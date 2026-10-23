@@ -2643,10 +2643,8 @@ aos:c:src/code_08002454.c:GameModeDebugExitUpdate	GameModeDebugExitUpdate	techni
 aos:c:src/code_08002454.c:GameModeDebugUpdate	GameModeDebugUpdate	technical	name			c_function	0x08002454	src/code_08002454.c	206	1	2
 aos:c:src/code_08002454.c:GameModeKonamiLogoUpdate	GameModeKonamiLogoUpdate	title	name			c_function	0x08002990	src/code_08002454.c	444	1	12
 aos:c:src/code_08002454.c:GameModeLicensedByNintendoUpdate	GameModeLicensedByNintendoUpdate	title	name			c_function	0x08002B54	src/code_08002454.c	533	1	3
-aos:c:src/code_08002454.c:GameModeMainMenuUpdate	GameModeMainMenuUpdate	menus	name			c_function	0x08004A48	src/code_08002454.c	2431	1	29
 aos:c:src/code_08002454.c:GameModeMainMenuUpdate_inline	GameModeMainMenuUpdate_inline	menus	name			c_function		src/code_08002454.c	2421	1	0
 aos:c:src/code_08002454.c:GameModeResetUpdate	GameModeResetUpdate	startup	referrers			c_function	0x08002C88	src/code_08002454.c	603	1	11
-aos:c:src/code_08002454.c:GameModeTitleScreenUpdate	GameModeTitleScreenUpdate	title	name			c_function		src/code_08002454.c	930	1	31
 aos:c:src/code_08002454.c:KonamiCodeCheck	KonamiCodeCheck	title	referrers			c_function	0x08002944	src/code_08002454.c	421	1	0
 aos:c:src/code_08002454.c:TitleScreenSetAffine_inline	TitleScreenSetAffine_inline	title	name			c_function		src/code_08002454.c	914	1	1
 aos:c:src/code_08002454.c:TitleScreen_sub_08002F44	TitleScreen_sub_08002F44	title	name			c_function	0x08002F44	src/code_08002454.c	747	1	2
@@ -2674,7 +2672,6 @@ aos:c:src/code_08002454.c:sub_080046CC	sub_080046CC	title	referrers			c_function
 aos:c:src/code_08002454.c:sub_080046D0	sub_080046D0	title	referrers			c_function	0x080046D0	src/code_08002454.c	2160	0	1
 aos:c:src/code_08002454.c:sub_08004750	sub_08004750	unclassified				c_function	0x08004750	src/code_08002454.c	2191	0	2
 aos:c:src/code_08002454.c:sub_0800480C	sub_0800480C	menus	referrers			c_function	0x0800480C	src/code_08002454.c	2234	1	11
-aos:c:src/code_08002454.c:sub_08004928	sub_08004928	menus	referrers			c_function	0x08004928	src/code_08002454.c	2287	1	4
 aos:c:src/code_08002454.c:sub_080049C4	sub_080049C4	menus	referrers			c_function	0x080049C4	src/code_08002454.c	2341	1	2
 aos:c:src/code_08005894.c:NONMATCH	NONMATCH	unclassified		technical	exclusive_callees	c_function		src/code_08005894.c	2151	0	3
 aos:c:src/code_08005894.c:sub_08005894	sub_08005894	unclassified				c_function	0x08005894	src/code_08005894.c	47	0	1
@@ -2875,14 +2872,10 @@ aos:c:src/code_08011DD0.c:sub_080125B4	sub_080125B4	unclassified				c_function	0
 aos:c:src/code_08011DD0.c:sub_0801261C	sub_0801261C	unclassified				c_function	0x0801261C	src/code_08011DD0.c	633	3	1
 aos:c:src/code_08011DD0.c:sub_0801266C	sub_0801266C	unclassified				c_function	0x0801266C	src/code_08011DD0.c	644	4	0
 aos:c:src/code_08011DD0.c:sub_08012688	sub_08012688	environment	referrers			c_function	0x08012688	src/code_08011DD0.c	654	1	4
-aos:c:src/code_08012744.c:SaveData_ClearSlotInSram	SaveData_ClearSlotInSram	saves	name			c_function	0x08013698	src/code_08012744.c	589	3	3
 aos:c:src/code_08012744.c:SaveData_ClearSlotInSram_inline	SaveData_ClearSlotInSram_inline	saves	name			c_function		src/code_08012744.c	61	1	3
 aos:c:src/code_08012744.c:SaveData_LoadLanguage	SaveData_LoadLanguage	saves	name			c_function	0x0801391C	src/code_08012744.c	781	2	2
-aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram	SaveData_LoadSlotFromSram	saves	name			c_function	0x08012744	src/code_08012744.c	107	9	2
 aos:c:src/code_08012744.c:SaveData_SaveLanguage	SaveData_SaveLanguage	saves	name			c_function	0x080138E8	src/code_08012744.c	762	1	3
-aos:c:src/code_08012744.c:SaveData_SaveSlotToSram	SaveData_SaveSlotToSram	saves	name			c_function	0x08013620	src/code_08012744.c	560	5	3
 aos:c:src/code_08012744.c:SaveData_SaveSlotToSram_inline	SaveData_SaveSlotToSram_inline	saves	name			c_function		src/code_08012744.c	39	6	3
-aos:c:src/code_08012744.c:sub_080127F0	sub_080127F0	unclassified		saves	exclusive_callees	c_function	0x080127F0	src/code_08012744.c	144	3	6
 aos:c:src/code_08012744.c:sub_08012A08	sub_08012A08	menus	referrers			c_function	0x08012A08	src/code_08012744.c	202	2	8
 aos:c:src/code_08012744.c:sub_08012E30	sub_08012E30	menus	referrers			c_function	0x08012E30	src/code_08012744.c	313	1	6
 aos:c:src/code_08012744.c:sub_08013038	sub_08013038	unclassified				c_function	0x08013038	src/code_08012744.c	352	1	5

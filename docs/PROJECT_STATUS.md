@@ -1,6 +1,21 @@
 # Project status
 
-Last updated: **2026-10-23**.
+Last updated: **2026-10-24**.
+
+## Patch 0478 - Aria file selection and runtime launch bridge
+
+- Replaced the New Game and Continue placeholders in the SDL title host with
+  three selectable files, empty/occupied summaries and overwrite confirmation.
+- Added a checksummed, versioned and ROM-free host save format. New Game
+  creates area 0, room 0 state, while Continue loads the selected file's room,
+  spawn, HP and currently exposed movement abilities into `fusion_aria_runtime`.
+- The title host launches the actual sibling runtime process after selection;
+  `--runtime` and `--save-dir` keep this testable with explicit local paths.
+- This is a playable host bridge, not a claim that native Aria SRAM or
+  `GameModeMainMenuUpdate` is complete. Inventory, equipment, souls, flags,
+  play-time updates and writes from native save rooms remain unported.
+- Next: connect native save-room detection and interaction to this save model,
+  then add the first pause/status inventory state without touching audio.
 
 ## Patch 0477 - Aria Bone Pillar and Buer linked components
 

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 54 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 55 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 419 | 3154 |
+| Castlevania: Aria of Sorrow | 426 | 3147 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1095,6 +1095,15 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 [?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (2 by native name, 3 by exclusive referrers). Category completeness has not been established.
 
+[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files can be created and loaded; the selected file launches the room runtime at its recorded area and room.
+
+Native evidence: `aos:c:src/code_08012744.c:SaveData_ClearSlotInSram`, `aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram`, `aos:c:src/code_08012744.c:SaveData_SaveSlotToSram`, `aos:c:src/code_08012744.c:sub_080127F0`.  
+Local implementation: [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Dependencies: `aos.startup.mode_dispatch`.  
+Known divergences: The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files and room, optional spawn, HP and movement mask are represented; inventory, equipment, souls, map/event state, play time updates and save-room writes are absent.  
+Next action: Port save-room interaction and the remaining progression fields before reconstructing native SRAM serialization.
+
 [~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** Native mode set, increment and GameModeUpdate result handling; the title destination ordering is catalogued but its screen handler is not ported.
 
 Native evidence: `aos:c:src/main.c:IncrementGameMode`, `aos:c:src/main.c:SetGameMode`.  
@@ -1107,14 +1116,14 @@ Next action: Port original title screen stages, graphics and selection and wire 
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Visible SDL preview with diagnostic menu, edge-triggered activation, 32/6-frame held-key navigation and working display option; device-free tests.
+[~] **`aos.title.input_stage8` — Aria title interactive-stage input and idle timer.** Visible SDL title and main menu navigation now reaches New Game or Continue, three file slots, overwrite confirmation, options and a real room-runtime launch; edge input and 32/6-frame repeat remain device-free tested.
 
-Native evidence: not attached yet.  
+Native evidence: `aos:c:src/code_08002454.c:GameModeMainMenuUpdate`, `aos:c:src/code_08002454.c:GameModeTitleScreenUpdate`, `aos:c:src/code_08002454.c:sub_08004928`.  
 Local implementation: [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_menu_preview.c`](../src/runtime/aos_menu_preview.c).  
 Tests: [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c), [`tests/test_aos_menu_preview.c`](../tests/test_aos_menu_preview.c).
-Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`.  
-Known divergences: SDL diagnostic title/menu navigation now supports held-key cursor repeat and art visibility options; native game menu, save flow, boot and graphics remain absent.  
-Next action: Port genuine GameModeMainMenuUpdate states, original extracted menu assets and file select, without presenting diagnostic UI as native parity.
+Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`, `aos.saves.portable_slots`.  
+Known divergences: The SDL frontend uses diagnostic rendering rather than original menu graphics and does not reproduce the full native GameModeMainMenuUpdate transition table.  
+Next action: Port the genuine GameModeMainMenuUpdate stages and extracted private menu presentation, then integrate pause/status screens.
 
 ### Menus and options
 

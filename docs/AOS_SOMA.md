@@ -31,6 +31,22 @@ offsets. The library uses the shared `metroidvania-sprite-index-v1` format of
 The older `scripts/aos_soma_sprite.py` remains the decoder library and the
 editor preview generator for six hand-selected sequences.
 
+## Frontend and portable saves
+
+`fusion_aria_title_preview` now provides a runnable host path from the title
+input into New Game or Continue, a three-file selection screen and the real
+`fusion_aria_runtime` process. By default it stores files in SDL's user data
+directory; `--save-dir DIR` and `--runtime FILE` provide explicit development
+paths. New files start at the native new-game location, area 0 room 0.
+
+`aos_save.c` deliberately uses the small, checksummed
+`metroidvania-aos-save-v1` text schema instead of claiming compatibility with
+the original six 0x47C-byte SRAM records. The runtime accepts `--save FILE`
+and restores the room, optional spawn, HP and the currently exposed movement
+mask. Inventory, equipment, souls, event flags, map state and native save-room
+writes are not represented yet; those fields will be added as their runtime
+owners are ported.
+
 ## Explicitly unresolved
 
 - Palette banks 1-6 of Soma's palette descriptor are not identified. Some

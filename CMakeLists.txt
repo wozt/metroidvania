@@ -64,10 +64,11 @@ fusion_enable_warnings(fusion_room_runtime)
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
-               src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/debug_menu.c)
+               src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
+               src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
-               src/runtime/aos_menu_preview.c)
+               src/runtime/aos_menu_preview.c src/runtime/aos_save.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_aria_title_preview)
@@ -281,6 +282,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_menu_preview_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_menu_preview_tests)
     add_test(NAME aos_menu_preview COMMAND fusion_aos_menu_preview_tests)
+
+    add_executable(fusion_aos_save_tests tests/test_aos_save.c src/runtime/aos_save.c)
+    target_include_directories(fusion_aos_save_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_save_tests)
+    add_test(NAME aos_save COMMAND fusion_aos_save_tests
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
     add_executable(fusion_aos_title_stages_tests tests/test_aos_title_stages.c src/runtime/aos_title_stages.c)
     target_include_directories(fusion_aos_title_stages_tests PRIVATE src/runtime)

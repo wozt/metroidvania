@@ -6,11 +6,13 @@
  * scripts/aos_soma_pipeline.py, then runs the ported player frame
  * aos_soma_update at 60 Hz. The library's animation_NNN keys are the
  * native animation descriptor indices, and their durations drive the
- * animation timing. Rooms, entities, souls and transitions are not
- * modelled. */
+ * animation timing. Room transitions and a portable frontend save can select
+ * the active room; complete inventory, soul and native SRAM parity remain
+ * separate reconstruction work. */
 #include "aos_door.h"
 #include "aos_enemy.h"
 #include "aos_room.h"
+#include "aos_save.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
 #include "debug_menu.h"
@@ -1261,7 +1263,8 @@ static void free_weapon_sprite(AriaWeaponSprite *sprite) {
 
 static void usage(const char *name) {
     fprintf(stderr,
-            "Usage: %s [--check] [--library index.tsv] [--spawn X Y] [--moves MASK]\n"
+            "Usage: %s [--check] [--save slot.sav] [--library index.tsv]\n"
+            "       [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
@@ -1272,7 +1275,7 @@ static void usage(const char *name) {
 
 int main(int argc, char **argv) {
     const char *folder = NULL, *library_path = DEFAULT_LIBRARY, *capture_path = NULL;
-    const char *weapon_name = "none";
+    const char *weapon_name = "none", *save_path = NULL;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
     /* No soul inventory yet: every ported ability move is enabled. */
@@ -1280,6 +1283,7 @@ int main(int argc, char **argv) {
                           AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
     int spawn_x = -1, spawn_y = -1;
     bool check = false, show_hitboxes = false, debug_at_start = false;
+    bool hp_override = false, moves_override = false, spawn_override = false;
     const char *debug_input = NULL;
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
@@ -1291,6 +1295,7 @@ int main(int argc, char **argv) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
         else if (!strcmp(argv[i], "--audit-transitions")) return audit_transitions();
+        else if (!strcmp(argv[i], "--save") && i + 1 < argc) save_path = argv[++i];
         else if (!strcmp(argv[i], "--library") && i + 1 < argc) library_path = argv[++i];
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
@@ -1308,15 +1313,19 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--repeat") && i + 1 < argc) repeat = atol(argv[++i]);
         else if (!strcmp(argv[i], "--atk") && i + 1 < argc) player_stats.atk = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--def") && i + 1 < argc) player_stats.def = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--hp") && i + 1 < argc)
+        else if (!strcmp(argv[i], "--hp") && i + 1 < argc) {
             player_stats.hp = player_stats.max_hp = atoi(argv[++i]);
+            hp_override = true;
+        }
         else if (!strcmp(argv[i], "--moves") && i + 1 < argc) {
             moves = strtoul(argv[++i], &end, 0);
             if (*end || moves > 0x1F) { usage(argv[0]); return 2; }
+            moves_override = true;
             end = NULL;
         } else if (!strcmp(argv[i], "--spawn") && i + 2 < argc) {
             spawn_x = atoi(argv[++i]);
             spawn_y = atoi(argv[++i]);
+            spawn_override = true;
         } else if (!strcmp(argv[i], "--capture") && i + 3 < argc) {
             capture_path = argv[++i];
             capture_frames = strtol(argv[++i], &end, 10);
@@ -1327,6 +1336,25 @@ int main(int argc, char **argv) {
         } else if (argv[i][0] != '-' && !folder) folder = argv[i];
         else { usage(argv[0]); return 2; }
         if (end && *end) { usage(argv[0]); return 2; }
+    }
+    if (save_path) {
+        AosSaveData save;
+        char error[256];
+        if (!aos_save_load(save_path, &save, error, sizeof error)) {
+            fprintf(stderr, "Cannot load Aria save: %s\n", error);
+            return 1;
+        }
+        if (area < 0) area = save.area;
+        if (room_number < 0) room_number = save.room;
+        if (!spawn_override && save.spawn_x >= 0 && save.spawn_y >= 0) {
+            spawn_x = save.spawn_x;
+            spawn_y = save.spawn_y;
+        }
+        if (!hp_override) {
+            player_stats.hp = save.hp;
+            player_stats.max_hp = save.max_hp;
+        }
+        if (!moves_override) moves = save.moves;
     }
     char folder_buffer[512], room_path[600];
     if (!folder) {

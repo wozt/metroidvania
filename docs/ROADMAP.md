@@ -72,10 +72,11 @@ explicitly measured and resolved.
   share behavior.
 
 Current progress: the experimental runtime covers bounded Soma movement and
-combat states, several weapon classes, room transitions, wooden doors, bats,
-zombies and blue crows. Most native routines remain unnamed; 2,192 of 3,573
-are classified from path, name or exclusive-referrer evidence, and the
-original game lifecycle is absent.
+combat states, several weapon classes, room transitions, wooden doors and a
+growing enemy set. The SDL title host can now select one of three portable
+files and launch New Game or Continue into the actual room runtime. That host
+bridge is not native menu/SRAM parity: save rooms, pause/inventory/map flows,
+full progression and most of the original game lifecycle remain absent.
 
 Exit criterion: Aria is normally completable through every native final branch
 from its menu to its credits without debug controls or emulation, with residual

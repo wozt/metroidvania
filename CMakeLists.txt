@@ -31,6 +31,7 @@ fusion_enable_warnings(fusion_native_editor_core)
 add_library(fusion_assets STATIC
     src/assets/core/sha1.c
     src/assets/core/rom.c
+    src/assets/gba/decompress.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)
@@ -119,6 +120,10 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_assets_rom_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_rom_tests)
     add_test(NAME fusion_assets_rom COMMAND fusion_assets_rom_tests)
+    add_executable(fusion_assets_gba_tests tests/test_fusion_assets_gba.c)
+    target_link_libraries(fusion_assets_gba_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_assets_gba_tests)
+    add_test(NAME fusion_assets_gba COMMAND fusion_assets_gba_tests)
     add_test(NAME fusion_importer_list COMMAND fusion_importer --list)
     add_test(NAME fusion_importer_dry_run COMMAND fusion_importer --dry-run --force)
 

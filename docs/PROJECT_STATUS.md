@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0481 - C11 GBA binary and compression primitives
+
+- Added a reusable bounds-checked little-endian binary reader to
+  `fusion_assets`.
+- Added strict-output GBA BIOS 0x10 LZ77 and 0x30 RLE decoders with malformed
+  stream, backreference, truncation and destination-bound checks.
+- Added ROM-free CTest coverage for literals, overlapping LZ77 copies, RLE,
+  endianness and invalid input.
+- These primitives are not connected to a production extractor yet; Python
+  remains authoritative and no resource-equivalence claim is made.
+- Next: port one small metadata reader using the binary reader and compare its
+  output structurally against the existing Python extractor.
+
 ## Patch 0480 - C11 asset pipeline foundation
 
 - Added the `fusion_assets` C11 library with bounded ROM loading, exact 8 MiB

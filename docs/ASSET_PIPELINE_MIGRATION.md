@@ -8,16 +8,20 @@ unit tests and an engine/editor integration check.
 
 ## Current foundation
 
-`libfusion_assets` is the first native layer. Its public header is
+`libfusion_assets` is the first native layer. Its public headers are
 `include/fusion/assets/rom.h`; the implementation is split into generic
-SHA-1 and bounded ROM loading under `src/assets/core/`. It currently:
+SHA-1, bounded ROM loading and GBA primitives under `src/assets/`.
+It currently:
 
 - recognizes the pinned USA revisions of Zero Mission and Aria of Sorrow;
 - requires the verified 8 MiB image size and the known SHA-1 fingerprint;
 - reads into a private heap buffer without modifying the input file;
 - rejects missing, oversized, truncated, incorrectly sized and mismatched
   inputs with a bounded diagnostic; and
-- wipes and releases private ROM bytes through `fusion_rom_close`.
+- wipes and releases private ROM bytes through `fusion_rom_close`;
+- provides a bounded little-endian binary reader; and
+- decodes standard GBA 0x10 LZ77 and 0x30 RLE streams into caller-owned
+  buffers without silently accepting output overflow.
 
 `fusion_importer` exposes the first orchestration contract:
 
@@ -37,6 +41,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 |---|---|---|---|
 | `scripts/verify_roms.py` | `fusion/assets/rom.h`, `src/assets/core/rom.c` | foundation complete | C SHA-1 vector, local ROM verification, malformed-file tests |
 | `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | not started | symbol-table byte and bounds comparison |
+| `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |

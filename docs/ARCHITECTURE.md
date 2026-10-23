@@ -200,7 +200,9 @@ usable on a ROM-free checkout. Private outputs stay below the ignored
 first C11 layer of the native import pipeline. It owns only generic ROM
 verification for the two pinned USA revisions so far: bounded loading,
 expected-size checks, SHA-1 fingerprints, error reporting and zeroing on
-release. `fusion_importer` (`src/tools/fusion_importer.c`) exposes `--list`,
+release. Its generic GBA layer also owns a bounds-checked little-endian
+reader and standard BIOS 0x10 LZ77 / 0x30 RLE decoders. `fusion_importer`
+(`src/tools/fusion_importer.c`) exposes `--list`,
 `--verify`, and an explicit dry-run plan for future extraction tasks. The
 Python extractors remain authoritative until each replacement passes the
 equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`.

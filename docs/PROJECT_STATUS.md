@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0465 - Aria ten-enemy constructor-table batch
+
+- Audited the ROM constructor table and corrected two historical identity
+  collisions: Killer Doll now runs at native ID `0x1F` instead of Bomber
+  Armor's `0x3A`, and Nemesis at `0x26` instead of Manticore's `0x36`.
+- Connected eight additional enemies in one batch: Merman, Siren, Tiny Devil,
+  Catoblepas, Imp, Gorgon, Harpy and Ripper. Their private native sheets,
+  palette variants, animations and frame boxes now render from real room
+  records, with basic locomotion, contact combat, generic death and inert
+  states. The registry marks each new state machine partial and lists the
+  attacks and specialized callbacks still to port.
+- Extended the object exporter to accept the native per-component OBJ palette
+  row used by Tiny Devil and Imp. ROM-free tests cover all corrected IDs, all
+  eight constructors, movement, the Harpy/Siren and Gorgon/Catoblepas aliases,
+  inert states and palette-row rendering.
+- Recorded one in-game capture for each of the ten identities. The new batch
+  renders and moves in native rooms; Merman, Gorgon, Harpy and Ripper also
+  demonstrate native-stat contact damage in the captures.
+
 ## Patch 0464 - Aria Nemesis temporary OAM history
 
 - Reconstructed the zero-filled 24-record scratch table allocated for each

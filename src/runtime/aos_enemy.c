@@ -426,6 +426,9 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && id != AOS_ENEMY_BLUE_CROW &&
+        id != AOS_ENEMY_MERMAN && id != AOS_ENEMY_SIREN && id != AOS_ENEMY_TINY_DEVIL &&
+        id != AOS_ENEMY_CATOBLEPAS && id != AOS_ENEMY_IMP && id != AOS_ENEMY_GORGON &&
+        id != AOS_ENEMY_HARPY && id != AOS_ENEMY_RIPPER &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
@@ -564,6 +567,79 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         step_anim(enemy, anims);
         enemy->hidden = true;
         enemy->step = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_MERMAN) {
+        /* EnemyMermanCreate: OBJ priority 4, animation 0 and a 60-frame
+         * idle. Parameter 1 selects the hidden room-spawner form; the active
+         * form starts its native jump setup with upward velocity and gravity. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 4;
+            return true;
+        }
+        if (param1) {
+            enemy->state = 3;
+            enemy->hidden = true;
+            enemy->combat.attack_off = enemy->combat.hurt_off = true;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->timer = 60;
+        enemy->vy = -0x8000;
+        enemy->ay = 0x1800;
+        face_player(enemy, soma);
+        return true;
+    }
+    if (id == AOS_ENEMY_HARPY || id == AOS_ENEMY_SIREN) {
+        /* EnemySirenCreate aliases EnemyHarpyCreate. The two constructors
+         * differ only by their palette bank. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
+        enemy->home = (int16_t)(enemy->y >> 16);
+        enemy->state = flag_8e_40 ? 4 : 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_GORGON || id == AOS_ENEMY_CATOBLEPAS) {
+        /* EnemyCatoblepasCreate aliases EnemyGorgonCreate and selects the
+         * second palette bank. Both are grounded patrol enemies. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            return true;
+        }
+        snap_to_floor(enemy, layer);
+        enemy->state = 0;
+        enemy->home = (int16_t)(enemy->x >> 16);
+        enemy->home_left = (int16_t)(enemy->home - 0x40);
+        enemy->home_right = (int16_t)(enemy->home + 0x40);
+        return true;
+    }
+    if (id == AOS_ENEMY_TINY_DEVIL || id == AOS_ENEMY_IMP) {
+        /* Tiny Devil and Imp share their sheet. Their native constructors
+         * choose animation 1 and 0 respectively and use different inert
+         * states under the global freeze flag. */
+        play(enemy, anims, id == AOS_ENEMY_TINY_DEVIL ? 1 : 0);
+        step_anim(enemy, anims);
+        enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
+        enemy->home = (int16_t)(enemy->y >> 16);
+        enemy->state = flag_8e_40 ? (id == AOS_ENEMY_TINY_DEVIL ? 3 : 4) : 1;
+        return true;
+    }
+    if (id == AOS_ENEMY_RIPPER) {
+        /* EnemyRipperCreate uses the Fleaman sheet with palette bank 1. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            return true;
+        }
+        enemy->state = 1;
+        enemy->dropped = ((param0 & param1) & 0xFFFF) == 0xFF;
+        if (!enemy->dropped) snap_to_floor(enemy, layer);
         return true;
     }
     if (id == AOS_ENEMY_FLEAMAN) {
@@ -5770,6 +5846,95 @@ static AosHitReport needles_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
     return report;
 }
 
+/* First native-observable pass for the six newly connected enemy state
+ * machines. Siren aliases Harpy, Catoblepas aliases Gorgon, and Tiny Devil
+ * shares its resources and aerial locomotion family with Imp. More elaborate
+ * attacks remain itemized as parity gaps rather than being guessed here. */
+static AosHitReport batch_enemy_update(AosEnemy *e, AosSoma *soma,
+                                       const AosCollision *layer, const AosEnemyKind *kind,
+                                       const AosWeaponEntity *weapon,
+                                       const AosWeaponFrames *weapon_frames, int soma_atk,
+                                       int soma_def, int cam_x, int cam_y,
+                                       uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (e->defeated) {
+        generic_death(e, kind, random, &report);
+        aos_combat_tick(&e->combat);
+        return report;
+    }
+    bool inert = (e->id == AOS_ENEMY_MERMAN && e->state == 4) ||
+                 ((e->id == AOS_ENEMY_HARPY || e->id == AOS_ENEMY_SIREN ||
+                   e->id == AOS_ENEMY_IMP) && e->state == 4) ||
+                 ((e->id == AOS_ENEMY_GORGON || e->id == AOS_ENEMY_CATOBLEPAS ||
+                   e->id == AOS_ENEMY_TINY_DEVIL || e->id == AOS_ENEMY_RIPPER) &&
+                  e->state == 3);
+    if (inert) {
+        step_anim(e, kind->anims);
+        return report;
+    }
+    if (e->id == AOS_ENEMY_MERMAN && e->param1) return report;
+
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
+
+    if (e->id == AOS_ENEMY_HARPY || e->id == AOS_ENEMY_SIREN) {
+        face_player(e, soma);
+        int32_t tx = soma->x + (e->mirrored ? -0x280000 : 0x280000);
+        int32_t ty = soma->y - 0x300000 + aos_sine(e->phase) * 8;
+        (void)move_toward(e, tx, ty, 0xC000);
+        e->phase = (uint16_t)(e->phase + 0x180);
+        integrate(e);
+    } else if (e->id == AOS_ENEMY_TINY_DEVIL || e->id == AOS_ENEMY_IMP) {
+        face_player(e, soma);
+        int32_t side = e->id == AOS_ENEMY_IMP ? 0x300000 : 0x240000;
+        int32_t tx = soma->x + (e->mirrored ? -side : side);
+        int32_t ty = soma->y - 0x200000 + aos_sine(e->phase) * 6;
+        (void)move_toward(e, tx, ty, e->id == AOS_ENEMY_IMP ? 0xA000 : 0xC000);
+        e->phase = (uint16_t)(e->phase + 0x200);
+        integrate(e);
+    } else if (e->id == AOS_ENEMY_GORGON || e->id == AOS_ENEMY_CATOBLEPAS) {
+        if (!e->vx) e->vx = toward_facing(e, 0x6000);
+        if ((e->x >> 16) <= e->home_left) {
+            e->mirrored = true;
+            e->vx = 0x6000;
+        } else if ((e->x >> 16) >= e->home_right) {
+            e->mirrored = false;
+            e->vx = -0x6000;
+        }
+        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0x6000, 12) & 3) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0x6000);
+        }
+    } else if (e->id == AOS_ENEMY_RIPPER) {
+        if (e->state == 1) {
+            face_player(e, soma);
+            e->vx = toward_facing(e, 0xC000);
+            e->vy = -0x28000;
+            e->ay = 0x3000;
+            e->state = 0;
+        }
+        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0xC000, 8) & 4) {
+            stop(e);
+            e->state = 1;
+        }
+    } else { /* Merman */
+        face_player(e, soma);
+        e->vx = toward_facing(e, 0x8000);
+        if (walk_collide(e, layer, 0x10000, (int32_t)0xFFE00000, 0x8000, 8) & 4) {
+            e->vy = -0x20000;
+            e->ay = 0x1800;
+        }
+    }
+
+    step_anim(e, kind->anims);
+    sx = (e->x >> 16) - cam_x;
+    sy = (e->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&e->combat);
+    return report;
+}
+
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
@@ -5777,6 +5942,13 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (enemy->role == AOS_ROLE_ENEMY &&
+        (enemy->id == AOS_ENEMY_MERMAN || enemy->id == AOS_ENEMY_SIREN ||
+         enemy->id == AOS_ENEMY_TINY_DEVIL || enemy->id == AOS_ENEMY_CATOBLEPAS ||
+         enemy->id == AOS_ENEMY_IMP || enemy->id == AOS_ENEMY_GORGON ||
+         enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_RIPPER))
+        return batch_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+                                  soma_def, cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&
         enemy->role == AOS_ROLE_ENEMY)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);

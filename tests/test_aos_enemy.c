@@ -19,6 +19,69 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+static void batch_enemy_tests(void) {
+    assert(AOS_ENEMY_MERMAN == 0x03 && AOS_ENEMY_SIREN == 0x0F &&
+           AOS_ENEMY_TINY_DEVIL == 0x10 && AOS_ENEMY_CATOBLEPAS == 0x1C &&
+           AOS_ENEMY_KILLER_DOLL == 0x1F && AOS_ENEMY_NEMESIS == 0x26 &&
+           AOS_ENEMY_IMP == 0x31 && AOS_ENEMY_GORGON == 0x33 &&
+           AOS_ENEMY_HARPY == 0x38 && AOS_ENEMY_RIPPER == 0x4A);
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[5] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 5};
+    AosEnemyKind kind = {.anims = &anims};
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 16, 2, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(159), NULL);
+    const uint8_t ids[] = {AOS_ENEMY_MERMAN, AOS_ENEMY_SIREN, AOS_ENEMY_TINY_DEVIL,
+                           AOS_ENEMY_CATOBLEPAS, AOS_ENEMY_IMP, AOS_ENEMY_GORGON,
+                           AOS_ENEMY_HARPY, AOS_ENEMY_RIPPER};
+    for (unsigned i = 0; i < sizeof ids; ++i) {
+        AosEnemy e;
+        int y = ids[i] == AOS_ENEMY_GORGON || ids[i] == AOS_ENEMY_CATOBLEPAS ||
+                        ids[i] == AOS_ENEMY_RIPPER
+                    ? 140
+                    : 100;
+        assert(aos_enemy_create(&e, ids[i], 100, y, 0, 0, &soma, &layer, &kind, &stats));
+        assert(e.id == ids[i] && e.hp == stats.hp);
+        int32_t x0 = e.x, y0 = e.y;
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        assert(e.x != x0 || e.y != y0);
+    }
+
+    /* The two native aliases execute the same locomotion from equal state. */
+    AosEnemy harpy, siren, gorgon, catoblepas;
+    assert(aos_enemy_create(&harpy, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(aos_enemy_create(&siren, AOS_ENEMY_SIREN, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    siren.phase = harpy.phase;
+    aos_enemy_update(&harpy, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_update(&siren, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(harpy.x == siren.x && harpy.y == siren.y && harpy.vx == siren.vx);
+    assert(aos_enemy_create(&gorgon, AOS_ENEMY_GORGON, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(aos_enemy_create(&catoblepas, AOS_ENEMY_CATOBLEPAS, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    aos_enemy_update(&gorgon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_update(&catoblepas, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(gorgon.x == catoblepas.x && gorgon.y == catoblepas.y);
+
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy frozen;
+    assert(aos_enemy_create(&frozen, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    int32_t x0 = frozen.x, y0 = frozen.y;
+    aos_enemy_update(&frozen, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(frozen.state == 4 && frozen.x == x0 && frozen.y == y0);
+}
+
 static void zombie_tests(void) {
     /* Floor at cell row 20 (top 160), a wall at cells x 40.. */
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
@@ -2877,6 +2940,7 @@ int main(void) {
     assert(aos_enemy_damage(10, 4, 0, 0, 0x0001) == 7);         /* (10 - 2) * 252 >> 8 */
     assert(aos_enemy_damage(1, 8, 0, 0, 1) == 1);
     assert(aos_player_damage(6, 10) == 2 && aos_player_damage(1, 50) == 1);
+    batch_enemy_tests();
     zombie_tests();
     crow_tests();
     red_crow_tests();

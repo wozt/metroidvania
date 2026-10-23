@@ -693,7 +693,20 @@ beyond 120 pixels it waits for the animation's cycle, plays animation 4
 once and perches again (step 0). Each frame it moves by its velocity, then
 adds its accelerations.
 
-Killer Doll (enemy 0x3A, `EnemyKillerDollCreate` /
+The constructor-table audit also connects an eight-enemy batch without
+overstating its fidelity. Merman (0x03), Siren (0x0F), Tiny Devil (0x10),
+Catoblepas (0x1C), Imp (0x31), Gorgon (0x33), Harpy (0x38) and Ripper (0x4A)
+now use their native identities, graphics, palettes, animation descriptors,
+frame boxes, room records, contact combat and global inert states. Siren calls
+the Harpy routines, while Catoblepas calls the Gorgon routines; their second
+palette banks are preserved. Tiny Devil and Imp share one sheet with palette
+banks 1 and 0, including the per-component OBJ palette-row byte that their OAM
+records use. The current behavior layer deliberately stops at basic aerial or
+ground locomotion and generic death. Their individual attack selections,
+projectiles, exact timers, collision probes and specialized death callbacks
+remain partial and are listed separately in the parity registry.
+
+Killer Doll (enemy 0x1F, `EnemyKillerDollCreate` /
 `EnemyKillerDollUpdate`): tiles `0x081F426C`, palette `0x0820BEEC` bank 0
 and frames `0x0824DB0C`. Creation starts animation 0, snaps it to the floor
 and seeds the attack wait (+ 0x14) to 128..2175 frames, the current leg (+
@@ -780,7 +793,7 @@ seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
 
-Nemesis (enemy 0x36, `EnemyNemesisCreate` / `EnemyNemesisUpdate`) uses the
+Nemesis (enemy 0x26, `EnemyNemesisCreate` / `EnemyNemesisUpdate`) uses the
 compact direct-frame descriptor `0x0824D2D8`, loaded from graphics
 `0x081F4264` and palette `0x0820BEC8` by `sub_080C6714`. Its four native OAM
 records are exported as one-frame animation states, preserving the recorded

@@ -67,6 +67,9 @@ ENEMIES = {
     "zombie": {"id": 0x01, "graphics": 0x081CBF8C, "palette": 0x0820A62C, "bank": 0,
                "frames": 0x082178B8,  # sub_0807B404 (EnemyZombieCreate 0x0807ABEC)
                "static_frames": (0, 0xD)},  # puddle (sub_0807B33C), drip and gore
+    # sub_08070AC4 (EnemyMermanCreate): the native Merman sheet and frames.
+    "merman": {"id": 0x03, "graphics": 0x081CBF3C, "palette": 0x0820A464, "bank": 0,
+               "frames": 0x08212FB4},
     "blue_crow": {"id": 0x09, "graphics": 0x081F4274, "palette": 0x0820BF10, "bank": 0,
                   "frames": 0x0824EC04,   # EnemyBlueCrowCreate 0x080C9A6C
                   "static_frames": (8,)},  # its feathers (sub_080C9E2C)
@@ -92,6 +95,27 @@ ENEMIES = {
     # sub_080C1E88 (EnemyFleamanCreate 0x080C1E0C).
     "fleaman": {"id": 0x18, "graphics": 0x081F423C, "palette": 0x0820BD94, "bank": 0,
                 "frames": 0x0824B92C},
+    # EnemyRipperCreate uses the Fleaman sheet with palette bank 1.
+    "ripper": {"id": 0x4A, "graphics": 0x081F423C, "palette": 0x0820BD94, "bank": 1,
+               "frames": 0x0824B92C},
+    # EnemyHarpyCreate and EnemySirenCreate share code and graphics; Siren
+    # selects the second palette bank.
+    "harpy": {"id": 0x38, "graphics": 0x081CBF6C, "palette": 0x0820A53C, "bank": 0,
+              "frames": 0x08216060},
+    "siren": {"id": 0x0F, "graphics": 0x081CBF6C, "palette": 0x0820A53C, "bank": 1,
+              "frames": 0x08216060},
+    # EnemyGorgonCreate and EnemyCatoblepasCreate share their state machine;
+    # Catoblepas uses palette bank 1.
+    "gorgon": {"id": 0x33, "graphics": 0x081CBFF4, "palette": 0x0820A890, "bank": 0,
+               "frames": 0x0821ECE8},
+    "catoblepas": {"id": 0x1C, "graphics": 0x081CBFF4, "palette": 0x0820A890, "bank": 1,
+                   "frames": 0x0821ECE8},
+    # Tiny Devil and Imp share a sheet and frame descriptor with different
+    # palette banks.
+    "tiny_devil": {"id": 0x10, "graphics": 0x081F4254, "palette": 0x0820BE60, "bank": 1,
+                   "frames": 0x0824CF0C},
+    "imp": {"id": 0x31, "graphics": 0x081F4254, "palette": 0x0820BE60, "bank": 0,
+            "frames": 0x0824CF0C},
     # EnemyDeadWarriorCreate 0x080B7594: walker probes 0x08528830.
     "dead_warrior": {"id": 0x2F, "graphics": 0x081EC1F4, "palette": 0x0820BBD4, "bank": 0,
                      "frames": 0x08246F00, "probes": 0x08528830},
@@ -109,7 +133,7 @@ ENEMIES = {
                  "frames": 0x0824A334, "static_frames": (0xD,)},
     # sub_080C7C04 (EnemyKillerDollCreate): its pieces show sprite frames
     # 13 to 17 (records at 0x08528AC4).
-    "killer_doll": {"id": 0x3A, "graphics": 0x081F426C, "palette": 0x0820BEEC, "bank": 0,
+    "killer_doll": {"id": 0x1F, "graphics": 0x081F426C, "palette": 0x0820BEEC, "bank": 0,
                     "frames": 0x0824DB0C, "static_frames": tuple(range(13, 18))},
     # sub_080C8A18 (EnemyLightningDollCreate): its pieces show sprite
     # frames 20 to 24 (records at 0x08528AE4).
@@ -117,7 +141,7 @@ ENEMIES = {
                        "frames": 0x0824E7F4, "static_frames": tuple(range(20, 25))},
     # EnemyNemesisCreate 0x080C664C: the floating Nemesis uses the shared
     # machine sheet, palette and frame descriptor loaded by sub_080C6714.
-    "nemesis": {"id": 0x36, "graphics": 0x081F4264, "palette": 0x0820BEC8, "bank": 0,
+    "nemesis": {"id": 0x26, "graphics": 0x081F4264, "palette": 0x0820BEC8, "bank": 0,
                 "frames": 0x0824D2D8, "static_frames": (0, 1, 2, 3)},
     # EnemyBeamSkeletonCreate 0x080CA5EC: walker probes 0x08528B04; its
     # muzzle flash (frame 0x15), beam (0x16, 0x17) and bones (0x18 to 0x1E,
@@ -296,7 +320,10 @@ def render_frame(tiles: bytes, sheet_width: int, components: list[tuple],
     pixels = {}
     sheet_height = len(tiles) // (sheet_width * TILE_BYTES) * 8
     for x, y, source_x, source_y, width, height, flags in reversed(components):
-        if flags >> 24 or (flags >> 16) & ~3:
+        # Byte + 0xB is the OBJ palette-row offset applied by the OAM
+        # builder. The exporter has already selected the descriptor's
+        # corresponding palette bank, so it does not alter bitmap pixels.
+        if ((flags >> 16) & 0xFF) not in range(4):
             raise ValueError("unsupported OAM component attributes")
         if source_x + width > sheet_width * 8 or source_y + height > sheet_height:
             if skipped is not None:

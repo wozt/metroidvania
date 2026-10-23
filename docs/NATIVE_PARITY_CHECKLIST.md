@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 36 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 44 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 291 | 3282 |
+| Castlevania: Aria of Sorrow | 310 | 3263 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1233,6 +1233,16 @@ Known divergences: As the Lubicant.
 Next action: Follow the Lubicant's open items.
 Evidence: in game: `aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)`.
 
+[~] **`aos.enemies.catoblepas` — Catoblepas (Gorgon's routines).** The native constructor and updater alias Gorgon; palette bank 1, room identity, frame boxes, grounded patrol, combat, generic death and the global inert state are connected.
+
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.gorgon`.  
+Known divergences: The Gorgon's attacks, petrifying breath, exact timers, collision probes, death callback, sounds and palette effects are not ported.  
+Next action: Port the shared Gorgon attack state machine and collision probes.
+Evidence: in game: `aria area_00_room_039: Catoblepas renders with its native palette and damages Soma for 50 HP during a 180-frame capture`.
+
 [+] **`aos.enemies.curly` — Curly.** Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AC5C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1A0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D188`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyCreate`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093218`, `aos:asm:asm/code/code_08090914.s:sub_08093460`, `aos:asm:asm/code/code_08090914.s:sub_08093540`, `aos:asm:asm/code/code_08090914.s:sub_080935E8`, `aos:asm:asm/code/code_08090914.s:sub_08093674`.  
@@ -1313,6 +1323,15 @@ Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the roo
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
 
+[~] **`aos.enemies.gorgon` — Gorgon.** The native constructor identity, graphics, palette, animations, frame boxes, grounded patrol, combat, generic death and global inert state are connected; Catoblepas shares this path.
+
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGorgonCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGorgonUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08089A50`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: Its attacks, petrifying breath, exact timers, collision probes, death callback, sounds and palette effects are not ported.  
+Next action: Port the attack state machine and collision probes from EnemyGorgonUpdate.
+Evidence: in game: `aria area_05_room_000 (--spawn 300 223 --hp 9999): both Gorgons render, patrol and one damages Soma for 66 HP by frame 120`.
+
 [+] **`aos.enemies.gremlin` — Gremlin (the gargoyle's routines).** EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1.
 
 Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinUpdate`.  
@@ -1323,14 +1342,32 @@ Known divergences: As the gargoyle.
 Next action: Follow the gargoyle's open items.
 Evidence: in game: `aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)`.
 
-[+] **`aos.enemies.killer_doll` — Killer Doll.** The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.
+[~] **`aos.enemies.harpy` — Harpy.** Native identity, palette bank 0, animations, frame boxes, aerial pursuit, combat, generic death and global inert state are connected; Siren shares this path.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyHarpyCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyHarpyUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807628C`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The native attack selection, acceleration curves, timers, projectiles, death callback, sounds and palette effects are not ported.  
+Next action: Port the complete Harpy attack state machine.
+Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): both Harpies render, pursue Soma and one damages him for 40 HP by frame 120`.
+
+[~] **`aos.enemies.imp` — Imp.** Native identity, palette bank 0, animations including palette-row OAM attributes, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyImpCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyImpUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: Its native child, attack selection, exact acceleration, timers, death callback, sounds and palette effects are not ported.  
+Next action: Port the Imp child and complete attack state machine.
+Evidence: in game: `aria area_04_room_001 (--spawn 400 703 --hp 9999): the Imp renders with its native palette during a 180-frame room capture`.
+
+[+] **`aos.enemies.killer_doll` — Killer Doll.** The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported at its constructor-table ID 0x1F.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BAC8`, `aos:asm:asm/code/code_08060B98.s:sub_0806BF78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7C04`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7C94`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7CE4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C81AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8244`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C82F4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C86A0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C88B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8914`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C893C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8968`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_aos_object_sprites.py`](../tests/test_aos_object_sprites.py).
 Known divergences: Sounds 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; child effects and pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Compare against an emulator.
-Evidence: in game: `aria area_06_room_026: from --spawn 200 159 it wakes and flies (frame 240); from --spawn 145 159 it charges Soma for 66 damage by frame 480; with --spawn 85 159 --atk 999 --weapon 0 --repeat 2 and right + B, one blow scatters it into five burning pieces by frame 90`.
+Evidence: in game: `aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames`.
 
 [+] **`aos.enemies.lightning_doll` — Lightning Doll.** The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.
 
@@ -1360,6 +1397,15 @@ Known divergences: The petrification of gold heads (contact element 0x100), soun
 Next action: Port the petrification of gold heads with Soma's status effects.
 Evidence: in game: `aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP`.
 
+[~] **`aos.enemies.merman` — Merman.** Native identity, graphics, palette, animations, active and hidden constructor forms, initial jump, frame boxes, combat, generic death and global inert state are connected.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyMermanCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyMermanUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: The water exit trigger, hidden spawner production, exact timers, attack, collision probes, death callback, sounds and palette effects are not ported.  
+Next action: Port the water-aware spawn and attack states from EnemyMermanUpdate.
+Evidence: in game: `aria area_07_room_002 (--spawn 160 175 --hp 9999): the active Merman row renders, moves and damages Soma for 14 HP twice by frame 120`.
+
 [+] **`aos.enemies.mimic` — Mimic.** The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080698A8`, `aos:asm:asm/code/code_08090914.s:EnemyMimicCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMimicUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080990D8`, `aos:asm:asm/code/code_08090914.s:sub_0809922C`, `aos:asm:asm/code/code_08090914.s:sub_080992C8`, `aos:asm:asm/code/code_08090914.s:sub_0809937C`, `aos:asm:asm/code/code_08090914.s:sub_080993EC`, `aos:asm:asm/code/code_08090914.s:sub_08099430`, `aos:asm:asm/code/code_08090914.s:sub_08099480`, `aos:asm:asm/code/code_08090914.s:sub_080994B0`.  
@@ -1380,14 +1426,14 @@ Known divergences: Sound 0x70, the palette bits and sub_080683BC are not ported;
 Next action: Play the sound once the Aria sound path exists.
 Evidence: in game: `aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21`.
 
-[+] **`aos.enemies.nemesis` — Nemesis.** Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle, temporary OAM history selection and the global 0x8E & 0x40 inert path are ported; direct frames and helper/effect anchors are exported.
+[+] **`aos.enemies.nemesis` — Nemesis.** Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle, temporary OAM history selection and the global 0x8E & 0x40 inert path are ported at its constructor-table ID 0x26; direct frames and helper/effect anchors are exported.
 
 Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08045748`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6714`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C68AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6AA8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6D0C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6F64`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C70F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C722C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C73F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C750C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7604`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C76D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7784`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7A3C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7AB8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7B54`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemy.h`](../src/runtime/aos_enemy.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Known divergences: The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation, per-child timer and 24-record integer-position/frame/mirror history now match sub_08045748; palette callbacks and native sounds remain outside the body slot.  
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
-Evidence: in game: `aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent delayed effect children render; Soma hit for 52 damage by frame 180`.
+Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
 
@@ -1398,6 +1444,26 @@ Dependencies: `aos.enemies.blue_crow`.
 Known divergences: As the blue crow: sounds 0x72 and 0x8B, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported.  
 Next action: Follow the blue crow's open items.
 Evidence: in game: `aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)`.
+
+[~] **`aos.enemies.ripper` — Ripper.** Native constructor-table identity, Fleaman sheet palette bank 1, animations, frame boxes, grounded jumps toward Soma, combat, generic death and global inert state are connected.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.fleaman`.  
+Known divergences: Its exact random jump table, hit callback, death timing, sounds and palette effects are not ported.  
+Next action: Port the exact jump selection and death callback from EnemyRipperUpdate.
+Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): the Ripper group renders, jumps and damages Soma for 80 HP twice by frame 120`.
+
+[~] **`aos.enemies.siren` — Siren (Harpy's routines).** The native constructor and updater alias Harpy; palette bank 1, room identity, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemySirenCreate`, `aos:asm:asm/code/code_080709D8.s:EnemySirenUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Dependencies: `aos.enemies.harpy`.  
+Known divergences: As Harpy: the native attack selection, acceleration curves, timers, projectiles, death callback, sounds and palette effects are not ported.  
+Next action: Follow the Harpy's open items.
+Evidence: in game: `aria area_00_room_009: the three Sirens render with their native palette and pursue Soma during a 180-frame capture`.
 
 [+] **`aos.enemies.skeleton_knight` — Skeleton knight.** The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
 
@@ -1428,6 +1494,15 @@ Dependencies: `aos.enemies.lubicant`.
 Known divergences: As the Lubicant.  
 Next action: Follow the Lubicant's open items.
 Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)`.
+
+[~] **`aos.enemies.tiny_devil` — Tiny Devil.** Native identity, palette bank 1, animations including palette-row OAM attributes, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.
+
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilUpdate`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
+Known divergences: Its native attack choice, exact acceleration, timers, effect children, death callback, sounds and palette effects are not ported.  
+Next action: Port the complete Tiny Devil attack state machine.
+Evidence: in game: `aria area_00_room_024: all three Tiny Devils render with their native palette and pursue Soma during a 180-frame capture`.
 
 [+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.
 

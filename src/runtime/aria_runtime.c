@@ -37,35 +37,40 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 100    /* enemy ids 0-1, 4-5, 9, 12-13, 17, 24, 29, 32, 41, 43, 45, 47, 54-55, 57-59, 63,
-                              73, 82, 87, 89, 91, 96, 98, 99 */
+#define ENEMY_KINDS 100
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
+                                                     [3] = "merman",
                                                      [4] = "axe_armor", [5] = "skull_archer",
                                                      [9] = "blue_crow",
                                                      [12] = "zombie_soldier",
                                                      [13] = "skeleton_knight",
+                                                     [15] = "siren", [16] = "tiny_devil",
                                                      [17] = "durga",
                                                      [24] = "fleaman",
+                                                     [28] = "catoblepas",
                                                      [29] = "ghost_dancer",
+                                                     [31] = "killer_doll",
                                                      [32] = "zombie_officer",
+                                                     [38] = "nemesis",
                                                      [41] = "valkyrie",
                                                      [43] = "curly",
                                                      [45] = "red_crow",
                                                      [47] = "dead_warrior",
-                                                     [54] = "nemesis",
+                                                     [49] = "imp", [51] = "gorgon",
                                                      [55] = "gremlin",
-                                                     [73] = "cagnazzo",
-                                                     [91] = "skull_millione",
-                                                     [99] = "lubicant",
-                                                     [82] = "dead_crusader",
+                                                     [56] = "harpy",
                                                      [57] = "medusa_head",
-                                                     [58] = "killer_doll",
                                                      [59] = "lightning_doll",
+                                                     [63] = "needles",
+                                                     [73] = "cagnazzo",
+                                                     [74] = "ripper",
+                                                     [82] = "dead_crusader",
                                                      [87] = "gargoyle",
                                                      [89] = "beam_skeleton",
+                                                     [91] = "skull_millione",
                                                      [96] = "mimic",
                                                      [98] = "erinys",
-                                                     [63] = "needles"};
+                                                     [99] = "lubicant"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 4

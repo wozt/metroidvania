@@ -171,7 +171,8 @@ class OutputTests(unittest.TestCase):
         # Not one of the five enemy drops of is_drop().
         self.assertNotIn("Water Drop", mzm_items)
         aos_partial = {row["name"] for row in aos["monsters"] if row["status"] == "partial"}
-        self.assertEqual(aos_partial, set())
+        self.assertEqual(aos_partial, {"Merman", "Siren", "Tiny Devil", "Catoblepas",
+                                       "Imp", "Gorgon", "Harpy", "Ripper"})
         aos_functional = {row["name"] for row in aos["monsters"]
                           if row["status"] == "functional"}
         self.assertEqual(aos_functional, {"Bat", "Zombie", "Blue Crow", "Zombie Soldier",

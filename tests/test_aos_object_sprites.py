@@ -28,6 +28,12 @@ class ObjectSpriteTests(unittest.TestCase):
                                                  (0, 0, 8, 0, 8, 8, 0)], colors)
         self.assertEqual(pixels[(0, 0)], (1, 1, 1))
 
+    def test_palette_row_attribute_does_not_reject_component(self):
+        tiles = bytes([0x01]) + bytes(31)
+        colors = [(0, 0, 0)] + [(10, 20, 30)] * 15
+        pixels = objects.render_frame(tiles, 1, [(0, 0, 0, 0, 8, 8, 0x01000000)], colors)
+        self.assertEqual(pixels[(0, 0)], (10, 20, 30))
+
 
 if __name__ == "__main__":
     unittest.main()

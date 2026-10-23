@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-22T23:23:57+00:00",
+ "generated_at": "2026-10-23T00:44:59+00:00",
  "git": {
-  "commit": "dcf3e50",
+  "commit": "74ca309",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 165,
+   "total": 173,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 17,
+    "partial": 25,
     "functional": 137,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 137,
-   "functional_or_better_percent": 83.0,
-   "with_passing_tests": 153,
-   "with_passing_tests_percent": 92.7,
+   "functional_or_better_percent": 79.2,
+   "with_passing_tests": 161,
+   "with_passing_tests_percent": 93.1,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -207,6 +207,7 @@
     "aos.enemies.beam_skeleton",
     "aos.enemies.blue_crow",
     "aos.enemies.cagnazzo",
+    "aos.enemies.catoblepas",
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
@@ -215,18 +216,25 @@
     "aos.enemies.fleaman",
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
+    "aos.enemies.gorgon",
     "aos.enemies.gremlin",
+    "aos.enemies.harpy",
+    "aos.enemies.imp",
     "aos.enemies.killer_doll",
     "aos.enemies.lightning_doll",
     "aos.enemies.lubicant",
     "aos.enemies.medusa_head",
+    "aos.enemies.merman",
     "aos.enemies.mimic",
     "aos.enemies.needles",
     "aos.enemies.nemesis",
     "aos.enemies.red_crow",
+    "aos.enemies.ripper",
+    "aos.enemies.siren",
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
+    "aos.enemies.tiny_devil",
     "aos.enemies.valkyrie",
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
@@ -399,11 +407,11 @@
    "areas": [
     "aos"
    ],
-   "total": 36,
+   "total": 44,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 5,
+    "partial": 13,
     "functional": 31,
     "faithful": 0,
     "validated": 0,
@@ -411,8 +419,8 @@
     "unknown": 0
    },
    "functional_or_better": 31,
-   "functional_or_better_percent": 86.1,
-   "with_passing_tests": 36,
+   "functional_or_better_percent": 70.5,
+   "with_passing_tests": 44,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -422,6 +430,7 @@
     "aos.enemies.beam_skeleton",
     "aos.enemies.blue_crow",
     "aos.enemies.cagnazzo",
+    "aos.enemies.catoblepas",
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
@@ -430,18 +439,25 @@
     "aos.enemies.fleaman",
     "aos.enemies.gargoyle",
     "aos.enemies.ghost_dancer",
+    "aos.enemies.gorgon",
     "aos.enemies.gremlin",
+    "aos.enemies.harpy",
+    "aos.enemies.imp",
     "aos.enemies.killer_doll",
     "aos.enemies.lightning_doll",
     "aos.enemies.lubicant",
     "aos.enemies.medusa_head",
+    "aos.enemies.merman",
     "aos.enemies.mimic",
     "aos.enemies.needles",
     "aos.enemies.nemesis",
     "aos.enemies.red_crow",
+    "aos.enemies.ripper",
+    "aos.enemies.siren",
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
+    "aos.enemies.tiny_devil",
     "aos.enemies.valkyrie",
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
@@ -706,7 +722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -780,7 +796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -917,7 +933,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -988,7 +1004,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1116,7 +1132,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1205,7 +1221,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1284,7 +1300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1356,7 +1372,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1429,7 +1445,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1507,7 +1523,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1599,7 +1615,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1673,7 +1689,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1747,7 +1763,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1825,7 +1841,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1890,7 +1906,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -1972,7 +1988,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2034,7 +2050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2122,7 +2138,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2213,7 +2229,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2272,7 +2288,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2345,7 +2361,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2414,7 +2430,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2485,7 +2501,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2543,7 +2559,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2621,7 +2637,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2679,7 +2695,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2767,7 +2783,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2850,7 +2866,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -2937,7 +2953,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3043,7 +3059,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3157,7 +3173,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3215,7 +3231,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3290,7 +3306,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3383,7 +3399,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3441,7 +3457,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3536,7 +3552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3600,7 +3616,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3670,7 +3686,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3730,7 +3746,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3842,7 +3858,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3909,7 +3925,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -3969,7 +3985,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4028,7 +4044,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4150,7 +4166,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4218,7 +4234,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4300,7 +4316,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4358,7 +4374,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4417,7 +4433,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4536,7 +4552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4598,7 +4614,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4666,7 +4682,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4725,7 +4741,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4783,7 +4799,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4841,7 +4857,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -4931,7 +4947,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5000,7 +5016,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5096,7 +5112,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5183,7 +5199,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5296,7 +5312,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5365,7 +5381,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5491,7 +5507,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5590,7 +5606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5710,7 +5726,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5775,7 +5791,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5850,7 +5866,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -5948,7 +5964,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6036,7 +6052,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6181,7 +6197,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6249,7 +6265,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6322,7 +6338,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6397,7 +6413,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6458,7 +6474,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6547,7 +6563,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6610,7 +6626,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6704,7 +6720,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6800,7 +6816,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -6986,7 +7002,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7075,7 +7091,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7194,7 +7210,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7253,7 +7269,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7339,7 +7355,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7421,7 +7437,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7498,7 +7514,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7577,7 +7593,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7719,7 +7735,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7802,7 +7818,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7879,7 +7895,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -7978,7 +7994,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8078,7 +8094,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8164,7 +8180,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8264,7 +8280,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8366,7 +8382,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8415,7 +8431,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8484,7 +8500,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8544,7 +8560,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8614,7 +8630,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8683,7 +8699,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8740,7 +8756,63 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.catoblepas",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Catoblepas (Gorgon's routines)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.gorgon"
+   ],
+   "native_routines": [
+    "EnemyCatoblepasCreate",
+    "EnemyCatoblepasUpdate"
+   ],
+   "limitations": "The Gorgon's attacks, petrifying breath, exact timers, collision probes, death callback, sounds and palette effects are not ported. The native constructor and updater alias Gorgon; palette bank 1, room identity, frame boxes, grounded patrol, combat, generic death and the global inert state are connected.",
+   "next_action": "Port the shared Gorgon attack state machine and collision probes.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_00_room_039: Catoblepas renders with its native palette and damages Soma for 50 HP during a 180-frame capture"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8805,7 +8877,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8866,7 +8938,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8928,7 +9000,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -8984,7 +9056,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9040,7 +9112,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9103,7 +9175,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9166,7 +9238,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9229,7 +9301,62 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.gorgon",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Gorgon",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyGorgonCreate",
+    "EnemyGorgonUpdate",
+    "sub_08089A50"
+   ],
+   "limitations": "Its attacks, petrifying breath, exact timers, collision probes, death callback, sounds and palette effects are not ported. The native constructor identity, graphics, palette, animations, frame boxes, grounded patrol, combat, generic death and global inert state are connected; Catoblepas shares this path.",
+   "next_action": "Port the attack state machine and collision probes from EnemyGorgonUpdate.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_05_room_000 (--spawn 300 223 --hp 9999): both Gorgons render, patrol and one damages Soma for 66 HP by frame 120"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9285,7 +9412,116 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.harpy",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Harpy",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyHarpyCreate",
+    "EnemyHarpyUpdate",
+    "sub_0807628C"
+   ],
+   "limitations": "The native attack selection, acceleration curves, timers, projectiles, death callback, sounds and palette effects are not ported. Native identity, palette bank 0, animations, frame boxes, aerial pursuit, combat, generic death and global inert state are connected; Siren shares this path.",
+   "next_action": "Port the complete Harpy attack state machine.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_06_room_000 (--spawn 256 159 --hp 9999): both Harpies render, pursue Soma and one damages him for 40 HP by frame 120"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.imp",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Imp",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyImpCreate",
+    "EnemyImpUpdate"
+   ],
+   "limitations": "Its native child, attack selection, exact acceleration, timers, death callback, sounds and palette effects are not ported. Native identity, palette bank 0, animations including palette-row OAM attributes, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.",
+   "next_action": "Port the Imp child and complete attack state machine.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_001 (--spawn 400 703 --hp 9999): the Imp renders with its native palette during a 180-frame room capture"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9323,7 +9559,7 @@
     "sub_0806BF78",
     "sub_0806D5C0"
    ],
-   "limitations": "Sounds 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; child effects and pieces are updated after the enemies of their frame (native slot order not traced). The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported.",
+   "limitations": "Sounds 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; child effects and pieces are updated after the enemies of their frame (native slot order not traced). The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported at its constructor-table ID 0x1F.",
    "next_action": "Compare against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -9331,7 +9567,7 @@
      "tests/test_aos_object_sprites.py"
     ],
     "in_game_check": [
-     "aria area_06_room_026: from --spawn 200 159 it wakes and flies (frame 240); from --spawn 145 159 it charges Soma for 66 damage by frame 480; with --spawn 85 159 --atk 999 --weapon 0 --repeat 2 and right + B, one blow scatters it into five burning pieces by frame 90"
+     "aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9361,7 +9597,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9438,7 +9674,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9501,7 +9737,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9565,7 +9801,62 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.merman",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Merman",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyMermanCreate",
+    "EnemyMermanUpdate",
+    "sub_08070AC4"
+   ],
+   "limitations": "The water exit trigger, hidden spawner production, exact timers, attack, collision probes, death callback, sounds and palette effects are not ported. Native identity, graphics, palette, animations, active and hidden constructor forms, initial jump, frame boxes, combat, generic death and global inert state are connected.",
+   "next_action": "Port the water-aware spawn and attack states from EnemyMermanUpdate.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_07_room_002 (--spawn 160 175 --hp 9999): the active Merman row renders, moves and damages Soma for 14 HP twice by frame 120"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9630,7 +9921,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9692,7 +9983,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9732,14 +10023,14 @@
     "sub_080C7B54",
     "sub_08045748"
    ],
-   "limitations": "The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation, per-child timer and 24-record integer-position/frame/mirror history now match sub_08045748; palette callbacks and native sounds remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle, temporary OAM history selection and the global 0x8E & 0x40 inert path are ported; direct frames and helper/effect anchors are exported.",
+   "limitations": "The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation, per-child timer and 24-record integer-position/frame/mirror history now match sub_08045748; palette callbacks and native sounds remain outside the body slot. Idle hover, homing approach, charge, recovery, facing, collision, shared death flames, linked-helper creation/positioning, the three technical effect identities (9, 12, 6), their active-child lifecycle, temporary OAM history selection and the global 0x8E & 0x40 inert path are ported at its constructor-table ID 0x26; direct frames and helper/effect anchors are exported.",
    "next_action": "Compare the three delayed effect trails and palette behavior against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent delayed effect children render; Soma hit for 52 damage by frame 180"
+     "aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -9763,7 +10054,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9825,7 +10116,119 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.ripper",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Ripper",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.fleaman"
+   ],
+   "native_routines": [
+    "EnemyRipperCreate",
+    "EnemyRipperUpdate"
+   ],
+   "limitations": "Its exact random jump table, hit callback, death timing, sounds and palette effects are not ported. Native constructor-table identity, Fleaman sheet palette bank 1, animations, frame boxes, grounded jumps toward Soma, combat, generic death and global inert state are connected.",
+   "next_action": "Port the exact jump selection and death callback from EnemyRipperUpdate.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_07_room_055 (--spawn 224 159 --hp 9999): the Ripper group renders, jumps and damages Soma for 80 HP twice by frame 120"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.siren",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Siren (Harpy's routines)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "aos.enemies.harpy"
+   ],
+   "native_routines": [
+    "EnemySirenCreate",
+    "EnemySirenUpdate"
+   ],
+   "limitations": "As Harpy: the native attack selection, acceleration curves, timers, projectiles, death callback, sounds and palette effects are not ported. The native constructor and updater alias Harpy; palette bank 1, room identity, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.",
+   "next_action": "Follow the Harpy's open items.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_00_room_009: the three Sirens render with their native palette and pursue Soma during a 180-frame capture"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9887,7 +10290,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -9955,7 +10358,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10011,7 +10414,61 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
+   "id": "aos.enemies.tiny_devil",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Tiny Devil",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "scripts/aos_object_sprites.py"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyTinyDevilCreate",
+    "EnemyTinyDevilUpdate"
+   ],
+   "limitations": "Its native attack choice, exact acceleration, timers, effect children, death callback, sounds and palette effects are not ported. Native identity, palette bank 1, animations including palette-row OAM attributes, frame boxes, aerial pursuit, combat, generic death and global inert state are connected.",
+   "next_action": "Port the complete Tiny Devil attack state machine.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_00_room_024: all three Tiny Devils render with their native palette and pursue Soma during a 180-frame capture"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10076,7 +10533,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10143,7 +10600,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10206,7 +10663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10276,7 +10733,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10340,7 +10797,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10405,7 +10862,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10454,7 +10911,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10504,7 +10961,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10607,7 +11064,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -10677,7 +11134,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11007,7 +11464,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11053,7 +11510,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11102,7 +11559,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11145,7 +11602,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11190,7 +11647,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11242,7 +11699,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11287,7 +11744,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11339,7 +11796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11383,7 +11840,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11427,7 +11884,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11534,7 +11991,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11554,7 +12011,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, blue crow, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, Merman, Blue Crow, Siren and Harpy, Tiny Devil and Imp, Gorgon and Catoblepas, Ripper, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -11579,7 +12036,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11633,7 +12090,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11679,7 +12136,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11724,7 +12181,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11797,7 +12254,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11842,7 +12299,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11887,7 +12344,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -11945,7 +12402,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12016,7 +12473,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12070,7 +12527,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12115,7 +12572,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12159,7 +12616,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12202,7 +12659,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12245,7 +12702,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-22"
+    "verified_on": "2026-10-23"
    }
   },
   {
@@ -12597,9 +13054,9 @@
    {
     "file": "tests/test_aos_object_sprites.py",
     "module": "tests.test_aos_object_sprites",
-    "test_count": 3,
+    "test_count": 4,
     "outcome": "passed",
-    "passed": 3
+    "passed": 4
    },
    {
     "file": "tests/test_aos_room_index.py",
@@ -13233,12 +13690,18 @@
    }
   ],
   "summary": {
-   "passed": 492,
+   "passed": 493,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "74ca309",
+   "date": "2026-10-23",
+   "subject": "Port Nemesis delayed effect history",
+   "scope": "project"
+  },
   {
    "commit": "dcf3e50",
    "date": "2026-10-23",
@@ -13712,12 +14175,6 @@
    "date": "2026-10-19",
    "subject": "Complete native Zeela eye affine clipping",
    "scope": "project"
-  },
-  {
-   "commit": "b3b979d",
-   "date": "2026-10-19",
-   "subject": "Remove NES unlock and complete native liquid splashes",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -13778,9 +14235,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 291,
-    "routines_attached_to_features": 291,
-    "unassigned_routines": 3282,
+    "routines_cited_by_features": 310,
+    "routines_attached_to_features": 310,
+    "unassigned_routines": 3263,
     "call_edges": 14228
    }
   },
@@ -16048,15 +16505,20 @@
      },
      {
       "id": 3,
-      "name": "Enemy 0x03",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Merman",
+      "status": "partial",
+      "note": "Merman",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_07_room_002 (--spawn 160 175 --hp 9999): the active Merman row renders, moves and damages Soma for 14 HP twice by frame 120"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.merman"
      },
      {
       "id": 4,
@@ -16217,27 +16679,37 @@
      },
      {
       "id": 15,
-      "name": "Enemy 0x0F",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Siren",
+      "status": "partial",
+      "note": "Siren (Harpy's routines)",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_00_room_009: the three Sirens render with their native palette and pursue Soma during a 180-frame capture"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.siren"
      },
      {
       "id": 16,
-      "name": "Enemy 0x10",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Tiny Devil",
+      "status": "partial",
+      "note": "Tiny Devil",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_00_room_024: all three Tiny Devils render with their native palette and pursue Soma during a 180-frame capture"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.tiny_devil"
      },
      {
       "id": 17,
@@ -16383,15 +16855,20 @@
      },
      {
       "id": 28,
-      "name": "Enemy 0x1C",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Catoblepas",
+      "status": "partial",
+      "note": "Catoblepas (Gorgon's routines)",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_00_room_039: Catoblepas renders with its native palette and damages Soma for 50 HP during a 180-frame capture"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.catoblepas"
      },
      {
       "id": 29,
@@ -16424,15 +16901,21 @@
      },
      {
       "id": 31,
-      "name": "Enemy 0x1F",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Killer Doll",
+      "status": "functional",
+      "note": "Killer Doll",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_aos_object_sprites.py"
+       ],
+       "in_game_check": [
+        "aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.killer_doll"
      },
      {
       "id": 32,
@@ -16513,15 +16996,20 @@
      },
      {
       "id": 38,
-      "name": "Enemy 0x26",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Nemesis",
+      "status": "functional",
+      "note": "Nemesis",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.nemesis"
      },
      {
       "id": 39,
@@ -16665,15 +17153,20 @@
      },
      {
       "id": 49,
-      "name": "Enemy 0x31",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Imp",
+      "status": "partial",
+      "note": "Imp",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_001 (--spawn 400 703 --hp 9999): the Imp renders with its native palette during a 180-frame room capture"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.imp"
      },
      {
       "id": 50,
@@ -16689,15 +17182,20 @@
      },
      {
       "id": 51,
-      "name": "Enemy 0x33",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Gorgon",
+      "status": "partial",
+      "note": "Gorgon",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_05_room_000 (--spawn 300 223 --hp 9999): both Gorgons render, patrol and one damages Soma for 66 HP by frame 120"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.gorgon"
      },
      {
       "id": 52,
@@ -16725,20 +17223,15 @@
      },
      {
       "id": 54,
-      "name": "Nemesis",
-      "status": "functional",
-      "note": "Nemesis",
+      "name": "Enemy 0x36",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table",
       "evidence": {
-       "unit_tests": [
-        "tests/test_aos_enemy.c"
-       ],
-       "in_game_check": [
-        "aria area_06_room_013 (--spawn 128 374 --hp 9999): Nemesis body, helper and three translucent delayed effect children render; Soma hit for 52 damage by frame 180"
-       ],
+       "unit_tests": [],
+       "in_game_check": [],
        "emulator_compared": false,
        "played_through": false
-      },
-      "feature": "aos.enemies.nemesis"
+      }
      },
      {
       "id": 55,
@@ -16759,15 +17252,20 @@
      },
      {
       "id": 56,
-      "name": "Enemy 0x38",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Harpy",
+      "status": "partial",
+      "note": "Harpy",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_06_room_000 (--spawn 256 159 --hp 9999): both Harpies render, pursue Soma and one damages him for 40 HP by frame 120"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.harpy"
      },
      {
       "id": 57,
@@ -16788,21 +17286,15 @@
      },
      {
       "id": 58,
-      "name": "Killer Doll",
-      "status": "functional",
-      "note": "Killer Doll",
+      "name": "Enemy 0x3A",
+      "status": "not_started",
+      "note": "not identified without the ROM constructor table",
       "evidence": {
-       "unit_tests": [
-        "tests/test_aos_enemy.c",
-        "tests/test_aos_object_sprites.py"
-       ],
-       "in_game_check": [
-        "aria area_06_room_026: from --spawn 200 159 it wakes and flies (frame 240); from --spawn 145 159 it charges Soma for 66 damage by frame 480; with --spawn 85 159 --atk 999 --weapon 0 --repeat 2 and right + B, one blow scatters it into five burning pieces by frame 90"
-       ],
+       "unit_tests": [],
+       "in_game_check": [],
        "emulator_compared": false,
        "played_through": false
-      },
-      "feature": "aos.enemies.killer_doll"
+      }
      },
      {
       "id": 59,
@@ -17002,15 +17494,20 @@
      },
      {
       "id": 74,
-      "name": "Enemy 0x4A",
-      "status": "not_started",
-      "note": "not identified without the ROM constructor table",
+      "name": "Ripper",
+      "status": "partial",
+      "note": "Ripper",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_07_room_055 (--spawn 224 159 --hp 9999): the Ripper group renders, jumps and damages Soma for 80 HP twice by frame 120"
+       ],
        "emulator_compared": false,
        "played_through": false
-      }
+      },
+      "feature": "aos.enemies.ripper"
      },
      {
       "id": 75,

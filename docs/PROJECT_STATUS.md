@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0477 - Aria Bone Pillar and Buer linked components
+
+- Ported Bone Pillar's constructor-time tower assembly: the original record
+  moves to the top and emits one linked animation-0 segment per clamped tower
+  unit, spaced by the native 22 pixels.
+- Ported Buer's constructor-time linked second direct frame. It follows the
+  rolling parent while active, without inventing the separate fire collision
+  behavior that still belongs to its attack-state reconstruction.
+- The Bone Pillar per-segment collision and hit callbacks, and Buer's fire
+  collision, bounce sequence, palette callbacks and sounds remain unported.
+- Next: continue the ten-enemy batch with Giant Ghost's three native linked
+  components, then Winged Skeleton's producer and dive state.
+
 ## Patch 0476 - Aria Peeping Eye random target steering
 
 - Ported the target choice following the timed entry: its horizontal point is

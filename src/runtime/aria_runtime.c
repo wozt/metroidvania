@@ -472,6 +472,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_IMP_HELPER ||
                  e->enemy.role == AOS_ROLE_RIPPER_BLADE ||
                  e->enemy.role == AOS_ROLE_PEEPING_SEGMENT ||
+                 e->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
+                 e->enemy.role == AOS_ROLE_BUER_FIRE ||
                  e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
@@ -514,6 +516,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_IMP_HELPER ||
                                        hit.children[c].role == AOS_ROLE_RIPPER_BLADE ||
                                        hit.children[c].role == AOS_ROLE_PEEPING_SEGMENT ||
+                                       hit.children[c].role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
+                                       hit.children[c].role == AOS_ROLE_BUER_FIRE ||
                                        hit.children[c].role == AOS_ROLE_WHITE_DRAGON_PART
                                    ? (int)i
                                    : -1,

@@ -1223,22 +1223,22 @@ Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not chec
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
 
-[~] **`aos.enemies.bone_pillar` — Bone Pillar.** The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement and animation loop are connected.
+[~] **`aos.enemies.bone_pillar` — Bone Pillar.** The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected.
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: The articulated tower segments, variant collision and damage callbacks are not ported.  
-Next action: Port the segment construction and tower collision.
+Known divergences: The per-segment collision, variant collision and damage callbacks are not ported.  
+Next action: Port per-segment collision and hit callbacks.
 Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
 
-[~] **`aos.enemies.buer` — Buer.** The native direct frames, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.
+[~] **`aos.enemies.buer` — Buer.** The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CBA30`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC3F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC4E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC514`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: The linked fire component, native bounce timing, sounds and palette callbacks are not ported.  
-Next action: Port the fire child and bounce state machine.
+Known divergences: The linked fire collision, native bounce timing, sounds and palette callbacks are not ported.  
+Next action: Port fire collision and the bounce state machine.
 Evidence: in game: `aria area_00_room_012: Buer record at x 128, y 504`.
 
 [+] **`aos.enemies.cagnazzo` — Cagnazzo (Lubicant's routines).** Record 1 of 0x0852883C (frames 0x0824A334, bank 0, a fin, the hover attack): before each dive it circles the player for 64 frames with animation 3 (+ 0x50 +/- 0x3000 up to 2.5, + 0x54 0x1800 or -0x3000 up to 0.5), with a lead of 2 and a dive speed of 4.0.

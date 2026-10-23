@@ -721,7 +721,8 @@ parent-linked static segments. Its segments now use a target-oriented polar
 angle and fixed-point radius; the White Dragon emits all nine animation-1 body
 parts in two linked batches, with a curved chain and per-part affine angle
 forwarded to the renderer. Its middle body record also owns the native shared
-unit-scale affine slot. The Peeping Eye's first controller gate uses the
+unit-scale affine slot. Bone Pillar now constructs its linked 22-pixel tower,
+and Buer emits its native linked second direct frame. The Peeping Eye's first controller gate uses the
 native 180 by 200 proximity window and its ten-stage, 40-frame extension
 sequence; it then chooses a random point 64 to 112 pixels sideways and 32 to
 80 pixels upward, steering toward it with the native damping, acceleration,

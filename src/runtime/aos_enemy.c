@@ -509,6 +509,9 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             if (enemy->param0 < 1) enemy->param0 = 1;
             if (enemy->param0 > 8) enemy->param0 = 8;
             snap_to_floor(enemy, layer);
+            /* EnemyBonePillarCreate builds its linked tower upward in
+             * 22-pixel increments, leaving this original record at the top. */
+            enemy->y -= AOS_FIXED(enemy->param0 * 22);
             break;
         case AOS_ENEMY_BUER:
             enemy->state = param0 ? 2 : 1;
@@ -6056,6 +6059,43 @@ static int32_t peeping_eye_radius(const AosEnemy *owner, unsigned i) {
     return radius;
 }
 
+/* EnemyBonePillarCreate creates one linked animation-0 record for each
+ * clamped parameter unit, then leaves the original record at the tower's
+ * top. The linked records are visual only in this pass: their native per-part
+ * collision and hit callbacks still need their own reconstruction. */
+static void bone_pillar_children(const AosEnemy *owner, const AosAnimSet *anims,
+                                 AosHitReport *report) {
+    for (int i = 0; i < owner->param0 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy child = {0};
+        child.id = owner->id;
+        child.role = AOS_ROLE_BONE_PILLAR_SEGMENT;
+        child.static_frame = -1;
+        child.variant = (uint8_t)i;
+        child.x = owner->x;
+        child.y = owner->y + AOS_FIXED((owner->param0 - i) * 22);
+        child.mirrored = owner->mirrored;
+        child.stats = owner->stats;
+        child.hp = owner->hp;
+        child.combat.type = AOS_TYPE_ENEMY;
+        child.combat.attack_off = child.combat.hurt_off = true;
+        play_loop(&child, anims, 0, true);
+        step_anim(&child, anims);
+        report->children[report->child_count++] = child;
+    }
+}
+
+/* sub_080CBA30 creates Buer's second direct frame as a linked component.
+ * The native helper follows the parent while it remains in its active state;
+ * its independent fire collision and later states are intentionally left for
+ * the dedicated attack pass. */
+static void buer_fire_child(const AosEnemy *owner, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy child;
+    make_static_child(&child, owner, AOS_ROLE_BUER_FIRE, 1);
+    child.combat.attack_off = child.combat.hurt_off = true;
+    report->children[report->child_count++] = child;
+}
+
 /* White Dragon's nine body records all use animation 1 and retain the native
  * owner link. The full ROM routine bends the chain with affine state; this
  * first pass keeps the nine animated parts visibly attached to the head. */
@@ -6104,6 +6144,17 @@ static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKin
         child->angle = angle;
         child->x = owner->x + fixed_mul(aos_sine(angle + 0x4000), radius);
         child->y = owner->y + fixed_mul(aos_sine(angle), radius);
+        return report;
+    }
+    if (child->role == AOS_ROLE_BONE_PILLAR_SEGMENT) {
+        child->x = owner->x;
+        child->y = owner->y + AOS_FIXED((owner->param0 - child->variant) * 22);
+        step_anim(child, kind->anims);
+        return report;
+    }
+    if (child->role == AOS_ROLE_BUER_FIRE) {
+        child->x = owner->x;
+        child->y = owner->y;
         return report;
     }
     unsigned i = child->variant;
@@ -7219,6 +7270,12 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     if (e->id == AOS_ENEMY_PEEPING_EYE && !e->helper_spawned) {
         peeping_eye_children(e, &report);
         e->helper_spawned = true;
+    } else if (e->id == AOS_ENEMY_BONE_PILLAR && !e->helper_spawned) {
+        bone_pillar_children(e, kind->anims, &report);
+        e->helper_spawned = true;
+    } else if (e->id == AOS_ENEMY_BUER && !e->helper_spawned) {
+        buer_fire_child(e, &report);
+        e->helper_spawned = true;
     } else if (e->id == AOS_ENEMY_WHITE_DRAGON && e->spawned_count < 9) {
         unsigned remaining = (unsigned)(9 - e->spawned_count);
         unsigned emit = remaining > AOS_ENEMY_MAX_CHILDREN ? AOS_ENEMY_MAX_CHILDREN : remaining;
@@ -7291,6 +7348,8 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
     if (enemy->role == AOS_ROLE_PEEPING_SEGMENT ||
+        enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
+        enemy->role == AOS_ROLE_BUER_FIRE ||
         enemy->role == AOS_ROLE_WHITE_DRAGON_PART)
         return linked_early_child_update(enemy, kind);
     if (is_early_enemy(enemy->id) && enemy->role == AOS_ROLE_ENEMY)

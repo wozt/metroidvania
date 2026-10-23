@@ -133,6 +133,29 @@ static void early_enemy_batch_tests(void) {
     assert(aos_enemy_create(&pillar, AOS_ENEMY_BONE_PILLAR, 100, 100, 12, 0, &soma, &layer,
                             &kind, &stats));
     assert(pillar.param0 == 8);
+    int32_t pillar_y = pillar.y;
+    AosHitReport pillar_parts = aos_enemy_update(&pillar, &soma, &layer, &kind, NULL, NULL, 10,
+                                                 4, 0, 0, never_zero);
+    assert(pillar_parts.child_count == 8 && pillar.helper_spawned);
+    assert(pillar_parts.children[0].role == AOS_ROLE_BONE_PILLAR_SEGMENT);
+    assert(pillar_parts.children[0].y > pillar_y &&
+           pillar_parts.children[7].y > pillar.y);
+    AosEnemy pillar_part = pillar_parts.children[7];
+    pillar_part.parent = &pillar;
+    aos_enemy_update(&pillar_part, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(pillar_part.y == pillar.y + AOS_FIXED(22));
+
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    AosHitReport buer_parts = aos_enemy_update(&buer, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                               0, 0, never_zero);
+    assert(buer_parts.child_count == 1 && buer_parts.children[0].role == AOS_ROLE_BUER_FIRE &&
+           buer_parts.children[0].static_frame == 1);
+    AosEnemy buer_fire = buer_parts.children[0];
+    buer_fire.parent = &buer;
+    aos_enemy_update(&buer_fire, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer_fire.x == buer.x && buer_fire.y == buer.y);
 }
 
 static void batch_enemy_tests(void) {

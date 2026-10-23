@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-23T21:52:16+00:00",
+ "generated_at": "2026-10-23T22:00:43+00:00",
  "git": {
-  "commit": "ac13cd4",
+  "commit": "38e91c0",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 191,
+   "total": 192,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 35,
+    "partial": 36,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 75.9,
-   "with_passing_tests": 179,
-   "with_passing_tests_percent": 93.7,
+   "functional_or_better_percent": 75.5,
+   "with_passing_tests": 180,
+   "with_passing_tests_percent": 93.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -277,6 +277,7 @@
     "tools.room_viewers",
     "tools.sprite_editor",
     "tools.world_atlas",
+    "assets.aria_early_enemy_components_0477",
     "assets.aria_enemy_batch_0469",
     "assets.aria_enemy_motion_0471",
     "assets.aria_linked_enemy_children_0470",
@@ -504,11 +505,11 @@
    "areas": [
     "assets"
    ],
-   "total": 20,
+   "total": 21,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 12,
+    "partial": 13,
     "functional": 8,
     "faithful": 0,
     "validated": 0,
@@ -516,11 +517,12 @@
     "unknown": 0
    },
    "functional_or_better": 8,
-   "functional_or_better_percent": 40.0,
-   "with_passing_tests": 20,
+   "functional_or_better_percent": 38.1,
+   "with_passing_tests": 21,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
+    "assets.aria_early_enemy_components_0477",
     "assets.aria_enemy_batch_0469",
     "assets.aria_enemy_motion_0471",
     "assets.aria_linked_enemy_children_0470",
@@ -8760,8 +8762,8 @@
     "sub_080B3BAC",
     "sub_080B3DCC"
    ],
-   "limitations": "The articulated tower segments, variant collision and damage callbacks are not ported. The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement and animation loop are connected.",
-   "next_action": "Port the segment construction and tower collision.",
+   "limitations": "The per-segment collision, variant collision and damage callbacks are not ported. The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected.",
+   "next_action": "Port per-segment collision and hit callbacks.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
@@ -8818,8 +8820,8 @@
     "sub_080CC4E4",
     "sub_080CC514"
    ],
-   "limitations": "The linked fire component, native bounce timing, sounds and palette callbacks are not ported. The native direct frames, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.",
-   "next_action": "Port the fire child and bounce state machine.",
+   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.",
+   "next_action": "Port fire collision and the bounce state machine.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c"
@@ -12669,6 +12671,57 @@
    }
   },
   {
+   "id": "assets.aria_early_enemy_components_0477",
+   "area": "assets",
+   "category": "gameplay",
+   "title": "Aria Bone Pillar and Buer linked components",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [
+    "assets.aria_peeping_eye_target_0476"
+   ],
+   "native_routines": [],
+   "limitations": "Bone Pillar now assembles its native 22-pixel linked tower and Buer emits its linked second direct frame. Per-segment and fire collision, bounce timing, attacks, fades, sounds and rewards remain open.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-10-23",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-23"
+   }
+  },
+  {
    "id": "assets.aria_enemy_batch_0469",
    "area": "assets",
    "category": "sprites",
@@ -14777,6 +14830,12 @@
  },
  "timeline": [
   {
+   "commit": "38e91c0",
+   "date": "2026-10-23",
+   "subject": "Add Aria Peeping Eye target steering",
+   "scope": "project"
+  },
+  {
    "commit": "ac13cd4",
    "date": "2026-10-23",
    "subject": "Trace Aria Peeping Eye timed entry",
@@ -15248,12 +15307,6 @@
    "commit": "d31e679",
    "date": "2026-10-19",
    "subject": "Port the fully powered suit items sequence on the status screen",
-   "scope": "project"
-  },
-  {
-   "commit": "9311e7c",
-   "date": "2026-10-19",
-   "subject": "Port the getting-fully-powered cutscene and suit upgrade",
    "scope": "project"
   }
  ],

@@ -959,7 +959,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
          * position (the affine double-size placement is not modelled). */
         double degrees = 0;
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
-        if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN)
+        if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
+            e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART)
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
          * coefficients are not traced, half alpha stands for them. */

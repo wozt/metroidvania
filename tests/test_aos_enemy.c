@@ -60,7 +60,7 @@ static void early_enemy_batch_tests(void) {
                             &stats));
     AosHitReport eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
                                               0, never_zero);
-    assert(eye_parts.child_count == 8 && eye.helper_spawned);
+    assert(eye_parts.child_count == 8 && eye.helper_spawned && eye.angle != 0);
     assert(eye_parts.children[0].role == AOS_ROLE_PEEPING_SEGMENT &&
            eye_parts.children[0].static_frame == 0xF &&
            eye_parts.children[7].static_frame == 0xE);
@@ -86,6 +86,7 @@ static void early_enemy_batch_tests(void) {
     int32_t part_x = part.x;
     aos_enemy_update(&part, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(part.x != part_x || part.y != dragon.y);
+    assert(part.angle != 0);
 
     AosEnemy producer;
     assert(aos_enemy_create(&producer, AOS_ENEMY_GHOST, 100, 100, 0, 1, &soma, &layer, &kind,

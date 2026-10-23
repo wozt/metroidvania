@@ -1481,14 +1481,14 @@ Known divergences: The four direct OAM records and collision boxes are ported; t
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
-[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The dedicated hover controller dispatches with the two eye overlays and six linked frames emitted through the parent slot.
+[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The parent tracks Soma with the native angle convention; two eye overlays and six linked frames use fixed-point polar offsets while the hover controller runs.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The native tendril polar attack, ceiling probing, sounds and attack cycle are not ported.  
-Next action: Port the eyeball polar controller, segment timing and attack state machine.
+Known divergences: The native attack cycle, ceiling probing, sounds and callbacks are not ported.  
+Next action: Trace the attack state table, segment timing and ceiling probe.
 Evidence: in game: `aria area_00_room_018: Peeping Eye record at x 568, y 176`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
@@ -1589,13 +1589,13 @@ Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)`.
 
-[~] **`aos.enemies.white_dragon` — White Dragon.** The dedicated head controller adds its facing, hover and drift while all nine animation-1 body parts are emitted in linked batches and follow the head.
+[~] **`aos.enemies.white_dragon` — White Dragon.** The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles forwarded to the renderer.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080773AC`, `aos:asm:asm/code/code_080709D8.s:sub_08077458`, `aos:asm:asm/code/code_080709D8.s:sub_08077C40`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
-Known divergences: The native affine chain, articulated hit callbacks, palette callbacks and sounds are not ported.  
-Next action: Port the affine body motion, damage callbacks and attack state machine.
+Known divergences: The native affine scale/matrix choreography, articulated hit callbacks, palette callbacks and sounds are not ported.  
+Next action: Trace the native affine scale/matrix sequence, damage callbacks and attack state machine.
 Evidence: in game: `aria area_00_room_013: White Dragon record at x 208, y 104`.
 
 [~] **`aos.enemies.winged_skeleton` — Winged Skeleton.** The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected.

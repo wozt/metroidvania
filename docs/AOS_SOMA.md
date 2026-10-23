@@ -717,11 +717,14 @@ states, and supplies deliberately small observable patrol, swimming, hovering
 and homing loops. The dedicated parent motion controllers are now dispatched
 for Peeping Eye, White Dragon, Buer, Rock Armor, Giant Ghost and Winged
 Skeleton, while the Peeping Eye still emits its two eye overlays and six
-parent-linked static segments and the White Dragon emits all nine animation-1
-body parts in two linked batches. The ten parity rows remain partial because
-the Peeping Eye polar attack, White Dragon affine chain, Giant Ghost visual
-children, Bone Pillar tower, Buer fire component, probes, attacks, fades,
-sounds and rewards still need their own native state machines.
+parent-linked static segments. Its segments now use a target-oriented polar
+angle and fixed-point radius; the White Dragon emits all nine animation-1 body
+parts in two linked batches, with a curved chain and per-part affine angle
+forwarded to the renderer. The ten parity rows remain partial because the
+Peeping Eye attack cycle and probes, White Dragon's complete affine scale and
+damage callbacks, Giant Ghost visual children, Bone Pillar tower, Buer fire
+component, attacks, fades, sounds and rewards still need their own native
+state machines.
 
 Tiny Devil (0x10) and Imp (0x31) share one sheet with palette banks 1 and 0,
 including the per-component OBJ palette-row byte used by their OAM records,

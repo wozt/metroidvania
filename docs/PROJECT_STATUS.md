@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0472 - Aria polar and articulated early-enemy motion
+
+- Connected the Peeping Eye's target-oriented polar segment pass: the parent
+  tracks Soma with the native angle convention and each linked segment keeps a
+  fixed-point radius while following the parent's phase.
+- Connected the White Dragon's articulated body pass: every linked animation-1
+  part now follows a curved fixed-point chain and carries its per-part affine
+  angle into the Aria renderer. The existing two-batch emission and parent
+  lifetime contract are unchanged.
+- Added ROM-free assertions for the polar angle and articulated child angle.
+  These are motion/controller improvements only; the Peeping Eye attack cycle,
+  ceiling probes, White Dragon's complete affine matrix/scale choreography,
+  damage callbacks, sounds and rewards remain partial.
+- Next: trace the remaining Peeping Eye attack states and White Dragon affine
+  scale/damage callbacks, then address the next linked early enemy family.
+
 ## Patch 0471 - Aria early-enemy motion controller wiring
 
 - Connected the dedicated early-enemy motion controllers for Peeping Eye,

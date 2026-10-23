@@ -6027,8 +6027,10 @@ static void peeping_eye_children(const AosEnemy *owner, AosHitReport *report) {
         make_static_child(&child, owner, AOS_ROLE_PEEPING_SEGMENT, frames[i]);
         child.variant = (uint8_t)i;
         child.hp = owner->hp;
-        child.x += (owner->mirrored ? 1 : -1) * (int32_t)(i * 0x50000);
-        child.y += (int32_t)(i * 0x18000);
+        child.angle = owner->angle + i * 0x1800u;
+        child.speed = 0x50000 + (int32_t)i * 0x18000;
+        child.x += fixed_mul(aos_sine(child.angle + 0x4000u), child.speed);
+        child.y += fixed_mul(aos_sine(child.angle), child.speed);
         report->children[report->child_count++] = child;
     }
 }
@@ -6045,8 +6047,9 @@ static void white_dragon_children(const AosEnemy *owner, const AosAnimSet *anims
         child.role = AOS_ROLE_WHITE_DRAGON_PART;
         child.static_frame = -1;
         child.variant = (uint8_t)i;
+        child.angle = owner->phase + i * 0x1000u;
         child.x = owner->x + (owner->mirrored ? 1 : -1) * (int32_t)((i + 1) * 0x80000);
-        child.y = owner->y + (int32_t)(aos_sine(owner->phase + i * 0x1800) / 8);
+        child.y = owner->y + (int32_t)(aos_sine(child.angle) / 8);
         child.mirrored = owner->mirrored;
         child.stats = owner->stats;
         child.hp = owner->hp;
@@ -6068,15 +6071,24 @@ static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKin
     child->hidden = owner->hidden;
     if (child->role == AOS_ROLE_PEEPING_SEGMENT) {
         unsigned i = child->variant;
-        uint32_t angle = owner->phase + i * 0x1800;
-        int32_t radius = (int32_t)(0x50000 + i * 0x18000);
+        /* The native child stores its own polar angle/radius. The parent
+         * target angle supplies the attack direction while phase keeps the
+         * chain moving between target updates. */
+        uint16_t angle = (uint16_t)(owner->angle + owner->phase + i * 0x1800u);
+        int32_t radius = child->speed ? child->speed : (int32_t)(0x50000 + i * 0x18000);
+        child->angle = angle;
         child->x = owner->x + fixed_mul(aos_sine(angle + 0x4000), radius);
         child->y = owner->y + fixed_mul(aos_sine(angle), radius);
         return report;
     }
     unsigned i = child->variant;
-    child->x = owner->x + (owner->mirrored ? 1 : -1) * (int32_t)((i + 1) * 0x80000);
-    child->y = owner->y + (int32_t)(aos_sine(owner->phase + i * 0x1800) / 8);
+    uint16_t bend = (uint16_t)(owner->phase + i * 0x1000u);
+    int32_t spacing = (int32_t)((i + 1) * 0x80000);
+    int32_t curve = 0x20000 + (int32_t)i * 0x8000;
+    int32_t side = owner->mirrored ? 1 : -1;
+    child->angle = (uint16_t)(bend + (owner->mirrored ? 0x8000u : 0));
+    child->x = owner->x + side * (spacing + fixed_mul(aos_sine(bend + 0x4000u), curve));
+    child->y = owner->y + fixed_mul(aos_sine(bend), curve);
     step_anim(child, kind->anims);
     return report;
 }
@@ -7027,6 +7039,8 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
 }
 
 static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma) {
+    int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
+    e->angle = aos_arctan2((int16_t)dx, (int16_t)dy);
     e->phase = (uint16_t)(e->phase + 0x180);
     e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
     face_player(e, soma);

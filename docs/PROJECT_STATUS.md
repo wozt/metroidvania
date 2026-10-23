@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0475 - Aria Peeping Eye timed entry sequence
+
+- Replaced the temporary 30/20/30-frame polar envelope with the ten-stage,
+  40-frame entry sequence traced from `sub_08088168`. Its extension levels now
+  drive the already-linked polar tendrils exactly through the observed stage
+  order and durations.
+- The ROM's following random-target selection, state-3 variant branch table,
+  ceiling probes, damage callbacks, sounds and rewards remain unported. When
+  the timed entry completes, the compact controller returns to idle instead of
+  inventing a patrol or attack state.
+- ROM-free enemy tests cover the trigger, early stage transition, final
+  20-frame hold and state-2 handoff.
+- Next: trace the Peeping Eye random target and state-3 variant selection,
+  then trace White Dragon damage and attack transitions.
+
 ## Patch 0474 - Aria Peeping Eye attack entry pass
 
 - Ported the traced `sub_08088168` proximity gate: the Peeping Eye begins its

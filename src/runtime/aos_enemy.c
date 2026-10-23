@@ -6035,12 +6035,24 @@ static void peeping_eye_children(const AosEnemy *owner, AosHitReport *report) {
     }
 }
 
+typedef struct {
+    uint8_t extension;
+    uint8_t duration;
+} PeepingEyeIntroStage;
+
+/* sub_08088168's initial state walks this traced, terminating sequence before
+ * choosing a movement target.  The extension value is consumed by the linked
+ * tendril presentation below; the later random target and ceiling-probe
+ * branches are still deliberately outside this pass. */
+static const PeepingEyeIntroStage peeping_eye_intro[] = {
+    {3, 2}, {2, 2}, {1, 2}, {0, 4}, {1, 2},
+    {2, 2}, {3, 2}, {2, 2}, {1, 2}, {0, 20},
+};
+
 static int32_t peeping_eye_radius(const AosEnemy *owner, unsigned i) {
     int32_t radius = 0x50000 + (int32_t)i * 0x18000;
-    if (owner->step == 1)
-        return radius + radius * owner->timer / 30;
-    if (owner->step == 2) return radius * 2;
-    if (owner->step == 3) return radius + radius * (30 - owner->timer) / 30;
+    if (owner->step == 1 && owner->substep < sizeof peeping_eye_intro / sizeof peeping_eye_intro[0])
+        return radius + radius * peeping_eye_intro[owner->substep].extension / 3;
     return radius;
 }
 
@@ -7057,33 +7069,30 @@ static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma) {
     int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
     e->angle = aos_arctan2((int16_t)dx, (int16_t)dy);
     /* sub_08088168 begins its attack when Soma enters the 180 by 200
-     * window centred 90 pixels left and 100 pixels above the eye. The ROM
-     * table that selects its later attack variants is not ported yet, but
-     * this first visible branch preserves the wind-up, full extension and
-     * retraction phases for the linked polar tendrils. */
+     * window centred 90 pixels left and 100 pixels above the eye. */
     if (e->step == 0 &&
         player_in(soma, (e->x >> 16) - 90, (e->y >> 16) - 100, 180, 200)) {
         e->step = 1;
         e->timer = 0;
+        e->substep = 0;
     }
     if (e->step == 1) {
         e->phase = (uint16_t)(e->phase + 0x300);
-        if (++e->timer >= 30) {
-            e->step = 2;
+        const PeepingEyeIntroStage *stage = &peeping_eye_intro[e->substep];
+        if (++e->timer >= stage->duration) {
             e->timer = 0;
+            if (++e->substep == sizeof peeping_eye_intro / sizeof peeping_eye_intro[0]) {
+                e->substep = 0;
+                /* Native state 2 picks a random movement target. The target
+                 * selection and following state-3 branch table are not yet
+                 * represented, so finish the faithfully timed intro without
+                 * inventing a replacement patrol. */
+                e->step = 2;
+            }
         }
     } else if (e->step == 2) {
         e->phase = (uint16_t)(e->phase + 0x200);
-        if (++e->timer >= 20) {
-            e->step = 3;
-            e->timer = 0;
-        }
-    } else if (e->step == 3) {
-        e->phase = (uint16_t)(e->phase + 0x200);
-        if (++e->timer >= 30) {
-            e->step = 0;
-            e->timer = 0;
-        }
+        e->step = 0;
     } else {
         e->phase = (uint16_t)(e->phase + 0x180);
     }

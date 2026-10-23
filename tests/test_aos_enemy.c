@@ -66,10 +66,16 @@ static void early_enemy_batch_tests(void) {
     assert(eye_parts.children[0].role == AOS_ROLE_PEEPING_SEGMENT &&
            eye_parts.children[0].static_frame == 0xF &&
            eye_parts.children[7].static_frame == 0xE);
-    for (int frame = 0; frame < 28; ++frame)
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 1 && eye.substep == 1 && eye.timer == 0);
+    for (int frame = 0; frame < 18; ++frame)
         eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                      never_zero);
-    assert(eye.step == 1 && eye.timer == 29);
+    assert(eye.step == 1 && eye.substep == 9 && eye.timer == 0);
+    for (int frame = 0; frame < 19; ++frame)
+        eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                     never_zero);
+    assert(eye.step == 1 && eye.substep == 9 && eye.timer == 19);
     eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                  never_zero);
     assert(eye.step == 2 && eye.timer == 0);

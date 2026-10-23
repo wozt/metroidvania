@@ -74,7 +74,7 @@ ENEMIES = {
                "frames": 0x08212FB4},
     "peeping_eye": {"id": 0x06, "graphics": 0x081CBFEC, "palette": 0x0820A86C,
                     "bank": 0, "frames": 0x0821D7B4,
-                    "static_frames": (0xB, 0xC, 0xD, 0xE)},  # sub_08088E08
+                    "static_frames": (0xB, 0xC, 0xD, 0xE, 0xF, 0x10)},  # sub_08088E08
     # EnemyKillerFishCreate uses the Merman sheet and frame descriptor.
     "killer_fish": {"id": 0x07, "graphics": 0x081CBF3C, "palette": 0x0820A464,
                     "bank": 0, "frames": 0x08212FB4},

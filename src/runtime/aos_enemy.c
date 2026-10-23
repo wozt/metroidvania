@@ -6015,6 +6015,72 @@ static void make_static_child(AosEnemy *child, const AosEnemy *owner, uint8_t ro
     child->combat.type = AOS_TYPE_ENEMY;
 }
 
+/* The Peeping Eye creates two eye overlays and six linked tendrils. The
+ * native tendril updater uses a polar chain; the compact representation keeps
+ * the same parent lifetime and frame order while the attack choreography is
+ * still being reconstructed. */
+static void peeping_eye_children(const AosEnemy *owner, AosHitReport *report) {
+    static const int frames[] = {0xF, 0x10, 0xB, 0xB, 0xC, 0xC, 0xD, 0xE};
+    for (unsigned i = 0; i < sizeof frames / sizeof frames[0] &&
+                         report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy child;
+        make_static_child(&child, owner, AOS_ROLE_PEEPING_SEGMENT, frames[i]);
+        child.variant = (uint8_t)i;
+        child.hp = owner->hp;
+        child.x += (owner->mirrored ? 1 : -1) * (int32_t)(i * 0x50000);
+        child.y += (int32_t)(i * 0x18000);
+        report->children[report->child_count++] = child;
+    }
+}
+
+/* White Dragon's nine body records all use animation 1 and retain the native
+ * owner link. The full ROM routine bends the chain with affine state; this
+ * first pass keeps the nine animated parts visibly attached to the head. */
+static void white_dragon_children(const AosEnemy *owner, const AosAnimSet *anims,
+                                  AosHitReport *report, unsigned first, unsigned count) {
+    for (unsigned i = first; i < first + count && i < 9 &&
+                         report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy child = {0};
+        child.id = owner->id;
+        child.role = AOS_ROLE_WHITE_DRAGON_PART;
+        child.static_frame = -1;
+        child.variant = (uint8_t)i;
+        child.x = owner->x + (owner->mirrored ? 1 : -1) * (int32_t)((i + 1) * 0x80000);
+        child.y = owner->y + (int32_t)(aos_sine(owner->phase + i * 0x1800) / 8);
+        child.mirrored = owner->mirrored;
+        child.stats = owner->stats;
+        child.hp = owner->hp;
+        child.combat.type = AOS_TYPE_ENEMY;
+        play_loop(&child, anims, 1, true);
+        step_anim(&child, anims);
+        report->children[report->child_count++] = child;
+    }
+}
+
+static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKind *kind) {
+    AosHitReport report = {0};
+    const AosEnemy *owner = child->parent;
+    if (!owner || owner->removed || owner->defeated) {
+        child->removed = true;
+        return report;
+    }
+    child->mirrored = owner->mirrored;
+    child->hidden = owner->hidden;
+    if (child->role == AOS_ROLE_PEEPING_SEGMENT) {
+        unsigned i = child->variant;
+        uint32_t angle = owner->phase + i * 0x1800;
+        int32_t radius = (int32_t)(0x50000 + i * 0x18000);
+        child->x = owner->x + fixed_mul(aos_sine(angle + 0x4000), radius);
+        child->y = owner->y + fixed_mul(aos_sine(angle), radius);
+        return report;
+    }
+    unsigned i = child->variant;
+    child->x = owner->x + (owner->mirrored ? 1 : -1) * (int32_t)((i + 1) * 0x80000);
+    child->y = owner->y + (int32_t)(aos_sine(owner->phase + i * 0x1800) / 8);
+    step_anim(child, kind->anims);
+    return report;
+}
+
 /* sub_08075EDC: the five Harpy feathers (frames 12 down to 8), and
  * sub_08076054: the Siren's three notes (frames 14, 13, 14). */
 static void harpy_shot(AosEnemy *owner, int variant, AosHitReport *report) {
@@ -6996,6 +7062,16 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
 
+    if (e->id == AOS_ENEMY_PEEPING_EYE && !e->helper_spawned) {
+        peeping_eye_children(e, &report);
+        e->helper_spawned = true;
+    } else if (e->id == AOS_ENEMY_WHITE_DRAGON && e->spawned_count < 9) {
+        unsigned remaining = (unsigned)(9 - e->spawned_count);
+        unsigned emit = remaining > AOS_ENEMY_MAX_CHILDREN ? AOS_ENEMY_MAX_CHILDREN : remaining;
+        white_dragon_children(e, kind->anims, &report, e->spawned_count, emit);
+        e->spawned_count = (uint8_t)(e->spawned_count + report.child_count);
+    }
+
     switch (e->id) {
     case AOS_ENEMY_SKELETON:
     case AOS_ENEMY_ROCK_ARMOR:
@@ -7062,8 +7138,10 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     if (e->static_frame < 0) step_anim(e, kind->anims);
     sx = (e->x >> 16) - cam_x;
     sy = (e->y >> 16) - cam_y;
-    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
-        report = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0) {
+        AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        merge_enemy_hit(&report, hit);
+    }
     aos_combat_tick(&e->combat);
     return report;
 }
@@ -7075,6 +7153,9 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (enemy->role == AOS_ROLE_PEEPING_SEGMENT ||
+        enemy->role == AOS_ROLE_WHITE_DRAGON_PART)
+        return linked_early_child_update(enemy, kind);
     if (is_early_enemy(enemy->id) && enemy->role == AOS_ROLE_ENEMY)
         return early_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y, random);

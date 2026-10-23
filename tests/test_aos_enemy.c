@@ -55,6 +55,37 @@ static void early_enemy_batch_tests(void) {
         assert(e.x != x0 || e.y != y0 || e.anim.frame != frame0 || e.anim.tick != tick0);
     }
 
+    AosEnemy eye;
+    assert(aos_enemy_create(&eye, AOS_ENEMY_PEEPING_EYE, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    AosHitReport eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                              0, never_zero);
+    assert(eye_parts.child_count == 8 && eye.helper_spawned);
+    assert(eye_parts.children[0].role == AOS_ROLE_PEEPING_SEGMENT &&
+           eye_parts.children[0].static_frame == 0xF &&
+           eye_parts.children[7].static_frame == 0xE);
+    eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                 never_zero);
+    assert(eye_parts.child_count == 0);
+
+    AosEnemy dragon;
+    assert(aos_enemy_create(&dragon, AOS_ENEMY_WHITE_DRAGON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    AosHitReport dragon_parts = aos_enemy_update(&dragon, &soma, &layer, &kind, NULL, NULL, 10,
+                                                 4, 0, 0, never_zero);
+    assert(dragon_parts.child_count == 8 && dragon.spawned_count == 8);
+    for (unsigned i = 0; i < dragon_parts.child_count; ++i)
+        assert(dragon_parts.children[i].role == AOS_ROLE_WHITE_DRAGON_PART &&
+               dragon_parts.children[i].anim.id == 1);
+    dragon_parts = aos_enemy_update(&dragon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                    never_zero);
+    assert(dragon_parts.child_count == 1 && dragon.spawned_count == 9);
+    AosEnemy part = dragon_parts.children[0];
+    part.parent = &dragon;
+    int32_t part_x = part.x;
+    aos_enemy_update(&part, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part.x != part_x || part.y != dragon.y);
+
     AosEnemy producer;
     assert(aos_enemy_create(&producer, AOS_ENEMY_GHOST, 100, 100, 0, 1, &soma, &layer, &kind,
                             &stats));

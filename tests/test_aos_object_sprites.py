@@ -25,6 +25,8 @@ class ObjectSpriteTests(unittest.TestCase):
             row = objects.ENEMIES[name]
             self.assertEqual((row["id"], row["graphics"], row["palette"], row["frames"]),
                              values)
+        self.assertEqual(objects.ENEMIES["peeping_eye"]["static_frames"],
+                         (0xB, 0xC, 0xD, 0xE, 0xF, 0x10))
 
     def test_palette_scripts_list_bank_and_duration(self):
         script = struct.pack("<HH", 3, 3) + bytes((3, 7, 0, 0, 4, 7, 0, 0, 5, 7, 0, 0))

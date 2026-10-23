@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0470 - Aria linked Peeping Eye and White Dragon children
+
+- Added parent-linked child roles to the Aria runtime. Peeping Eye now emits
+  its two eye overlays and six native static segment frames; the children
+  follow the parent lifetime, facing and hover phase.
+- White Dragon now emits all nine animation-1 body parts in two batches so the
+  runtime's eight-child report remains bounded. The parts follow the head and
+  render with the native animation descriptor; the native affine chain is
+  still explicitly open.
+- Added child lifetime/update coverage to the ROM-free enemy tests and staged
+  native-room captures for both identities. The generated private library now
+  contains 348 object sequences and 1,344 frames, including Peeping Eye frames
+  `0xF` and `0x10`.
+- Both parity entries remain `partial`: attacks, polar/affine choreography,
+  hit callbacks, fades, sounds and rewards are not promoted by this visual
+  child pass.
+- Next: port Peeping Eye's polar attack controller and White Dragon's affine
+  body motion, then move to Bone Pillar's tower segments.
+
 ## Patch 0469 - Aria constructor-table batch: ten early enemies
 
 - Connected the native constructor identities, private sheets, palettes,

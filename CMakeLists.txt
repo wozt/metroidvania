@@ -28,6 +28,18 @@ target_compile_definitions(fusion_native_editor_core
         FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
 fusion_enable_warnings(fusion_native_editor_core)
 
+add_library(fusion_assets STATIC
+    src/assets/core/sha1.c
+    src/assets/core/rom.c
+)
+target_include_directories(fusion_assets PUBLIC include)
+target_include_directories(fusion_assets PRIVATE src/assets/core)
+fusion_enable_warnings(fusion_assets)
+
+add_executable(fusion_importer src/tools/fusion_importer.c)
+target_link_libraries(fusion_importer PRIVATE fusion_assets)
+fusion_enable_warnings(fusion_importer)
+
 add_executable(fusion_editor_cli src/tools/editor_cli.c)
 target_link_libraries(fusion_editor_cli PRIVATE fusion_native_editor_core)
 fusion_enable_warnings(fusion_editor_cli)
@@ -103,6 +115,13 @@ else()
 endif()
 
 if(BUILD_TESTING)
+    add_executable(fusion_assets_rom_tests tests/test_fusion_assets_rom.c)
+    target_link_libraries(fusion_assets_rom_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_assets_rom_tests)
+    add_test(NAME fusion_assets_rom COMMAND fusion_assets_rom_tests)
+    add_test(NAME fusion_importer_list COMMAND fusion_importer --list)
+    add_test(NAME fusion_importer_dry_run COMMAND fusion_importer --dry-run --force)
+
     add_test(NAME editor_cli_headless
         COMMAND ${CMAKE_COMMAND} -E env --unset=DISPLAY --unset=WAYLAND_DISPLAY
                 $<TARGET_FILE:fusion_editor_cli>

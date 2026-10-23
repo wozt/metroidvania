@@ -194,6 +194,17 @@ usable on a ROM-free checkout. Private outputs stay below the ignored
 
 ## Active C components
 
+### Native asset foundation
+
+`fusion_assets` (`include/fusion/assets/rom.h` and `src/assets/core/`) is the
+first C11 layer of the native import pipeline. It owns only generic ROM
+verification for the two pinned USA revisions so far: bounded loading,
+expected-size checks, SHA-1 fingerprints, error reporting and zeroing on
+release. `fusion_importer` (`src/tools/fusion_importer.c`) exposes `--list`,
+`--verify`, and an explicit dry-run plan for future extraction tasks. The
+Python extractors remain authoritative until each replacement passes the
+equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`.
+
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:
 

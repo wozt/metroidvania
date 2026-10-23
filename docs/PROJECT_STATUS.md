@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0480 - C11 asset pipeline foundation
+
+- Added the `fusion_assets` C11 library with bounded ROM loading, exact 8 MiB
+  size checks, SHA-1 verification for the pinned USA Zero Mission and Aria
+  revisions, clear errors and zeroing on release.
+- Added `fusion_importer`: `--list`, `--verify`, and an explicit `--dry-run`
+  task-plan interface. `--assets` and `--all` report the current boundary
+  instead of pretending that extraction has already migrated.
+- Added the first migration matrix in `docs/ASSET_PIPELINE_MIGRATION.md` and
+  documented the public contract in `docs/ARCHITECTURE.md`.
+- Python extractors, generated caches and ROM-derived resources remain
+  unchanged and authoritative; no gameplay parity status was raised.
+- Next: add generic bounded GBA binary/decompression primitives, then port one
+  small metadata extractor with a Python/C equivalence fixture.
+
 ## Patch 0479 - Aria save-room checkpoints
 
 - Added `aos_save_room`, a device-free controller for the native Object1C

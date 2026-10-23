@@ -7026,6 +7026,61 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
     return report;
 }
 
+static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma) {
+    e->phase = (uint16_t)(e->phase + 0x180);
+    e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+    face_player(e, soma);
+}
+
+static void white_dragon_controller(AosEnemy *e, const AosSoma *soma) {
+    face_player(e, soma);
+    e->phase = (uint16_t)(e->phase + 0x100);
+    e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+    e->x += toward_facing(e, 0x2000);
+}
+
+static void buer_controller(AosEnemy *e, const AosSoma *soma) {
+    face_player(e, soma);
+    e->x += e->vx;
+    if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
+        e->mirrored = !e->mirrored;
+        e->vx = toward_facing(e, 0x18000);
+    }
+    e->phase = (uint16_t)(e->phase + 0x400);
+    e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
+}
+
+static void rock_armor_controller(AosEnemy *e, const AosSoma *soma) {
+    face_player(e, soma);
+    e->x += e->vx;
+    if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
+        e->mirrored = !e->mirrored;
+        e->vx = toward_facing(e, 0x6000);
+    }
+    e->phase = (uint16_t)(e->phase + 0x180);
+    e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 24;
+}
+
+static void giant_ghost_controller(AosEnemy *e, const AosSoma *soma) {
+    move_toward(e, soma->x, soma->y - AOS_FIXED(24), 0x4000);
+    e->phase = (uint16_t)(e->phase + 0x180);
+    e->x += e->vx;
+    e->y += e->vy + aos_sine(e->phase) / 32;
+    face_player(e, soma);
+}
+
+static void winged_skeleton_controller(AosEnemy *e, const AosSoma *soma,
+                                       const AosEnemyKind *kind, int cam_x, int cam_y) {
+    (void)soma;
+    e->x += e->vx;
+    e->phase = (uint16_t)(e->phase + 0x280);
+    e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 12;
+    if (outside_margins(kind, 0, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y)) {
+        e->mirrored = !e->mirrored;
+        e->vx = toward_facing(e, 0xC000);
+    }
+}
+
 static bool early_enemy_inert(const AosEnemy *e) {
     if ((e->id == AOS_ENEMY_SKELETON || e->id == AOS_ENEMY_KILLER_FISH) && e->state == 5)
         return true;
@@ -7074,17 +7129,17 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
 
     switch (e->id) {
     case AOS_ENEMY_SKELETON:
-    case AOS_ENEMY_ROCK_ARMOR:
         e->x += e->vx;
         if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
             e->mirrored = !e->mirrored;
-            e->vx = toward_facing(e, e->id == AOS_ENEMY_SKELETON ? 0x8000 : 0x6000);
+            e->vx = toward_facing(e, 0x8000);
         }
         break;
+    case AOS_ENEMY_ROCK_ARMOR:
+        rock_armor_controller(e, soma);
+        break;
     case AOS_ENEMY_PEEPING_EYE:
-        e->phase += 0x180;
-        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
-        face_player(e, soma);
+        peeping_eye_controller(e, soma);
         break;
     case AOS_ENEMY_KILLER_FISH:
         e->x += e->vx;
@@ -7099,18 +7154,10 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         face_player(e, soma);
         break;
     case AOS_ENEMY_BUER:
-        e->x += e->vx;
-        if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
-            e->mirrored = !e->mirrored;
-            e->vx = toward_facing(e, 0x18000);
-        }
-        e->phase += 0x400;
-        e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
+        buer_controller(e, soma);
         break;
     case AOS_ENEMY_WHITE_DRAGON:
-        face_player(e, soma);
-        e->phase += 0x100;
-        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+        white_dragon_controller(e, soma);
         break;
     case AOS_ENEMY_GHOST:
         move_toward(e, soma->x, soma->y - AOS_FIXED(16), 0x6000);
@@ -7119,19 +7166,10 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         face_player(e, soma);
         break;
     case AOS_ENEMY_GIANT_GHOST:
-        move_toward(e, soma->x, soma->y - AOS_FIXED(24), 0x4000);
-        e->x += e->vx;
-        e->y += e->vy;
-        face_player(e, soma);
+        giant_ghost_controller(e, soma);
         break;
     case AOS_ENEMY_WINGED_SKELETON:
-        e->x += e->vx;
-        e->phase += 0x280;
-        e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 12;
-        if (outside_margins(kind, 0, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y)) {
-            e->mirrored = !e->mirrored;
-            e->vx = toward_facing(e, 0xC000);
-        }
+        winged_skeleton_controller(e, soma, kind, cam_x, cam_y);
         break;
     default: break;
     }

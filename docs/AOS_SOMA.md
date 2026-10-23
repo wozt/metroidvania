@@ -714,10 +714,12 @@ their native sheets, palettes, animation descriptors, direct child frames and
 frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming, hovering
-and homing loops. The Peeping Eye now emits its two eye overlays and six
-parent-linked static segments; the White Dragon emits all nine animation-1
+and homing loops. The dedicated parent motion controllers are now dispatched
+for Peeping Eye, White Dragon, Buer, Rock Armor, Giant Ghost and Winged
+Skeleton, while the Peeping Eye still emits its two eye overlays and six
+parent-linked static segments and the White Dragon emits all nine animation-1
 body parts in two linked batches. The ten parity rows remain partial because
-the Peeping Eye polar controller, White Dragon affine chain, Giant Ghost visual
+the Peeping Eye polar attack, White Dragon affine chain, Giant Ghost visual
 children, Bone Pillar tower, Buer fire component, probes, attacks, fades,
 sounds and rewards still need their own native state machines.
 

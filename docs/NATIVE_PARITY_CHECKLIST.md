@@ -1232,7 +1232,7 @@ Known divergences: The articulated tower segments, variant collision and damage 
 Next action: Port the segment construction and tower collision.
 Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
 
-[~] **`aos.enemies.buer` — Buer.** The native direct frames, contact box, parameter-selected state, floor-relative placement and bounded rolling loop are connected.
+[~] **`aos.enemies.buer` — Buer.** The native direct frames, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CBA30`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC3F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC4E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC514`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
@@ -1350,7 +1350,7 @@ Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the roo
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
 
-[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The native sheet, palette, frame descriptor and basic homing loop are connected.
+[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The native sheet, palette, frame descriptor and homing-plus-hover controller are connected.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
@@ -1481,14 +1481,14 @@ Known divergences: The four direct OAM records and collision boxes are ported; t
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
-[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The two eye overlays and six linked frames are emitted through the parent slot and follow its native-facing hover loop.
+[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The dedicated hover controller dispatches with the two eye overlays and six linked frames emitted through the parent slot.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The native tendril polar controller, ceiling probing, sounds and attack cycle are not ported.  
-Next action: Port the eyeball controller, polar segment timing and attack state machine.
+Known divergences: The native tendril polar attack, ceiling probing, sounds and attack cycle are not ported.  
+Next action: Port the eyeball polar controller, segment timing and attack state machine.
 Evidence: in game: `aria area_00_room_018: Peeping Eye record at x 568, y 176`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40.
@@ -1511,7 +1511,7 @@ Known divergences: Animation-marker timing is represented by the exported animat
 Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator.
 Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts`.
 
-[~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and bounded patrol are connected.
+[~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F10`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
@@ -1589,7 +1589,7 @@ Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)`.
 
-[~] **`aos.enemies.white_dragon` — White Dragon.** All nine animation-1 body parts are emitted in linked batches, follow the head and render in native order while the head hover loop runs.
+[~] **`aos.enemies.white_dragon` — White Dragon.** The dedicated head controller adds its facing, hover and drift while all nine animation-1 body parts are emitted in linked batches and follow the head.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080773AC`, `aos:asm:asm/code/code_080709D8.s:sub_08077458`, `aos:asm:asm/code/code_080709D8.s:sub_08077C40`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  
@@ -1598,7 +1598,7 @@ Known divergences: The native affine chain, articulated hit callbacks, palette c
 Next action: Port the affine body motion, damage callbacks and attack state machine.
 Evidence: in game: `aria area_00_room_013: White Dragon record at x 208, y 104`.
 
-[~] **`aos.enemies.winged_skeleton` — Winged Skeleton.** The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and facing-dependent initial speed are connected.
+[~] **`aos.enemies.winged_skeleton` — Winged Skeleton.** The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080751B4`, `aos:asm:asm/code/code_080709D8.s:sub_080754E0`, `aos:asm:asm/code/code_080709D8.s:sub_0807552C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`scripts/aos_object_sprites.py`](../scripts/aos_object_sprites.py).  

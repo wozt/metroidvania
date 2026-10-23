@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0471 - Aria early-enemy motion controller wiring
+
+- Connected the dedicated early-enemy motion controllers for Peeping Eye,
+  White Dragon, Buer, Rock Armor, Giant Ghost and Winged Skeleton from the
+  constructor-table update path. The controllers now own their facing,
+  bounded movement, phase and homing/hover updates instead of leaving those
+  motions inline in the shared dispatcher.
+- Preserved the parent-linked Peeping Eye and White Dragon emission and child
+  update paths unchanged. This patch only changes the parent motion dispatch;
+  it does not claim the Peeping Eye polar attack, White Dragon affine chain,
+  probes, attacks, palette callbacks, sounds or rewards.
+- The Aria enemy runtime test covers the updated constructor batch and linked
+  children; all entries remain `partial` until their complete native routines
+  and an in-game capture are available.
+- Next: replace the approximate Peeping Eye hover with its native polar attack
+  controller and connect White Dragon's affine body motion without changing
+  the linked-child spawn contract.
+
 ## Patch 0470 - Aria linked Peeping Eye and White Dragon children
 
 - Added parent-linked child roles to the Aria runtime. Peeping Eye now emits

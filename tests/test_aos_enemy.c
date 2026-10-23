@@ -58,14 +58,21 @@ static void early_enemy_batch_tests(void) {
     AosEnemy eye;
     assert(aos_enemy_create(&eye, AOS_ENEMY_PEEPING_EYE, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
+    soma.x = AOS_FIXED(170);
     AosHitReport eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
                                               0, never_zero);
     assert(eye_parts.child_count == 8 && eye.helper_spawned && eye.angle != 0);
+    assert(eye.step == 1 && eye.timer == 1);
     assert(eye_parts.children[0].role == AOS_ROLE_PEEPING_SEGMENT &&
            eye_parts.children[0].static_frame == 0xF &&
            eye_parts.children[7].static_frame == 0xE);
+    for (int frame = 0; frame < 28; ++frame)
+        eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                     never_zero);
+    assert(eye.step == 1 && eye.timer == 29);
     eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                  never_zero);
+    assert(eye.step == 2 && eye.timer == 0);
     assert(eye_parts.child_count == 0);
 
     AosEnemy dragon;

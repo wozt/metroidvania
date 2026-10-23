@@ -721,8 +721,11 @@ parent-linked static segments. Its segments now use a target-oriented polar
 angle and fixed-point radius; the White Dragon emits all nine animation-1 body
 parts in two linked batches, with a curved chain and per-part affine angle
 forwarded to the renderer. Its middle body record also owns the native shared
-unit-scale affine slot. The ten parity rows remain partial because the Peeping
-Eye attack cycle and probes, White Dragon's complete affine choreography and
+unit-scale affine slot. The Peeping Eye's first controller gate uses the
+native 180 by 200 proximity window and drives a visual wind-up, extension and
+retraction envelope for the polar chain; its variant table, exact timings,
+probes and callbacks are still open. The ten parity rows remain partial because
+of those Peeping Eye gaps, White Dragon's complete affine choreography and
 damage callbacks, Giant Ghost visual children, Bone Pillar tower, Buer fire
 component, attacks, fades, sounds and rewards still need their own native
 state machines.

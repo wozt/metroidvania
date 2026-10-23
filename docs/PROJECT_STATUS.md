@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-23**.
 
+## Patch 0474 - Aria Peeping Eye attack entry pass
+
+- Ported the traced `sub_08088168` proximity gate: the Peeping Eye begins its
+  controller pass when Soma enters the native 180 by 200 pixel window.
+- Added the first visible tendril attack envelope: wind-up, full polar
+  extension and retraction now drive the already-linked child radii. ROM-free
+  tests cover the trigger and the wind-up-to-extension transition.
+- The variant table, exact branch timings, ceiling probes, damage callbacks,
+  sounds and rewards are still unported. The temporary 30/20/30 frame envelope
+  is explicitly not presented as the native attack-state table.
+- Next: decode the remaining Peeping Eye branch table and attack callbacks,
+  then trace White Dragon damage and attack transitions.
+
 ## Patch 0473 - Aria White Dragon central affine slot
 
 - Connected the White Dragon's native shared affine slot to the middle linked

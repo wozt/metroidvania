@@ -6035,6 +6035,15 @@ static void peeping_eye_children(const AosEnemy *owner, AosHitReport *report) {
     }
 }
 
+static int32_t peeping_eye_radius(const AosEnemy *owner, unsigned i) {
+    int32_t radius = 0x50000 + (int32_t)i * 0x18000;
+    if (owner->step == 1)
+        return radius + radius * owner->timer / 30;
+    if (owner->step == 2) return radius * 2;
+    if (owner->step == 3) return radius + radius * (30 - owner->timer) / 30;
+    return radius;
+}
+
 /* White Dragon's nine body records all use animation 1 and retain the native
  * owner link. The full ROM routine bends the chain with affine state; this
  * first pass keeps the nine animated parts visibly attached to the head. */
@@ -6079,7 +6088,7 @@ static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKin
          * target angle supplies the attack direction while phase keeps the
          * chain moving between target updates. */
         uint16_t angle = (uint16_t)(owner->angle + owner->phase + i * 0x1800u);
-        int32_t radius = child->speed ? child->speed : (int32_t)(0x50000 + i * 0x18000);
+        int32_t radius = peeping_eye_radius(owner, i);
         child->angle = angle;
         child->x = owner->x + fixed_mul(aos_sine(angle + 0x4000), radius);
         child->y = owner->y + fixed_mul(aos_sine(angle), radius);
@@ -7047,7 +7056,37 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
 static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma) {
     int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
     e->angle = aos_arctan2((int16_t)dx, (int16_t)dy);
-    e->phase = (uint16_t)(e->phase + 0x180);
+    /* sub_08088168 begins its attack when Soma enters the 180 by 200
+     * window centred 90 pixels left and 100 pixels above the eye. The ROM
+     * table that selects its later attack variants is not ported yet, but
+     * this first visible branch preserves the wind-up, full extension and
+     * retraction phases for the linked polar tendrils. */
+    if (e->step == 0 &&
+        player_in(soma, (e->x >> 16) - 90, (e->y >> 16) - 100, 180, 200)) {
+        e->step = 1;
+        e->timer = 0;
+    }
+    if (e->step == 1) {
+        e->phase = (uint16_t)(e->phase + 0x300);
+        if (++e->timer >= 30) {
+            e->step = 2;
+            e->timer = 0;
+        }
+    } else if (e->step == 2) {
+        e->phase = (uint16_t)(e->phase + 0x200);
+        if (++e->timer >= 20) {
+            e->step = 3;
+            e->timer = 0;
+        }
+    } else if (e->step == 3) {
+        e->phase = (uint16_t)(e->phase + 0x200);
+        if (++e->timer >= 30) {
+            e->step = 0;
+            e->timer = 0;
+        }
+    } else {
+        e->phase = (uint16_t)(e->phase + 0x180);
+    }
     e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
     face_player(e, soma);
 }

@@ -22,7 +22,7 @@ from scripts.import_aos_world import (
     decode_world,
 )
 from scripts.aos_room_index import index_rows
-from scripts.aos_room_render import decode_background
+from scripts.aos_room_render import decode_background, load_video_memory
 from scripts.aos_runtime_room import native_cell
 
 
@@ -294,6 +294,43 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             actual.append((int(fields[1]), int(fields[2]), fields[3],
                            *(int(value, 0) for value in fields[4:])))
         self.assertEqual(actual, expected)
+
+    def test_room_video_memory_matches_python_reference(self):
+        rom = ROM.read_bytes()
+        resource_cache = {}
+        expected = []
+        graphics_count = 0
+        palette_count = 0
+        world = decode_world(rom)
+        for room in world["rooms"]:
+            vram, palette, _ = load_video_memory(rom, room, resource_cache)
+            graphics = len(room["graphics_loads"])
+            palettes = len(room["palette_loads"])
+            expected.append((
+                room["engine_area"], room["room"], graphics, palettes,
+                hashlib.sha1(vram).hexdigest(),
+                hashlib.sha1(palette).hexdigest(),
+            ))
+            graphics_count += graphics
+            palette_count += palettes
+
+        result = subprocess.run(
+            [str(BINARY), "--aria-video-memory", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            kind, area, room, graphics, palettes, vram, palette = line.split("\t")
+            self.assertEqual(kind, "video")
+            actual.append((int(area), int(room), int(graphics), int(palettes),
+                           vram, palette))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{len(expected)}\t{graphics_count}\t{palette_count}",
+        )
 
     def test_room_entity_lists_match_python_reference(self):
         rom = ROM.read_bytes()

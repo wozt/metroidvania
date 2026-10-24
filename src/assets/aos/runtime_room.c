@@ -5,11 +5,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum {
     GBA_ROM_BASE = 0x08000000,
     AOS_BACKGROUND_METADATA_SIZE = 16,
-    AOS_METADATA_OUTPUT_CAPACITY = 256 * 1024
+    AOS_METADATA_OUTPUT_CAPACITY = 256 * 1024,
+    AOS_GRAPHICS_BLOCK_SIZE = 0x800,
+    AOS_PALETTE_ROW_SIZE = 0x20,
+    AOS_PALETTE_ROW_COUNT = 16
 };
 
 typedef struct {
@@ -86,6 +90,143 @@ static bool read_metadata_payload(const FusionRom *rom, uint32_t pointer,
     }
     payload->data = payload->owned + 4;
     payload->size = written - 4;
+    return true;
+}
+
+static bool read_resource_payload(const FusionRom *rom, uint32_t pointer,
+                                  MetadataPayload *payload,
+                                  char *error, size_t error_size) {
+    *payload = (MetadataPayload){0};
+    size_t offset;
+    if (!pointer_offset(rom, pointer, 8, &offset)) {
+        set_error(error, error_size,
+                  "Aria graphics resource points outside the ROM");
+        return false;
+    }
+    uint8_t encoding = rom->data[offset];
+    if (encoding == 0) {
+        payload->data = rom->data + offset + 4;
+        payload->size = rom->size - offset - 4;
+        return true;
+    }
+    if (encoding != 1) {
+        set_error(error, error_size,
+                  "Aria graphics resource uses an unsupported encoding");
+        return false;
+    }
+    uint32_t compressed_pointer = read_u32(rom->data + offset + 4);
+    size_t compressed_offset;
+    if (!pointer_offset(rom, compressed_pointer, 4, &compressed_offset)) {
+        set_error(error, error_size,
+                  "Aria compressed graphics resource points outside the ROM");
+        return false;
+    }
+    uint32_t expanded_size = fusion_gba_uncompressed_size(
+        rom->data + compressed_offset, rom->size - compressed_offset);
+    if (expanded_size == 0 || expanded_size > AOS_METADATA_OUTPUT_CAPACITY) {
+        set_error(error, error_size,
+                  "Aria graphics resource has an invalid LZ77 size");
+        return false;
+    }
+    payload->owned = malloc(expanded_size);
+    if (!payload->owned) {
+        set_error(error, error_size,
+                  "cannot allocate Aria graphics resource payload");
+        return false;
+    }
+    size_t written = 0;
+    if (!fusion_gba_lz77_uncompress(rom->data + compressed_offset,
+                                    rom->size - compressed_offset,
+                                    payload->owned, expanded_size, &written) ||
+        written < 4 || payload->owned[0] != 0) {
+        free_payload(payload);
+        set_error(error, error_size,
+                  "Aria graphics resource has invalid expanded data");
+        return false;
+    }
+    payload->data = payload->owned + 4;
+    payload->size = written - 4;
+    return true;
+}
+
+bool fusion_aos_load_video_memory(const FusionRom *rom,
+                                  const FusionAosRoomDescriptor *descriptor,
+                                  FusionAosVideoMemory *memory,
+                                  char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_ARIA ||
+        !descriptor || !memory) {
+        set_error(error, error_size, "invalid Aria video-memory request");
+        return false;
+    }
+    *memory = (FusionAosVideoMemory){0};
+    FusionAosLoadList graphics;
+    if (!fusion_aos_read_load_list(rom, descriptor->graphics_pointer,
+                                   &graphics, error, error_size)) {
+        return false;
+    }
+    for (size_t index = 0; index < graphics.count; ++index) {
+        const FusionAosLoadEntry *entry = &graphics.entries[index];
+        MetadataPayload payload;
+        if (!read_resource_payload(rom, entry->resource_pointer, &payload,
+                                   error, error_size)) {
+            return false;
+        }
+        size_t destination = (size_t)entry->parameters[0] * AOS_GRAPHICS_BLOCK_SIZE;
+        size_t source = (size_t)entry->parameters[1] * AOS_GRAPHICS_BLOCK_SIZE;
+        size_t length = (size_t)entry->parameters[2] * AOS_GRAPHICS_BLOCK_SIZE;
+        if (source > payload.size || length > payload.size - source ||
+            destination > sizeof memory->vram ||
+            length > sizeof memory->vram - destination) {
+            free_payload(&payload);
+            set_error(error, error_size,
+                      "Aria graphics load exceeds video-memory bounds");
+            return false;
+        }
+        memcpy(memory->vram + destination, payload.data + source, length);
+        free_payload(&payload);
+    }
+    memory->graphics_load_count = graphics.count;
+
+    FusionAosLoadList palettes;
+    if (!fusion_aos_read_load_list(rom, descriptor->palette_pointer,
+                                   &palettes, error, error_size)) {
+        return false;
+    }
+    for (size_t index = 0; index < palettes.count; ++index) {
+        const FusionAosLoadEntry *entry = &palettes.entries[index];
+        size_t offset;
+        if (!pointer_offset(rom, entry->resource_pointer, 4, &offset)) {
+            set_error(error, error_size,
+                      "Aria palette resource points outside the ROM");
+            return false;
+        }
+        if (rom->data[offset] != 0) {
+            set_error(error, error_size,
+                      "Aria palette resource uses an unsupported encoding");
+            return false;
+        }
+        size_t destination_row = entry->parameters[0];
+        size_t source_row = entry->parameters[1];
+        size_t row_count = entry->parameters[2];
+        size_t available_rows = (size_t)rom->data[offset + 2] + 1;
+        if (source_row > available_rows || row_count > available_rows - source_row ||
+            destination_row > AOS_PALETTE_ROW_COUNT ||
+            row_count > AOS_PALETTE_ROW_COUNT - destination_row) {
+            set_error(error, error_size,
+                      "Aria palette load exceeds palette-memory bounds");
+            return false;
+        }
+        size_t source = offset + 4 + source_row * AOS_PALETTE_ROW_SIZE;
+        size_t length = row_count * AOS_PALETTE_ROW_SIZE;
+        if (source > rom->size || length > rom->size - source) {
+            set_error(error, error_size, "Aria palette resource is truncated");
+            return false;
+        }
+        memcpy(memory->palette + destination_row * AOS_PALETTE_ROW_SIZE,
+               rom->data + source, length);
+    }
+    memory->palette_load_count = palettes.count;
+    if (error && error_size > 0) error[0] = '\0';
     return true;
 }
 

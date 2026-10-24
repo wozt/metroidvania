@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0499 - Native Aria graphics and palette loading
+
+- Added bounded C11 execution of Aria's native graphics and palette load lists,
+  including direct resources, BIOS LZ77 resources, the four-byte expanded-data
+  prefix and the palette header's inclusive final-row field.
+- Each room now produces complete 64 KiB VRAM and 512-byte palette snapshots;
+  source ranges, destination blocks, palette rows, resource pointers,
+  encodings, expanded sizes and compressed streams are rejected on overflow or
+  truncation.
+- Added synthetic direct/LZ77 resource, copy-placement, encoding and bounds
+  coverage, then compared SHA-1 digests of both complete output buffers with
+  Python for all 343 rooms through `--aria-video-memory`.
+- The verified rooms apply 887 graphics loads and 736 palette loads. Static
+  background compositing and `AOSROOM-NATIVE` serialization remain
+  Python-owned, so the migration stays partial and gameplay parity does not
+  change.
+- Next: alternate to Zero Mission and decode its remaining BG0/BG1/BG2 room
+  background payloads from the native descriptors; audio remains untouched.
+
 ## Patch 0498 - Native Zero Mission Clipdata payloads
 
 - Added a bounded C11 decoder for Zero Mission's custom two-pass room RLE,

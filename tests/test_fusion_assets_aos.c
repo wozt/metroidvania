@@ -28,6 +28,10 @@ enum {
     COLLISION_BLOCKS_OFFSET = 0xC200,
     COLLISION_VALUES_OFFSET = 0xC300,
     COLLISION_MAP_OFFSET = 0xC400,
+    GRAPHICS_RESOURCE_OFFSET = 0xD000,
+    COMPRESSED_GRAPHICS_RESOURCE_OFFSET = 0xD900,
+    PALETTE_RESOURCE_OFFSET = 0xDA00,
+    GRAPHICS_LZ77_OFFSET = 0xDB00,
     ENEMY_TABLE_OFFSET = 0x0E9644,
     ENEMY_ENTRY_SIZE = 0x24,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
@@ -84,6 +88,23 @@ static void write_load_entry(uint8_t *data, size_t offset, uint32_t resource,
     data[offset + 4] = parameter_0;
     data[offset + 5] = parameter_1;
     data[offset + 6] = parameter_2;
+}
+
+static size_t write_lz77_literals(uint8_t *data, size_t offset,
+                                  const uint8_t *expanded, size_t size) {
+    data[offset] = 0x10;
+    data[offset + 1] = (uint8_t)size;
+    data[offset + 2] = (uint8_t)(size >> 8);
+    data[offset + 3] = (uint8_t)(size >> 16);
+    size_t input = 0, output = offset + 4;
+    while (input < size) {
+        data[output++] = 0;
+        size_t count = size - input < 8 ? size - input : 8;
+        memcpy(data + output, expanded + input, count);
+        input += count;
+        output += count;
+    }
+    return output - offset;
 }
 
 static void write_entity(uint8_t *data, size_t offset, int16_t x, int16_t y,
@@ -287,6 +308,64 @@ int main(void) {
     assert(fusion_aos_read_load_list(&rom, descriptor.palette_pointer, &loads,
                                      error, sizeof error));
     assert(loads.count == 1 && loads.entries[0].parameters[1] == 8);
+
+    write_load_entry(bytes, GRAPHICS_LOAD_OFFSET,
+                     GBA_ROM_BASE + GRAPHICS_RESOURCE_OFFSET, 1, 0, 1);
+    write_load_entry(bytes, GRAPHICS_LOAD_OFFSET + 8,
+                     GBA_ROM_BASE + COMPRESSED_GRAPHICS_RESOURCE_OFFSET, 2, 0, 1);
+    write_load_entry(bytes, GRAPHICS_LOAD_OFFSET + 16, 0, 0, 0, 0);
+    bytes[GRAPHICS_RESOURCE_OFFSET] = 0;
+    bytes[GRAPHICS_RESOURCE_OFFSET + 1] = 4;
+    bytes[GRAPHICS_RESOURCE_OFFSET + 2] = 1;
+    for (size_t index = 0; index < 0x800; ++index)
+        bytes[GRAPHICS_RESOURCE_OFFSET + 4 + index] = (uint8_t)(index ^ 0x5A);
+    bytes[COMPRESSED_GRAPHICS_RESOURCE_OFFSET] = 1;
+    bytes[COMPRESSED_GRAPHICS_RESOURCE_OFFSET + 1] = 4;
+    bytes[COMPRESSED_GRAPHICS_RESOURCE_OFFSET + 2] = 1;
+    write_u32(bytes, COMPRESSED_GRAPHICS_RESOURCE_OFFSET + 4,
+              GBA_ROM_BASE + GRAPHICS_LZ77_OFFSET);
+    uint8_t expanded[0x804] = {0};
+    for (size_t index = 0; index < 0x800; ++index)
+        expanded[4 + index] = (uint8_t)(index ^ 0xA5);
+    assert(write_lz77_literals(bytes, GRAPHICS_LZ77_OFFSET,
+                               expanded, sizeof expanded) < 0xA00);
+
+    write_load_entry(bytes, PALETTE_LOAD_OFFSET,
+                     GBA_ROM_BASE + PALETTE_RESOURCE_OFFSET, 2, 1, 1);
+    write_load_entry(bytes, PALETTE_LOAD_OFFSET + 8, 0, 0, 0, 0);
+    bytes[PALETTE_RESOURCE_OFFSET] = 0;
+    bytes[PALETTE_RESOURCE_OFFSET + 1] = 4;
+    bytes[PALETTE_RESOURCE_OFFSET + 2] = 1;
+    for (size_t index = 0; index < 0x40; ++index)
+        bytes[PALETTE_RESOURCE_OFFSET + 4 + index] = (uint8_t)(index + 7);
+
+    FusionAosVideoMemory memory;
+    assert(fusion_aos_load_video_memory(&rom, &descriptor, &memory,
+                                        error, sizeof error));
+    assert(memory.graphics_load_count == 2 && memory.palette_load_count == 1);
+    assert(memory.vram[0] == 0 && memory.vram[0x800] == 0x5A &&
+           memory.vram[0xFFF] == (uint8_t)(0x7FF ^ 0x5A));
+    assert(memory.vram[0x1000] == 0xA5 &&
+           memory.vram[0x17FF] == (uint8_t)(0x7FF ^ 0xA5));
+    assert(memory.palette[0x3F] == 0 && memory.palette[0x40] == 0x27 &&
+           memory.palette[0x5F] == 0x46 && memory.palette[0x60] == 0);
+
+    bytes[GRAPHICS_LOAD_OFFSET + 4] = 32;
+    assert(!fusion_aos_load_video_memory(&rom, &descriptor, &memory,
+                                         error, sizeof error));
+    bytes[GRAPHICS_LOAD_OFFSET + 4] = 1;
+    bytes[GRAPHICS_RESOURCE_OFFSET] = 2;
+    assert(!fusion_aos_load_video_memory(&rom, &descriptor, &memory,
+                                         error, sizeof error));
+    bytes[GRAPHICS_RESOURCE_OFFSET] = 0;
+    bytes[PALETTE_LOAD_OFFSET + 4] = 16;
+    assert(!fusion_aos_load_video_memory(&rom, &descriptor, &memory,
+                                         error, sizeof error));
+    bytes[PALETTE_LOAD_OFFSET + 4] = 2;
+    bytes[PALETTE_RESOURCE_OFFSET] = 1;
+    assert(!fusion_aos_load_video_memory(&rom, &descriptor, &memory,
+                                         error, sizeof error));
+    bytes[PALETTE_RESOURCE_OFFSET] = 0;
     for (size_t index = 0; index < FUSION_AOS_LOAD_ENTRY_CAPACITY; ++index) {
         write_load_entry(bytes, UNTERMINATED_LOAD_OFFSET + index * 8,
                          GBA_ROM_BASE + 0x8000, 0, 0, 0);

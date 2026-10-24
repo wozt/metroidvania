@@ -18,6 +18,8 @@ enum {
     FUSION_AOS_ENTITY_CAPACITY = 512,
     FUSION_AOS_BOSS_ROOM_COUNT = 12,
     FUSION_AOS_BACKGROUND_SCREEN_LIMIT = 16,
+    FUSION_AOS_VRAM_SIZE = 0x10000,
+    FUSION_AOS_PALETTE_SIZE = 0x200,
     FUSION_AOS_COLLISION_CELL_CAPACITY =
         FUSION_AOS_BACKGROUND_SCREEN_LIMIT * FUSION_AOS_BACKGROUND_SCREEN_LIMIT *
         32 * 32,
@@ -150,6 +152,13 @@ typedef struct {
 } FusionAosLoadList;
 
 typedef struct {
+    uint8_t vram[FUSION_AOS_VRAM_SIZE];
+    uint8_t palette[FUSION_AOS_PALETTE_SIZE];
+    size_t graphics_load_count;
+    size_t palette_load_count;
+} FusionAosVideoMemory;
+
+typedef struct {
     uint32_t entry_pointer;
     int16_t x;
     int16_t y;
@@ -222,6 +231,10 @@ void fusion_aos_free_collision_map(FusionAosCollisionMap *collision);
 bool fusion_aos_read_load_list(const FusionRom *rom, uint32_t pointer,
                                FusionAosLoadList *list,
                                char *error, size_t error_size);
+bool fusion_aos_load_video_memory(const FusionRom *rom,
+                                  const FusionAosRoomDescriptor *descriptor,
+                                  FusionAosVideoMemory *memory,
+                                  char *error, size_t error_size);
 bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
                                  FusionAosEntityList *list,
                                  char *error, size_t error_size);

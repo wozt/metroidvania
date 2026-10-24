@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T22:36:56+00:00",
+ "generated_at": "2026-10-24T22:53:10+00:00",
  "git": {
-  "commit": "03de137",
+  "commit": "fbf9b01",
   "branch": "main",
   "dirty": true
  },
@@ -12507,7 +12507,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders and 342 static-origin room composites; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots and their complete metatile tables. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for rendering, serialization, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders and 342 static-origin room composites; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables and 1115 exact RGBA room layers. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for compositing, serialization, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13936,7 +13936,7 @@
     "assets.raw_import"
    ],
    "native_routines": [],
-   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots and 97328 complete tileset/common metatile records. Python still owns animated tiles and palettes, the Mother Ship common-tile variant, pixel rendering, compositing and room serialization; BG2 movement and BG0 movement effects remain incomplete.",
+   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots, 97328 metatile records and 1115 complete RGBA room layers totaling 253914112 pixels. Python still owns animated tiles and palettes, the Mother Ship common-tile variant, compositing and room serialization; BG2 movement and BG0 movement effects remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14892,9 +14892,9 @@
    {
     "file": "tests/test_mzm_bg_layers.py",
     "module": "tests.test_mzm_bg_layers",
-    "test_count": 5,
+    "test_count": 6,
     "outcome": "passed",
-    "passed": 5
+    "passed": 6
    },
    {
     "file": "tests/test_mzm_c_tables.py",
@@ -15297,12 +15297,18 @@
    }
   ],
   "summary": {
-   "passed": 526,
+   "passed": 527,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "fbf9b01",
+   "date": "2026-10-25",
+   "subject": "Decode Zero Mission metatiles natively",
+   "scope": "project"
+  },
   {
    "commit": "03de137",
    "date": "2026-10-24",
@@ -15775,12 +15781,6 @@
    "commit": "ca58551",
    "date": "2026-10-20",
    "subject": "Add navigable Aria SDL menu preview",
-   "scope": "project"
-  },
-  {
-   "commit": "4c1c50f",
-   "date": "2026-10-20",
-   "subject": "Add runnable SDL Aria title preview frontend",
    "scope": "project"
   }
  ],

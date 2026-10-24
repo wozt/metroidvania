@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0507 - Native Zero Mission room-layer rendering
+
+- Added bounded C11 RGBA rendering for both Zero Mission room-background
+  paths: 16x16 RLE block layers through the validated tileset/common metatile
+  tables and LZ77 text tilemaps through character base 2.
+- Preserved block-to-common-table selection, invalid-block fallback, four-cell
+  metatile placement, screen-block ordering, 4-bpp palette banks, horizontal
+  and vertical tile flips, transparent color index zero and exact GBA
+  BGR555-to-RGB conversion.
+- Added synthetic tileset/common block colors, ownership and text-layer
+  coverage. The Python reference now assembles block layers from cached
+  tileset sheets so complete SHA-1 equivalence remains practical.
+- `--mzm-background-renders` verifies all 1,115 present layers: 784 RLE and
+  331 text layers totaling 253,914,112 pixels, with zero unresolved tile or
+  palette references. The remaining 209 layer slots are explicitly absent.
+- Animated tile/palette replacement, the Mother Ship common-tile variant,
+  inter-layer composition, effects and runtime-room serialization remain
+  Python-owned, so migration and gameplay status do not change.
+- Next: alternate to Aria and serialize its validated native composites and
+  runtime-room payloads in C; audio remains untouched.
+
 ## Patch 0506 - Native Zero Mission metatile tables
 
 - Added bounded C11 reconstruction of the 79 Zero Mission tileset metatile

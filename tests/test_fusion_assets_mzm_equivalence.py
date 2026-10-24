@@ -11,7 +11,10 @@ import unittest
 
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
+    metatile_sheet,
+    render_block_background,
     symbol_bytes,
+    text_background,
     tileset_entry,
     tileset_metatiles,
     tileset_video_memory,
@@ -169,10 +172,14 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                         if (parts := row.split("\t"))[0] == "symbol"}
         names = enum_values()
         expected = []
+        expected_renders = []
+        sheets = {}
         counts = {"rle": 0, "text": 0, "none": 0, "unsupported": 0}
         total_cells = 0
+        total_rendered_pixels = 0
         for room in source_rooms():
             fields = room["fields"]
+            tileset = evaluate(fields.get("tileset", "0"), names)
             for layer in range(4):
                 property_value = evaluate(fields.get(f"bg{layer}Prop", "0"), names)
                 symbol = fields[f"pBg{layer}Data"]
@@ -187,6 +194,13 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                     payload = struct.pack(f"<{len(cells)}H", *cells)
                     cell_count = len(cells)
                     digest = hashlib.sha1(payload).hexdigest()
+                    if tileset not in sheets:
+                        sheets[tileset] = metatile_sheet(tileset)
+                    rgba = render_block_background(
+                        width, height, cells, tileset,
+                        sheet=sheets[tileset],
+                    )
+                    pixel_width, pixel_height = width * 16, height * 16
                 elif property_value & 0x40:
                     status = "text"
                     size_flag = rom[offset]
@@ -197,8 +211,18 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                     cell_count = len(payload) // 2
                     self.assertEqual(len(payload), width * height * 2)
                     digest = hashlib.sha1(payload).hexdigest()
+                    _, pixel_width, pixel_height, rgba = text_background(
+                        symbol, tileset)
                 else:
                     status = "none" if property_value == 0 else "unsupported"
+                if status in ("rle", "text"):
+                    pixels = pixel_width * pixel_height
+                    expected_renders.append((
+                        room["area"], room["index"], layer, status,
+                        pixel_width, pixel_height, pixels, 0,
+                        hashlib.sha1(rgba).hexdigest(),
+                    ))
+                    total_rendered_pixels += pixels
                 counts[status] += 1
                 total_cells += cell_count
                 expected.append((
@@ -234,6 +258,28 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                 counts["text"], counts["none"], counts["unsupported"],
                 total_cells,
             ),
+        )
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-background-renders", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual_renders = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "render")
+            actual_renders.append((
+                fields[1], int(fields[2]), int(fields[3]), fields[4],
+                *(int(value) for value in fields[5:9]), fields[9],
+            ))
+        self.assertEqual(actual_renders, expected_renders)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{len(expected_renders)}\t{counts['rle']}\t"
+            f"{counts['text']}\t{counts['none'] + counts['unsupported']}\t"
+            f"{total_rendered_pixels}\t0",
         )
 
     def test_tileset_video_memory_matches_python_reference(self):

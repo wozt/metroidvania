@@ -31,6 +31,26 @@ class MzmBgLayerTests(unittest.TestCase):
         mzm_bg_layers.draw_tile(flipped, 8, 0, 0, 0x3400 | 1, bytes(vram), colors, 0x4000)
         self.assertEqual(bytes(flipped[7 * 4:8 * 4]), bytes((10, 20, 30, 255)))
 
+    def test_block_background_assembles_tileset_and_common_blocks(self):
+        sheet_width = mzm_bg_layers.SHEET_COLUMNS * 16
+        sheet_height = ((mzm_bg_layers.SHEET_BLOCKS +
+                         mzm_bg_layers.SHEET_COLUMNS - 1) //
+                        mzm_bg_layers.SHEET_COLUMNS) * 16
+        sheet = bytearray(sheet_width * sheet_height * 4)
+        sheet[0:64] = bytes((255, 0, 0, 255)) * 16
+        common = mzm_bg_layers.TILESET_METATILES
+        common_x = common % mzm_bg_layers.SHEET_COLUMNS * 16
+        common_y = common // mzm_bg_layers.SHEET_COLUMNS * 16
+        common_offset = (common_y * sheet_width + common_x) * 4
+        sheet[common_offset:common_offset + 64] = \
+            bytes((0, 255, 0, 255)) * 16
+        rgba = mzm_bg_layers.render_block_background(
+            2, 1, (0, 0x400), 0,
+            sheet=(sheet_width, sheet_height, bytes(sheet)),
+        )
+        self.assertEqual(rgba[:4], bytes((255, 0, 0, 255)))
+        self.assertEqual(rgba[16 * 4:17 * 4], bytes((0, 255, 0, 255)))
+
     def test_bmp32_is_a_top_down_alpha_bitmap(self):
         data = mzm_bg_layers.bmp32(2, 1, bytes((1, 2, 3, 4, 5, 6, 7, 8)))
         self.assertEqual(data[:2], b"BM")

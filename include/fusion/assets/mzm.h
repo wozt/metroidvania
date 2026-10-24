@@ -25,6 +25,7 @@ enum {
     FUSION_MZM_METATILE_WORD_COUNT =
         (FUSION_MZM_TILESET_METATILE_COUNT +
          FUSION_MZM_COMMON_METATILE_COUNT) * FUSION_MZM_METATILE_CELLS,
+    FUSION_MZM_RENDER_PIXEL_CAPACITY = 4096 * 4096,
     FUSION_MZM_VRAM_SIZE = 0x10000,
     FUSION_MZM_PALETTE_SIZE = 0x200,
     FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED = 0x10,
@@ -152,6 +153,14 @@ typedef struct {
     size_t common_word_count;
 } FusionMzmMetatileTable;
 
+typedef struct {
+    size_t width_pixels;
+    size_t height_pixels;
+    uint8_t *rgba;
+    size_t pixel_count;
+    size_t unresolved_count;
+} FusionMzmRenderedBackground;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -202,5 +211,16 @@ bool fusion_mzm_read_tileset_metatiles(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     size_t index, FusionMzmMetatileTable *table,
     char *error, size_t error_size);
+bool fusion_mzm_render_rle_background(
+    const FusionMzmRoomRleMap *map, const FusionMzmMetatileTable *metatiles,
+    const FusionMzmVideoMemory *memory,
+    FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size);
+bool fusion_mzm_render_text_background(
+    const FusionMzmTextTilemap *map, const FusionMzmVideoMemory *memory,
+    FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size);
+void fusion_mzm_free_rendered_background(
+    FusionMzmRenderedBackground *rendered);
 
 #endif /* FUSION_ASSETS_MZM_H */

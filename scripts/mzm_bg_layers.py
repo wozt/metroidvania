@@ -172,6 +172,33 @@ def sheet_block(value: int) -> int:
     return value if value < TILESET_METATILES else 0
 
 
+def render_block_background(width: int, height: int, blocks: tuple[int, ...],
+                            tileset: int, *, sheet: tuple | None = None) -> bytes:
+    """Assemble one RLE 16x16-block layer from its validated tileset sheet."""
+    if width <= 0 or height <= 0 or len(blocks) != width * height:
+        raise ValueError("invalid Zero Mission block background")
+    sheet_width, sheet_height, sheet_rgba = sheet or metatile_sheet(tileset)
+    if (sheet_width != SHEET_COLUMNS * 16 or
+            sheet_height * sheet_width * 4 != len(sheet_rgba) or
+            sheet_height < ((SHEET_BLOCKS + SHEET_COLUMNS - 1) //
+                            SHEET_COLUMNS) * 16):
+        raise ValueError("invalid Zero Mission metatile sheet")
+    output_width = width * 16
+    rgba = bytearray(output_width * height * 16 * 4)
+    for block_y in range(height):
+        for block_x in range(width):
+            block = sheet_block(blocks[block_x + block_y * width])
+            source_x = block % SHEET_COLUMNS * 16
+            source_y = block // SHEET_COLUMNS * 16
+            for row in range(16):
+                source = ((source_y + row) * sheet_width + source_x) * 4
+                destination = ((block_y * 16 + row) * output_width +
+                               block_x * 16) * 4
+                rgba[destination:destination + 64] = \
+                    sheet_rgba[source:source + 64]
+    return bytes(rgba)
+
+
 def text_background(symbol: str, tileset: int) -> tuple[int, int, int, bytes]:
     """An LZ77 text background (BG3, LZ77 BG0): size flag and RGBA image."""
     data = symbol_bytes(symbol)

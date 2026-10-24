@@ -380,6 +380,50 @@ static void test_tileset_video_memory(void) {
            metatiles->cells[4095] == 0 &&
            metatiles->cells[4096] == 0x4000 &&
            metatiles->cells[FUSION_MZM_METATILE_WORD_COUNT - 1] == 0x433F);
+    for (size_t cell = 0; cell < FUSION_MZM_METATILE_CELLS; ++cell) {
+        metatiles->cells[cell] = 1;
+        metatiles->cells[
+            FUSION_MZM_TILESET_METATILE_COUNT *
+                FUSION_MZM_METATILE_CELLS + cell] = 0x1001;
+    }
+    memset(memory->vram + 0x4000 + 32, 0x11, 32);
+    write_u16(memory->palette, 2, 0x001F);
+    write_u16(memory->palette, 34, 0x03E0);
+    uint16_t block_cells[] = {0, 0x400};
+    FusionMzmRoomRleMap render_map = {
+        .width = 2, .height = 1, .cells = block_cells, .cell_count = 2
+    };
+    FusionMzmRenderedBackground rendered;
+    assert(fusion_mzm_render_rle_background(
+        &render_map, metatiles, memory, &rendered, error, sizeof error));
+    assert(rendered.width_pixels == 32 && rendered.height_pixels == 16 &&
+           rendered.pixel_count == 512 && rendered.unresolved_count == 0);
+    assert(rendered.rgba[0] == 255 && rendered.rgba[1] == 0 &&
+           rendered.rgba[2] == 0 && rendered.rgba[3] == 255);
+    size_t common_pixel = 16 * 4;
+    assert(rendered.rgba[common_pixel] == 0 &&
+           rendered.rgba[common_pixel + 1] == 255 &&
+           rendered.rgba[common_pixel + 2] == 0 &&
+           rendered.rgba[common_pixel + 3] == 255);
+    fusion_mzm_free_rendered_background(&rendered);
+    assert(rendered.rgba == NULL && rendered.pixel_count == 0);
+
+    uint16_t *text_cells = calloc(1024, sizeof *text_cells);
+    assert(text_cells);
+    text_cells[0] = 1;
+    memset(memory->vram + 0x8000 + 32, 0x11, 32);
+    FusionMzmTextTilemap text_map = {
+        .width_tiles = 32, .height_tiles = 32,
+        .cells = text_cells, .cell_count = 1024
+    };
+    assert(fusion_mzm_render_text_background(
+        &text_map, memory, &rendered, error, sizeof error));
+    assert(rendered.width_pixels == 256 && rendered.height_pixels == 256 &&
+           rendered.pixel_count == 65536 && rendered.unresolved_count == 0);
+    assert(rendered.rgba[0] == 255 && rendered.rgba[1] == 0 &&
+           rendered.rgba[2] == 0 && rendered.rgba[3] == 255);
+    fusion_mzm_free_rendered_background(&rendered);
+    free(text_cells);
     symbol_entries[4].size = 1;
     assert(!fusion_mzm_read_tileset_metatiles(
         &rom, &symbols, TILESET_INDEX, metatiles, error, sizeof error));

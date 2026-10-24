@@ -254,6 +254,159 @@ bool fusion_mzm_read_tileset_metatiles(
     return true;
 }
 
+void fusion_mzm_free_rendered_background(
+    FusionMzmRenderedBackground *rendered) {
+    if (!rendered) return;
+    free(rendered->rgba);
+    *rendered = (FusionMzmRenderedBackground){0};
+}
+
+static bool allocate_rendered_background(
+    size_t width, size_t height, FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size) {
+    if (!rendered || width == 0 || height == 0 ||
+        width > FUSION_MZM_RENDER_PIXEL_CAPACITY / height) {
+        set_error(error, error_size,
+                  "invalid Zero Mission background-render request");
+        return false;
+    }
+    *rendered = (FusionMzmRenderedBackground){0};
+    size_t pixel_count = width * height;
+    if (pixel_count > FUSION_MZM_RENDER_PIXEL_CAPACITY ||
+        pixel_count > SIZE_MAX / 4) {
+        set_error(error, error_size,
+                  "Zero Mission rendered background exceeds the pixel safety cap");
+        return false;
+    }
+    uint8_t *rgba = calloc(pixel_count, 4);
+    if (!rgba) {
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission rendered background");
+        return false;
+    }
+    *rendered = (FusionMzmRenderedBackground){
+        width, height, rgba, pixel_count, 0
+    };
+    return true;
+}
+
+static void render_tile(uint16_t word, size_t character_base,
+                        const FusionMzmVideoMemory *memory,
+                        FusionMzmRenderedBackground *rendered,
+                        size_t destination_x, size_t destination_y) {
+    size_t tile_offset = character_base + (size_t)(word & 0x3FF) * 32;
+    if (tile_offset > sizeof memory->vram ||
+        32 > sizeof memory->vram - tile_offset) {
+        ++rendered->unresolved_count;
+        return;
+    }
+    size_t palette_bank = (word >> 12) & 0xF;
+    for (size_t y = 0; y < 8; ++y) {
+        size_t source_y = (word & 0x800) ? 7 - y : y;
+        for (size_t x = 0; x < 8; ++x) {
+            size_t source_x = (word & 0x400) ? 7 - x : x;
+            uint8_t packed = memory->vram[
+                tile_offset + source_y * 4 + source_x / 2];
+            uint8_t color_index =
+                (packed >> (4 * (source_x & 1))) & 0xF;
+            if (color_index == 0) continue;
+            size_t color_offset = (palette_bank * 16 + color_index) * 2;
+            uint16_t color = read_u16(memory->palette + color_offset);
+            size_t destination =
+                ((destination_y + y) * rendered->width_pixels +
+                 destination_x + x) * 4;
+            rendered->rgba[destination] =
+                (uint8_t)(((color & 31) * 255) / 31);
+            rendered->rgba[destination + 1] =
+                (uint8_t)((((color >> 5) & 31) * 255) / 31);
+            rendered->rgba[destination + 2] =
+                (uint8_t)((((color >> 10) & 31) * 255) / 31);
+            rendered->rgba[destination + 3] = 255;
+        }
+    }
+}
+
+bool fusion_mzm_render_rle_background(
+    const FusionMzmRoomRleMap *map, const FusionMzmMetatileTable *metatiles,
+    const FusionMzmVideoMemory *memory,
+    FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size) {
+    if (!map || !metatiles || !memory || !rendered || !map->cells ||
+        map->width == 0 || map->height == 0 ||
+        map->cell_count != (size_t)map->width * map->height ||
+        metatiles->tileset_word_count >
+            FUSION_MZM_TILESET_METATILE_COUNT * FUSION_MZM_METATILE_CELLS ||
+        metatiles->common_word_count !=
+            FUSION_MZM_COMMON_METATILE_COUNT * FUSION_MZM_METATILE_CELLS) {
+        set_error(error, error_size,
+                  "invalid Zero Mission RLE background-render request");
+        return false;
+    }
+    if (!allocate_rendered_background((size_t)map->width * 16,
+                                      (size_t)map->height * 16,
+                                      rendered, error, error_size)) {
+        return false;
+    }
+    for (size_t block_y = 0; block_y < map->height; ++block_y) {
+        for (size_t block_x = 0; block_x < map->width; ++block_x) {
+            size_t value = map->cells[block_x + block_y * map->width];
+            size_t block;
+            if (value & 0x400) {
+                size_t common = value - 0x400;
+                block = common < FUSION_MZM_COMMON_METATILE_COUNT
+                    ? FUSION_MZM_TILESET_METATILE_COUNT + common : 0;
+            } else {
+                block = value < FUSION_MZM_TILESET_METATILE_COUNT ? value : 0;
+            }
+            size_t first_word = block * FUSION_MZM_METATILE_CELLS;
+            for (size_t cell = 0; cell < FUSION_MZM_METATILE_CELLS; ++cell) {
+                render_tile(metatiles->cells[first_word + cell], 0x4000,
+                            memory, rendered,
+                            block_x * 16 + cell % 2 * 8,
+                            block_y * 16 + cell / 2 * 8);
+            }
+        }
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+bool fusion_mzm_render_text_background(
+    const FusionMzmTextTilemap *map, const FusionMzmVideoMemory *memory,
+    FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size) {
+    if (!map || !memory || !rendered || !map->cells ||
+        map->width_tiles == 0 || map->height_tiles == 0 ||
+        map->width_tiles % 32 != 0 || map->height_tiles % 32 != 0 ||
+        map->cell_count != (size_t)map->width_tiles * map->height_tiles) {
+        set_error(error, error_size,
+                  "invalid Zero Mission text background-render request");
+        return false;
+    }
+    if (!allocate_rendered_background((size_t)map->width_tiles * 8,
+                                      (size_t)map->height_tiles * 8,
+                                      rendered, error, error_size)) {
+        return false;
+    }
+    size_t screens_x = map->width_tiles / 32;
+    size_t screens_y = map->height_tiles / 32;
+    for (size_t screen_y = 0; screen_y < screens_y; ++screen_y) {
+        for (size_t screen_x = 0; screen_x < screens_x; ++screen_x) {
+            size_t screen = screen_y * screens_x + screen_x;
+            for (size_t tile_y = 0; tile_y < 32; ++tile_y) {
+                for (size_t tile_x = 0; tile_x < 32; ++tile_x) {
+                    size_t source = screen * 1024 + tile_y * 32 + tile_x;
+                    render_tile(map->cells[source], 0x8000, memory, rendered,
+                                screen_x * 256 + tile_x * 8,
+                                screen_y * 256 + tile_y * 8);
+                }
+            }
+        }
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 static bool read_count(const uint8_t *data, size_t size, size_t *position,
                        uint8_t count_bytes, uint16_t *count) {
     if (*position > size || count_bytes > size - *position) return false;

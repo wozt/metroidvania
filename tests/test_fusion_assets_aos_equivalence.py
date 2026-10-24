@@ -12,6 +12,7 @@ from scripts.import_aos_world import (
     decode_area_directory,
     decode_map_cells,
     decode_room_descriptor,
+    decode_room_transitions,
 )
 
 
@@ -103,4 +104,42 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             )
             actual.append(tuple(int(value, 0) for value in fields[1:18]) +
                           (variants,))
+        self.assertEqual(actual, expected)
+
+    def test_room_transitions_and_targets_match_python_reference(self):
+        rom = ROM.read_bytes()
+        area_pointers, room_counts = decode_area_directory(rom)
+        rooms = []
+        locations = {}
+        for area, (table_pointer, room_count) in enumerate(
+                zip(area_pointers, room_counts)):
+            table_offset = table_pointer - GBA_ROM_BASE
+            for room in range(room_count):
+                source = struct.unpack_from("<I", rom, table_offset + room * 4)[0]
+                self.assertNotIn(source, locations)
+                locations[source] = (area, room)
+                rooms.append((area, room, decode_room_descriptor(rom, source)))
+        expected = []
+        for area, room, descriptor in rooms:
+            for index, transition in enumerate(
+                    decode_room_transitions(rom, descriptor)):
+                target_area, target_room = locations[transition["target_pointer"]]
+                expected.append((
+                    area, room, index, transition["entry_pointer"],
+                    transition["target_pointer"], transition["source_screen_x"],
+                    transition["source_screen_y"], transition["field_6"],
+                    transition["field_8"], transition["load_x"],
+                    transition["load_y"], transition["field_e"],
+                    target_area, target_room,
+                ))
+        result = subprocess.run(
+            [str(BINARY), "--aria-transitions", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = []
+        for line in result.stdout.splitlines():
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "transition")
+            actual.append(tuple(int(value, 0) for value in fields[1:]))
         self.assertEqual(actual, expected)

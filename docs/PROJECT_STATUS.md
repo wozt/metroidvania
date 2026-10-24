@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0487 - Native Aria room transitions
+
+- Ported Aria's 16-byte room transition entries to C11, including signed source
+  screen coordinates, load coordinates and the five native control fields.
+- Resolved every transition target pointer to one unique native area/room pair;
+  unknown and ambiguous room pointers are rejected.
+- Added synthetic coverage for signed coordinates, field decoding, two resolved
+  destinations and an unknown target, then compared every local-ROM transition
+  and destination against the Python reference.
+- Background descriptors, graphics/palette loading lists and entity placements
+  remain Python-authoritative; no transition output is tracked in the repository.
+- Next: port the three background descriptors and their bounded dimension
+  metadata, without decoding tile graphics yet.
+
 ## Patch 0486 - Native Aria room descriptor headers
 
 - Ported Aria's bounded room descriptor headers and up-to-16-entry variant

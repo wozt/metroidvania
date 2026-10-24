@@ -36,6 +36,7 @@ build/fusion_importer --verify --rom-dir roms
 build/fusion_importer --aria-directory "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-map "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-rooms "roms/Castlevania - Aria of Sorrow (USA).gba"
+build/fusion_importer --aria-transitions "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --dry-run --force
 ```
 
@@ -54,7 +55,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
-| `scripts/import_aos_world.py` | `src/assets/aos/world.c` | directory, map and room headers partial | synthetic bounds fixture plus verified-ROM comparison of room counts, every occupied map/save/warp cell and every descriptor/variant chain; transition entries, backgrounds, loading lists and entities pending |
+| `scripts/import_aos_world.py` | `src/assets/aos/world.c` | world structure partial | synthetic bounds fixtures plus verified-ROM comparison of directory counts, map cells, room headers/variants and all resolved transition entries; backgrounds, loading lists and entities pending |
 | `scripts/aos_runtime_room.py` | `src/assets/aos/rooms.c` | not started | collision, entity and transition comparison |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
@@ -64,8 +65,8 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next native Aria layer should decode transition entries and resolve their
-target rooms against the new directory/map/descriptor readers. The header extractor is
+The next native Aria layer should decode the three background descriptors and
+their dimension metadata. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not
 replace room or asset extraction. Each task must declare its ROM inputs,

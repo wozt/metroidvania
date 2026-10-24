@@ -222,3 +222,77 @@ bool fusion_aos_read_room_descriptor(const FusionRom *rom,
     if (error && error_size > 0) error[0] = '\0';
     return true;
 }
+
+static bool resolve_room_pointer(const FusionRom *rom,
+                                 const FusionAosAreaDirectory *directory,
+                                 uint32_t target, size_t *target_area,
+                                 size_t *target_room) {
+    size_t matches = 0;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        size_t table_offset;
+        if (!pointer_offset(rom, directory->areas[area].room_table_pointer,
+                            directory->areas[area].room_count * sizeof(uint32_t),
+                            &table_offset)) {
+            return false;
+        }
+        for (size_t room = 0; room < directory->areas[area].room_count; ++room) {
+            if (read_u32(rom->data + table_offset + room * 4) == target) {
+                *target_area = area;
+                *target_room = room;
+                ++matches;
+            }
+        }
+    }
+    return matches == 1;
+}
+
+bool fusion_aos_read_room_transitions(const FusionRom *rom,
+                                      const FusionAosAreaDirectory *directory,
+                                      const FusionAosRoomDescriptor *descriptor,
+                                      FusionAosTransitionList *transitions,
+                                      char *error, size_t error_size) {
+    if (!rom || !directory || !descriptor || !transitions || !rom->data ||
+        rom->game != FUSION_ASSET_GAME_ARIA) {
+        set_error(error, error_size, "invalid Aria room transition request");
+        return false;
+    }
+    if (descriptor->transition_count > FUSION_AOS_ROOM_TRANSITION_CAPACITY) {
+        set_error(error, error_size, "Aria room transition count exceeds the safety cap");
+        return false;
+    }
+    size_t offset;
+    if (!pointer_offset(rom, descriptor->transitions_pointer,
+                        descriptor->transition_count * AOS_TRANSITION_SIZE, &offset)) {
+        set_error(error, error_size, "Aria room transition table points outside the ROM");
+        return false;
+    }
+
+    *transitions = (FusionAosTransitionList){0};
+    for (size_t index = 0; index < descriptor->transition_count; ++index) {
+        const uint8_t *data = rom->data + offset + index * AOS_TRANSITION_SIZE;
+        FusionAosTransition *transition = &transitions->entries[index];
+        transition->entry_pointer =
+            GBA_ROM_BASE + (uint32_t)(offset + index * AOS_TRANSITION_SIZE);
+        transition->target_pointer = read_u32(data);
+        transition->source_screen_x = (int8_t)data[4];
+        transition->source_screen_y = (int8_t)data[5];
+        transition->field_6 = read_u16(data + 6);
+        transition->field_8 = read_u16(data + 8);
+        transition->load_x = read_u16(data + 10);
+        transition->load_y = read_u16(data + 12);
+        transition->field_e = read_u16(data + 14);
+        size_t target_offset;
+        if (!pointer_offset(rom, transition->target_pointer,
+                            AOS_ROOM_DESCRIPTOR_SIZE, &target_offset) ||
+            !resolve_room_pointer(rom, directory, transition->target_pointer,
+                                  &transition->target_area,
+                                  &transition->target_room)) {
+            set_error(error, error_size,
+                      "Aria transition targets an unknown or ambiguous room");
+            return false;
+        }
+        transitions->count = index + 1;
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}

@@ -215,8 +215,9 @@ The first game-specific reader is `fusion/assets/aos.h`. It decodes Aria's
 and exposes per-area room counts. It also decodes the 64x35 global map into
 bounded room-coordinate records with save/warp flags and room pointers. Room
 descriptor headers and their bounded variant chains are native as well.
-Transition records, background/load descriptors, entities and resource
-payloads are still owned by the Python reference pipeline.
+Transition records are decoded and resolved to unique native room identities.
+Background/load descriptors, entities and resource payloads are still owned by
+the Python reference pipeline.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

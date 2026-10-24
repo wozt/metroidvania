@@ -17,9 +17,10 @@ static void usage(const char *name) {
             "       %s --aria-directory FILE\n"
             "       %s --aria-map FILE\n"
             "       %s --aria-rooms FILE\n"
+            "       %s --aria-transitions FILE\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
-            name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name);
 }
 
 static void list_games(void) {
@@ -188,12 +189,56 @@ static int inspect_aria_rooms(const char *path) {
     return 0;
 }
 
+static int inspect_aria_transitions(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-transitions: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-transitions: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            FusionAosTransitionList transitions;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error) ||
+                !fusion_aos_read_room_transitions(&rom, &directory, &descriptor,
+                                                  &transitions, error, sizeof error)) {
+                fprintf(stderr, "aria-transitions: area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            for (size_t index = 0; index < transitions.count; ++index) {
+                const FusionAosTransition *transition = &transitions.entries[index];
+                printf("transition\t%zu\t%zu\t%zu\t0x%08X\t0x%08X\t%d\t%d\t"
+                       "%u\t%u\t%u\t%u\t%u\t%zu\t%zu\n",
+                       area, room, index, transition->entry_pointer,
+                       transition->target_pointer, transition->source_screen_x,
+                       transition->source_screen_y, transition->field_6,
+                       transition->field_8, transition->load_x, transition->load_y,
+                       transition->field_e, transition->target_area,
+                       transition->target_room);
+            }
+        }
+    }
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
     const char *aria_directory_path = NULL;
     const char *aria_map_path = NULL;
     const char *aria_rooms_path = NULL;
+    const char *aria_transitions_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -205,6 +250,8 @@ int main(int argc, char **argv) {
             aria_map_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-rooms") && i + 1 < argc)
             aria_rooms_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-transitions") && i + 1 < argc)
+            aria_transitions_path = argv[++i];
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -224,6 +271,7 @@ int main(int argc, char **argv) {
     if (aria_directory_path) return inspect_aria_directory(aria_directory_path);
     if (aria_map_path) return inspect_aria_map(aria_map_path);
     if (aria_rooms_path) return inspect_aria_rooms(aria_rooms_path);
+    if (aria_transitions_path) return inspect_aria_transitions(aria_transitions_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

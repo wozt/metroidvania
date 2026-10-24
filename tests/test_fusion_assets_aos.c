@@ -39,6 +39,16 @@ static void write_room_descriptor(uint8_t *data, size_t offset, uint16_t selecto
     write_u16(data, offset + 34, coordinates);
 }
 
+static void write_transition(uint8_t *data, size_t offset, uint32_t target,
+                             int8_t source_x, int8_t source_y, uint16_t seed) {
+    write_u32(data, offset, target);
+    data[offset + 4] = (uint8_t)source_x;
+    data[offset + 5] = (uint8_t)source_y;
+    for (size_t field = 0; field < 5; ++field) {
+        write_u16(data, offset + 6 + field * 2, (uint16_t)(seed + field));
+    }
+}
+
 int main(void) {
     uint8_t *bytes = calloc(1, FIXTURE_SIZE);
     assert(bytes);
@@ -76,6 +86,10 @@ int main(void) {
                           (uint16_t)(5 | (6 << 7) | 0xC000));
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 24,
               GBA_ROM_BASE + RESOLVED_ROOM_OFFSET - 0x20);
+    write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x20,
+                     GBA_ROM_BASE + ROOM_BASE_OFFSET + ROOM_STRIDE, -1, 2, 10);
+    write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x10,
+                     GBA_ROM_BASE + ROOM_BASE_OFFSET + 2 * ROOM_STRIDE, 3, -4, 20);
     FusionAosRoomDescriptor descriptor;
     assert(fusion_aos_read_room_descriptor(&rom, &directory, 0, 0, &descriptor,
                                            error, sizeof error));
@@ -86,6 +100,23 @@ int main(void) {
     assert(descriptor.map_x == 5 && descriptor.map_y == 6);
     assert(descriptor.coordinate_flag_0 && descriptor.coordinate_flag_1);
     assert(descriptor.transition_count == 2);
+    FusionAosTransitionList transitions;
+    assert(fusion_aos_read_room_transitions(&rom, &directory, &descriptor,
+                                            &transitions, error, sizeof error));
+    assert(transitions.count == 2);
+    assert(transitions.entries[0].source_screen_x == -1);
+    assert(transitions.entries[0].source_screen_y == 2);
+    assert(transitions.entries[0].field_6 == 10 && transitions.entries[0].field_e == 14);
+    assert(transitions.entries[0].target_area == 1 &&
+           transitions.entries[0].target_room == 0);
+    assert(transitions.entries[1].source_screen_y == -4);
+    assert(transitions.entries[1].target_area == 1 &&
+           transitions.entries[1].target_room == 1);
+    write_u32(bytes, RESOLVED_ROOM_OFFSET - 0x20, GBA_ROM_BASE + 0x7000);
+    assert(!fusion_aos_read_room_transitions(&rom, &directory, &descriptor,
+                                             &transitions, error, sizeof error));
+    write_u32(bytes, RESOLVED_ROOM_OFFSET - 0x20,
+              GBA_ROM_BASE + ROOM_BASE_OFFSET + ROOM_STRIDE);
     write_u32(bytes, ROOM_BASE_OFFSET + 4, GBA_ROM_BASE + ROOM_BASE_OFFSET);
     assert(!fusion_aos_read_room_descriptor(&rom, &directory, 0, 0, &descriptor,
                                             error, sizeof error));

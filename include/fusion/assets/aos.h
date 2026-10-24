@@ -12,6 +12,7 @@
 enum {
     FUSION_AOS_AREA_COUNT = 12,
     FUSION_AOS_ROOM_VARIANT_CAPACITY = 16,
+    FUSION_AOS_ROOM_TRANSITION_CAPACITY = 16,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
@@ -69,6 +70,25 @@ typedef struct {
     bool coordinate_flag_1;
 } FusionAosRoomDescriptor;
 
+typedef struct {
+    uint32_t entry_pointer;
+    uint32_t target_pointer;
+    int8_t source_screen_x;
+    int8_t source_screen_y;
+    uint16_t field_6;
+    uint16_t field_8;
+    uint16_t load_x;
+    uint16_t load_y;
+    uint16_t field_e;
+    size_t target_area;
+    size_t target_room;
+} FusionAosTransition;
+
+typedef struct {
+    FusionAosTransition entries[FUSION_AOS_ROOM_TRANSITION_CAPACITY];
+    size_t count;
+} FusionAosTransitionList;
+
 bool fusion_aos_read_area_directory(const FusionRom *rom,
                                     FusionAosAreaDirectory *directory,
                                     char *error, size_t error_size);
@@ -80,5 +100,10 @@ bool fusion_aos_read_room_descriptor(const FusionRom *rom,
                                      size_t area, size_t room,
                                      FusionAosRoomDescriptor *descriptor,
                                      char *error, size_t error_size);
+bool fusion_aos_read_room_transitions(const FusionRom *rom,
+                                      const FusionAosAreaDirectory *directory,
+                                      const FusionAosRoomDescriptor *descriptor,
+                                      FusionAosTransitionList *transitions,
+                                      char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

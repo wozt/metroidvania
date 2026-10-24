@@ -289,26 +289,22 @@ def decode_room_descriptor(rom: bytes, source_pointer: int) -> dict:
     }
 
 
-def _decode_room(rom: bytes, source_pointer: int) -> dict:
-    """Resolve and decode one room descriptor with bounded linked structures."""
-    header = decode_room_descriptor(rom, source_pointer)
-    pointer = header["resolved_pointer"]
-    transitions_pointer = header["transitions_pointer"]
-    transition_count = header["transition_count"]
-    transition_offset = _rom_offset(
-        transitions_pointer, len(rom), transition_count * TRANSITION_ENTRY_SIZE
-    )
+def decode_room_transitions(rom: bytes, descriptor: dict) -> list[dict]:
+    """Decode the bounded transition entries owned by one room descriptor."""
+    pointer = descriptor["transitions_pointer"]
+    count = descriptor["transition_count"]
+    offset = _rom_offset(pointer, len(rom), count * TRANSITION_ENTRY_SIZE)
     transitions = []
-    for index in range(transition_count):
-        entry_offset = transition_offset + index * TRANSITION_ENTRY_SIZE
+    for index in range(count):
+        entry_offset = offset + index * TRANSITION_ENTRY_SIZE
         (
             target, source_screen_x, source_screen_y, field_6, field_8,
             load_x, load_y, field_e,
         ) = struct.unpack_from("<IbbHHHHH", rom, entry_offset)
         _rom_offset(target, len(rom), ROOM_DESCRIPTOR_SIZE)
         transitions.append({
-            "entry_pointer": _pointer(GBA_ROM_BASE + entry_offset),
-            "target_pointer": _pointer(target),
+            "entry_pointer": GBA_ROM_BASE + entry_offset,
+            "target_pointer": target,
             "source_screen_x": source_screen_x,
             "source_screen_y": source_screen_y,
             "field_6": field_6,
@@ -317,6 +313,22 @@ def _decode_room(rom: bytes, source_pointer: int) -> dict:
             "load_y": load_y,
             "field_e": field_e,
         })
+    return transitions
+
+
+def _decode_room(rom: bytes, source_pointer: int) -> dict:
+    """Resolve and decode one room descriptor with bounded linked structures."""
+    header = decode_room_descriptor(rom, source_pointer)
+    pointer = header["resolved_pointer"]
+    transitions_pointer = header["transitions_pointer"]
+    transitions = [
+        {
+            **entry,
+            "entry_pointer": _pointer(entry["entry_pointer"]),
+            "target_pointer": _pointer(entry["target_pointer"]),
+        }
+        for entry in decode_room_transitions(rom, header)
+    ]
 
     entities_pointer = header["entities_pointer"]
     entities = [] if entities_pointer == 0 else _decode_entities(rom, entities_pointer)

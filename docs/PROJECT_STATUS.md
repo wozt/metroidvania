@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0502 - Native Zero Mission BG3 tilemaps
+
+- Extended the native room-background contract from BG0/BG1/BG2 to all four
+  layers and connected each room entry's BG3 property and resource pointer.
+- BG3 now uses the existing bounded BIOS-LZ77 text-tilemap decoder, including
+  the `BG_PROP_STARTS_FROM_BOTTOM` property combination and its preserved size
+  flag, dimensions and final 16-bit cells.
+- Extended the synthetic ownership/property fixture and the complete Python
+  comparison to all four layer slots through `--mzm-backgrounds`.
+- All 317 present BG3 tilemaps match Python across 576,512 cells; the other 14
+  BG3 layers are absent. Across BG0-BG3, the contract now covers 784 RLE maps,
+  331 text tilemaps and 209 absent layers, totaling 1,443,436 cells with no
+  unsupported property. Tileset graphics/palettes, compositing and room
+  serialization remain Python-owned, so migration status stays partial and
+  gameplay parity does not change.
+- Next: alternate to Aria and port bounded 4-bpp pixel rendering from native
+  tilemaps, VRAM and palettes; audio remains untouched.
+
 ## Patch 0501 - Native Aria background tile expansion
 
 - Added bounded C11 expansion of Aria text-background block maps into their

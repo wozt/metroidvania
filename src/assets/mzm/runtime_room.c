@@ -229,10 +229,12 @@ bool fusion_mzm_read_room_backgrounds(const FusionRom *rom,
     }
     *backgrounds = (FusionMzmRoomBackgrounds){0};
     const uint8_t properties[FUSION_MZM_ROOM_BACKGROUND_COUNT] = {
-        entry->bg0_property, entry->bg1_property, entry->bg2_property
+        entry->bg0_property, entry->bg1_property,
+        entry->bg2_property, entry->bg3_property
     };
     const uint32_t pointers[FUSION_MZM_ROOM_BACKGROUND_COUNT] = {
-        entry->bg0_pointer, entry->bg1_pointer, entry->bg2_pointer
+        entry->bg0_pointer, entry->bg1_pointer,
+        entry->bg2_pointer, entry->bg3_pointer
     };
     for (size_t layer = 0; layer < FUSION_MZM_ROOM_BACKGROUND_COUNT; ++layer) {
         FusionMzmRoomBackground *background = &backgrounds->layers[layer];

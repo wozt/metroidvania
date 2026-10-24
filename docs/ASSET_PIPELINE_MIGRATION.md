@@ -66,7 +66,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | native extractor complete, orchestration pending | synthetic malformed-ELF, bounds and serialization fixtures; exact verified-input comparison of every filtered symbol plus byte-for-byte comparison of `MZMROM01` and the manifest |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
 | GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header`, `fusion_rom_read_gba_header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, verified local ROM identity, fixed marker and complement checksum |
-| `scripts/mzm_runtime_room.py`, `scripts/mzm_bg_layers.py` | `src/assets/mzm/rooms.c`, `src/assets/mzm/runtime_room.c` | room entries, Clipdata and BG0/BG1/BG2 payloads complete; other payloads pending | synthetic table, pointer, custom-RLE and LZ77 bounds; exact comparison of every descriptor field, all 331 Clipdata maps, 784 RLE background layers and 14 text tilemaps; BG3, tilesets, compositing and runtime-room serialization pending |
+| `scripts/mzm_runtime_room.py`, `scripts/mzm_bg_layers.py` | `src/assets/mzm/rooms.c`, `src/assets/mzm/runtime_room.c` | room entries, Clipdata and BG0-BG3 payloads complete; other payloads pending | synthetic table, pointer, property, custom-RLE and LZ77 bounds; exact comparison of every descriptor field, all 331 Clipdata maps, 784 RLE background layers and 331 text tilemaps totaling 1,443,436 cells; tilesets, compositing and runtime-room serialization pending |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
@@ -79,11 +79,10 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should alternate to Zero Mission and connect its BG3
-LZ77 tilemaps to the native room-background contract. Aria still needs native
-pixel rendering, compositing and runtime-room serialization; Zero Mission
-still needs tilesets, compositing, doors, sprites and runtime-room
-serialization. The
+The next migration layer should alternate to Aria and render its decoded 4-bpp
+text backgrounds from native tilemaps, VRAM and palettes. Aria still needs
+native compositing and runtime-room serialization; Zero Mission still needs
+tilesets, compositing, doors, sprites and runtime-room serialization. The
 completed Zero Mission ROM bank and Aria world catalog are ready for later
 registration in the native task graph. The header extractor is
 intentionally diagnostic: it reads a

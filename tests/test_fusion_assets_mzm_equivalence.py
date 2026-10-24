@@ -167,7 +167,7 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
         total_cells = 0
         for room in source_rooms():
             fields = room["fields"]
-            for layer in range(3):
+            for layer in range(4):
                 property_value = evaluate(fields.get(f"bg{layer}Prop", "0"), names)
                 symbol = fields[f"pBg{layer}Data"]
                 pointer = symbols[symbol]

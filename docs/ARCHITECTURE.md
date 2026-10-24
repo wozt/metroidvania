@@ -241,8 +241,9 @@ including their layer, Clipdata and spriteset references and scalar room
 properties. The room layer now decodes the custom two-pass RLE behind every
 Clipdata pointer into its final 16-bit cell map. It also classifies all
 BG0/BG1/BG2 property combinations, expands their custom-RLE block maps and
-BIOS-LZ77 text tilemaps, and exposes the final bounded 16-bit cells. BG3,
-tileset graphics/palettes, compositing, doors, sprites and runtime-room
+BIOS-LZ77 text tilemaps, and exposes the final bounded 16-bit cells. The same
+text-tilemap path now covers BG3, including its starts-from-bottom property.
+Tileset graphics/palettes, compositing, doors, sprites and runtime-room
 serialization remain Python-owned, and these native extractors are not yet
 registered in the global native task graph.
 

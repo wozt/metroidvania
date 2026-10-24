@@ -228,9 +228,11 @@ static void test_room_backgrounds(void) {
         .bg0_property = FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED,
         .bg1_property = 0,
         .bg2_property = FUSION_MZM_BG_PROPERTY_LZ77_COMPRESSED,
+        .bg3_property = 0x46,
         .bg0_pointer = 0x08000000 + RLE_OFFSET,
         .bg1_pointer = 0x08000020,
         .bg2_pointer = 0x08000000 + TEXT_OFFSET,
+        .bg3_pointer = 0x08000000 + TEXT_OFFSET,
     };
     char error[160];
     FusionMzmRoomBackgrounds backgrounds;
@@ -248,9 +250,14 @@ static void test_room_backgrounds(void) {
            backgrounds.layers[2].text.cell_count == 1024);
     assert(backgrounds.layers[2].text.cells[0] == 0x6C6D &&
            backgrounds.layers[2].text.cells[1023] == 0x9293);
+    assert(backgrounds.layers[3].status == FUSION_MZM_BACKGROUND_TEXT);
+    assert(backgrounds.layers[3].property == 0x46 &&
+           backgrounds.layers[3].text.cell_count == 1024 &&
+           backgrounds.layers[3].text.cells[0] == 0x6C6D);
     fusion_mzm_free_room_backgrounds(&backgrounds);
     assert(backgrounds.layers[0].rle.cells == NULL &&
-           backgrounds.layers[2].text.cells == NULL);
+           backgrounds.layers[2].text.cells == NULL &&
+           backgrounds.layers[3].text.cells == NULL);
 
     entry.bg1_property = 1;
     assert(fusion_mzm_read_room_backgrounds(&rom, &entry, &backgrounds,

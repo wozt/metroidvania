@@ -1,13 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "fusion/assets/mzm.h"
 
+#include "output.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 enum {
     ELF32_HEADER_SIZE = 0x34,
@@ -22,8 +20,6 @@ typedef struct {
     const char *name;
     bool duplicate;
 } NameSlot;
-
-typedef bool (*WriteFileBody)(FILE *file, const void *context);
 
 static void set_error(char *error, size_t error_size, const char *message) {
     if (!error || error_size == 0) return;
@@ -94,47 +90,6 @@ void fusion_mzm_free_symbols(FusionMzmRomSymbolTable *table) {
     *table = (FusionMzmRomSymbolTable){0};
 }
 
-static bool replace_file(const char *temporary, const char *path) {
-#ifdef _WIN32
-    return MoveFileExA(temporary, path,
-                       MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#else
-    return rename(temporary, path) == 0;
-#endif
-}
-
-static bool write_atomic(const char *path, WriteFileBody write_body,
-                         const void *context, char *error, size_t error_size) {
-    size_t path_length = strlen(path);
-    if (path_length > SIZE_MAX - 5) {
-        set_error(error, error_size, "native output path is too long");
-        return false;
-    }
-    char *temporary = malloc(path_length + 5);
-    if (!temporary) {
-        set_error(error, error_size, "cannot allocate native output path");
-        return false;
-    }
-    snprintf(temporary, path_length + 5, "%s.tmp", path);
-    FILE *file = fopen(temporary, "wb");
-    if (!file) {
-        free(temporary);
-        set_error(error, error_size, "cannot open native temporary output");
-        return false;
-    }
-    bool written = write_body(file, context);
-    bool flushed = fflush(file) == 0;
-    bool closed = fclose(file) == 0;
-    if (!written || !flushed || !closed || !replace_file(temporary, path)) {
-        remove(temporary);
-        free(temporary);
-        set_error(error, error_size, "cannot atomically write native output");
-        return false;
-    }
-    free(temporary);
-    return true;
-}
-
 typedef struct {
     const FusionRom *rom;
 } BankWriteContext;
@@ -190,10 +145,10 @@ bool fusion_mzm_write_rom_bank(const FusionRom *rom,
     }
     BankWriteContext bank_context = {rom};
     ManifestWriteContext manifest_context = {table};
-    if (!write_atomic(bank_path, write_bank_body, &bank_context,
-                      error, error_size) ||
-        !write_atomic(manifest_path, write_manifest_body, &manifest_context,
-                      error, error_size)) {
+    if (!fusion_asset_write_atomic(bank_path, write_bank_body, &bank_context,
+                                   error, error_size) ||
+        !fusion_asset_write_atomic(manifest_path, write_manifest_body,
+                                   &manifest_context, error, error_size)) {
         return false;
     }
     if (error && error_size > 0) error[0] = '\0';

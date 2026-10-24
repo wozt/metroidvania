@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0495 - Native Aria world-catalog serialization
+
+- Added deterministic C11 serialization for the complete `MV_AOS_WORLD_2`
+  catalog: rooms, variants, backgrounds, load lists, entities, resolved
+  transitions, map cells, boss annotations, savepoints and warps.
+- Added native generation of the derived verified `rooms.tsv` browser index,
+  including primary dimensions, entity/transition counts and save/boss flags.
+- Factored atomic output replacement into the shared native asset core and kept
+  the existing Zero Mission ROM-bank writer on that common implementation.
+- Compared the complete native JSON structure with `decode_world`, compared the
+  room index byte for byte, and verified deterministic rewrites in an isolated
+  directory through `fusion_importer --aria-catalog`.
+- The Aria world extractor is now native; registration in the global `--assets`
+  task graph and resource-payload extraction remain open.
+- Next: alternate to Zero Mission and begin its native room-metadata contract
+  from `mzm_runtime_room.py`; audio remains untouched.
+
 ## Patch 0494 - Native Zero Mission ROM-bank serialization
 
 - Added deterministic C11 serialization of the private `MZMROM01` bank and the

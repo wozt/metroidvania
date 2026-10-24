@@ -21,6 +21,9 @@ enum {
     ENTITY_OFFSET = 0x7800,
     UNTERMINATED_ENTITY_OFFSET = 0x9000,
     BOSS_ENTITY_OFFSET = 0xB000,
+    COMMON_BACKGROUND_OFFSET = 0xC000,
+    COMMON_METADATA_OFFSET = 0xC030,
+    EMPTY_LOAD_OFFSET = 0xC040,
     ENEMY_TABLE_OFFSET = 0x0E9644,
     ENEMY_ENTRY_SIZE = 0x24,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
@@ -116,11 +119,25 @@ int main(void) {
             write_u32(bytes, cursor + room * 4, room_pointers[area][room]);
             write_room_descriptor(bytes, descriptor_offset, 0xFFFF, 0, 0x1F00,
                                   (uint16_t)(area | (room << 7)));
+            write_u32(bytes, descriptor_offset + 8,
+                      GBA_ROM_BASE + COMMON_BACKGROUND_OFFSET);
+            write_u32(bytes, descriptor_offset + 12,
+                      GBA_ROM_BASE + EMPTY_LOAD_OFFSET);
+            write_u32(bytes, descriptor_offset + 16,
+                      GBA_ROM_BASE + EMPTY_LOAD_OFFSET);
             ++descriptor_index;
         }
         cursor += room_counts[area] * 4;
     }
     assert(cursor == DIRECTORY_OFFSET);
+    for (size_t layer = 0; layer < FUSION_AOS_BACKGROUND_COUNT; ++layer) {
+        write_background(bytes, COMMON_BACKGROUND_OFFSET + layer * 12,
+                         (uint8_t)layer, (uint8_t)(layer + 1),
+                         (uint16_t)(0x400 + layer),
+                         GBA_ROM_BASE + COMMON_METADATA_OFFSET + layer * 2);
+        bytes[COMMON_METADATA_OFFSET + layer * 2] = 1;
+        bytes[COMMON_METADATA_OFFSET + layer * 2 + 1] = 1;
+    }
 
     for (size_t index = 0; index < FUSION_AOS_BOSS_ROOM_COUNT; ++index) {
         const FusionAosBossSpec *spec = fusion_aos_boss_spec(index);
@@ -304,6 +321,28 @@ int main(void) {
     assert(summary.entity_count == 2 + FUSION_AOS_BOSS_ROOM_COUNT);
     assert(summary.boss_room_count == FUSION_AOS_BOSS_ROOM_COUNT);
     assert(summary.savepoint_count == 1 && summary.warp_count == 1);
+    const char *catalog_path = "fusion-aos-world-test.json";
+    const char *index_path = "fusion-aos-rooms-test.tsv";
+    remove(catalog_path);
+    remove(index_path);
+    assert(fusion_aos_write_world_catalog(&rom, catalog_path, error, sizeof error));
+    assert(fusion_aos_write_room_index(&rom, index_path, error, sizeof error));
+    FILE *catalog = fopen(catalog_path, "rb");
+    assert(catalog);
+    char catalog_header[40] = {0};
+    assert(fread(catalog_header, 1, sizeof catalog_header - 1, catalog) ==
+           sizeof catalog_header - 1);
+    assert(fclose(catalog) == 0);
+    assert(strstr(catalog_header, "\"format\":\"MV_AOS_WORLD_2\"") != NULL);
+    FILE *index_file = fopen(index_path, "rb");
+    assert(index_file);
+    char index_header[64] = {0};
+    assert(fread(index_header, 1, sizeof index_header - 1, index_file) ==
+           sizeof index_header - 1);
+    assert(fclose(index_file) == 0);
+    assert(strstr(index_header, "# VERIFIED ARIA STRUCTURAL INDEX") != NULL);
+    assert(remove(catalog_path) == 0);
+    assert(remove(index_path) == 0);
 
     rom.game = FUSION_ASSET_GAME_METROID;
     assert(!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error));

@@ -29,7 +29,9 @@ target_compile_definitions(fusion_native_editor_core
 fusion_enable_warnings(fusion_native_editor_core)
 
 add_library(fusion_assets STATIC
+    src/assets/aos/catalog.c
     src/assets/aos/world.c
+    src/assets/core/output.c
     src/assets/core/sha1.c
     src/assets/core/rom.c
     src/assets/gba/decompress.c

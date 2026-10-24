@@ -25,12 +25,13 @@ static void usage(const char *name) {
             "       %s --aria-entities FILE\n"
             "       %s --aria-bosses FILE\n"
             "       %s --aria-summary FILE\n"
+            "       %s --aria-catalog ROM WORLD_JSON ROOMS_TSV\n"
             "       %s --mzm-symbols ROM ELF\n"
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name, name);
+            name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -472,6 +473,23 @@ static int inspect_aria_summary(const char *path) {
     return 0;
 }
 
+static int write_aria_catalog(const char *rom_path, const char *output_path,
+                              const char *index_path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &rom,
+                         error, sizeof error) ||
+        !fusion_aos_write_world_catalog(&rom, output_path, error, sizeof error) ||
+        !fusion_aos_write_room_index(&rom, index_path, error, sizeof error)) {
+        fprintf(stderr, "aria-catalog: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    printf("Aria world catalog -> %s, %s\n", output_path, index_path);
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 static int inspect_mzm_symbols(const char *rom_path, const char *elf_path) {
     FusionRom rom = {0};
     uint8_t *elf = NULL;
@@ -564,6 +582,9 @@ int main(int argc, char **argv) {
     const char *aria_entities_path = NULL;
     const char *aria_bosses_path = NULL;
     const char *aria_summary_path = NULL;
+    const char *aria_catalog_rom_path = NULL;
+    const char *aria_catalog_output_path = NULL;
+    const char *aria_catalog_index_path = NULL;
     const char *mzm_symbols_rom_path = NULL;
     const char *mzm_symbols_elf_path = NULL;
     const char *mzm_bank_rom_path = NULL;
@@ -592,6 +613,11 @@ int main(int argc, char **argv) {
             aria_bosses_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-summary") && i + 1 < argc)
             aria_summary_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-catalog") && i + 3 < argc) {
+            aria_catalog_rom_path = argv[++i];
+            aria_catalog_output_path = argv[++i];
+            aria_catalog_index_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--mzm-symbols") && i + 2 < argc) {
             mzm_symbols_rom_path = argv[++i];
             mzm_symbols_elf_path = argv[++i];
@@ -626,6 +652,9 @@ int main(int argc, char **argv) {
     if (aria_entities_path) return inspect_aria_entities(aria_entities_path);
     if (aria_bosses_path) return inspect_aria_bosses(aria_bosses_path);
     if (aria_summary_path) return inspect_aria_summary(aria_summary_path);
+    if (aria_catalog_rom_path)
+        return write_aria_catalog(aria_catalog_rom_path, aria_catalog_output_path,
+                                  aria_catalog_index_path);
     if (mzm_symbols_rom_path)
         return inspect_mzm_symbols(mzm_symbols_rom_path, mzm_symbols_elf_path);
     if (mzm_bank_rom_path)

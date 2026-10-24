@@ -202,5 +202,9 @@ bool fusion_aos_read_boss_room(const FusionRom *rom,
 bool fusion_aos_read_world_summary(const FusionRom *rom,
                                    FusionAosWorldSummary *summary,
                                    char *error, size_t error_size);
+bool fusion_aos_write_world_catalog(const FusionRom *rom, const char *path,
+                                    char *error, size_t error_size);
+bool fusion_aos_write_room_index(const FusionRom *rom, const char *path,
+                                 char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

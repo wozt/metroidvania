@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import struct
 import subprocess
+import tempfile
 import unittest
 
 from scripts.import_aos_world import (
@@ -18,6 +20,7 @@ from scripts.import_aos_world import (
     decode_room_transitions,
     decode_world,
 )
+from scripts.aos_room_index import index_rows
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -284,3 +287,28 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
         self.assertEqual(set(actual), set(keys))
         self.assertEqual({key: int(actual[key]) for key in keys},
                          {key: world[key] for key in keys})
+
+    def test_native_world_catalog_matches_complete_python_structure(self):
+        expected = decode_world(ROM.read_bytes())
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "world.json"
+            index = Path(directory) / "rooms.tsv"
+            command = [str(BINARY), "--aria-catalog", str(ROM), str(output),
+                       str(index)]
+            result = subprocess.run(
+                command, cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            first = output.read_bytes()
+            first_index = index.read_bytes()
+            self.assertEqual(json.loads(first), expected)
+            self.assertEqual(first_index,
+                             ("\n".join(index_rows(expected)) + "\n").encode())
+            result = subprocess.run(
+                command, cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_bytes(), first)
+            self.assertEqual(index.read_bytes(), first_index)
+            self.assertFalse(output.with_suffix(".json.tmp").exists())
+            self.assertFalse(index.with_suffix(".tsv.tmp").exists())

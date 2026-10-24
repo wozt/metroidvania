@@ -506,3 +506,52 @@ bool fusion_aos_read_boss_room(const FusionRom *rom,
     if (error && error_size > 0) error[0] = '\0';
     return true;
 }
+
+bool fusion_aos_read_world_summary(const FusionRom *rom,
+                                   FusionAosWorldSummary *summary,
+                                   char *error, size_t error_size) {
+    if (!rom || !summary || !rom->data || rom->game != FUSION_ASSET_GAME_ARIA) {
+        set_error(error, error_size, "invalid Aria world-summary request");
+        return false;
+    }
+    FusionAosAreaDirectory directory;
+    FusionAosMap map;
+    if (!fusion_aos_read_area_directory(rom, &directory, error, error_size) ||
+        !fusion_aos_read_map(rom, &directory, &map, error, error_size)) {
+        return false;
+    }
+
+    *summary = (FusionAosWorldSummary){0};
+    summary->native_room_count = directory.total_rooms;
+    summary->mapped_cells = map.count;
+    summary->savepoint_count = map.save_count;
+    summary->warp_count = map.warp_count;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            FusionAosTransitionList transitions;
+            FusionAosEntityList entities;
+            if (!fusion_aos_read_room_descriptor(rom, &directory, area, room,
+                                                 &descriptor, error, error_size) ||
+                !fusion_aos_read_room_transitions(rom, &directory, &descriptor,
+                                                  &transitions, error, error_size) ||
+                !fusion_aos_read_entity_list(rom, descriptor.entities_pointer,
+                                             &entities, error, error_size)) {
+                return false;
+            }
+            summary->transition_count += transitions.count;
+            summary->entity_count += entities.count;
+        }
+    }
+    for (size_t index = 0; index < FUSION_AOS_BOSS_ROOM_COUNT; ++index) {
+        FusionAosBossRoom boss;
+        const FusionAosBossSpec *spec = fusion_aos_boss_spec(index);
+        if (!spec || !fusion_aos_read_boss_room(rom, &directory, spec, &boss,
+                                                error, error_size)) {
+            return false;
+        }
+        ++summary->boss_room_count;
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}

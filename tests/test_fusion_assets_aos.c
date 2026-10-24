@@ -20,6 +20,7 @@ enum {
     UNTERMINATED_LOAD_OFFSET = 0x7400,
     ENTITY_OFFSET = 0x7800,
     UNTERMINATED_ENTITY_OFFSET = 0x9000,
+    BOSS_ENTITY_OFFSET = 0xB000,
     ENEMY_TABLE_OFFSET = 0x0E9644,
     ENEMY_ENTRY_SIZE = 0x24,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
@@ -95,24 +96,43 @@ static void write_entity(uint8_t *data, size_t offset, int16_t x, int16_t y,
 int main(void) {
     uint8_t *bytes = calloc(1, FIXTURE_SIZE);
     assert(bytes);
-    size_t total_entries = FUSION_AOS_AREA_COUNT * (FUSION_AOS_AREA_COUNT + 1) / 2;
+    static const size_t room_counts[FUSION_AOS_AREA_COUNT] = {
+        11, 7, 16, 20, 12, 7, 8, 38, 2, 5, 1, 23
+    };
+    uint32_t room_pointers[FUSION_AOS_AREA_COUNT][64] = {{0}};
+    size_t total_entries = 0;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        total_entries += room_counts[area];
+    }
     size_t table_offset = DIRECTORY_OFFSET - total_entries * 4;
     size_t cursor = table_offset;
     size_t descriptor_index = 0;
     for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
         write_u32(bytes, DIRECTORY_OFFSET + area * 4,
                   GBA_ROM_BASE + (uint32_t)cursor);
-        for (size_t room = 0; room <= area; ++room) {
+        for (size_t room = 0; room < room_counts[area]; ++room) {
             size_t descriptor_offset = ROOM_BASE_OFFSET + descriptor_index * ROOM_STRIDE;
-            write_u32(bytes, cursor + room * 4,
-                      GBA_ROM_BASE + (uint32_t)descriptor_offset);
+            room_pointers[area][room] = GBA_ROM_BASE + (uint32_t)descriptor_offset;
+            write_u32(bytes, cursor + room * 4, room_pointers[area][room]);
             write_room_descriptor(bytes, descriptor_offset, 0xFFFF, 0, 0x1F00,
                                   (uint16_t)(area | (room << 7)));
             ++descriptor_index;
         }
-        cursor += (area + 1) * 4;
+        cursor += room_counts[area] * 4;
     }
     assert(cursor == DIRECTORY_OFFSET);
+
+    for (size_t index = 0; index < FUSION_AOS_BOSS_ROOM_COUNT; ++index) {
+        const FusionAosBossSpec *spec = fusion_aos_boss_spec(index);
+        assert(spec);
+        size_t descriptor_offset = room_pointers[spec->area][spec->room] - GBA_ROM_BASE;
+        size_t entity_offset = BOSS_ENTITY_OFFSET + index * 24;
+        write_u32(bytes, descriptor_offset + 20,
+                  GBA_ROM_BASE + (uint32_t)entity_offset);
+        write_entity(bytes, entity_offset, (int16_t)index, (int16_t)(index + 1),
+                     0, 1, spec->enemy_id, 0, 0, 0);
+        write_entity(bytes, entity_offset + 12, INT16_MAX, 0, 0, 0, 0, 0, 0, 0);
+    }
 
     FusionRom rom = {bytes, FIXTURE_SIZE, FUSION_ASSET_GAME_ARIA};
     FusionAosAreaDirectory directory;
@@ -120,7 +140,7 @@ int main(void) {
     assert(fusion_aos_read_area_directory(&rom, &directory, error, sizeof error));
     assert(directory.total_rooms == total_entries);
     for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
-        assert(directory.areas[area].room_count == area + 1);
+        assert(directory.areas[area].room_count == room_counts[area]);
     }
 
     write_room_descriptor(bytes, ROOM_BASE_OFFSET, 0,
@@ -134,9 +154,9 @@ int main(void) {
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 24,
               GBA_ROM_BASE + RESOLVED_ROOM_OFFSET - 0x20);
     write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x20,
-                     GBA_ROM_BASE + ROOM_BASE_OFFSET + ROOM_STRIDE, -1, 2, 10);
+                     room_pointers[1][0], -1, 2, 10);
     write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x10,
-                     GBA_ROM_BASE + ROOM_BASE_OFFSET + 2 * ROOM_STRIDE, 3, -4, 20);
+                     room_pointers[1][1], 3, -4, 20);
     FusionAosRoomDescriptor descriptor;
     assert(fusion_aos_read_room_descriptor(&rom, &directory, 0, 0, &descriptor,
                                            error, sizeof error));
@@ -163,7 +183,7 @@ int main(void) {
     assert(!fusion_aos_read_room_transitions(&rom, &directory, &descriptor,
                                              &transitions, error, sizeof error));
     write_u32(bytes, RESOLVED_ROOM_OFFSET - 0x20,
-              GBA_ROM_BASE + ROOM_BASE_OFFSET + ROOM_STRIDE);
+              room_pointers[1][0]);
     write_background(bytes, BACKGROUND_OFFSET, 1, 2, 0x100,
                      GBA_ROM_BASE + BACKGROUND_METADATA_OFFSET);
     write_background(bytes, BACKGROUND_OFFSET + 0x0C, 3, 4, 0x200, 0);
@@ -275,6 +295,15 @@ int main(void) {
     write_u16(bytes, MAP_OFFSET, (uint16_t)(15u << 6));
     assert(!fusion_aos_read_map(&rom, &directory, &map, error, sizeof error));
     write_u16(bytes, MAP_OFFSET, 0x8000);
+
+    FusionAosWorldSummary summary;
+    assert(fusion_aos_read_world_summary(&rom, &summary, error, sizeof error));
+    assert(summary.native_room_count == total_entries);
+    assert(summary.mapped_cells == 2);
+    assert(summary.transition_count == 2);
+    assert(summary.entity_count == 2 + FUSION_AOS_BOSS_ROOM_COUNT);
+    assert(summary.boss_room_count == FUSION_AOS_BOSS_ROOM_COUNT);
+    assert(summary.savepoint_count == 1 && summary.warp_count == 1);
 
     rom.game = FUSION_ASSET_GAME_METROID;
     assert(!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error));

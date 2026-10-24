@@ -268,3 +268,19 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
                 *(int(value, 0) for value in fields[5:]),
             ))
         self.assertEqual(actual, expected)
+
+    def test_world_summary_matches_python_reference(self):
+        world = decode_world(ROM.read_bytes())
+        keys = (
+            "native_room_count", "mapped_cells", "transition_count",
+            "entity_count", "boss_room_count", "savepoint_count", "warp_count",
+        )
+        result = subprocess.run(
+            [str(BINARY), "--aria-summary", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = dict(line.split("=", 1) for line in result.stdout.splitlines())
+        self.assertEqual(set(actual), set(keys))
+        self.assertEqual({key: int(actual[key]) for key in keys},
+                         {key: world[key] for key in keys})

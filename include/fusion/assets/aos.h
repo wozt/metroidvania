@@ -157,6 +157,16 @@ typedef struct {
     uint16_t health;
 } FusionAosBossRoom;
 
+typedef struct {
+    size_t native_room_count;
+    size_t mapped_cells;
+    size_t transition_count;
+    size_t entity_count;
+    size_t boss_room_count;
+    size_t savepoint_count;
+    size_t warp_count;
+} FusionAosWorldSummary;
+
 bool fusion_aos_read_area_directory(const FusionRom *rom,
                                     FusionAosAreaDirectory *directory,
                                     char *error, size_t error_size);
@@ -189,5 +199,8 @@ bool fusion_aos_read_boss_room(const FusionRom *rom,
                                const FusionAosBossSpec *spec,
                                FusionAosBossRoom *boss,
                                char *error, size_t error_size);
+bool fusion_aos_read_world_summary(const FusionRom *rom,
+                                   FusionAosWorldSummary *summary,
+                                   char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

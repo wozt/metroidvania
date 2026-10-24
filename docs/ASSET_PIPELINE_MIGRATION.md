@@ -41,6 +41,7 @@ build/fusion_importer --aria-backgrounds "roms/Castlevania - Aria of Sorrow (USA
 build/fusion_importer --aria-loads "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-entities "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-bosses "roms/Castlevania - Aria of Sorrow (USA).gba"
+build/fusion_importer --aria-summary "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --dry-run --force
 ```
 
@@ -59,7 +60,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
-| `scripts/import_aos_world.py` | `src/assets/aos/world.c` | structural and boss metadata readers complete, catalog partial | synthetic bounds fixtures plus verified-ROM comparison of directory, map, room/variant, transition, background, loading-list, entity and audited boss metadata; native catalog serialization pending |
+| `scripts/import_aos_world.py` | `src/assets/aos/world.c` | world metadata readers complete, catalog serialization partial | synthetic bounds fixtures plus verified-ROM comparison of directory, map, room/variant, transition, background, loading-list, entity, audited boss metadata and all world-summary totals; native catalog serialization pending |
 | `scripts/aos_runtime_room.py` | `src/assets/aos/rooms.c` | not started | collision, entity and transition comparison |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
@@ -69,8 +70,9 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next native Aria layer should assemble a world summary and catalog contract
-from the migrated structural and boss metadata. The header extractor is
+The next migration layer should begin Zero Mission's bounded ROM-bank symbol
+contract. Aria's next slice is deterministic native catalog serialization from
+the migrated metadata. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not
 replace room or asset extraction. Each task must declare its ROM inputs,

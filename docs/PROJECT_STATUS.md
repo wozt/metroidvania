@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0492 - Native Aria world summary
+
+- Added a bounded C11 world-summary reader that composes the migrated Aria
+  directory, map, room, transition, entity and audited boss readers.
+- The native summary now reports the room, mapped-cell, transition, entity,
+  boss-room, savepoint and warp totals used by the Python world catalog.
+- Expanded the synthetic world fixture to cover every audited boss location and
+  added exact verified-ROM comparison through `fusion_importer --aria-summary`.
+- Native catalog serialization and resource payload extraction remain open;
+  Python therefore remains the production serializer.
+- Next: begin the Zero Mission side of the native migration with the bounded
+  `mzm_rom_bank` symbol-table contract; audio remains outside the active scope.
+
 ## Patch 0491 - Native Aria boss-room metadata
 
 - Ported the audited Aria boss-room identity table to C11, preserving the

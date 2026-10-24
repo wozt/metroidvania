@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T00:18:34+00:00",
+ "generated_at": "2026-10-24T00:21:49+00:00",
  "git": {
-  "commit": "b1ee46c",
+  "commit": "26ed26a",
   "branch": "main",
   "dirty": true
  },
@@ -12493,7 +12493,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs and reads Aria's complete structural room inputs—directory, map, variants, transitions, backgrounds, loading references and entities—plus the audited boss identities and enemy-table health, with Python/C equivalence. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for native catalog serialization, resource payloads, caches and every migration gate not yet proven.",
+   "limitations": "The C11 library verifies both ROMs and reads Aria's complete structural room inputs—directory, map, variants, transitions, backgrounds, loading references and entities—plus audited boss metadata and all world-summary totals, with Python/C equivalence. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for native catalog serialization, resource payloads, caches and every migration gate not yet proven.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14724,9 +14724,9 @@
    {
     "file": "tests/test_fusion_assets_aos_equivalence.py",
     "module": "tests.test_fusion_assets_aos_equivalence",
-    "test_count": 8,
+    "test_count": 9,
     "outcome": "passed",
-    "passed": 8
+    "passed": 9
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -15206,12 +15206,18 @@
    }
   ],
   "summary": {
-   "passed": 512,
+   "passed": 513,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "26ed26a",
+   "date": "2026-10-24",
+   "subject": "Port Aria boss metadata to C11",
+   "scope": "project"
+  },
   {
    "commit": "b1ee46c",
    "date": "2026-10-24",
@@ -15684,12 +15690,6 @@
    "commit": "16a8733",
    "date": "2026-10-20",
    "subject": "Port the Time Attack unlock, records and code",
-   "scope": "project"
-  },
-  {
-   "commit": "346f6bf",
-   "date": "2026-10-20",
-   "subject": "Test the Tourian escape's initial room tilemaps",
    "scope": "project"
   }
  ],

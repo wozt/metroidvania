@@ -226,11 +226,12 @@ derived room-browser index deterministically through atomic replacement. Its
 runtime-room layer also expands every compressed BG1 block/collision table and
 produces the final flipped per-cell collision map. It also resolves direct and
 LZ77 graphics resources and applies every native graphics/palette load entry to
-bounded 64 KiB VRAM and 512-byte palette snapshots. Rendered backgrounds,
-runtime-room serialization and global task orchestration are still owned by the
-Python reference pipeline. Before rendering, however, all non-affine room
-background block maps and direct/LZ77 metatile tables are now expanded natively
-to their final flipped 8x8 tile entries.
+bounded 64 KiB VRAM and 512-byte palette snapshots. All non-affine room
+background block maps and direct/LZ77 metatile tables are expanded natively to
+their final flipped 8x8 tile entries, then rendered to RGBA with native 4-bpp
+character-base, palette-bank, flip and transparency semantics. Depth
+compositing, image serialization, runtime-room serialization and global task
+orchestration are still owned by the Python reference pipeline.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name

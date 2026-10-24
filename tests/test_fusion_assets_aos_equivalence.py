@@ -22,7 +22,11 @@ from scripts.import_aos_world import (
     decode_world,
 )
 from scripts.aos_room_index import index_rows
-from scripts.aos_room_render import decode_background, load_video_memory
+from scripts.aos_room_render import (
+    decode_background,
+    load_video_memory,
+    render_background,
+)
 from scripts.aos_runtime_room import native_cell
 
 
@@ -249,6 +253,52 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             "summary\t{}\t{}\t{}\t{}".format(
                 status_counts["decoded"], status_counts["absent"],
                 status_counts["affine"], total_cells),
+        )
+
+    def test_background_renders_match_python_reference(self):
+        rom = ROM.read_bytes()
+        resource_cache = {}
+        expected = []
+        skipped_count = 0
+        total_pixels = 0
+        unresolved_count = 0
+        for room in decode_world(rom)["rooms"]:
+            vram, palette, _ = load_video_memory(rom, room, resource_cache)
+            for background in room["backgrounds"]:
+                decoded = decode_background(rom, background)
+                if decoded["status"] != "DECODED_TEXT_BACKGROUND":
+                    skipped_count += 1
+                    continue
+                rgba, unresolved = render_background(
+                    decoded, vram, palette)
+                width = decoded["width_tiles"] * 8
+                height = decoded["height_tiles"] * 8
+                pixels = width * height
+                expected.append((
+                    room["engine_area"], room["room"], background["layer"],
+                    width, height, pixels, unresolved,
+                    hashlib.sha1(rgba).hexdigest(),
+                ))
+                total_pixels += pixels
+                unresolved_count += unresolved
+
+        result = subprocess.run(
+            [str(BINARY), "--aria-background-renders", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "render")
+            actual.append(tuple(int(value) for value in fields[1:8]) +
+                          (fields[8],))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{len(expected)}\t{skipped_count}\t"
+            f"{total_pixels}\t{unresolved_count}",
         )
 
     def test_bg1_collision_maps_match_python_reference(self):

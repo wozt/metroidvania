@@ -275,6 +275,24 @@ int main(void) {
     assert(tilemap.width_tiles == 32 && tilemap.height_tiles == 32);
     assert(tilemap.cells[0] == 0x1C0F && tilemap.cells[1] == 0x1C0E &&
            tilemap.cells[2] == 0x1C0D && tilemap.cells[3] == 0x1C0C);
+    FusionAosVideoMemory render_memory = {0};
+    render_memory.vram[15 * 32 + 31] = 0x20;
+    write_u16(render_memory.palette, 18 * 2, 0x03E0);
+    FusionAosRenderedBackground rendered;
+    assert(fusion_aos_render_background(&backgrounds.entries[0], &tilemap,
+                                        &render_memory, &rendered,
+                                        error, sizeof error));
+    assert(rendered.width_pixels == 256 && rendered.height_pixels == 256 &&
+           rendered.pixel_count == 65536 && rendered.unresolved_count == 0);
+    assert(rendered.rgba[0] == 0 && rendered.rgba[1] == 255 &&
+           rendered.rgba[2] == 0 && rendered.rgba[3] == 255);
+    fusion_aos_free_rendered_background(&rendered);
+    assert(rendered.rgba == NULL && rendered.pixel_count == 0);
+    FusionAosBackground eight_bpp = backgrounds.entries[0];
+    eight_bpp.control |= 0x80;
+    assert(!fusion_aos_render_background(&eight_bpp, &tilemap,
+                                         &render_memory, &rendered,
+                                         error, sizeof error));
     fusion_aos_free_background_tilemap(&tilemap);
     assert(tilemap.cells == NULL && tilemap.cell_count == 0);
     assert(fusion_aos_read_background_tiles(&rom, &backgrounds.entries[1],

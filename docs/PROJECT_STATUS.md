@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0503 - Native Aria 4-bpp background rendering
+
+- Added bounded C11 rendering of decoded Aria text backgrounds from the native
+  tilemaps, 64 KiB VRAM snapshot and 512-byte palette snapshot.
+- Preserved character-base selection, tile index and palette bank lookup,
+  per-tile horizontal/vertical flips, transparent color index zero and exact
+  GBA BGR555-to-RGB conversion; unsupported 8-bpp layers and invalid output
+  dimensions fail explicitly.
+- Added a synthetic flipped-tile/palette fixture, transparent output ownership
+  and 8-bpp rejection, then compared complete RGBA SHA-1 digests with Python
+  through `--aria-background-renders`.
+- All 901 decoded layers produce identical output across 150,929,408 pixels,
+  with zero unresolved tile or palette references; 128 absent/affine layers
+  remain intentionally skipped. Depth compositing, BMP serialization and
+  `AOSROOM-NATIVE` serialization remain Python-owned, so migration status stays
+  partial and gameplay parity does not change.
+- Next: alternate to Zero Mission and load its tileset graphics and palettes
+  into bounded native VRAM/palette snapshots; audio remains untouched.
+
 ## Patch 0502 - Native Zero Mission BG3 tilemaps
 
 - Extended the native room-background contract from BG0/BG1/BG2 to all four

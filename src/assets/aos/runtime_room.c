@@ -230,6 +230,105 @@ bool fusion_aos_load_video_memory(const FusionRom *rom,
     return true;
 }
 
+void fusion_aos_free_rendered_background(FusionAosRenderedBackground *rendered) {
+    if (!rendered) return;
+    free(rendered->rgba);
+    *rendered = (FusionAosRenderedBackground){0};
+}
+
+bool fusion_aos_render_background(const FusionAosBackground *background,
+                                  const FusionAosBackgroundTilemap *tilemap,
+                                  const FusionAosVideoMemory *memory,
+                                  FusionAosRenderedBackground *rendered,
+                                  char *error, size_t error_size) {
+    if (!rendered) {
+        set_error(error, error_size, "invalid Aria background-render request");
+        return false;
+    }
+    *rendered = (FusionAosRenderedBackground){0};
+    if (!background || !tilemap || !memory ||
+        tilemap->status != FUSION_AOS_TILEMAP_DECODED || !tilemap->cells ||
+        tilemap->width_tiles == 0 || tilemap->height_tiles == 0 ||
+        tilemap->cell_count != tilemap->width_tiles * tilemap->height_tiles) {
+        set_error(error, error_size, "invalid Aria background-render request");
+        return false;
+    }
+    if (background->control & 0x80) {
+        set_error(error, error_size,
+                  "Aria 8-bpp text backgrounds are not supported");
+        return false;
+    }
+    size_t width = tilemap->width_tiles * 8;
+    size_t height = tilemap->height_tiles * 8;
+    if (width == 0 || height == 0 ||
+        width > FUSION_AOS_RENDER_PIXEL_CAPACITY / height) {
+        set_error(error, error_size,
+                  "Aria rendered background exceeds the pixel safety cap");
+        return false;
+    }
+    size_t pixel_count = width * height;
+    if (pixel_count > FUSION_AOS_RENDER_PIXEL_CAPACITY ||
+        pixel_count > SIZE_MAX / 4) {
+        set_error(error, error_size,
+                  "Aria rendered background exceeds the pixel safety cap");
+        return false;
+    }
+    uint8_t *rgba = calloc(pixel_count, 4);
+    if (!rgba) {
+        set_error(error, error_size,
+                  "cannot allocate Aria rendered background");
+        return false;
+    }
+    size_t unresolved = 0;
+    size_t character_base = (size_t)((background->control >> 2) & 3) * 0x4000;
+    for (size_t tile_y = 0; tile_y < tilemap->height_tiles; ++tile_y) {
+        for (size_t tile_x = 0; tile_x < tilemap->width_tiles; ++tile_x) {
+            uint16_t word = tilemap->cells[
+                tile_x + tile_y * tilemap->width_tiles];
+            size_t tile_offset = character_base + (size_t)(word & 0x3FF) * 32;
+            if (tile_offset > sizeof memory->vram ||
+                32 > sizeof memory->vram - tile_offset) {
+                ++unresolved;
+                continue;
+            }
+            size_t palette_bank = (word >> 12) & 0xF;
+            for (size_t y = 0; y < 8; ++y) {
+                size_t source_y = (word & 0x800) ? 7 - y : y;
+                for (size_t x = 0; x < 8; ++x) {
+                    size_t source_x = (word & 0x400) ? 7 - x : x;
+                    uint8_t packed = memory->vram[
+                        tile_offset + source_y * 4 + source_x / 2];
+                    uint8_t color_index =
+                        (packed >> (4 * (source_x & 1))) & 0xF;
+                    if (color_index == 0) continue;
+                    size_t color_offset =
+                        (palette_bank * 16 + color_index) * 2;
+                    if (color_offset > sizeof memory->palette ||
+                        2 > sizeof memory->palette - color_offset) {
+                        ++unresolved;
+                        continue;
+                    }
+                    uint16_t color = read_u16(memory->palette + color_offset);
+                    size_t destination =
+                        ((tile_y * 8 + y) * width + tile_x * 8 + x) * 4;
+                    rgba[destination] =
+                        (uint8_t)(((color & 31) * 255) / 31);
+                    rgba[destination + 1] =
+                        (uint8_t)((((color >> 5) & 31) * 255) / 31);
+                    rgba[destination + 2] =
+                        (uint8_t)((((color >> 10) & 31) * 255) / 31);
+                    rgba[destination + 3] = 255;
+                }
+            }
+        }
+    }
+    *rendered = (FusionAosRenderedBackground){
+        width, height, rgba, pixel_count, unresolved
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 void fusion_aos_free_background_tilemap(FusionAosBackgroundTilemap *tilemap) {
     if (!tilemap) return;
     free(tilemap->cells);

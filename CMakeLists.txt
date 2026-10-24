@@ -29,6 +29,7 @@ target_compile_definitions(fusion_native_editor_core
 fusion_enable_warnings(fusion_native_editor_core)
 
 add_library(fusion_assets STATIC
+    src/assets/aos/world.c
     src/assets/core/sha1.c
     src/assets/core/rom.c
     src/assets/gba/decompress.c
@@ -129,6 +130,10 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_assets_gba_header_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_gba_header_tests)
     add_test(NAME fusion_assets_gba_header COMMAND fusion_assets_gba_header_tests)
+    add_executable(fusion_assets_aos_tests tests/test_fusion_assets_aos.c)
+    target_link_libraries(fusion_assets_aos_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_assets_aos_tests)
+    add_test(NAME fusion_assets_aos COMMAND fusion_assets_aos_tests)
     add_test(NAME fusion_importer_list COMMAND fusion_importer --list)
     add_test(NAME fusion_importer_dry_run COMMAND fusion_importer --dry-run --force)
 

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Native asset pipeline entry point. Extraction remains Python-authoritative
  * until each C replacement has an equivalence fixture and integration test. */
+#include "fusion/assets/aos.h"
 #include "fusion/assets/rom.h"
 #include "fusion/assets/gba.h"
 
@@ -13,9 +14,10 @@ static void usage(const char *name) {
             "Usage: %s --list\n"
             "       %s --verify [--rom-dir DIR] [--aria FILE] [--metroid FILE]\n"
             "       %s --header FILE\n"
+            "       %s --aria-directory FILE\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
-            name, name, name, name, name);
+            name, name, name, name, name, name);
 }
 
 static void list_games(void) {
@@ -92,14 +94,38 @@ static int inspect_header(const char *path) {
     return header.checksum_valid ? 0 : 1;
 }
 
+static int inspect_aria_directory(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-directory: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-directory: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        printf("area_%02zu=%zu\n", area, directory.areas[area].room_count);
+    }
+    printf("total_rooms=%zu\n", directory.total_rooms);
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
+    const char *aria_directory_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
         else if (!strcmp(argv[i], "--verify")) verify = true;
         else if (!strcmp(argv[i], "--header") && i + 1 < argc) header_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-directory") && i + 1 < argc)
+            aria_directory_path = argv[++i];
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -116,6 +142,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (header_path) return inspect_header(header_path);
+    if (aria_directory_path) return inspect_aria_directory(aria_directory_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

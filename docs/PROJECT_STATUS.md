@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0484 - Native Aria area directory
+
+- Added the first game-specific C11 metadata reader: Aria's 12-entry area
+  directory and the bounded room-table count derived for each area.
+- Added strict game, ROM-size, GBA-pointer ordering, table-end and alignment
+  validation plus a fully synthetic ROM-free CTest.
+- Refactored the Python reference to expose the same focused operation and
+  compared all native counts against the verified local Aria ROM through
+  `fusion_importer --aria-directory`.
+- No extracted counts or ROM bytes are tracked; full room descriptors,
+  entities, transitions and rendered resources remain Python-authoritative.
+- Next: port Aria's map-cell table so the native layer can associate area/room
+  identifiers with map coordinates, save rooms and warp rooms.
+
 ## Patch 0483 - Connect verified ROMs to GBA metadata
 
 - Added `fusion_rom_read_gba_header`, which exposes the bounded GBA header

@@ -94,6 +94,26 @@ def _pointer(pointer: int) -> str:
     return f"0x{pointer:08x}"
 
 
+def decode_area_directory(rom: bytes) -> tuple[list[int], list[int]]:
+    """Return the bounded Aria room-table pointers and per-area counts."""
+    directory_end = AREA_DIRECTORY_OFFSET + AREA_COUNT * 4
+    if len(rom) < directory_end:
+        raise ValueError("ROM is too short for the Aria area directory")
+    area_pointers = [
+        _u32(rom, AREA_DIRECTORY_OFFSET + index * 4)
+        for index in range(AREA_COUNT)
+    ]
+    table_end = GBA_ROM_BASE + AREA_DIRECTORY_OFFSET
+    table_bounds = list(zip(area_pointers, area_pointers[1:] + [table_end]))
+    room_counts = []
+    for area, (start, end) in enumerate(table_bounds):
+        _rom_offset(start, len(rom))
+        if end <= start or end > table_end or (end - start) % 4:
+            raise ValueError(f"invalid room-pointer table bounds for area {area}")
+        room_counts.append((end - start) // 4)
+    return area_pointers, room_counts
+
+
 def _decode_load_list(rom: bytes, pointer: int) -> list[dict]:
     """Decode a zero-terminated eight-byte resource loading list."""
     start = _rom_offset(pointer, len(rom), LOAD_ENTRY_SIZE)
@@ -251,22 +271,9 @@ def decode_world(rom: bytes, *, verify_hash: bool = True) -> dict:
     if verify_hash and hashlib.sha1(rom, usedforsecurity=False).hexdigest() != EXPECTED_SHA1:
         raise ValueError("expected unmodified Aria of Sorrow USA ROM")
     map_end = MAP_TABLE_OFFSET + MAP_WIDTH * MAP_HEIGHT * 2
-    directory_end = AREA_DIRECTORY_OFFSET + AREA_COUNT * 4
-    if len(rom) < max(map_end, directory_end):
+    if len(rom) < map_end:
         raise ValueError("ROM is too short for the audited Aria tables")
-
-    area_pointers = [
-        _u32(rom, AREA_DIRECTORY_OFFSET + index * 4)
-        for index in range(AREA_COUNT)
-    ]
-    table_end = GBA_ROM_BASE + AREA_DIRECTORY_OFFSET
-    table_bounds = list(zip(area_pointers, area_pointers[1:] + [table_end]))
-    room_counts = []
-    for area, (start, end) in enumerate(table_bounds):
-        _rom_offset(start, len(rom))
-        if end <= start or end > table_end or (end - start) % 4:
-            raise ValueError(f"invalid room-pointer table bounds for area {area}")
-        room_counts.append((end - start) // 4)
+    area_pointers, room_counts = decode_area_directory(rom)
 
     native_rooms = []
     room_by_location = {}

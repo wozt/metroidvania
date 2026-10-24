@@ -33,6 +33,7 @@ It currently:
 ```text
 build/fusion_importer --list
 build/fusion_importer --verify --rom-dir roms
+build/fusion_importer --aria-directory "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --dry-run --force
 ```
 
@@ -51,7 +52,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
-| `scripts/import_aos_world.py` | `src/assets/aos/world.c` | not started | room/map/transition structure comparison |
+| `scripts/import_aos_world.py` | `src/assets/aos/world.c` | area directory partial | synthetic bounds fixture and verified-ROM per-area room-count comparison; map cells, rooms, entities and transitions pending |
 | `scripts/aos_runtime_room.py` | `src/assets/aos/rooms.c` | not started | collision, entity and transition comparison |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
@@ -61,8 +62,8 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next native layer should port one small game-specific metadata extractor at
-a time. The header extractor is intentionally diagnostic: it reads a
+The next native Aria layer should decode the global map-cell table against the
+new area directory. The header extractor is intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not
 replace room or asset extraction. Each task must declare its ROM inputs,
 generated private outputs, extractor version and dependencies. A C task becomes

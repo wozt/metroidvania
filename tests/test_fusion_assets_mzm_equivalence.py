@@ -11,7 +11,7 @@ import unittest
 
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_rom_bank import elf_symbols, produce, symbol_lines
-from scripts.mzm_room_render import rle_room, source_rooms
+from scripts.mzm_room_render import lz77, rle_room, source_rooms
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -151,3 +151,81 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                            fields[8]))
         self.assertEqual(actual, expected)
         self.assertEqual(lines[-1], f"summary\t{len(expected)}\t{total_cells}")
+
+    def test_room_background_payloads_match_python_reference(self):
+        rom = ROM.read_bytes()
+        symbol_rows, _ = symbol_lines(elf_symbols(ELF.read_bytes()), len(rom))
+        symbols = {parts[1]: int(parts[2])
+                   for row in symbol_rows
+                   if (parts := row.split("\t"))[0] == "symbol"}
+        symbol_sizes = {parts[1]: int(parts[3])
+                        for row in symbol_rows
+                        if (parts := row.split("\t"))[0] == "symbol"}
+        names = enum_values()
+        expected = []
+        counts = {"rle": 0, "text": 0, "none": 0, "unsupported": 0}
+        total_cells = 0
+        for room in source_rooms():
+            fields = room["fields"]
+            for layer in range(3):
+                property_value = evaluate(fields.get(f"bg{layer}Prop", "0"), names)
+                symbol = fields[f"pBg{layer}Data"]
+                pointer = symbols[symbol]
+                offset = pointer - 0x08000000
+                size_flag = -1
+                width = height = cell_count = 0
+                digest = "-"
+                if property_value & 0x10:
+                    status = "rle"
+                    width, height, cells = rle_room(rom[offset:])
+                    payload = struct.pack(f"<{len(cells)}H", *cells)
+                    cell_count = len(cells)
+                    digest = hashlib.sha1(payload).hexdigest()
+                elif property_value & 0x40:
+                    status = "text"
+                    size_flag = rom[offset]
+                    width = 32 if size_flag in (0, 2) else 64
+                    height = 64 if size_flag == 2 else 32
+                    payload = lz77(rom[offset + 4:
+                                       offset + symbol_sizes[symbol]])
+                    cell_count = len(payload) // 2
+                    self.assertEqual(len(payload), width * height * 2)
+                    digest = hashlib.sha1(payload).hexdigest()
+                else:
+                    status = "none" if property_value == 0 else "unsupported"
+                counts[status] += 1
+                total_cells += cell_count
+                expected.append((
+                    room["area"], room["index"], layer, status,
+                    property_value, pointer, size_flag, width, height,
+                    cell_count, digest,
+                ))
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-backgrounds", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "background")
+            encoded_size = int(fields[11])
+            if fields[4] == "rle":
+                self.assertGreaterEqual(encoded_size, 6)
+            else:
+                self.assertEqual(encoded_size, 0)
+            actual.append((
+                fields[1], int(fields[2]), int(fields[3]), fields[4],
+                *(int(value, 0) for value in fields[5:11]), fields[12],
+            ))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            "summary\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(
+                len(source_rooms()), len(expected), counts["rle"],
+                counts["text"], counts["none"], counts["unsupported"],
+                total_cells,
+            ),
+        )

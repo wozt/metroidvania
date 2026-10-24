@@ -14,7 +14,11 @@ enum {
     FUSION_MZM_ROOM_AREA_COUNT = 11,
     FUSION_MZM_ROOM_ENTRY_SIZE = 60,
     FUSION_MZM_ROOM_CAPACITY = 512,
-    FUSION_MZM_ROOM_RLE_CELL_CAPACITY = 6144
+    FUSION_MZM_ROOM_RLE_CELL_CAPACITY = 6144,
+    FUSION_MZM_ROOM_BACKGROUND_COUNT = 3,
+    FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
+    FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED = 0x10,
+    FUSION_MZM_BG_PROPERTY_LZ77_COMPRESSED = 0x40
 };
 
 typedef struct {
@@ -83,6 +87,35 @@ typedef struct {
     size_t encoded_size;
 } FusionMzmRoomRleMap;
 
+typedef struct {
+    uint32_t source_pointer;
+    uint8_t size_flag;
+    uint8_t width_tiles;
+    uint8_t height_tiles;
+    uint16_t *cells;
+    size_t cell_count;
+} FusionMzmTextTilemap;
+
+typedef enum {
+    FUSION_MZM_BACKGROUND_NONE,
+    FUSION_MZM_BACKGROUND_RLE,
+    FUSION_MZM_BACKGROUND_TEXT,
+    FUSION_MZM_BACKGROUND_UNSUPPORTED
+} FusionMzmBackgroundStatus;
+
+typedef struct {
+    uint8_t layer;
+    uint8_t property;
+    uint32_t source_pointer;
+    FusionMzmBackgroundStatus status;
+    FusionMzmRoomRleMap rle;
+    FusionMzmTextTilemap text;
+} FusionMzmRoomBackground;
+
+typedef struct {
+    FusionMzmRoomBackground layers[FUSION_MZM_ROOM_BACKGROUND_COUNT];
+} FusionMzmRoomBackgrounds;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -112,5 +145,14 @@ bool fusion_mzm_read_room_rle(const FusionRom *rom, uint32_t pointer,
                               FusionMzmRoomRleMap *map,
                               char *error, size_t error_size);
 void fusion_mzm_free_room_rle(FusionMzmRoomRleMap *map);
+bool fusion_mzm_read_text_tilemap(const FusionRom *rom, uint32_t pointer,
+                                  FusionMzmTextTilemap *map,
+                                  char *error, size_t error_size);
+void fusion_mzm_free_text_tilemap(FusionMzmTextTilemap *map);
+bool fusion_mzm_read_room_backgrounds(const FusionRom *rom,
+                                      const FusionMzmRoomEntry *entry,
+                                      FusionMzmRoomBackgrounds *backgrounds,
+                                      char *error, size_t error_size);
+void fusion_mzm_free_room_backgrounds(FusionMzmRoomBackgrounds *backgrounds);
 
 #endif /* FUSION_ASSETS_MZM_H */

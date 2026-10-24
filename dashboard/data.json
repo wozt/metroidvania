@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T12:42:01+00:00",
+ "generated_at": "2026-10-24T12:59:21+00:00",
  "git": {
-  "commit": "53bc7e2",
+  "commit": "6a3b247",
   "branch": "main",
   "dirty": true
  },
@@ -12506,7 +12506,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs, reproduces Aria's complete structural world catalog, all 342 BG1 collision maps and complete VRAM/palette loading for 343 rooms, reproduces Zero Mission's ROM bank and symbol manifest, and decodes all 331 Zero Mission room descriptors and Clipdata maps. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for static compositing, room serialization, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, 342 BG1 collision maps and complete room VRAM/palette loading; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps and BG0/BG1/BG2 payloads. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for compositing, room serialization, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13935,7 +13935,7 @@
     "assets.raw_import"
    ],
    "native_routines": [],
-   "limitations": "The native importer decodes and source-compares all 331 RoomEntryRom descriptors and their 345686 final Clipdata cells. Python still owns the remaining payloads: 330 rooms export with their native backgrounds (per-tileset metatile sheets with the common tiles, BG0/BG1/BG2 block maps, BG3 and LZ77 BG0 images); animated tiles and palettes, the mother ship common tiles, BG2 movement and BG0 movement effects are not exported; background.bmp keeps the older BG1-over-BG2 composite for the tools.",
+   "limitations": "The native importer decodes and source-compares all 331 RoomEntryRom descriptors, their 345686 final Clipdata cells, 784 BG0/BG1/BG2 RLE layers and 14 LZ77 BG0 tilemaps. Python still owns BG3, tileset graphics/palettes, compositing and room serialization; 330 rooms export with their native backgrounds, while animated tiles and palettes, the mother ship common tiles, BG2 movement and BG0 movement effects remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14814,9 +14814,9 @@
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
     "module": "tests.test_fusion_assets_mzm_equivalence",
-    "test_count": 4,
+    "test_count": 5,
     "outcome": "passed",
-    "passed": 4
+    "passed": 5
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -15296,12 +15296,18 @@
    }
   ],
   "summary": {
-   "passed": 521,
+   "passed": 522,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "6a3b247",
+   "date": "2026-10-24",
+   "subject": "Load Aria video memory natively",
+   "scope": "project"
+  },
   {
    "commit": "53bc7e2",
    "date": "2026-10-24",
@@ -15774,12 +15780,6 @@
    "commit": "9f488c4",
    "date": "2026-10-20",
    "subject": "Lay native Aria title and menu mode dispatch foundation",
-   "scope": "project"
-  },
-  {
-   "commit": "b0c4ebb",
-   "date": "2026-10-20",
-   "subject": "Port Aria native soft reset key detection",
    "scope": "project"
   }
  ],

@@ -25,6 +25,23 @@ static void write_u32(uint8_t *data, size_t offset, uint32_t value) {
     data[offset + 3] = (uint8_t)(value >> 24);
 }
 
+static size_t write_lz77_literals(uint8_t *data, size_t offset,
+                                  const uint8_t *expanded, size_t size) {
+    data[offset] = 0x10;
+    data[offset + 1] = (uint8_t)size;
+    data[offset + 2] = (uint8_t)(size >> 8);
+    data[offset + 3] = (uint8_t)(size >> 16);
+    size_t input = 0, output = offset + 4;
+    while (input < size) {
+        data[output++] = 0;
+        size_t count = size - input < 8 ? size - input : 8;
+        memcpy(data + output, expanded + input, count);
+        input += count;
+        output += count;
+    }
+    return output - offset;
+}
+
 static void write_symbol(uint8_t *elf, size_t index, uint32_t name,
                          uint32_t address, uint32_t size, uint8_t kind) {
     size_t offset = SYMBOL_OFFSET + index * 16;
@@ -187,6 +204,65 @@ static void test_room_rle(FusionRom *rom) {
                                      error, sizeof error));
 }
 
+static void test_room_backgrounds(void) {
+    enum {
+        FIXTURE_SIZE = 0xC00,
+        RLE_OFFSET = 0x100,
+        TEXT_OFFSET = 0x180
+    };
+    uint8_t bytes[FIXTURE_SIZE] = {0};
+    static const uint8_t encoded[] = {
+        2, 2,
+        1, 0x84, 3, 0,
+        1, 0x84, 0, 0
+    };
+    memcpy(bytes + RLE_OFFSET, encoded, sizeof encoded);
+    bytes[TEXT_OFFSET] = 0;
+    uint8_t expanded[0x800];
+    for (size_t index = 0; index < sizeof expanded; ++index)
+        expanded[index] = (uint8_t)(index ^ 0x6D);
+    assert(write_lz77_literals(bytes, TEXT_OFFSET + 4,
+                               expanded, sizeof expanded) < 0xA00);
+    FusionRom rom = {bytes, sizeof bytes, FUSION_ASSET_GAME_METROID};
+    FusionMzmRoomEntry entry = {
+        .bg0_property = FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED,
+        .bg1_property = 0,
+        .bg2_property = FUSION_MZM_BG_PROPERTY_LZ77_COMPRESSED,
+        .bg0_pointer = 0x08000000 + RLE_OFFSET,
+        .bg1_pointer = 0x08000020,
+        .bg2_pointer = 0x08000000 + TEXT_OFFSET,
+    };
+    char error[160];
+    FusionMzmRoomBackgrounds backgrounds;
+    assert(fusion_mzm_read_room_backgrounds(&rom, &entry, &backgrounds,
+                                            error, sizeof error));
+    assert(backgrounds.layers[0].status == FUSION_MZM_BACKGROUND_RLE);
+    assert(backgrounds.layers[0].rle.width == 2 &&
+           backgrounds.layers[0].rle.height == 2 &&
+           backgrounds.layers[0].rle.cells[3] == 3);
+    assert(backgrounds.layers[1].status == FUSION_MZM_BACKGROUND_NONE);
+    assert(backgrounds.layers[2].status == FUSION_MZM_BACKGROUND_TEXT);
+    assert(backgrounds.layers[2].text.size_flag == 0 &&
+           backgrounds.layers[2].text.width_tiles == 32 &&
+           backgrounds.layers[2].text.height_tiles == 32 &&
+           backgrounds.layers[2].text.cell_count == 1024);
+    assert(backgrounds.layers[2].text.cells[0] == 0x6C6D &&
+           backgrounds.layers[2].text.cells[1023] == 0x9293);
+    fusion_mzm_free_room_backgrounds(&backgrounds);
+    assert(backgrounds.layers[0].rle.cells == NULL &&
+           backgrounds.layers[2].text.cells == NULL);
+
+    entry.bg1_property = 1;
+    assert(fusion_mzm_read_room_backgrounds(&rom, &entry, &backgrounds,
+                                            error, sizeof error));
+    assert(backgrounds.layers[1].status == FUSION_MZM_BACKGROUND_UNSUPPORTED);
+    fusion_mzm_free_room_backgrounds(&backgrounds);
+    bytes[TEXT_OFFSET + 5] = 1;
+    assert(!fusion_mzm_read_text_tilemap(&rom, entry.bg2_pointer,
+                                         &backgrounds.layers[2].text,
+                                         error, sizeof error));
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -229,6 +305,7 @@ int main(void) {
 
     test_room_entries(&rom);
     test_room_rle(&rom);
+    test_room_backgrounds();
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

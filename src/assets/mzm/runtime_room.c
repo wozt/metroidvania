@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "fusion/assets/mzm.h"
 
+#include "fusion/assets/gba.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,6 +140,127 @@ bool fusion_mzm_read_room_rle(const FusionRom *rom, uint32_t pointer,
     *map = (FusionMzmRoomRleMap){
         pointer, data[0], data[1], cells, total, position
     };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+void fusion_mzm_free_text_tilemap(FusionMzmTextTilemap *map) {
+    if (!map) return;
+    free(map->cells);
+    *map = (FusionMzmTextTilemap){0};
+}
+
+bool fusion_mzm_read_text_tilemap(const FusionRom *rom, uint32_t pointer,
+                                  FusionMzmTextTilemap *map,
+                                  char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID || !map) {
+        set_error(error, error_size,
+                  "invalid Zero Mission text-tilemap request");
+        return false;
+    }
+    *map = (FusionMzmTextTilemap){0};
+    size_t offset;
+    if (!pointer_offset(rom, pointer, 8, &offset)) {
+        set_error(error, error_size,
+                  "Zero Mission text tilemap points outside the ROM");
+        return false;
+    }
+    uint8_t size_flag = rom->data[offset];
+    uint8_t width_tiles = size_flag == 0 || size_flag == 2 ? 32 : 64;
+    uint8_t height_tiles = size_flag == 2 ? 64 : 32;
+    size_t cell_count = (size_t)width_tiles * height_tiles;
+    uint32_t expanded_size = fusion_gba_uncompressed_size(
+        rom->data + offset + 4, rom->size - offset - 4);
+    if (cell_count > FUSION_MZM_TEXT_TILE_CELL_CAPACITY ||
+        expanded_size != cell_count * sizeof(uint16_t)) {
+        set_error(error, error_size,
+                  "Zero Mission text tilemap has an invalid expanded size");
+        return false;
+    }
+    uint8_t *expanded = malloc(expanded_size);
+    uint16_t *cells = malloc(cell_count * sizeof *cells);
+    if (!expanded || !cells) {
+        free(expanded);
+        free(cells);
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission text tilemap");
+        return false;
+    }
+    size_t written = 0;
+    if (!fusion_gba_lz77_uncompress(rom->data + offset + 4,
+                                    rom->size - offset - 4,
+                                    expanded, expanded_size, &written) ||
+        written != expanded_size) {
+        free(expanded);
+        free(cells);
+        set_error(error, error_size,
+                  "Zero Mission text tilemap has invalid LZ77 data");
+        return false;
+    }
+    for (size_t index = 0; index < cell_count; ++index)
+        cells[index] = (uint16_t)expanded[index * 2] |
+                       (uint16_t)expanded[index * 2 + 1] << 8;
+    free(expanded);
+    *map = (FusionMzmTextTilemap){
+        pointer, size_flag, width_tiles, height_tiles, cells, cell_count
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+void fusion_mzm_free_room_backgrounds(FusionMzmRoomBackgrounds *backgrounds) {
+    if (!backgrounds) return;
+    for (size_t layer = 0; layer < FUSION_MZM_ROOM_BACKGROUND_COUNT; ++layer) {
+        fusion_mzm_free_room_rle(&backgrounds->layers[layer].rle);
+        fusion_mzm_free_text_tilemap(&backgrounds->layers[layer].text);
+    }
+    *backgrounds = (FusionMzmRoomBackgrounds){0};
+}
+
+bool fusion_mzm_read_room_backgrounds(const FusionRom *rom,
+                                      const FusionMzmRoomEntry *entry,
+                                      FusionMzmRoomBackgrounds *backgrounds,
+                                      char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID ||
+        !entry || !backgrounds) {
+        set_error(error, error_size,
+                  "invalid Zero Mission room-background request");
+        return false;
+    }
+    *backgrounds = (FusionMzmRoomBackgrounds){0};
+    const uint8_t properties[FUSION_MZM_ROOM_BACKGROUND_COUNT] = {
+        entry->bg0_property, entry->bg1_property, entry->bg2_property
+    };
+    const uint32_t pointers[FUSION_MZM_ROOM_BACKGROUND_COUNT] = {
+        entry->bg0_pointer, entry->bg1_pointer, entry->bg2_pointer
+    };
+    for (size_t layer = 0; layer < FUSION_MZM_ROOM_BACKGROUND_COUNT; ++layer) {
+        FusionMzmRoomBackground *background = &backgrounds->layers[layer];
+        background->layer = (uint8_t)layer;
+        background->property = properties[layer];
+        background->source_pointer = pointers[layer];
+        if (properties[layer] & FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED) {
+            background->status = FUSION_MZM_BACKGROUND_RLE;
+            if (!fusion_mzm_read_room_rle(rom, pointers[layer],
+                                          &background->rle,
+                                          error, error_size)) {
+                fusion_mzm_free_room_backgrounds(backgrounds);
+                return false;
+            }
+        } else if (properties[layer] & FUSION_MZM_BG_PROPERTY_LZ77_COMPRESSED) {
+            background->status = FUSION_MZM_BACKGROUND_TEXT;
+            if (!fusion_mzm_read_text_tilemap(rom, pointers[layer],
+                                              &background->text,
+                                              error, error_size)) {
+                fusion_mzm_free_room_backgrounds(backgrounds);
+                return false;
+            }
+        } else {
+            background->status = properties[layer] == 0
+                ? FUSION_MZM_BACKGROUND_NONE
+                : FUSION_MZM_BACKGROUND_UNSUPPORTED;
+        }
+    }
     if (error && error_size > 0) error[0] = '\0';
     return true;
 }

@@ -237,9 +237,12 @@ manifest outputs through atomic replacement. It also resolves all eleven room
 tables from those symbols and decodes the 331 bounded `RoomEntryRom` records,
 including their layer, Clipdata and spriteset references and scalar room
 properties. The room layer now decodes the custom two-pass RLE behind every
-Clipdata pointer into its final 16-bit cell map. Background payloads, doors,
-sprites and runtime-room serialization remain Python-owned, and these native
-extractors are not yet registered in the global native task graph.
+Clipdata pointer into its final 16-bit cell map. It also classifies all
+BG0/BG1/BG2 property combinations, expands their custom-RLE block maps and
+BIOS-LZ77 text tilemaps, and exposes the final bounded 16-bit cells. BG3,
+tileset graphics/palettes, compositing, doors, sprites and runtime-room
+serialization remain Python-owned, and these native extractors are not yet
+registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

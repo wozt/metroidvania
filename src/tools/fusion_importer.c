@@ -32,11 +32,12 @@ static void usage(const char *name) {
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-rooms ROM ELF\n"
             "       %s --mzm-clipdata ROM ELF\n"
+            "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
             name,
-            name, name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -841,6 +842,123 @@ static int inspect_mzm_clipdata(const char *rom_path, const char *elf_path) {
     return 0;
 }
 
+static const char *mzm_background_status_name(FusionMzmBackgroundStatus status) {
+    switch (status) {
+        case FUSION_MZM_BACKGROUND_NONE: return "none";
+        case FUSION_MZM_BACKGROUND_RLE: return "rle";
+        case FUSION_MZM_BACKGROUND_TEXT: return "text";
+        case FUSION_MZM_BACKGROUND_UNSUPPORTED: return "unsupported";
+    }
+    return "invalid";
+}
+
+static int inspect_mzm_backgrounds(const char *rom_path, const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
+        fprintf(stderr, "mzm-backgrounds: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmRoomDirectory directory;
+    if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error) ||
+        !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
+                                        error, sizeof error)) {
+        fprintf(stderr, "mzm-backgrounds: %s\n", error);
+        fusion_mzm_free_symbols(&symbols);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    size_t status_counts[4] = {0};
+    size_t room_count = 0, total_cells = 0;
+    uint8_t canonical[FUSION_MZM_ROOM_RLE_CELL_CAPACITY * 2];
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionMzmRoomEntry entry;
+            FusionMzmRoomBackgrounds backgrounds;
+            if (!fusion_mzm_read_room_entry(&rom, &directory, area, room,
+                                            &entry, error, sizeof error) ||
+                !fusion_mzm_read_room_backgrounds(&rom, &entry, &backgrounds,
+                                                  error, sizeof error)) {
+                fprintf(stderr, "mzm-backgrounds: %s %zu: %s\n",
+                        spec->id, room, error);
+                fusion_mzm_free_symbols(&symbols);
+                fusion_rom_close(&rom);
+                free(elf);
+                return 1;
+            }
+            for (size_t layer = 0; layer < FUSION_MZM_ROOM_BACKGROUND_COUNT;
+                 ++layer) {
+                const FusionMzmRoomBackground *background =
+                    &backgrounds.layers[layer];
+                const uint16_t *cells = NULL;
+                size_t cell_count = 0, encoded_size = 0;
+                unsigned width = 0, height = 0;
+                int size_flag = -1;
+                if (background->status == FUSION_MZM_BACKGROUND_RLE) {
+                    cells = background->rle.cells;
+                    cell_count = background->rle.cell_count;
+                    encoded_size = background->rle.encoded_size;
+                    width = background->rle.width;
+                    height = background->rle.height;
+                } else if (background->status == FUSION_MZM_BACKGROUND_TEXT) {
+                    cells = background->text.cells;
+                    cell_count = background->text.cell_count;
+                    width = background->text.width_tiles;
+                    height = background->text.height_tiles;
+                    size_flag = background->text.size_flag;
+                }
+                char digest[41] = "-";
+                if (cells) {
+                    for (size_t index = 0; index < cell_count; ++index) {
+                        canonical[index * 2] = (uint8_t)cells[index];
+                        canonical[index * 2 + 1] = (uint8_t)(cells[index] >> 8);
+                    }
+                    if (!fusion_rom_sha1_hex(canonical, cell_count * 2, digest)) {
+                        fprintf(stderr,
+                                "mzm-backgrounds: cannot hash %s %zu BG%zu\n",
+                                spec->id, room, layer);
+                        fusion_mzm_free_room_backgrounds(&backgrounds);
+                        fusion_mzm_free_symbols(&symbols);
+                        fusion_rom_close(&rom);
+                        free(elf);
+                        return 1;
+                    }
+                }
+                ++status_counts[background->status];
+                total_cells += cell_count;
+                printf("background\t%s\t%zu\t%zu\t%s\t%u\t0x%08X\t%d\t"
+                       "%u\t%u\t%zu\t%zu\t%s\n",
+                       spec->id, room, layer,
+                       mzm_background_status_name(background->status),
+                       background->property, background->source_pointer,
+                       size_flag, width, height, cell_count, encoded_size, digest);
+            }
+            ++room_count;
+            fusion_mzm_free_room_backgrounds(&backgrounds);
+        }
+    }
+    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
+           room_count, room_count * FUSION_MZM_ROOM_BACKGROUND_COUNT,
+           status_counts[FUSION_MZM_BACKGROUND_RLE],
+           status_counts[FUSION_MZM_BACKGROUND_TEXT],
+           status_counts[FUSION_MZM_BACKGROUND_NONE],
+           status_counts[FUSION_MZM_BACKGROUND_UNSUPPORTED], total_cells);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -867,6 +985,8 @@ int main(int argc, char **argv) {
     const char *mzm_rooms_elf_path = NULL;
     const char *mzm_clip_rom_path = NULL;
     const char *mzm_clip_elf_path = NULL;
+    const char *mzm_background_rom_path = NULL;
+    const char *mzm_background_elf_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -916,6 +1036,10 @@ int main(int argc, char **argv) {
             mzm_clip_rom_path = argv[++i];
             mzm_clip_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-backgrounds") && i + 2 < argc) {
+            mzm_background_rom_path = argv[++i];
+            mzm_background_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -956,6 +1080,9 @@ int main(int argc, char **argv) {
         return inspect_mzm_rooms(mzm_rooms_rom_path, mzm_rooms_elf_path);
     if (mzm_clip_rom_path)
         return inspect_mzm_clipdata(mzm_clip_rom_path, mzm_clip_elf_path);
+    if (mzm_background_rom_path)
+        return inspect_mzm_backgrounds(mzm_background_rom_path,
+                                       mzm_background_elf_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

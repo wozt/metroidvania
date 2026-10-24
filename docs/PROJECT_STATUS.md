@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0500 - Native Zero Mission room backgrounds
+
+- Added a native BG0/BG1/BG2 preparation contract that classifies each room
+  layer from its property bits and decodes both custom two-pass RLE block maps
+  and BIOS LZ77 text tilemaps.
+- Text backgrounds preserve the native size flag and expose bounded 32x32,
+  64x32 or 32x64 final 16-bit tile cells; malformed pointers, dimensions,
+  expanded sizes and compressed streams fail without retaining partial data.
+- Added synthetic ownership, classification, direct RLE, LZ77 size and payload
+  coverage, then compared every final map digest and dimension with Python
+  through `--mzm-backgrounds`.
+- Across all 331 rooms, the native reader now covers 784 RLE layers and 14
+  LZ77 BG0 layers, totaling 866,924 cells; 195 layers are absent and none use
+  an unsupported property. BG3, tileset graphics/palettes, compositing and
+  runtime-room serialization remain Python-owned, so migration status stays
+  partial and gameplay parity does not change.
+- Next: alternate to Aria and port static text-background tile expansion from
+  its native VRAM and room metadata; audio remains untouched.
+
 ## Patch 0499 - Native Aria graphics and palette loading
 
 - Added bounded C11 execution of Aria's native graphics and palette load lists,

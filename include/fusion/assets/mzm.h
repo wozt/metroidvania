@@ -13,7 +13,8 @@ enum {
     FUSION_MZM_ROM_SYMBOL_CAPACITY = 65536,
     FUSION_MZM_ROOM_AREA_COUNT = 11,
     FUSION_MZM_ROOM_ENTRY_SIZE = 60,
-    FUSION_MZM_ROOM_CAPACITY = 512
+    FUSION_MZM_ROOM_CAPACITY = 512,
+    FUSION_MZM_ROOM_RLE_CELL_CAPACITY = 6144
 };
 
 typedef struct {
@@ -73,6 +74,15 @@ typedef struct {
     uint16_t music_track;
 } FusionMzmRoomEntry;
 
+typedef struct {
+    uint32_t source_pointer;
+    uint8_t width;
+    uint8_t height;
+    uint16_t *cells;
+    size_t cell_count;
+    size_t encoded_size;
+} FusionMzmRoomRleMap;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -98,5 +108,9 @@ bool fusion_mzm_read_room_entry(const FusionRom *rom,
                                 size_t area, size_t room,
                                 FusionMzmRoomEntry *entry,
                                 char *error, size_t error_size);
+bool fusion_mzm_read_room_rle(const FusionRom *rom, uint32_t pointer,
+                              FusionMzmRoomRleMap *map,
+                              char *error, size_t error_size);
+void fusion_mzm_free_room_rle(FusionMzmRoomRleMap *map);
 
 #endif /* FUSION_ASSETS_MZM_H */

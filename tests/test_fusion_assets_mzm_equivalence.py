@@ -2,14 +2,16 @@
 """Compare the native Zero Mission ROM-symbol reader with Python."""
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
+import struct
 import subprocess
 import tempfile
 import unittest
 
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_rom_bank import elf_symbols, produce, symbol_lines
-from scripts.mzm_room_render import source_rooms
+from scripts.mzm_room_render import rle_room, source_rooms
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,3 +117,37 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                                    symbols[f"s{area}RoomEntries"]))
         self.assertEqual(area_rows, expected_areas)
         self.assertEqual(lines[-1], f"summary\t{len(expected)}")
+
+    def test_clipdata_maps_match_python_reference(self):
+        rom = ROM.read_bytes()
+        symbol_rows, _ = symbol_lines(elf_symbols(ELF.read_bytes()), len(rom))
+        symbols = {parts[1]: int(parts[2])
+                   for row in symbol_rows
+                   if (parts := row.split("\t"))[0] == "symbol"}
+        expected = []
+        total_cells = 0
+        for room in source_rooms():
+            pointer = symbols[room["fields"]["pClipData"]]
+            width, height, cells = rle_room(rom[pointer - 0x08000000:])
+            canonical = struct.pack(f"<{len(cells)}H", *cells)
+            expected.append((room["area"], room["index"], pointer,
+                             width, height, len(cells),
+                             hashlib.sha1(canonical).hexdigest()))
+            total_cells += len(cells)
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-clipdata", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "clipdata")
+            self.assertGreaterEqual(int(fields[7]), 6)
+            actual.append((fields[1], int(fields[2]), int(fields[3], 0),
+                           int(fields[4]), int(fields[5]), int(fields[6]),
+                           fields[8]))
+        self.assertEqual(actual, expected)
+        self.assertEqual(lines[-1], f"summary\t{len(expected)}\t{total_cells}")

@@ -39,6 +39,7 @@ add_library(fusion_assets STATIC
     src/assets/gba/header.c
     src/assets/mzm/rom_bank.c
     src/assets/mzm/rooms.c
+    src/assets/mzm/runtime_room.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)

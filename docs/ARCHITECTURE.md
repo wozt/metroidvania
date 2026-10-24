@@ -234,7 +234,9 @@ rules used by `mzm_rom_bank.py`, and writes byte-identical `MZMROM01` and symbol
 manifest outputs through atomic replacement. It also resolves all eleven room
 tables from those symbols and decodes the 331 bounded `RoomEntryRom` records,
 including their layer, Clipdata and spriteset references and scalar room
-properties. Room resource payloads remain Python-owned, and these native
+properties. The room layer now decodes the custom two-pass RLE behind every
+Clipdata pointer into its final 16-bit cell map. Background payloads, doors,
+sprites and runtime-room serialization remain Python-owned, and these native
 extractors are not yet registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,

@@ -30,10 +30,11 @@ static void usage(const char *name) {
             "       %s --mzm-symbols ROM ELF\n"
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-rooms ROM ELF\n"
+            "       %s --mzm-clipdata ROM ELF\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -707,6 +708,79 @@ static int inspect_mzm_rooms(const char *rom_path, const char *elf_path) {
     return 0;
 }
 
+static int inspect_mzm_clipdata(const char *rom_path, const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
+        fprintf(stderr, "mzm-clipdata: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmRoomDirectory directory;
+    if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error) ||
+        !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
+                                        error, sizeof error)) {
+        fprintf(stderr, "mzm-clipdata: %s\n", error);
+        fusion_mzm_free_symbols(&symbols);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    size_t room_count = 0;
+    size_t cell_count = 0;
+    uint8_t canonical[FUSION_MZM_ROOM_RLE_CELL_CAPACITY * 2];
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionMzmRoomEntry entry;
+            FusionMzmRoomRleMap map;
+            if (!fusion_mzm_read_room_entry(&rom, &directory, area, room,
+                                            &entry, error, sizeof error) ||
+                !fusion_mzm_read_room_rle(&rom, entry.clip_pointer, &map,
+                                          error, sizeof error)) {
+                fprintf(stderr, "mzm-clipdata: %s %zu: %s\n",
+                        spec->id, room, error);
+                fusion_mzm_free_symbols(&symbols);
+                fusion_rom_close(&rom);
+                free(elf);
+                return 1;
+            }
+            for (size_t index = 0; index < map.cell_count; ++index) {
+                canonical[index * 2] = (uint8_t)map.cells[index];
+                canonical[index * 2 + 1] = (uint8_t)(map.cells[index] >> 8);
+            }
+            char digest[41];
+            if (!fusion_rom_sha1_hex(canonical, map.cell_count * 2, digest)) {
+                fprintf(stderr, "mzm-clipdata: cannot hash %s %zu\n",
+                        spec->id, room);
+                fusion_mzm_free_room_rle(&map);
+                fusion_mzm_free_symbols(&symbols);
+                fusion_rom_close(&rom);
+                free(elf);
+                return 1;
+            }
+            printf("clipdata\t%s\t%zu\t0x%08X\t%u\t%u\t%zu\t%zu\t%s\n",
+                   spec->id, room, map.source_pointer, map.width, map.height,
+                   map.cell_count, map.encoded_size, digest);
+            ++room_count;
+            cell_count += map.cell_count;
+            fusion_mzm_free_room_rle(&map);
+        }
+    }
+    printf("summary\t%zu\t%zu\n", room_count, cell_count);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -730,6 +804,8 @@ int main(int argc, char **argv) {
     const char *mzm_bank_output_path = NULL;
     const char *mzm_rooms_rom_path = NULL;
     const char *mzm_rooms_elf_path = NULL;
+    const char *mzm_clip_rom_path = NULL;
+    const char *mzm_clip_elf_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -773,6 +849,10 @@ int main(int argc, char **argv) {
             mzm_rooms_rom_path = argv[++i];
             mzm_rooms_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-clipdata") && i + 2 < argc) {
+            mzm_clip_rom_path = argv[++i];
+            mzm_clip_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -809,6 +889,8 @@ int main(int argc, char **argv) {
                                   mzm_bank_output_path);
     if (mzm_rooms_rom_path)
         return inspect_mzm_rooms(mzm_rooms_rom_path, mzm_rooms_elf_path);
+    if (mzm_clip_rom_path)
+        return inspect_mzm_clipdata(mzm_clip_rom_path, mzm_clip_elf_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

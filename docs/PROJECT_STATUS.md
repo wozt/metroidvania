@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0498 - Native Zero Mission Clipdata payloads
+
+- Added a bounded C11 decoder for Zero Mission's custom two-pass room RLE,
+  including one- and two-byte big-endian counts, repeated and literal spans,
+  independent low/high-byte passes and room-specific trailing metadata.
+- Connected every native `RoomEntryRom::pClipData` pointer to that decoder and
+  exposed dimensions, consumed input size and final 16-bit Clipdata cells
+  through `--mzm-clipdata`.
+- Added synthetic dimension, pass-width, overflow, truncation and ownership
+  coverage, then compared dimensions and a canonical little-endian SHA-1 of
+  every decoded map with Python.
+- All 331 descriptors decode to 345,686 identical Clipdata cells. Background
+  payloads, doors, sprites and runtime-room serialization remain Python-owned,
+  so the migration stays partial and gameplay parity does not change.
+- Next: alternate to Aria and port graphics/palette resource loading into its
+  native runtime-room preparation; audio remains untouched.
+
 ## Patch 0497 - Native Aria BG1 collision maps
 
 - Added bounded C11 decoding for Aria text-background metadata, compressed

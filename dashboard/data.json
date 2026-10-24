@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T12:33:12+00:00",
+ "generated_at": "2026-10-24T12:37:20+00:00",
  "git": {
-  "commit": "6a2aa1e",
+  "commit": "43d797e",
   "branch": "main",
   "dirty": true
  },
@@ -12484,6 +12484,7 @@
     "src/assets/gba/header.c",
     "src/assets/mzm/rom_bank.c",
     "src/assets/mzm/rooms.c",
+    "src/assets/mzm/runtime_room.c",
     "src/tools/fusion_importer.c",
     "scripts/aos_room_render.py",
     "scripts/aos_runtime_room.py",
@@ -12505,7 +12506,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs, reproduces Aria's complete structural world catalog and room index, expands all 342 Aria BG1 collision maps, reproduces Zero Mission's ROM bank and symbol manifest, and decodes all 331 Zero Mission room descriptors. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for graphics, palettes, room serialization, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs, reproduces Aria's complete structural world catalog and 342 BG1 collision maps, reproduces Zero Mission's ROM bank and symbol manifest, and decodes all 331 Zero Mission room descriptors and Clipdata maps. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for graphics, palettes, room serialization, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13917,6 +13918,7 @@
    "local_sources": [
     "include/fusion/assets/mzm.h",
     "src/assets/mzm/rooms.c",
+    "src/assets/mzm/runtime_room.c",
     "scripts/mzm_runtime_room.py",
     "scripts/mzm_room_render.py",
     "scripts/mzm_bg_layers.py"
@@ -13933,7 +13935,7 @@
     "assets.raw_import"
    ],
    "native_routines": [],
-   "limitations": "The native importer decodes and source-compares the structural fields of all 331 RoomEntryRom descriptors. Python still owns the resource payloads: 330 rooms export with their native backgrounds (per-tileset metatile sheets with the common tiles, BG0/BG1/BG2 block maps, BG3 and LZ77 BG0 images); animated tiles and palettes, the mother ship common tiles, BG2 movement and BG0 movement effects are not exported; background.bmp keeps the older BG1-over-BG2 composite for the tools.",
+   "limitations": "The native importer decodes and source-compares all 331 RoomEntryRom descriptors and their 345686 final Clipdata cells. Python still owns the remaining payloads: 330 rooms export with their native backgrounds (per-tileset metatile sheets with the common tiles, BG0/BG1/BG2 block maps, BG3 and LZ77 BG0 images); animated tiles and palettes, the mother ship common tiles, BG2 movement and BG0 movement effects are not exported; background.bmp keeps the older BG1-over-BG2 composite for the tools.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14812,9 +14814,9 @@
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
     "module": "tests.test_fusion_assets_mzm_equivalence",
-    "test_count": 3,
+    "test_count": 4,
     "outcome": "passed",
-    "passed": 3
+    "passed": 4
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -15294,12 +15296,18 @@
    }
   ],
   "summary": {
-   "passed": 519,
+   "passed": 520,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "43d797e",
+   "date": "2026-10-24",
+   "subject": "Decode Aria collision maps natively",
+   "scope": "project"
+  },
   {
    "commit": "6a2aa1e",
    "date": "2026-10-24",
@@ -15772,12 +15780,6 @@
    "commit": "0d92a42",
    "date": "2026-10-20",
    "subject": "Port the native Aria input pipeline",
-   "scope": "project"
-  },
-  {
-   "commit": "27b478a",
-   "date": "2026-10-20",
-   "subject": "Suggest categories for unassigned Aria routines",
    "scope": "project"
   }
  ],

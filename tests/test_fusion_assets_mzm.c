@@ -152,6 +152,41 @@ static void test_room_entries(FusionRom *rom) {
                                        error, sizeof error));
 }
 
+static void test_room_rle(FusionRom *rom) {
+    static const uint8_t encoded[] = {
+        2, 2,
+        1, 0x82, 1, 0x82, 2, 0,
+        1, 0x84, 0, 0
+    };
+    const size_t offset = 0xA0;
+    memcpy(rom->data + offset, encoded, sizeof encoded);
+    char error[160];
+    FusionMzmRoomRleMap map;
+    assert(fusion_mzm_read_room_rle(rom, 0x08000000 + offset, &map,
+                                    error, sizeof error));
+    assert(map.source_pointer == 0x08000000 + offset);
+    assert(map.width == 2 && map.height == 2 && map.cell_count == 4);
+    assert(map.encoded_size == sizeof encoded);
+    assert(map.cells[0] == 1 && map.cells[1] == 1 &&
+           map.cells[2] == 2 && map.cells[3] == 2);
+    fusion_mzm_free_room_rle(&map);
+    assert(map.cells == NULL && map.cell_count == 0);
+
+    rom->data[offset] = 0;
+    assert(!fusion_mzm_read_room_rle(rom, 0x08000000 + offset, &map,
+                                     error, sizeof error));
+    memcpy(rom->data + offset, encoded, sizeof encoded);
+    rom->data[offset + 2] = 3;
+    assert(!fusion_mzm_read_room_rle(rom, 0x08000000 + offset, &map,
+                                     error, sizeof error));
+    memcpy(rom->data + offset, encoded, sizeof encoded);
+    rom->data[offset + 3] = 5;
+    assert(!fusion_mzm_read_room_rle(rom, 0x08000000 + offset, &map,
+                                     error, sizeof error));
+    assert(!fusion_mzm_read_room_rle(rom, 0x080000FC, &map,
+                                     error, sizeof error));
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -193,6 +228,7 @@ int main(void) {
     assert(table.entries == NULL && table.count == 0);
 
     test_room_entries(&rom);
+    test_room_rle(&rom);
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

@@ -13,6 +13,7 @@ from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
     symbol_bytes,
     tileset_entry,
+    tileset_metatiles,
     tileset_video_memory,
 )
 from scripts.mzm_rom_bank import elf_symbols, produce, symbol_lines
@@ -284,4 +285,51 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             lines[-1],
             f"summary\t{len(expected)}\t{total_graphics}\t"
             f"{total_background_graphics}",
+        )
+
+    def test_tileset_metatiles_match_python_reference(self):
+        symbol_rows, _ = symbol_lines(elf_symbols(ELF.read_bytes()),
+                                      ROM.stat().st_size)
+        symbols = {parts[1]: int(parts[2])
+                   for row in symbol_rows
+                   if (parts := row.split("\t"))[0] == "symbol"}
+        expected = []
+        total_tileset_words = 0
+        for index in range(79):
+            entry = tileset_entry(index)
+            blocks = tileset_metatiles(index)
+            words = [word for block in blocks for word in block]
+            canonical = struct.pack(f"<{len(words)}H", *words)
+            source_words = min(
+                (len(symbol_bytes(entry["pTilemap"])) - 2) // 2,
+                1024 * 4,
+            )
+            expected.append((
+                index,
+                symbols[entry["pTilemap"]],
+                source_words,
+                208 * 4,
+                1024 + 208,
+                hashlib.sha1(canonical).hexdigest(),
+            ))
+            total_tileset_words += source_words
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-metatiles", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "metatiles")
+            actual.append(tuple(int(value) for value in fields[1:6]) +
+                          (fields[6],))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{len(expected)}\t{total_tileset_words}\t"
+            f"{len(expected) * 208 * 4}\t"
+            f"{len(expected) * (1024 + 208)}",
         )

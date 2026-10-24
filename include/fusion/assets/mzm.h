@@ -19,6 +19,12 @@ enum {
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
     FUSION_MZM_TILESET_COUNT = 79,
     FUSION_MZM_TILESET_ENTRY_SIZE = 20,
+    FUSION_MZM_TILESET_METATILE_COUNT = 1024,
+    FUSION_MZM_COMMON_METATILE_COUNT = 208,
+    FUSION_MZM_METATILE_CELLS = 4,
+    FUSION_MZM_METATILE_WORD_COUNT =
+        (FUSION_MZM_TILESET_METATILE_COUNT +
+         FUSION_MZM_COMMON_METATILE_COUNT) * FUSION_MZM_METATILE_CELLS,
     FUSION_MZM_VRAM_SIZE = 0x10000,
     FUSION_MZM_PALETTE_SIZE = 0x200,
     FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED = 0x10,
@@ -139,6 +145,13 @@ typedef struct {
     size_t background_graphics_size;
 } FusionMzmVideoMemory;
 
+typedef struct {
+    FusionMzmTilesetEntry entry;
+    uint16_t cells[FUSION_MZM_METATILE_WORD_COUNT];
+    size_t tileset_word_count;
+    size_t common_word_count;
+} FusionMzmMetatileTable;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -184,6 +197,10 @@ bool fusion_mzm_read_tileset_entry(const FusionRom *rom,
 bool fusion_mzm_load_tileset_video_memory(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     size_t index, FusionMzmVideoMemory *memory,
+    char *error, size_t error_size);
+bool fusion_mzm_read_tileset_metatiles(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    size_t index, FusionMzmMetatileTable *table,
     char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_MZM_H */

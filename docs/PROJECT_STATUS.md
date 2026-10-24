@@ -1,6 +1,26 @@
 # Project status
 
-Last updated: **2026-10-24**.
+Last updated: **2026-10-25**.
+
+## Patch 0506 - Native Zero Mission metatile tables
+
+- Added bounded C11 reconstruction of the 79 Zero Mission tileset metatile
+  tables from their ROM pointers and exact pinned-ELF object sizes.
+- Preserved the loader's effective layout without reading past source objects:
+  available words after each two-byte resource header are copied into 1,024
+  four-cell tileset blocks, the remainder is zero-filled, and the 208 common
+  four-cell blocks are appended from `sCommonTilemap`.
+- Added synthetic header, short-table, zero-fill, common-table, pointer and
+  malformed-size coverage plus complete little-endian SHA-1 comparison through
+  `--mzm-metatiles`.
+- All 79 tables match Python: 157,198 source tileset words and 65,728 repeated
+  common words produce 97,328 complete block records. Room-layer pixel
+  rendering, composition, animated replacements and the Mother Ship common
+  variant remain outside this contract, so migration and gameplay status do
+  not change.
+- Next: render Zero Mission RLE metatile and LZ77 text room layers natively
+  from the validated tables and video-memory snapshots; audio remains
+  untouched.
 
 ## Patch 0505 - Native Aria background depth composites
 

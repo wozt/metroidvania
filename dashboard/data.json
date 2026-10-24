@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T21:05:54+00:00",
+ "generated_at": "2026-10-24T22:36:56+00:00",
  "git": {
-  "commit": "51984b4",
+  "commit": "03de137",
   "branch": "main",
   "dirty": true
  },
@@ -12507,7 +12507,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders and 342 static-origin room composites; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload and all 79 standard tileset VRAM/palette snapshots. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for serialization, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders and 342 static-origin room composites; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots and their complete metatile tables. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for rendering, serialization, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12524,7 +12524,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-24",
+   "last_validated": "2026-10-25",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -13936,7 +13936,7 @@
     "assets.raw_import"
    ],
    "native_routines": [],
-   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload and all 79 standard RoomLoadTileset VRAM/palette snapshots. Python still owns animated tiles and palettes, the Mother Ship common-tile variant, metatile expansion, compositing and room serialization; BG2 movement and BG0 movement effects remain incomplete.",
+   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots and 97328 complete tileset/common metatile records. Python still owns animated tiles and palettes, the Mother Ship common-tile variant, pixel rendering, compositing and room serialization; BG2 movement and BG0 movement effects remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13951,7 +13951,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-24",
+   "last_validated": "2026-10-25",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -14815,9 +14815,9 @@
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
     "module": "tests.test_fusion_assets_mzm_equivalence",
-    "test_count": 6,
+    "test_count": 7,
     "outcome": "passed",
-    "passed": 6
+    "passed": 7
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -15297,12 +15297,18 @@
    }
   ],
   "summary": {
-   "passed": 525,
+   "passed": 526,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "03de137",
+   "date": "2026-10-24",
+   "subject": "Composite Aria backgrounds natively",
+   "scope": "project"
+  },
   {
    "commit": "51984b4",
    "date": "2026-10-24",
@@ -15775,12 +15781,6 @@
    "commit": "4c1c50f",
    "date": "2026-10-20",
    "subject": "Add runnable SDL Aria title preview frontend",
-   "scope": "project"
-  },
-  {
-   "commit": "a4d2290",
-   "date": "2026-10-20",
-   "subject": "Port Aria title stages six and seven fade control",
    "scope": "project"
   }
  ],

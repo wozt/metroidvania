@@ -251,9 +251,12 @@ The native reader also resolves all 79 tileset records and reproduces the
 standard `RoomLoadTileset` 64-KiB VRAM and 512-byte BG-palette snapshots,
 including both LZ77 graphics placements, common tiles/palettes and the final
 VRAM clear. Animated tiles and palettes, the Mother Ship common-tile variant,
-metatile expansion, compositing, doors, sprites and runtime-room serialization
-remain Python-owned, and these native extractors are not yet registered in the
-global native task graph.
+and pixel rendering remain Python-owned. The native path now reconstructs each
+tileset's effective metatile table as well: up to 1,024 four-cell tileset blocks
+are copied within their exact ELF object bounds and zero-filled, then the 208
+four-cell common blocks are appended. Layer compositing, doors, sprites and
+runtime-room serialization remain Python-owned, and these native extractors are
+not yet registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

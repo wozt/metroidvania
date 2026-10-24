@@ -24,6 +24,10 @@ static bool pointer_offset(const FusionRom *rom, uint32_t pointer, size_t size,
     return true;
 }
 
+static uint16_t read_u16(const uint8_t *data) {
+    return (uint16_t)data[0] | (uint16_t)data[1] << 8;
+}
+
 static uint32_t read_u32(const uint8_t *data) {
     return (uint32_t)data[0] | (uint32_t)data[1] << 8 |
            (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
@@ -35,6 +39,16 @@ static const FusionMzmRomSymbol *find_symbol(
     for (size_t index = 0; index < symbols->count; ++index) {
         if (symbols->entries[index].name &&
             !strcmp(symbols->entries[index].name, name))
+            return &symbols->entries[index];
+    }
+    return NULL;
+}
+
+static const FusionMzmRomSymbol *find_symbol_at(
+    const FusionMzmRomSymbolTable *symbols, uint32_t address) {
+    if (!symbols || (symbols->count && !symbols->entries)) return NULL;
+    for (size_t index = 0; index < symbols->count; ++index) {
+        if (symbols->entries[index].address == address)
             return &symbols->entries[index];
     }
     return NULL;
@@ -181,6 +195,61 @@ bool fusion_mzm_load_tileset_video_memory(
     memcpy(memory->palette + 3 * 32,
            rom->data + palette_offset + 32, 13 * 32);
     memcpy(memory->palette + 2, rom->data + common_palette_offset + 2, 94);
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+bool fusion_mzm_read_tileset_metatiles(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    size_t index, FusionMzmMetatileTable *table,
+    char *error, size_t error_size) {
+    if (!table) {
+        set_error(error, error_size,
+                  "invalid Zero Mission metatile-table request");
+        return false;
+    }
+    *table = (FusionMzmMetatileTable){0};
+    if (!fusion_mzm_read_tileset_entry(rom, symbols, index, &table->entry,
+                                       error, error_size)) {
+        return false;
+    }
+    const FusionMzmRomSymbol *tileset =
+        find_symbol_at(symbols, table->entry.tilemap_pointer);
+    size_t tileset_offset;
+    if (!tileset || tileset->size < 2 || (tileset->size - 2) % 2 != 0 ||
+        !pointer_offset(rom, tileset->address, tileset->size,
+                        &tileset_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission tileset metatiles");
+        return false;
+    }
+    size_t available_words = (tileset->size - 2) / 2;
+    size_t tileset_capacity = FUSION_MZM_TILESET_METATILE_COUNT *
+                              FUSION_MZM_METATILE_CELLS;
+    table->tileset_word_count = available_words < tileset_capacity
+        ? available_words : tileset_capacity;
+    for (size_t word = 0; word < table->tileset_word_count; ++word)
+        table->cells[word] = read_u16(
+            rom->data + tileset_offset + 2 + word * 2);
+
+    const FusionMzmRomSymbol *common =
+        find_symbol(symbols, "sCommonTilemap");
+    size_t common_words = FUSION_MZM_COMMON_METATILE_COUNT *
+                          FUSION_MZM_METATILE_CELLS;
+    size_t common_size = common_words * 2;
+    size_t common_offset;
+    if (!common || common->size < common_size ||
+        !pointer_offset(rom, common->address, common_size, &common_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission common metatiles");
+        *table = (FusionMzmMetatileTable){0};
+        return false;
+    }
+    size_t destination = tileset_capacity;
+    for (size_t word = 0; word < common_words; ++word)
+        table->cells[destination + word] =
+            read_u16(rom->data + common_offset + word * 2);
+    table->common_word_count = common_words;
     if (error && error_size > 0) error[0] = '\0';
     return true;
 }

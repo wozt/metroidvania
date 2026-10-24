@@ -280,6 +280,7 @@ static void test_tileset_video_memory(void) {
         BACKGROUND_OFFSET = 0x1400,
         TILEMAP_OFFSET = 0x1800,
         COMMON_GFX_OFFSET = 0x2000,
+        COMMON_TILEMAP_OFFSET = 0x2600,
         COMMON_PALETTE_OFFSET = 0x3000,
         DOOR_PALETTE_OFFSET = COMMON_PALETTE_OFFSET + 32,
         TILESET_INDEX = 3
@@ -307,6 +308,16 @@ static void test_tileset_video_memory(void) {
     bytes[COMMON_GFX_OFFSET + 1] = 0x22;
     bytes[COMMON_GFX_OFFSET + 2] = 0x33;
     bytes[COMMON_GFX_OFFSET + 3] = 0x44;
+    write_u16(bytes, TILEMAP_OFFSET, 0x1234);
+    for (size_t index = 0; index < 4; ++index)
+        write_u16(bytes, TILEMAP_OFFSET + 2 + index * 2,
+                  (uint16_t)(0x1001 + index));
+    for (size_t index = 0;
+         index < FUSION_MZM_COMMON_METATILE_COUNT *
+                     FUSION_MZM_METATILE_CELLS; ++index) {
+        write_u16(bytes, COMMON_TILEMAP_OFFSET + index * 2,
+                  (uint16_t)(0x4000 + index));
+    }
 
     FusionMzmRomSymbol symbol_entries[] = {
         {"sTilesetEntries", 0x08000000 + TABLE_OFFSET,
@@ -314,6 +325,10 @@ static void test_tileset_video_memory(void) {
         {"sCommonTilesGfx", 0x08000000 + COMMON_GFX_OFFSET, 4, 1},
         {"sCommonTilesPal", 0x08000000 + COMMON_PALETTE_OFFSET, 32, 2},
         {"sDoorTransitionPal", 0x08000000 + DOOR_PALETTE_OFFSET, 480, 3},
+        {"sFixtureTilemap", 0x08000000 + TILEMAP_OFFSET, 10, 4},
+        {"sCommonTilemap", 0x08000000 + COMMON_TILEMAP_OFFSET,
+         FUSION_MZM_COMMON_METATILE_COUNT *
+             FUSION_MZM_METATILE_CELLS * 2, 5},
     };
     FusionMzmRomSymbolTable symbols = {
         symbol_entries, sizeof symbol_entries / sizeof symbol_entries[0], 0
@@ -352,6 +367,24 @@ static void test_tileset_video_memory(void) {
     assert(memory->palette[95] == bytes[COMMON_PALETTE_OFFSET + 95]);
     assert(memory->palette[96] == bytes[PALETTE_OFFSET + 32]);
     assert(memory->palette[511] == bytes[PALETTE_OFFSET + 447]);
+    FusionMzmMetatileTable *metatiles = malloc(sizeof *metatiles);
+    assert(metatiles);
+    assert(fusion_mzm_read_tileset_metatiles(
+        &rom, &symbols, TILESET_INDEX, metatiles, error, sizeof error));
+    assert(metatiles->tileset_word_count == 4 &&
+           metatiles->common_word_count ==
+               FUSION_MZM_COMMON_METATILE_COUNT *
+                   FUSION_MZM_METATILE_CELLS);
+    assert(metatiles->cells[0] == 0x1001 &&
+           metatiles->cells[3] == 0x1004 && metatiles->cells[4] == 0 &&
+           metatiles->cells[4095] == 0 &&
+           metatiles->cells[4096] == 0x4000 &&
+           metatiles->cells[FUSION_MZM_METATILE_WORD_COUNT - 1] == 0x433F);
+    symbol_entries[4].size = 1;
+    assert(!fusion_mzm_read_tileset_metatiles(
+        &rom, &symbols, TILESET_INDEX, metatiles, error, sizeof error));
+    symbol_entries[4].size = 10;
+    free(metatiles);
     bytes[GRAPHICS_OFFSET] = 0;
     assert(!fusion_mzm_load_tileset_video_memory(
         &rom, &symbols, TILESET_INDEX, memory, error, sizeof error));

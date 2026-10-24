@@ -2,11 +2,13 @@
 /* Native asset pipeline entry point. Extraction remains Python-authoritative
  * until each C replacement has an equivalence fixture and integration test. */
 #include "fusion/assets/aos.h"
+#include "fusion/assets/mzm.h"
 #include "fusion/assets/rom.h"
 #include "fusion/assets/gba.h"
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void usage(const char *name) {
@@ -23,10 +25,53 @@ static void usage(const char *name) {
             "       %s --aria-entities FILE\n"
             "       %s --aria-bosses FILE\n"
             "       %s --aria-summary FILE\n"
+            "       %s --mzm-symbols ROM ELF\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name);
+            name, name, name, name);
+}
+
+static bool read_file(const char *path, uint8_t **data, size_t *size,
+                      char *error, size_t error_size) {
+    enum { FILE_SIZE_LIMIT = 64 * 1024 * 1024 };
+    *data = NULL;
+    *size = 0;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        snprintf(error, error_size, "cannot open %s", path);
+        return false;
+    }
+    if (fseek(file, 0, SEEK_END) != 0) {
+        fclose(file);
+        snprintf(error, error_size, "cannot seek %s", path);
+        return false;
+    }
+    long length = ftell(file);
+    if (length < 0 || (unsigned long)length > FILE_SIZE_LIMIT ||
+        fseek(file, 0, SEEK_SET) != 0) {
+        fclose(file);
+        snprintf(error, error_size, "%s exceeds the native file safety bound", path);
+        return false;
+    }
+    *size = (size_t)length;
+    *data = malloc(*size == 0 ? 1 : *size);
+    if (!*data) {
+        fclose(file);
+        snprintf(error, error_size, "cannot allocate buffer for %s", path);
+        return false;
+    }
+    size_t count = fread(*data, 1, *size, file);
+    bool complete = count == *size && ferror(file) == 0;
+    fclose(file);
+    if (!complete) {
+        free(*data);
+        *data = NULL;
+        *size = 0;
+        snprintf(error, error_size, "cannot read all of %s", path);
+        return false;
+    }
+    return true;
 }
 
 static void list_games(void) {
@@ -426,6 +471,39 @@ static int inspect_aria_summary(const char *path) {
     return 0;
 }
 
+static int inspect_mzm_symbols(const char *rom_path, const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
+        fprintf(stderr, "mzm-symbols: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmRomSymbolTable table;
+    if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &table,
+                                     error, sizeof error)) {
+        fprintf(stderr, "mzm-symbols: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    for (size_t index = 0; index < table.count; ++index) {
+        const FusionMzmRomSymbol *symbol = &table.entries[index];
+        printf("symbol\t%s\t%u\t%u\n", symbol->name,
+               symbol->address, symbol->size);
+    }
+    printf("summary\t%zu\t%zu\n", table.count, table.duplicate_name_count);
+    fusion_mzm_free_symbols(&table);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -438,6 +516,8 @@ int main(int argc, char **argv) {
     const char *aria_entities_path = NULL;
     const char *aria_bosses_path = NULL;
     const char *aria_summary_path = NULL;
+    const char *mzm_symbols_rom_path = NULL;
+    const char *mzm_symbols_elf_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -461,6 +541,10 @@ int main(int argc, char **argv) {
             aria_bosses_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-summary") && i + 1 < argc)
             aria_summary_path = argv[++i];
+        else if (!strcmp(argv[i], "--mzm-symbols") && i + 2 < argc) {
+            mzm_symbols_rom_path = argv[++i];
+            mzm_symbols_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -486,6 +570,8 @@ int main(int argc, char **argv) {
     if (aria_entities_path) return inspect_aria_entities(aria_entities_path);
     if (aria_bosses_path) return inspect_aria_bosses(aria_bosses_path);
     if (aria_summary_path) return inspect_aria_summary(aria_summary_path);
+    if (mzm_symbols_rom_path)
+        return inspect_mzm_symbols(mzm_symbols_rom_path, mzm_symbols_elf_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

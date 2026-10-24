@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T00:21:49+00:00",
+ "generated_at": "2026-10-24T00:25:13+00:00",
  "git": {
-  "commit": "26ed26a",
+  "commit": "4eecf83",
   "branch": "main",
   "dirty": true
  },
@@ -12473,19 +12473,24 @@
    "local_sources": [
     "include/fusion/assets/aos.h",
     "include/fusion/assets/gba.h",
+    "include/fusion/assets/mzm.h",
     "include/fusion/assets/rom.h",
     "src/assets/aos/world.c",
     "src/assets/core/rom.c",
     "src/assets/gba/decompress.c",
     "src/assets/gba/header.c",
+    "src/assets/mzm/rom_bank.c",
     "src/tools/fusion_importer.c",
-    "scripts/import_aos_world.py"
+    "scripts/import_aos_world.py",
+    "scripts/mzm_rom_bank.py"
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
     "tests/test_fusion_assets_aos_equivalence.py",
     "tests/test_fusion_assets_gba.c",
     "tests/test_fusion_assets_gba_header.c",
+    "tests/test_fusion_assets_mzm.c",
+    "tests/test_fusion_assets_mzm_equivalence.py",
     "tests/test_fusion_assets_rom.c",
     "tests/test_fusion_importer_header.py"
    ],
@@ -12493,7 +12498,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs and reads Aria's complete structural room inputs—directory, map, variants, transitions, backgrounds, loading references and entities—plus audited boss metadata and all world-summary totals, with Python/C equivalence. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for native catalog serialization, resource payloads, caches and every migration gate not yet proven.",
+   "limitations": "The C11 library verifies both ROMs; reads Aria's complete structural world metadata with Python/C equivalence; and now reproduces Zero Mission's filtered, ordered ROM-symbol contract from the pinned ELF. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for native catalog and ROM-bank serialization, resource payloads, caches and every migration gate not yet proven.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12501,6 +12506,8 @@
      "tests/test_fusion_assets_aos_equivalence.py",
      "tests/test_fusion_assets_gba.c",
      "tests/test_fusion_assets_gba_header.c",
+     "tests/test_fusion_assets_mzm.c",
+     "tests/test_fusion_assets_mzm_equivalence.py",
      "tests/test_fusion_assets_rom.c",
      "tests/test_fusion_importer_header.py"
     ],
@@ -12549,6 +12556,22 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_mzm.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_assets_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_mzm_equivalence.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      },
      {
       "test": "tests/test_fusion_assets_rom.c",
@@ -14219,6 +14242,13 @@
     "outcome": "passed"
    },
    {
+    "name": "fusion_assets_mzm",
+    "files": [
+     "tests/test_fusion_assets_mzm.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "fusion_importer_list",
     "files": [],
     "outcome": "passed"
@@ -14729,6 +14759,13 @@
     "passed": 9
    },
    {
+    "file": "tests/test_fusion_assets_mzm_equivalence.py",
+    "module": "tests.test_fusion_assets_mzm_equivalence",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
     "file": "tests/test_fusion_importer_header.py",
     "module": "tests.test_fusion_importer_header",
     "test_count": 1,
@@ -15206,12 +15243,18 @@
    }
   ],
   "summary": {
-   "passed": 513,
+   "passed": 515,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "4eecf83",
+   "date": "2026-10-24",
+   "subject": "Add native Aria world summary",
+   "scope": "project"
+  },
   {
    "commit": "26ed26a",
    "date": "2026-10-24",
@@ -15684,12 +15727,6 @@
    "commit": "55612e4",
    "date": "2026-10-20",
    "subject": "Resolve the escape timer graphics difference",
-   "scope": "project"
-  },
-  {
-   "commit": "16a8733",
-   "date": "2026-10-20",
-   "subject": "Port the Time Attack unlock, records and code",
    "scope": "project"
   }
  ],

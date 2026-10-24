@@ -42,6 +42,7 @@ build/fusion_importer --aria-loads "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-entities "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-bosses "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-summary "roms/Castlevania - Aria of Sorrow (USA).gba"
+build/fusion_importer --mzm-symbols "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
 build/fusion_importer --dry-run --force
 ```
 
@@ -54,7 +55,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | Python reference | Native target | Status | Equivalence gate |
 |---|---|---|---|
 | `scripts/verify_roms.py` | `fusion/assets/rom.h`, `src/assets/core/rom.c` | foundation complete | C SHA-1 vector, local ROM verification, malformed-file tests |
-| `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | not started | symbol-table byte and bounds comparison |
+| `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | symbol reader complete, bank serialization partial | synthetic malformed-ELF and bounds fixtures plus exact verified-input comparison of every filtered symbol line and duplicate-name count; `MZMROM01` and manifest writing pending |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
 | GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header`, `fusion_rom_read_gba_header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, verified local ROM identity, fixed marker and complement checksum |
 | `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
@@ -70,8 +71,9 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should begin Zero Mission's bounded ROM-bank symbol
-contract. Aria's next slice is deterministic native catalog serialization from
+The next migration layer should serialize Zero Mission's `MZMROM01` bank and
+symbol manifest deterministically in an isolated output, then compare them with
+Python. Aria's next slice is deterministic native catalog serialization from
 the migrated metadata. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not

@@ -34,6 +34,7 @@ add_library(fusion_assets STATIC
     src/assets/core/rom.c
     src/assets/gba/decompress.c
     src/assets/gba/header.c
+    src/assets/mzm/rom_bank.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)
@@ -134,6 +135,10 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_assets_aos_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_aos_tests)
     add_test(NAME fusion_assets_aos COMMAND fusion_assets_aos_tests)
+    add_executable(fusion_assets_mzm_tests tests/test_fusion_assets_mzm.c)
+    target_link_libraries(fusion_assets_mzm_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_assets_mzm_tests)
+    add_test(NAME fusion_assets_mzm COMMAND fusion_assets_mzm_tests)
     add_test(NAME fusion_importer_list COMMAND fusion_importer --list)
     add_test(NAME fusion_importer_dry_run COMMAND fusion_importer --dry-run --force)
 

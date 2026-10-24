@@ -224,6 +224,11 @@ against the Python reference. A native aggregate reader also checks all world
 summary totals. Catalog serialization and resource payloads are still owned by
 the Python reference pipeline.
 
+The Zero Mission side now has a bounded native reader for the pinned reference
+ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name
+rules used by `mzm_rom_bank.py`; native bank and manifest serialization are not
+yet connected, so the Python producer remains authoritative.
+
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:
 

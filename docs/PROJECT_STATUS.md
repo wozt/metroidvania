@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0493 - Native Zero Mission ROM symbols
+
+- Started the Zero Mission side of the C11 import migration with a bounded
+  little-endian ELF32 symbol-table reader.
+- Preserved the Python contract for sized `STT_OBJECT` records: ROM-range
+  filtering, address/name ordering, first-definition-wins deduplication and
+  rejection of objects that extend past the ROM.
+- Added a synthetic malformed-ELF and ROM-bounds suite, then compared every
+  emitted symbol line and the duplicate-name count against `mzm_rom_bank.py`
+  through `fusion_importer --mzm-symbols` on the verified local inputs.
+- This slice does not yet write `MZMROM01` or `rom_symbols.tsv`; the Python bank
+  producer remains authoritative and audio remains outside the active scope.
+- Next: add deterministic native serialization for the Zero Mission ROM bank
+  and symbol manifest, with byte-for-byte comparison in an isolated output.
+
 ## Patch 0492 - Native Aria world summary
 
 - Added a bounded C11 world-summary reader that composes the migrated Aria

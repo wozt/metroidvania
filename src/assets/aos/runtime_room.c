@@ -230,6 +230,126 @@ bool fusion_aos_load_video_memory(const FusionRom *rom,
     return true;
 }
 
+void fusion_aos_free_background_tilemap(FusionAosBackgroundTilemap *tilemap) {
+    if (!tilemap) return;
+    free(tilemap->cells);
+    *tilemap = (FusionAosBackgroundTilemap){0};
+}
+
+bool fusion_aos_read_background_tiles(const FusionRom *rom,
+                                      const FusionAosBackground *background,
+                                      FusionAosBackgroundTilemap *tilemap,
+                                      char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_ARIA ||
+        !background || !tilemap) {
+        set_error(error, error_size, "invalid Aria background-tile request");
+        return false;
+    }
+    *tilemap = (FusionAosBackgroundTilemap){0};
+    tilemap->metadata_pointer = background->metadata_pointer;
+    if (background->metadata_pointer == 0) {
+        tilemap->status = FUSION_AOS_TILEMAP_ABSENT;
+        if (error && error_size > 0) error[0] = '\0';
+        return true;
+    }
+
+    size_t metadata_offset;
+    if (!pointer_offset(rom, background->metadata_pointer,
+                        AOS_BACKGROUND_METADATA_SIZE, &metadata_offset)) {
+        set_error(error, error_size,
+                  "Aria background metadata points outside the ROM");
+        return false;
+    }
+    const uint8_t *metadata = rom->data + metadata_offset;
+    tilemap->width_screens = metadata[0];
+    tilemap->height_screens = metadata[1];
+    tilemap->flags = read_u16(metadata + 2);
+    tilemap->blocks_pointer = read_u32(metadata + 4);
+    tilemap->map_pointer = read_u32(metadata + 12);
+    if (tilemap->width_screens == 0 || tilemap->height_screens == 0 ||
+        tilemap->width_screens > FUSION_AOS_BACKGROUND_SCREEN_LIMIT ||
+        tilemap->height_screens > FUSION_AOS_BACKGROUND_SCREEN_LIMIT) {
+        set_error(error, error_size,
+                  "Aria background dimensions exceed the safety bounds");
+        return false;
+    }
+    if (tilemap->flags & 1) {
+        tilemap->status = FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE;
+        if (error && error_size > 0) error[0] = '\0';
+        return true;
+    }
+
+    size_t map_count = (size_t)tilemap->width_screens *
+                       tilemap->height_screens * 64;
+    size_t map_offset;
+    if (!pointer_offset(rom, tilemap->map_pointer,
+                        map_count * sizeof(uint16_t), &map_offset)) {
+        set_error(error, error_size,
+                  "Aria background block map points outside the ROM");
+        return false;
+    }
+    const uint8_t *block_map = rom->data + map_offset;
+    for (size_t index = 0; index < map_count; ++index) {
+        uint16_t block = read_u16(block_map + index * 2) & 0x3FFF;
+        if (block > tilemap->maximum_block) tilemap->maximum_block = block;
+    }
+
+    MetadataPayload blocks;
+    if (!read_metadata_payload(rom, tilemap->blocks_pointer,
+                               (tilemap->flags & 2) != 0,
+                               &blocks, error, error_size)) {
+        return false;
+    }
+    size_t required_blocks = (size_t)tilemap->maximum_block * 16 * 2;
+    if (required_blocks > blocks.size) {
+        free_payload(&blocks);
+        set_error(error, error_size,
+                  "Aria background block table is truncated");
+        return false;
+    }
+
+    tilemap->width_tiles = (size_t)tilemap->width_screens * 32;
+    tilemap->height_tiles = (size_t)tilemap->height_screens * 32;
+    tilemap->cell_count = tilemap->width_tiles * tilemap->height_tiles;
+    if (tilemap->cell_count > FUSION_AOS_COLLISION_CELL_CAPACITY) {
+        free_payload(&blocks);
+        set_error(error, error_size,
+                  "Aria background tilemap exceeds the safety cap");
+        return false;
+    }
+    tilemap->cells = calloc(tilemap->cell_count, sizeof *tilemap->cells);
+    if (!tilemap->cells) {
+        free_payload(&blocks);
+        set_error(error, error_size,
+                  "cannot allocate Aria background tilemap");
+        return false;
+    }
+    for (size_t tile_y = 0; tile_y < tilemap->height_tiles; ++tile_y) {
+        size_t block_y = tile_y / 4;
+        size_t initial_local_y = tile_y % 4;
+        for (size_t tile_x = 0; tile_x < tilemap->width_tiles; ++tile_x) {
+            size_t block_x = tile_x / 4;
+            size_t local_x = tile_x % 4;
+            size_t local_y = initial_local_y;
+            uint16_t map_value = read_u16(
+                block_map + (block_x + block_y *
+                             tilemap->width_screens * 8) * 2);
+            uint16_t block = map_value & 0x3FFF;
+            if (block == 0) continue;
+            if (map_value & 0x4000) local_x = 3 - local_x;
+            if (map_value & 0x8000) local_y = 3 - local_y;
+            size_t cell = (size_t)(block - 1) * 16 + local_x + local_y * 4;
+            uint16_t word = read_u16(blocks.data + cell * 2);
+            word ^= (uint16_t)(((map_value >> 12) & 0xC) << 8);
+            tilemap->cells[tile_x + tile_y * tilemap->width_tiles] = word;
+        }
+    }
+    free_payload(&blocks);
+    tilemap->status = FUSION_AOS_TILEMAP_DECODED;
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 void fusion_aos_free_collision_map(FusionAosCollisionMap *collision) {
     if (!collision) return;
     free(collision->cells);

@@ -38,6 +38,7 @@ build/fusion_importer --aria-map "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-rooms "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-transitions "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-backgrounds "roms/Castlevania - Aria of Sorrow (USA).gba"
+build/fusion_importer --aria-background-tiles "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-collisions "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-loads "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-video-memory "roms/Castlevania - Aria of Sorrow (USA).gba"
@@ -69,7 +70,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
-| `scripts/aos_runtime_room.py`, `scripts/aos_room_render.py` | `src/assets/aos/runtime_room.c` | BG1 collision and graphics/palette loading complete, compositing and room serialization pending | synthetic metadata, resource-encoding, bounds and flip fixtures; exact final-cell comparison for 342 decoded collision maps plus the one absent BG1, and complete VRAM/palette SHA-1 comparison after 887 graphics and 736 palette loads across all 343 rooms |
+| `scripts/aos_runtime_room.py`, `scripts/aos_room_render.py` | `src/assets/aos/runtime_room.c` | BG1 collision, graphics/palette loading and text-background tile expansion complete; rendering, compositing and room serialization pending | synthetic metadata, resource-encoding, bounds and flip fixtures; exact comparison of 342 collision maps, 343 complete VRAM/palette snapshots and 901 final background tilemaps totaling 2,358,272 entries; 104 absent and 24 affine layer slots remain explicit |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
 
@@ -78,10 +79,10 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should alternate to Aria and expand its static text
-background tiles from the native room metadata and video-memory snapshots.
-Aria still needs native compositing and runtime-room serialization; Zero
-Mission still needs BG3, tilesets, compositing, doors, sprites and runtime-room
+The next migration layer should alternate to Zero Mission and connect its BG3
+LZ77 tilemaps to the native room-background contract. Aria still needs native
+pixel rendering, compositing and runtime-room serialization; Zero Mission
+still needs tilesets, compositing, doors, sprites and runtime-room
 serialization. The
 completed Zero Mission ROM bank and Aria world catalog are ready for later
 registration in the native task graph. The header extractor is

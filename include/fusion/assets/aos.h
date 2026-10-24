@@ -118,6 +118,27 @@ typedef struct {
 } FusionAosBackgroundList;
 
 typedef enum {
+    FUSION_AOS_TILEMAP_ABSENT,
+    FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE,
+    FUSION_AOS_TILEMAP_DECODED
+} FusionAosTilemapStatus;
+
+typedef struct {
+    FusionAosTilemapStatus status;
+    uint32_t metadata_pointer;
+    uint8_t width_screens;
+    uint8_t height_screens;
+    uint16_t flags;
+    uint32_t blocks_pointer;
+    uint32_t map_pointer;
+    uint16_t maximum_block;
+    size_t width_tiles;
+    size_t height_tiles;
+    uint16_t *cells;
+    size_t cell_count;
+} FusionAosBackgroundTilemap;
+
+typedef enum {
     FUSION_AOS_COLLISION_ABSENT,
     FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE,
     FUSION_AOS_COLLISION_NONE,
@@ -223,6 +244,11 @@ bool fusion_aos_read_room_backgrounds(const FusionRom *rom,
                                       const FusionAosRoomDescriptor *descriptor,
                                       FusionAosBackgroundList *backgrounds,
                                       char *error, size_t error_size);
+bool fusion_aos_read_background_tiles(const FusionRom *rom,
+                                      const FusionAosBackground *background,
+                                      FusionAosBackgroundTilemap *tilemap,
+                                      char *error, size_t error_size);
+void fusion_aos_free_background_tilemap(FusionAosBackgroundTilemap *tilemap);
 bool fusion_aos_read_background_collision(const FusionRom *rom,
                                           const FusionAosBackground *background,
                                           FusionAosCollisionMap *collision,

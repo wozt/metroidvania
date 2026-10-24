@@ -228,7 +228,9 @@ produces the final flipped per-cell collision map. It also resolves direct and
 LZ77 graphics resources and applies every native graphics/palette load entry to
 bounded 64 KiB VRAM and 512-byte palette snapshots. Rendered backgrounds,
 runtime-room serialization and global task orchestration are still owned by the
-Python reference pipeline.
+Python reference pipeline. Before rendering, however, all non-affine room
+background block maps and direct/LZ77 metatile tables are now expanded natively
+to their final flipped 8x8 tile entries.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name

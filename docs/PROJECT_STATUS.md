@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0501 - Native Aria background tile expansion
+
+- Added bounded C11 expansion of Aria text-background block maps into their
+  final 8x8 tile entries, including direct or LZ77 block tables, empty block
+  zero, horizontal/vertical block flips and the corresponding tile flip-bit
+  toggles.
+- Exposed absent and affine layers explicitly and retained the native metadata
+  pointers, dimensions, flags, maximum block and final tile dimensions for
+  every layer.
+- Added synthetic flip, ownership, absent, affine, dimension and truncated
+  block-table coverage, then compared complete little-endian tilemap SHA-1
+  digests with Python through `--aria-background-tiles`.
+- Across all 1,029 layer slots in 343 rooms, 901 text backgrounds now expand
+  to 2,358,272 identical tile entries; 104 layers are absent and 24 are affine.
+  Pixel rendering, depth compositing and `AOSROOM-NATIVE` serialization remain
+  Python-owned, so migration status stays partial and gameplay parity does not
+  change.
+- Next: alternate to Zero Mission and connect its BG3 LZ77 tilemaps to the
+  native room-background contract; audio remains untouched.
+
 ## Patch 0500 - Native Zero Mission room backgrounds
 
 - Added a native BG0/BG1/BG2 preparation contract that classifies each room

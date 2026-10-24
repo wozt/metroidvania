@@ -189,6 +189,68 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             actual.append(tuple(int(value, 0) for value in fields[1:]))
         self.assertEqual(actual, expected)
 
+    def test_background_tilemaps_match_python_reference(self):
+        rom = ROM.read_bytes()
+        expected = []
+        status_counts = {"decoded": 0, "absent": 0, "affine": 0}
+        total_cells = 0
+        for room in decode_world(rom)["rooms"]:
+            for background in room["backgrounds"]:
+                pointer_text = background["metadata_pointer"]
+                pointer = int(pointer_text, 16) if pointer_text is not None else 0
+                decoded = decode_background(rom, background)
+                if decoded["status"] == "ABSENT":
+                    values = ("absent", pointer, 0, 0, 0, 0, 0,
+                              0, 0, 0, 0, "-")
+                else:
+                    offset = pointer - GBA_ROM_BASE
+                    width, height, flags, blocks, _, block_map = \
+                        struct.unpack_from("<BBHIII", rom, offset)
+                    if decoded["status"] == "UNSUPPORTED_AFFINE":
+                        values = ("affine", pointer, width, height, flags,
+                                  blocks, block_map, 0, 0, 0, 0, "-")
+                    else:
+                        map_count = width * height * 64
+                        map_offset = block_map - GBA_ROM_BASE
+                        map_values = struct.unpack_from(
+                            f"<{map_count}H", rom, map_offset)
+                        maximum_block = max(
+                            (value & 0x3FFF for value in map_values), default=0)
+                        payload = struct.pack(
+                            f"<{len(decoded['tiles'])}H", *decoded["tiles"])
+                        values = (
+                            "decoded", pointer, width, height, flags, blocks,
+                            block_map, maximum_block, decoded["width_tiles"],
+                            decoded["height_tiles"], len(decoded["tiles"]),
+                            hashlib.sha1(payload).hexdigest(),
+                        )
+                        total_cells += len(decoded["tiles"])
+                status_counts[values[0]] += 1
+                expected.append((room["engine_area"], room["room"],
+                                 background["layer"], *values))
+
+        result = subprocess.run(
+            [str(BINARY), "--aria-background-tiles", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "tilemap")
+            actual.append((int(fields[1]), int(fields[2]), int(fields[3]),
+                           fields[4],
+                           *(int(value, 0) for value in fields[5:15]),
+                           fields[15]))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            "summary\t{}\t{}\t{}\t{}".format(
+                status_counts["decoded"], status_counts["absent"],
+                status_counts["affine"], total_cells),
+        )
+
     def test_bg1_collision_maps_match_python_reference(self):
         rom = ROM.read_bytes()
         area_pointers, room_counts = decode_area_directory(rom)

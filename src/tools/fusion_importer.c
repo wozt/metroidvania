@@ -21,6 +21,7 @@ static void usage(const char *name) {
             "       %s --aria-rooms FILE\n"
             "       %s --aria-transitions FILE\n"
             "       %s --aria-backgrounds FILE\n"
+            "       %s --aria-background-tiles FILE\n"
             "       %s --aria-collisions FILE\n"
             "       %s --aria-loads FILE\n"
             "       %s --aria-video-memory FILE\n"
@@ -36,7 +37,7 @@ static void usage(const char *name) {
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name,
+            name, name,
             name, name, name, name, name, name, name, name, name, name);
 }
 
@@ -342,6 +343,105 @@ static const char *collision_status_name(FusionAosCollisionStatus status) {
         case FUSION_AOS_COLLISION_DECODED: return "decoded";
     }
     return "invalid";
+}
+
+static const char *tilemap_status_name(FusionAosTilemapStatus status) {
+    switch (status) {
+        case FUSION_AOS_TILEMAP_ABSENT: return "absent";
+        case FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE: return "affine";
+        case FUSION_AOS_TILEMAP_DECODED: return "decoded";
+    }
+    return "invalid";
+}
+
+static int inspect_aria_background_tiles(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-background-tiles: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-background-tiles: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    uint8_t *canonical = malloc(FUSION_AOS_COLLISION_CELL_CAPACITY * 2);
+    if (!canonical) {
+        fprintf(stderr, "aria-background-tiles: cannot allocate hash buffer\n");
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    size_t status_counts[3] = {0};
+    size_t total_cells = 0;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            FusionAosBackgroundList backgrounds;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error) ||
+                !fusion_aos_read_room_backgrounds(&rom, &descriptor, &backgrounds,
+                                                  error, sizeof error)) {
+                fprintf(stderr, "aria-background-tiles: area %zu room %zu: %s\n",
+                        area, room, error);
+                free(canonical);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            for (size_t layer = 0; layer < FUSION_AOS_BACKGROUND_COUNT; ++layer) {
+                FusionAosBackgroundTilemap tilemap;
+                if (!fusion_aos_read_background_tiles(&rom,
+                                                      &backgrounds.entries[layer],
+                                                      &tilemap, error,
+                                                      sizeof error)) {
+                    fprintf(stderr,
+                            "aria-background-tiles: area %zu room %zu layer %zu: %s\n",
+                            area, room, layer, error);
+                    free(canonical);
+                    fusion_rom_close(&rom);
+                    return 1;
+                }
+                char digest[41] = "-";
+                if (tilemap.status == FUSION_AOS_TILEMAP_DECODED) {
+                    for (size_t index = 0; index < tilemap.cell_count; ++index) {
+                        canonical[index * 2] = (uint8_t)tilemap.cells[index];
+                        canonical[index * 2 + 1] =
+                            (uint8_t)(tilemap.cells[index] >> 8);
+                    }
+                    if (!fusion_rom_sha1_hex(canonical, tilemap.cell_count * 2,
+                                             digest)) {
+                        fprintf(stderr,
+                                "aria-background-tiles: cannot hash area %zu room %zu layer %zu\n",
+                                area, room, layer);
+                        fusion_aos_free_background_tilemap(&tilemap);
+                        free(canonical);
+                        fusion_rom_close(&rom);
+                        return 1;
+                    }
+                }
+                ++status_counts[tilemap.status];
+                total_cells += tilemap.cell_count;
+                printf("tilemap\t%zu\t%zu\t%u\t%s\t0x%08X\t%u\t%u\t%u\t"
+                       "0x%08X\t0x%08X\t%u\t%zu\t%zu\t%zu\t%s\n",
+                       area, room, backgrounds.entries[layer].layer,
+                       tilemap_status_name(tilemap.status),
+                       tilemap.metadata_pointer, tilemap.width_screens,
+                       tilemap.height_screens, tilemap.flags,
+                       tilemap.blocks_pointer, tilemap.map_pointer,
+                       tilemap.maximum_block, tilemap.width_tiles,
+                       tilemap.height_tiles, tilemap.cell_count, digest);
+                fusion_aos_free_background_tilemap(&tilemap);
+            }
+        }
+    }
+    printf("summary\t%zu\t%zu\t%zu\t%zu\n",
+           status_counts[FUSION_AOS_TILEMAP_DECODED],
+           status_counts[FUSION_AOS_TILEMAP_ABSENT],
+           status_counts[FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE], total_cells);
+    free(canonical);
+    fusion_rom_close(&rom);
+    return 0;
 }
 
 static int inspect_aria_collisions(const char *path) {
@@ -967,6 +1067,7 @@ int main(int argc, char **argv) {
     const char *aria_rooms_path = NULL;
     const char *aria_transitions_path = NULL;
     const char *aria_backgrounds_path = NULL;
+    const char *aria_background_tiles_path = NULL;
     const char *aria_collisions_path = NULL;
     const char *aria_loads_path = NULL;
     const char *aria_video_memory_path = NULL;
@@ -1002,6 +1103,8 @@ int main(int argc, char **argv) {
             aria_transitions_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-backgrounds") && i + 1 < argc)
             aria_backgrounds_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-background-tiles") && i + 1 < argc)
+            aria_background_tiles_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-collisions") && i + 1 < argc)
             aria_collisions_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-loads") && i + 1 < argc)
@@ -1061,6 +1164,8 @@ int main(int argc, char **argv) {
     if (aria_rooms_path) return inspect_aria_rooms(aria_rooms_path);
     if (aria_transitions_path) return inspect_aria_transitions(aria_transitions_path);
     if (aria_backgrounds_path) return inspect_aria_backgrounds(aria_backgrounds_path);
+    if (aria_background_tiles_path)
+        return inspect_aria_background_tiles(aria_background_tiles_path);
     if (aria_collisions_path) return inspect_aria_collisions(aria_collisions_path);
     if (aria_loads_path) return inspect_aria_loads(aria_loads_path);
     if (aria_video_memory_path)

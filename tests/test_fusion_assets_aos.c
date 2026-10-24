@@ -13,6 +13,8 @@ enum {
     ROOM_BASE_OFFSET = 0x1000,
     ROOM_STRIDE = 0x40,
     RESOLVED_ROOM_OFFSET = 0x6000,
+    BACKGROUND_OFFSET = 0x7000,
+    BACKGROUND_METADATA_OFFSET = 0x7100,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
 };
 
@@ -47,6 +49,17 @@ static void write_transition(uint8_t *data, size_t offset, uint32_t target,
     for (size_t field = 0; field < 5; ++field) {
         write_u16(data, offset + 6 + field * 2, (uint16_t)(seed + field));
     }
+}
+
+static void write_background(uint8_t *data, size_t offset, uint8_t field_0,
+                             uint8_t field_1, uint16_t seed,
+                             uint32_t metadata_pointer) {
+    data[offset] = field_0;
+    data[offset + 1] = field_1;
+    write_u16(data, offset + 2, seed);
+    write_u16(data, offset + 4, (uint16_t)(seed + 1));
+    write_u16(data, offset + 6, (uint16_t)(seed + 2));
+    write_u32(data, offset + 8, metadata_pointer);
 }
 
 int main(void) {
@@ -84,6 +97,7 @@ int main(void) {
                           GBA_ROM_BASE + RESOLVED_ROOM_OFFSET, 0, 0);
     write_room_descriptor(bytes, RESOLVED_ROOM_OFFSET, 0xFFFF, 0, 0x1234,
                           (uint16_t)(5 | (6 << 7) | 0xC000));
+    write_u32(bytes, RESOLVED_ROOM_OFFSET + 8, GBA_ROM_BASE + BACKGROUND_OFFSET);
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 24,
               GBA_ROM_BASE + RESOLVED_ROOM_OFFSET - 0x20);
     write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x20,
@@ -117,6 +131,26 @@ int main(void) {
                                              &transitions, error, sizeof error));
     write_u32(bytes, RESOLVED_ROOM_OFFSET - 0x20,
               GBA_ROM_BASE + ROOM_BASE_OFFSET + ROOM_STRIDE);
+    write_background(bytes, BACKGROUND_OFFSET, 1, 2, 0x100,
+                     GBA_ROM_BASE + BACKGROUND_METADATA_OFFSET);
+    write_background(bytes, BACKGROUND_OFFSET + 0x0C, 3, 4, 0x200, 0);
+    write_background(bytes, BACKGROUND_OFFSET + 0x18, 5, 6, 0x300,
+                     GBA_ROM_BASE + BACKGROUND_METADATA_OFFSET + 2);
+    bytes[BACKGROUND_METADATA_OFFSET] = 7;
+    bytes[BACKGROUND_METADATA_OFFSET + 1] = 8;
+    bytes[BACKGROUND_METADATA_OFFSET + 2] = 9;
+    bytes[BACKGROUND_METADATA_OFFSET + 3] = 10;
+    FusionAosBackgroundList backgrounds;
+    assert(fusion_aos_read_room_backgrounds(&rom, &descriptor, &backgrounds,
+                                            error, sizeof error));
+    assert(backgrounds.entries[0].layer == 1);
+    assert(backgrounds.entries[0].control == 0x100);
+    assert(backgrounds.entries[0].width_screens == 7 &&
+           backgrounds.entries[0].height_screens == 8);
+    assert(!backgrounds.entries[1].has_dimensions);
+    assert(backgrounds.entries[2].field_6 == 0x302);
+    assert(backgrounds.entries[2].width_screens == 9 &&
+           backgrounds.entries[2].height_screens == 10);
     write_u32(bytes, ROOM_BASE_OFFSET + 4, GBA_ROM_BASE + ROOM_BASE_OFFSET);
     assert(!fusion_aos_read_room_descriptor(&rom, &directory, 0, 0, &descriptor,
                                             error, sizeof error));

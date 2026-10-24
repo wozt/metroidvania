@@ -181,7 +181,8 @@ def _decode_load_list(rom: bytes, pointer: int) -> list[dict]:
     raise ValueError(f"resource list exceeds safety cap at {_pointer(pointer)}")
 
 
-def _decode_backgrounds(rom: bytes, pointer: int) -> list[dict]:
+def decode_room_backgrounds(rom: bytes, pointer: int) -> list[dict]:
+    """Decode the three bounded background descriptors for one room."""
     start = _rom_offset(
         pointer, len(rom), BACKGROUND_COUNT * BACKGROUND_DESCRIPTOR_SIZE
     )
@@ -200,17 +201,31 @@ def _decode_backgrounds(rom: bytes, pointer: int) -> list[dict]:
             width_screens = height_screens = None
         backgrounds.append({
             "layer": index + 1,
-            "descriptor_pointer": _pointer(GBA_ROM_BASE + offset),
+            "descriptor_pointer": GBA_ROM_BASE + offset,
             "field_0": field_0,
             "field_1": field_1,
             "control": control,
             "field_4": field_4,
             "field_6": field_6,
-            "metadata_pointer": _pointer(metadata) if metadata else None,
+            "metadata_pointer": metadata,
             "width_screens": width_screens,
             "height_screens": height_screens,
         })
     return backgrounds
+
+
+def _decode_backgrounds(rom: bytes, pointer: int) -> list[dict]:
+    return [
+        {
+            **background,
+            "descriptor_pointer": _pointer(background["descriptor_pointer"]),
+            "metadata_pointer": (
+                _pointer(background["metadata_pointer"])
+                if background["metadata_pointer"] else None
+            ),
+        }
+        for background in decode_room_backgrounds(rom, pointer)
+    ]
 
 
 def _decode_entities(rom: bytes, pointer: int) -> list[dict]:

@@ -13,6 +13,7 @@ enum {
     FUSION_AOS_AREA_COUNT = 12,
     FUSION_AOS_ROOM_VARIANT_CAPACITY = 16,
     FUSION_AOS_ROOM_TRANSITION_CAPACITY = 16,
+    FUSION_AOS_BACKGROUND_COUNT = 3,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
@@ -89,6 +90,24 @@ typedef struct {
     size_t count;
 } FusionAosTransitionList;
 
+typedef struct {
+    uint32_t descriptor_pointer;
+    uint8_t layer;
+    uint8_t field_0;
+    uint8_t field_1;
+    uint16_t control;
+    uint16_t field_4;
+    uint16_t field_6;
+    uint32_t metadata_pointer;
+    bool has_dimensions;
+    uint8_t width_screens;
+    uint8_t height_screens;
+} FusionAosBackground;
+
+typedef struct {
+    FusionAosBackground entries[FUSION_AOS_BACKGROUND_COUNT];
+} FusionAosBackgroundList;
+
 bool fusion_aos_read_area_directory(const FusionRom *rom,
                                     FusionAosAreaDirectory *directory,
                                     char *error, size_t error_size);
@@ -104,6 +123,10 @@ bool fusion_aos_read_room_transitions(const FusionRom *rom,
                                       const FusionAosAreaDirectory *directory,
                                       const FusionAosRoomDescriptor *descriptor,
                                       FusionAosTransitionList *transitions,
+                                      char *error, size_t error_size);
+bool fusion_aos_read_room_backgrounds(const FusionRom *rom,
+                                      const FusionAosRoomDescriptor *descriptor,
+                                      FusionAosBackgroundList *backgrounds,
                                       char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

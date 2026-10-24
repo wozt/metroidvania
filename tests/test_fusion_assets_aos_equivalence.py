@@ -11,6 +11,7 @@ from scripts.import_aos_world import (
     GBA_ROM_BASE,
     decode_area_directory,
     decode_map_cells,
+    decode_room_backgrounds,
     decode_room_descriptor,
     decode_room_transitions,
 )
@@ -141,5 +142,40 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
         for line in result.stdout.splitlines():
             fields = line.split("\t")
             self.assertEqual(fields[0], "transition")
+            actual.append(tuple(int(value, 0) for value in fields[1:]))
+        self.assertEqual(actual, expected)
+
+    def test_room_background_headers_match_python_reference(self):
+        rom = ROM.read_bytes()
+        area_pointers, room_counts = decode_area_directory(rom)
+        expected = []
+        for area, (table_pointer, room_count) in enumerate(
+                zip(area_pointers, room_counts)):
+            table_offset = table_pointer - GBA_ROM_BASE
+            for room in range(room_count):
+                source = struct.unpack_from("<I", rom, table_offset + room * 4)[0]
+                descriptor = decode_room_descriptor(rom, source)
+                for background in decode_room_backgrounds(
+                        rom, descriptor["backgrounds_pointer"]):
+                    expected.append((
+                        area, room, background["layer"],
+                        background["descriptor_pointer"], background["field_0"],
+                        background["field_1"], background["control"],
+                        background["field_4"], background["field_6"],
+                        background["metadata_pointer"],
+                        (-1 if background["width_screens"] is None
+                         else background["width_screens"]),
+                        (-1 if background["height_screens"] is None
+                         else background["height_screens"]),
+                    ))
+        result = subprocess.run(
+            [str(BINARY), "--aria-backgrounds", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = []
+        for line in result.stdout.splitlines():
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "background")
             actual.append(tuple(int(value, 0) for value in fields[1:]))
         self.assertEqual(actual, expected)

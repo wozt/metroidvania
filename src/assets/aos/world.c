@@ -8,7 +8,8 @@ enum {
     AOS_MAP_TABLE_OFFSET = 0x116650,
     AOS_AREA_DIRECTORY_OFFSET = 0x50EF08,
     AOS_ROOM_DESCRIPTOR_SIZE = 0x24,
-    AOS_TRANSITION_SIZE = 0x10
+    AOS_TRANSITION_SIZE = 0x10,
+    AOS_BACKGROUND_DESCRIPTOR_SIZE = 0x0C
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -292,6 +293,52 @@ bool fusion_aos_read_room_transitions(const FusionRom *rom,
             return false;
         }
         transitions->count = index + 1;
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+bool fusion_aos_read_room_backgrounds(const FusionRom *rom,
+                                      const FusionAosRoomDescriptor *descriptor,
+                                      FusionAosBackgroundList *backgrounds,
+                                      char *error, size_t error_size) {
+    if (!rom || !descriptor || !backgrounds || !rom->data ||
+        rom->game != FUSION_ASSET_GAME_ARIA) {
+        set_error(error, error_size, "invalid Aria room background request");
+        return false;
+    }
+    size_t offset;
+    if (!pointer_offset(rom, descriptor->backgrounds_pointer,
+                        FUSION_AOS_BACKGROUND_COUNT * AOS_BACKGROUND_DESCRIPTOR_SIZE,
+                        &offset)) {
+        set_error(error, error_size, "Aria background descriptors point outside the ROM");
+        return false;
+    }
+
+    *backgrounds = (FusionAosBackgroundList){0};
+    for (size_t index = 0; index < FUSION_AOS_BACKGROUND_COUNT; ++index) {
+        size_t entry_offset = offset + index * AOS_BACKGROUND_DESCRIPTOR_SIZE;
+        const uint8_t *data = rom->data + entry_offset;
+        FusionAosBackground *background = &backgrounds->entries[index];
+        background->descriptor_pointer = GBA_ROM_BASE + (uint32_t)entry_offset;
+        background->layer = (uint8_t)(index + 1);
+        background->field_0 = data[0];
+        background->field_1 = data[1];
+        background->control = read_u16(data + 2);
+        background->field_4 = read_u16(data + 4);
+        background->field_6 = read_u16(data + 6);
+        background->metadata_pointer = read_u32(data + 8);
+        if (background->metadata_pointer != 0) {
+            size_t metadata_offset;
+            if (!pointer_offset(rom, background->metadata_pointer, 2, &metadata_offset)) {
+                set_error(error, error_size,
+                          "Aria background dimension metadata points outside the ROM");
+                return false;
+            }
+            background->has_dimensions = true;
+            background->width_screens = rom->data[metadata_offset];
+            background->height_screens = rom->data[metadata_offset + 1];
+        }
     }
     if (error && error_size > 0) error[0] = '\0';
     return true;

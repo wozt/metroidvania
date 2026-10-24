@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0488 - Native Aria background descriptors
+
+- Ported each room's three 12-byte background descriptors to C11, including
+  layer identity, native control fields and metadata pointers.
+- Added bounded optional width/height metadata reads while preserving the
+  distinction between a null metadata pointer and zero-valued dimensions.
+- Added a synthetic mixed metadata/no-metadata fixture and compared every room
+  background header and dimension against Python through
+  `fusion_importer --aria-backgrounds`.
+- Tile graphics, palettes, block maps and collision payloads remain untouched
+  and Python-authoritative; no ROM-derived output is tracked.
+- Next: port the zero-terminated graphics and palette loading-list entries.
+
 ## Patch 0487 - Native Aria room transitions
 
 - Ported Aria's 16-byte room transition entries to C11, including signed source

@@ -19,9 +19,10 @@ static void usage(const char *name) {
             "       %s --aria-rooms FILE\n"
             "       %s --aria-transitions FILE\n"
             "       %s --aria-backgrounds FILE\n"
+            "       %s --aria-loads FILE\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
-            name, name, name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name, name, name);
 }
 
 static void list_games(void) {
@@ -276,6 +277,55 @@ static int inspect_aria_backgrounds(const char *path) {
     return 0;
 }
 
+static bool print_aria_load_list(const FusionRom *rom, size_t area, size_t room,
+                                 const char *kind, uint32_t pointer,
+                                 char *error, size_t error_size) {
+    FusionAosLoadList list;
+    if (!fusion_aos_read_load_list(rom, pointer, &list, error, error_size)) return false;
+    for (size_t index = 0; index < list.count; ++index) {
+        const FusionAosLoadEntry *entry = &list.entries[index];
+        printf("load\t%zu\t%zu\t%s\t%zu\t0x%08X\t0x%08X\t%u\t%u\t%u\n",
+               area, room, kind, index, entry->entry_pointer, entry->resource_pointer,
+               entry->parameters[0], entry->parameters[1], entry->parameters[2]);
+    }
+    return true;
+}
+
+static int inspect_aria_loads(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-loads: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-loads: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error) ||
+                !print_aria_load_list(&rom, area, room, "graphics",
+                                      descriptor.graphics_pointer,
+                                      error, sizeof error) ||
+                !print_aria_load_list(&rom, area, room, "palette",
+                                      descriptor.palette_pointer,
+                                      error, sizeof error)) {
+                fprintf(stderr, "aria-loads: area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+        }
+    }
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -284,6 +334,7 @@ int main(int argc, char **argv) {
     const char *aria_rooms_path = NULL;
     const char *aria_transitions_path = NULL;
     const char *aria_backgrounds_path = NULL;
+    const char *aria_loads_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -299,6 +350,8 @@ int main(int argc, char **argv) {
             aria_transitions_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-backgrounds") && i + 1 < argc)
             aria_backgrounds_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-loads") && i + 1 < argc)
+            aria_loads_path = argv[++i];
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -320,6 +373,7 @@ int main(int argc, char **argv) {
     if (aria_rooms_path) return inspect_aria_rooms(aria_rooms_path);
     if (aria_transitions_path) return inspect_aria_transitions(aria_transitions_path);
     if (aria_backgrounds_path) return inspect_aria_backgrounds(aria_backgrounds_path);
+    if (aria_loads_path) return inspect_aria_loads(aria_loads_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

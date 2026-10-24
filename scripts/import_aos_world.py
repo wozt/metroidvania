@@ -159,7 +159,7 @@ def decode_map_cells(rom: bytes, area_pointers: list[int],
     return cells
 
 
-def _decode_load_list(rom: bytes, pointer: int) -> list[dict]:
+def decode_load_list(rom: bytes, pointer: int) -> list[dict]:
     """Decode a zero-terminated eight-byte resource loading list."""
     start = _rom_offset(pointer, len(rom), LOAD_ENTRY_SIZE)
     entries = []
@@ -174,11 +174,22 @@ def _decode_load_list(rom: bytes, pointer: int) -> list[dict]:
             return entries
         _rom_offset(resource, len(rom))
         entries.append({
-            "entry_pointer": _pointer(GBA_ROM_BASE + offset),
-            "resource_pointer": _pointer(resource),
+            "entry_pointer": GBA_ROM_BASE + offset,
+            "resource_pointer": resource,
             "parameters": [parameter_0, parameter_1, parameter_2],
         })
     raise ValueError(f"resource list exceeds safety cap at {_pointer(pointer)}")
+
+
+def _decode_load_list(rom: bytes, pointer: int) -> list[dict]:
+    return [
+        {
+            **entry,
+            "entry_pointer": _pointer(entry["entry_pointer"]),
+            "resource_pointer": _pointer(entry["resource_pointer"]),
+        }
+        for entry in decode_load_list(rom, pointer)
+    ]
 
 
 def decode_room_backgrounds(rom: bytes, pointer: int) -> list[dict]:

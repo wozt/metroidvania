@@ -10,6 +10,7 @@ import unittest
 from scripts.import_aos_world import (
     GBA_ROM_BASE,
     decode_area_directory,
+    decode_load_list,
     decode_map_cells,
     decode_room_backgrounds,
     decode_room_descriptor,
@@ -178,4 +179,35 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             fields = line.split("\t")
             self.assertEqual(fields[0], "background")
             actual.append(tuple(int(value, 0) for value in fields[1:]))
+        self.assertEqual(actual, expected)
+
+    def test_room_loading_lists_match_python_reference(self):
+        rom = ROM.read_bytes()
+        area_pointers, room_counts = decode_area_directory(rom)
+        expected = []
+        for area, (table_pointer, room_count) in enumerate(
+                zip(area_pointers, room_counts)):
+            table_offset = table_pointer - GBA_ROM_BASE
+            for room in range(room_count):
+                source = struct.unpack_from("<I", rom, table_offset + room * 4)[0]
+                descriptor = decode_room_descriptor(rom, source)
+                for kind, pointer in (
+                        ("graphics", descriptor["graphics_pointer"]),
+                        ("palette", descriptor["palette_pointer"])):
+                    for index, entry in enumerate(decode_load_list(rom, pointer)):
+                        expected.append((
+                            area, room, kind, index, entry["entry_pointer"],
+                            entry["resource_pointer"], *entry["parameters"],
+                        ))
+        result = subprocess.run(
+            [str(BINARY), "--aria-loads", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = []
+        for line in result.stdout.splitlines():
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "load")
+            actual.append((int(fields[1]), int(fields[2]), fields[3],
+                           *(int(value, 0) for value in fields[4:])))
         self.assertEqual(actual, expected)

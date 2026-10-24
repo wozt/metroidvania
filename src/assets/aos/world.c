@@ -9,7 +9,8 @@ enum {
     AOS_AREA_DIRECTORY_OFFSET = 0x50EF08,
     AOS_ROOM_DESCRIPTOR_SIZE = 0x24,
     AOS_TRANSITION_SIZE = 0x10,
-    AOS_BACKGROUND_DESCRIPTOR_SIZE = 0x0C
+    AOS_BACKGROUND_DESCRIPTOR_SIZE = 0x0C,
+    AOS_LOAD_ENTRY_SIZE = 0x08
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -342,4 +343,47 @@ bool fusion_aos_read_room_backgrounds(const FusionRom *rom,
     }
     if (error && error_size > 0) error[0] = '\0';
     return true;
+}
+
+bool fusion_aos_read_load_list(const FusionRom *rom, uint32_t pointer,
+                               FusionAosLoadList *list,
+                               char *error, size_t error_size) {
+    if (!rom || !list || !rom->data || rom->game != FUSION_ASSET_GAME_ARIA) {
+        set_error(error, error_size, "invalid Aria loading-list request");
+        return false;
+    }
+    size_t offset;
+    if (!pointer_offset(rom, pointer, AOS_LOAD_ENTRY_SIZE, &offset)) {
+        set_error(error, error_size, "Aria loading list points outside the ROM");
+        return false;
+    }
+
+    *list = (FusionAosLoadList){0};
+    for (size_t index = 0; index < FUSION_AOS_LOAD_ENTRY_CAPACITY; ++index) {
+        size_t entry_offset = offset + index * AOS_LOAD_ENTRY_SIZE;
+        if (entry_offset > rom->size || AOS_LOAD_ENTRY_SIZE > rom->size - entry_offset) {
+            set_error(error, error_size, "unterminated Aria loading list");
+            return false;
+        }
+        const uint8_t *data = rom->data + entry_offset;
+        uint32_t resource_pointer = read_u32(data);
+        if (resource_pointer == 0) {
+            if (error && error_size > 0) error[0] = '\0';
+            return true;
+        }
+        size_t resource_offset;
+        if (!pointer_offset(rom, resource_pointer, 1, &resource_offset)) {
+            set_error(error, error_size, "Aria loading-list resource points outside the ROM");
+            return false;
+        }
+        FusionAosLoadEntry *entry = &list->entries[index];
+        entry->entry_pointer = GBA_ROM_BASE + (uint32_t)entry_offset;
+        entry->resource_pointer = resource_pointer;
+        entry->parameters[0] = data[4];
+        entry->parameters[1] = data[5];
+        entry->parameters[2] = data[6];
+        list->count = index + 1;
+    }
+    set_error(error, error_size, "Aria loading list exceeds the safety cap");
+    return false;
 }

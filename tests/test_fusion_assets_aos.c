@@ -15,6 +15,9 @@ enum {
     RESOLVED_ROOM_OFFSET = 0x6000,
     BACKGROUND_OFFSET = 0x7000,
     BACKGROUND_METADATA_OFFSET = 0x7100,
+    GRAPHICS_LOAD_OFFSET = 0x7200,
+    PALETTE_LOAD_OFFSET = 0x7300,
+    UNTERMINATED_LOAD_OFFSET = 0x7400,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
 };
 
@@ -62,6 +65,15 @@ static void write_background(uint8_t *data, size_t offset, uint8_t field_0,
     write_u32(data, offset + 8, metadata_pointer);
 }
 
+static void write_load_entry(uint8_t *data, size_t offset, uint32_t resource,
+                             uint8_t parameter_0, uint8_t parameter_1,
+                             uint8_t parameter_2) {
+    write_u32(data, offset, resource);
+    data[offset + 4] = parameter_0;
+    data[offset + 5] = parameter_1;
+    data[offset + 6] = parameter_2;
+}
+
 int main(void) {
     uint8_t *bytes = calloc(1, FIXTURE_SIZE);
     assert(bytes);
@@ -98,6 +110,8 @@ int main(void) {
     write_room_descriptor(bytes, RESOLVED_ROOM_OFFSET, 0xFFFF, 0, 0x1234,
                           (uint16_t)(5 | (6 << 7) | 0xC000));
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 8, GBA_ROM_BASE + BACKGROUND_OFFSET);
+    write_u32(bytes, RESOLVED_ROOM_OFFSET + 12, GBA_ROM_BASE + GRAPHICS_LOAD_OFFSET);
+    write_u32(bytes, RESOLVED_ROOM_OFFSET + 16, GBA_ROM_BASE + PALETTE_LOAD_OFFSET);
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 24,
               GBA_ROM_BASE + RESOLVED_ROOM_OFFSET - 0x20);
     write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x20,
@@ -151,6 +165,27 @@ int main(void) {
     assert(backgrounds.entries[2].field_6 == 0x302);
     assert(backgrounds.entries[2].width_screens == 9 &&
            backgrounds.entries[2].height_screens == 10);
+    write_load_entry(bytes, GRAPHICS_LOAD_OFFSET, GBA_ROM_BASE + 0x8000, 1, 2, 3);
+    write_load_entry(bytes, GRAPHICS_LOAD_OFFSET + 8, GBA_ROM_BASE + 0x8100, 4, 5, 6);
+    write_load_entry(bytes, GRAPHICS_LOAD_OFFSET + 16, 0, 0, 0, 0);
+    write_load_entry(bytes, PALETTE_LOAD_OFFSET, GBA_ROM_BASE + 0x8200, 7, 8, 9);
+    write_load_entry(bytes, PALETTE_LOAD_OFFSET + 8, 0, 0, 0, 0);
+    FusionAosLoadList loads;
+    assert(fusion_aos_read_load_list(&rom, descriptor.graphics_pointer, &loads,
+                                     error, sizeof error));
+    assert(loads.count == 2);
+    assert(loads.entries[0].parameters[0] == 1 &&
+           loads.entries[1].parameters[2] == 6);
+    assert(fusion_aos_read_load_list(&rom, descriptor.palette_pointer, &loads,
+                                     error, sizeof error));
+    assert(loads.count == 1 && loads.entries[0].parameters[1] == 8);
+    for (size_t index = 0; index < FUSION_AOS_LOAD_ENTRY_CAPACITY; ++index) {
+        write_load_entry(bytes, UNTERMINATED_LOAD_OFFSET + index * 8,
+                         GBA_ROM_BASE + 0x8000, 0, 0, 0);
+    }
+    assert(!fusion_aos_read_load_list(&rom,
+                                      GBA_ROM_BASE + UNTERMINATED_LOAD_OFFSET,
+                                      &loads, error, sizeof error));
     write_u32(bytes, ROOM_BASE_OFFSET + 4, GBA_ROM_BASE + ROOM_BASE_OFFSET);
     assert(!fusion_aos_read_room_descriptor(&rom, &directory, 0, 0, &descriptor,
                                             error, sizeof error));

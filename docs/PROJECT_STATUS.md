@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0489 - Native Aria resource loading lists
+
+- Ported Aria's zero-terminated eight-byte graphics and palette loading-list
+  entries to C11, preserving each resource pointer and its three parameters.
+- Added ROM bounds, resource-pointer validation, mandatory terminators and the
+  native 64-entry safety cap.
+- Added synthetic graphics/palette lists plus an unterminated-list failure and
+  compared every room list against Python through `fusion_importer --aria-loads`.
+- Resource payloads are not read, decompressed or written by this slice; entity
+  placements and resource decoding remain Python-authoritative.
+- Next: port the bounded room entity lists and their terminator semantics.
+
 ## Patch 0488 - Native Aria background descriptors
 
 - Ported each room's three 12-byte background descriptors to C11, including

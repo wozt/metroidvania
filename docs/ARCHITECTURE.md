@@ -217,8 +217,8 @@ bounded room-coordinate records with save/warp flags and room pointers. Room
 descriptor headers and their bounded variant chains are native as well.
 Transition records are decoded and resolved to unique native room identities.
 The three background descriptors and their optional screen dimensions are also
-native. Graphics/palette loading lists, entities and resource payloads are still
-owned by the Python reference pipeline.
+native. Graphics/palette loading-list references and parameters are native too;
+entities and resource payloads are still owned by the Python reference pipeline.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

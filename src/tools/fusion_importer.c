@@ -21,6 +21,7 @@ static void usage(const char *name) {
             "       %s --aria-rooms FILE\n"
             "       %s --aria-transitions FILE\n"
             "       %s --aria-backgrounds FILE\n"
+            "       %s --aria-collisions FILE\n"
             "       %s --aria-loads FILE\n"
             "       %s --aria-entities FILE\n"
             "       %s --aria-bosses FILE\n"
@@ -32,7 +33,7 @@ static void usage(const char *name) {
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -325,6 +326,80 @@ static int inspect_aria_backgrounds(const char *path) {
             }
         }
     }
+    fusion_rom_close(&rom);
+    return 0;
+}
+
+static const char *collision_status_name(FusionAosCollisionStatus status) {
+    switch (status) {
+        case FUSION_AOS_COLLISION_ABSENT: return "absent";
+        case FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE: return "affine";
+        case FUSION_AOS_COLLISION_NONE: return "none";
+        case FUSION_AOS_COLLISION_DECODED: return "decoded";
+    }
+    return "invalid";
+}
+
+static int inspect_aria_collisions(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-collisions: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-collisions: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    size_t status_counts[4] = {0};
+    size_t total_cells = 0;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            FusionAosBackgroundList backgrounds;
+            FusionAosCollisionMap collision;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error) ||
+                !fusion_aos_read_room_backgrounds(&rom, &descriptor, &backgrounds,
+                                                  error, sizeof error) ||
+                !fusion_aos_read_background_collision(&rom, &backgrounds.entries[0],
+                                                      &collision, error,
+                                                      sizeof error)) {
+                fprintf(stderr, "aria-collisions: area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            char digest[41] = "-";
+            if (collision.status == FUSION_AOS_COLLISION_DECODED &&
+                !fusion_rom_sha1_hex(collision.cells, collision.cell_count, digest)) {
+                fprintf(stderr, "aria-collisions: cannot hash area %zu room %zu\n",
+                        area, room);
+                fusion_aos_free_collision_map(&collision);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            ++status_counts[collision.status];
+            total_cells += collision.cell_count;
+            printf("collision\t%zu\t%zu\t%s\t0x%08X\t%u\t%u\t%u\t0x%08X\t"
+                   "0x%08X\t0x%08X\t%u\t%zu\t%zu\t%zu\t%s\n",
+                   area, room, collision_status_name(collision.status),
+                   collision.metadata_pointer, collision.width_screens,
+                   collision.height_screens, collision.flags,
+                   collision.blocks_pointer, collision.collision_pointer,
+                   collision.map_pointer, collision.maximum_block,
+                   collision.width_tiles, collision.height_tiles,
+                   collision.cell_count, digest);
+            fusion_aos_free_collision_map(&collision);
+        }
+    }
+    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\n",
+           status_counts[FUSION_AOS_COLLISION_DECODED],
+           status_counts[FUSION_AOS_COLLISION_ABSENT],
+           status_counts[FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE],
+           status_counts[FUSION_AOS_COLLISION_NONE], total_cells);
     fusion_rom_close(&rom);
     return 0;
 }
@@ -640,6 +715,7 @@ int main(int argc, char **argv) {
     const char *aria_rooms_path = NULL;
     const char *aria_transitions_path = NULL;
     const char *aria_backgrounds_path = NULL;
+    const char *aria_collisions_path = NULL;
     const char *aria_loads_path = NULL;
     const char *aria_entities_path = NULL;
     const char *aria_bosses_path = NULL;
@@ -669,6 +745,8 @@ int main(int argc, char **argv) {
             aria_transitions_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-backgrounds") && i + 1 < argc)
             aria_backgrounds_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-collisions") && i + 1 < argc)
+            aria_collisions_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-loads") && i + 1 < argc)
             aria_loads_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-entities") && i + 1 < argc)
@@ -716,6 +794,7 @@ int main(int argc, char **argv) {
     if (aria_rooms_path) return inspect_aria_rooms(aria_rooms_path);
     if (aria_transitions_path) return inspect_aria_transitions(aria_transitions_path);
     if (aria_backgrounds_path) return inspect_aria_backgrounds(aria_backgrounds_path);
+    if (aria_collisions_path) return inspect_aria_collisions(aria_collisions_path);
     if (aria_loads_path) return inspect_aria_loads(aria_loads_path);
     if (aria_entities_path) return inspect_aria_entities(aria_entities_path);
     if (aria_bosses_path) return inspect_aria_bosses(aria_bosses_path);

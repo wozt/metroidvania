@@ -2,6 +2,7 @@
 """Compare the native Aria area directory with the Python reference."""
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import json
 import struct
@@ -21,6 +22,8 @@ from scripts.import_aos_world import (
     decode_world,
 )
 from scripts.aos_room_index import index_rows
+from scripts.aos_room_render import decode_background
+from scripts.aos_runtime_room import native_cell
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -185,6 +188,81 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             self.assertEqual(fields[0], "background")
             actual.append(tuple(int(value, 0) for value in fields[1:]))
         self.assertEqual(actual, expected)
+
+    def test_bg1_collision_maps_match_python_reference(self):
+        rom = ROM.read_bytes()
+        area_pointers, room_counts = decode_area_directory(rom)
+        expected = []
+        status_counts = {"decoded": 0, "absent": 0, "affine": 0, "none": 0}
+        total_cells = 0
+        for area, (table_pointer, room_count) in enumerate(
+                zip(area_pointers, room_counts)):
+            table_offset = table_pointer - GBA_ROM_BASE
+            for room in range(room_count):
+                source = struct.unpack_from("<I", rom, table_offset + room * 4)[0]
+                descriptor = decode_room_descriptor(rom, source)
+                bg1 = decode_room_backgrounds(
+                    rom, descriptor["backgrounds_pointer"])[0]
+                pointer = bg1["metadata_pointer"] or 0
+                if pointer == 0:
+                    values = ("absent", 0, 0, 0, 0, 0, 0, 0, 0, 0, "-")
+                else:
+                    offset = pointer - GBA_ROM_BASE
+                    width, height, flags, blocks, collision, block_map = \
+                        struct.unpack_from("<BBHIII", rom, offset)
+                    decoded = decode_background(
+                        rom, dict(bg1, metadata_pointer=f"0x{pointer:08x}"))
+                    if decoded["status"] == "UNSUPPORTED_AFFINE":
+                        values = ("affine", width, height, flags, blocks,
+                                  collision, block_map, 0, 0, 0, "-")
+                    else:
+                        map_count = width * height * 64
+                        map_offset = block_map - GBA_ROM_BASE
+                        map_values = struct.unpack_from(
+                            f"<{map_count}H", rom, map_offset)
+                        maximum_block = max(
+                            (value & 0x3FFF for value in map_values), default=0)
+                        if decoded["collision"] is None:
+                            values = ("none", width, height, flags, blocks,
+                                      collision, block_map, maximum_block,
+                                      0, 0, "-")
+                        else:
+                            cells = bytes(native_cell(value, flipped)
+                                          for value, flipped in zip(
+                                              decoded["collision"],
+                                              decoded["collision_xflip"]))
+                            values = (
+                                "decoded", width, height, flags, blocks,
+                                collision, block_map, maximum_block,
+                                decoded["width_tiles"], decoded["height_tiles"],
+                                hashlib.sha1(cells).hexdigest(),
+                            )
+                            total_cells += len(cells)
+                status_counts[values[0]] += 1
+                cell_count = values[8] * values[9]
+                expected.append((area, room, values[0], pointer, *values[1:10],
+                                 cell_count, values[10]))
+
+        result = subprocess.run(
+            [str(BINARY), "--aria-collisions", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "collision")
+            actual.append((int(fields[1]), int(fields[2]), fields[3],
+                           *(int(value, 0) for value in fields[4:15]),
+                           fields[15]))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            "summary\t{}\t{}\t{}\t{}\t{}".format(
+                status_counts["decoded"], status_counts["absent"],
+                status_counts["affine"], status_counts["none"], total_cells),
+        )
 
     def test_room_loading_lists_match_python_reference(self):
         rom = ROM.read_bytes()

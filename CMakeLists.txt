@@ -30,6 +30,7 @@ fusion_enable_warnings(fusion_native_editor_core)
 
 add_library(fusion_assets STATIC
     src/assets/aos/catalog.c
+    src/assets/aos/runtime_room.c
     src/assets/aos/world.c
     src/assets/core/output.c
     src/assets/core/sha1.c

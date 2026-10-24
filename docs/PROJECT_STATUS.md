@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0497 - Native Aria BG1 collision maps
+
+- Added bounded C11 decoding for Aria text-background metadata, compressed
+  block and collision payloads, 4x4 block maps and the final per-cell BG1
+  collision bytes consumed by the runtime.
+- Preserved horizontal and vertical block flips and the native slope-direction
+  toggle; fixed the Python reference so a vertical flip starts from the source
+  row for every cell instead of alternately toggling the row within a block.
+- Added synthetic bounds, absent/affine/no-collision status, flip and slope
+  coverage, then compared dimensions, pointers, maximum block and a SHA-1 of
+  every final collision map for all 343 rooms.
+- The verified ROM contains 342 decoded BG1 collision maps totaling 956,416
+  cells and one room without BG1. Rendering, graphics, palettes and runtime
+  room serialization remain Python-owned, so the migration stays partial.
+- Next: alternate to Zero Mission and decode its bounded Clipdata room payload
+  from the newly native room descriptors; audio remains untouched.
+
 ## Patch 0496 - Native Zero Mission room descriptors
 
 - Added a bounded C11 reader for the 60-byte `RoomEntryRom` structure and all

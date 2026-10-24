@@ -222,9 +222,11 @@ bounded entity placements are now native as well. The audited boss identities,
 their unique room entities and enemy-table health values are native and checked
 against the Python reference. A native aggregate reader also checks all world
 summary totals. The same library now serializes the complete world JSON and its
-derived room-browser index deterministically through atomic replacement.
-Resource payloads and global task orchestration are still owned by the Python
-reference pipeline.
+derived room-browser index deterministically through atomic replacement. Its
+runtime-room layer also expands every compressed BG1 block/collision table and
+produces the final flipped per-cell collision map. Graphics, palettes, rendered
+backgrounds, runtime-room serialization and global task orchestration are still
+owned by the Python reference pipeline.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T12:07:02+00:00",
+ "generated_at": "2026-10-24T12:33:12+00:00",
  "git": {
-  "commit": "9b78308",
+  "commit": "6a2aa1e",
   "branch": "main",
   "dirty": true
  },
@@ -12476,6 +12476,7 @@
     "include/fusion/assets/mzm.h",
     "include/fusion/assets/rom.h",
     "src/assets/aos/catalog.c",
+    "src/assets/aos/runtime_room.c",
     "src/assets/aos/world.c",
     "src/assets/core/output.c",
     "src/assets/core/rom.c",
@@ -12484,6 +12485,8 @@
     "src/assets/mzm/rom_bank.c",
     "src/assets/mzm/rooms.c",
     "src/tools/fusion_importer.c",
+    "scripts/aos_room_render.py",
+    "scripts/aos_runtime_room.py",
     "scripts/import_aos_world.py",
     "scripts/mzm_rom_bank.py",
     "scripts/mzm_runtime_room.py"
@@ -12502,7 +12505,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs, reproduces Aria's complete structural world catalog and room index, reproduces Zero Mission's ROM bank and symbol manifest, and decodes all 331 Zero Mission room descriptors. The outputs pass complete semantic or byte equivalence as appropriate and use shared atomic replacement. Python remains authoritative for room resource payloads, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs, reproduces Aria's complete structural world catalog and room index, expands all 342 Aria BG1 collision maps, reproduces Zero Mission's ROM bank and symbol manifest, and decodes all 331 Zero Mission room descriptors. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for graphics, palettes, room serialization, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13415,10 +13418,14 @@
    "status": "functional",
    "fidelity": "partial",
    "local_sources": [
+    "include/fusion/assets/aos.h",
+    "src/assets/aos/runtime_room.c",
     "scripts/aos_runtime_room.py",
     "scripts/aos_room_render.py"
    ],
    "tests": [
+    "tests/test_fusion_assets_aos.c",
+    "tests/test_fusion_assets_aos_equivalence.py",
     "tests/test_aos_runtime_room.py",
     "tests/test_aos_room_render.py"
    ],
@@ -13426,10 +13433,12 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "342 of 343 rooms export; one has no decodable BG1 collision table. The background is a static composite.",
+   "limitations": "The native importer expands and source-compares all 342 BG1 collision maps (956416 final cells); one of 343 rooms has no BG1. Python still owns graphics and palette loading, static background compositing and AOSROOM-NATIVE serialization.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
+     "tests/test_fusion_assets_aos.c",
+     "tests/test_fusion_assets_aos_equivalence.py",
      "tests/test_aos_runtime_room.py",
      "tests/test_aos_room_render.py"
     ],
@@ -13437,12 +13446,28 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-24",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_fusion_assets_aos.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_assets_aos"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_equivalence.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
      {
       "test": "tests/test_aos_runtime_room.py",
       "kind": "python",
@@ -14780,9 +14805,9 @@
    {
     "file": "tests/test_fusion_assets_aos_equivalence.py",
     "module": "tests.test_fusion_assets_aos_equivalence",
-    "test_count": 10,
+    "test_count": 11,
     "outcome": "passed",
-    "passed": 10
+    "passed": 11
    },
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
@@ -15269,12 +15294,18 @@
    }
   ],
   "summary": {
-   "passed": 518,
+   "passed": 519,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "6a2aa1e",
+   "date": "2026-10-24",
+   "subject": "Decode Zero Mission room descriptors natively",
+   "scope": "project"
+  },
   {
    "commit": "9b78308",
    "date": "2026-10-24",
@@ -15747,12 +15778,6 @@
    "commit": "27b478a",
    "date": "2026-10-20",
    "subject": "Suggest categories for unassigned Aria routines",
-   "scope": "project"
-  },
-  {
-   "commit": "c26648a",
-   "date": "2026-10-20",
-   "subject": "Track every unassigned Aria routine",
    "scope": "project"
   }
  ],

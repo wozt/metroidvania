@@ -231,9 +231,10 @@ def decode_background(rom: bytes, descriptor: dict) -> dict:
     # Block X flips per cell: sub_08001A00 toggles bit 2 of slope bytes.
     collision_xflip = [False] * len(tiles) if collision_data is not None else None
     for tile_y in range(height_tiles):
-        block_y, local_y = divmod(tile_y, 4)
+        block_y, row_y = divmod(tile_y, 4)
         for tile_x in range(width_tiles):
             block_x, local_x = divmod(tile_x, 4)
+            local_y = row_y
             map_value = block_map[block_x + block_y * width * 8]
             block = map_value & 0x3FFF
             if block == 0:

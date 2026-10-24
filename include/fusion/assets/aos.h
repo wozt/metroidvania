@@ -17,6 +17,10 @@ enum {
     FUSION_AOS_LOAD_ENTRY_CAPACITY = 64,
     FUSION_AOS_ENTITY_CAPACITY = 512,
     FUSION_AOS_BOSS_ROOM_COUNT = 12,
+    FUSION_AOS_BACKGROUND_SCREEN_LIMIT = 16,
+    FUSION_AOS_COLLISION_CELL_CAPACITY =
+        FUSION_AOS_BACKGROUND_SCREEN_LIMIT * FUSION_AOS_BACKGROUND_SCREEN_LIMIT *
+        32 * 32,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
@@ -111,6 +115,29 @@ typedef struct {
     FusionAosBackground entries[FUSION_AOS_BACKGROUND_COUNT];
 } FusionAosBackgroundList;
 
+typedef enum {
+    FUSION_AOS_COLLISION_ABSENT,
+    FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE,
+    FUSION_AOS_COLLISION_NONE,
+    FUSION_AOS_COLLISION_DECODED
+} FusionAosCollisionStatus;
+
+typedef struct {
+    FusionAosCollisionStatus status;
+    uint32_t metadata_pointer;
+    uint8_t width_screens;
+    uint8_t height_screens;
+    uint16_t flags;
+    uint32_t blocks_pointer;
+    uint32_t collision_pointer;
+    uint32_t map_pointer;
+    uint16_t maximum_block;
+    size_t width_tiles;
+    size_t height_tiles;
+    uint8_t *cells;
+    size_t cell_count;
+} FusionAosCollisionMap;
+
 typedef struct {
     uint32_t entry_pointer;
     uint32_t resource_pointer;
@@ -187,6 +214,11 @@ bool fusion_aos_read_room_backgrounds(const FusionRom *rom,
                                       const FusionAosRoomDescriptor *descriptor,
                                       FusionAosBackgroundList *backgrounds,
                                       char *error, size_t error_size);
+bool fusion_aos_read_background_collision(const FusionRom *rom,
+                                          const FusionAosBackground *background,
+                                          FusionAosCollisionMap *collision,
+                                          char *error, size_t error_size);
+void fusion_aos_free_collision_map(FusionAosCollisionMap *collision);
 bool fusion_aos_read_load_list(const FusionRom *rom, uint32_t pointer,
                                FusionAosLoadList *list,
                                char *error, size_t error_size);

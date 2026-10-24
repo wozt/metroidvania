@@ -38,6 +38,7 @@ build/fusion_importer --aria-map "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-rooms "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-transitions "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-backgrounds "roms/Castlevania - Aria of Sorrow (USA).gba"
+build/fusion_importer --aria-collisions "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-loads "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-entities "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-bosses "roms/Castlevania - Aria of Sorrow (USA).gba"
@@ -65,7 +66,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
-| `scripts/aos_runtime_room.py` | `src/assets/aos/rooms.c` | not started | collision, entity and transition comparison |
+| `scripts/aos_runtime_room.py` | `src/assets/aos/runtime_room.c` | BG1 collision maps complete, room serialization pending | synthetic metadata, bounds and flip fixtures; exact per-room metadata and final-cell SHA-1 comparison for 342 decoded maps plus the one absent BG1 |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
 
@@ -74,11 +75,12 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should alternate to Aria's runtime-room payloads and
-begin with bounded collision metadata. Zero Mission room resources still need
-native decoding after its complete structural descriptor pass. The completed
-Zero Mission ROM bank and Aria world catalog are ready for later registration
-in the native task graph. The header extractor is
+The next migration layer should alternate to Zero Mission's room payloads and
+begin with bounded Clipdata decoding from the native descriptors. Aria still
+needs native graphics/palette loading, background rendering and runtime-room
+serialization after its complete BG1 collision pass. The completed Zero Mission
+ROM bank and Aria world catalog are ready for later registration in the native
+task graph. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not
 replace room or asset extraction. Each task must declare its ROM inputs,

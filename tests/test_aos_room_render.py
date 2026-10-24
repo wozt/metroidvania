@@ -46,7 +46,7 @@ class AriaRoomRenderTests(unittest.TestCase):
         struct.pack_into("<BBHIII", rom, 0x100, 1, 1, 0, blocks, collision, block_map)
         struct.pack_into("<16H", rom, 0x200, *range(16))
         rom[0x300:0x310] = bytes(range(16))
-        struct.pack_into("<H", rom, 0x400, 0x4001)
+        struct.pack_into("<H", rom, 0x400, 0xC001)
         background = decode_background(bytes(rom), {
             "layer": 1,
             "metadata_pointer": f"0x{metadata:08x}",
@@ -55,8 +55,8 @@ class AriaRoomRenderTests(unittest.TestCase):
         })
         self.assertEqual(background["width_tiles"], 32)
         self.assertEqual(background["height_tiles"], 32)
-        self.assertEqual(background["tiles"][:4], [0x403, 0x402, 0x401, 0x400])
-        self.assertEqual(background["collision"][:4], [3, 2, 1, 0])
+        self.assertEqual(background["tiles"][:4], [0xC0F, 0xC0E, 0xC0D, 0xC0C])
+        self.assertEqual(background["collision"][:4], [15, 14, 13, 12])
 
     def test_4bpp_render_and_depth_composite(self):
         vram = bytearray(0x10000)

@@ -24,6 +24,10 @@ enum {
     COMMON_BACKGROUND_OFFSET = 0xC000,
     COMMON_METADATA_OFFSET = 0xC030,
     EMPTY_LOAD_OFFSET = 0xC040,
+    COLLISION_METADATA_OFFSET = 0xC100,
+    COLLISION_BLOCKS_OFFSET = 0xC200,
+    COLLISION_VALUES_OFFSET = 0xC300,
+    COLLISION_MAP_OFFSET = 0xC400,
     ENEMY_TABLE_OFFSET = 0x0E9644,
     ENEMY_ENTRY_SIZE = 0x24,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
@@ -221,6 +225,54 @@ int main(void) {
     assert(backgrounds.entries[2].field_6 == 0x302);
     assert(backgrounds.entries[2].width_screens == 9 &&
            backgrounds.entries[2].height_screens == 10);
+    write_background(bytes, BACKGROUND_OFFSET, 1, 2, 0x100,
+                     GBA_ROM_BASE + COLLISION_METADATA_OFFSET);
+    bytes[COLLISION_METADATA_OFFSET] = 1;
+    bytes[COLLISION_METADATA_OFFSET + 1] = 1;
+    write_u16(bytes, COLLISION_METADATA_OFFSET + 2, 0);
+    write_u32(bytes, COLLISION_METADATA_OFFSET + 4,
+              GBA_ROM_BASE + COLLISION_BLOCKS_OFFSET);
+    write_u32(bytes, COLLISION_METADATA_OFFSET + 8,
+              GBA_ROM_BASE + COLLISION_VALUES_OFFSET);
+    write_u32(bytes, COLLISION_METADATA_OFFSET + 12,
+              GBA_ROM_BASE + COLLISION_MAP_OFFSET);
+    for (size_t index = 0; index < 16; ++index)
+        bytes[COLLISION_VALUES_OFFSET + index] = (uint8_t)index;
+    bytes[COLLISION_VALUES_OFFSET + 15] = 0x41;
+    write_u16(bytes, COLLISION_MAP_OFFSET, 0xC001);
+    assert(fusion_aos_read_room_backgrounds(&rom, &descriptor, &backgrounds,
+                                            error, sizeof error));
+    FusionAosCollisionMap collision;
+    assert(fusion_aos_read_background_collision(&rom, &backgrounds.entries[0],
+                                                &collision, error, sizeof error));
+    assert(collision.status == FUSION_AOS_COLLISION_DECODED);
+    assert(collision.width_screens == 1 && collision.height_screens == 1);
+    assert(collision.maximum_block == 1 && collision.cell_count == 1024);
+    assert(collision.width_tiles == 32 && collision.height_tiles == 32);
+    assert(collision.cells[0] == 0x45 && collision.cells[1] == 14 &&
+           collision.cells[2] == 13 && collision.cells[3] == 12);
+    fusion_aos_free_collision_map(&collision);
+    assert(collision.cells == NULL && collision.cell_count == 0);
+    assert(fusion_aos_read_background_collision(&rom, &backgrounds.entries[1],
+                                                &collision, error, sizeof error));
+    assert(collision.status == FUSION_AOS_COLLISION_ABSENT);
+    write_u32(bytes, COLLISION_METADATA_OFFSET + 8, 0);
+    assert(fusion_aos_read_background_collision(&rom, &backgrounds.entries[0],
+                                                &collision, error, sizeof error));
+    assert(collision.status == FUSION_AOS_COLLISION_NONE);
+    write_u16(bytes, COLLISION_METADATA_OFFSET + 2, 1);
+    assert(fusion_aos_read_background_collision(&rom, &backgrounds.entries[0],
+                                                &collision, error, sizeof error));
+    assert(collision.status == FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE);
+    write_u16(bytes, COLLISION_METADATA_OFFSET + 2, 0);
+    bytes[COLLISION_METADATA_OFFSET] = 17;
+    assert(!fusion_aos_read_background_collision(&rom, &backgrounds.entries[0],
+                                                 &collision, error, sizeof error));
+    bytes[COLLISION_METADATA_OFFSET] = 1;
+    write_u32(bytes, COLLISION_METADATA_OFFSET + 4,
+              GBA_ROM_BASE + FIXTURE_SIZE - 1);
+    assert(!fusion_aos_read_background_collision(&rom, &backgrounds.entries[0],
+                                                 &collision, error, sizeof error));
     write_load_entry(bytes, GRAPHICS_LOAD_OFFSET, GBA_ROM_BASE + 0x8000, 1, 2, 3);
     write_load_entry(bytes, GRAPHICS_LOAD_OFFSET + 8, GBA_ROM_BASE + 0x8100, 4, 5, 6);
     write_load_entry(bytes, GRAPHICS_LOAD_OFFSET + 16, 0, 0, 0, 0);

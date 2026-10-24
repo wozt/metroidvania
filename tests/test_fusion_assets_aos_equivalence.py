@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+import struct
 import subprocess
 import unittest
 
-from scripts.import_aos_world import decode_area_directory, decode_map_cells
+from scripts.import_aos_world import (
+    GBA_ROM_BASE,
+    decode_area_directory,
+    decode_map_cells,
+    decode_room_descriptor,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,3 +64,43 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
         self.assertEqual(int(count), len(expected))
         self.assertEqual(int(saves), sum(cell["save"] for cell in expected))
         self.assertEqual(int(warps), sum(cell["warp"] for cell in expected))
+
+    def test_room_descriptor_headers_match_python_reference(self):
+        rom = ROM.read_bytes()
+        area_pointers, room_counts = decode_area_directory(rom)
+        expected = []
+        for area, (table_pointer, room_count) in enumerate(
+                zip(area_pointers, room_counts)):
+            table_offset = table_pointer - GBA_ROM_BASE
+            for room in range(room_count):
+                source = struct.unpack_from("<I", rom, table_offset + room * 4)[0]
+                header = decode_room_descriptor(rom, source)
+                expected.append((
+                    area, room, header["source_pointer"], header["resolved_pointer"],
+                    header["display_control"], header["next_pointer"],
+                    header["backgrounds_pointer"], header["graphics_pointer"],
+                    header["palette_pointer"], header["entities_pointer"],
+                    header["transitions_pointer"], header["transition_count"],
+                    header["blend_control"], header["map_x"], header["map_y"],
+                    *header["flags"],
+                    tuple((item["pointer"], item["selector"])
+                          for item in header["variant_chain"]),
+                ))
+        result = subprocess.run(
+            [str(BINARY), "--aria-rooms", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = []
+        for line in result.stdout.splitlines():
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "room")
+            self.assertEqual(int(fields[18]), len(fields[19].split(",")))
+            variants = tuple(
+                (int(pointer, 16), int(selector, 16))
+                for pointer, selector in (item.split(":")
+                                          for item in fields[19].split(","))
+            )
+            actual.append(tuple(int(value, 0) for value in fields[1:18]) +
+                          (variants,))
+        self.assertEqual(actual, expected)

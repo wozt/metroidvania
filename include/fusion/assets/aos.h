@@ -11,6 +11,7 @@
 
 enum {
     FUSION_AOS_AREA_COUNT = 12,
+    FUSION_AOS_ROOM_VARIANT_CAPACITY = 16,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
@@ -43,11 +44,41 @@ typedef struct {
     size_t warp_count;
 } FusionAosMap;
 
+typedef struct {
+    uint32_t pointer;
+    uint16_t selector;
+} FusionAosRoomVariant;
+
+typedef struct {
+    uint32_t source_pointer;
+    uint32_t resolved_pointer;
+    FusionAosRoomVariant variants[FUSION_AOS_ROOM_VARIANT_CAPACITY];
+    size_t variant_count;
+    uint16_t display_control;
+    uint32_t next_pointer;
+    uint32_t backgrounds_pointer;
+    uint32_t graphics_pointer;
+    uint32_t palette_pointer;
+    uint32_t entities_pointer;
+    uint32_t transitions_pointer;
+    size_t transition_count;
+    uint16_t blend_control;
+    uint8_t map_x;
+    uint8_t map_y;
+    bool coordinate_flag_0;
+    bool coordinate_flag_1;
+} FusionAosRoomDescriptor;
+
 bool fusion_aos_read_area_directory(const FusionRom *rom,
                                     FusionAosAreaDirectory *directory,
                                     char *error, size_t error_size);
 bool fusion_aos_read_map(const FusionRom *rom,
                          const FusionAosAreaDirectory *directory,
                          FusionAosMap *map, char *error, size_t error_size);
+bool fusion_aos_read_room_descriptor(const FusionRom *rom,
+                                     const FusionAosAreaDirectory *directory,
+                                     size_t area, size_t room,
+                                     FusionAosRoomDescriptor *descriptor,
+                                     char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

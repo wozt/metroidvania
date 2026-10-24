@@ -238,8 +238,8 @@ def _decode_entities(rom: bytes, pointer: int) -> list[dict]:
     raise ValueError(f"entity list exceeds safety cap at {_pointer(pointer)}")
 
 
-def _decode_room(rom: bytes, source_pointer: int) -> dict:
-    """Resolve and decode one room descriptor with bounded linked structures."""
+def decode_room_descriptor(rom: bytes, source_pointer: int) -> dict:
+    """Resolve one bounded room variant chain and return its raw header."""
     pointer = source_pointer
     variants = []
     seen = set()
@@ -249,7 +249,7 @@ def _decode_room(rom: bytes, source_pointer: int) -> dict:
         seen.add(pointer)
         offset = _rom_offset(pointer, len(rom), ROOM_DESCRIPTOR_SIZE)
         selector = struct.unpack_from("<H", rom, offset + 2)[0]
-        variants.append({"pointer": _pointer(pointer), "selector": selector})
+        variants.append({"pointer": pointer, "selector": selector})
         if selector == 0xFFFF:
             break
         pointer = _u32(rom, offset + 4)
@@ -267,6 +267,34 @@ def _decode_room(rom: bytes, source_pointer: int) -> dict:
     if transitions_pointer > pointer or (pointer - transitions_pointer) % TRANSITION_ENTRY_SIZE:
         raise ValueError(f"invalid transition table at {_pointer(transitions_pointer)}")
     transition_count = (pointer - transitions_pointer) // TRANSITION_ENTRY_SIZE
+    _rom_offset(
+        transitions_pointer, len(rom), transition_count * TRANSITION_ENTRY_SIZE
+    )
+    return {
+        "source_pointer": source_pointer,
+        "resolved_pointer": pointer,
+        "variant_chain": variants,
+        "display_control": display_control,
+        "next_pointer": next_pointer,
+        "backgrounds_pointer": backgrounds_pointer,
+        "graphics_pointer": graphics_pointer,
+        "palette_pointer": palette_pointer,
+        "entities_pointer": entities_pointer,
+        "transitions_pointer": transitions_pointer,
+        "transition_count": transition_count,
+        "blend_control": blend_control,
+        "map_x": coordinates & 0x7F,
+        "map_y": (coordinates >> 7) & 0x7F,
+        "flags": [(coordinates >> 14) & 1, (coordinates >> 15) & 1],
+    }
+
+
+def _decode_room(rom: bytes, source_pointer: int) -> dict:
+    """Resolve and decode one room descriptor with bounded linked structures."""
+    header = decode_room_descriptor(rom, source_pointer)
+    pointer = header["resolved_pointer"]
+    transitions_pointer = header["transitions_pointer"]
+    transition_count = header["transition_count"]
     transition_offset = _rom_offset(
         transitions_pointer, len(rom), transition_count * TRANSITION_ENTRY_SIZE
     )
@@ -290,24 +318,28 @@ def _decode_room(rom: bytes, source_pointer: int) -> dict:
             "field_e": field_e,
         })
 
+    entities_pointer = header["entities_pointer"]
     entities = [] if entities_pointer == 0 else _decode_entities(rom, entities_pointer)
     return {
         "source_pointer": _pointer(source_pointer),
         "resolved_pointer": _pointer(pointer),
-        "variant_chain": variants,
-        "display_control": display_control,
-        "blend_control": blend_control,
-        "map_x": coordinates & 0x7F,
-        "map_y": (coordinates >> 7) & 0x7F,
-        "flags": [(coordinates >> 14) & 1, (coordinates >> 15) & 1],
-        "backgrounds": _decode_backgrounds(rom, backgrounds_pointer),
-        "graphics_loads": _decode_load_list(rom, graphics_pointer),
-        "palette_loads": _decode_load_list(rom, palette_pointer),
+        "variant_chain": [
+            {"pointer": _pointer(item["pointer"]), "selector": item["selector"]}
+            for item in header["variant_chain"]
+        ],
+        "display_control": header["display_control"],
+        "blend_control": header["blend_control"],
+        "map_x": header["map_x"],
+        "map_y": header["map_y"],
+        "flags": header["flags"],
+        "backgrounds": _decode_backgrounds(rom, header["backgrounds_pointer"]),
+        "graphics_loads": _decode_load_list(rom, header["graphics_pointer"]),
+        "palette_loads": _decode_load_list(rom, header["palette_pointer"]),
         "entity_list_pointer": _pointer(entities_pointer) if entities_pointer else None,
         "entities": entities,
         "transition_list_pointer": _pointer(transitions_pointer),
         "transitions": transitions,
-        "next_pointer": _pointer(next_pointer) if next_pointer else None,
+        "next_pointer": _pointer(header["next_pointer"]) if header["next_pointer"] else None,
     }
 
 

@@ -16,9 +16,10 @@ static void usage(const char *name) {
             "       %s --header FILE\n"
             "       %s --aria-directory FILE\n"
             "       %s --aria-map FILE\n"
+            "       %s --aria-rooms FILE\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
-            name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name);
 }
 
 static void list_games(void) {
@@ -143,11 +144,56 @@ static int inspect_aria_map(const char *path) {
     return 0;
 }
 
+static int inspect_aria_rooms(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-rooms: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-rooms: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error)) {
+                fprintf(stderr, "aria-rooms: area %zu room %zu: %s\n", area, room, error);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            printf("room\t%zu\t%zu\t0x%08X\t0x%08X\t%u\t0x%08X\t0x%08X\t"
+                   "0x%08X\t0x%08X\t0x%08X\t0x%08X\t%zu\t%u\t%u\t%u\t%u\t%u\t%zu\t",
+                   area, room, descriptor.source_pointer, descriptor.resolved_pointer,
+                   descriptor.display_control, descriptor.next_pointer,
+                   descriptor.backgrounds_pointer, descriptor.graphics_pointer,
+                   descriptor.palette_pointer, descriptor.entities_pointer,
+                   descriptor.transitions_pointer, descriptor.transition_count,
+                   descriptor.blend_control, descriptor.map_x, descriptor.map_y,
+                   descriptor.coordinate_flag_0 ? 1u : 0u,
+                   descriptor.coordinate_flag_1 ? 1u : 0u, descriptor.variant_count);
+            for (size_t index = 0; index < descriptor.variant_count; ++index) {
+                if (index > 0) putchar(',');
+                printf("0x%08X:0x%04X", descriptor.variants[index].pointer,
+                       descriptor.variants[index].selector);
+            }
+            putchar('\n');
+        }
+    }
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
     const char *aria_directory_path = NULL;
     const char *aria_map_path = NULL;
+    const char *aria_rooms_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -157,6 +203,8 @@ int main(int argc, char **argv) {
             aria_directory_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-map") && i + 1 < argc)
             aria_map_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-rooms") && i + 1 < argc)
+            aria_rooms_path = argv[++i];
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -175,6 +223,7 @@ int main(int argc, char **argv) {
     if (header_path) return inspect_header(header_path);
     if (aria_directory_path) return inspect_aria_directory(aria_directory_path);
     if (aria_map_path) return inspect_aria_map(aria_map_path);
+    if (aria_rooms_path) return inspect_aria_rooms(aria_rooms_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

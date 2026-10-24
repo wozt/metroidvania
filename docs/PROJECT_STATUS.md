@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0486 - Native Aria room descriptor headers
+
+- Ported Aria's bounded room descriptor headers and up-to-16-entry variant
+  chains to C11, including cycle detection and the original terminal selector.
+- Exposed display/blend control, linked resource pointers, map coordinates,
+  coordinate flags and transition-table bounds through `FusionAosRoomDescriptor`.
+- Added synthetic coverage for a resolved two-stage chain, coordinate flags,
+  transition counts and a rejected cycle, then compared every room header and
+  variant chain against Python through `fusion_importer --aria-rooms`.
+- Transition entries, backgrounds, loading lists and entities are still
+  Python-authoritative; this patch does not copy or emit their payloads.
+- Next: port transition entries and resolve their target room identities using
+  the native area directory.
+
 ## Patch 0485 - Native Aria global map metadata
 
 - Ported Aria's 64x35 global map table to C11, including occupied coordinates,

@@ -6,7 +6,9 @@
 enum {
     GBA_ROM_BASE = 0x08000000,
     AOS_MAP_TABLE_OFFSET = 0x116650,
-    AOS_AREA_DIRECTORY_OFFSET = 0x50EF08
+    AOS_AREA_DIRECTORY_OFFSET = 0x50EF08,
+    AOS_ROOM_DESCRIPTOR_SIZE = 0x24,
+    AOS_TRANSITION_SIZE = 0x10
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -134,6 +136,88 @@ bool fusion_aos_read_map(const FusionRom *rom,
             map->save_count += save ? 1u : 0u;
             map->warp_count += warp ? 1u : 0u;
         }
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+bool fusion_aos_read_room_descriptor(const FusionRom *rom,
+                                     const FusionAosAreaDirectory *directory,
+                                     size_t area, size_t room,
+                                     FusionAosRoomDescriptor *descriptor,
+                                     char *error, size_t error_size) {
+    if (!rom || !directory || !descriptor || !rom->data ||
+        rom->game != FUSION_ASSET_GAME_ARIA || area >= FUSION_AOS_AREA_COUNT ||
+        room >= directory->areas[area].room_count) {
+        set_error(error, error_size, "invalid Aria room descriptor request");
+        return false;
+    }
+    size_t table_offset;
+    if (!pointer_offset(rom, directory->areas[area].room_table_pointer,
+                        directory->areas[area].room_count * sizeof(uint32_t),
+                        &table_offset)) {
+        set_error(error, error_size, "Aria room table points outside the ROM");
+        return false;
+    }
+
+    *descriptor = (FusionAosRoomDescriptor){0};
+    uint32_t pointer = read_u32(rom->data + table_offset + room * 4);
+    descriptor->source_pointer = pointer;
+    for (size_t index = 0; index < FUSION_AOS_ROOM_VARIANT_CAPACITY; ++index) {
+        for (size_t previous = 0; previous < index; ++previous) {
+            if (descriptor->variants[previous].pointer == pointer) {
+                set_error(error, error_size, "Aria room variant chain contains a cycle");
+                return false;
+            }
+        }
+        size_t offset;
+        if (!pointer_offset(rom, pointer, AOS_ROOM_DESCRIPTOR_SIZE, &offset)) {
+            set_error(error, error_size, "Aria room descriptor points outside the ROM");
+            return false;
+        }
+        uint16_t selector = read_u16(rom->data + offset + 2);
+        descriptor->variants[index] = (FusionAosRoomVariant){pointer, selector};
+        descriptor->variant_count = index + 1;
+        if (selector == 0xFFFF) break;
+        pointer = read_u32(rom->data + offset + 4);
+    }
+    if (descriptor->variants[descriptor->variant_count - 1].selector != 0xFFFF) {
+        set_error(error, error_size, "Aria room variant chain exceeds the safety cap");
+        return false;
+    }
+
+    size_t offset;
+    if (!pointer_offset(rom, pointer, AOS_ROOM_DESCRIPTOR_SIZE, &offset)) {
+        set_error(error, error_size, "resolved Aria room descriptor is outside the ROM");
+        return false;
+    }
+    descriptor->resolved_pointer = pointer;
+    descriptor->display_control = read_u16(rom->data + offset);
+    descriptor->next_pointer = read_u32(rom->data + offset + 4);
+    descriptor->backgrounds_pointer = read_u32(rom->data + offset + 8);
+    descriptor->graphics_pointer = read_u32(rom->data + offset + 12);
+    descriptor->palette_pointer = read_u32(rom->data + offset + 16);
+    descriptor->entities_pointer = read_u32(rom->data + offset + 20);
+    descriptor->transitions_pointer = read_u32(rom->data + offset + 24);
+    descriptor->blend_control = read_u16(rom->data + offset + 30);
+    uint16_t coordinates = read_u16(rom->data + offset + 34);
+    descriptor->map_x = coordinates & 0x7F;
+    descriptor->map_y = (coordinates >> 7) & 0x7F;
+    descriptor->coordinate_flag_0 = ((coordinates >> 14) & 1) != 0;
+    descriptor->coordinate_flag_1 = ((coordinates >> 15) & 1) != 0;
+    if (descriptor->transitions_pointer > pointer ||
+        (pointer - descriptor->transitions_pointer) % AOS_TRANSITION_SIZE != 0) {
+        set_error(error, error_size, "invalid Aria room transition table bounds");
+        return false;
+    }
+    descriptor->transition_count =
+        (pointer - descriptor->transitions_pointer) / AOS_TRANSITION_SIZE;
+    size_t transition_offset;
+    if (!pointer_offset(rom, descriptor->transitions_pointer,
+                        descriptor->transition_count * AOS_TRANSITION_SIZE,
+                        &transition_offset)) {
+        set_error(error, error_size, "Aria room transition table points outside the ROM");
+        return false;
     }
     if (error && error_size > 0) error[0] = '\0';
     return true;

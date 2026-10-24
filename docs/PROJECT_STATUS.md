@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0485 - Native Aria global map metadata
+
+- Ported Aria's 64x35 global map table to C11, including occupied coordinates,
+  area/room identities, room descriptor pointers, save flags and warp flags.
+- Added strict map bounds, area/room range, room-table pointer and duplicate
+  save-room validation to the native reader.
+- Refactored the focused Python decoder and compared every native cell and
+  summary count against it through `fusion_importer --aria-map` on the verified
+  local ROM; the synthetic CTest also covers invalid rooms and duplicate saves.
+- No map output or ROM-derived bytes are tracked. Room descriptors, backgrounds,
+  entities and transitions remain Python-authoritative.
+- Next: port the bounded Aria room descriptor and variant-chain header, without
+  decoding graphics or entity payloads yet.
+
 ## Patch 0484 - Native Aria area directory
 
 - Added the first game-specific C11 metadata reader: Aria's 12-entry area

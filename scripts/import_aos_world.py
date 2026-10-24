@@ -114,6 +114,51 @@ def decode_area_directory(rom: bytes) -> tuple[list[int], list[int]]:
     return area_pointers, room_counts
 
 
+def decode_map_cells(rom: bytes, area_pointers: list[int],
+                     room_counts: list[int]) -> list[dict]:
+    """Return bounded occupied cells from Aria's 64x35 global map."""
+    map_end = MAP_TABLE_OFFSET + MAP_WIDTH * MAP_HEIGHT * 2
+    if len(rom) < map_end:
+        raise ValueError("ROM is too short for the Aria map table")
+    cells = []
+    seen_save_locations = set()
+    for map_y in range(MAP_HEIGHT):
+        for map_x in range(MAP_WIDTH):
+            offset = MAP_TABLE_OFFSET + 2 * (map_y * MAP_WIDTH + map_x)
+            value = struct.unpack_from("<H", rom, offset)[0]
+            if value == 0xFFFF:
+                continue
+            area = (value >> 6) & 0xF
+            room = value & 0x3F
+            if area >= AREA_COUNT or room >= room_counts[area]:
+                raise ValueError(
+                    f"map cell ({map_x},{map_y}) references invalid room {area}:{room}"
+                )
+            room_pointer = _u32(
+                rom, _rom_offset(area_pointers[area], len(rom)) + room * 4
+            )
+            _rom_offset(room_pointer, len(rom))
+            record = {
+                "engine_area": area,
+                "area": AREA_NAMES[area],
+                "room": room,
+                "map_x": map_x,
+                "map_y": map_y,
+                "room_pointer": f"0x{room_pointer:08x}",
+                "save": bool(value & SAVE_FLAG),
+                "warp": bool(value & WARP_FLAG),
+            }
+            if record["save"]:
+                location = (area, room)
+                if location in seen_save_locations:
+                    raise ValueError(
+                        f"save room {area}:{room} occupies multiple map cells"
+                    )
+                seen_save_locations.add(location)
+            cells.append(record)
+    return cells
+
+
 def _decode_load_list(rom: bytes, pointer: int) -> list[dict]:
     """Decode a zero-terminated eight-byte resource loading list."""
     start = _rom_offset(pointer, len(rom), LOAD_ENTRY_SIZE)
@@ -299,54 +344,24 @@ def decode_world(rom: bytes, *, verify_hash: bool = True) -> dict:
             room_by_location[(area, room)] = decoded
             location_by_pointer[room_pointer] = (area, room)
 
-    map_cells = []
+    map_cells = decode_map_cells(rom, area_pointers, room_counts)
     savepoints = []
     warps = []
-    seen_locations = set()
-    for map_y in range(MAP_HEIGHT):
-        for map_x in range(MAP_WIDTH):
-            offset = MAP_TABLE_OFFSET + 2 * (map_y * MAP_WIDTH + map_x)
-            value = struct.unpack_from("<H", rom, offset)[0]
-            if value == 0xFFFF:
-                continue
-            area = (value >> 6) & 0xF
-            room = value & 0x3F
-            if area >= AREA_COUNT or room >= room_counts[area]:
-                raise ValueError(
-                    f"map cell ({map_x},{map_y}) references invalid room {area}:{room}"
-                )
-            room_pointer = _u32(
-                rom, _rom_offset(area_pointers[area], len(rom)) + room * 4
-            )
-            _rom_offset(room_pointer, len(rom))
-            record = {
-                "engine_area": area,
-                "area": AREA_NAMES[area],
-                "room": room,
-                "map_x": map_x,
-                "map_y": map_y,
-                "room_pointer": f"0x{room_pointer:08x}",
-                "save": bool(value & SAVE_FLAG),
-                "warp": bool(value & WARP_FLAG),
-            }
-            map_cells.append(record)
-            room_by_location[(area, room)]["map_cells"].append({
-                "map_x": map_x,
-                "map_y": map_y,
-                "save": record["save"],
-                "warp": record["warp"],
+    for record in map_cells:
+        area, room = record["engine_area"], record["room"]
+        room_by_location[(area, room)]["map_cells"].append({
+            "map_x": record["map_x"],
+            "map_y": record["map_y"],
+            "save": record["save"],
+            "warp": record["warp"],
+        })
+        if record["save"]:
+            savepoints.append({
+                "id": f"aria.save.{area}.{room}",
+                **record,
             })
-            if record["save"]:
-                location = (area, room)
-                if location in seen_locations:
-                    raise ValueError(f"save room {area}:{room} occupies multiple map cells")
-                seen_locations.add(location)
-                savepoints.append({
-                    "id": f"aria.save.{area}.{room}",
-                    **record,
-                })
-            if record["warp"]:
-                warps.append(record)
+        if record["warp"]:
+            warps.append(record)
 
     transition_count = 0
     for room in native_rooms:

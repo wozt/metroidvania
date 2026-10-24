@@ -212,8 +212,10 @@ equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`.
 
 The first game-specific reader is `fusion/assets/aos.h`. It decodes Aria's
 12-entry area directory from a verified ROM, validates the GBA table pointers
-and exposes per-area room counts. Room descriptors, map cells and resource
-payloads are still owned by the Python reference pipeline.
+and exposes per-area room counts. It also decodes the 64x35 global map into
+bounded room-coordinate records with save/warp flags and room pointers. Room
+descriptors and resource payloads are still owned by the Python reference
+pipeline.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

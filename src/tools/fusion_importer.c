@@ -35,11 +35,12 @@ static void usage(const char *name) {
             "       %s --mzm-rooms ROM ELF\n"
             "       %s --mzm-clipdata ROM ELF\n"
             "       %s --mzm-backgrounds ROM ELF\n"
+            "       %s --mzm-tilesets ROM ELF\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
             name, name, name,
-            name, name, name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -1159,6 +1160,80 @@ static int inspect_mzm_backgrounds(const char *rom_path, const char *elf_path) {
     return 0;
 }
 
+static int inspect_mzm_tilesets(const char *rom_path, const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
+        fprintf(stderr, "mzm-tilesets: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmRomSymbolTable symbols = {0};
+    if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error)) {
+        fprintf(stderr, "mzm-tilesets: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmVideoMemory *memory = malloc(sizeof *memory);
+    if (!memory) {
+        fprintf(stderr, "mzm-tilesets: cannot allocate video memory\n");
+        fusion_mzm_free_symbols(&symbols);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    size_t total_graphics = 0, total_background_graphics = 0;
+    for (size_t index = 0; index < FUSION_MZM_TILESET_COUNT; ++index) {
+        if (!fusion_mzm_load_tileset_video_memory(
+                &rom, &symbols, index, memory, error, sizeof error)) {
+            fprintf(stderr, "mzm-tilesets: tileset %zu: %s\n", index, error);
+            free(memory);
+            fusion_mzm_free_symbols(&symbols);
+            fusion_rom_close(&rom);
+            free(elf);
+            return 1;
+        }
+        char vram_digest[41], palette_digest[41];
+        if (!fusion_rom_sha1_hex(memory->vram, sizeof memory->vram,
+                                 vram_digest) ||
+            !fusion_rom_sha1_hex(memory->palette, sizeof memory->palette,
+                                 palette_digest)) {
+            fprintf(stderr, "mzm-tilesets: cannot hash tileset %zu\n", index);
+            free(memory);
+            fusion_mzm_free_symbols(&symbols);
+            fusion_rom_close(&rom);
+            free(elf);
+            return 1;
+        }
+        printf("tileset\t%zu\t%u\t%u\t%u\t%u\t%u\t%u\t%zu\t%zu\t%zu\t%s\t%s\n",
+               index, memory->entry.graphics_pointer,
+               memory->entry.palette_pointer,
+               memory->entry.background_graphics_pointer,
+               memory->entry.tilemap_pointer,
+               memory->entry.animated_tileset,
+               memory->entry.animated_palette,
+               memory->common_graphics_size, memory->graphics_size,
+               memory->background_graphics_size,
+               vram_digest, palette_digest);
+        total_graphics += memory->graphics_size;
+        total_background_graphics += memory->background_graphics_size;
+    }
+    printf("summary\t%u\t%zu\t%zu\n", FUSION_MZM_TILESET_COUNT,
+           total_graphics, total_background_graphics);
+    free(memory);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -1189,6 +1264,8 @@ int main(int argc, char **argv) {
     const char *mzm_clip_elf_path = NULL;
     const char *mzm_background_rom_path = NULL;
     const char *mzm_background_elf_path = NULL;
+    const char *mzm_tileset_rom_path = NULL;
+    const char *mzm_tileset_elf_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -1246,6 +1323,10 @@ int main(int argc, char **argv) {
             mzm_background_rom_path = argv[++i];
             mzm_background_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-tilesets") && i + 2 < argc) {
+            mzm_tileset_rom_path = argv[++i];
+            mzm_tileset_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -1293,6 +1374,9 @@ int main(int argc, char **argv) {
     if (mzm_background_rom_path)
         return inspect_mzm_backgrounds(mzm_background_rom_path,
                                        mzm_background_elf_path);
+    if (mzm_tileset_rom_path)
+        return inspect_mzm_tilesets(mzm_tileset_rom_path,
+                                    mzm_tileset_elf_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

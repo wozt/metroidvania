@@ -81,9 +81,8 @@ def tileset_entry(index: int) -> dict[str, str]:
 
 
 @lru_cache(maxsize=79)
-def tileset_vram(index: int) -> tuple[bytes, list]:
-    """BG VRAM and the 256 BG colors (None: transparent index 0 of a row)
-    after RoomLoadTileset."""
+def tileset_video_memory(index: int) -> tuple[bytes, bytes]:
+    """Raw BG VRAM and palette RAM after the standard RoomLoadTileset path."""
     entry = tileset_entry(index)
     vram = bytearray(0x10000)
     common = symbol_bytes("sCommonTilesGfx")
@@ -96,18 +95,26 @@ def tileset_vram(index: int) -> tuple[bytes, list]:
     start = 0xFDE0 - size
     vram[start:start + len(data)] = data[:0x10000 - start]
     vram[0xFFE0:0x10000] = bytes(0x20)
-    colors = [None] * 256
+    raw_palette = bytearray(0x200)
     # The DMA copies 3 rows minus a color from sCommonTilesPal + 1, a
     # one-row table that sDoorTransitionPal directly follows in ROM
     # (src/data/common_pals.c, mzm_us.map): rows 1-2 come from it.
     common_pal = symbol_bytes("sCommonTilesPal") + symbol_bytes("sDoorTransitionPal")
-    for i in range(1, min(48, len(common_pal) // 2)):
-        colors[i] = struct.unpack_from("<H", common_pal, i * 2)[0]
+    raw_palette[2:96] = common_pal[2:96]
     palette = symbol_bytes(entry["pPalette"])
-    for i in range(13 * 16):
-        if 16 + i < len(palette) // 2:
-            colors[48 + i] = struct.unpack_from("<H", palette, (16 + i) * 2)[0]
-    return bytes(vram), [None if c is None else bgr555(c) for c in colors]
+    raw_palette[96:512] = palette[32:448]
+    return bytes(vram), bytes(raw_palette)
+
+
+@lru_cache(maxsize=79)
+def tileset_vram(index: int) -> tuple[bytes, list]:
+    """BG VRAM and the 256 BG colors (None: transparent index 0 of a row)
+    after RoomLoadTileset."""
+    vram, raw_palette = tileset_video_memory(index)
+    colors = [None] * 256
+    for i in range(1, 256):
+        colors[i] = bgr555(struct.unpack_from("<H", raw_palette, i * 2)[0])
+    return vram, colors
 
 
 @lru_cache(maxsize=79)

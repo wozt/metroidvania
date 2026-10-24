@@ -17,6 +17,10 @@ enum {
     FUSION_MZM_ROOM_RLE_CELL_CAPACITY = 6144,
     FUSION_MZM_ROOM_BACKGROUND_COUNT = 4,
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
+    FUSION_MZM_TILESET_COUNT = 79,
+    FUSION_MZM_TILESET_ENTRY_SIZE = 20,
+    FUSION_MZM_VRAM_SIZE = 0x10000,
+    FUSION_MZM_PALETTE_SIZE = 0x200,
     FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED = 0x10,
     FUSION_MZM_BG_PROPERTY_LZ77_COMPRESSED = 0x40
 };
@@ -116,6 +120,25 @@ typedef struct {
     FusionMzmRoomBackground layers[FUSION_MZM_ROOM_BACKGROUND_COUNT];
 } FusionMzmRoomBackgrounds;
 
+typedef struct {
+    uint8_t index;
+    uint32_t graphics_pointer;
+    uint32_t palette_pointer;
+    uint32_t background_graphics_pointer;
+    uint32_t tilemap_pointer;
+    uint8_t animated_tileset;
+    uint8_t animated_palette;
+} FusionMzmTilesetEntry;
+
+typedef struct {
+    FusionMzmTilesetEntry entry;
+    uint8_t vram[FUSION_MZM_VRAM_SIZE];
+    uint8_t palette[FUSION_MZM_PALETTE_SIZE];
+    size_t common_graphics_size;
+    size_t graphics_size;
+    size_t background_graphics_size;
+} FusionMzmVideoMemory;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -154,5 +177,13 @@ bool fusion_mzm_read_room_backgrounds(const FusionRom *rom,
                                       FusionMzmRoomBackgrounds *backgrounds,
                                       char *error, size_t error_size);
 void fusion_mzm_free_room_backgrounds(FusionMzmRoomBackgrounds *backgrounds);
+bool fusion_mzm_read_tileset_entry(const FusionRom *rom,
+                                   const FusionMzmRomSymbolTable *symbols,
+                                   size_t index, FusionMzmTilesetEntry *entry,
+                                   char *error, size_t error_size);
+bool fusion_mzm_load_tileset_video_memory(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    size_t index, FusionMzmVideoMemory *memory,
+    char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_MZM_H */

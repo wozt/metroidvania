@@ -10,6 +10,11 @@ import tempfile
 import unittest
 
 from scripts.mzm_c_tables import enum_values, evaluate
+from scripts.mzm_bg_layers import (
+    symbol_bytes,
+    tileset_entry,
+    tileset_video_memory,
+)
 from scripts.mzm_rom_bank import elf_symbols, produce, symbol_lines
 from scripts.mzm_room_render import lz77, rle_room, source_rooms
 
@@ -228,4 +233,55 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                 counts["text"], counts["none"], counts["unsupported"],
                 total_cells,
             ),
+        )
+
+    def test_tileset_video_memory_matches_python_reference(self):
+        symbol_rows, _ = symbol_lines(elf_symbols(ELF.read_bytes()),
+                                      ROM.stat().st_size)
+        symbols = {parts[1]: int(parts[2])
+                   for row in symbol_rows
+                   if (parts := row.split("\t"))[0] == "symbol"}
+        expected = []
+        total_graphics = 0
+        total_background_graphics = 0
+        for index in range(79):
+            entry = tileset_entry(index)
+            vram, palette = tileset_video_memory(index)
+            graphics_size = len(lz77(symbol_bytes(entry["pTileGraphics"])))
+            background_size = len(
+                lz77(symbol_bytes(entry["pBackgroundGraphics"])))
+            expected.append((
+                index,
+                symbols[entry["pTileGraphics"]],
+                symbols[entry["pPalette"]],
+                symbols[entry["pBackgroundGraphics"]],
+                symbols[entry["pTilemap"]],
+                int(entry["animatedTileset"]),
+                int(entry["animatedPalette"]),
+                len(symbol_bytes("sCommonTilesGfx")),
+                graphics_size,
+                background_size,
+                hashlib.sha1(vram).hexdigest(),
+                hashlib.sha1(palette).hexdigest(),
+            ))
+            total_graphics += graphics_size
+            total_background_graphics += background_size
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-tilesets", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "tileset")
+            actual.append(tuple(int(value) for value in fields[1:11]) +
+                          (fields[11], fields[12]))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{len(expected)}\t{total_graphics}\t"
+            f"{total_background_graphics}",
         )

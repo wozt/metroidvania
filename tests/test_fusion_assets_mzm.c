@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 enum {
@@ -270,6 +271,94 @@ static void test_room_backgrounds(void) {
                                          error, sizeof error));
 }
 
+static void test_tileset_video_memory(void) {
+    enum {
+        FIXTURE_SIZE = 0x4000,
+        TABLE_OFFSET = 0x100,
+        GRAPHICS_OFFSET = 0x800,
+        PALETTE_OFFSET = 0x1000,
+        BACKGROUND_OFFSET = 0x1400,
+        TILEMAP_OFFSET = 0x1800,
+        COMMON_GFX_OFFSET = 0x2000,
+        COMMON_PALETTE_OFFSET = 0x3000,
+        DOOR_PALETTE_OFFSET = COMMON_PALETTE_OFFSET + 32,
+        TILESET_INDEX = 3
+    };
+    uint8_t *bytes = calloc(FIXTURE_SIZE, 1);
+    assert(bytes);
+    uint8_t *entry = bytes + TABLE_OFFSET +
+                     TILESET_INDEX * FUSION_MZM_TILESET_ENTRY_SIZE;
+    write_u32(entry, 0, 0x08000000 + GRAPHICS_OFFSET);
+    write_u32(entry, 4, 0x08000000 + PALETTE_OFFSET);
+    write_u32(entry, 8, 0x08000000 + BACKGROUND_OFFSET);
+    write_u32(entry, 12, 0x08000000 + TILEMAP_OFFSET);
+    entry[16] = 5;
+    entry[17] = 6;
+    static const uint8_t graphics[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    static const uint8_t background[] = {9, 10, 11, 12};
+    write_lz77_literals(bytes, GRAPHICS_OFFSET, graphics, sizeof graphics);
+    write_lz77_literals(bytes, BACKGROUND_OFFSET,
+                        background, sizeof background);
+    for (size_t index = 0; index < 14 * 32; ++index)
+        bytes[PALETTE_OFFSET + index] = (uint8_t)(index ^ 0xA5);
+    for (size_t index = 0; index < 96; ++index)
+        bytes[COMMON_PALETTE_OFFSET + index] = (uint8_t)(index ^ 0x5A);
+    bytes[COMMON_GFX_OFFSET] = 0x11;
+    bytes[COMMON_GFX_OFFSET + 1] = 0x22;
+    bytes[COMMON_GFX_OFFSET + 2] = 0x33;
+    bytes[COMMON_GFX_OFFSET + 3] = 0x44;
+
+    FusionMzmRomSymbol symbol_entries[] = {
+        {"sTilesetEntries", 0x08000000 + TABLE_OFFSET,
+         FUSION_MZM_TILESET_COUNT * FUSION_MZM_TILESET_ENTRY_SIZE, 0},
+        {"sCommonTilesGfx", 0x08000000 + COMMON_GFX_OFFSET, 4, 1},
+        {"sCommonTilesPal", 0x08000000 + COMMON_PALETTE_OFFSET, 32, 2},
+        {"sDoorTransitionPal", 0x08000000 + DOOR_PALETTE_OFFSET, 480, 3},
+    };
+    FusionMzmRomSymbolTable symbols = {
+        symbol_entries, sizeof symbol_entries / sizeof symbol_entries[0], 0
+    };
+    FusionRom rom = {bytes, FIXTURE_SIZE, FUSION_ASSET_GAME_METROID};
+    char error[160];
+    FusionMzmTilesetEntry decoded;
+    assert(fusion_mzm_read_tileset_entry(&rom, &symbols, TILESET_INDEX,
+                                         &decoded, error, sizeof error));
+    assert(decoded.index == TILESET_INDEX);
+    assert(decoded.graphics_pointer == 0x08000000 + GRAPHICS_OFFSET);
+    assert(decoded.palette_pointer == 0x08000000 + PALETTE_OFFSET);
+    assert(decoded.background_graphics_pointer ==
+           0x08000000 + BACKGROUND_OFFSET);
+    assert(decoded.tilemap_pointer == 0x08000000 + TILEMAP_OFFSET);
+    assert(decoded.animated_tileset == 5 && decoded.animated_palette == 6);
+    assert(!fusion_mzm_read_tileset_entry(
+        &rom, &symbols, FUSION_MZM_TILESET_COUNT,
+        &decoded, error, sizeof error));
+
+    FusionMzmVideoMemory *memory = malloc(sizeof *memory);
+    assert(memory);
+    assert(fusion_mzm_load_tileset_video_memory(
+        &rom, &symbols, TILESET_INDEX, memory, error, sizeof error));
+    assert(memory->common_graphics_size == 4 &&
+           memory->graphics_size == sizeof graphics &&
+           memory->background_graphics_size == sizeof background);
+    assert(!memcmp(memory->vram + 0x4800,
+                   bytes + COMMON_GFX_OFFSET, 4));
+    assert(!memcmp(memory->vram + 0x5800, graphics, sizeof graphics));
+    assert(!memcmp(memory->vram + 0xFDE0 - sizeof background,
+                   background, sizeof background));
+    assert(memory->vram[0xFFE0] == 0 && memory->vram[0xFFFF] == 0);
+    assert(memory->palette[0] == 0 && memory->palette[1] == 0);
+    assert(memory->palette[2] == bytes[COMMON_PALETTE_OFFSET + 2]);
+    assert(memory->palette[95] == bytes[COMMON_PALETTE_OFFSET + 95]);
+    assert(memory->palette[96] == bytes[PALETTE_OFFSET + 32]);
+    assert(memory->palette[511] == bytes[PALETTE_OFFSET + 447]);
+    bytes[GRAPHICS_OFFSET] = 0;
+    assert(!fusion_mzm_load_tileset_video_memory(
+        &rom, &symbols, TILESET_INDEX, memory, error, sizeof error));
+    free(memory);
+    free(bytes);
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -313,6 +402,7 @@ int main(void) {
     test_room_entries(&rom);
     test_room_rle(&rom);
     test_room_backgrounds();
+    test_tileset_video_memory();
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0504 - Native Zero Mission tileset video memory
+
+- Added bounded C11 decoding of all 79 `sTilesetEntries` records directly from
+  the verified ROM and pinned ELF symbol table.
+- Reproduced the standard `RoomLoadTileset` memory layout: common graphics at
+  VRAM `0x4800`, LZ77 tileset graphics at `0x5800`, LZ77 background graphics
+  ending at `0xFDE0`, the final 32-byte clear at `0xFFE0`, common palette
+  colors 1-47 and tileset palette rows 3-15.
+- Added synthetic pointer, table, LZ77, placement, palette and malformed-input
+  coverage plus `--mzm-tilesets` complete SHA-1 comparison against the Python
+  reference's raw video-memory snapshots.
+- All 79 64-KiB VRAM and 512-byte palette snapshots match exactly. They cover
+  1,229,216 bytes of expanded tileset graphics and 789,728 bytes of expanded
+  background graphics. Animated updates, the Mother Ship common-tile variant,
+  metatile expansion, compositing and room serialization remain Python-owned,
+  so migration status stays partial and gameplay parity does not change.
+- Next: alternate to Aria and reproduce native room background depth
+  compositing from the already validated layer renders; audio remains
+  untouched.
+
 ## Patch 0503 - Native Aria 4-bpp background rendering
 
 - Added bounded C11 rendering of decoded Aria text backgrounds from the native

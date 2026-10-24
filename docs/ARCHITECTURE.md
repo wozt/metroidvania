@@ -244,9 +244,13 @@ Clipdata pointer into its final 16-bit cell map. It also classifies all
 BG0/BG1/BG2 property combinations, expands their custom-RLE block maps and
 BIOS-LZ77 text tilemaps, and exposes the final bounded 16-bit cells. The same
 text-tilemap path now covers BG3, including its starts-from-bottom property.
-Tileset graphics/palettes, compositing, doors, sprites and runtime-room
-serialization remain Python-owned, and these native extractors are not yet
-registered in the global native task graph.
+The native reader also resolves all 79 tileset records and reproduces the
+standard `RoomLoadTileset` 64-KiB VRAM and 512-byte BG-palette snapshots,
+including both LZ77 graphics placements, common tiles/palettes and the final
+VRAM clear. Animated tiles and palettes, the Mother Ship common-tile variant,
+metatile expansion, compositing, doors, sprites and runtime-room serialization
+remain Python-owned, and these native extractors are not yet registered in the
+global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

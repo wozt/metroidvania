@@ -24,6 +24,167 @@ static bool pointer_offset(const FusionRom *rom, uint32_t pointer, size_t size,
     return true;
 }
 
+static uint32_t read_u32(const uint8_t *data) {
+    return (uint32_t)data[0] | (uint32_t)data[1] << 8 |
+           (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
+}
+
+static const FusionMzmRomSymbol *find_symbol(
+    const FusionMzmRomSymbolTable *symbols, const char *name) {
+    if (!symbols || (symbols->count && !symbols->entries)) return NULL;
+    for (size_t index = 0; index < symbols->count; ++index) {
+        if (symbols->entries[index].name &&
+            !strcmp(symbols->entries[index].name, name))
+            return &symbols->entries[index];
+    }
+    return NULL;
+}
+
+bool fusion_mzm_read_tileset_entry(const FusionRom *rom,
+                                   const FusionMzmRomSymbolTable *symbols,
+                                   size_t index, FusionMzmTilesetEntry *entry,
+                                   char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID ||
+        !symbols || !entry || index >= FUSION_MZM_TILESET_COUNT) {
+        set_error(error, error_size, "invalid Zero Mission tileset request");
+        return false;
+    }
+    *entry = (FusionMzmTilesetEntry){0};
+    const FusionMzmRomSymbol *table = find_symbol(symbols, "sTilesetEntries");
+    size_t required = FUSION_MZM_TILESET_COUNT * FUSION_MZM_TILESET_ENTRY_SIZE;
+    size_t table_offset;
+    if (!table || table->size < required ||
+        !pointer_offset(rom, table->address, required, &table_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission tileset table");
+        return false;
+    }
+    const uint8_t *data = rom->data + table_offset +
+                          index * FUSION_MZM_TILESET_ENTRY_SIZE;
+    *entry = (FusionMzmTilesetEntry){
+        (uint8_t)index, read_u32(data), read_u32(data + 4),
+        read_u32(data + 8), read_u32(data + 12), data[16], data[17]
+    };
+    const uint32_t pointers[] = {
+        entry->graphics_pointer, entry->palette_pointer,
+        entry->background_graphics_pointer, entry->tilemap_pointer
+    };
+    for (size_t pointer = 0;
+         pointer < sizeof pointers / sizeof pointers[0]; ++pointer) {
+        size_t ignored;
+        if (!pointer_offset(rom, pointers[pointer], 1, &ignored)) {
+            set_error(error, error_size,
+                      "Zero Mission tileset resource points outside the ROM");
+            *entry = (FusionMzmTilesetEntry){0};
+            return false;
+        }
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+bool fusion_mzm_load_tileset_video_memory(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    size_t index, FusionMzmVideoMemory *memory,
+    char *error, size_t error_size) {
+    if (!memory) {
+        set_error(error, error_size,
+                  "invalid Zero Mission tileset video-memory request");
+        return false;
+    }
+    *memory = (FusionMzmVideoMemory){0};
+    if (!fusion_mzm_read_tileset_entry(rom, symbols, index, &memory->entry,
+                                       error, error_size)) {
+        return false;
+    }
+
+    const FusionMzmRomSymbol *common_gfx =
+        find_symbol(symbols, "sCommonTilesGfx");
+    const FusionMzmRomSymbol *common_palette =
+        find_symbol(symbols, "sCommonTilesPal");
+    const FusionMzmRomSymbol *door_palette =
+        find_symbol(symbols, "sDoorTransitionPal");
+    size_t common_gfx_offset, common_palette_offset;
+    if (!common_gfx || common_gfx->size > sizeof memory->vram - 0x4800 ||
+        !pointer_offset(rom, common_gfx->address, common_gfx->size,
+                        &common_gfx_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission common tile graphics");
+        return false;
+    }
+    if (!common_palette || !door_palette || common_palette->size < 32 ||
+        door_palette->size < 64 ||
+        door_palette->address != common_palette->address + common_palette->size ||
+        !pointer_offset(rom, common_palette->address, 96,
+                        &common_palette_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission common tile palette");
+        return false;
+    }
+    memcpy(memory->vram + 0x4800, rom->data + common_gfx_offset,
+           common_gfx->size);
+    memory->common_graphics_size = common_gfx->size;
+
+    size_t graphics_offset;
+    if (!pointer_offset(rom, memory->entry.graphics_pointer, 4,
+                        &graphics_offset)) {
+        set_error(error, error_size,
+                  "Zero Mission tileset graphics point outside the ROM");
+        return false;
+    }
+    uint32_t graphics_size = fusion_gba_uncompressed_size(
+        rom->data + graphics_offset, rom->size - graphics_offset);
+    if (graphics_size == 0 || graphics_size > sizeof memory->vram - 0x5800 ||
+        !fusion_gba_lz77_uncompress(rom->data + graphics_offset,
+                                    rom->size - graphics_offset,
+                                    memory->vram + 0x5800,
+                                    sizeof memory->vram - 0x5800,
+                                    &memory->graphics_size)) {
+        set_error(error, error_size,
+                  "invalid Zero Mission tileset graphics");
+        return false;
+    }
+
+    size_t background_offset;
+    if (!pointer_offset(rom, memory->entry.background_graphics_pointer, 4,
+                        &background_offset)) {
+        set_error(error, error_size,
+                  "Zero Mission background graphics point outside the ROM");
+        return false;
+    }
+    uint32_t background_size = fusion_gba_uncompressed_size(
+        rom->data + background_offset, rom->size - background_offset);
+    if (background_size == 0 || background_size > 0xFDE0) {
+        set_error(error, error_size,
+                  "invalid Zero Mission background graphics size");
+        return false;
+    }
+    size_t background_destination = 0xFDE0 - background_size;
+    if (!fusion_gba_lz77_uncompress(rom->data + background_offset,
+                                    rom->size - background_offset,
+                                    memory->vram + background_destination,
+                                    sizeof memory->vram - background_destination,
+                                    &memory->background_graphics_size)) {
+        set_error(error, error_size,
+                  "invalid Zero Mission background graphics");
+        return false;
+    }
+    memset(memory->vram + 0xFFE0, 0, 0x20);
+
+    size_t palette_offset;
+    if (!pointer_offset(rom, memory->entry.palette_pointer, 14 * 32,
+                        &palette_offset)) {
+        set_error(error, error_size,
+                  "Zero Mission tileset palette points outside the ROM");
+        return false;
+    }
+    memcpy(memory->palette + 3 * 32,
+           rom->data + palette_offset + 32, 13 * 32);
+    memcpy(memory->palette + 2, rom->data + common_palette_offset + 2, 94);
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 static bool read_count(const uint8_t *data, size_t size, size_t *position,
                        uint8_t count_bytes, uint16_t *count) {
     if (*position > size || count_bytes > size - *position) return false;

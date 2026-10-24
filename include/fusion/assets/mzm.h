@@ -9,7 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum { FUSION_MZM_ROM_SYMBOL_CAPACITY = 65536 };
+enum {
+    FUSION_MZM_ROM_SYMBOL_CAPACITY = 65536,
+    FUSION_MZM_ROOM_AREA_COUNT = 11,
+    FUSION_MZM_ROOM_ENTRY_SIZE = 60,
+    FUSION_MZM_ROOM_CAPACITY = 512
+};
 
 typedef struct {
     const char *name;
@@ -23,6 +28,50 @@ typedef struct {
     size_t count;
     size_t duplicate_name_count;
 } FusionMzmRomSymbolTable;
+
+typedef struct {
+    const char *id;
+    const char *symbol;
+} FusionMzmRoomAreaSpec;
+
+typedef struct {
+    uint32_t table_pointer;
+    size_t room_count;
+} FusionMzmRoomArea;
+
+typedef struct {
+    FusionMzmRoomArea areas[FUSION_MZM_ROOM_AREA_COUNT];
+    size_t total_rooms;
+} FusionMzmRoomDirectory;
+
+typedef struct {
+    uint32_t entry_pointer;
+    uint8_t tileset;
+    uint8_t bg0_property;
+    uint8_t bg1_property;
+    uint8_t bg2_property;
+    uint8_t bg3_property;
+    uint32_t bg0_pointer;
+    uint32_t bg1_pointer;
+    uint32_t bg2_pointer;
+    uint32_t clip_pointer;
+    uint32_t bg3_pointer;
+    uint8_t bg3_scrolling;
+    uint8_t transparency;
+    uint32_t default_sprite_pointer;
+    uint8_t default_spriteset;
+    uint8_t first_spriteset_event;
+    uint32_t first_sprite_pointer;
+    uint8_t first_spriteset;
+    uint8_t second_spriteset_event;
+    uint32_t second_sprite_pointer;
+    uint8_t second_spriteset;
+    uint8_t map_x;
+    uint8_t map_y;
+    uint8_t effect;
+    uint8_t effect_y;
+    uint16_t music_track;
+} FusionMzmRoomEntry;
 
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
@@ -38,5 +87,16 @@ bool fusion_mzm_write_rom_bank(const FusionRom *rom,
                                const FusionMzmRomSymbolTable *table,
                                const char *bank_path, const char *manifest_path,
                                char *error, size_t error_size);
+
+const FusionMzmRoomAreaSpec *fusion_mzm_room_area_spec(size_t index);
+bool fusion_mzm_read_room_directory(const FusionRom *rom,
+                                    const FusionMzmRomSymbolTable *symbols,
+                                    FusionMzmRoomDirectory *directory,
+                                    char *error, size_t error_size);
+bool fusion_mzm_read_room_entry(const FusionRom *rom,
+                                const FusionMzmRoomDirectory *directory,
+                                size_t area, size_t room,
+                                FusionMzmRoomEntry *entry,
+                                char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_MZM_H */

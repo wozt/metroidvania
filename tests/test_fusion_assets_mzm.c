@@ -73,6 +73,85 @@ static size_t read_file(const char *path, uint8_t *data, size_t capacity) {
     return size;
 }
 
+static void test_room_entries(FusionRom *rom) {
+    static const char *names[FUSION_MZM_ROOM_AREA_COUNT] = {
+        "sBrinstarRoomEntries", "sKraidRoomEntries",
+        "sNorfairRoomEntries", "sRidleyRoomEntries",
+        "sTourianRoomEntries", "sCrateriaRoomEntries",
+        "sChozodiaRoomEntries", "sTest1RoomEntries",
+        "sTest2RoomEntries", "sTest3RoomEntries", "sTestRoomEntries"
+    };
+    FusionMzmRomSymbol entries[FUSION_MZM_ROOM_AREA_COUNT];
+    for (size_t index = 0; index < FUSION_MZM_ROOM_AREA_COUNT; ++index) {
+        entries[index] = (FusionMzmRomSymbol){
+            names[index], 0x08000050, FUSION_MZM_ROOM_ENTRY_SIZE, index
+        };
+    }
+    FusionMzmRomSymbolTable symbols = {
+        entries, FUSION_MZM_ROOM_AREA_COUNT, 0
+    };
+    uint8_t *data = (uint8_t *)rom->data + 0x50;
+    memset(data, 0, FUSION_MZM_ROOM_ENTRY_SIZE);
+    data[0] = 8;
+    data[1] = 1;
+    data[2] = 2;
+    data[3] = 3;
+    data[4] = 4;
+    for (size_t offset = 8; offset <= 24; offset += 4)
+        write_u32(data, offset, 0x08000010 + (uint32_t)offset);
+    data[28] = 5;
+    data[29] = 6;
+    write_u32(data, 32, 0x08000030);
+    data[36] = 7;
+    data[37] = 8;
+    write_u32(data, 40, 0x08000034);
+    data[44] = 9;
+    data[45] = 10;
+    write_u32(data, 48, 0x08000038);
+    data[52] = 11;
+    data[53] = 12;
+    data[54] = 13;
+    data[55] = 14;
+    data[56] = 15;
+    write_u16(data, 58, 0x1234);
+
+    char error[160];
+    FusionMzmRoomDirectory directory;
+    assert(fusion_mzm_read_room_directory(rom, &symbols, &directory,
+                                          error, sizeof error));
+    assert(directory.total_rooms == FUSION_MZM_ROOM_AREA_COUNT);
+    assert(directory.areas[0].room_count == 1);
+    assert(directory.areas[10].table_pointer == 0x08000050);
+    assert(!strcmp(fusion_mzm_room_area_spec(0)->id, "Brinstar"));
+    assert(fusion_mzm_room_area_spec(FUSION_MZM_ROOM_AREA_COUNT) == NULL);
+    FusionMzmRoomEntry room;
+    assert(fusion_mzm_read_room_entry(rom, &directory, 0, 0, &room,
+                                      error, sizeof error));
+    assert(room.entry_pointer == 0x08000050);
+    assert(room.tileset == 8 && room.bg0_property == 1 && room.bg3_property == 4);
+    assert(room.bg0_pointer == 0x08000018 && room.clip_pointer == 0x08000024);
+    assert(room.bg3_scrolling == 5 && room.transparency == 6);
+    assert(room.default_sprite_pointer == 0x08000030);
+    assert(room.default_spriteset == 7 && room.first_spriteset_event == 8);
+    assert(room.first_sprite_pointer == 0x08000034);
+    assert(room.first_spriteset == 9 && room.second_spriteset_event == 10);
+    assert(room.second_sprite_pointer == 0x08000038);
+    assert(room.second_spriteset == 11 && room.map_x == 12 && room.map_y == 13);
+    assert(room.effect == 14 && room.effect_y == 15 && room.music_track == 0x1234);
+    assert(!fusion_mzm_read_room_entry(rom, &directory, 0, 1, &room,
+                                       error, sizeof error));
+
+    entries[0].size = FUSION_MZM_ROOM_ENTRY_SIZE - 1;
+    assert(!fusion_mzm_read_room_directory(rom, &symbols, &directory,
+                                           error, sizeof error));
+    entries[0].size = FUSION_MZM_ROOM_ENTRY_SIZE;
+    write_u32(data, 20, 0x09000000);
+    assert(fusion_mzm_read_room_directory(rom, &symbols, &directory,
+                                          error, sizeof error));
+    assert(!fusion_mzm_read_room_entry(rom, &directory, 0, 0, &room,
+                                       error, sizeof error));
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -112,6 +191,8 @@ int main(void) {
     assert(remove(manifest_path) == 0);
     fusion_mzm_free_symbols(&table);
     assert(table.entries == NULL && table.count == 0);
+
+    test_room_entries(&rom);
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0496 - Native Zero Mission room descriptors
+
+- Added a bounded C11 reader for the 60-byte `RoomEntryRom` structure and all
+  eleven named room tables in the pinned Zero Mission ELF, including the four
+  test-area tables.
+- The native contract exposes every layer, Clipdata and spriteset pointer plus
+  the room properties, map position, effect and music fields for all 331
+  source descriptors.
+- Added malformed table-size, index, ROM-bound and resource-pointer coverage,
+  then compared every native field and table address with the pinned
+  decompilation declarations and ELF symbols through `--mzm-rooms`.
+- This is structural metadata only: room resources, doors, collision payloads,
+  sprites and rendered output remain Python-owned, so the room migration stays
+  partial and no gameplay parity status changes.
+- Next: alternate to Aria and begin the native runtime-room payload contract,
+  starting with its bounded collision metadata; audio remains untouched.
+
 ## Patch 0495 - Native Aria world-catalog serialization
 
 - Added deterministic C11 serialization for the complete `MV_AOS_WORLD_2`

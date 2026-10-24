@@ -45,6 +45,7 @@ build/fusion_importer --aria-summary "roms/Castlevania - Aria of Sorrow (USA).gb
 build/fusion_importer --aria-catalog "roms/Castlevania - Aria of Sorrow (USA).gba" WORLD_JSON ROOMS_TSV
 build/fusion_importer --mzm-symbols "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
 build/fusion_importer --mzm-rom-bank "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf OUTPUT_DIR
+build/fusion_importer --mzm-rooms "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
 build/fusion_importer --dry-run --force
 ```
 
@@ -60,7 +61,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | native extractor complete, orchestration pending | synthetic malformed-ELF, bounds and serialization fixtures; exact verified-input comparison of every filtered symbol plus byte-for-byte comparison of `MZMROM01` and the manifest |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
 | GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header`, `fusion_rom_read_gba_header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, verified local ROM identity, fixed marker and complement checksum |
-| `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | not started | room structure and semantic render comparison |
+| `scripts/mzm_runtime_room.py` | `src/assets/mzm/rooms.c` | room-entry metadata complete, payloads pending | synthetic table, index and pointer bounds; exact comparison of every field in all 331 `RoomEntryRom` records with the pinned source declarations and ELF symbols; resource and semantic render comparison pending |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
@@ -73,10 +74,11 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should begin Zero Mission's native room-metadata
-contract from `mzm_runtime_room.py`. The completed Zero Mission ROM bank and
-Aria world catalog are ready for later registration in the native task graph.
-The header extractor is
+The next migration layer should alternate to Aria's runtime-room payloads and
+begin with bounded collision metadata. Zero Mission room resources still need
+native decoding after its complete structural descriptor pass. The completed
+Zero Mission ROM bank and Aria world catalog are ready for later registration
+in the native task graph. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not
 replace room or asset extraction. Each task must declare its ROM inputs,

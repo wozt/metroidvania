@@ -229,8 +229,11 @@ reference pipeline.
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name
 rules used by `mzm_rom_bank.py`, and writes byte-identical `MZMROM01` and symbol
-manifest outputs through atomic replacement. This extractor is native, but it
-is not yet registered in the global native task graph.
+manifest outputs through atomic replacement. It also resolves all eleven room
+tables from those symbols and decodes the 331 bounded `RoomEntryRom` records,
+including their layer, Clipdata and spriteset references and scalar room
+properties. Room resource payloads remain Python-owned, and these native
+extractors are not yet registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

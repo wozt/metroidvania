@@ -28,10 +28,11 @@ static void usage(const char *name) {
             "       %s --aria-catalog ROM WORLD_JSON ROOMS_TSV\n"
             "       %s --mzm-symbols ROM ELF\n"
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
+            "       %s --mzm-rooms ROM ELF\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name, name, name);
+            name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -570,6 +571,67 @@ static int write_mzm_rom_bank(const char *rom_path, const char *elf_path,
     return 0;
 }
 
+static int inspect_mzm_rooms(const char *rom_path, const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
+        fprintf(stderr, "mzm-rooms: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmRoomDirectory directory;
+    if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error) ||
+        !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
+                                        error, sizeof error)) {
+        fprintf(stderr, "mzm-rooms: %s\n", error);
+        fusion_mzm_free_symbols(&symbols);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+        printf("area\t%zu\t%s\t%zu\t%u\n", area, spec->id,
+               directory.areas[area].room_count,
+               directory.areas[area].table_pointer);
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionMzmRoomEntry entry;
+            if (!fusion_mzm_read_room_entry(&rom, &directory, area, room,
+                                            &entry, error, sizeof error)) {
+                fprintf(stderr, "mzm-rooms: %s %zu: %s\n", spec->id, room, error);
+                fusion_mzm_free_symbols(&symbols);
+                fusion_rom_close(&rom);
+                free(elf);
+                return 1;
+            }
+            printf("room\t%s\t%zu\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\t%u\n",
+                   spec->id, room, entry.entry_pointer, entry.tileset,
+                   entry.bg0_property, entry.bg1_property, entry.bg2_property,
+                   entry.bg3_property, entry.bg0_pointer, entry.bg1_pointer,
+                   entry.bg2_pointer, entry.clip_pointer, entry.bg3_pointer,
+                   entry.bg3_scrolling, entry.transparency,
+                   entry.default_sprite_pointer, entry.default_spriteset,
+                   entry.first_spriteset_event, entry.first_sprite_pointer,
+                   entry.first_spriteset, entry.second_spriteset_event,
+                   entry.second_sprite_pointer, entry.second_spriteset,
+                   entry.map_x, entry.map_y, entry.effect, entry.effect_y,
+                   entry.music_track);
+        }
+    }
+    printf("summary\t%zu\n", directory.total_rooms);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -590,6 +652,8 @@ int main(int argc, char **argv) {
     const char *mzm_bank_rom_path = NULL;
     const char *mzm_bank_elf_path = NULL;
     const char *mzm_bank_output_path = NULL;
+    const char *mzm_rooms_rom_path = NULL;
+    const char *mzm_rooms_elf_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -627,6 +691,10 @@ int main(int argc, char **argv) {
             mzm_bank_elf_path = argv[++i];
             mzm_bank_output_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-rooms") && i + 2 < argc) {
+            mzm_rooms_rom_path = argv[++i];
+            mzm_rooms_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -660,6 +728,8 @@ int main(int argc, char **argv) {
     if (mzm_bank_rom_path)
         return write_mzm_rom_bank(mzm_bank_rom_path, mzm_bank_elf_path,
                                   mzm_bank_output_path);
+    if (mzm_rooms_rom_path)
+        return inspect_mzm_rooms(mzm_rooms_rom_path, mzm_rooms_elf_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

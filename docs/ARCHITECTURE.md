@@ -226,8 +226,9 @@ the Python reference pipeline.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name
-rules used by `mzm_rom_bank.py`; native bank and manifest serialization are not
-yet connected, so the Python producer remains authoritative.
+rules used by `mzm_rom_bank.py`, and writes byte-identical `MZMROM01` and symbol
+manifest outputs through atomic replacement. This extractor is native, but it
+is not yet registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

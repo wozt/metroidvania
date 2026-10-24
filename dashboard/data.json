@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T00:25:13+00:00",
+ "generated_at": "2026-10-24T00:28:39+00:00",
  "git": {
-  "commit": "4eecf83",
+  "commit": "2c73ba6",
   "branch": "main",
   "dirty": true
  },
@@ -12498,7 +12498,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reads Aria's complete structural world metadata with Python/C equivalence; and now reproduces Zero Mission's filtered, ordered ROM-symbol contract from the pinned ELF. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for native catalog and ROM-bank serialization, resource payloads, caches and every migration gate not yet proven.",
+   "limitations": "The C11 library verifies both ROMs; reads Aria's complete structural world metadata with Python/C equivalence; and now reproduces Zero Mission's ROM bank and symbol manifest byte for byte with atomic output replacement. The CLI exposes focused inspection and serialization for migrated slices. Python remains authoritative for the Aria catalog, resource payloads, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14761,9 +14761,9 @@
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
     "module": "tests.test_fusion_assets_mzm_equivalence",
-    "test_count": 1,
+    "test_count": 2,
     "outcome": "passed",
-    "passed": 1
+    "passed": 2
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -15243,12 +15243,18 @@
    }
   ],
   "summary": {
-   "passed": 515,
+   "passed": 516,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "2c73ba6",
+   "date": "2026-10-24",
+   "subject": "Port Zero Mission ROM symbols to C11",
+   "scope": "project"
+  },
   {
    "commit": "4eecf83",
    "date": "2026-10-24",
@@ -15721,12 +15727,6 @@
    "commit": "07d816b",
    "date": "2026-10-20",
    "subject": "Audit the clipdata routines and mark the entry functional",
-   "scope": "project"
-  },
-  {
-   "commit": "55612e4",
-   "date": "2026-10-20",
-   "subject": "Resolve the escape timer graphics difference",
    "scope": "project"
   }
  ],

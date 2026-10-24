@@ -32,4 +32,11 @@ bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
                                  char *error, size_t error_size);
 void fusion_mzm_free_symbols(FusionMzmRomSymbolTable *table);
 
+/* Writes the MZMROM01 bank and metroidvania-mzm-rom-v1 manifest through
+ * sibling .tmp files. Parent directories must already exist. */
+bool fusion_mzm_write_rom_bank(const FusionRom *rom,
+                               const FusionMzmRomSymbolTable *table,
+                               const char *bank_path, const char *manifest_path,
+                               char *error, size_t error_size);
+
 #endif /* FUSION_ASSETS_MZM_H */

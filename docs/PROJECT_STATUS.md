@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0494 - Native Zero Mission ROM-bank serialization
+
+- Added deterministic C11 serialization of the private `MZMROM01` bank and the
+  `metroidvania-mzm-rom-v1` symbol manifest.
+- Both outputs use sibling temporary files followed by atomic replacement; the
+  caller supplies an existing private output directory, keeping path ownership
+  separate from serialization.
+- Added synthetic byte-level coverage for the binary header, ROM payload and
+  manifest, then compared both complete native files byte for byte with
+  `mzm_rom_bank.py` in isolated temporary roots.
+- `fusion_importer --mzm-rom-bank ROM ELF OUTPUT_DIR` now reproduces this Python
+  extractor, but the global native `--assets` task graph is not connected yet.
+- Next: alternate back to Aria and add deterministic native world-catalog
+  serialization from its already migrated metadata; audio remains untouched.
+
 ## Patch 0493 - Native Zero Mission ROM symbols
 
 - Started the Zero Mission side of the C11 import migration with a bounded

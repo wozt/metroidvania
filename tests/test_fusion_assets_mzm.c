@@ -63,6 +63,16 @@ static void make_elf(uint8_t elf[ELF_SIZE]) {
     write_symbol(elf, 5, 24, 0x08000040, 4, 2);
 }
 
+static size_t read_file(const char *path, uint8_t *data, size_t capacity) {
+    FILE *file = fopen(path, "rb");
+    assert(file);
+    size_t size = fread(data, 1, capacity, file);
+    assert(ferror(file) == 0);
+    assert(fgetc(file) == EOF);
+    assert(fclose(file) == 0);
+    return size;
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -78,6 +88,28 @@ int main(void) {
     assert(table.entries[0].address == 0x08000010 && table.entries[0].size == 8);
     assert(!strcmp(table.entries[1].name, "dup"));
     assert(table.entries[1].address == 0x08000020 && table.entries[1].size == 4);
+    const char *bank_path = "fusion-mzm-rom-bank-test.bin";
+    const char *manifest_path = "fusion-mzm-rom-symbols-test.tsv";
+    remove(bank_path);
+    remove(manifest_path);
+    assert(fusion_mzm_write_rom_bank(&rom, &table, bank_path, manifest_path,
+                                     error, sizeof error));
+    uint8_t bank[16 + ROM_SIZE];
+    assert(read_file(bank_path, bank, sizeof bank) == sizeof bank);
+    assert(!memcmp(bank, "MZMROM01", 8));
+    assert(bank[8] == 0 && bank[9] == 0 && bank[10] == 0 && bank[11] == 8);
+    assert(bank[12] == 0 && bank[13] == 1 &&
+           bank[14] == 0 && bank[15] == 0);
+    assert(!memcmp(bank + 16, rom_bytes, ROM_SIZE));
+    uint8_t manifest[256];
+    size_t manifest_size = read_file(manifest_path, manifest, sizeof manifest - 1);
+    manifest[manifest_size] = '\0';
+    assert(!strcmp((char *)manifest,
+                   "schema\tmetroidvania-mzm-rom-v1\n"
+                   "symbol\tfirst\t134217744\t8\n"
+                   "symbol\tdup\t134217760\t4\n"));
+    assert(remove(bank_path) == 0);
+    assert(remove(manifest_path) == 0);
     fusion_mzm_free_symbols(&table);
     assert(table.entries == NULL && table.count == 0);
 

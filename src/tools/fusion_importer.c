@@ -26,10 +26,11 @@ static void usage(const char *name) {
             "       %s --aria-bosses FILE\n"
             "       %s --aria-summary FILE\n"
             "       %s --mzm-symbols ROM ELF\n"
+            "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name);
+            name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -504,6 +505,53 @@ static int inspect_mzm_symbols(const char *rom_path, const char *elf_path) {
     return 0;
 }
 
+static int write_mzm_rom_bank(const char *rom_path, const char *elf_path,
+                              const char *output_directory) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
+        fprintf(stderr, "mzm-rom-bank: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    FusionMzmRomSymbolTable table;
+    if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &table,
+                                     error, sizeof error)) {
+        fprintf(stderr, "mzm-rom-bank: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    char bank_path[1024];
+    char manifest_path[1024];
+    int bank_length = snprintf(bank_path, sizeof bank_path, "%s/rom_bank.bin",
+                               output_directory);
+    int manifest_length = snprintf(manifest_path, sizeof manifest_path,
+                                   "%s/rom_symbols.tsv", output_directory);
+    if (bank_length < 0 || (size_t)bank_length >= sizeof bank_path ||
+        manifest_length < 0 || (size_t)manifest_length >= sizeof manifest_path ||
+        !fusion_mzm_write_rom_bank(&rom, &table, bank_path, manifest_path,
+                                   error, sizeof error)) {
+        fprintf(stderr, "mzm-rom-bank: %s\n",
+                error[0] ? error : "output path is too long");
+        fusion_mzm_free_symbols(&table);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    printf("Zero Mission ROM bank: %zu data symbols, %zu duplicate names -> %s\n",
+           table.count, table.duplicate_name_count, output_directory);
+    fusion_mzm_free_symbols(&table);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -518,6 +566,9 @@ int main(int argc, char **argv) {
     const char *aria_summary_path = NULL;
     const char *mzm_symbols_rom_path = NULL;
     const char *mzm_symbols_elf_path = NULL;
+    const char *mzm_bank_rom_path = NULL;
+    const char *mzm_bank_elf_path = NULL;
+    const char *mzm_bank_output_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -544,6 +595,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--mzm-symbols") && i + 2 < argc) {
             mzm_symbols_rom_path = argv[++i];
             mzm_symbols_elf_path = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--mzm-rom-bank") && i + 3 < argc) {
+            mzm_bank_rom_path = argv[++i];
+            mzm_bank_elf_path = argv[++i];
+            mzm_bank_output_path = argv[++i];
         }
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
@@ -572,6 +628,9 @@ int main(int argc, char **argv) {
     if (aria_summary_path) return inspect_aria_summary(aria_summary_path);
     if (mzm_symbols_rom_path)
         return inspect_mzm_symbols(mzm_symbols_rom_path, mzm_symbols_elf_path);
+    if (mzm_bank_rom_path)
+        return write_mzm_rom_bank(mzm_bank_rom_path, mzm_bank_elf_path,
+                                  mzm_bank_output_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

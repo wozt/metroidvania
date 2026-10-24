@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 enum {
     ELF32_HEADER_SIZE = 0x34,
     ELF32_SECTION_SIZE = 0x28,
@@ -19,6 +23,8 @@ typedef struct {
     bool duplicate;
 } NameSlot;
 
+typedef bool (*WriteFileBody)(FILE *file, const void *context);
+
 static void set_error(char *error, size_t error_size, const char *message) {
     if (!error || error_size == 0) return;
     snprintf(error, error_size, "%s", message);
@@ -32,6 +38,13 @@ static uint16_t read_u16(const uint8_t *data) {
 static uint32_t read_u32(const uint8_t *data) {
     return (uint32_t)data[0] | (uint32_t)data[1] << 8 |
            (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
+}
+
+static void write_u32(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8);
+    data[2] = (uint8_t)(value >> 16);
+    data[3] = (uint8_t)(value >> 24);
 }
 
 static bool range_valid(size_t total, size_t offset, size_t length) {
@@ -79,6 +92,112 @@ void fusion_mzm_free_symbols(FusionMzmRomSymbolTable *table) {
     if (!table) return;
     free(table->entries);
     *table = (FusionMzmRomSymbolTable){0};
+}
+
+static bool replace_file(const char *temporary, const char *path) {
+#ifdef _WIN32
+    return MoveFileExA(temporary, path,
+                       MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+    return rename(temporary, path) == 0;
+#endif
+}
+
+static bool write_atomic(const char *path, WriteFileBody write_body,
+                         const void *context, char *error, size_t error_size) {
+    size_t path_length = strlen(path);
+    if (path_length > SIZE_MAX - 5) {
+        set_error(error, error_size, "native output path is too long");
+        return false;
+    }
+    char *temporary = malloc(path_length + 5);
+    if (!temporary) {
+        set_error(error, error_size, "cannot allocate native output path");
+        return false;
+    }
+    snprintf(temporary, path_length + 5, "%s.tmp", path);
+    FILE *file = fopen(temporary, "wb");
+    if (!file) {
+        free(temporary);
+        set_error(error, error_size, "cannot open native temporary output");
+        return false;
+    }
+    bool written = write_body(file, context);
+    bool flushed = fflush(file) == 0;
+    bool closed = fclose(file) == 0;
+    if (!written || !flushed || !closed || !replace_file(temporary, path)) {
+        remove(temporary);
+        free(temporary);
+        set_error(error, error_size, "cannot atomically write native output");
+        return false;
+    }
+    free(temporary);
+    return true;
+}
+
+typedef struct {
+    const FusionRom *rom;
+} BankWriteContext;
+
+static bool write_bank_body(FILE *file, const void *raw_context) {
+    const BankWriteContext *context = raw_context;
+    uint8_t header[16] = {'M', 'Z', 'M', 'R', 'O', 'M', '0', '1'};
+    write_u32(header + 8, GBA_ROM_BASE);
+    write_u32(header + 12, (uint32_t)context->rom->size);
+    return fwrite(header, 1, sizeof header, file) == sizeof header &&
+           fwrite(context->rom->data, 1, context->rom->size, file) ==
+               context->rom->size;
+}
+
+typedef struct {
+    const FusionMzmRomSymbolTable *table;
+} ManifestWriteContext;
+
+static bool write_manifest_body(FILE *file, const void *raw_context) {
+    const ManifestWriteContext *context = raw_context;
+    if (fputs("schema\tmetroidvania-mzm-rom-v1\n", file) == EOF) return false;
+    for (size_t index = 0; index < context->table->count; ++index) {
+        const FusionMzmRomSymbol *symbol = &context->table->entries[index];
+        if (fprintf(file, "symbol\t%s\t%u\t%u\n", symbol->name,
+                    symbol->address, symbol->size) < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool fusion_mzm_write_rom_bank(const FusionRom *rom,
+                               const FusionMzmRomSymbolTable *table,
+                               const char *bank_path, const char *manifest_path,
+                               char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID ||
+        rom->size > UINT32_MAX || !table || (table->count && !table->entries) ||
+        !bank_path || !manifest_path || strcmp(bank_path, manifest_path) == 0) {
+        set_error(error, error_size, "invalid Zero Mission ROM-bank write request");
+        return false;
+    }
+    for (size_t index = 0; index < table->count; ++index) {
+        const FusionMzmRomSymbol *symbol = &table->entries[index];
+        if (!symbol->name || symbol->address < GBA_ROM_BASE) {
+            set_error(error, error_size, "invalid Zero Mission ROM symbol");
+            return false;
+        }
+        size_t offset = (size_t)(symbol->address - GBA_ROM_BASE);
+        if (offset >= rom->size || symbol->size > rom->size - offset) {
+            set_error(error, error_size, "Zero Mission ROM symbol is outside the bank");
+            return false;
+        }
+    }
+    BankWriteContext bank_context = {rom};
+    ManifestWriteContext manifest_context = {table};
+    if (!write_atomic(bank_path, write_bank_body, &bank_context,
+                      error, error_size) ||
+        !write_atomic(manifest_path, write_manifest_body, &manifest_context,
+                      error, error_size)) {
+        return false;
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
 }
 
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,

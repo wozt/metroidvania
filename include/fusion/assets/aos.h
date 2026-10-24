@@ -189,6 +189,18 @@ typedef struct {
 } FusionAosRenderedBackground;
 
 typedef struct {
+    const FusionAosBackground *background;
+    const FusionAosRenderedBackground *rendered;
+} FusionAosCompositeLayer;
+
+typedef struct {
+    size_t width_pixels;
+    size_t height_pixels;
+    uint8_t *rgb;
+    size_t pixel_count;
+} FusionAosCompositeBackground;
+
+typedef struct {
     uint32_t entry_pointer;
     int16_t x;
     int16_t y;
@@ -276,6 +288,12 @@ bool fusion_aos_render_background(const FusionAosBackground *background,
                                   FusionAosRenderedBackground *rendered,
                                   char *error, size_t error_size);
 void fusion_aos_free_rendered_background(FusionAosRenderedBackground *rendered);
+bool fusion_aos_composite_backgrounds(
+    const FusionAosCompositeLayer *layers, size_t layer_count,
+    FusionAosCompositeBackground *composite,
+    char *error, size_t error_size);
+void fusion_aos_free_composite_background(
+    FusionAosCompositeBackground *composite);
 bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
                                  FusionAosEntityList *list,
                                  char *error, size_t error_size);

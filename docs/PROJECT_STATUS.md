@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0505 - Native Aria background depth composites
+
+- Added bounded C11 composition of the already validated Aria RGBA layers,
+  using BG1 dimensions when available, the first supported layer otherwise,
+  native `field_0` depth ordering, transparent-pixel rejection and modulo
+  repetition for differently sized layers.
+- Added synthetic depth, transparency, repeated-source, BG1-primary,
+  fallback-primary, ownership and empty-input coverage plus complete RGB SHA-1
+  comparison through `--aria-background-composites`.
+- All 342 supported room composites match Python across 61,210,624 output
+  pixels and all 901 rendered source layers. Area 11 room 40 has no supported
+  text layer in either implementation and is reported explicitly as skipped.
+- This remains a static-origin diagnostic composite: parallax, affine/8-bpp
+  layers, hardware priority/blending, animation, entities, BMP output and
+  `AOSROOM-NATIVE` serialization remain outside the native contract. Migration
+  status therefore stays partial and gameplay parity does not change.
+- Next: alternate to Zero Mission and expand its tileset and common metatile
+  tables natively before rendering room layers; audio remains untouched.
+
 ## Patch 0504 - Native Zero Mission tileset video memory
 
 - Added bounded C11 decoding of all 79 `sTilesetEntries` records directly from

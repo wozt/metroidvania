@@ -293,6 +293,36 @@ int main(void) {
     assert(!fusion_aos_render_background(&eight_bpp, &tilemap,
                                          &render_memory, &rendered,
                                          error, sizeof error));
+    uint8_t front_rgba[] = {255, 0, 0, 255, 0, 0, 0, 0};
+    uint8_t rear_rgba[] = {0, 0, 255, 255};
+    FusionAosBackground front = {.layer = 1, .field_0 = 22};
+    FusionAosBackground rear = {.layer = 2, .field_0 = 31};
+    FusionAosRenderedBackground front_rendered = {
+        2, 1, front_rgba, 2, 0
+    };
+    FusionAosRenderedBackground rear_rendered = {
+        1, 1, rear_rgba, 1, 0
+    };
+    FusionAosCompositeLayer layers[] = {
+        {&front, &front_rendered}, {&rear, &rear_rendered}
+    };
+    FusionAosCompositeBackground composite;
+    assert(fusion_aos_composite_backgrounds(
+        layers, 2, &composite, error, sizeof error));
+    assert(composite.width_pixels == 2 && composite.height_pixels == 1 &&
+           composite.pixel_count == 2);
+    assert(composite.rgb[0] == 255 && composite.rgb[1] == 0 &&
+           composite.rgb[2] == 0 && composite.rgb[3] == 0 &&
+           composite.rgb[4] == 0 && composite.rgb[5] == 255);
+    fusion_aos_free_composite_background(&composite);
+    assert(composite.rgb == NULL && composite.pixel_count == 0);
+    assert(fusion_aos_composite_backgrounds(
+        &layers[1], 1, &composite, error, sizeof error));
+    assert(composite.width_pixels == 1 && composite.height_pixels == 1 &&
+           composite.rgb[2] == 255);
+    fusion_aos_free_composite_background(&composite);
+    assert(!fusion_aos_composite_backgrounds(
+        NULL, 0, &composite, error, sizeof error));
     fusion_aos_free_background_tilemap(&tilemap);
     assert(tilemap.cells == NULL && tilemap.cell_count == 0);
     assert(fusion_aos_read_background_tiles(&rom, &backgrounds.entries[1],

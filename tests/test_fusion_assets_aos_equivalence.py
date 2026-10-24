@@ -23,6 +23,7 @@ from scripts.import_aos_world import (
 )
 from scripts.aos_room_index import index_rows
 from scripts.aos_room_render import (
+    composite_backgrounds,
     decode_background,
     load_video_memory,
     render_background,
@@ -259,11 +260,15 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
         rom = ROM.read_bytes()
         resource_cache = {}
         expected = []
+        expected_composites = []
         skipped_count = 0
         total_pixels = 0
         unresolved_count = 0
+        composite_pixels = 0
+        skipped_rooms = 0
         for room in decode_world(rom)["rooms"]:
             vram, palette, _ = load_video_memory(rom, room, resource_cache)
+            room_layers = []
             for background in room["backgrounds"]:
                 decoded = decode_background(rom, background)
                 if decoded["status"] != "DECODED_TEXT_BACKGROUND":
@@ -279,8 +284,23 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
                     width, height, pixels, unresolved,
                     hashlib.sha1(rgba).hexdigest(),
                 ))
+                room_layers.append((decoded, rgba))
                 total_pixels += pixels
                 unresolved_count += unresolved
+            if room_layers:
+                width, height, rgb = composite_backgrounds(room_layers)
+                pixels = width * height
+                expected_composites.append(
+                    f"composite\t{room['engine_area']}\t{room['room']}\t"
+                    f"{width}\t{height}\t{pixels}\t{len(room_layers)}\t"
+                    f"{hashlib.sha1(rgb).hexdigest()}"
+                )
+                composite_pixels += pixels
+            else:
+                expected_composites.append(
+                    f"skipped\t{room['engine_area']}\t{room['room']}"
+                )
+                skipped_rooms += 1
 
         result = subprocess.run(
             [str(BINARY), "--aria-background-renders", str(ROM)],
@@ -299,6 +319,19 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             lines[-1],
             f"summary\t{len(expected)}\t{skipped_count}\t"
             f"{total_pixels}\t{unresolved_count}",
+        )
+
+        result = subprocess.run(
+            [str(BINARY), "--aria-background-composites", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertEqual(lines[:-1], expected_composites)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{len(expected_composites) - skipped_rooms}\t"
+            f"{skipped_rooms}\t{len(expected)}\t{composite_pixels}",
         )
 
     def test_bg1_collision_maps_match_python_reference(self):

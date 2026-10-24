@@ -329,6 +329,108 @@ bool fusion_aos_render_background(const FusionAosBackground *background,
     return true;
 }
 
+void fusion_aos_free_composite_background(
+    FusionAosCompositeBackground *composite) {
+    if (!composite) return;
+    free(composite->rgb);
+    *composite = (FusionAosCompositeBackground){0};
+}
+
+bool fusion_aos_composite_backgrounds(
+    const FusionAosCompositeLayer *layers, size_t layer_count,
+    FusionAosCompositeBackground *composite,
+    char *error, size_t error_size) {
+    if (!composite) {
+        set_error(error, error_size,
+                  "invalid Aria background-composite request");
+        return false;
+    }
+    *composite = (FusionAosCompositeBackground){0};
+    if (!layers || layer_count == 0 ||
+        layer_count > FUSION_AOS_BACKGROUND_COUNT) {
+        set_error(error, error_size,
+                  "room has no supported Aria text background layers");
+        return false;
+    }
+    size_t primary = 0;
+    bool found_primary = false;
+    for (size_t index = 0; index < layer_count; ++index) {
+        const FusionAosCompositeLayer *layer = &layers[index];
+        if (!layer->background || !layer->rendered ||
+            !layer->rendered->rgba || layer->rendered->width_pixels == 0 ||
+            layer->rendered->height_pixels == 0 ||
+            layer->rendered->width_pixels >
+                FUSION_AOS_RENDER_PIXEL_CAPACITY /
+                    layer->rendered->height_pixels ||
+            layer->rendered->pixel_count !=
+                layer->rendered->width_pixels *
+                    layer->rendered->height_pixels) {
+            set_error(error, error_size,
+                      "invalid Aria background-composite layer");
+            return false;
+        }
+        if (!found_primary && layer->background->layer == 1) {
+            primary = index;
+            found_primary = true;
+        }
+    }
+    size_t width = layers[primary].rendered->width_pixels;
+    size_t height = layers[primary].rendered->height_pixels;
+    if (width > FUSION_AOS_RENDER_PIXEL_CAPACITY / height) {
+        set_error(error, error_size,
+                  "Aria background composite exceeds the pixel safety cap");
+        return false;
+    }
+    size_t pixel_count = width * height;
+    if (pixel_count > FUSION_AOS_RENDER_PIXEL_CAPACITY ||
+        pixel_count > SIZE_MAX / 3) {
+        set_error(error, error_size,
+                  "Aria background composite exceeds the pixel safety cap");
+        return false;
+    }
+    uint8_t *rgb = calloc(pixel_count, 3);
+    if (!rgb) {
+        set_error(error, error_size,
+                  "cannot allocate Aria background composite");
+        return false;
+    }
+    size_t order[FUSION_AOS_BACKGROUND_COUNT];
+    for (size_t index = 0; index < layer_count; ++index) {
+        order[index] = index;
+        size_t position = index;
+        while (position > 0 &&
+               layers[order[position - 1]].background->field_0 <
+                   layers[order[position]].background->field_0) {
+            size_t swap = order[position - 1];
+            order[position - 1] = order[position];
+            order[position] = swap;
+            --position;
+        }
+    }
+    for (size_t sorted = 0; sorted < layer_count; ++sorted) {
+        const FusionAosRenderedBackground *source =
+            layers[order[sorted]].rendered;
+        for (size_t y = 0; y < height; ++y) {
+            size_t source_row = (y % source->height_pixels) *
+                                source->width_pixels;
+            size_t destination_row = y * width;
+            for (size_t x = 0; x < width; ++x) {
+                size_t source_pixel =
+                    source_row + x % source->width_pixels;
+                size_t source_offset = source_pixel * 4;
+                if (source->rgba[source_offset + 3] == 0) continue;
+                memcpy(rgb + (destination_row + x) * 3,
+                       source->rgba + source_offset, 3);
+            }
+        }
+    }
+    *composite = (FusionAosCompositeBackground){
+        width, height, rgb, pixel_count
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 void fusion_aos_free_background_tilemap(FusionAosBackgroundTilemap *tilemap) {
     if (!tilemap) return;
     free(tilemap->cells);

@@ -18,6 +18,8 @@ enum {
     GRAPHICS_LOAD_OFFSET = 0x7200,
     PALETTE_LOAD_OFFSET = 0x7300,
     UNTERMINATED_LOAD_OFFSET = 0x7400,
+    ENTITY_OFFSET = 0x7800,
+    UNTERMINATED_ENTITY_OFFSET = 0x9000,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
 };
 
@@ -74,6 +76,20 @@ static void write_load_entry(uint8_t *data, size_t offset, uint32_t resource,
     data[offset + 6] = parameter_2;
 }
 
+static void write_entity(uint8_t *data, size_t offset, int16_t x, int16_t y,
+                         uint8_t persistent_index, uint8_t kind,
+                         uint8_t entity_id, uint8_t flags,
+                         uint16_t parameter_0, uint16_t parameter_1) {
+    write_u16(data, offset, (uint16_t)x);
+    write_u16(data, offset + 2, (uint16_t)y);
+    data[offset + 4] = persistent_index;
+    data[offset + 5] = kind;
+    data[offset + 6] = entity_id;
+    data[offset + 7] = flags;
+    write_u16(data, offset + 8, parameter_0);
+    write_u16(data, offset + 10, parameter_1);
+}
+
 int main(void) {
     uint8_t *bytes = calloc(1, FIXTURE_SIZE);
     assert(bytes);
@@ -112,6 +128,7 @@ int main(void) {
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 8, GBA_ROM_BASE + BACKGROUND_OFFSET);
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 12, GBA_ROM_BASE + GRAPHICS_LOAD_OFFSET);
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 16, GBA_ROM_BASE + PALETTE_LOAD_OFFSET);
+    write_u32(bytes, RESOLVED_ROOM_OFFSET + 20, GBA_ROM_BASE + ENTITY_OFFSET);
     write_u32(bytes, RESOLVED_ROOM_OFFSET + 24,
               GBA_ROM_BASE + RESOLVED_ROOM_OFFSET - 0x20);
     write_transition(bytes, RESOLVED_ROOM_OFFSET - 0x20,
@@ -186,6 +203,28 @@ int main(void) {
     assert(!fusion_aos_read_load_list(&rom,
                                       GBA_ROM_BASE + UNTERMINATED_LOAD_OFFSET,
                                       &loads, error, sizeof error));
+    write_entity(bytes, ENTITY_OFFSET, -12, 34, 5, 1, 0x21, 7, 0x1234, 0x5678);
+    write_entity(bytes, ENTITY_OFFSET + 12, 56, -78, 6, 2, 0x22, 8, 9, 10);
+    write_entity(bytes, ENTITY_OFFSET + 24, INT16_MAX, 0, 0, 0, 0, 0, 0, 0);
+    FusionAosEntityList entities;
+    assert(fusion_aos_read_entity_list(&rom, descriptor.entities_pointer, &entities,
+                                       error, sizeof error));
+    assert(entities.count == 2);
+    assert(entities.entries[0].x == -12 && entities.entries[0].y == 34);
+    assert(entities.entries[0].persistent_index == 5 &&
+           entities.entries[0].entity_id == 0x21);
+    assert(entities.entries[0].parameters[0] == 0x1234 &&
+           entities.entries[0].parameters[1] == 0x5678);
+    assert(entities.entries[1].y == -78 && entities.entries[1].kind == 2);
+    assert(fusion_aos_read_entity_list(&rom, 0, &entities, error, sizeof error));
+    assert(entities.count == 0);
+    for (size_t index = 0; index < FUSION_AOS_ENTITY_CAPACITY; ++index) {
+        write_entity(bytes, UNTERMINATED_ENTITY_OFFSET + index * 12,
+                     1, 2, 0, 1, 3, 0, 0, 0);
+    }
+    assert(!fusion_aos_read_entity_list(&rom,
+                                        GBA_ROM_BASE + UNTERMINATED_ENTITY_OFFSET,
+                                        &entities, error, sizeof error));
     write_u32(bytes, ROOM_BASE_OFFSET + 4, GBA_ROM_BASE + ROOM_BASE_OFFSET);
     assert(!fusion_aos_read_room_descriptor(&rom, &directory, 0, 0, &descriptor,
                                             error, sizeof error));

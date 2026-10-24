@@ -20,9 +20,11 @@ static void usage(const char *name) {
             "       %s --aria-transitions FILE\n"
             "       %s --aria-backgrounds FILE\n"
             "       %s --aria-loads FILE\n"
+            "       %s --aria-entities FILE\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
-            name, name, name, name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name, name, name,
+            name);
 }
 
 static void list_games(void) {
@@ -326,6 +328,46 @@ static int inspect_aria_loads(const char *path) {
     return 0;
 }
 
+static int inspect_aria_entities(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-entities: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-entities: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            FusionAosEntityList entities;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error) ||
+                !fusion_aos_read_entity_list(&rom, descriptor.entities_pointer,
+                                             &entities, error, sizeof error)) {
+                fprintf(stderr, "aria-entities: area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            for (size_t index = 0; index < entities.count; ++index) {
+                const FusionAosEntity *entity = &entities.entries[index];
+                printf("entity\t%zu\t%zu\t%zu\t0x%08X\t%d\t%d\t%u\t%u\t%u\t%u\t"
+                       "%u\t%u\n",
+                       area, room, index, entity->entry_pointer, entity->x, entity->y,
+                       entity->persistent_index, entity->kind, entity->entity_id,
+                       entity->flags, entity->parameters[0], entity->parameters[1]);
+            }
+        }
+    }
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -335,6 +377,7 @@ int main(int argc, char **argv) {
     const char *aria_transitions_path = NULL;
     const char *aria_backgrounds_path = NULL;
     const char *aria_loads_path = NULL;
+    const char *aria_entities_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -352,6 +395,8 @@ int main(int argc, char **argv) {
             aria_backgrounds_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-loads") && i + 1 < argc)
             aria_loads_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-entities") && i + 1 < argc)
+            aria_entities_path = argv[++i];
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -374,6 +419,7 @@ int main(int argc, char **argv) {
     if (aria_transitions_path) return inspect_aria_transitions(aria_transitions_path);
     if (aria_backgrounds_path) return inspect_aria_backgrounds(aria_backgrounds_path);
     if (aria_loads_path) return inspect_aria_loads(aria_loads_path);
+    if (aria_entities_path) return inspect_aria_entities(aria_entities_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

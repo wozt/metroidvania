@@ -10,7 +10,8 @@ enum {
     AOS_ROOM_DESCRIPTOR_SIZE = 0x24,
     AOS_TRANSITION_SIZE = 0x10,
     AOS_BACKGROUND_DESCRIPTOR_SIZE = 0x0C,
-    AOS_LOAD_ENTRY_SIZE = 0x08
+    AOS_LOAD_ENTRY_SIZE = 0x08,
+    AOS_ENTITY_ENTRY_SIZE = 0x0C
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -385,5 +386,50 @@ bool fusion_aos_read_load_list(const FusionRom *rom, uint32_t pointer,
         list->count = index + 1;
     }
     set_error(error, error_size, "Aria loading list exceeds the safety cap");
+    return false;
+}
+
+bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
+                                 FusionAosEntityList *list,
+                                 char *error, size_t error_size) {
+    if (!rom || !list || !rom->data || rom->game != FUSION_ASSET_GAME_ARIA) {
+        set_error(error, error_size, "invalid Aria entity-list request");
+        return false;
+    }
+    *list = (FusionAosEntityList){0};
+    if (pointer == 0) {
+        if (error && error_size > 0) error[0] = '\0';
+        return true;
+    }
+    size_t offset;
+    if (!pointer_offset(rom, pointer, AOS_ENTITY_ENTRY_SIZE, &offset)) {
+        set_error(error, error_size, "Aria entity list points outside the ROM");
+        return false;
+    }
+    for (size_t index = 0; index < FUSION_AOS_ENTITY_CAPACITY; ++index) {
+        size_t entry_offset = offset + index * AOS_ENTITY_ENTRY_SIZE;
+        if (entry_offset > rom->size || AOS_ENTITY_ENTRY_SIZE > rom->size - entry_offset) {
+            set_error(error, error_size, "unterminated Aria entity list");
+            return false;
+        }
+        const uint8_t *data = rom->data + entry_offset;
+        int16_t x = (int16_t)read_u16(data);
+        if (x == INT16_MAX) {
+            if (error && error_size > 0) error[0] = '\0';
+            return true;
+        }
+        FusionAosEntity *entity = &list->entries[index];
+        entity->entry_pointer = GBA_ROM_BASE + (uint32_t)entry_offset;
+        entity->x = x;
+        entity->y = (int16_t)read_u16(data + 2);
+        entity->persistent_index = data[4];
+        entity->kind = data[5];
+        entity->entity_id = data[6];
+        entity->flags = data[7];
+        entity->parameters[0] = read_u16(data + 8);
+        entity->parameters[1] = read_u16(data + 10);
+        list->count = index + 1;
+    }
+    set_error(error, error_size, "Aria entity list exceeds the safety cap");
     return false;
 }

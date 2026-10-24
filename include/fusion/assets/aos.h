@@ -15,6 +15,7 @@ enum {
     FUSION_AOS_ROOM_TRANSITION_CAPACITY = 16,
     FUSION_AOS_BACKGROUND_COUNT = 3,
     FUSION_AOS_LOAD_ENTRY_CAPACITY = 64,
+    FUSION_AOS_ENTITY_CAPACITY = 512,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
@@ -120,6 +121,22 @@ typedef struct {
     size_t count;
 } FusionAosLoadList;
 
+typedef struct {
+    uint32_t entry_pointer;
+    int16_t x;
+    int16_t y;
+    uint8_t persistent_index;
+    uint8_t kind;
+    uint8_t entity_id;
+    uint8_t flags;
+    uint16_t parameters[2];
+} FusionAosEntity;
+
+typedef struct {
+    FusionAosEntity entries[FUSION_AOS_ENTITY_CAPACITY];
+    size_t count;
+} FusionAosEntityList;
+
 bool fusion_aos_read_area_directory(const FusionRom *rom,
                                     FusionAosAreaDirectory *directory,
                                     char *error, size_t error_size);
@@ -143,5 +160,8 @@ bool fusion_aos_read_room_backgrounds(const FusionRom *rom,
 bool fusion_aos_read_load_list(const FusionRom *rom, uint32_t pointer,
                                FusionAosLoadList *list,
                                char *error, size_t error_size);
+bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
+                                 FusionAosEntityList *list,
+                                 char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

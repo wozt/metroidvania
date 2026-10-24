@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T00:13:24+00:00",
+ "generated_at": "2026-10-24T00:15:31+00:00",
  "git": {
-  "commit": "c2a6ce7",
+  "commit": "09bfe4a",
   "branch": "main",
   "dirty": true
  },
@@ -12493,7 +12493,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs and reads Aria's directory, map cells, room variants, resolved transitions, backgrounds and graphics/palette loading-list references with Python/C equivalence. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for entities, resource payloads, caches and every migration gate not yet proven.",
+   "limitations": "The C11 library verifies both ROMs and reads Aria's complete structural room inputs—directory, map, variants, transitions, backgrounds, loading references and entities—with Python/C equivalence. The CLI exposes focused inspection for each migrated slice. Python remains authoritative for boss annotations, native catalog serialization, resource payloads, caches and every migration gate not yet proven.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14724,9 +14724,9 @@
    {
     "file": "tests/test_fusion_assets_aos_equivalence.py",
     "module": "tests.test_fusion_assets_aos_equivalence",
-    "test_count": 6,
+    "test_count": 7,
     "outcome": "passed",
-    "passed": 6
+    "passed": 7
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -15206,12 +15206,18 @@
    }
   ],
   "summary": {
-   "passed": 510,
+   "passed": 511,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "09bfe4a",
+   "date": "2026-10-24",
+   "subject": "Port Aria resource loading lists to C11",
+   "scope": "project"
+  },
   {
    "commit": "c2a6ce7",
    "date": "2026-10-24",
@@ -15684,12 +15690,6 @@
    "commit": "39299bb",
    "date": "2026-10-20",
    "subject": "Load the Tourian escape room layers and spare Samus in the exit fade",
-   "scope": "project"
-  },
-  {
-   "commit": "1a8f8b7",
-   "date": "2026-10-20",
-   "subject": "Port the liquid splashes of debris and sprites and the small dusts",
    "scope": "project"
   }
  ],

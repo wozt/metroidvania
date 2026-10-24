@@ -239,7 +239,10 @@ def _decode_backgrounds(rom: bytes, pointer: int) -> list[dict]:
     ]
 
 
-def _decode_entities(rom: bytes, pointer: int) -> list[dict]:
+def decode_entities(rom: bytes, pointer: int) -> list[dict]:
+    """Decode one bounded, terminated room entity list."""
+    if pointer == 0:
+        return []
     start = _rom_offset(pointer, len(rom), ENTITY_ENTRY_SIZE)
     entities = []
     for index in range(MAX_ENTITY_ENTRIES):
@@ -252,7 +255,7 @@ def _decode_entities(rom: bytes, pointer: int) -> list[dict]:
         if x >= 0x7FFF:
             return entities
         entities.append({
-            "entry_pointer": _pointer(GBA_ROM_BASE + offset),
+            "entry_pointer": GBA_ROM_BASE + offset,
             "x": x,
             "y": y,
             "persistent_index": persistent_index,
@@ -262,6 +265,13 @@ def _decode_entities(rom: bytes, pointer: int) -> list[dict]:
             "parameters": [parameter_0, parameter_1],
         })
     raise ValueError(f"entity list exceeds safety cap at {_pointer(pointer)}")
+
+
+def _decode_entities(rom: bytes, pointer: int) -> list[dict]:
+    return [
+        {**entity, "entry_pointer": _pointer(entity["entry_pointer"])}
+        for entity in decode_entities(rom, pointer)
+    ]
 
 
 def decode_room_descriptor(rom: bytes, source_pointer: int) -> dict:

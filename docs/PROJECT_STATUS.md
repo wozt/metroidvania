@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0490 - Native Aria room entities
+
+- Ported Aria's 12-byte room entity entries to C11: signed position,
+  persistent index, kind, entity ID, flags and both parameters.
+- Preserved null-list semantics and the native `x == 0x7FFF` terminator with
+  ROM bounds and a 512-entry safety cap.
+- Added synthetic negative-coordinate, empty-list and unterminated-list coverage,
+  then compared every room placement against Python through
+  `fusion_importer --aria-entities`.
+- The structural room inputs are now decoded natively, but boss annotations,
+  catalog serialization and resource payload decoding remain Python-owned.
+- Next: port the audited boss-room identities and enemy-table health metadata,
+  then assemble a native world-summary contract.
+
 ## Patch 0489 - Native Aria resource loading lists
 
 - Ported Aria's zero-terminated eight-byte graphics and palette loading-list

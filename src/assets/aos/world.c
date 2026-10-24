@@ -11,7 +11,25 @@ enum {
     AOS_TRANSITION_SIZE = 0x10,
     AOS_BACKGROUND_DESCRIPTOR_SIZE = 0x0C,
     AOS_LOAD_ENTRY_SIZE = 0x08,
-    AOS_ENTITY_ENTRY_SIZE = 0x0C
+    AOS_ENTITY_ENTRY_SIZE = 0x0C,
+    AOS_ENEMY_TABLE_POINTER = 0x080E9644,
+    AOS_ENEMY_TABLE_ENTRY_SIZE = 0x24,
+    AOS_ENEMY_HEALTH_OFFSET = 0x0C
+};
+
+static const FusionAosBossSpec boss_specs[FUSION_AOS_BOSS_ROOM_COUNT] = {
+    {"aria.creaking_skull", "Creaking Skull", "fight", 0, 10, 0x21},
+    {"aria.manticore", "Manticore", "fight", 1, 6, 0x36},
+    {"aria.great_armor", "Great Armor", "fight", 2, 15, 0x3C},
+    {"aria.big_golem", "Big Golem", "fight", 3, 19, 0x45},
+    {"aria.headhunter", "Headhunter", "fight", 4, 11, 0x6A},
+    {"aria.julius", "Julius Belmont", "fight", 5, 6, 0x6E},
+    {"aria.death", "Death", "fight", 6, 7, 0x6B},
+    {"aria.legion", "Legion", "fight", 7, 37, 0x6C},
+    {"aria.balore", "Balore", "fight", 8, 1, 0x6D},
+    {"aria.graham", "Graham Jones", "fight", 9, 4, 0x6F},
+    {"aria.chaos", "Chaos", "first_phase", 11, 20, 0x70},
+    {"aria.chaos", "Chaos", "second_phase", 11, 22, 0x70},
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -432,4 +450,59 @@ bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
     }
     set_error(error, error_size, "Aria entity list exceeds the safety cap");
     return false;
+}
+
+const FusionAosBossSpec *fusion_aos_boss_spec(size_t index) {
+    return index < FUSION_AOS_BOSS_ROOM_COUNT ? &boss_specs[index] : NULL;
+}
+
+bool fusion_aos_read_boss_room(const FusionRom *rom,
+                               const FusionAosAreaDirectory *directory,
+                               const FusionAosBossSpec *spec,
+                               FusionAosBossRoom *boss,
+                               char *error, size_t error_size) {
+    if (!rom || !directory || !spec || !boss || !rom->data ||
+        rom->game != FUSION_ASSET_GAME_ARIA ||
+        spec->area >= FUSION_AOS_AREA_COUNT ||
+        spec->room >= directory->areas[spec->area].room_count) {
+        set_error(error, error_size, "invalid Aria boss-room request");
+        return false;
+    }
+    FusionAosRoomDescriptor descriptor;
+    FusionAosEntityList entities;
+    if (!fusion_aos_read_room_descriptor(rom, directory, spec->area, spec->room,
+                                         &descriptor, error, error_size) ||
+        !fusion_aos_read_entity_list(rom, descriptor.entities_pointer,
+                                     &entities, error, error_size)) {
+        return false;
+    }
+    const FusionAosEntity *match = NULL;
+    for (size_t index = 0; index < entities.count; ++index) {
+        const FusionAosEntity *entity = &entities.entries[index];
+        if (entity->kind == 1 && entity->entity_id == spec->enemy_id) {
+            if (match) {
+                set_error(error, error_size, "Aria boss entity is ambiguous in its room");
+                return false;
+            }
+            match = entity;
+        }
+    }
+    if (!match) {
+        set_error(error, error_size, "Aria boss entity is missing from its room");
+        return false;
+    }
+    uint32_t enemy_table_pointer =
+        AOS_ENEMY_TABLE_POINTER + spec->enemy_id * AOS_ENEMY_TABLE_ENTRY_SIZE;
+    size_t enemy_offset;
+    if (!pointer_offset(rom, enemy_table_pointer,
+                        AOS_ENEMY_TABLE_ENTRY_SIZE, &enemy_offset)) {
+        set_error(error, error_size, "Aria enemy table entry points outside the ROM");
+        return false;
+    }
+    *boss = (FusionAosBossRoom){spec, descriptor.map_x, descriptor.map_y,
+                                descriptor.source_pointer, match->entry_pointer,
+                                enemy_table_pointer,
+                                read_u16(rom->data + enemy_offset + AOS_ENEMY_HEALTH_OFFSET)};
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
 }

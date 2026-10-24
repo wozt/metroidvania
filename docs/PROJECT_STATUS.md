@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-24**.
 
+## Patch 0491 - Native Aria boss-room metadata
+
+- Ported the audited Aria boss-room identity table to C11, preserving the
+  distinct first and second Chaos phase records.
+- The native reader resolves each identity through the room directory, requires
+  exactly one matching enemy placement and reads its health from the bounded
+  enemy table entry.
+- Added synthetic success, missing-entity and ambiguous-entity coverage, then
+  compared every audited boss record against the Python reference through
+  `fusion_importer --aria-bosses` on the verified local ROM.
+- This slice does not serialize the native world catalog or extract resource
+  payloads, and no ROM-derived data is tracked.
+- Next: assemble the native Aria world-summary and catalog contract while the
+  Python serializer remains authoritative.
+
 ## Patch 0490 - Native Aria room entities
 
 - Ported Aria's 12-byte room entity entries to C11: signed position,

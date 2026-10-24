@@ -21,10 +21,11 @@ static void usage(const char *name) {
             "       %s --aria-backgrounds FILE\n"
             "       %s --aria-loads FILE\n"
             "       %s --aria-entities FILE\n"
+            "       %s --aria-bosses FILE\n"
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name);
+            name, name);
 }
 
 static void list_games(void) {
@@ -368,6 +369,38 @@ static int inspect_aria_entities(const char *path) {
     return 0;
 }
 
+static int inspect_aria_bosses(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error)) {
+        fprintf(stderr, "aria-bosses: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(&rom, &directory, error, sizeof error)) {
+        fprintf(stderr, "aria-bosses: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    for (size_t index = 0; index < FUSION_AOS_BOSS_ROOM_COUNT; ++index) {
+        const FusionAosBossSpec *spec = fusion_aos_boss_spec(index);
+        FusionAosBossRoom boss;
+        if (!spec || !fusion_aos_read_boss_room(&rom, &directory, spec, &boss,
+                                                error, sizeof error)) {
+            fprintf(stderr, "aria-bosses: entry %zu: %s\n", index, error);
+            fusion_rom_close(&rom);
+            return 1;
+        }
+        printf("boss\t%zu\t%s\t%s\t%s\t%u\t%u\t%u\t%u\t0x%08X\t"
+               "0x%08X\t%u\t0x%08X\t%u\n",
+               index, spec->id, spec->name, spec->phase, spec->area, spec->room,
+               boss.map_x, boss.map_y, boss.room_pointer, boss.entity_pointer,
+               spec->enemy_id, boss.enemy_table_pointer, boss.health);
+    }
+    fusion_rom_close(&rom);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
@@ -378,6 +411,7 @@ int main(int argc, char **argv) {
     const char *aria_backgrounds_path = NULL;
     const char *aria_loads_path = NULL;
     const char *aria_entities_path = NULL;
+    const char *aria_bosses_path = NULL;
     const char *rom_dir = "roms", *aria_path = NULL, *metroid_path = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
@@ -397,6 +431,8 @@ int main(int argc, char **argv) {
             aria_loads_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-entities") && i + 1 < argc)
             aria_entities_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-bosses") && i + 1 < argc)
+            aria_bosses_path = argv[++i];
         else if (!strcmp(argv[i], "--dry-run")) dry_run = true;
         else if (!strcmp(argv[i], "--assets") || !strcmp(argv[i], "--all")) assets = true;
         else if (!strcmp(argv[i], "--force")) force = true;
@@ -420,6 +456,7 @@ int main(int argc, char **argv) {
     if (aria_backgrounds_path) return inspect_aria_backgrounds(aria_backgrounds_path);
     if (aria_loads_path) return inspect_aria_loads(aria_loads_path);
     if (aria_entities_path) return inspect_aria_entities(aria_entities_path);
+    if (aria_bosses_path) return inspect_aria_bosses(aria_bosses_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
         printf("planned: native extraction tasks remain Python-authoritative\n");

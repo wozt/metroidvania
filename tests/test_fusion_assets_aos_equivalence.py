@@ -16,6 +16,7 @@ from scripts.import_aos_world import (
     decode_room_backgrounds,
     decode_room_descriptor,
     decode_room_transitions,
+    decode_world,
 )
 
 
@@ -241,4 +242,29 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             fields = line.split("\t")
             self.assertEqual(fields[0], "entity")
             actual.append(tuple(int(value, 0) for value in fields[1:]))
+        self.assertEqual(actual, expected)
+
+    def test_audited_boss_rooms_match_python_reference(self):
+        expected = []
+        for index, boss in enumerate(decode_world(ROM.read_bytes())["boss_rooms"]):
+            expected.append((
+                index, boss["id"], boss["name"], boss["phase"],
+                boss["engine_area"], boss["room"], boss["map_x"], boss["map_y"],
+                int(boss["room_pointer"], 16), int(boss["entity_pointer"], 16),
+                boss["entity_id"], int(boss["enemy_table_pointer"], 16),
+                boss["health"],
+            ))
+        result = subprocess.run(
+            [str(BINARY), "--aria-bosses", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = []
+        for line in result.stdout.splitlines():
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "boss")
+            actual.append((
+                int(fields[1]), fields[2], fields[3], fields[4],
+                *(int(value, 0) for value in fields[5:]),
+            ))
         self.assertEqual(actual, expected)

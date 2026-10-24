@@ -20,6 +20,8 @@ enum {
     UNTERMINATED_LOAD_OFFSET = 0x7400,
     ENTITY_OFFSET = 0x7800,
     UNTERMINATED_ENTITY_OFFSET = 0x9000,
+    ENEMY_TABLE_OFFSET = 0x0E9644,
+    ENEMY_ENTRY_SIZE = 0x24,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
 };
 
@@ -216,6 +218,33 @@ int main(void) {
     assert(entities.entries[0].parameters[0] == 0x1234 &&
            entities.entries[0].parameters[1] == 0x5678);
     assert(entities.entries[1].y == -78 && entities.entries[1].kind == 2);
+    assert(fusion_aos_boss_spec(0) != NULL);
+    assert(fusion_aos_boss_spec(FUSION_AOS_BOSS_ROOM_COUNT) == NULL);
+    const uint16_t boss_health = 0x3456;
+    write_u16(bytes, ENEMY_TABLE_OFFSET + 0x21 * ENEMY_ENTRY_SIZE + 0x0C,
+              boss_health);
+    const FusionAosBossSpec test_boss = {
+        "aria.test", "Synthetic Boss", "fight", 0, 0, 0x21
+    };
+    FusionAosBossRoom boss;
+    assert(fusion_aos_read_boss_room(&rom, &directory, &test_boss, &boss,
+                                     error, sizeof error));
+    assert(boss.spec == &test_boss);
+    assert(boss.map_x == descriptor.map_x && boss.map_y == descriptor.map_y);
+    assert(boss.room_pointer == descriptor.source_pointer);
+    assert(boss.entity_pointer == entities.entries[0].entry_pointer);
+    assert(boss.enemy_table_pointer ==
+           GBA_ROM_BASE + ENEMY_TABLE_OFFSET + 0x21 * ENEMY_ENTRY_SIZE);
+    assert(boss.health == boss_health);
+    write_entity(bytes, ENTITY_OFFSET + 12, 56, -78, 6, 1, 0x21, 8, 9, 10);
+    assert(!fusion_aos_read_boss_room(&rom, &directory, &test_boss, &boss,
+                                      error, sizeof error));
+    write_entity(bytes, ENTITY_OFFSET + 12, 56, -78, 6, 2, 0x22, 8, 9, 10);
+    const FusionAosBossSpec missing_boss = {
+        "aria.missing", "Missing Boss", "fight", 0, 0, 0x22
+    };
+    assert(!fusion_aos_read_boss_room(&rom, &directory, &missing_boss, &boss,
+                                      error, sizeof error));
     assert(fusion_aos_read_entity_list(&rom, 0, &entities, error, sizeof error));
     assert(entities.count == 0);
     for (size_t index = 0; index < FUSION_AOS_ENTITY_CAPACITY; ++index) {

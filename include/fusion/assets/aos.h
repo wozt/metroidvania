@@ -16,6 +16,7 @@ enum {
     FUSION_AOS_BACKGROUND_COUNT = 3,
     FUSION_AOS_LOAD_ENTRY_CAPACITY = 64,
     FUSION_AOS_ENTITY_CAPACITY = 512,
+    FUSION_AOS_BOSS_ROOM_COUNT = 12,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
@@ -137,6 +138,25 @@ typedef struct {
     size_t count;
 } FusionAosEntityList;
 
+typedef struct {
+    const char *id;
+    const char *name;
+    const char *phase;
+    uint8_t area;
+    uint8_t room;
+    uint8_t enemy_id;
+} FusionAosBossSpec;
+
+typedef struct {
+    const FusionAosBossSpec *spec;
+    uint8_t map_x;
+    uint8_t map_y;
+    uint32_t room_pointer;
+    uint32_t entity_pointer;
+    uint32_t enemy_table_pointer;
+    uint16_t health;
+} FusionAosBossRoom;
+
 bool fusion_aos_read_area_directory(const FusionRom *rom,
                                     FusionAosAreaDirectory *directory,
                                     char *error, size_t error_size);
@@ -163,5 +183,11 @@ bool fusion_aos_read_load_list(const FusionRom *rom, uint32_t pointer,
 bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
                                  FusionAosEntityList *list,
                                  char *error, size_t error_size);
+const FusionAosBossSpec *fusion_aos_boss_spec(size_t index);
+bool fusion_aos_read_boss_room(const FusionRom *rom,
+                               const FusionAosAreaDirectory *directory,
+                               const FusionAosBossSpec *spec,
+                               FusionAosBossRoom *boss,
+                               char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

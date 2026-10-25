@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The private Zero Mission ROM bank (scripts/mzm_rom_bank.py): the ROM bytes
+/* The private Zero Mission ROM bank (fusion_importer --mzm-rom-bank): ROM bytes
  * by GBA address and the data symbols of the reference build by name, read
  * by the native screens (HUD, minimap, menus, cutscenes). Also the BIOS
  * decompression routines they use (LZ77UnCompVram/Wram, RLUnCompVram). */

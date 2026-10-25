@@ -2,6 +2,34 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0524 - Native Zero Mission ROM bank in production
+
+- The `metroid_rom_bank` rebuild task now runs `build/fusion_importer
+  --mzm-rom-bank ROM ELF OUTPUT_DIR`. It declares the ROM, reference ELF and
+  importer binary as inputs and both `rom_bank.bin` and `rom_symbols.tsv` as
+  outputs; the rebuild graph creates and checks the ignored private parent
+  before invoking C.
+- A forced production rebuild indexed all 14,462 sized ROM data objects with
+  no duplicate names, and the next run was up to date. The native outputs keep
+  the exact post-equivalence SHA-256 values:
+  `430baf8f92febfc780d17aa048fb70f445499ae2fc271c73b5aba886d90cf85b`
+  for the private bank and
+  `4f438abdd6ce8b0e3f3e591177ab5097a4866d26d5a69f9c830ae54ee7f5ecea`
+  for its symbol manifest.
+- Extended `tests/test_fusion_assets_mzm_golden.py` and its digest fixture to
+  guard the native bank command and both output files. The room export's
+  symlink/file refusal test moved there as well, preserving that safety check.
+- Removed `scripts/mzm_rom_bank.py`, its duplicate Python ELF tests and the
+  remaining temporary MZM Python/native equivalence suite. Synthetic ELF,
+  bounds and serialization coverage stays in `tests/test_fusion_assets_mzm.c`;
+  the golden fixture now guards the verified production output.
+- Runtime diagnostics, the technical parity registry and documentation now
+  direct developers to the native rebuild task. No gameplay status changed,
+  no private ROM bytes were committed, and audio remains untouched.
+- Next: add a native writer for the two small verified-ROM JSON manifests and
+  switch `aria_rom` / `metroid_rom` away from the remaining Python verifier
+  output path before starting the larger sprite-pipeline migrations.
+
 ## Patch 0523 - Native Aria world catalog in production
 
 - The `aria_world` rebuild task now runs `build/fusion_importer --aria-catalog

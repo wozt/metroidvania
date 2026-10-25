@@ -179,6 +179,16 @@ def _run_native_catalog(rom: Path, world: Path,
     return action
 
 
+def _run_native_rom_bank(rom: Path, elf: Path, bank: Path,
+                         manifest: Path) -> Callable[[], None]:
+    def action() -> None:
+        if bank.parent != manifest.parent:
+            raise ValueError("native ROM-bank outputs must share a directory")
+        private_path(ROOT, bank.relative_to(ROOT), create=True)
+        _run_native("--mzm-rom-bank", rom, elf, bank.parent)()
+    return action
+
+
 def _verify_rom(game: str) -> Callable[[], None]:
     def action() -> None:
         valid, message = verify_roms.validate(game, ROMS[game])
@@ -218,6 +228,8 @@ ARIA_WORLD = ROOT / "assets/extracted/rooms/aria/world.json"
 ARIA_WORLD_INDEX = ROOT / "assets/extracted/rooms/aria/rooms.tsv"
 ARIA_ROOM_INDEX = ROOT / ARIA_ROOMS / "runtime" / export_index.NAME
 MZM_ROOM_INDEX = ROOT / METROID_ROOMS / "runtime" / export_index.NAME
+MZM_ROM_BANK = ROOT / "assets/extracted/metroid/rom/rom_bank.bin"
+MZM_ROM_SYMBOLS = ROOT / "assets/extracted/metroid/rom/rom_symbols.tsv"
 ARIA_OBJECTS = ROOT / ARIA_SPRITES / "objects/runtime/runtime_index.tsv"
 ARIA_WEAPONS = ROOT / ARIA_SPRITES / "weapons/runtime/runtime_index.tsv"
 ARIA_SOMA = ROOT / ARIA_SOMA_RUNTIME / "runtime_index.tsv"
@@ -296,11 +308,14 @@ ASSET_TASKS = {
         (ROOT / "assets/extracted/metroid/sound/runtime/sound_bank.bin",
          ROOT / "assets/extracted/metroid/sound/runtime/sound_tables.tsv"),
         ("metroid_rom",), requires=(ROOT / "third_party/mzm/mzm_us.map",)),
-    "metroid_rom_bank": _asset_task(
-        "metroid_rom_bank", "metroid", "mzm_rom_bank", (),
-        (ROOT / "assets/extracted/metroid/rom/rom_bank.bin",
-         ROOT / "assets/extracted/metroid/rom/rom_symbols.tsv"),
-        ("metroid_rom",), requires=(ROOT / "third_party/mzm/mzm_us.elf",)),
+    "metroid_rom_bank": Task(
+        name="metroid_rom_bank", version=2, dependencies=("metroid_rom",),
+        inputs=lambda: [ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER],
+        outputs=(MZM_ROM_BANK, MZM_ROM_SYMBOLS),
+        action=_run_native_rom_bank(ROMS["metroid"], MZM_ELF, MZM_ROM_BANK,
+                                    MZM_ROM_SYMBOLS),
+        requires=(ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("metroid"), group="assets"),
 }
 TASKS.update(ASSET_TASKS)
 

@@ -1385,7 +1385,7 @@ static void runtime_power_bomb_apply(void *context, int y, int x) {
 
 /* BlockRemoveNeverReformBlocks at a room load, with a fresh block state. */
 /* The HUD and minimap (mzm_hud) drawn by a GBA PPU over the view, from the
- * ROM bank (scripts/mzm_rom_bank.py). */
+ * native private ROM bank. */
 #define RUNTIME_ROM_BANK "assets/extracted/metroid/rom/rom_bank.bin"
 #define RUNTIME_ROM_SYMBOLS "assets/extracted/metroid/rom/rom_symbols.tsv"
 #define RUNTIME_HUD_H 32

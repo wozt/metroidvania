@@ -324,7 +324,8 @@ suitless charge bar and the 3x3 minimap that marks the screens Samus
 explores. They are drawn by a GBA picture processing unit emulation
 (`src/runtime/gba_ppu.c`: text and affine backgrounds, objects, windows,
 blending, mosaic) from a private ROM data bank exported by
-`python3 -m scripts.mzm_rom_bank` (rebuild task `metroid_rom_bank`), whose
+`python3 -m scripts.rebuild --task metroid_rom_bank` through the native C11
+importer, whose
 symbol table comes from the decompilation's reference ELF. The view is wider
 than the GBA screen, so the minimap sits at the view's right edge. Tanks are
 only collected on explored minimap tiles, as in the game.

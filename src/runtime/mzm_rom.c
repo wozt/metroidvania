@@ -59,7 +59,8 @@ bool mzm_rom_open(const char *bank_path, const char *symbols_path) {
     mzm_rom_close();
     FILE *f = fopen(bank_path, "rb");
     if (!f) {
-        fprintf(stderr, "No Zero Mission ROM bank: %s (run python3 -m scripts.mzm_rom_bank)\n",
+        fprintf(stderr, "No Zero Mission ROM bank: %s "
+                        "(run python3 -m scripts.rebuild --task metroid_rom_bank)\n",
                 bank_path);
         return false;
     }

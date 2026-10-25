@@ -248,8 +248,10 @@ by the production room export.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name
-rules used by `mzm_rom_bank.py`, and writes byte-identical `MZMROM01` and symbol
-manifest outputs through atomic replacement. It also resolves all eleven room
+rules proven against the former Python writer, and writes byte-identical
+`MZMROM01` and symbol-manifest outputs through atomic replacement. The
+`metroid_rom_bank` rebuild task runs that writer through `fusion_importer
+--mzm-rom-bank`; the Python writer is gone. It also resolves all eleven room
 tables from those symbols and decodes the 331 bounded `RoomEntryRom` records,
 including their layer, Clipdata and spriteset references and scalar room
 properties. The room layer now decodes the custom two-pass RLE behind every

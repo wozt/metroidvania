@@ -2,11 +2,11 @@
 """Regression digests of the native Zero Mission importer on the local ROM.
 
 The fixture records, for each inspection command, the SHA-256 of its whole
-standard output and its summary line, and the SHA-256 of every file the
-native room export writes. They were recorded once the native outputs had
-been proven byte-identical to the former Python exporter (patches 0511 to
-0519), which this file replaces as the reference. The fixture holds digests
-and counts only, no ROM-derived bytes.
+standard output and its summary line, the ROM bank and symbol manifest, and
+every file the native room export writes. They were recorded once the native
+outputs had been proven byte-identical to the former Python exporters, which
+this file replaces as the reference. The fixture holds digests and counts
+only, no ROM-derived bytes.
 
 Regenerate after an intended format change with
 ``MZM_GOLDEN_UPDATE=1 python3 -m unittest tests.test_fusion_assets_mzm_golden``
@@ -18,6 +18,7 @@ import hashlib
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -54,7 +55,18 @@ def _current() -> list[str]:
         lines.append(f"command\t{command}\t{hashlib.sha256(output).hexdigest()}\t"
                      + text[-1].replace("\t", " "))
     with tempfile.TemporaryDirectory() as directory:
-        output = Path(directory) / "runtime"
+        root = Path(directory)
+        bank = root / "rom"
+        bank.mkdir()
+        console = _run("--mzm-rom-bank", str(ROM), str(ELF), str(bank))
+        normalized = console.replace(str(root).encode(), b"<OUTPUT>")
+        lines.append(f"bank-console\tstdout\t{hashlib.sha256(normalized).hexdigest()}")
+        for path in sorted(bank.iterdir()):
+            if path.is_file():
+                lines.append(f"bank-file\t{path.name}\t"
+                             f"{hashlib.sha256(path.read_bytes()).hexdigest()}")
+
+        output = root / "runtime"
         console = _run("--mzm-export-rooms", str(ROM), str(ELF), str(output))
         lines.append(f"console\t{hashlib.sha256(console).hexdigest()}")
         for path in sorted(output.rglob("*")):
@@ -78,6 +90,23 @@ class NativeGoldenTests(unittest.TestCase):
         self.assertEqual(sorted(produced), sorted(recorded))
         for key, line in produced.items():
             self.assertEqual(line, recorded[key], key)
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX symlinks")
+    def test_room_export_refuses_symlinks_and_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "target"
+            target.mkdir()
+            link = Path(directory) / "link"
+            link.symlink_to(target, target_is_directory=True)
+            blocked = Path(directory) / "file"
+            blocked.write_text("x", encoding="utf-8")
+            for output in (link, blocked):
+                result = subprocess.run(
+                    [str(BINARY), "--mzm-export-rooms", str(ROM), str(ELF),
+                     str(output)], cwd=ROOT, text=True, capture_output=True,
+                     check=False)
+                self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(list(target.iterdir()))
 
 
 if __name__ == "__main__":

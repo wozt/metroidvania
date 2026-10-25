@@ -477,6 +477,45 @@ int main(void) {
     assert(entities.entries[0].parameters[0] == 0x1234 &&
            entities.entries[0].parameters[1] == 0x5678);
     assert(entities.entries[1].y == -78 && entities.entries[1].kind == 2);
+    uint8_t room_cells[32 * 32] = {0x45, 0x0E};
+    FusionAosCollisionMap room_collision = {
+        .status = FUSION_AOS_COLLISION_DECODED,
+        .width_screens = 1,
+        .height_screens = 1,
+        .width_tiles = 32,
+        .height_tiles = 32,
+        .cells = room_cells,
+        .cell_count = 32 * 32,
+    };
+    FusionAosTransitionList room_transitions = {.count = 1};
+    room_transitions.entries[0] = (FusionAosTransition){
+        .source_screen_x = -1,
+        .source_screen_y = 2,
+        .field_6 = 0xFFF0,
+        .load_x = 1040,
+        .load_y = 512,
+        .target_area = 1,
+        .target_room = 6,
+    };
+    FusionAosEntityList room_entities = {.count = 1};
+    room_entities.entries[0] = entities.entries[0];
+    FusionAosRuntimeRoomPayload room_payload;
+    assert(fusion_aos_serialize_runtime_room(
+        3, 7, &room_collision, &room_transitions, &room_entities,
+        FUSION_AOS_ROOM_FLAG_SAVE | FUSION_AOS_ROOM_FLAG_WARP,
+        &room_payload, error, sizeof error));
+    const char *room_text = (const char *)room_payload.data;
+    assert(!strncmp(room_text,
+                    "AOSROOM-NATIVE\t4\t3\t7\t1\t1\t32\t32\t3\nR\t450e",
+                    strlen("AOSROOM-NATIVE\t4\t3\t7\t1\t1\t32\t32\t3\nR\t450e")));
+    assert(strstr(room_text, "\nT\t-1\t2\t-16\t1040\t512\t1\t6\n"));
+    assert(strstr(room_text, "\nE\t1\t33\t-12\t34\t4660\t22136\t7\nEND\n"));
+    assert(room_payload.data[room_payload.size] == '\0');
+    fusion_aos_free_runtime_room_payload(&room_payload);
+    assert(room_payload.data == NULL && room_payload.size == 0);
+    assert(!fusion_aos_serialize_runtime_room(
+        3, 7, &room_collision, &room_transitions, &room_entities, 4,
+        &room_payload, error, sizeof error));
     assert(fusion_aos_boss_spec(0) != NULL);
     assert(fusion_aos_boss_spec(FUSION_AOS_BOSS_ROOM_COUNT) == NULL);
     const uint16_t boss_health = 0x3456;

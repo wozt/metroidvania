@@ -29,7 +29,12 @@ from scripts.aos_room_render import (
     load_video_memory,
     render_background,
 )
-from scripts.aos_runtime_room import native_cell
+from scripts.aos_runtime_room import (
+    ROOM_FLAG_SAVE,
+    ROOM_FLAG_WARP,
+    encode_room,
+    native_cell,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -413,6 +418,67 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             "summary\t{}\t{}\t{}\t{}\t{}".format(
                 status_counts["decoded"], status_counts["absent"],
                 status_counts["affine"], status_counts["none"], total_cells),
+        )
+
+    def test_runtime_room_payloads_match_python_reference(self):
+        rom = ROM.read_bytes()
+        expected = []
+        exported = skipped = total_cells = total_transitions = 0
+        total_entities = total_bytes = save_rooms = warp_rooms = 0
+        for room in decode_world(rom)["rooms"]:
+            bg1 = next(background for background in room["backgrounds"]
+                       if background["layer"] == 1)
+            background = decode_background(rom, bg1)
+            if background["status"] == "ABSENT":
+                status = "absent"
+            elif background["status"] == "UNSUPPORTED_AFFINE":
+                status = "affine"
+            elif background["collision"] is None:
+                status = "none"
+            else:
+                status = "decoded"
+            area = room["engine_area"]
+            number = room["room"]
+            if status != "decoded":
+                expected.append(f"skipped\t{area}\t{number}\t{status}")
+                skipped += 1
+                continue
+            flags = 0
+            if any(cell["save"] for cell in room["map_cells"]):
+                flags |= ROOM_FLAG_SAVE
+            if any(cell["warp"] for cell in room["map_cells"]):
+                flags |= ROOM_FLAG_WARP
+            payload = encode_room(
+                area, number, background, room["transitions"],
+                room["entities"], flags).encode()
+            cells = background["width_tiles"] * background["height_tiles"]
+            expected.append(
+                f"room\t{area}\t{number}\t{background['width_screens']}\t"
+                f"{background['height_screens']}\t{background['width_tiles']}\t"
+                f"{background['height_tiles']}\t{cells}\t"
+                f"{len(room['transitions'])}\t{len(room['entities'])}\t{flags}\t"
+                f"{len(payload)}\t{hashlib.sha1(payload).hexdigest()}"
+            )
+            exported += 1
+            total_cells += cells
+            total_transitions += len(room["transitions"])
+            total_entities += len(room["entities"])
+            total_bytes += len(payload)
+            save_rooms += bool(flags & ROOM_FLAG_SAVE)
+            warp_rooms += bool(flags & ROOM_FLAG_WARP)
+
+        result = subprocess.run(
+            [str(BINARY), "--aria-runtime-rooms", str(ROM)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertEqual(lines[:-1], expected)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{exported}\t{skipped}\t{total_cells}\t"
+            f"{total_transitions}\t{total_entities}\t{total_bytes}\t"
+            f"{save_rooms}\t{warp_rooms}",
         )
 
     def test_room_loading_lists_match_python_reference(self):

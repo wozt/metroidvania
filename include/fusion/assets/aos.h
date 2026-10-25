@@ -26,6 +26,8 @@ enum {
         32 * 32,
     FUSION_AOS_MAP_WIDTH = 64,
     FUSION_AOS_MAP_HEIGHT = 35,
+    FUSION_AOS_ROOM_FLAG_SAVE = 1 << 0,
+    FUSION_AOS_ROOM_FLAG_WARP = 1 << 1,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
 };
 
@@ -206,6 +208,11 @@ typedef struct {
 } FusionAosBitmap24;
 
 typedef struct {
+    uint8_t *data;
+    size_t size;
+} FusionAosRuntimeRoomPayload;
+
+typedef struct {
     uint32_t entry_pointer;
     int16_t x;
     int16_t y;
@@ -306,6 +313,13 @@ void fusion_aos_free_bitmap24(FusionAosBitmap24 *bitmap);
 bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
                                  FusionAosEntityList *list,
                                  char *error, size_t error_size);
+bool fusion_aos_serialize_runtime_room(
+    size_t area, size_t room, const FusionAosCollisionMap *collision,
+    const FusionAosTransitionList *transitions,
+    const FusionAosEntityList *entities, uint8_t room_flags,
+    FusionAosRuntimeRoomPayload *payload, char *error, size_t error_size);
+void fusion_aos_free_runtime_room_payload(
+    FusionAosRuntimeRoomPayload *payload);
 const FusionAosBossSpec *fusion_aos_boss_spec(size_t index);
 bool fusion_aos_read_boss_room(const FusionRom *rom,
                                const FusionAosAreaDirectory *directory,

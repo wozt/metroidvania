@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0509 - Native Aria runtime-room serialization
+
+- Added bounded C11 serialization of the `AOSROOM-NATIVE` v4 TSV consumed by
+  the Aria runtime, using the already validated final BG1 collision cells,
+  transition targets, entity records and global-map room flags.
+- Preserved lowercase two-digit collision rows, signed transition X
+  adjustments, source-screen coordinates, target room identities, entity
+  ordering and the final `END` record.
+- Added synthetic schema, collision-row, signed-transition, entity, flag,
+  ownership and invalid-input coverage plus complete byte-level SHA-1
+  comparison through `--aria-runtime-rooms`.
+- All 342 exportable rooms match Python byte for byte: 956,416 collision cells,
+  725 transitions and 2,335 entities serialize to 2,035,730 bytes. The output
+  carries 17 save-room flags and 8 warp-room flags. Area 11 room 40 remains
+  explicitly skipped because its BG1 is absent in both implementations.
+- Private directory/index writes and global task orchestration remain
+  Python-owned, so technical migration remains partial and gameplay status
+  does not change.
+- Next: alternate to Zero Mission and compose its validated native background
+  layers before tackling its runtime-room serialization; audio remains
+  untouched.
+
 ## Patch 0508 - Native Aria composite bitmap serialization
 
 - Added bounded C11 serialization of native Aria RGB room composites to the

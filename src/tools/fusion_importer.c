@@ -25,6 +25,7 @@ static void usage(const char *name) {
             "       %s --aria-background-renders FILE\n"
             "       %s --aria-background-composites FILE\n"
             "       %s --aria-collisions FILE\n"
+            "       %s --aria-runtime-rooms FILE\n"
             "       %s --aria-loads FILE\n"
             "       %s --aria-video-memory FILE\n"
             "       %s --aria-entities FILE\n"
@@ -42,7 +43,7 @@ static void usage(const char *name) {
             "       %s --dry-run [--force]\n"
             "       %s --assets|--all [--dry-run] [--force]\n",
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name,
+            name, name, name, name, name,
             name, name, name, name, name, name, name, name, name, name, name,
             name, name);
 }
@@ -769,6 +770,128 @@ static int inspect_aria_collisions(const char *path) {
            status_counts[FUSION_AOS_COLLISION_ABSENT],
            status_counts[FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE],
            status_counts[FUSION_AOS_COLLISION_NONE], total_cells);
+    fusion_rom_close(&rom);
+    return 0;
+}
+
+static uint8_t aria_room_flags(const FusionAosMap *map,
+                               size_t area, size_t room) {
+    uint8_t flags = 0;
+    for (size_t index = 0; index < map->count; ++index) {
+        const FusionAosMapCell *cell = &map->cells[index];
+        if (cell->area != area || cell->room != room) continue;
+        if (cell->save) flags |= FUSION_AOS_ROOM_FLAG_SAVE;
+        if (cell->warp) flags |= FUSION_AOS_ROOM_FLAG_WARP;
+    }
+    return flags;
+}
+
+static int inspect_aria_runtime_rooms(const char *path) {
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom,
+                         error, sizeof error)) {
+        fprintf(stderr, "aria-runtime-rooms: %s\n", error);
+        return 1;
+    }
+    FusionAosAreaDirectory directory;
+    FusionAosMap map;
+    if (!fusion_aos_read_area_directory(&rom, &directory,
+                                        error, sizeof error) ||
+        !fusion_aos_read_map(&rom, &directory, &map,
+                             error, sizeof error)) {
+        fprintf(stderr, "aria-runtime-rooms: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    size_t exported_count = 0, skipped_count = 0, total_cells = 0;
+    size_t total_transitions = 0, total_entities = 0, total_bytes = 0;
+    size_t save_room_count = 0, warp_room_count = 0;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionAosRoomDescriptor descriptor;
+            FusionAosBackgroundList backgrounds;
+            FusionAosCollisionMap collision;
+            if (!fusion_aos_read_room_descriptor(&rom, &directory, area, room,
+                                                 &descriptor, error, sizeof error) ||
+                !fusion_aos_read_room_backgrounds(&rom, &descriptor,
+                                                  &backgrounds,
+                                                  error, sizeof error) ||
+                !fusion_aos_read_background_collision(
+                    &rom, &backgrounds.entries[0], &collision,
+                    error, sizeof error)) {
+                fprintf(stderr,
+                        "aria-runtime-rooms: area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            if (collision.status != FUSION_AOS_COLLISION_DECODED) {
+                printf("skipped\t%zu\t%zu\t%s\n", area, room,
+                       collision_status_name(collision.status));
+                ++skipped_count;
+                fusion_aos_free_collision_map(&collision);
+                continue;
+            }
+            FusionAosTransitionList transitions;
+            FusionAosEntityList entities;
+            if (!fusion_aos_read_room_transitions(
+                    &rom, &directory, &descriptor, &transitions,
+                    error, sizeof error) ||
+                !fusion_aos_read_entity_list(
+                    &rom, descriptor.entities_pointer, &entities,
+                    error, sizeof error)) {
+                fprintf(stderr,
+                        "aria-runtime-rooms: area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_aos_free_collision_map(&collision);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            uint8_t flags = aria_room_flags(&map, area, room);
+            FusionAosRuntimeRoomPayload payload;
+            if (!fusion_aos_serialize_runtime_room(
+                    area, room, &collision, &transitions, &entities, flags,
+                    &payload, error, sizeof error)) {
+                fprintf(stderr,
+                        "aria-runtime-rooms: cannot serialize area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_aos_free_collision_map(&collision);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            char digest[41];
+            if (!fusion_rom_sha1_hex(payload.data, payload.size, digest)) {
+                fprintf(stderr,
+                        "aria-runtime-rooms: cannot hash area %zu room %zu\n",
+                        area, room);
+                fusion_aos_free_runtime_room_payload(&payload);
+                fusion_aos_free_collision_map(&collision);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            printf("room\t%zu\t%zu\t%u\t%u\t%zu\t%zu\t%zu\t%zu\t%zu\t%u\t%zu\t%s\n",
+                   area, room, (unsigned)collision.width_screens,
+                   (unsigned)collision.height_screens,
+                   collision.width_tiles, collision.height_tiles,
+                   collision.cell_count, transitions.count, entities.count,
+                   (unsigned)flags, payload.size, digest);
+            ++exported_count;
+            total_cells += collision.cell_count;
+            total_transitions += transitions.count;
+            total_entities += entities.count;
+            total_bytes += payload.size;
+            save_room_count +=
+                (flags & FUSION_AOS_ROOM_FLAG_SAVE) != 0 ? 1u : 0u;
+            warp_room_count +=
+                (flags & FUSION_AOS_ROOM_FLAG_WARP) != 0 ? 1u : 0u;
+            fusion_aos_free_runtime_room_payload(&payload);
+            fusion_aos_free_collision_map(&collision);
+        }
+    }
+    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
+           exported_count, skipped_count, total_cells, total_transitions,
+           total_entities, total_bytes, save_room_count, warp_room_count);
     fusion_rom_close(&rom);
     return 0;
 }
@@ -1631,6 +1754,7 @@ int main(int argc, char **argv) {
     const char *aria_background_renders_path = NULL;
     const char *aria_background_composites_path = NULL;
     const char *aria_collisions_path = NULL;
+    const char *aria_runtime_rooms_path = NULL;
     const char *aria_loads_path = NULL;
     const char *aria_video_memory_path = NULL;
     const char *aria_entities_path = NULL;
@@ -1680,6 +1804,8 @@ int main(int argc, char **argv) {
             aria_background_composites_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-collisions") && i + 1 < argc)
             aria_collisions_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-runtime-rooms") && i + 1 < argc)
+            aria_runtime_rooms_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-loads") && i + 1 < argc)
             aria_loads_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-video-memory") && i + 1 < argc)
@@ -1758,6 +1884,8 @@ int main(int argc, char **argv) {
         return inspect_aria_background_composites(
             aria_background_composites_path);
     if (aria_collisions_path) return inspect_aria_collisions(aria_collisions_path);
+    if (aria_runtime_rooms_path)
+        return inspect_aria_runtime_rooms(aria_runtime_rooms_path);
     if (aria_loads_path) return inspect_aria_loads(aria_loads_path);
     if (aria_video_memory_path)
         return inspect_aria_video_memory(aria_video_memory_path);

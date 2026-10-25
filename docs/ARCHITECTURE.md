@@ -233,9 +233,11 @@ character-base, palette-bank, flip and transparency semantics. Supported room
 layers are also composed natively at a static origin using BG1 dimensions,
 native depth keys, modulo repetition and transparent-pixel rejection. The
 resulting RGB composites are serialized natively to byte-identical 24-bit BMP
-files with bottom-up BGR rows and aligned pitch. Parallax, affine/8-bpp layers,
-hardware blending, runtime-room TSV serialization and global task
-orchestration are still owned by the Python reference pipeline.
+files with bottom-up BGR rows and aligned pitch. The same layer serializes the
+runtime's `AOSROOM-NATIVE` v4 TSV directly from final collision cells,
+transitions, entities and save/warp map flags. Parallax, affine/8-bpp layers,
+hardware blending, private output/index writes and global task orchestration
+are still owned by the Python reference pipeline.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name

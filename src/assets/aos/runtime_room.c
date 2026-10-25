@@ -3,6 +3,7 @@
 
 #include "fusion/assets/gba.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +48,19 @@ static void write_u32(uint8_t *data, uint32_t value) {
     data[1] = (uint8_t)(value >> 8);
     data[2] = (uint8_t)(value >> 16);
     data[3] = (uint8_t)(value >> 24);
+}
+
+static bool append_format(uint8_t *data, size_t capacity, size_t *used,
+                          const char *format, ...) {
+    if (*used >= capacity) return false;
+    va_list arguments;
+    va_start(arguments, format);
+    int written = vsnprintf((char *)data + *used, capacity - *used,
+                            format, arguments);
+    va_end(arguments);
+    if (written < 0 || (size_t)written >= capacity - *used) return false;
+    *used += (size_t)written;
+    return true;
 }
 
 static bool pointer_offset(const FusionRom *rom, uint32_t pointer, size_t size,
@@ -510,6 +524,112 @@ bool fusion_aos_serialize_composite_bmp24(
     *bitmap = (FusionAosBitmap24){data, bitmap_size};
     if (error && error_size > 0) error[0] = '\0';
     return true;
+}
+
+void fusion_aos_free_runtime_room_payload(
+    FusionAosRuntimeRoomPayload *payload) {
+    if (!payload) return;
+    free(payload->data);
+    *payload = (FusionAosRuntimeRoomPayload){0};
+}
+
+bool fusion_aos_serialize_runtime_room(
+    size_t area, size_t room, const FusionAosCollisionMap *collision,
+    const FusionAosTransitionList *transitions,
+    const FusionAosEntityList *entities, uint8_t room_flags,
+    FusionAosRuntimeRoomPayload *payload, char *error, size_t error_size) {
+    if (!payload) {
+        set_error(error, error_size,
+                  "invalid Aria runtime-room output request");
+        return false;
+    }
+    *payload = (FusionAosRuntimeRoomPayload){0};
+    if (area >= FUSION_AOS_AREA_COUNT || !collision || !transitions ||
+        !entities || collision->status != FUSION_AOS_COLLISION_DECODED ||
+        !collision->cells || collision->width_screens == 0 ||
+        collision->height_screens == 0 || collision->width_tiles == 0 ||
+        collision->height_tiles == 0 ||
+        collision->width_tiles != (size_t)collision->width_screens * 32 ||
+        collision->height_tiles != (size_t)collision->height_screens * 32 ||
+        collision->width_tiles >
+            FUSION_AOS_COLLISION_CELL_CAPACITY / collision->height_tiles ||
+        collision->cell_count !=
+            collision->width_tiles * collision->height_tiles ||
+        transitions->count > FUSION_AOS_ROOM_TRANSITION_CAPACITY ||
+        entities->count > FUSION_AOS_ENTITY_CAPACITY ||
+        room_flags >
+            (FUSION_AOS_ROOM_FLAG_SAVE | FUSION_AOS_ROOM_FLAG_WARP)) {
+        set_error(error, error_size, "invalid Aria runtime-room payload");
+        return false;
+    }
+    size_t capacity = 256 + collision->cell_count * 2 +
+        collision->height_tiles * 3 + transitions->count * 128 +
+        entities->count * 128;
+    uint8_t *data = malloc(capacity);
+    if (!data) {
+        set_error(error, error_size,
+                  "cannot allocate Aria runtime-room payload");
+        return false;
+    }
+    size_t used = 0;
+    if (!append_format(
+            data, capacity, &used,
+            "AOSROOM-NATIVE\t4\t%zu\t%zu\t%u\t%u\t%zu\t%zu\t%u\n",
+            area, room, (unsigned)collision->width_screens,
+            (unsigned)collision->height_screens, collision->width_tiles,
+            collision->height_tiles, (unsigned)room_flags)) {
+        goto overflow;
+    }
+    static const char hex[] = "0123456789abcdef";
+    for (size_t y = 0; y < collision->height_tiles; ++y) {
+        size_t row_size = 3 + collision->width_tiles * 2;
+        if (row_size > capacity - used) goto overflow;
+        data[used++] = 'R';
+        data[used++] = '\t';
+        for (size_t x = 0; x < collision->width_tiles; ++x) {
+            uint8_t value = collision->cells[y * collision->width_tiles + x];
+            data[used++] = (uint8_t)hex[value >> 4];
+            data[used++] = (uint8_t)hex[value & 15];
+        }
+        data[used++] = '\n';
+    }
+    for (size_t index = 0; index < transitions->count; ++index) {
+        const FusionAosTransition *transition = &transitions->entries[index];
+        if (!append_format(
+                data, capacity, &used,
+                "T\t%d\t%d\t%d\t%u\t%u\t%zu\t%zu\n",
+                transition->source_screen_x, transition->source_screen_y,
+                (int16_t)transition->field_6,
+                (unsigned)transition->load_x,
+                (unsigned)transition->load_y, transition->target_area,
+                transition->target_room)) {
+            goto overflow;
+        }
+    }
+    for (size_t index = 0; index < entities->count; ++index) {
+        const FusionAosEntity *entity = &entities->entries[index];
+        if (!append_format(
+                data, capacity, &used,
+                "E\t%u\t%u\t%d\t%d\t%u\t%u\t%u\n",
+                (unsigned)entity->kind, (unsigned)entity->entity_id,
+                entity->x, entity->y, (unsigned)entity->parameters[0],
+                (unsigned)entity->parameters[1], (unsigned)entity->flags)) {
+            goto overflow;
+        }
+    }
+    if (5 > capacity - used) goto overflow;
+    memcpy(data + used, "END\n", 4);
+    used += 4;
+    data[used] = '\0';
+    *payload = (FusionAosRuntimeRoomPayload){data, used};
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+
+overflow:
+    free(data);
+    set_error(error, error_size,
+              "Aria runtime-room payload exceeds the size bound");
+    return false;
 }
 
 void fusion_aos_free_background_tilemap(FusionAosBackgroundTilemap *tilemap) {

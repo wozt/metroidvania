@@ -36,9 +36,9 @@ On Debian 13:
 ```sh
 sudo apt install build-essential cmake libsdl3-dev libgtk-4-dev python3 git
 git submodule update --init
-python3 scripts/verify_roms.py \
-  --aria "roms/Castlevania - Aria of Sorrow (USA).gba" \
-  --metroid "roms/Metroid - Zero Mission (USA).gba"
+cmake -S . -B build
+cmake --build build -j8
+build/fusion_importer --verify --rom-dir roms
 ```
 
 Import private assets and structural metadata in one incremental pass:
@@ -49,7 +49,8 @@ python3 -m scripts.rebuild --list            # tasks, dependencies, required fil
 python3 -m scripts.audit_extracted_assets --write
 ```
 
-`--assets` verifies each ROM, then runs the native and remaining Python
+`--assets` verifies each ROM and writes both private identity manifests in
+C11, then runs the native and remaining Python
 extractors in dependency order: the raw import (`import_game_assets.py`, both
 ROMs), the native Aria world metadata and runtime rooms, Soma, object/enemy
 sprites and weapons, and

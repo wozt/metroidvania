@@ -15,6 +15,7 @@ static void usage(const char *name) {
     fprintf(stderr,
             "Usage: %s --list\n"
             "       %s --verify [--rom-dir DIR] [--aria FILE] [--metroid FILE]\n"
+            "       %s --rom-manifest GAME ROM OUTPUT_JSON\n"
             "       %s --header FILE\n"
             "       %s --aria-directory FILE\n"
             "       %s --aria-map FILE\n"
@@ -58,7 +59,7 @@ static void usage(const char *name) {
             name, name, name, name, name, name, name, name, name, name, name,
             name,
             name, name, name, name,
-            name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -145,6 +146,26 @@ static int verify_games(const char *rom_dir, const char *aria_path, const char *
         }
     }
     return failures == 0 ? 0 : 1;
+}
+
+static int write_rom_manifest(const char *game_id, const char *rom_path,
+                              const char *output_path) {
+    const FusionAssetGameSpec *spec = fusion_asset_game_from_id(game_id);
+    if (!spec) {
+        fprintf(stderr, "rom-manifest: unsupported game %s\n", game_id);
+        return 1;
+    }
+    FusionRom rom = {0};
+    char error[256];
+    if (!fusion_rom_open(spec->game, rom_path, &rom, error, sizeof error) ||
+        !fusion_rom_write_manifest(&rom, output_path, error, sizeof error)) {
+        fprintf(stderr, "rom-manifest: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    fusion_rom_close(&rom);
+    printf("%s: verified ROM manifest -> %s\n", spec->id, output_path);
+    return 0;
 }
 
 static int inspect_header(const char *path) {
@@ -2593,6 +2614,9 @@ static int inspect_mzm_background_composites(const char *rom_path,
 int main(int argc, char **argv) {
     bool list = false, verify = false, dry_run = false, assets = false, force = false;
     const char *header_path = NULL;
+    const char *manifest_game = NULL;
+    const char *manifest_rom_path = NULL;
+    const char *manifest_output_path = NULL;
     const char *aria_directory_path = NULL;
     const char *aria_map_path = NULL;
     const char *aria_rooms_path = NULL;
@@ -2656,6 +2680,11 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--list")) list = true;
         else if (!strcmp(argv[i], "--verify")) verify = true;
+        else if (!strcmp(argv[i], "--rom-manifest") && i + 3 < argc) {
+            manifest_game = argv[++i];
+            manifest_rom_path = argv[++i];
+            manifest_output_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--header") && i + 1 < argc) header_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-directory") && i + 1 < argc)
             aria_directory_path = argv[++i];
@@ -2794,6 +2823,9 @@ int main(int argc, char **argv) {
         list_games();
         return 0;
     }
+    if (manifest_game)
+        return write_rom_manifest(manifest_game, manifest_rom_path,
+                                  manifest_output_path);
     if (header_path) return inspect_header(header_path);
     if (aria_directory_path) return inspect_aria_directory(aria_directory_path);
     if (aria_map_path) return inspect_aria_map(aria_map_path);

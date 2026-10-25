@@ -180,11 +180,11 @@ unclassified; bosses are not split from Aria's enemies until a boss marker
 is traced. The checklist prints this breakdown per category. Remaining gaps
 are emitted in the generated checklist rather than silently excluded.
 
-Asset tasks join the same graph without changing their extractors: each one
-runs an existing `scripts.<module>` command in a subprocess. Its digest covers
-the ROM it needs, the extractor module and every `scripts` module it imports
-(found from its import statements), and the pinned revision and tracked-file
-state of the matching decompilation. Its declared outputs are index files;
+Asset tasks join the same graph through either a migrated `fusion_importer`
+command or a retained `scripts.<module>` subprocess. Their digests cover the
+ROMs and executables or Python module dependency closure they need, plus the
+pinned revision and tracked-file state of the matching decompilation when
+applicable. Their declared outputs are index files or small manifests;
 `scripts/export_index.py` validates them (per-file SHA-256 for room exports,
 content-addressed objects for sprite libraries), so a deleted or edited
 private file reruns the task. A task whose required file (ROM, reference ELF)
@@ -201,11 +201,15 @@ and `src/assets/`) is the
 first C11 layer of the native import pipeline. It owns only generic ROM
 verification for the two pinned USA revisions so far: bounded loading,
 expected-size checks, SHA-1 fingerprints, error reporting and zeroing on
-release. Its generic GBA layer also owns a bounds-checked little-endian
+release. It also atomically serializes the deterministic private identity
+manifest for either verified image; the `aria_rom` and `metroid_rom` rebuild
+tasks invoke that writer through `fusion_importer --rom-manifest`, with no
+Python output path. Its generic GBA layer also owns a bounds-checked little-endian
 reader, standard BIOS 0x10 LZ77 / 0x30 RLE decoders and bounded GBA header
 metadata/checksum parsing. `fusion_importer`
 (`src/tools/fusion_importer.c`) exposes `--list`,
-`--verify` reports the parsed identity after ROM fingerprint validation, and
+`--verify` reports the parsed identity after ROM fingerprint validation,
+`--rom-manifest` writes one verified private manifest, and
 an explicit dry-run plan remains available for future extraction tasks. The
 Python extractors remain authoritative until each replacement passes the
 equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`.

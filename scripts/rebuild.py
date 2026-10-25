@@ -5,9 +5,10 @@
 Native tasks (``inventory``, ``checklist``) read only the pinned
 decompilations and write tracked, redistributable files. Asset tasks read the
 user's ROMs and write private files below the ignored ``assets/extracted/``;
-each one runs an existing extractor unchanged. A task whose ROM (or other
-required local file) is missing is skipped, and so are the tasks depending on
-it, so the native tasks keep working on a ROM-free checkout.
+they run native writers where migration is complete and retain Python for the
+remaining extractors. A task whose ROM (or other required local file) is
+missing is skipped, and so are the tasks depending on it, so the native tasks
+keep working on a ROM-free checkout.
 """
 from __future__ import annotations
 
@@ -21,12 +22,11 @@ import subprocess
 import sys
 from typing import Callable
 
-from scripts import export_index, native_inventory, native_parity, verify_roms
+from scripts import export_index, native_inventory, native_parity
 from scripts.asset_layout import (
     ARIA_METADATA, ARIA_ROOMS, ARIA_SOMA_RUNTIME, ARIA_SPRITES, IMPORT_CATALOG,
     METROID_PROJECTILES_RUNTIME, METROID_ROOMS, METROID_SAMUS_RUNTIME, SHARED_MANIFESTS,
     private_path)
-from scripts.sprite_library import write_atomic
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = ROOT / ".cache/rebuild/state.json"
@@ -189,15 +189,10 @@ def _run_native_rom_bank(rom: Path, elf: Path, bank: Path,
     return action
 
 
-def _verify_rom(game: str) -> Callable[[], None]:
+def _run_native_manifest(game: str, output: Path) -> Callable[[], None]:
     def action() -> None:
-        valid, message = verify_roms.validate(game, ROMS[game])
-        if not valid:
-            raise ValueError(message)
-        output = private_path(ROOT, SHARED_MANIFESTS / f"rom_{game}.json", create=True)
-        label, sha1 = verify_roms.EXPECTED[game]
-        write_atomic(output, json.dumps({"game": label, "sha1": sha1,
-                                         "file": ROMS[game].name}, indent=2) + "\n")
+        private_path(ROOT, output.relative_to(ROOT), create=True)
+        _run_native("--rom-manifest", game, ROMS[game], output)()
     return action
 
 
@@ -239,15 +234,19 @@ MZM_SPRITES = ROOT / "assets/extracted/metroid/sprites/enemies/runtime/runtime_i
 
 ASSET_TASKS = {
     "aria_rom": Task(
-        name="aria_rom", version=1, dependencies=(),
-        inputs=lambda: [ROMS["aria"], *_module_sources("verify_roms")],
-        outputs=(ROOT / SHARED_MANIFESTS / "rom_aria.json",), action=_verify_rom("aria"),
-        requires=(ROMS["aria"],), group="assets"),
+        name="aria_rom", version=2, dependencies=(),
+        inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],
+        outputs=(ROOT / SHARED_MANIFESTS / "rom_aria.json",),
+        action=_run_native_manifest(
+            "aria", ROOT / SHARED_MANIFESTS / "rom_aria.json"),
+        requires=(ROMS["aria"], NATIVE_IMPORTER), group="assets"),
     "metroid_rom": Task(
-        name="metroid_rom", version=1, dependencies=(),
-        inputs=lambda: [ROMS["metroid"], *_module_sources("verify_roms")],
+        name="metroid_rom", version=2, dependencies=(),
+        inputs=lambda: [ROMS["metroid"], NATIVE_IMPORTER],
         outputs=(ROOT / SHARED_MANIFESTS / "rom_metroid.json",),
-        action=_verify_rom("metroid"), requires=(ROMS["metroid"],), group="assets"),
+        action=_run_native_manifest(
+            "metroid", ROOT / SHARED_MANIFESTS / "rom_metroid.json"),
+        requires=(ROMS["metroid"], NATIVE_IMPORTER), group="assets"),
     "raw_import": _asset_task(
         "raw_import", "both", "import_game_assets", ("--scope", "all"),
         (ROOT / IMPORT_CATALOG,), ("aria_rom", "metroid_rom")),

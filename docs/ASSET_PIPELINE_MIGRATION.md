@@ -20,6 +20,8 @@ It currently:
 - rejects missing, oversized, truncated, incorrectly sized and mismatched
   inputs with a bounded diagnostic; and
 - wipes and releases private ROM bytes through `fusion_rom_close`;
+- atomically writes the deterministic private JSON manifest of either verified
+  ROM through `fusion_rom_write_manifest`;
 - provides a bounded little-endian binary reader; and
 - decodes standard GBA 0x10 LZ77 and 0x30 RLE streams into caller-owned
   buffers without silently accepting output overflow.
@@ -33,6 +35,7 @@ It currently:
 ```text
 build/fusion_importer --list
 build/fusion_importer --verify --rom-dir roms
+build/fusion_importer --rom-manifest aria "roms/Castlevania - Aria of Sorrow (USA).gba" OUTPUT_JSON
 build/fusion_importer --aria-directory "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-map "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-rooms "roms/Castlevania - Aria of Sorrow (USA).gba"
@@ -79,7 +82,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 
 | Python reference | Native target | Status | Equivalence gate |
 |---|---|---|---|
-| `scripts/verify_roms.py` | `fusion/assets/rom.h`, `src/assets/core/rom.c` | foundation complete | C SHA-1 vector, local ROM verification, malformed-file tests |
+| removed: `scripts/verify_roms.py` | `fusion/assets/rom.h`, `src/assets/core/rom.c`, `fusion_importer --verify`, `fusion_importer --rom-manifest` | native verification and rebuild-manifest cutover complete; the unreferenced Python validator is removed | C SHA-1 vector, local ROM verification, malformed-file tests, exact JSON serialization, byte-identical Aria and Zero Mission manifests and native rebuild-task integration |
 | removed: `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | native writer and rebuild cutover complete; the Python writer is removed | synthetic malformed-ELF, bounds and serialization fixtures; exact verified-input comparison of every filtered symbol plus byte-for-byte comparison of `MZMROM01` and the manifest; recorded native digests guard the command and both output files |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
 | GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header`, `fusion_rom_read_gba_header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, verified local ROM identity, fixed marker and complement checksum |
@@ -117,7 +120,9 @@ editor previews and sprite tooling. The Aria world catalog is also registered
 in the native task graph through `fusion_importer --aria-catalog`; only its
 Python decoding library remains for editor and sprite consumers. The Zero
 Mission ROM bank is registered too through `fusion_importer --mzm-rom-bank`,
-and its former Python writer is removed. The header extractor is
+and its former Python writer is removed. Both verified-ROM manifests are
+registered through `fusion_importer --rom-manifest`; their Python output path
+and the now-unreferenced standalone Python validator are removed. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not
 replace room or asset extraction. Each task must declare its ROM inputs,

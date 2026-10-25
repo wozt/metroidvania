@@ -448,6 +448,12 @@ class NativeParityTests(unittest.TestCase):
         self.assertIn(rebuild.ROMS["aria"], rebuild.TASKS["aria_rooms"].requires)
         self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_rooms"].requires)
         self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_world"].requires)
+        self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_rom"].requires)
+        self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["metroid_rom"].requires)
+        self.assertEqual(rebuild.TASKS["aria_rom"].inputs(),
+                         [rebuild.ROMS["aria"], rebuild.NATIVE_IMPORTER])
+        self.assertEqual(rebuild.TASKS["metroid_rom"].inputs(),
+                         [rebuild.ROMS["metroid"], rebuild.NATIVE_IMPORTER])
         self.assertEqual(rebuild.TASKS["aria_world"].outputs,
                          (rebuild.ARIA_WORLD, rebuild.ARIA_WORLD_INDEX))
         self.assertIn(rebuild.MZM_ELF, rebuild.TASKS["metroid_samus"].requires)

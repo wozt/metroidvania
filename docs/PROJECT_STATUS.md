@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0525 - Native verified-ROM manifests in production
+
+- Added `fusion_rom_write_manifest` and `fusion_importer --rom-manifest GAME
+  ROM OUTPUT_JSON`. The C path opens and SHA-1-verifies the pinned ROM before
+  atomically writing its deterministic private identity manifest.
+- Switched both `aria_rom` and `metroid_rom` rebuild tasks to the native
+  command. Their ROM and `fusion_importer` binary are now the declared inputs
+  and requirements; the rebuild graph still creates and validates the ignored
+  private destination.
+- The native Aria and Zero Mission JSON files match the previous Python output
+  byte for byte. Their SHA-256 values are respectively
+  `e029aeb877281428f292206193680106b25da4168942e973ee3358152caac6a1`
+  and `a6f090c8ed83ee5dc33069726b37c60775d15ce69b858f01959aa1876031dc47`.
+  Forced production writes succeeded and the following rebuild was up to date.
+- Extended the C ROM test with exact manifest serialization, atomic output and
+  unverified-request rejection, and the rebuild test now locks both tasks to
+  the native importer. Removed the now-unreferenced `scripts/verify_roms.py`
+  and its duplicate Python test; the public setup and local-ROM instructions
+  now use `fusion_importer --verify`.
+- No gameplay or fidelity status changed, no private bytes were committed, and
+  audio remains untouched.
+- Next: port the Aria Soma animation-library writer to C11, prove its complete
+  private output against the retained Python reference, then switch
+  `aria_soma` in the rebuild graph.
+
 ## Patch 0524 - Native Zero Mission ROM bank in production
 
 - The `metroid_rom_bank` rebuild task now runs `build/fusion_importer

@@ -45,6 +45,11 @@ bool fusion_rom_open(FusionAssetGame game, const char *path, FusionRom *rom,
                      char *error, size_t error_size);
 void fusion_rom_close(FusionRom *rom);
 
+/* Writes the deterministic private verification manifest for an already
+ * verified ROM. The destination is replaced atomically. */
+bool fusion_rom_write_manifest(const FusionRom *rom, const char *path,
+                               char *error, size_t error_size);
+
 /* Reads the standard header from an already verified private ROM buffer. */
 bool fusion_rom_read_gba_header(const FusionRom *rom, FusionGbaHeader *header);
 

@@ -12,9 +12,8 @@ Currently supported revisions:
 Local validation:
 
 ```sh
-python3 scripts/verify_roms.py \
-  --aria "roms/Castlevania - Aria of Sorrow (USA).gba" \
-  --metroid "roms/Metroid - Zero Mission (USA).gba"
+cmake --build build -j8
+build/fusion_importer --verify --rom-dir roms
 ```
 
 Importers reject unknown revisions before reading any game structure.

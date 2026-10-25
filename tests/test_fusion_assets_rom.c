@@ -45,8 +45,57 @@ int main(void) {
     assert(strcmp(aria->sha1, "abd71fe01ebb201bcc133074db1dd8c5253776c7") == 0);
     assert(fusion_asset_game_from_id("unknown") == NULL);
 
-    FusionRom rom = {0};
+    uint8_t verified_marker = 0;
+    FusionRom verified = {
+        .data = &verified_marker,
+        .size = aria->expected_size,
+        .game = FUSION_ASSET_GAME_ARIA,
+    };
     char error[256];
+    const char *manifest_path = "fusion-assets-rom-manifest.json";
+    assert(fusion_rom_write_manifest(&verified, manifest_path,
+                                     error, sizeof error));
+    FILE *manifest = fopen(manifest_path, "rb");
+    assert(manifest);
+    char content[256];
+    size_t content_size = fread(content, 1, sizeof content - 1, manifest);
+    assert(ferror(manifest) == 0);
+    assert(fclose(manifest) == 0);
+    content[content_size] = '\0';
+    assert(!strcmp(content,
+        "{\n"
+        "  \"game\": \"Castlevania: Aria of Sorrow USA\",\n"
+        "  \"sha1\": \"abd71fe01ebb201bcc133074db1dd8c5253776c7\",\n"
+        "  \"file\": \"Castlevania - Aria of Sorrow (USA).gba\"\n"
+        "}\n"));
+    assert(remove(manifest_path) == 0);
+    const FusionAssetGameSpec *metroid =
+        fusion_asset_game_spec(FUSION_ASSET_GAME_METROID);
+    assert(metroid);
+    verified.game = FUSION_ASSET_GAME_METROID;
+    verified.size = metroid->expected_size;
+    assert(fusion_rom_write_manifest(&verified, manifest_path,
+                                     error, sizeof error));
+    manifest = fopen(manifest_path, "rb");
+    assert(manifest);
+    content_size = fread(content, 1, sizeof content - 1, manifest);
+    assert(ferror(manifest) == 0);
+    assert(fclose(manifest) == 0);
+    content[content_size] = '\0';
+    assert(!strcmp(content,
+        "{\n"
+        "  \"game\": \"Metroid: Zero Mission USA\",\n"
+        "  \"sha1\": \"5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8\",\n"
+        "  \"file\": \"Metroid - Zero Mission (USA).gba\"\n"
+        "}\n"));
+    assert(remove(manifest_path) == 0);
+    verified.size = 1;
+    assert(!fusion_rom_write_manifest(&verified, manifest_path,
+                                      error, sizeof error));
+    assert(strstr(error, "invalid verified ROM") != NULL);
+    assert(fusion_asset_game_spec((FusionAssetGame)-1) == NULL);
+
+    FusionRom rom = {0};
     assert(!fusion_rom_open(FUSION_ASSET_GAME_ARIA, "does-not-exist.gba", &rom,
                             error, sizeof error));
     assert(strstr(error, "cannot open") != NULL);

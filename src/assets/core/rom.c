@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "fusion/assets/rom.h"
 
+#include "output.h"
 #include "sha1.h"
 #include "sha256.h"
 
@@ -26,7 +27,7 @@ static void set_error(char *error, size_t error_size, const char *message) {
 }
 
 const FusionAssetGameSpec *fusion_asset_game_spec(FusionAssetGame game) {
-    return game < FUSION_ASSET_GAME_COUNT ? &specs[game] : NULL;
+    return (unsigned)game < FUSION_ASSET_GAME_COUNT ? &specs[game] : NULL;
 }
 
 const FusionAssetGameSpec *fusion_asset_game_from_id(const char *id) {
@@ -145,6 +146,29 @@ bool fusion_rom_open(FusionAssetGame game, const char *path, FusionRom *rom,
 }
 
 void fusion_rom_close(FusionRom *rom) { clear_rom(rom); }
+
+static bool write_manifest_body(FILE *file, const void *context) {
+    const FusionAssetGameSpec *spec = context;
+    return fprintf(file,
+                   "{\n"
+                   "  \"game\": \"%s\",\n"
+                   "  \"sha1\": \"%s\",\n"
+                   "  \"file\": \"%s\"\n"
+                   "}\n",
+                   spec->title, spec->sha1, spec->filename) >= 0;
+}
+
+bool fusion_rom_write_manifest(const FusionRom *rom, const char *path,
+                               char *error, size_t error_size) {
+    const FusionAssetGameSpec *spec =
+        rom ? fusion_asset_game_spec(rom->game) : NULL;
+    if (!spec || !rom->data || rom->size != spec->expected_size || !path) {
+        set_error(error, error_size, "invalid verified ROM manifest request");
+        return false;
+    }
+    return fusion_asset_write_atomic(path, write_manifest_body, spec,
+                                     error, error_size);
+}
 
 bool fusion_rom_read_gba_header(const FusionRom *rom, FusionGbaHeader *header) {
     return rom && fusion_gba_read_header(rom->data, rom->size, header);

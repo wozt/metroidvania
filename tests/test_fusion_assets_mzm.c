@@ -789,6 +789,120 @@ static void test_runtime_room_core(void) {
         &rom, &symbols, &hatch_tables, error, sizeof error));
 }
 
+static void test_runtime_room_sprites(void) {
+    enum {
+        POINTERS = 0x10, SET0 = 0x20, SET1 = 0x30, SET2 = 0x40,
+        DEFAULT_DATA = 0x60, FIRST_DATA = 0x80, SECOND_DATA = 0xA0,
+        FIXTURE_SIZE = 0x100
+    };
+    const uint32_t ROM_BASE = 0x08000000;
+    uint8_t bytes[FIXTURE_SIZE] = {0};
+    write_u32(bytes, POINTERS, ROM_BASE + SET0);
+    write_u32(bytes, POINTERS + 4, ROM_BASE + SET1);
+    write_u32(bytes, POINTERS + 8, ROM_BASE + SET2);
+    /* Set 1: ZOOMER_YELLOW (18) in slot 0, MORPH_BALL (33) with 0x0A & 7
+     * = slot 2, then SPRITESET_EMPTY. Set 2: SKREE_GREEN (31) with no
+     * terminator: the array ends it. */
+    memcpy(bytes + SET1, (uint8_t[]){18, 0, 33, 0x0A, 0, 0}, 6);
+    memcpy(bytes + SET2, (uint8_t[]){31, 3}, 2);
+    /* Default: member 0 (slot 17), a missing member (slot 19, skipped but
+     * counted), PrimarySprite 4 (slot 5, 0x80 masked), then the terminator
+     * and data the terminator hides. */
+    memcpy(bytes + DEFAULT_DATA,
+           (uint8_t[]){2, 3, 17, 4, 5, 19, 6, 7, 0x85, 0xFF, 0xFF, 0xFF,
+                       8, 9, 17}, 15);
+    memcpy(bytes + FIRST_DATA, (uint8_t[]){10, 11, 17, 0xFF, 0xFF, 0xFF}, 6);
+    memcpy(bytes + SECOND_DATA, (uint8_t[]){0xFF, 0xFF, 0xFF}, 3);
+    FusionRom rom = {bytes, sizeof bytes, FUSION_ASSET_GAME_METROID};
+    FusionMzmRomSymbol entries[] = {
+        {"sSpritesetPointers", ROM_BASE + POINTERS, 12, 0},
+        {"sSpriteset0", ROM_BASE + SET0, 2, 1},
+        {"label", ROM_BASE + SET1, 0, 2},
+        {"sSpriteset1", ROM_BASE + SET1, 6, 3},
+        {"sSpriteset2", ROM_BASE + SET2, 2, 4},
+        {"sDefault", ROM_BASE + DEFAULT_DATA, 15, 5},
+        {"sFirst", ROM_BASE + FIRST_DATA, 6, 6},
+        {"sSecond", ROM_BASE + SECOND_DATA, 3, 7},
+    };
+    FusionMzmRomSymbolTable symbols = {entries, sizeof entries / sizeof entries[0], 0};
+    char error[160];
+    static FusionMzmSpritesetTable sets;
+    assert(fusion_mzm_read_spritesets(&rom, &symbols, &sets, error, sizeof error));
+    assert(sets.count == 3 && sets.sets[0].count == 0 && sets.sets[1].count == 2 &&
+           sets.sets[1].members[1].slot == 0x0A && sets.sets[2].count == 1);
+    FusionMzmRoomEntry entry = {
+        .default_sprite_pointer = ROM_BASE + DEFAULT_DATA,
+        .default_spriteset = 1,
+        .first_spriteset_event = 5,
+        .first_sprite_pointer = ROM_BASE + FIRST_DATA,
+        .first_spriteset = 200,
+        .second_spriteset_event = 9,
+        .second_sprite_pointer = ROM_BASE + SECOND_DATA,
+        .second_spriteset = 0,
+        .music_track = 7
+    };
+    static FusionMzmRoomSprites sprites;
+    assert(fusion_mzm_read_room_sprites(&rom, &symbols, &sets, &entry, &sprites,
+                                        error, sizeof error));
+    /* Spriteset 200 clamps to the table's last entry. */
+    assert(sprites.count == 3 && sprites.variants[0].placement_count == 3 &&
+           sprites.variants[1].spriteset == 2 &&
+           sprites.variants[2].placement_count == 0);
+
+    uint16_t cell = 0;
+    FusionMzmRoomRleMap clipdata = {.width = 1, .height = 1, .cells = &cell,
+                                    .cell_count = 1};
+    static FusionMzmClipdataTables tables;
+    static FusionMzmDoorDirectory doors;
+    static FusionMzmHatchTables hatches;
+    FusionMzmRoomBackgrounds backgrounds = {0};
+    FusionMzmRuntimeRoomPayload payload;
+    assert(fusion_mzm_serialize_runtime_room_sprites(
+        0, 0, &clipdata, &tables, &doors, &hatches, &entry, &backgrounds,
+        &sets, &sprites, &payload, error, sizeof error));
+    assert(payload.sprite_count == 2 && payload.spriteset_member_count == 2 &&
+           payload.sprite_variant_count == 2 && payload.variant_sprite_count == 1 &&
+           payload.variant_member_count == 1);
+    const char *expected =
+        "P\t2\t3\tZOOMER_YELLOW\t0\t0\n"
+        "P\t6\t7\tUNUSED4\t0\t2\n"
+        "S\t1\tZOOMER_YELLOW\t0\n"
+        "S\t1\tMORPH_BALL\t2\n"
+        "F\t1\t5\t2\n"
+        "J\t1\t10\t11\tSKREE_GREEN\t3\t0\n"
+        "N\t1\tSKREE_GREEN\t3\n"
+        "F\t2\t9\t0\n"
+        "U\t7\n";
+    assert(strstr((char *)payload.data, expected));
+    fusion_mzm_free_runtime_room_payload(&payload);
+
+    /* An event of 0 drops its variant; a UCHAR_MAX spriteset (the test
+     * areas) drops them all. */
+    entry.second_spriteset_event = 0;
+    assert(fusion_mzm_read_room_sprites(&rom, &symbols, &sets, &entry, &sprites,
+                                        error, sizeof error));
+    assert(sprites.count == 2 && sprites.variants[1].variant == 1);
+    entry.default_spriteset = UINT8_MAX;
+    assert(fusion_mzm_read_room_sprites(&rom, &symbols, &sets, &entry, &sprites,
+                                        error, sizeof error));
+    assert(sprites.count == 0);
+    assert(fusion_mzm_serialize_runtime_room_sprites(
+        0, 0, &clipdata, &tables, &doors, &hatches, &entry, &backgrounds,
+        &sets, &sprites, &payload, error, sizeof error));
+    assert(!strstr((char *)payload.data, "\nP\t") &&
+           !strstr((char *)payload.data, "\nS\t") &&
+           strstr((char *)payload.data, "\nU\t7\n"));
+    fusion_mzm_free_runtime_room_payload(&payload);
+
+    /* Sprite data without an array symbol is an error. */
+    entry.default_spriteset = 1;
+    entry.default_sprite_pointer = ROM_BASE + 0xF0;
+    assert(!fusion_mzm_read_room_sprites(&rom, &symbols, &sets, &entry, &sprites,
+                                         error, sizeof error));
+    entries[0].size = 10;
+    assert(!fusion_mzm_read_spritesets(&rom, &symbols, &sets, error, sizeof error));
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -834,6 +948,7 @@ int main(void) {
     test_room_backgrounds();
     test_tileset_video_memory();
     test_runtime_room_core();
+    test_runtime_room_sprites();
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

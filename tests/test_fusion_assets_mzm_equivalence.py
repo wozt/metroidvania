@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import unittest
 
-from scripts import mzm_runtime_room
+from scripts import mzm_runtime_room, mzm_sprites
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
     bg_properties,
@@ -404,6 +404,131 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             f"{metadata_totals['locks']}\t{metadata_totals['music']}\t"
             f"{metadata_totals['layers']}\t{metadata_totals['rows']}\t"
             f"{metadata_totals['text']}\t{metadata_totals['bytes']}",
+        )
+
+    def test_room_sprite_payloads_match_python_reference(self):
+        """The complete payload with P/S/F/J/N, as produce() encodes it."""
+        rom = ROM.read_bytes()
+        symbol_rows, _ = symbol_lines(elf_symbols(ELF.read_bytes()), len(rom))
+        symbols = {parts[1]: int(parts[2])
+                   for row in symbol_rows
+                   if (parts := row.split("\t"))[0] == "symbol"}
+        tables = mzm_runtime_room.collision_tables()
+        names = enum_values()
+        properties = bg_properties()
+        rooms = source_rooms()
+        doors_by_area = mzm_runtime_room.door_tables()
+        targets_by_area = {
+            area: mzm_runtime_room.area_targets(area)
+            for area in {room["area"] for room in rooms}
+        }
+        hatch_types, hatch_behaviors = mzm_runtime_room.hatch_tables()
+        hatch_metadata = mzm_runtime_room.hatch_animation_lines(
+            tables, hatch_behaviors,
+        )
+        keys = ("clipdata", "transitions", "movements", "doors", "exits",
+                "locations", "hatches", "locks", "music", "layers", "rows",
+                "text", "sprites", "members", "variants", "variant_sprites",
+                "variant_members")
+        prefixes = ("C", "B", "M", "D", "X", "Y", "H", "Q", "U", "G", "R",
+                    "T", "P", "S", "F", "J", "N")
+        totals = dict.fromkeys(("cells", *keys, "bytes"), 0)
+        expected = []
+        skipped = 0
+        coverage = {"none": 0, "default": 0, "one_event": 0, "two_events": 0,
+                    "unsupported": 0, "graphics_slots": set()}
+        for room in rooms:
+            fields = room["fields"]
+            if fields.get("bg1Prop") != "BG_PROP_RLE_COMPRESSED":
+                skipped += 1
+                continue
+            width, height, cells = rle_room(
+                rom[symbols[fields["pClipData"]] - 0x08000000:]
+            )
+            room_doors = doors_by_area.get(room["area"], [])
+            room_hatches = mzm_runtime_room.room_hatches(
+                room_doors, room["index"], (width, height, cells), tables,
+                hatch_types, hatch_behaviors,
+            )
+            lock_lines = mzm_runtime_room.hatch_lock_lines(
+                room["area"], room["index"], room_doors,
+            ) if room["area"].isalpha() else []
+            blocks = {
+                "Bg1": rle_room(rom[symbols[fields["pBg1Data"]] - 0x08000000:])
+            }
+            for layer in ("Bg0", "Bg2"):
+                prop = properties.get(fields.get(f"{layer.lower()}Prop", ""), 0)
+                if prop & properties["BG_PROP_RLE_COMPRESSED"]:
+                    blocks[layer] = rle_room(
+                        rom[symbols[fields[f"p{layer}Data"]] - 0x08000000:]
+                    )
+            background_lines, _ = room_background_lines(
+                fields, blocks, evaluate(fields["tileset"], names),
+            )
+            try:
+                variants = mzm_sprites.room_sprite_variants(
+                    room["area"], room["index"],
+                )
+            except ValueError:
+                variants = []
+                coverage["unsupported"] += 1
+            payload = mzm_runtime_room.encode_room(
+                room["area"], room["index"], width * 16, height * 16,
+                (width, height, cells), tables, doors=room_doors,
+                hatches=room_hatches, targets=targets_by_area[room["area"]],
+                music=evaluate(fields.get("musicTrack", "0"), names),
+                backgrounds=[*background_lines, *hatch_metadata, *lock_lines],
+                sprite_variants=variants,
+            ).encode()
+            lines = payload.splitlines()
+            counts = {key: sum(line.startswith(f"{prefix}\t".encode())
+                               for line in lines)
+                      for key, prefix in zip(keys, prefixes)}
+            expected.append((room["area"], room["index"], width, height,
+                             len(cells), *(counts[key] for key in keys),
+                             len(payload), hashlib.sha1(payload).hexdigest()))
+            totals["cells"] += len(cells)
+            for key in keys:
+                totals[key] += counts[key]
+            totals["bytes"] += len(payload)
+            if variants:
+                if counts["variants"] == 2:
+                    coverage["two_events"] += 1
+                elif counts["variants"] == 1:
+                    coverage["one_event"] += 1
+                elif counts["sprites"]:
+                    coverage["default"] += 1
+                else:
+                    coverage["none"] += 1
+                for line in lines:
+                    if line.startswith(b"S\t"):
+                        coverage["graphics_slots"].add(int(line.split(b"\t")[3]))
+
+        # The reference covers every sprite case the serializer handles.
+        self.assertGreater(coverage["none"], 0)
+        self.assertGreater(coverage["default"], 0)
+        self.assertGreater(coverage["one_event"], 0)
+        self.assertGreater(coverage["two_events"], 0)
+        self.assertGreater(coverage["unsupported"], 0)
+        self.assertGreater(len(coverage["graphics_slots"]), 2)
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-runtime-room-sprites", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output_lines = result.stdout.splitlines()
+        actual = []
+        for line in output_lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "room")
+            actual.append((fields[1], *(int(value) for value in fields[2:24]),
+                           fields[24]))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            output_lines[-1],
+            "\t".join(["summary", str(len(expected)), str(skipped),
+                       *(str(totals[key]) for key in ("cells", *keys, "bytes"))]),
         )
 
     def test_room_background_payloads_match_python_reference(self):

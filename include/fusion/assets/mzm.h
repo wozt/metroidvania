@@ -27,6 +27,12 @@ enum {
     FUSION_MZM_HATCH_LOCK_RECORD_SIZE = 8,
     FUSION_MZM_HATCH_LOCK_CAPACITY = 32,
     FUSION_MZM_ROOM_BACKGROUND_COUNT = 4,
+    FUSION_MZM_PRIMARY_SPRITE_COUNT = 207,
+    FUSION_MZM_SPRITESET_CAPACITY = 128,
+    FUSION_MZM_SPRITESET_MEMBER_CAPACITY = 16,
+    FUSION_MZM_SPRITESET_ENTRY_TYPES = 16,
+    FUSION_MZM_ROOM_SPRITE_CAPACITY = 64,
+    FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT = 3,
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
     FUSION_MZM_TILESET_COUNT = 79,
     FUSION_MZM_TILESET_ENTRY_SIZE = 20,
@@ -249,6 +255,45 @@ typedef struct {
 } FusionMzmHatchTables;
 
 typedef struct {
+    uint8_t sprite;
+    uint8_t slot;
+} FusionMzmSpritesetMember;
+
+typedef struct {
+    FusionMzmSpritesetMember members[FUSION_MZM_SPRITESET_MEMBER_CAPACITY];
+    size_t count;
+} FusionMzmSpriteset;
+
+/* sSpritesetPointers: each spriteset's (PrimarySprite, graphics slot)
+ * pairs up to SPRITESET_EMPTY or the end of its array symbol. */
+typedef struct {
+    FusionMzmSpriteset sets[FUSION_MZM_SPRITESET_CAPACITY];
+    size_t count;
+} FusionMzmSpritesetTable;
+
+typedef struct {
+    uint8_t y;
+    uint8_t x;
+    uint8_t slot;
+} FusionMzmRoomSpritePlacement;
+
+typedef struct {
+    uint8_t variant;
+    uint8_t event;
+    uint8_t spriteset;
+    FusionMzmRoomSpritePlacement placements[FUSION_MZM_ROOM_SPRITE_CAPACITY];
+    size_t placement_count;
+} FusionMzmRoomSpriteVariant;
+
+/* RoomLoadEntry's sprite choices: variant 0 (the default) then the event
+ * variants 1 and 2 whose event is set. A room with a UCHAR_MAX spriteset
+ * (the test areas) has none. */
+typedef struct {
+    FusionMzmRoomSpriteVariant variants[FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT];
+    size_t count;
+} FusionMzmRoomSprites;
+
+typedef struct {
     uint8_t *data;
     size_t size;
     size_t clipdata_count;
@@ -263,6 +308,11 @@ typedef struct {
     size_t background_layer_count;
     size_t background_row_count;
     size_t text_background_count;
+    size_t sprite_count;
+    size_t spriteset_member_count;
+    size_t sprite_variant_count;
+    size_t variant_sprite_count;
+    size_t variant_member_count;
 } FusionMzmRuntimeRoomPayload;
 
 /* Symbol names point into elf_data and remain valid only while that buffer is
@@ -383,6 +433,31 @@ bool fusion_mzm_serialize_runtime_room_metadata(
     const FusionMzmHatchTables *hatches,
     const FusionMzmRoomEntry *entry,
     const FusionMzmRoomBackgrounds *backgrounds,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size);
+/* The PrimarySprite enumerator name without its PSPRITE_ prefix, NULL
+ * outside the enum. */
+const char *fusion_mzm_primary_sprite_name(size_t id);
+bool fusion_mzm_read_spritesets(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmSpritesetTable *table,
+    char *error, size_t error_size);
+bool fusion_mzm_read_room_sprites(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const FusionMzmSpritesetTable *spritesets,
+    const FusionMzmRoomEntry *entry, FusionMzmRoomSprites *sprites,
+    char *error, size_t error_size);
+/* The metadata payload with the sprite records P, S, F, J and N between
+ * the hatches and the music track. */
+bool fusion_mzm_serialize_runtime_room_sprites(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
+    const FusionMzmSpritesetTable *spritesets,
+    const FusionMzmRoomSprites *sprites,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(

@@ -40,6 +40,7 @@ static void usage(const char *name) {
             "       %s --mzm-runtime-room-doors ROM ELF\n"
             "       %s --mzm-runtime-room-hatches ROM ELF\n"
             "       %s --mzm-runtime-room-metadata ROM ELF\n"
+            "       %s --mzm-runtime-room-sprites ROM ELF\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -52,7 +53,7 @@ static void usage(const char *name) {
             name, name, name, name, name, name, name, name, name, name, name,
             name,
             name, name, name, name,
-            name, name);
+            name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -1341,8 +1342,10 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
                                      const char *elf_path,
                                      bool include_doors,
                                      bool include_hatches,
-                                     bool include_metadata) {
-    const char *label = include_metadata ? "mzm-runtime-room-metadata" :
+                                     bool include_metadata,
+                                     bool include_sprites) {
+    const char *label = include_sprites ? "mzm-runtime-room-sprites" :
+        include_metadata ? "mzm-runtime-room-metadata" :
         include_hatches ? "mzm-runtime-room-hatches" :
         include_doors ? "mzm-runtime-room-doors" :
         "mzm-runtime-room-cores";
@@ -1363,6 +1366,7 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
     FusionMzmClipdataTables tables;
     FusionMzmDoorDirectory doors = {0};
     FusionMzmHatchTables hatches = {0};
+    static FusionMzmSpritesetTable spritesets;
     if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
                                      error, sizeof error) ||
         !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
@@ -1374,7 +1378,10 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
                                          error, sizeof error)) ||
         (include_hatches &&
          !fusion_mzm_read_hatch_tables(&rom, &symbols, &hatches,
-                                       error, sizeof error))) {
+                                       error, sizeof error)) ||
+        (include_sprites &&
+         !fusion_mzm_read_spritesets(&rom, &symbols, &spritesets,
+                                     error, sizeof error))) {
         fprintf(stderr, "%s: %s\n", label, error);
         fusion_mzm_free_hatch_tables(&hatches);
         fusion_mzm_free_door_directory(&doors);
@@ -1390,6 +1397,9 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
     size_t total_music = 0, total_background_layers = 0;
     size_t total_background_rows = 0, total_text_backgrounds = 0;
     size_t skipped_rooms = 0;
+    size_t total_sprites = 0, total_spriteset_members = 0;
+    size_t total_sprite_variants = 0, total_variant_sprites = 0;
+    size_t total_variant_members = 0;
     for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
         const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
         for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
@@ -1428,8 +1438,29 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
                 free(elf);
                 return 1;
             }
+            static FusionMzmRoomSprites sprites;
+            if (include_sprites &&
+                !fusion_mzm_read_room_sprites(&rom, &symbols, &spritesets,
+                                              &entry, &sprites,
+                                              error, sizeof error)) {
+                fprintf(stderr, "%s: %s %zu sprites: %s\n",
+                        label, spec->id, room, error);
+                fusion_mzm_free_room_rle(&clipdata);
+                fusion_mzm_free_room_backgrounds(&backgrounds);
+                fusion_mzm_free_hatch_tables(&hatches);
+                fusion_mzm_free_door_directory(&doors);
+                fusion_mzm_free_symbols(&symbols);
+                fusion_rom_close(&rom);
+                free(elf);
+                return 1;
+            }
             FusionMzmRuntimeRoomPayload payload;
-            bool serialized = include_metadata
+            bool serialized = include_sprites
+                ? fusion_mzm_serialize_runtime_room_sprites(
+                      area, room, &clipdata, &tables, &doors, &hatches,
+                      &entry, &backgrounds, &spritesets, &sprites, &payload,
+                      error, sizeof error)
+                : include_metadata
                 ? fusion_mzm_serialize_runtime_room_metadata(
                       area, room, &clipdata, &tables, &doors, &hatches,
                       &entry, &backgrounds, &payload, error, sizeof error)
@@ -1471,7 +1502,24 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
                 free(elf);
                 return 1;
             }
-            if (include_metadata) {
+            if (include_sprites) {
+                printf("room\t%s\t%zu\t%u\t%u\t%zu\t%zu\t%zu\t%zu\t"
+                       "%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t"
+                       "%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\n",
+                       spec->id, room, (unsigned)clipdata.width,
+                       (unsigned)clipdata.height, clipdata.cell_count,
+                       payload.clipdata_count, payload.transition_count,
+                       payload.movement_count, payload.door_count,
+                       payload.exit_count, payload.location_count,
+                       payload.hatch_count, payload.hatch_lock_count,
+                       payload.music_count, payload.background_layer_count,
+                       payload.background_row_count,
+                       payload.text_background_count, payload.sprite_count,
+                       payload.spriteset_member_count,
+                       payload.sprite_variant_count,
+                       payload.variant_sprite_count,
+                       payload.variant_member_count, payload.size, digest);
+            } else if (include_metadata) {
                 printf("room\t%s\t%zu\t%u\t%u\t%zu\t%zu\t%zu\t%zu\t"
                        "%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t"
                        "%zu\t%s\n",
@@ -1524,13 +1572,29 @@ static int inspect_mzm_runtime_rooms(const char *rom_path,
             total_background_layers += payload.background_layer_count;
             total_background_rows += payload.background_row_count;
             total_text_backgrounds += payload.text_background_count;
+            total_sprites += payload.sprite_count;
+            total_spriteset_members += payload.spriteset_member_count;
+            total_sprite_variants += payload.sprite_variant_count;
+            total_variant_sprites += payload.variant_sprite_count;
+            total_variant_members += payload.variant_member_count;
             total_bytes += payload.size;
             fusion_mzm_free_runtime_room_payload(&payload);
             fusion_mzm_free_room_rle(&clipdata);
             fusion_mzm_free_room_backgrounds(&backgrounds);
         }
     }
-    if (include_metadata) {
+    if (include_sprites) {
+        printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t"
+               "%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t"
+               "%zu\n",
+               room_count, skipped_rooms, total_cells, total_clipdata,
+               total_transitions, total_movements, total_doors, total_exits,
+               total_locations, total_hatches, total_hatch_locks, total_music,
+               total_background_layers, total_background_rows,
+               total_text_backgrounds, total_sprites, total_spriteset_members,
+               total_sprite_variants, total_variant_sprites,
+               total_variant_members, total_bytes);
+    } else if (include_metadata) {
         printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t"
                "%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
                room_count, skipped_rooms, total_cells, total_clipdata,
@@ -2248,6 +2312,8 @@ int main(int argc, char **argv) {
     const char *mzm_runtime_hatch_rom_path = NULL;
     const char *mzm_runtime_hatch_elf_path = NULL;
     const char *mzm_runtime_metadata_rom_path = NULL;
+    const char *mzm_runtime_sprite_rom_path = NULL;
+    const char *mzm_runtime_sprite_elf_path = NULL;
     const char *mzm_runtime_metadata_elf_path = NULL;
     const char *mzm_background_rom_path = NULL;
     const char *mzm_background_elf_path = NULL;
@@ -2337,6 +2403,11 @@ int main(int argc, char **argv) {
             mzm_runtime_metadata_rom_path = argv[++i];
             mzm_runtime_metadata_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-runtime-room-sprites") &&
+                 i + 2 < argc) {
+            mzm_runtime_sprite_rom_path = argv[++i];
+            mzm_runtime_sprite_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--mzm-backgrounds") && i + 2 < argc) {
             mzm_background_rom_path = argv[++i];
             mzm_background_elf_path = argv[++i];
@@ -2411,19 +2482,23 @@ int main(int argc, char **argv) {
     if (mzm_runtime_core_rom_path)
         return inspect_mzm_runtime_rooms(
             mzm_runtime_core_rom_path, mzm_runtime_core_elf_path,
-            false, false, false);
+            false, false, false, false);
     if (mzm_runtime_door_rom_path)
         return inspect_mzm_runtime_rooms(
             mzm_runtime_door_rom_path, mzm_runtime_door_elf_path,
-            true, false, false);
+            true, false, false, false);
     if (mzm_runtime_hatch_rom_path)
         return inspect_mzm_runtime_rooms(
             mzm_runtime_hatch_rom_path, mzm_runtime_hatch_elf_path,
-            true, true, false);
+            true, true, false, false);
     if (mzm_runtime_metadata_rom_path)
         return inspect_mzm_runtime_rooms(
             mzm_runtime_metadata_rom_path, mzm_runtime_metadata_elf_path,
-            true, true, true);
+            true, true, true, false);
+    if (mzm_runtime_sprite_rom_path)
+        return inspect_mzm_runtime_rooms(
+            mzm_runtime_sprite_rom_path, mzm_runtime_sprite_elf_path,
+            true, true, true, true);
     if (mzm_background_rom_path)
         return inspect_mzm_backgrounds(mzm_background_rom_path,
                                        mzm_background_elf_path);

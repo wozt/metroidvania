@@ -40,6 +40,7 @@ add_library(fusion_assets STATIC
     src/assets/mzm/rom_bank.c
     src/assets/mzm/rooms.c
     src/assets/mzm/runtime_room.c
+    src/assets/mzm/primary_sprites.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)

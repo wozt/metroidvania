@@ -2,6 +2,46 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0516 - Native Zero Mission room sprite serialization
+
+- Completed the cumulative C11 room serializer with the sprite records: `P`
+  default placements, `S` default spriteset members, `F` event-variant
+  headers, `J` event-variant placements and `N` event-variant members,
+  emitted between the hatches and the `U` music record exactly as
+  `scripts/mzm_runtime_room.py::encode_room` orders them.
+- `fusion_mzm_read_spritesets` reads `sSpritesetPointers` and each
+  spriteset array from bounded ELF symbols, stopping at `SPRITESET_EMPTY` or
+  the array end; `fusion_mzm_read_room_sprites` reads the room entry's
+  default and event sprite data up to `ROOM_SPRITE_DATA_TERMINATOR`, drops
+  event variants whose event is 0, clamps spriteset indices to the table end
+  and gives no variant for the test areas' `UCHAR_MAX` spritesets, matching
+  the Python reference's behavior there. Placement slots above 16 resolve to
+  spriteset members (missing members skipped but still numbered), others to
+  PrimarySprite ids; names come from a C table of the decompilation's
+  PrimarySprite enumerators (`src/assets/mzm/primary_sprites.c`), since the
+  reference ELF carries no debug information.
+- Added synthetic coverage of member/direct slots, the 0x80 slot bit, a
+  missing member, graphics-slot masking, a terminator hiding later data, an
+  array ending a spriteset, a zero-size label sharing an array address,
+  spriteset clamping, both event variants, an event variant without
+  placements, a dropped event-0 variant, the `UCHAR_MAX` rule and missing or
+  malformed symbols. The new `--mzm-runtime-room-sprites` command and a new
+  real-ROM equivalence test compare the complete payload with `produce()`'s
+  encoding byte for byte.
+- All 330 exportable rooms match across 5,548,796 bytes with 1,160 `P`,
+  1,518 `S`, 118 `F`, 785 `J` and 608 `N` records plus every earlier record;
+  the reference set covers rooms without sprites, with default sprites only,
+  with one and with two event variants, several graphics slots and the 16
+  test-area rooms without sprite records. The room without a supported BG1
+  stays skipped by both implementations.
+- The native serializer now covers the complete room TSV payload. Private
+  output writes and the rebuild task remain Python-owned, so production
+  authority and gameplay status do not change.
+- Next: an atomic native writer for the complete private room outputs
+  (room TSV, background BMP and masks), wired into the `metroid_rooms` task of
+  `scripts/rebuild.py`, validated for runtime/editor consumption and
+  incremental rebuilds before the Python production path is removed.
+
 ## Patch 0515 - Native Zero Mission room metadata serialization
 
 - Extended the cumulative C11 room serializer with the room entry's `U` music,

@@ -860,6 +860,146 @@ bool fusion_mzm_serialize_background(
     return true;
 }
 
+/* The first sized symbol at an address (array data, not a label). */
+static const FusionMzmRomSymbol *find_sized_symbol_at(
+    const FusionMzmRomSymbolTable *symbols, uint32_t address) {
+    if (!symbols || (symbols->count && !symbols->entries)) return NULL;
+    for (size_t index = 0; index < symbols->count; ++index) {
+        if (symbols->entries[index].address == address &&
+            symbols->entries[index].size > 0)
+            return &symbols->entries[index];
+    }
+    return NULL;
+}
+
+bool fusion_mzm_read_spritesets(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmSpritesetTable *table,
+    char *error, size_t error_size) {
+    if (!table) {
+        set_error(error, error_size,
+                  "invalid Zero Mission spriteset output request");
+        return false;
+    }
+    *table = (FusionMzmSpritesetTable){0};
+    const FusionMzmRomSymbol *pointers =
+        rom ? find_symbol(symbols, "sSpritesetPointers") : NULL;
+    size_t pointers_offset;
+    if (!pointers || pointers->size == 0 || pointers->size % 4 != 0 ||
+        pointers->size / 4 > FUSION_MZM_SPRITESET_CAPACITY ||
+        !pointer_offset(rom, pointers->address, pointers->size,
+                        &pointers_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission sSpritesetPointers");
+        return false;
+    }
+    size_t count = pointers->size / 4;
+    for (size_t index = 0; index < count; ++index) {
+        uint32_t address = read_u32(rom->data + pointers_offset + index * 4);
+        const FusionMzmRomSymbol *set = find_sized_symbol_at(symbols, address);
+        size_t offset;
+        if (!set || !pointer_offset(rom, set->address, set->size, &offset)) {
+            *table = (FusionMzmSpritesetTable){0};
+            set_error(error, error_size,
+                      "Zero Mission spriteset has no bounded array symbol");
+            return false;
+        }
+        FusionMzmSpriteset *entries = &table->sets[index];
+        for (size_t pair = 0; pair + 1 < set->size; pair += 2) {
+            uint8_t sprite = rom->data[offset + pair];
+            if (sprite == 0) break;  /* SPRITESET_EMPTY */
+            if (entries->count == FUSION_MZM_SPRITESET_MEMBER_CAPACITY) {
+                *table = (FusionMzmSpritesetTable){0};
+                set_error(error, error_size,
+                          "Zero Mission spriteset exceeds its member capacity");
+                return false;
+            }
+            entries->members[entries->count++] = (FusionMzmSpritesetMember){
+                sprite, rom->data[offset + pair + 1]
+            };
+        }
+    }
+    table->count = count;
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+/* sSpritesetPointers index clamped like SpriteLoadSpriteset's table end. */
+static uint8_t clamp_spriteset(const FusionMzmSpritesetTable *table,
+                               uint8_t index) {
+    return index >= table->count - 1 ? (uint8_t)(table->count - 1) : index;
+}
+
+bool fusion_mzm_read_room_sprites(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const FusionMzmSpritesetTable *spritesets,
+    const FusionMzmRoomEntry *entry, FusionMzmRoomSprites *sprites,
+    char *error, size_t error_size) {
+    if (!sprites) {
+        set_error(error, error_size,
+                  "invalid Zero Mission room-sprite output request");
+        return false;
+    }
+    *sprites = (FusionMzmRoomSprites){0};
+    if (!rom || !entry || !spritesets || spritesets->count == 0 ||
+        spritesets->count > FUSION_MZM_SPRITESET_CAPACITY) {
+        set_error(error, error_size, "invalid Zero Mission room-sprite input");
+        return false;
+    }
+    /* The test areas name UCHAR_MAX spritesets: no sprite choice. */
+    if (entry->default_spriteset == UINT8_MAX ||
+        entry->first_spriteset == UINT8_MAX ||
+        entry->second_spriteset == UINT8_MAX) {
+        if (error && error_size > 0) error[0] = '\0';
+        return true;
+    }
+    const struct {
+        uint8_t variant, event;
+        uint32_t pointer;
+        uint8_t spriteset;
+    } choices[FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT] = {
+        {0, 0, entry->default_sprite_pointer, entry->default_spriteset},
+        {1, entry->first_spriteset_event, entry->first_sprite_pointer,
+         entry->first_spriteset},
+        {2, entry->second_spriteset_event, entry->second_sprite_pointer,
+         entry->second_spriteset},
+    };
+    for (size_t choice = 0; choice < FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT;
+         ++choice) {
+        if (choices[choice].variant && choices[choice].event == 0) continue;
+        const FusionMzmRomSymbol *data =
+            find_sized_symbol_at(symbols, choices[choice].pointer);
+        size_t offset;
+        if (!data || !pointer_offset(rom, data->address, data->size, &offset)) {
+            *sprites = (FusionMzmRoomSprites){0};
+            set_error(error, error_size,
+                      "Zero Mission room sprite data has no bounded symbol");
+            return false;
+        }
+        FusionMzmRoomSpriteVariant *variant =
+            &sprites->variants[sprites->count++];
+        variant->variant = choices[choice].variant;
+        variant->event = choices[choice].event;
+        variant->spriteset = clamp_spriteset(spritesets,
+                                             choices[choice].spriteset);
+        for (size_t index = 0; index + 2 < data->size; index += 3) {
+            const uint8_t *triplet = rom->data + offset + index;
+            if (triplet[0] == 0xFF) break;  /* ROOM_SPRITE_DATA_TERMINATOR */
+            if (variant->placement_count == FUSION_MZM_ROOM_SPRITE_CAPACITY) {
+                *sprites = (FusionMzmRoomSprites){0};
+                set_error(error, error_size,
+                          "Zero Mission room exceeds the sprite capacity");
+                return false;
+            }
+            variant->placements[variant->placement_count++] =
+                (FusionMzmRoomSpritePlacement){triplet[0], triplet[1],
+                                               triplet[2]};
+        }
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 void fusion_mzm_free_runtime_room_payload(
     FusionMzmRuntimeRoomPayload *payload) {
     if (!payload) return;
@@ -963,6 +1103,8 @@ static bool serialize_runtime_room(
     const FusionMzmHatchTables *hatches,
     const FusionMzmRoomEntry *entry,
     const FusionMzmRoomBackgrounds *backgrounds,
+    const FusionMzmSpritesetTable *spritesets,
+    const FusionMzmRoomSprites *sprites,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     if (!payload) {
@@ -991,7 +1133,11 @@ static bool serialize_runtime_room(
                       !hatches->locks[area_index].entries))) ||
         ((entry == NULL) != (backgrounds == NULL)) ||
         (entry && (!hatches || entry->tileset >= FUSION_MZM_TILESET_COUNT ||
-                   !room_effect_name(entry->effect)))) {
+                   !room_effect_name(entry->effect))) ||
+        ((spritesets == NULL) != (sprites == NULL)) ||
+        (sprites && (!entry || spritesets->count == 0 ||
+                     spritesets->count > FUSION_MZM_SPRITESET_CAPACITY ||
+                     sprites->count > FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT))) {
         set_error(error, error_size,
                   "invalid Zero Mission runtime-room core payload");
         return false;
@@ -1037,6 +1183,19 @@ static bool serialize_runtime_room(
         }
         capacity += 1024 + background_cells * 8;
     }
+    if (sprites) {
+        /* At most 64 placements and 16 members per variant, each record
+         * under 64 bytes. */
+        enum { SPRITE_RECORD_CAPACITY = FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT *
+               (FUSION_MZM_ROOM_SPRITE_CAPACITY +
+                FUSION_MZM_SPRITESET_MEMBER_CAPACITY + 1) * 64 };
+        if (capacity > SIZE_MAX - SPRITE_RECORD_CAPACITY) {
+            set_error(error, error_size,
+                      "Zero Mission runtime-room payload exceeds the size bound");
+            return false;
+        }
+        capacity += SPRITE_RECORD_CAPACITY;
+    }
     uint8_t *data = malloc(capacity);
     if (!data) {
         set_error(error, error_size,
@@ -1050,6 +1209,9 @@ static bool serialize_runtime_room(
     size_t location_count = 0, hatch_count = 0, hatch_lock_count = 0;
     size_t music_count = 0, background_layer_count = 0;
     size_t background_row_count = 0, text_background_count = 0;
+    size_t sprite_count = 0, spriteset_member_count = 0;
+    size_t sprite_variant_count = 0, variant_sprite_count = 0;
+    size_t variant_member_count = 0;
     if (!append_format(
             data, capacity, &used,
             "MVROOM-NATIVE\t1\tmzm\t%s\t%zu\t%zu\t%zu\n",
@@ -1260,6 +1422,98 @@ static bool serialize_runtime_room(
             }
             ++hatch_count;
         }
+        for (size_t index = 0; sprites && index < sprites->count; ++index) {
+            const FusionMzmRoomSpriteVariant *variant =
+                &sprites->variants[index];
+            if (variant->spriteset >= spritesets->count ||
+                variant->placement_count > FUSION_MZM_ROOM_SPRITE_CAPACITY) {
+                free(data);
+                set_error(error, error_size,
+                          "invalid Zero Mission room sprite variant");
+                return false;
+            }
+            const FusionMzmSpriteset *set =
+                &spritesets->sets[variant->spriteset];
+            bool event_variant = variant->variant != 0;
+            if (event_variant &&
+                !append_format(data, capacity, &used, "F\t%u\t%u\t%u\n",
+                               (unsigned)variant->variant,
+                               (unsigned)variant->event,
+                               (unsigned)variant->spriteset)) {
+                goto overflow;
+            }
+            if (event_variant) ++sprite_variant_count;
+            /* The placements: a slot above 16 picks spriteset member
+             * (slot - 1) % 16 (skipped beyond the members), any other is
+             * PrimarySprite slot - 1 in graphics slot 0. */
+            for (size_t slot = 0; slot < variant->placement_count; ++slot) {
+                const FusionMzmRoomSpritePlacement *placement =
+                    &variant->placements[slot];
+                unsigned raw = placement->slot & 0x7F;
+                const char *name;
+                char number[16];
+                unsigned gfx_slot = 0;
+                if (raw > FUSION_MZM_SPRITESET_ENTRY_TYPES) {
+                    size_t choice = (raw - 1) % FUSION_MZM_SPRITESET_ENTRY_TYPES;
+                    if (choice >= set->count) continue;
+                    name = fusion_mzm_primary_sprite_name(
+                        set->members[choice].sprite);
+                    gfx_slot = set->members[choice].slot & 7;
+                } else {
+                    name = fusion_mzm_primary_sprite_name(raw - 1);
+                    if (!name) {
+                        snprintf(number, sizeof number, "%d", (int)raw - 1);
+                        name = number;
+                    }
+                }
+                if (!name) {
+                    free(data);
+                    set_error(error, error_size,
+                              "Zero Mission spriteset member is outside PrimarySprite");
+                    return false;
+                }
+                if (event_variant
+                        ? !append_format(data, capacity, &used,
+                                         "J\t%u\t%u\t%u\t%s\t%u\t%zu\n",
+                                         (unsigned)variant->variant,
+                                         (unsigned)placement->y,
+                                         (unsigned)placement->x, name,
+                                         gfx_slot, slot)
+                        : !append_format(data, capacity, &used,
+                                         "P\t%u\t%u\t%s\t%u\t%zu\n",
+                                         (unsigned)placement->y,
+                                         (unsigned)placement->x, name,
+                                         gfx_slot, slot)) {
+                    goto overflow;
+                }
+                if (event_variant) ++variant_sprite_count;
+                else ++sprite_count;
+            }
+            for (size_t member = 0; member < set->count; ++member) {
+                const char *name =
+                    fusion_mzm_primary_sprite_name(set->members[member].sprite);
+                if (!name) {
+                    free(data);
+                    set_error(error, error_size,
+                              "Zero Mission spriteset member is outside PrimarySprite");
+                    return false;
+                }
+                unsigned gfx_slot = set->members[member].slot & 7;
+                if (event_variant
+                        ? !append_format(data, capacity, &used,
+                                         "N\t%u\t%s\t%u\n",
+                                         (unsigned)variant->variant, name,
+                                         gfx_slot)
+                        : !append_format(data, capacity, &used,
+                                         "S\t%u\t%s\t%u\n",
+                                         (unsigned)variant->spriteset, name,
+                                         gfx_slot)) {
+                    goto overflow;
+                }
+                if (event_variant) ++variant_member_count;
+                else ++spriteset_member_count;
+            }
+        }
         if (entry) {
             const char *effect = room_effect_name(entry->effect);
             if (!append_format(data, capacity, &used, "U\t%u\n",
@@ -1395,7 +1649,8 @@ static bool serialize_runtime_room(
         data, used, clipdata_count, transition_count, movement_count,
         door_count, exit_count, location_count, hatch_count, hatch_lock_count,
         music_count, background_layer_count, background_row_count,
-        text_background_count
+        text_background_count, sprite_count, spriteset_member_count,
+        sprite_variant_count, variant_sprite_count, variant_member_count
     };
     if (error && error_size > 0) error[0] = '\0';
     return true;
@@ -1413,7 +1668,8 @@ bool fusion_mzm_serialize_runtime_room_core(
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     return serialize_runtime_room(area, SIZE_MAX, room, clipdata, tables, NULL,
-                                  NULL, NULL, NULL, payload, error, error_size);
+                                  NULL, NULL, NULL, NULL, NULL, payload, error,
+                                  error_size);
 }
 
 bool fusion_mzm_serialize_runtime_room_doors(
@@ -1430,7 +1686,7 @@ bool fusion_mzm_serialize_runtime_room_doors(
         return false;
     }
     return serialize_runtime_room(spec->id, area, room, clipdata, tables,
-                                  doors, NULL, NULL, NULL, payload,
+                                  doors, NULL, NULL, NULL, NULL, NULL, payload,
                                   error, error_size);
 }
 
@@ -1449,8 +1705,8 @@ bool fusion_mzm_serialize_runtime_room_hatches(
         return false;
     }
     return serialize_runtime_room(spec->id, area, room, clipdata, tables,
-                                  doors, hatches, NULL, NULL, payload,
-                                  error, error_size);
+                                  doors, hatches, NULL, NULL, NULL, NULL,
+                                  payload, error, error_size);
 }
 
 bool fusion_mzm_serialize_runtime_room_metadata(
@@ -1470,8 +1726,32 @@ bool fusion_mzm_serialize_runtime_room_metadata(
         return false;
     }
     return serialize_runtime_room(spec->id, area, room, clipdata, tables,
-                                  doors, hatches, entry, backgrounds, payload,
-                                  error, error_size);
+                                  doors, hatches, entry, backgrounds, NULL,
+                                  NULL, payload, error, error_size);
+}
+
+bool fusion_mzm_serialize_runtime_room_sprites(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
+    const FusionMzmSpritesetTable *spritesets,
+    const FusionMzmRoomSprites *sprites,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size) {
+    const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+    if (!spec || !spritesets || !sprites) {
+        if (payload) *payload = (FusionMzmRuntimeRoomPayload){0};
+        set_error(error, error_size,
+                  "invalid Zero Mission runtime-room sprite input");
+        return false;
+    }
+    return serialize_runtime_room(spec->id, area, room, clipdata, tables,
+                                  doors, hatches, entry, backgrounds,
+                                  spritesets, sprites, payload, error,
+                                  error_size);
 }
 
 static bool read_count(const uint8_t *data, size_t size, size_t *position,

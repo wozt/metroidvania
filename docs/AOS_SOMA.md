@@ -43,8 +43,8 @@ paths. New files start at the native new-game location, area 0 room 0.
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with
 the original six 0x47C-byte SRAM records. The runtime accepts `--save FILE`
 and restores the room, optional spawn, HP and the currently exposed movement
-mask. `scripts.aos_runtime_room` now emits schema version 4's global-map save
-and warp bits. Runtime compatibility also recognizes the native room object
+mask. The native room exporter emits schema version 4's global-map save and
+warp bits. Runtime compatibility also recognizes the native room object
 `0x1C` in older exports. Holding Up inside Object1C's verified rectangle
 (`x=104..136`, `y=128..183`) restores HP and atomically updates the selected
 portable file with the current room, spawn and play time. The native healing
@@ -138,11 +138,12 @@ cells, mostly with air above), bit 2 outside slopes (`0x04`) and the rare
 `0x14`, `0x27`, `0x37` values; `gEwramData->unk_A074_6` with the bitmap at
 `unk_F0C0` overrides some cells to `0x03`.
 
-Ported so far: `python3 -m scripts.aos_runtime_room --area <A> --room <R>`
-exports a room's background composite and its BG1 collision bytes as
-`sub_08001A00` returns them (342 of 343 rooms; the remaining one has no text
-BG1). `src/runtime/aos_collision.c` ports the cell lookup, slope height, walk
-modes, the four vertical walks, the bit-3 test and both horizontal pushes,
+Ported so far: `python3 -m scripts.rebuild --task aria_rooms` runs the native
+C11 exporter for every room, writing each background composite and its BG1
+collision bytes as `sub_08001A00` returns them (342 of 343 rooms; the
+remaining one has no text BG1). `src/runtime/aos_collision.c` ports the cell
+lookup, slope height, walk modes, the four vertical walks, the bit-3 test and
+both horizontal pushes,
 with ROM-free tests. It is not yet used by a Soma controller.
 
 Player collision: `sub_08014A04` runs every frame from `sub_0801B0D8`

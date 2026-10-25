@@ -1,174 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Zero Mission runtime-room export (scripts/mzm_runtime_room.py --all):
- * every exportable room's room.tsv, background.bmp and text layers, the
- * used tileset sheets, blocks.tsv, power_bomb.tsv and export_index.tsv. */
-#define _POSIX_C_SOURCE 200809L  /* lstat */
-
+/* The Zero Mission runtime-room export (formerly scripts/mzm_runtime_room.py
+ * --all): every exportable room's room.tsv, background.bmp and text layers,
+ * the used tileset sheets, blocks.tsv, power_bomb.tsv and export_index.tsv. */
 #include "fusion/assets/mzm.h"
 
+#include "export.h"
 #include "fusion/assets/rom.h"
-#include "output.h"
 
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#endif
-
-enum {
-    EXPORT_PATH_CAPACITY = 1024,
-    EXPORT_SKIP_CAPACITY = FUSION_MZM_EXPORT_SKIP_CAPACITY
-};
+enum { EXPORT_SKIP_CAPACITY = FUSION_MZM_EXPORT_SKIP_CAPACITY };
 
 static void set_error(char *error, size_t error_size, const char *format,
                       const char *detail) {
     if (!error || error_size == 0) return;
     snprintf(error, error_size, format, detail ? detail : "");
     error[error_size - 1] = '\0';
-}
-
-static bool is_symlink(const char *path) {
-#ifdef _WIN32
-    (void)path;
-    return false;
-#else
-    struct stat info;
-    return lstat(path, &info) == 0 && S_ISLNK(info.st_mode);
-#endif
-}
-
-/* private_path(create=True): a real directory, created when missing. */
-static bool ensure_directory(const char *path, char *error, size_t error_size) {
-    if (is_symlink(path)) {
-        set_error(error, error_size, "symlink private asset component refused: %s",
-                  path);
-        return false;
-    }
-    struct stat info;
-    if (stat(path, &info) == 0) {
-        if (S_ISDIR(info.st_mode)) return true;
-        set_error(error, error_size, "private asset parent is not a directory: %s",
-                  path);
-        return false;
-    }
-#ifdef _WIN32
-    int made = _mkdir(path);
-#else
-    int made = mkdir(path, 0777);
-#endif
-    if (made != 0 && errno != EEXIST) {
-        set_error(error, error_size, "cannot create private asset directory: %s",
-                  path);
-        return false;
-    }
-    return true;
-}
-
-static bool join_path(char *output, const char *directory, const char *name) {
-    int written = snprintf(output, EXPORT_PATH_CAPACITY, "%s/%s", directory, name);
-    return written > 0 && written < EXPORT_PATH_CAPACITY;
-}
-
-typedef struct {
-    const uint8_t *data;
-    size_t size;
-} ExportBytes;
-
-static bool write_bytes(FILE *file, const void *context) {
-    const ExportBytes *bytes = context;
-    return fwrite(bytes->data, 1, bytes->size, file) == bytes->size;
-}
-
-/* sprite_library.write_atomic: no symlinked target or temporary. */
-static bool write_file(const char *path, const uint8_t *data, size_t size,
-                       char *error, size_t error_size) {
-    char temporary[EXPORT_PATH_CAPACITY + 8];
-    snprintf(temporary, sizeof temporary, "%s.tmp", path);
-    if (is_symlink(path) || is_symlink(temporary)) {
-        set_error(error, error_size, "symlink output refused: %s", path);
-        return false;
-    }
-    ExportBytes bytes = {data, size};
-    char detail[128];
-    if (!fusion_asset_write_atomic(path, write_bytes, &bytes, detail,
-                                   sizeof detail)) {
-        set_error(error, error_size, "cannot write %s", path);
-        return false;
-    }
-    return true;
-}
-
-typedef struct {
-    char folder[40];
-    char sha_room[65];
-    char sha_background[65];
-} ExportedRoom;
-
-typedef struct {
-    char item[40];
-    char reason[96];
-} SkippedRoom;
-
-static int compare_skipped(const void *left, const void *right) {
-    const SkippedRoom *a = left, *b = right;
-    int order = strcmp(a->item, b->item);
-    return order ? order : strcmp(a->reason, b->reason);
-}
-
-static int compare_exported(const void *left, const void *right) {
-    return strcmp(((const ExportedRoom *)left)->folder,
-                  ((const ExportedRoom *)right)->folder);
-}
-
-/* export_index.write: every room.tsv and background.bmp sorted by path,
- * then the skipped rooms sorted, each reason's whitespace collapsed. */
-static bool write_index(const char *output, ExportedRoom *rooms, size_t room_count,
-                        SkippedRoom *skipped, size_t skipped_count,
-                        char *error, size_t error_size) {
-    qsort(rooms, room_count, sizeof *rooms, compare_exported);
-    qsort(skipped, skipped_count, sizeof *skipped, compare_skipped);
-    size_t capacity = 64 + room_count * 2 * 128 + skipped_count * 160;
-    char *text = malloc(capacity);
-    if (!text) {
-        set_error(error, error_size, "cannot allocate the export index%s", NULL);
-        return false;
-    }
-    size_t used = (size_t)snprintf(text, capacity,
-                                   "schema\tmetroidvania-export-index-v1\n");
-    for (size_t index = 0; index < room_count; ++index) {
-        used += (size_t)snprintf(text + used, capacity - used,
-                                 "file\t%s/background.bmp\t%s\n"
-                                 "file\t%s/room.tsv\t%s\n",
-                                 rooms[index].folder, rooms[index].sha_background,
-                                 rooms[index].folder, rooms[index].sha_room);
-    }
-    for (size_t index = 0; index < skipped_count; ++index) {
-        used += (size_t)snprintf(text + used, capacity - used, "skipped\t%s\t",
-                                 skipped[index].item);
-        bool space = false, started = false;
-        for (const char *cursor = skipped[index].reason; *cursor; ++cursor) {
-            if (*cursor == ' ' || *cursor == '\t' || *cursor == '\n' ||
-                *cursor == '\r' || *cursor == '\v' || *cursor == '\f') {
-                space = started;
-                continue;
-            }
-            if (space && used + 1 < capacity) text[used++] = ' ';
-            if (used + 1 < capacity) text[used++] = *cursor;
-            space = false;
-            started = true;
-        }
-        if (used + 1 < capacity) text[used++] = '\n';
-        text[used] = '\0';
-    }
-    char path[EXPORT_PATH_CAPACITY];
-    bool written = used < capacity && join_path(path, output, "export_index.tsv") &&
-                   write_file(path, (const uint8_t *)text, used, error, error_size);
-    free(text);
-    return written;
 }
 
 bool fusion_mzm_export_runtime_rooms(
@@ -190,9 +39,9 @@ bool fusion_mzm_export_runtime_rooms(
     FusionMzmRoomSprites *sprites = malloc(sizeof *sprites);
     FusionMzmVideoMemory *memory = malloc(sizeof *memory);
     FusionMzmMetatileTable *metatiles = malloc(sizeof *metatiles);
-    ExportedRoom *rooms = calloc(FUSION_MZM_ROOM_AREA_COUNT * FUSION_MZM_ROOM_CAPACITY,
+    FusionExportRoom *rooms = calloc(FUSION_MZM_ROOM_AREA_COUNT * FUSION_MZM_ROOM_CAPACITY,
                                  sizeof *rooms);
-    SkippedRoom skipped[EXPORT_SKIP_CAPACITY];
+    FusionExportSkip skipped[EXPORT_SKIP_CAPACITY];
     size_t room_count = 0, skipped_count = 0;
     bool sheet_written[FUSION_MZM_TILESET_COUNT] = {false};
     bool shared_written = false;
@@ -202,9 +51,9 @@ bool fusion_mzm_export_runtime_rooms(
                   NULL);
         goto done;
     }
-    char tilesets[EXPORT_PATH_CAPACITY];
-    if (!ensure_directory(output, error, error_size) ||
-        !join_path(tilesets, output, "tilesets") ||
+    char tilesets[FUSION_EXPORT_PATH_CAPACITY];
+    if (!fusion_export_ensure_directory(output, error, error_size) ||
+        !fusion_export_join(tilesets, output, "tilesets") ||
         !fusion_mzm_read_rom_symbols(rom, elf, elf_size, &symbols, detail,
                                      sizeof detail) ||
         !fusion_mzm_read_room_directory(rom, &symbols, &directory, detail,
@@ -231,7 +80,7 @@ bool fusion_mzm_export_runtime_rooms(
             FusionMzmRuntimeRoomPayload payload = {0};
             bool no_base = false, room_ok = false;
             const char *skip = NULL;
-            char folder[EXPORT_PATH_CAPACITY], path[EXPORT_PATH_CAPACITY];
+            char folder[FUSION_EXPORT_PATH_CAPACITY], path[FUSION_EXPORT_PATH_CAPACITY];
             char name[40];
             if (!fusion_mzm_read_room_entry(rom, &directory, area, room, &entry,
                                             detail, sizeof detail)) {
@@ -287,8 +136,8 @@ bool fusion_mzm_export_runtime_rooms(
                     ? (char)(value - 'A' + 'a') : value;
             }
             snprintf(name + length, sizeof name - length, "_%03zu", room);
-            if (!join_path(folder, output, name) ||
-                !ensure_directory(folder, error, error_size)) {
+            if (!fusion_export_join(folder, output, name) ||
+                !fusion_export_ensure_directory(folder, error, error_size)) {
                 goto room_done;
             }
             if (!fusion_mzm_read_room_sprites(rom, &symbols, spritesets, &entry,
@@ -324,8 +173,8 @@ bool fusion_mzm_export_runtime_rooms(
                 bool serialized = fusion_mzm_serialize_bmp32(&text, &bitmap, detail,
                                                              sizeof detail);
                 fusion_mzm_free_rendered_background(&text);
-                bool written = serialized && join_path(path, folder, file) &&
-                               write_file(path, bitmap.data, bitmap.size, error,
+                bool written = serialized && fusion_export_join(path, folder, file) &&
+                               fusion_export_write_file(path, bitmap.data, bitmap.size, error,
                                           error_size);
                 if (serialized) fusion_mzm_free_bitmap(&bitmap);
                 if (!serialized) set_error(error, error_size, "%s", detail);
@@ -339,11 +188,11 @@ bool fusion_mzm_export_runtime_rooms(
                                                       detail, sizeof detail) &&
                     fusion_mzm_serialize_power_bomb_windows(rom, &symbols, &windows,
                                                             detail, sizeof detail);
-                bool written = built && join_path(path, output, "blocks.tsv") &&
-                               write_file(path, blocks.data, blocks.size, error,
+                bool written = built && fusion_export_join(path, output, "blocks.tsv") &&
+                               fusion_export_write_file(path, blocks.data, blocks.size, error,
                                           error_size) &&
-                               join_path(path, output, "power_bomb.tsv") &&
-                               write_file(path, windows.data, windows.size, error,
+                               fusion_export_join(path, output, "power_bomb.tsv") &&
+                               fusion_export_write_file(path, windows.data, windows.size, error,
                                           error_size);
                 fusion_mzm_free_text_file(&blocks);
                 fusion_mzm_free_text_file(&windows);
@@ -357,7 +206,7 @@ bool fusion_mzm_export_runtime_rooms(
                 char file[32];
                 snprintf(file, sizeof file, "tileset_%02u.bmp",
                          (unsigned)entry.tileset);
-                if (!ensure_directory(tilesets, error, error_size)) goto room_done;
+                if (!fusion_export_ensure_directory(tilesets, error, error_size)) goto room_done;
                 if (!fusion_mzm_read_tileset_metatiles(rom, &symbols, entry.tileset,
                                                        metatiles, detail,
                                                        sizeof detail) ||
@@ -369,8 +218,8 @@ bool fusion_mzm_export_runtime_rooms(
                 bool serialized = fusion_mzm_serialize_bmp32(&sheet, &bitmap, detail,
                                                              sizeof detail);
                 fusion_mzm_free_rendered_background(&sheet);
-                bool written = serialized && join_path(path, tilesets, file) &&
-                               write_file(path, bitmap.data, bitmap.size, error,
+                bool written = serialized && fusion_export_join(path, tilesets, file) &&
+                               fusion_export_write_file(path, bitmap.data, bitmap.size, error,
                                           error_size);
                 if (serialized) fusion_mzm_free_bitmap(&bitmap);
                 if (!serialized) set_error(error, error_size, "%s", detail);
@@ -378,12 +227,12 @@ bool fusion_mzm_export_runtime_rooms(
                 sheet_written[entry.tileset] = true;
                 ++summary->sheet_count;
             }
-            ExportedRoom *exported = &rooms[room_count];
+            FusionExportRoom *exported = &rooms[room_count];
             snprintf(exported->folder, sizeof exported->folder, "%s", name);
-            if (!join_path(path, folder, "room.tsv") ||
-                !write_file(path, payload.data, payload.size, error, error_size) ||
-                !join_path(path, folder, "background.bmp") ||
-                !write_file(path, background.bitmap, background.bitmap_size, error,
+            if (!fusion_export_join(path, folder, "room.tsv") ||
+                !fusion_export_write_file(path, payload.data, payload.size, error, error_size) ||
+                !fusion_export_join(path, folder, "background.bmp") ||
+                !fusion_export_write_file(path, background.bitmap, background.bitmap_size, error,
                             error_size) ||
                 !fusion_sha256_hex(payload.data, payload.size, exported->sha_room) ||
                 !fusion_sha256_hex(background.bitmap, background.bitmap_size,
@@ -411,7 +260,7 @@ bool fusion_mzm_export_runtime_rooms(
         snprintf(summary->skipped[index], sizeof summary->skipped[index],
                  "%s: %s", skipped[index].item, skipped[index].reason);
     }
-    if (!write_index(output, rooms, room_count, skipped, skipped_count, error,
+    if (!fusion_export_write_room_index(output, rooms, room_count, skipped, skipped_count, error,
                      error_size)) {
         goto done;
     }

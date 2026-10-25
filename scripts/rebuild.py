@@ -232,9 +232,17 @@ ASSET_TASKS = {
     "aria_world": _asset_task(
         "aria_world", "aria", "import_aos_world", (),
         (ROOT / "assets/extracted/rooms/aria/world.json",), ("aria_rom",)),
-    "aria_rooms": _asset_task(
-        "aria_rooms", "aria", "aos_runtime_room", ("--all",), (ARIA_ROOM_INDEX,),
-        ("aria_rom",), _export_validator(ARIA_ROOM_INDEX)),
+    # The native writer reads the ROM directly. The importer binary is an
+    # input, so rebuilding it invalidates the private room export.
+    "aria_rooms": Task(
+        name="aria_rooms", version=2, dependencies=("aria_rom",),
+        inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],
+        outputs=(ARIA_ROOM_INDEX,),
+        action=_run_native("--aria-export-rooms", ROMS["aria"],
+                           ARIA_ROOM_INDEX.parent),
+        requires=(ROMS["aria"], NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("aria"),
+        validate=_export_validator(ARIA_ROOM_INDEX), group="assets"),
     "aria_soma": _asset_task(
         "aria_soma", "aria", "aos_soma_pipeline", (), (ARIA_SOMA,), ("aria_rom",),
         _sprite_validator(ARIA_SOMA)),

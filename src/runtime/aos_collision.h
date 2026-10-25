@@ -2,7 +2,7 @@
 /* Aria of Sorrow BG1 collision primitives.
  *
  * Ports of the cvaos routines in src/code_08001194.c: the cell lookup
- * sub_08001A00 (on a table exported by scripts/aos_runtime_room.py, with the
+ * sub_08001A00 (on a table exported by fusion_importer, with the
  * slope X-flip toggle already applied), the slope height sub_08001B40, the
  * mode rewrite sub_08001BA0, the vertical walks sub_08001C1C, sub_08001CCC,
  * sub_08001D94 and sub_08001E58, the slope/bit-3 test sub_08001F3C and the

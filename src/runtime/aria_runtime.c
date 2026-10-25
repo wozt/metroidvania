@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Experimental Aria of Sorrow room runtime: Soma in one native room.
  *
- * Loads a room exported by scripts/aos_runtime_room.py (AOSROOM-NATIVE
+ * Loads a room exported by fusion_importer (AOSROOM-NATIVE
  * collision bytes and background.bmp) and Soma's sprite library from
  * scripts/aos_soma_pipeline.py, then runs the ported player frame
  * aos_soma_update at 60 Hz. The library's animation_NNN keys are the
@@ -1406,8 +1406,8 @@ int main(int argc, char **argv) {
 
     AriaRoom room = {0};
     if (!load_room(room_path, &room)) {
-        fprintf(stderr, "Export the room first: python3 -m scripts.aos_runtime_room "
-                        "--area <A> --room <R>\n");
+        fprintf(stderr, "Export the rooms first: python3 -m scripts.rebuild "
+                        "--task aria_rooms\n");
         return 1;
     }
     AosCollision layer = room_layer(&room);

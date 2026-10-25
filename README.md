@@ -391,7 +391,7 @@ with:
 
 ```sh
 python3 -m scripts.aos_soma_pipeline
-python3 -m scripts.aos_runtime_room --all
+python3 -m scripts.rebuild --task aria_rooms   # runs build/fusion_importer --aria-export-rooms
 python3 -m scripts.aos_object_sprites
 python3 -m scripts.aos_weapons
 ./build/fusion_aria_runtime --area 0 --room 6

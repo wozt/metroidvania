@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Native asset pipeline entry point. Extraction remains Python-authoritative
- * until each C replacement has an equivalence fixture and integration test. */
+/* Native asset pipeline entry point. Each C replacement becomes authoritative
+ * only after an equivalence fixture and integration test. */
 #include "fusion/assets/aos.h"
 #include "fusion/assets/mzm.h"
 #include "fusion/assets/rom.h"
@@ -32,6 +32,7 @@ static void usage(const char *name) {
             "       %s --aria-bosses FILE\n"
             "       %s --aria-summary FILE\n"
             "       %s --aria-catalog ROM WORLD_JSON ROOMS_TSV\n"
+            "       %s --aria-export-rooms ROM OUTPUT_DIR\n"
             "       %s --mzm-symbols ROM ELF\n"
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-rooms ROM ELF\n"
@@ -57,7 +58,7 @@ static void usage(const char *name) {
             name, name, name, name, name, name, name, name, name, name, name,
             name,
             name, name, name, name,
-            name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -796,6 +797,25 @@ static uint8_t aria_room_flags(const FusionAosMap *map,
         if (cell->warp) flags |= FUSION_AOS_ROOM_FLAG_WARP;
     }
     return flags;
+}
+
+static int export_aria_runtime_rooms(const char *path, const char *output) {
+    FusionRom rom = {0};
+    char error[512];
+    static FusionAosExportSummary summary;
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom, error, sizeof error) ||
+        !fusion_aos_export_runtime_rooms(&rom, output, &summary, error,
+                                         sizeof error)) {
+        fprintf(stderr, "aria-export-rooms: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    printf("Aria runtime rooms exported: %zu, skipped: %zu\n", summary.room_count,
+           summary.skipped_count);
+    for (size_t index = 0; index < summary.skipped_count; ++index)
+        printf("  skipped %s\n", summary.skipped[index]);
+    fusion_rom_close(&rom);
+    return 0;
 }
 
 static int inspect_aria_runtime_rooms(const char *path) {
@@ -2588,6 +2608,8 @@ int main(int argc, char **argv) {
     const char *aria_entities_path = NULL;
     const char *aria_bosses_path = NULL;
     const char *aria_summary_path = NULL;
+    const char *aria_export_rom_path = NULL;
+    const char *aria_export_output = NULL;
     const char *aria_catalog_rom_path = NULL;
     const char *aria_catalog_output_path = NULL;
     const char *aria_catalog_index_path = NULL;
@@ -2666,6 +2688,10 @@ int main(int argc, char **argv) {
             aria_bosses_path = argv[++i];
         else if (!strcmp(argv[i], "--aria-summary") && i + 1 < argc)
             aria_summary_path = argv[++i];
+        else if (!strcmp(argv[i], "--aria-export-rooms") && i + 2 < argc) {
+            aria_export_rom_path = argv[++i];
+            aria_export_output = argv[++i];
+        }
         else if (!strcmp(argv[i], "--aria-catalog") && i + 3 < argc) {
             aria_catalog_rom_path = argv[++i];
             aria_catalog_output_path = argv[++i];
@@ -2790,6 +2816,8 @@ int main(int argc, char **argv) {
     if (aria_entities_path) return inspect_aria_entities(aria_entities_path);
     if (aria_bosses_path) return inspect_aria_bosses(aria_bosses_path);
     if (aria_summary_path) return inspect_aria_summary(aria_summary_path);
+    if (aria_export_rom_path)
+        return export_aria_runtime_rooms(aria_export_rom_path, aria_export_output);
     if (aria_catalog_rom_path)
         return write_aria_catalog(aria_catalog_rom_path, aria_catalog_output_path,
                                   aria_catalog_index_path);

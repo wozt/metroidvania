@@ -49,6 +49,7 @@ build/fusion_importer --aria-entities "roms/Castlevania - Aria of Sorrow (USA).g
 build/fusion_importer --aria-bosses "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-summary "roms/Castlevania - Aria of Sorrow (USA).gba"
 build/fusion_importer --aria-catalog "roms/Castlevania - Aria of Sorrow (USA).gba" WORLD_JSON ROOMS_TSV
+build/fusion_importer --aria-export-rooms "roms/Castlevania - Aria of Sorrow (USA).gba" OUTPUT_DIR
 build/fusion_importer --mzm-symbols "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
 build/fusion_importer --mzm-rom-bank "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf OUTPUT_DIR
 build/fusion_importer --mzm-rooms "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
@@ -86,7 +87,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
-| `scripts/aos_runtime_room.py`, `scripts/aos_room_render.py` | `src/assets/aos/runtime_room.c` | BG1 collision, graphics/palette loading, tile expansion, 4-bpp rendering, static-origin depth compositing, BMP and runtime-room TSV serialization complete; private output orchestration pending | synthetic metadata, resource-encoding, bounds, tile/pixel flip, palette, transparency, depth, repetition, BMP, runtime schema, signed-transition, entity and flag fixtures; exact comparison of 342 collision maps, 343 complete VRAM/palette snapshots, 901 final tilemaps and RGBA layers totaling 150,929,408 pixels, 342 complete RGB composites totaling 61,210,624 pixels, their byte-identical 183,650,340-byte BMP representation and 342 byte-identical `AOSROOM-NATIVE` payloads totaling 2,035,730 bytes; 104 absent and 24 affine layer slots remain explicit and one room has no supported text layer or runtime payload |
+| removed: `scripts/aos_runtime_room.py`; retained: `scripts/aos_room_render.py` for editor previews and sprite tooling | `src/assets/aos/runtime_room.c`, `src/assets/aos/export.c` | BG1 collision, graphics/palette loading, tile expansion, 4-bpp rendering, static-origin depth compositing, BMP and runtime-room TSV serialization complete; the atomic private export, SHA-256 index and rebuild cutover are complete; the Python room exporter is removed | synthetic metadata, resource-encoding, bounds, tile/pixel flip, palette, transparency, depth, repetition, BMP, runtime schema, signed-transition, entity and flag fixtures; exact comparison of 342 collision maps, 343 complete VRAM/palette snapshots, 901 final tilemaps and RGBA layers totaling 150,929,408 pixels, 342 complete RGB composites totaling 61,210,624 pixels, their byte-identical 183,650,340-byte BMP representation, 342 byte-identical `AOSROOM-NATIVE` payloads totaling 2,035,730 bytes and the complete 685-file private export; 104 absent and 24 affine layer slots remain explicit and one room has no supported text layer or runtime payload; recorded SHA-256 digests guard every native command, both catalog files and all export files |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
 
@@ -107,10 +108,13 @@ its index atomically, file for file as the former Python exporter. The
 their tests and the room-only helpers of `mzm_sprites` / `mzm_c_tables`, and
 `tests/test_fusion_assets_mzm_golden.py` checks recorded SHA-256 digests of
 every native command output and export file instead of the Python
-reference. Aria's composite image and `AOSROOM-NATIVE` v4
-serialization are native; private output orchestration remains Python-owned.
-The
-completed Zero Mission ROM bank and Aria world catalog are ready for later
+reference. Aria's composite image, `AOSROOM-NATIVE` v4 serialization and
+complete 685-file private export are now native too. The `aria_rooms` rebuild
+task calls `build/fusion_importer --aria-export-rooms`, the former Python room
+exporter and its tests are removed, and a recorded digest fixture replaces the
+temporary Python equivalence test. The retained Python renderer still serves
+editor previews and sprite tooling. The completed Zero Mission ROM bank and
+Aria world catalog are ready for later
 registration in the native task graph. The header extractor is
 intentionally diagnostic: it reads a
 caller-supplied file and now also runs on verified game imports, but does not

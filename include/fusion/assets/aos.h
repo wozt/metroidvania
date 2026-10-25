@@ -28,7 +28,8 @@ enum {
     FUSION_AOS_MAP_HEIGHT = 35,
     FUSION_AOS_ROOM_FLAG_SAVE = 1 << 0,
     FUSION_AOS_ROOM_FLAG_WARP = 1 << 1,
-    FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT
+    FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT,
+    FUSION_AOS_EXPORT_SKIP_CAPACITY = 64
 };
 
 typedef struct {
@@ -333,5 +334,23 @@ bool fusion_aos_write_world_catalog(const FusionRom *rom, const char *path,
                                     char *error, size_t error_size);
 bool fusion_aos_write_room_index(const FusionRom *rom, const char *path,
                                  char *error, size_t error_size);
+
+typedef struct {
+    size_t room_count;
+    size_t skipped_count;
+    size_t room_bytes;
+    size_t background_bytes;
+    /* The skipped rooms in export order, "area/room: reason". */
+    char skipped[FUSION_AOS_EXPORT_SKIP_CAPACITY][160];
+} FusionAosExportSummary;
+
+/* Writes the complete native runtime-room export into OUTPUT (the runtime
+ * rooms folder, created when missing): for each room
+ * with a decoded BG1 collision table, area_<AA>_room_<RRR>/room.tsv
+ * (AOSROOM-NATIVE v4) and background.bmp (the static-origin composite), then
+ * export_index.tsv, every file atomically and never through a symlink. */
+bool fusion_aos_export_runtime_rooms(const FusionRom *rom, const char *output,
+                                     FusionAosExportSummary *summary,
+                                     char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

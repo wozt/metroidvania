@@ -235,9 +235,13 @@ native depth keys, modulo repetition and transparent-pixel rejection. The
 resulting RGB composites are serialized natively to byte-identical 24-bit BMP
 files with bottom-up BGR rows and aligned pitch. The same layer serializes the
 runtime's `AOSROOM-NATIVE` v4 TSV directly from final collision cells,
-transitions, entities and save/warp map flags. Parallax, affine/8-bpp layers,
-hardware blending, private output/index writes and global task orchestration
-are still owned by the Python reference pipeline.
+transitions, entities and save/warp map flags. `fusion_aos_export_runtime_rooms`
+(`src/assets/aos/export.c`) writes all 342 supported room TSV/background pairs
+and their SHA-256 export index atomically, and the `aria_rooms` rebuild task
+runs it through `build/fusion_importer`; the Python room exporter is gone.
+Parallax, affine/8-bpp layers and hardware blending remain unsupported. The
+Python renderer remains in use by editor previews and sprite extraction, not
+by the production room export.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name

@@ -445,6 +445,7 @@ class NativeParityTests(unittest.TestCase):
         for name in ("aria_rom", "metroid_rom", "aria_rooms", "metroid_rooms"):
             self.assertEqual(rebuild.TASKS[name].group, "assets")
         self.assertIn(rebuild.ROMS["aria"], rebuild.TASKS["aria_rooms"].requires)
+        self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_rooms"].requires)
         self.assertIn(rebuild.MZM_ELF, rebuild.TASKS["metroid_samus"].requires)
 
     def test_rebuild_detects_tampered_outputs_and_pending_dependencies(self):

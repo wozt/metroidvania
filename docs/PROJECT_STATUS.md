@@ -2,6 +2,40 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0522 - Native Aria room export in production
+
+- Added `fusion_aos_export_runtime_rooms` and `--aria-export-rooms ROM
+  OUTPUT_DIR`. From the verified ROM alone, the writer decodes every room,
+  composes its static background, serializes `AOSROOM-NATIVE` v4 with map
+  flags, transitions and entities, and atomically writes the 342 supported
+  `room.tsv` / `background.bmp` pairs plus their SHA-256
+  `export_index.tsv`. Area 11 room 40 remains the single explicit skip because
+  it has no decodable BG1 collision table.
+- Extracted the directory, symlink refusal, atomic byte writer and sorted room
+  index logic shared by both games into `src/assets/core/export.c`; the Zero
+  Mission exporter now uses that shared implementation without changing its
+  output.
+- Compared the complete native and Python exports before removing the
+  reference: all 685 files and the console output were identical. The native
+  export took about 5 seconds on this machine, against about 2 minutes 15 for
+  Python.
+- The `aria_rooms` rebuild task now runs `build/fusion_importer
+  --aria-export-rooms`; its inputs are the ROM and importer binary, and its
+  existing export-index validation is unchanged. A forced production rebuild
+  exported 342 rooms and one skip, the next run was up to date, and
+  `fusion_aria_runtime --area 0 --room 6 --check` loaded the result.
+- Removed `scripts/aos_runtime_room.py`, its unit test and the temporary
+  Python/native equivalence suite. `tests/test_fusion_assets_aos_golden.py`
+  now guards the 15 native inspection outputs, both native catalog files and
+  every one of the 685 export files with the recorded digests in
+  `tests/fixtures/aos_native_golden.tsv`. `scripts/aos_room_render.py` stays:
+  editor previews and sprite tools still use it outside the production room
+  export.
+- No gameplay or fidelity status changed. The next C-pipeline cutover is the
+  already byte-matched Aria world catalog (`aria_world`); its remaining
+  Python module cannot be removed wholesale until the sprite and editor
+  consumers of its decoding helpers have native replacements.
+
 ## Patch 0521 - Native Zero Mission room export in production
 
 - The `metroid_rooms` rebuild task now runs `build/fusion_importer

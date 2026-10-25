@@ -424,6 +424,30 @@ static void test_tileset_video_memory(void) {
            rendered.rgba[2] == 0 && rendered.rgba[3] == 255);
     fusion_mzm_free_rendered_background(&rendered);
     free(text_cells);
+    uint8_t bg1_rgba[] = {
+        255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+    uint8_t bg2_rgba[] = {
+        0, 0, 255, 255, 0, 255, 0, 255, 0, 0, 0, 0
+    };
+    FusionMzmRenderedBackground bg1 = {3, 1, bg1_rgba, 3, 0};
+    FusionMzmRenderedBackground bg2 = {3, 1, bg2_rgba, 3, 0};
+    FusionMzmCompositeBackground composite;
+    assert(fusion_mzm_compose_bg12(
+        &bg1, &bg2, &composite, error, sizeof error));
+    assert(composite.width_pixels == 3 && composite.height_pixels == 1 &&
+           composite.pixel_count == 3 && composite.bg1_visible_count == 1 &&
+           composite.bg2_visible_count == 1 &&
+           composite.unresolved_count == 1);
+    assert(!memcmp(composite.rgb,
+                   (uint8_t[]){255, 0, 0, 0, 255, 0, 0, 0, 0}, 9));
+    assert(!memcmp(composite.visibility, (uint8_t[]){1, 1, 0}, 3));
+    fusion_mzm_free_composite_background(&composite);
+    assert(composite.rgb == NULL && composite.visibility == NULL &&
+           composite.pixel_count == 0);
+    bg2.width_pixels = 2;
+    assert(!fusion_mzm_compose_bg12(
+        &bg1, &bg2, &composite, error, sizeof error));
     symbol_entries[4].size = 1;
     assert(!fusion_mzm_read_tileset_metatiles(
         &rom, &symbols, TILESET_INDEX, metatiles, error, sizeof error));

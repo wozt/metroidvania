@@ -407,6 +407,72 @@ bool fusion_mzm_render_text_background(
     return true;
 }
 
+void fusion_mzm_free_composite_background(
+    FusionMzmCompositeBackground *composite) {
+    if (!composite) return;
+    free(composite->rgb);
+    free(composite->visibility);
+    *composite = (FusionMzmCompositeBackground){0};
+}
+
+bool fusion_mzm_compose_bg12(
+    const FusionMzmRenderedBackground *bg1,
+    const FusionMzmRenderedBackground *bg2,
+    FusionMzmCompositeBackground *composite,
+    char *error, size_t error_size) {
+    if (!composite) {
+        set_error(error, error_size,
+                  "invalid Zero Mission background-composite output");
+        return false;
+    }
+    *composite = (FusionMzmCompositeBackground){0};
+    if (!bg1 || !bg2 || !bg1->rgba || !bg2->rgba ||
+        bg1->width_pixels == 0 || bg1->height_pixels == 0 ||
+        bg1->width_pixels != bg2->width_pixels ||
+        bg1->height_pixels != bg2->height_pixels ||
+        bg1->width_pixels >
+            FUSION_MZM_RENDER_PIXEL_CAPACITY / bg1->height_pixels ||
+        bg1->pixel_count != bg1->width_pixels * bg1->height_pixels ||
+        bg2->pixel_count != bg1->pixel_count ||
+        bg1->pixel_count > FUSION_MZM_RENDER_PIXEL_CAPACITY ||
+        bg1->pixel_count > SIZE_MAX / 3) {
+        set_error(error, error_size,
+                  "invalid Zero Mission BG1/BG2 composite layers");
+        return false;
+    }
+    uint8_t *rgb = calloc(bg1->pixel_count, 3);
+    uint8_t *visibility = calloc(bg1->pixel_count, 1);
+    if (!rgb || !visibility) {
+        free(rgb);
+        free(visibility);
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission background composite");
+        return false;
+    }
+    size_t bg1_visible = 0, bg2_visible = 0, unresolved = 0;
+    for (size_t pixel = 0; pixel < bg1->pixel_count; ++pixel) {
+        size_t rgba_offset = pixel * 4;
+        size_t rgb_offset = pixel * 3;
+        if (bg1->rgba[rgba_offset + 3] != 0) {
+            memcpy(rgb + rgb_offset, bg1->rgba + rgba_offset, 3);
+            visibility[pixel] = 1;
+            ++bg1_visible;
+        } else if (bg2->rgba[rgba_offset + 3] != 0) {
+            memcpy(rgb + rgb_offset, bg2->rgba + rgba_offset, 3);
+            visibility[pixel] = 1;
+            ++bg2_visible;
+        } else {
+            ++unresolved;
+        }
+    }
+    *composite = (FusionMzmCompositeBackground){
+        bg1->width_pixels, bg1->height_pixels, rgb, visibility,
+        bg1->pixel_count, bg1_visible, bg2_visible, unresolved
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 static bool read_count(const uint8_t *data, size_t size, size_t *position,
                        uint8_t count_bytes, uint16_t *count) {
     if (*position > size || count_bytes > size - *position) return false;

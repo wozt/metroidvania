@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0510 - Native Zero Mission BG1/BG2 composites
+
+- Added bounded C11 composition of the already validated Zero Mission BG1 and
+  BG2 RGBA layers when both are decoded and have identical dimensions.
+- Preserved the existing diagnostic contract: known opaque BG1 pixels are in
+  front of known BG2 pixels, pixels absent from both layers remain black, and
+  a separate byte mask distinguishes visible native black from unresolved
+  output. This does not claim GBA priority, window or blending parity.
+- Added synthetic foreground, background, unresolved, visibility, ownership
+  and dimension-mismatch coverage plus complete RGB/mask SHA-1 comparison
+  through `--mzm-background-composites`.
+- All 301 eligible room composites match Python across 83,362,816 pixels:
+  51,786,183 are selected from BG1, 3,646,119 from BG2 and 27,930,514 remain
+  unresolved. Twenty-nine rooms have BG1 but no BG2, one has neither layer,
+  and no decoded pair has mismatched dimensions.
+- BG0/BG3, hardware priority, scrolling, blending, animated replacements,
+  bitmap output and runtime-room serialization remain outside this contract,
+  so migration and gameplay status do not change.
+- Next: serialize the native Zero Mission background selection to the private
+  bitmap/mask format, including the 29 valid BG1-only rooms, before porting the
+  complete room package; audio remains untouched.
+
 ## Patch 0509 - Native Aria runtime-room serialization
 
 - Added bounded C11 serialization of the `AOSROOM-NATIVE` v4 TSV consumed by

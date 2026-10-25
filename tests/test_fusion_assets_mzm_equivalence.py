@@ -11,6 +11,7 @@ import unittest
 
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
+    compose_bg12,
     metatile_sheet,
     render_block_background,
     symbol_bytes,
@@ -173,13 +174,19 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
         names = enum_values()
         expected = []
         expected_renders = []
+        expected_composites = []
         sheets = {}
         counts = {"rle": 0, "text": 0, "none": 0, "unsupported": 0}
         total_cells = 0
         total_rendered_pixels = 0
+        composite_count = missing_composites = mismatched_composites = 0
+        composite_pixels = composite_bg1 = composite_bg2 = 0
+        composite_unresolved = 0
         for room in source_rooms():
             fields = room["fields"]
             tileset = evaluate(fields.get("tileset", "0"), names)
+            room_renders = {}
+            room_statuses = {}
             for layer in range(4):
                 property_value = evaluate(fields.get(f"bg{layer}Prop", "0"), names)
                 symbol = fields[f"pBg{layer}Data"]
@@ -217,6 +224,7 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                     status = "none" if property_value == 0 else "unsupported"
                 if status in ("rle", "text"):
                     pixels = pixel_width * pixel_height
+                    room_renders[layer] = (pixel_width, pixel_height, rgba)
                     expected_renders.append((
                         room["area"], room["index"], layer, status,
                         pixel_width, pixel_height, pixels, 0,
@@ -224,12 +232,45 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                     ))
                     total_rendered_pixels += pixels
                 counts[status] += 1
+                room_statuses[layer] = status
                 total_cells += cell_count
                 expected.append((
                     room["area"], room["index"], layer, status,
                     property_value, pointer, size_flag, width, height,
                     cell_count, digest,
                 ))
+            if 1 not in room_renders or 2 not in room_renders:
+                expected_composites.append(
+                    f"skipped\t{room['area']}\t{room['index']}\tmissing\t"
+                    f"{room_statuses[1]}\t{room_statuses[2]}"
+                )
+                missing_composites += 1
+            elif room_renders[1][:2] != room_renders[2][:2]:
+                width1, height1, _ = room_renders[1]
+                width2, height2, _ = room_renders[2]
+                expected_composites.append(
+                    f"skipped\t{room['area']}\t{room['index']}\tdimensions\t"
+                    f"{width1}\t{height1}\t{width2}\t{height2}"
+                )
+                mismatched_composites += 1
+            else:
+                width, height, bg1 = room_renders[1]
+                _, _, bg2 = room_renders[2]
+                rgb, visibility, coverage = compose_bg12(bg1, bg2)
+                pixels = width * height
+                expected_composites.append(
+                    f"composite\t{room['area']}\t{room['index']}\t{width}\t"
+                    f"{height}\t{pixels}\t{coverage['bg1_visible_pixels']}\t"
+                    f"{coverage['bg2_visible_pixels']}\t"
+                    f"{coverage['unresolved_pixels']}\t"
+                    f"{hashlib.sha1(rgb).hexdigest()}\t"
+                    f"{hashlib.sha1(visibility).hexdigest()}"
+                )
+                composite_count += 1
+                composite_pixels += pixels
+                composite_bg1 += coverage["bg1_visible_pixels"]
+                composite_bg2 += coverage["bg2_visible_pixels"]
+                composite_unresolved += coverage["unresolved_pixels"]
 
         result = subprocess.run(
             [str(BINARY), "--mzm-backgrounds", str(ROM), str(ELF)],
@@ -280,6 +321,20 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             f"summary\t{len(expected_renders)}\t{counts['rle']}\t"
             f"{counts['text']}\t{counts['none'] + counts['unsupported']}\t"
             f"{total_rendered_pixels}\t0",
+        )
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-background-composites", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertEqual(lines[:-1], expected_composites)
+        self.assertEqual(
+            lines[-1],
+            f"summary\t{composite_count}\t{missing_composites}\t"
+            f"{mismatched_composites}\t{composite_pixels}\t{composite_bg1}\t"
+            f"{composite_bg2}\t{composite_unresolved}",
         )
 
     def test_tileset_video_memory_matches_python_reference(self):

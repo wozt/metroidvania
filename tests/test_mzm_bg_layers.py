@@ -51,6 +51,20 @@ class MzmBgLayerTests(unittest.TestCase):
         self.assertEqual(rgba[:4], bytes((255, 0, 0, 255)))
         self.assertEqual(rgba[16 * 4:17 * 4], bytes((0, 255, 0, 255)))
 
+    def test_bg12_composite_preserves_visibility(self):
+        bg1 = bytes((255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0))
+        bg2 = bytes((0, 0, 255, 255, 0, 255, 0, 255, 0, 0, 0, 0))
+        rgb, visibility, counts = mzm_bg_layers.compose_bg12(bg1, bg2)
+        self.assertEqual(rgb, bytes((255, 0, 0, 0, 255, 0, 0, 0, 0)))
+        self.assertEqual(visibility, bytes((1, 1, 0)))
+        self.assertEqual(counts, {
+            "bg1_visible_pixels": 1,
+            "bg2_visible_pixels": 1,
+            "unresolved_pixels": 1,
+        })
+        with self.assertRaises(ValueError):
+            mzm_bg_layers.compose_bg12(bg1, bg2[:-4])
+
     def test_bmp32_is_a_top_down_alpha_bitmap(self):
         data = mzm_bg_layers.bmp32(2, 1, bytes((1, 2, 3, 4, 5, 6, 7, 8)))
         self.assertEqual(data[:2], b"BM")

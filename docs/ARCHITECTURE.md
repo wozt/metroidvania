@@ -259,9 +259,12 @@ tileset's effective metatile table as well: up to 1,024 four-cell tileset blocks
 are copied within their exact ELF object bounds and zero-filled, then the 208
 four-cell common blocks are appended. It renders RLE block layers from those
 tables on character base 1 and LZ77 text layers on character base 2 with native
-4-bpp palette, flip and transparency semantics. Layer compositing, doors,
-sprites and runtime-room serialization remain Python-owned, and these native
-extractors are not yet registered in the global native task graph.
+4-bpp palette, flip and transparency semantics. Equal-sized decoded BG1/BG2
+pairs are composed natively using the intentionally diagnostic BG1-over-BG2
+order, with a separate visibility mask for unresolved transparent pixels.
+Hardware priority/blending, bitmap output, doors, sprites and runtime-room
+serialization remain Python-owned, and these native extractors are not yet
+registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

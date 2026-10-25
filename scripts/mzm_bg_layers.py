@@ -199,6 +199,34 @@ def render_block_background(width: int, height: int, blocks: tuple[int, ...],
     return bytes(rgba)
 
 
+def compose_bg12(bg1_rgba: bytes, bg2_rgba: bytes) -> tuple[bytes, bytes, dict]:
+    """Build the diagnostic BG1-over-BG2 composite from native RGBA layers."""
+    if not bg1_rgba or len(bg1_rgba) != len(bg2_rgba) or len(bg1_rgba) % 4:
+        raise ValueError("invalid Zero Mission BG1/BG2 RGBA layers")
+    pixels = len(bg1_rgba) // 4
+    rgb = bytearray(pixels * 3)
+    visibility = bytearray(pixels)
+    front = behind = unresolved = 0
+    for pixel in range(pixels):
+        source = pixel * 4
+        destination = pixel * 3
+        if bg1_rgba[source + 3]:
+            rgb[destination:destination + 3] = bg1_rgba[source:source + 3]
+            visibility[pixel] = 1
+            front += 1
+        elif bg2_rgba[source + 3]:
+            rgb[destination:destination + 3] = bg2_rgba[source:source + 3]
+            visibility[pixel] = 1
+            behind += 1
+        else:
+            unresolved += 1
+    return bytes(rgb), bytes(visibility), {
+        "bg1_visible_pixels": front,
+        "bg2_visible_pixels": behind,
+        "unresolved_pixels": unresolved,
+    }
+
+
 def text_background(symbol: str, tileset: int) -> tuple[int, int, int, bytes]:
     """An LZ77 text background (BG3, LZ77 BG0): size flag and RGBA image."""
     data = symbol_bytes(symbol)

@@ -41,6 +41,7 @@ static void usage(const char *name) {
             "       %s --mzm-runtime-room-hatches ROM ELF\n"
             "       %s --mzm-runtime-room-metadata ROM ELF\n"
             "       %s --mzm-runtime-room-sprites ROM ELF\n"
+            "       %s --mzm-bitmaps ROM ELF\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -53,7 +54,7 @@ static void usage(const char *name) {
             name, name, name, name, name, name, name, name, name, name, name,
             name,
             name, name, name, name,
-            name, name, name);
+            name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -1817,6 +1818,129 @@ static int inspect_mzm_tilesets(const char *rom_path, const char *elf_path) {
     return 0;
 }
 
+/* Prints one hashed BMP32 per tileset metatile sheet, then per text layer
+ * (BG0/BG3) of each room with an RLE BG1, as the runtime-room export
+ * writes them. */
+static bool print_bitmap(const char *prefix,
+                         const FusionMzmRenderedBackground *rendered,
+                         size_t *total_bytes, char *error, size_t error_size) {
+    FusionMzmBitmap bitmap;
+    if (!fusion_mzm_serialize_bmp32(rendered, &bitmap, error, error_size))
+        return false;
+    char digest[41];
+    if (!fusion_rom_sha1_hex(bitmap.data, bitmap.size, digest)) {
+        fusion_mzm_free_bitmap(&bitmap);
+        snprintf(error, error_size, "cannot hash bitmap");
+        return false;
+    }
+    printf("%s\t%zu\t%zu\t%zu\t%s\n", prefix, rendered->width_pixels,
+           rendered->height_pixels, bitmap.size, digest);
+    *total_bytes += bitmap.size;
+    fusion_mzm_free_bitmap(&bitmap);
+    return true;
+}
+
+static int inspect_mzm_bitmaps(const char *rom_path, const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmRoomDirectory directory;
+    FusionMzmVideoMemory *memory = malloc(sizeof *memory);
+    FusionMzmMetatileTable *metatiles = malloc(sizeof *metatiles);
+    int status = 1;
+    size_t sheets = 0, texts = 0, total_bytes = 0;
+    if (!memory || !metatiles) {
+        snprintf(error, sizeof error, "cannot allocate tileset buffers");
+        goto fail;
+    }
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error) ||
+        !fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error) ||
+        !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
+                                        error, sizeof error)) {
+        goto fail;
+    }
+    for (size_t index = 0; index < FUSION_MZM_TILESET_COUNT; ++index) {
+        FusionMzmRenderedBackground sheet;
+        char prefix[32];
+        snprintf(prefix, sizeof prefix, "sheet\t%zu", index);
+        if (!fusion_mzm_load_tileset_video_memory(&rom, &symbols, index, memory,
+                                                  error, sizeof error) ||
+            !fusion_mzm_read_tileset_metatiles(&rom, &symbols, index, metatiles,
+                                               error, sizeof error) ||
+            !fusion_mzm_render_metatile_sheet(metatiles, memory, &sheet,
+                                              error, sizeof error)) {
+            goto fail;
+        }
+        bool printed = print_bitmap(prefix, &sheet, &total_bytes,
+                                    error, sizeof error);
+        fusion_mzm_free_rendered_background(&sheet);
+        if (!printed) goto fail;
+        ++sheets;
+    }
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionMzmRoomEntry entry;
+            FusionMzmRoomBackgrounds backgrounds = {0};
+            if (!fusion_mzm_read_room_entry(&rom, &directory, area, room,
+                                            &entry, error, sizeof error))
+                goto fail;
+            if (entry.bg1_property != FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED)
+                continue;
+            if (!fusion_mzm_read_room_backgrounds(&rom, &entry, &backgrounds,
+                                                  error, sizeof error) ||
+                !fusion_mzm_load_tileset_video_memory(
+                    &rom, &symbols, entry.tileset, memory,
+                    error, sizeof error)) {
+                fusion_mzm_free_room_backgrounds(&backgrounds);
+                goto fail;
+            }
+            for (size_t layer = 0; layer < FUSION_MZM_ROOM_BACKGROUND_COUNT;
+                 ++layer) {
+                if ((layer != 0 && layer != 3) ||
+                    backgrounds.layers[layer].status !=
+                        FUSION_MZM_BACKGROUND_TEXT) {
+                    continue;
+                }
+                FusionMzmRenderedBackground text;
+                char prefix[48];
+                snprintf(prefix, sizeof prefix, "text\t%s\t%zu\t%zu",
+                         spec->id, room, layer);
+                if (!fusion_mzm_render_text_background(
+                        &backgrounds.layers[layer].text, memory, &text,
+                        error, sizeof error)) {
+                    fusion_mzm_free_room_backgrounds(&backgrounds);
+                    goto fail;
+                }
+                bool printed = print_bitmap(prefix, &text, &total_bytes,
+                                            error, sizeof error);
+                fusion_mzm_free_rendered_background(&text);
+                if (!printed) {
+                    fusion_mzm_free_room_backgrounds(&backgrounds);
+                    goto fail;
+                }
+                ++texts;
+            }
+            fusion_mzm_free_room_backgrounds(&backgrounds);
+        }
+    }
+    printf("summary\t%zu\t%zu\t%zu\n", sheets, texts, total_bytes);
+    status = 0;
+fail:
+    if (status) fprintf(stderr, "mzm-bitmaps: %s\n", error);
+    free(memory);
+    free(metatiles);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return status;
+}
+
 static int inspect_mzm_metatiles(const char *rom_path, const char *elf_path) {
     FusionRom rom = {0};
     uint8_t *elf = NULL;
@@ -2313,6 +2437,8 @@ int main(int argc, char **argv) {
     const char *mzm_runtime_hatch_elf_path = NULL;
     const char *mzm_runtime_metadata_rom_path = NULL;
     const char *mzm_runtime_sprite_rom_path = NULL;
+    const char *mzm_bitmap_rom_path = NULL;
+    const char *mzm_bitmap_elf_path = NULL;
     const char *mzm_runtime_sprite_elf_path = NULL;
     const char *mzm_runtime_metadata_elf_path = NULL;
     const char *mzm_background_rom_path = NULL;
@@ -2408,6 +2534,10 @@ int main(int argc, char **argv) {
             mzm_runtime_sprite_rom_path = argv[++i];
             mzm_runtime_sprite_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-bitmaps") && i + 2 < argc) {
+            mzm_bitmap_rom_path = argv[++i];
+            mzm_bitmap_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--mzm-backgrounds") && i + 2 < argc) {
             mzm_background_rom_path = argv[++i];
             mzm_background_elf_path = argv[++i];
@@ -2499,6 +2629,8 @@ int main(int argc, char **argv) {
         return inspect_mzm_runtime_rooms(
             mzm_runtime_sprite_rom_path, mzm_runtime_sprite_elf_path,
             true, true, true, true);
+    if (mzm_bitmap_rom_path)
+        return inspect_mzm_bitmaps(mzm_bitmap_rom_path, mzm_bitmap_elf_path);
     if (mzm_background_rom_path)
         return inspect_mzm_backgrounds(mzm_background_rom_path,
                                        mzm_background_elf_path);

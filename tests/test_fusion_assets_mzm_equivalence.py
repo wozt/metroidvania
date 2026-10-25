@@ -13,6 +13,7 @@ from scripts import mzm_runtime_room, mzm_sprites
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
     bg_properties,
+    bmp32,
     metatile_sheet,
     render_block_background,
     room_background_lines,
@@ -530,6 +531,47 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             "\t".join(["summary", str(len(expected)), str(skipped),
                        *(str(totals[key]) for key in ("cells", *keys, "bytes"))]),
         )
+
+    def test_runtime_bitmaps_match_python_reference(self):
+        """The tileset sheets and text layers the room export writes."""
+        expected = []
+        total_bytes = 0
+        for index in range(79):
+            width, height, rgba = metatile_sheet(index)
+            bitmap = bmp32(width, height, rgba)
+            expected.append(f"sheet\t{index}\t{width}\t{height}\t{len(bitmap)}\t"
+                            f"{hashlib.sha1(bitmap).hexdigest()}")
+            total_bytes += len(bitmap)
+        properties = bg_properties()
+        names = enum_values()
+        texts = 0
+        for room in source_rooms():
+            fields = room["fields"]
+            if fields.get("bg1Prop") != "BG_PROP_RLE_COMPRESSED":
+                continue
+            tileset = evaluate(fields["tileset"], names)
+            for layer, key in ((0, "bg0"), (3, "bg3")):
+                prop = properties.get(fields.get(f"{key}Prop", "BG_PROP_NONE"), 0)
+                if not prop & properties["BG_PROP_LZ77_COMPRESSED"]:
+                    continue
+                _, width, height, rgba = text_background(
+                    fields[f"p{key.capitalize()}Data"], tileset,
+                )
+                bitmap = bmp32(width, height, rgba)
+                expected.append(
+                    f"text\t{room['area']}\t{room['index']}\t{layer}\t{width}\t"
+                    f"{height}\t{len(bitmap)}\t{hashlib.sha1(bitmap).hexdigest()}"
+                )
+                total_bytes += len(bitmap)
+                texts += 1
+        result = subprocess.run(
+            [str(BINARY), "--mzm-bitmaps", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        self.assertEqual(lines[:-1], expected)
+        self.assertEqual(lines[-1], f"summary\t79\t{texts}\t{total_bytes}")
 
     def test_room_background_payloads_match_python_reference(self):
         rom = ROM.read_bytes()

@@ -38,6 +38,9 @@ enum {
     FUSION_MZM_TILESET_ENTRY_SIZE = 20,
     FUSION_MZM_TILESET_METATILE_COUNT = 1024,
     FUSION_MZM_COMMON_METATILE_COUNT = 208,
+    FUSION_MZM_SHEET_COLUMNS = 32,
+    FUSION_MZM_SHEET_BLOCKS = FUSION_MZM_TILESET_METATILE_COUNT +
+                              FUSION_MZM_COMMON_METATILE_COUNT,
     FUSION_MZM_METATILE_CELLS = 4,
     FUSION_MZM_METATILE_WORD_COUNT =
         (FUSION_MZM_TILESET_METATILE_COUNT +
@@ -195,6 +198,11 @@ typedef struct {
     uint8_t *visibility;
     size_t visibility_size;
 } FusionMzmSerializedBackground;
+
+typedef struct {
+    uint8_t *data;
+    size_t size;
+} FusionMzmBitmap;
 
 typedef struct {
     uint8_t collision[FUSION_MZM_CLIPDATA_COUNT];
@@ -374,8 +382,21 @@ bool fusion_mzm_render_text_background(
     const FusionMzmTextTilemap *map, const FusionMzmVideoMemory *memory,
     FusionMzmRenderedBackground *rendered,
     char *error, size_t error_size);
+/* The runtime metatile sheet: every block value of a tileset (the common
+ * blocks after the 1024 tileset blocks), 32 blocks a row. */
+bool fusion_mzm_render_metatile_sheet(
+    const FusionMzmMetatileTable *metatiles,
+    const FusionMzmVideoMemory *memory,
+    FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size);
 void fusion_mzm_free_rendered_background(
     FusionMzmRenderedBackground *rendered);
+/* A top-down 32-bit BITMAPV4HEADER BMP with an alpha mask, as
+ * scripts/mzm_bg_layers.py::bmp32 writes the sheets and text layers. */
+bool fusion_mzm_serialize_bmp32(
+    const FusionMzmRenderedBackground *rendered, FusionMzmBitmap *bitmap,
+    char *error, size_t error_size);
+void fusion_mzm_free_bitmap(FusionMzmBitmap *bitmap);
 bool fusion_mzm_compose_bg12(
     const FusionMzmRenderedBackground *bg1,
     const FusionMzmRenderedBackground *bg2,

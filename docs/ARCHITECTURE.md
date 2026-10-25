@@ -279,8 +279,11 @@ background descriptors as `U/L/E/G/R/T`, and the sprite records `P/S/F/J/N`
 between the hatches and the music record: `sSpritesetPointers` and the room
 entry's default and event sprite data are read from bounded ELF symbols and
 resolved against a table of the decompilation's PrimarySprite names. The
-native serializer therefore covers the complete room TSV payload; private
-output writes remain Python-owned, and these native extractors are not yet
+native serializer therefore covers the complete room TSV payload. The
+metatile sheets and text layers are rendered and serialized as the export's
+BMP32 files too; the export's `background.bmp` (an older diagnostic render)
+is not yet reproduced natively, and private output writes remain
+Python-owned, and these native extractors are not yet
 registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,

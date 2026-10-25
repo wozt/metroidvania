@@ -789,6 +789,47 @@ static void test_runtime_room_core(void) {
         &rom, &symbols, &hatch_tables, error, sizeof error));
 }
 
+static void test_bitmaps(void) {
+    /* A 2 x 1 RGBA image: BGRA pixels after the 122-byte V4 header, a
+     * negative height (top-down) and BI_BITFIELDS masks. */
+    uint8_t pixels[8] = {1, 2, 3, 255, 4, 5, 6, 0};
+    FusionMzmRenderedBackground image = {2, 1, pixels, 2, 0};
+    FusionMzmBitmap bitmap;
+    char error[160];
+    assert(fusion_mzm_serialize_bmp32(&image, &bitmap, error, sizeof error));
+    assert(bitmap.size == 122 + 8 && !memcmp(bitmap.data, "BM", 2));
+    assert(bitmap.data[10] == 122 && bitmap.data[14] == 108 &&
+           bitmap.data[18] == 2 && bitmap.data[22] == 0xFF &&
+           bitmap.data[25] == 0xFF && bitmap.data[28] == 32 &&
+           bitmap.data[30] == 3 && !memcmp(bitmap.data + 70, "BGRs", 4));
+    assert(!memcmp(bitmap.data + 122, (uint8_t[]){3, 2, 1, 255, 6, 5, 4, 0}, 8));
+    fusion_mzm_free_bitmap(&bitmap);
+    assert(bitmap.data == NULL);
+    image.pixel_count = 3;
+    assert(!fusion_mzm_serialize_bmp32(&image, &bitmap, error, sizeof error));
+
+    /* The sheet: 32 blocks a row, the common blocks from block 1024; tile 1
+     * at character base 0x4000 is color 1 of bank 2. */
+    static FusionMzmVideoMemory memory;
+    static FusionMzmMetatileTable metatiles;
+    memset(memory.vram + 0x4000 + 32, 0x11, 32);
+    memory.palette[(2 * 16 + 1) * 2] = 31;   /* red */
+    metatiles.tileset_word_count = 8;
+    metatiles.common_word_count =
+        FUSION_MZM_COMMON_METATILE_COUNT * FUSION_MZM_METATILE_CELLS;
+    metatiles.cells[1 * 4 + 3] = 0x2001;     /* block 1, bottom-right */
+    metatiles.cells[1024 * 4] = 0x2001;      /* common block 0, top-left */
+    FusionMzmRenderedBackground sheet;
+    assert(fusion_mzm_render_metatile_sheet(&metatiles, &memory, &sheet,
+                                            error, sizeof error));
+    assert(sheet.width_pixels == 512 && sheet.height_pixels == 39 * 16);
+    const uint8_t *block1 = sheet.rgba + ((8 * 512) + 16 + 8) * 4;
+    const uint8_t *common = sheet.rgba + ((32 * 16 * 512) + 0) * 4;
+    assert(block1[0] == 255 && block1[3] == 255 && common[0] == 255 &&
+           sheet.rgba[3] == 0);
+    fusion_mzm_free_rendered_background(&sheet);
+}
+
 static void test_runtime_room_sprites(void) {
     enum {
         POINTERS = 0x10, SET0 = 0x20, SET1 = 0x30, SET2 = 0x40,
@@ -949,6 +990,7 @@ int main(void) {
     test_tileset_video_memory();
     test_runtime_room_core();
     test_runtime_room_sprites();
+    test_bitmaps();
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

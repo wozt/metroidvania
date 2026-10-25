@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0517 - Native Zero Mission runtime bitmaps
+
+- Added `fusion_mzm_render_metatile_sheet` (every block value of a tileset,
+  32 a row, the common blocks from block 1024, through the existing tile
+  renderer) and `fusion_mzm_serialize_bmp32` (the top-down BITMAPV4HEADER
+  32-bit BMP with an alpha mask of `scripts/mzm_bg_layers.py::bmp32`).
+- The new `--mzm-bitmaps` command and real-ROM equivalence test match the
+  room export's `tilesets/tileset_NN.bmp` sheets and `bg0.bmp` / `bg3.bmp`
+  text layers byte for byte: all 79 sheets and the 331 text layers of the
+  rooms with an RLE BG1, 255,148,900 bytes. Synthetic coverage checks the
+  header, BGRA order, alpha, the size bound and sheet placement.
+- Measured before the writer: the export's `background.bmp`, which the
+  runtime loads as the room texture, comes from the older
+  `render_layer` / `compose_partial_bg12` path with a guessed graphics base,
+  not from the RoomLoadTileset VRAM selection the native code reproduces
+  (`select_bg12`). The two differ in 289 of the 330 exportable rooms (0.4 to
+  4.6 % of the pixels in the first rooms checked), so the native writer cannot
+  replace that file byte for byte yet; porting the legacy path or switching
+  the export to the VRAM selection is an open decision with a visible runtime
+  effect.
+- Production authority and gameplay status do not change.
+
 ## Patch 0516 - Native Zero Mission room sprite serialization
 
 - Completed the cumulative C11 room serializer with the sprite records: `P`

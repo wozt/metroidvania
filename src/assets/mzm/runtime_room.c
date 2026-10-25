@@ -689,6 +689,107 @@ bool fusion_mzm_render_text_background(
     return true;
 }
 
+bool fusion_mzm_render_metatile_sheet(
+    const FusionMzmMetatileTable *metatiles,
+    const FusionMzmVideoMemory *memory,
+    FusionMzmRenderedBackground *rendered,
+    char *error, size_t error_size) {
+    if (!metatiles || !memory || !rendered ||
+        metatiles->tileset_word_count >
+            FUSION_MZM_TILESET_METATILE_COUNT * FUSION_MZM_METATILE_CELLS ||
+        metatiles->common_word_count !=
+            FUSION_MZM_COMMON_METATILE_COUNT * FUSION_MZM_METATILE_CELLS) {
+        set_error(error, error_size,
+                  "invalid Zero Mission metatile-sheet request");
+        return false;
+    }
+    size_t rows = (FUSION_MZM_SHEET_BLOCKS + FUSION_MZM_SHEET_COLUMNS - 1) /
+                  FUSION_MZM_SHEET_COLUMNS;
+    if (!allocate_rendered_background(FUSION_MZM_SHEET_COLUMNS * 16, rows * 16,
+                                      rendered, error, error_size)) {
+        return false;
+    }
+    /* Tileset blocks beyond the table are zero words, as the reference
+     * pads them. */
+    for (size_t block = 0; block < FUSION_MZM_SHEET_BLOCKS; ++block) {
+        size_t x = block % FUSION_MZM_SHEET_COLUMNS * 16;
+        size_t y = block / FUSION_MZM_SHEET_COLUMNS * 16;
+        for (size_t cell = 0; cell < FUSION_MZM_METATILE_CELLS; ++cell) {
+            size_t word = block * FUSION_MZM_METATILE_CELLS + cell;
+            uint16_t value = word < metatiles->tileset_word_count ||
+                                 block >= FUSION_MZM_TILESET_METATILE_COUNT
+                ? metatiles->cells[word] : 0;
+            render_tile(value, 0x4000, memory, rendered,
+                        x + cell % 2 * 8, y + cell / 2 * 8);
+        }
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+void fusion_mzm_free_bitmap(FusionMzmBitmap *bitmap) {
+    if (!bitmap) return;
+    free(bitmap->data);
+    *bitmap = (FusionMzmBitmap){0};
+}
+
+bool fusion_mzm_serialize_bmp32(
+    const FusionMzmRenderedBackground *rendered, FusionMzmBitmap *bitmap,
+    char *error, size_t error_size) {
+    enum { FILE_HEADER_SIZE = 14, INFO_HEADER_SIZE = 108 };
+    if (!bitmap) {
+        set_error(error, error_size, "invalid Zero Mission bitmap output");
+        return false;
+    }
+    *bitmap = (FusionMzmBitmap){0};
+    if (!rendered || !rendered->rgba || rendered->width_pixels == 0 ||
+        rendered->height_pixels == 0 || rendered->width_pixels > 4096 ||
+        rendered->height_pixels > 4096 ||
+        rendered->pixel_count !=
+            rendered->width_pixels * rendered->height_pixels) {
+        set_error(error, error_size, "invalid Zero Mission 32-bit bitmap");
+        return false;
+    }
+    size_t pixel_bytes = rendered->pixel_count * 4;
+    size_t offset = FILE_HEADER_SIZE + INFO_HEADER_SIZE;
+    size_t size = offset + pixel_bytes;
+    uint8_t *data = calloc(size, 1);
+    if (!data) {
+        set_error(error, error_size, "cannot allocate Zero Mission bitmap");
+        return false;
+    }
+    data[0] = 'B';
+    data[1] = 'M';
+    write_u32(data + 2, (uint32_t)size);
+    write_u32(data + 10, (uint32_t)offset);
+    uint8_t *info = data + FILE_HEADER_SIZE;
+    write_u32(info, INFO_HEADER_SIZE);
+    write_u32(info + 4, (uint32_t)rendered->width_pixels);
+    write_u32(info + 8, (uint32_t)-(int32_t)rendered->height_pixels);
+    write_u16(info + 12, 1);
+    write_u16(info + 14, 32);
+    write_u32(info + 16, 3);  /* BI_BITFIELDS */
+    write_u32(info + 20, (uint32_t)pixel_bytes);
+    write_u32(info + 24, 2835);
+    write_u32(info + 28, 2835);
+    write_u32(info + 40, 0x00FF0000);
+    write_u32(info + 44, 0x0000FF00);
+    write_u32(info + 48, 0x000000FF);
+    write_u32(info + 52, 0xFF000000);
+    memcpy(info + 56, "BGRs", 4);
+    for (size_t pixel = 0; pixel < rendered->pixel_count; ++pixel) {
+        const uint8_t *source = rendered->rgba + pixel * 4;
+        uint8_t *destination = data + offset + pixel * 4;
+        destination[0] = source[2];
+        destination[1] = source[1];
+        destination[2] = source[0];
+        destination[3] = source[3];
+    }
+    *bitmap = (FusionMzmBitmap){data, size};
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 void fusion_mzm_free_composite_background(
     FusionMzmCompositeBackground *composite) {
     if (!composite) return;

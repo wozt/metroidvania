@@ -137,6 +137,99 @@ bool fusion_mzm_read_clipdata_tables(
     return true;
 }
 
+void fusion_mzm_free_door_directory(FusionMzmDoorDirectory *directory) {
+    if (!directory) return;
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area)
+        free(directory->areas[area].entries);
+    *directory = (FusionMzmDoorDirectory){0};
+}
+
+bool fusion_mzm_read_door_directory(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmDoorDirectory *directory,
+    char *error, size_t error_size) {
+    static const char *door_symbols[FUSION_MZM_ROOM_AREA_COUNT] = {
+        "sBrinstarDoors", "sKraidDoors", "sNorfairDoors",
+        "sRidleyDoors", "sTourianDoors", "sCrateriaDoors",
+        "sChozodiaDoors", NULL, NULL, NULL, "sTestDoors"
+    };
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID ||
+        !symbols || !directory) {
+        set_error(error, error_size,
+                  "invalid Zero Mission door-directory request");
+        return false;
+    }
+    *directory = (FusionMzmDoorDirectory){0};
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        if (!door_symbols[area]) continue;
+        const FusionMzmRomSymbol *symbol =
+            find_symbol(symbols, door_symbols[area]);
+        size_t offset;
+        if (!symbol || symbol->size == 0 ||
+            symbol->size % FUSION_MZM_DOOR_RECORD_SIZE != 0 ||
+            symbol->size / FUSION_MZM_DOOR_RECORD_SIZE >
+                FUSION_MZM_DOOR_CAPACITY ||
+            !pointer_offset(rom, symbol->address, symbol->size, &offset)) {
+            fusion_mzm_free_door_directory(directory);
+            set_error(error, error_size,
+                      "missing or invalid Zero Mission door table");
+            return false;
+        }
+        size_t count = symbol->size / FUSION_MZM_DOOR_RECORD_SIZE;
+        FusionMzmDoor *entries = calloc(count, sizeof *entries);
+        if (!entries) {
+            fusion_mzm_free_door_directory(directory);
+            set_error(error, error_size,
+                      "cannot allocate Zero Mission door table");
+            return false;
+        }
+        for (size_t index = 0; index < count; ++index) {
+            const uint8_t *data = rom->data + offset +
+                                  index * FUSION_MZM_DOOR_RECORD_SIZE;
+            uint8_t kind = data[0] & 0xF;
+            if (kind > 6) {
+                free(entries);
+                fusion_mzm_free_door_directory(directory);
+                set_error(error, error_size,
+                          "invalid Zero Mission door type");
+                return false;
+            }
+            entries[index] = (FusionMzmDoor){
+                data[0], data[1], data[2], data[3], data[4], data[5],
+                data[6], (int8_t)data[7], (int8_t)data[8]
+            };
+        }
+        directory->areas[area] = (FusionMzmDoorList){entries, count};
+    }
+    const FusionMzmRomSymbol *connections =
+        find_symbol(symbols, "sAreaConnections");
+    size_t connection_offset;
+    if (!connections || connections->size == 0 ||
+        connections->size % 3 != 0 ||
+        connections->size / 3 > FUSION_MZM_AREA_CONNECTION_CAPACITY ||
+        !pointer_offset(rom, connections->address, connections->size,
+                        &connection_offset)) {
+        fusion_mzm_free_door_directory(directory);
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission area connections");
+        return false;
+    }
+    for (size_t index = 0; index < connections->size / 3; ++index) {
+        const uint8_t *data = rom->data + connection_offset + index * 3;
+        if (data[0] == UINT8_MAX) break;
+        if (data[0] >= 7 || data[2] >= 7) {
+            fusion_mzm_free_door_directory(directory);
+            set_error(error, error_size,
+                      "invalid Zero Mission area connection");
+            return false;
+        }
+        directory->connections[directory->connection_count++] =
+            (FusionMzmAreaConnection){data[0], data[1], data[2]};
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 bool fusion_mzm_read_tileset_entry(const FusionRom *rom,
                                    const FusionMzmRomSymbolTable *symbols,
                                    size_t index, FusionMzmTilesetEntry *entry,
@@ -702,9 +795,36 @@ static bool resolve_clipdata(
     return true;
 }
 
-bool fusion_mzm_serialize_runtime_room_core(
-    const char *area, size_t room, const FusionMzmRoomRleMap *clipdata,
+static const char *door_kind_name(uint8_t type) {
+    switch (type & 0xF) {
+        case 0: return "none";
+        case 1: return "area";
+        case 2: return "nohatch";
+        case 3:
+        case 4: return "hatch";
+        case 5:
+        case 6: return "mothership";
+    }
+    return NULL;
+}
+
+static bool lowercase_area_id(const char *area, char output[32]) {
+    size_t index = 0;
+    for (; index < 31 && area[index]; ++index) {
+        char value = area[index];
+        output[index] = value >= 'A' && value <= 'Z'
+            ? (char)(value - 'A' + 'a') : value;
+    }
+    if (area[index]) return false;
+    output[index] = '\0';
+    return true;
+}
+
+static bool serialize_runtime_room(
+    const char *area, size_t area_index, size_t room,
+    const FusionMzmRoomRleMap *clipdata,
     const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     if (!payload) {
@@ -719,12 +839,25 @@ bool fusion_mzm_serialize_runtime_room_core(
         clipdata->cell_count !=
             (size_t)clipdata->width * clipdata->height ||
         clipdata->cell_count > FUSION_MZM_ROOM_RLE_CELL_CAPACITY ||
-        clipdata->cell_count > (SIZE_MAX - 256) / 96) {
+        clipdata->cell_count > (SIZE_MAX - 256) / 96 ||
+        (doors && (area_index >= FUSION_MZM_ROOM_AREA_COUNT ||
+                   doors->areas[area_index].count > FUSION_MZM_DOOR_CAPACITY ||
+                   (doors->areas[area_index].count &&
+                    !doors->areas[area_index].entries) ||
+                   doors->connection_count >
+                       FUSION_MZM_AREA_CONNECTION_CAPACITY))) {
         set_error(error, error_size,
                   "invalid Zero Mission runtime-room core payload");
         return false;
     }
     size_t capacity = 256 + clipdata->cell_count * 96;
+    size_t door_capacity = doors ? doors->areas[area_index].count : 0;
+    if (door_capacity > (SIZE_MAX - capacity) / 256) {
+        set_error(error, error_size,
+                  "Zero Mission runtime-room payload exceeds the size bound");
+        return false;
+    }
+    capacity += door_capacity * 256;
     uint8_t *data = malloc(capacity);
     if (!data) {
         set_error(error, error_size,
@@ -734,7 +867,8 @@ bool fusion_mzm_serialize_runtime_room_core(
     size_t width_pixels = (size_t)clipdata->width * 16;
     size_t height_pixels = (size_t)clipdata->height * 16;
     size_t used = 0, clipdata_count = 0, transition_count = 0;
-    size_t movement_count = 0;
+    size_t movement_count = 0, door_count = 0, exit_count = 0;
+    size_t location_count = 0;
     if (!append_format(
             data, capacity, &used,
             "MVROOM-NATIVE\t1\tmzm\t%s\t%zu\t%zu\t%zu\n",
@@ -785,12 +919,94 @@ bool fusion_mzm_serialize_runtime_room_core(
             }
         }
     }
+    if (doors) {
+        const FusionMzmDoorList *list = &doors->areas[area_index];
+        char local_area[32];
+        if (!lowercase_area_id(area, local_area)) goto overflow;
+        for (size_t index = 0; index < list->count; ++index) {
+            const FusionMzmDoor *door = &list->entries[index];
+            if (door->source_room != room) continue;
+            const char *kind = door_kind_name(door->type);
+            if (!kind) goto overflow;
+            const FusionMzmDoor *target = NULL;
+            const char *target_area = local_area;
+            char target_area_buffer[32];
+            uint8_t base_kind = door->type & 0xF;
+            if (base_kind != 0 && base_kind != 1 &&
+                door->destination_door < list->count) {
+                target = &list->entries[door->destination_door];
+            } else if (base_kind == 1) {
+                for (size_t connection = 0;
+                     connection < doors->connection_count; ++connection) {
+                    const FusionMzmAreaConnection *candidate =
+                        &doors->connections[connection];
+                    if (candidate->source_area != area_index ||
+                        candidate->source_door != index) {
+                        continue;
+                    }
+                    const FusionMzmRoomAreaSpec *target_spec =
+                        fusion_mzm_room_area_spec(candidate->destination_area);
+                    const FusionMzmDoorList *target_list =
+                        &doors->areas[candidate->destination_area];
+                    if (target_spec &&
+                        door->destination_door < target_list->count &&
+                        lowercase_area_id(target_spec->id,
+                                          target_area_buffer)) {
+                        target = &target_list->entries[door->destination_door];
+                        target_area = target_area_buffer;
+                    }
+                    break;
+                }
+            }
+            if (target) {
+                if (!append_format(
+                        data, capacity, &used,
+                        "D\t%zu\t%s\t%u\t%u\t%u\t%u\t%s_%03u\t%u\t%u\t%d\t%d\n",
+                        index, kind, (unsigned)door->x_start,
+                        (unsigned)door->x_end, (unsigned)door->y_start,
+                        (unsigned)door->y_end, target_area,
+                        (unsigned)target->source_room,
+                        (unsigned)target->x_start, (unsigned)target->y_end,
+                        (int)target->x_exit, (int)target->y_exit)) {
+                    goto overflow;
+                }
+            } else if (!append_format(
+                           data, capacity, &used,
+                           "D\t%zu\t%s\t%u\t%u\t%u\t%u\t-\t0\t0\t0\t0\n",
+                           index, kind, (unsigned)door->x_start,
+                           (unsigned)door->x_end, (unsigned)door->y_start,
+                           (unsigned)door->y_end)) {
+                goto overflow;
+            }
+            ++door_count;
+        }
+        for (size_t index = 0; index < list->count; ++index) {
+            const FusionMzmDoor *door = &list->entries[index];
+            if (door->source_room != room) continue;
+            if (!append_format(data, capacity, &used,
+                               "X\t%zu\t%d\t%d\n", index,
+                               (int)door->x_exit, (int)door->y_exit)) {
+                goto overflow;
+            }
+            ++exit_count;
+        }
+        for (size_t index = 0; index < list->count; ++index) {
+            const FusionMzmDoor *door = &list->entries[index];
+            if (door->source_room != room || !(door->type & 0x40)) continue;
+            if (!append_format(data, capacity, &used,
+                               "Y\t%zu\n", index)) {
+                goto overflow;
+            }
+            ++location_count;
+        }
+    }
     if (5 > capacity - used) goto overflow;
     memcpy(data + used, "END\n", 4);
     used += 4;
     data[used] = '\0';
     *payload = (FusionMzmRuntimeRoomPayload){
-        data, used, clipdata_count, transition_count, movement_count
+        data, used, clipdata_count, transition_count, movement_count,
+        door_count, exit_count, location_count
     };
     if (error && error_size > 0) error[0] = '\0';
     return true;
@@ -800,6 +1016,32 @@ overflow:
     set_error(error, error_size,
               "Zero Mission runtime-room core payload exceeds the size bound");
     return false;
+}
+
+bool fusion_mzm_serialize_runtime_room_core(
+    const char *area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size) {
+    return serialize_runtime_room(area, SIZE_MAX, room, clipdata, tables, NULL,
+                                  payload, error, error_size);
+}
+
+bool fusion_mzm_serialize_runtime_room_doors(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size) {
+    const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+    if (!spec) {
+        if (payload) *payload = (FusionMzmRuntimeRoomPayload){0};
+        set_error(error, error_size,
+                  "invalid Zero Mission runtime-room door area");
+        return false;
+    }
+    return serialize_runtime_room(spec->id, area, room, clipdata, tables,
+                                  doors, payload, error, error_size);
 }
 
 static bool read_count(const uint8_t *data, size_t size, size_t *position,

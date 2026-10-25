@@ -137,11 +137,20 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                    if (parts := row.split("\t"))[0] == "symbol"}
         expected = []
         expected_cores = []
+        expected_doors = []
         total_cells = 0
         total_clipdata = total_transitions = total_movements = 0
+        total_doors = total_exits = total_locations = 0
         total_core_bytes = 0
+        total_door_bytes = 0
         tables = mzm_runtime_room.collision_tables()
-        for room in source_rooms():
+        rooms = source_rooms()
+        doors_by_area = mzm_runtime_room.door_tables()
+        targets_by_area = {
+            area: mzm_runtime_room.area_targets(area)
+            for area in {room["area"] for room in rooms}
+        }
+        for room in rooms:
             pointer = symbols[room["fields"]["pClipData"]]
             width, height, cells = rle_room(rom[pointer - 0x08000000:])
             canonical = struct.pack(f"<{len(cells)}H", *cells)
@@ -166,6 +175,27 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             total_transitions += transition_count
             total_movements += movement_count
             total_core_bytes += len(payload)
+
+            door_payload = mzm_runtime_room.encode_room(
+                room["area"], room["index"], width * 16, height * 16,
+                (width, height, cells), tables,
+                doors=doors_by_area.get(room["area"], []),
+                targets=targets_by_area[room["area"]],
+            ).encode()
+            door_lines = door_payload.splitlines()
+            door_count = sum(line.startswith(b"D\t") for line in door_lines)
+            exit_count = sum(line.startswith(b"X\t") for line in door_lines)
+            location_count = sum(line.startswith(b"Y\t") for line in door_lines)
+            expected_doors.append((
+                room["area"], room["index"], width, height, len(cells),
+                clipdata_count, transition_count, movement_count,
+                door_count, exit_count, location_count, len(door_payload),
+                hashlib.sha1(door_payload).hexdigest(),
+            ))
+            total_doors += door_count
+            total_exits += exit_count
+            total_locations += location_count
+            total_door_bytes += len(door_payload)
 
         result = subprocess.run(
             [str(BINARY), "--mzm-clipdata", str(ROM), str(ELF)],
@@ -202,6 +232,28 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             f"summary\t{len(expected_cores)}\t{total_cells}\t"
             f"{total_clipdata}\t{total_transitions}\t{total_movements}\t"
             f"{total_core_bytes}",
+        )
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-runtime-room-doors", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output_lines = result.stdout.splitlines()
+        actual_doors = []
+        for line in output_lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "room")
+            actual_doors.append((
+                fields[1], *(int(value) for value in fields[2:13]), fields[13],
+            ))
+        self.assertEqual(actual_doors, expected_doors)
+        self.assertEqual(
+            output_lines[-1],
+            f"summary\t{len(expected_doors)}\t{total_cells}\t"
+            f"{total_clipdata}\t{total_transitions}\t{total_movements}\t"
+            f"{total_doors}\t{total_exits}\t{total_locations}\t"
+            f"{total_door_bytes}",
         )
 
     def test_room_background_payloads_match_python_reference(self):

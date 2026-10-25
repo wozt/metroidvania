@@ -37,6 +37,7 @@ static void usage(const char *name) {
             "       %s --mzm-rooms ROM ELF\n"
             "       %s --mzm-clipdata ROM ELF\n"
             "       %s --mzm-runtime-room-cores ROM ELF\n"
+            "       %s --mzm-runtime-room-doors ROM ELF\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -48,7 +49,7 @@ static void usage(const char *name) {
             name, name, name, name, name,
             name, name, name, name, name, name, name, name, name, name, name,
             name,
-            name,
+            name, name,
             name, name);
 }
 
@@ -1334,8 +1335,11 @@ static int inspect_mzm_clipdata(const char *rom_path, const char *elf_path) {
     return 0;
 }
 
-static int inspect_mzm_runtime_room_cores(const char *rom_path,
-                                          const char *elf_path) {
+static int inspect_mzm_runtime_rooms(const char *rom_path,
+                                     const char *elf_path,
+                                     bool include_doors) {
+    const char *label = include_doors
+        ? "mzm-runtime-room-doors" : "mzm-runtime-room-cores";
     FusionRom rom = {0};
     uint8_t *elf = NULL;
     size_t elf_size = 0;
@@ -1343,7 +1347,7 @@ static int inspect_mzm_runtime_room_cores(const char *rom_path,
     if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
                          error, sizeof error) ||
         !read_file(elf_path, &elf, &elf_size, error, sizeof error)) {
-        fprintf(stderr, "mzm-runtime-room-cores: %s\n", error);
+        fprintf(stderr, "%s: %s\n", label, error);
         fusion_rom_close(&rom);
         free(elf);
         return 1;
@@ -1351,13 +1355,18 @@ static int inspect_mzm_runtime_room_cores(const char *rom_path,
     FusionMzmRomSymbolTable symbols = {0};
     FusionMzmRoomDirectory directory;
     FusionMzmClipdataTables tables;
+    FusionMzmDoorDirectory doors = {0};
     if (!fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
                                      error, sizeof error) ||
         !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
                                         error, sizeof error) ||
         !fusion_mzm_read_clipdata_tables(&rom, &symbols, &tables,
-                                         error, sizeof error)) {
-        fprintf(stderr, "mzm-runtime-room-cores: %s\n", error);
+                                         error, sizeof error) ||
+        (include_doors &&
+         !fusion_mzm_read_door_directory(&rom, &symbols, &doors,
+                                         error, sizeof error))) {
+        fprintf(stderr, "%s: %s\n", label, error);
+        fusion_mzm_free_door_directory(&doors);
         fusion_mzm_free_symbols(&symbols);
         fusion_rom_close(&rom);
         free(elf);
@@ -1365,6 +1374,7 @@ static int inspect_mzm_runtime_room_cores(const char *rom_path,
     }
     size_t room_count = 0, total_cells = 0, total_clipdata = 0;
     size_t total_transitions = 0, total_movements = 0, total_bytes = 0;
+    size_t total_doors = 0, total_exits = 0, total_locations = 0;
     for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
         const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
         for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
@@ -1374,21 +1384,28 @@ static int inspect_mzm_runtime_room_cores(const char *rom_path,
                                             &entry, error, sizeof error) ||
                 !fusion_mzm_read_room_rle(&rom, entry.clip_pointer, &clipdata,
                                           error, sizeof error)) {
-                fprintf(stderr, "mzm-runtime-room-cores: %s %zu: %s\n",
-                        spec->id, room, error);
+                fprintf(stderr, "%s: %s %zu: %s\n",
+                        label, spec->id, room, error);
+                fusion_mzm_free_door_directory(&doors);
                 fusion_mzm_free_symbols(&symbols);
                 fusion_rom_close(&rom);
                 free(elf);
                 return 1;
             }
             FusionMzmRuntimeRoomPayload payload;
-            if (!fusion_mzm_serialize_runtime_room_core(
-                    spec->id, room, &clipdata, &tables, &payload,
-                    error, sizeof error)) {
+            bool serialized = include_doors
+                ? fusion_mzm_serialize_runtime_room_doors(
+                      area, room, &clipdata, &tables, &doors, &payload,
+                      error, sizeof error)
+                : fusion_mzm_serialize_runtime_room_core(
+                      spec->id, room, &clipdata, &tables, &payload,
+                      error, sizeof error);
+            if (!serialized) {
                 fprintf(stderr,
-                        "mzm-runtime-room-cores: cannot serialize %s %zu: %s\n",
-                        spec->id, room, error);
+                        "%s: cannot serialize %s %zu: %s\n",
+                        label, spec->id, room, error);
                 fusion_mzm_free_room_rle(&clipdata);
+                fusion_mzm_free_door_directory(&doors);
                 fusion_mzm_free_symbols(&symbols);
                 fusion_rom_close(&rom);
                 free(elf);
@@ -1397,33 +1414,55 @@ static int inspect_mzm_runtime_room_cores(const char *rom_path,
             char digest[41];
             if (!fusion_rom_sha1_hex(payload.data, payload.size, digest)) {
                 fprintf(stderr,
-                        "mzm-runtime-room-cores: cannot hash %s %zu\n",
-                        spec->id, room);
+                        "%s: cannot hash %s %zu\n", label, spec->id, room);
                 fusion_mzm_free_runtime_room_payload(&payload);
                 fusion_mzm_free_room_rle(&clipdata);
+                fusion_mzm_free_door_directory(&doors);
                 fusion_mzm_free_symbols(&symbols);
                 fusion_rom_close(&rom);
                 free(elf);
                 return 1;
             }
-            printf("room\t%s\t%zu\t%u\t%u\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\n",
-                   spec->id, room, (unsigned)clipdata.width,
-                   (unsigned)clipdata.height, clipdata.cell_count,
-                   payload.clipdata_count, payload.transition_count,
-                   payload.movement_count, payload.size, digest);
+            if (include_doors) {
+                printf("room\t%s\t%zu\t%u\t%u\t%zu\t%zu\t%zu\t%zu\t"
+                       "%zu\t%zu\t%zu\t%zu\t%s\n",
+                       spec->id, room, (unsigned)clipdata.width,
+                       (unsigned)clipdata.height, clipdata.cell_count,
+                       payload.clipdata_count, payload.transition_count,
+                       payload.movement_count, payload.door_count,
+                       payload.exit_count, payload.location_count,
+                       payload.size, digest);
+            } else {
+                printf("room\t%s\t%zu\t%u\t%u\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\n",
+                       spec->id, room, (unsigned)clipdata.width,
+                       (unsigned)clipdata.height, clipdata.cell_count,
+                       payload.clipdata_count, payload.transition_count,
+                       payload.movement_count, payload.size, digest);
+            }
             ++room_count;
             total_cells += clipdata.cell_count;
             total_clipdata += payload.clipdata_count;
             total_transitions += payload.transition_count;
             total_movements += payload.movement_count;
+            total_doors += payload.door_count;
+            total_exits += payload.exit_count;
+            total_locations += payload.location_count;
             total_bytes += payload.size;
             fusion_mzm_free_runtime_room_payload(&payload);
             fusion_mzm_free_room_rle(&clipdata);
         }
     }
-    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
-           room_count, total_cells, total_clipdata, total_transitions,
-           total_movements, total_bytes);
+    if (include_doors) {
+        printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
+               room_count, total_cells, total_clipdata, total_transitions,
+               total_movements, total_doors, total_exits, total_locations,
+               total_bytes);
+    } else {
+        printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
+               room_count, total_cells, total_clipdata, total_transitions,
+               total_movements, total_bytes);
+    }
+    fusion_mzm_free_door_directory(&doors);
     fusion_mzm_free_symbols(&symbols);
     fusion_rom_close(&rom);
     free(elf);
@@ -2111,6 +2150,8 @@ int main(int argc, char **argv) {
     const char *mzm_clip_elf_path = NULL;
     const char *mzm_runtime_core_rom_path = NULL;
     const char *mzm_runtime_core_elf_path = NULL;
+    const char *mzm_runtime_door_rom_path = NULL;
+    const char *mzm_runtime_door_elf_path = NULL;
     const char *mzm_background_rom_path = NULL;
     const char *mzm_background_elf_path = NULL;
     const char *mzm_tileset_rom_path = NULL;
@@ -2184,6 +2225,11 @@ int main(int argc, char **argv) {
             mzm_runtime_core_rom_path = argv[++i];
             mzm_runtime_core_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-runtime-room-doors") &&
+                 i + 2 < argc) {
+            mzm_runtime_door_rom_path = argv[++i];
+            mzm_runtime_door_elf_path = argv[++i];
+        }
         else if (!strcmp(argv[i], "--mzm-backgrounds") && i + 2 < argc) {
             mzm_background_rom_path = argv[++i];
             mzm_background_elf_path = argv[++i];
@@ -2256,8 +2302,11 @@ int main(int argc, char **argv) {
     if (mzm_clip_rom_path)
         return inspect_mzm_clipdata(mzm_clip_rom_path, mzm_clip_elf_path);
     if (mzm_runtime_core_rom_path)
-        return inspect_mzm_runtime_room_cores(
-            mzm_runtime_core_rom_path, mzm_runtime_core_elf_path);
+        return inspect_mzm_runtime_rooms(
+            mzm_runtime_core_rom_path, mzm_runtime_core_elf_path, false);
+    if (mzm_runtime_door_rom_path)
+        return inspect_mzm_runtime_rooms(
+            mzm_runtime_door_rom_path, mzm_runtime_door_elf_path, true);
     if (mzm_background_rom_path)
         return inspect_mzm_backgrounds(mzm_background_rom_path,
                                        mzm_background_elf_path);

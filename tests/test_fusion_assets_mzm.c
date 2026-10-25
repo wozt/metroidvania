@@ -500,7 +500,11 @@ static void test_runtime_room_core(void) {
         BEHAVIOR_OFFSET = 0x100,
         TILE_COLLISION_OFFSET = 0x280,
         TILE_BEHAVIOR_OFFSET = 0x380,
-        MOVEMENT_OFFSET = 0x600
+        MOVEMENT_OFFSET = 0x600,
+        BRINSTAR_DOOR_OFFSET = 0x640,
+        KRAID_DOOR_OFFSET = 0x680,
+        DEFAULT_DOOR_OFFSET = 0x6A0,
+        CONNECTION_OFFSET = 0x6C0
     };
     uint8_t bytes[FIXTURE_SIZE] = {0};
     bytes[COLLISION_OFFSET + 16] = 1;
@@ -513,6 +517,21 @@ static void test_runtime_room_core(void) {
     write_u16(bytes, TILE_BEHAVIOR_OFFSET + 1 * 2, 9);
     write_u16(bytes, MOVEMENT_OFFSET + 8 * 2, 8);
     write_u16(bytes, MOVEMENT_OFFSET + 9 * 2, 9);
+    uint8_t *door = bytes + BRINSTAR_DOOR_OFFSET;
+    memcpy(door, (uint8_t[]){0x51, 0, 1, 2, 3, 4, 0, 5, 6}, 9);
+    door += FUSION_MZM_DOOR_RECORD_SIZE;
+    memcpy(door, (uint8_t[]){0x14, 0, 10, 10, 11, 14, 2, 0xE0, 0}, 9);
+    door += FUSION_MZM_DOOR_RECORD_SIZE;
+    memcpy(door, (uint8_t[]){0x12, 1, 20, 21, 22, 23, 1, 12, 0xF0}, 9);
+    door += FUSION_MZM_DOOR_RECORD_SIZE;
+    memset(door, 0, FUSION_MZM_DOOR_RECORD_SIZE);
+    door = bytes + KRAID_DOOR_OFFSET;
+    memcpy(door, (uint8_t[]){0x12, 2, 7, 8, 9, 10, 0, 0xF4, 16}, 9);
+    memset(door + FUSION_MZM_DOOR_RECORD_SIZE, 0,
+           FUSION_MZM_DOOR_RECORD_SIZE);
+    memset(bytes + DEFAULT_DOOR_OFFSET, 0, FUSION_MZM_DOOR_RECORD_SIZE);
+    memcpy(bytes + CONNECTION_OFFSET,
+           (uint8_t[]){0, 0, 1, UINT8_MAX, UINT8_MAX, UINT8_MAX}, 6);
     FusionMzmRomSymbol entries[] = {
         {"sClipdataCollisionTypes", 0x08000000 + COLLISION_OFFSET,
          FUSION_MZM_CLIPDATA_COUNT, 0},
@@ -526,6 +545,23 @@ static void test_runtime_room_core(void) {
          FUSION_MZM_CLIPDATA_TILEMAP_COUNT * 2, 3},
         {"sMovementClipdataValues", 0x08000000 + MOVEMENT_OFFSET,
          FUSION_MZM_CLIPDATA_MOVEMENT_COUNT * 2, 4},
+        {"sBrinstarDoors", 0x08000000 + BRINSTAR_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE * 4, 5},
+        {"sKraidDoors", 0x08000000 + KRAID_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE * 2, 6},
+        {"sNorfairDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE, 7},
+        {"sRidleyDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE, 8},
+        {"sTourianDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE, 9},
+        {"sCrateriaDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE, 10},
+        {"sChozodiaDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE, 11},
+        {"sTestDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
+         FUSION_MZM_DOOR_RECORD_SIZE, 12},
+        {"sAreaConnections", 0x08000000 + CONNECTION_OFFSET, 6, 13},
     };
     FusionMzmRomSymbolTable symbols = {
         entries, sizeof entries / sizeof entries[0], 0
@@ -568,6 +604,34 @@ static void test_runtime_room_core(void) {
     fusion_mzm_free_runtime_room_payload(&payload);
     assert(payload.data == NULL && payload.size == 0 &&
            payload.clipdata_count == 0);
+    FusionMzmDoorDirectory doors;
+    assert(fusion_mzm_read_door_directory(
+        &rom, &symbols, &doors, error, sizeof error));
+    assert(doors.areas[0].count == 4 && doors.areas[1].count == 2 &&
+           doors.areas[7].count == 0 && doors.areas[10].count == 1 &&
+           doors.areas[0].entries[1].x_exit == -32 &&
+           doors.areas[0].entries[2].y_exit == -16 &&
+           doors.connection_count == 1 &&
+           doors.connections[0].destination_area == 1);
+    assert(fusion_mzm_serialize_runtime_room_doors(
+        0, 0, &clipdata, &tables, &doors, &payload,
+        error, sizeof error));
+    assert(payload.door_count == 3 && payload.exit_count == 3 &&
+           payload.location_count == 1);
+    assert(strstr((char *)payload.data,
+                  "D\t0\tarea\t1\t2\t3\t4\tkraid_002\t7\t10\t-12\t16\n"));
+    assert(strstr((char *)payload.data,
+                  "D\t1\thatch\t10\t10\t11\t14\tbrinstar_001\t20\t23\t12\t-16\n"));
+    assert(strstr((char *)payload.data,
+                  "D\t3\tnone\t0\t0\t0\t0\t-\t0\t0\t0\t0\n"));
+    char *x0 = strstr((char *)payload.data, "X\t0\t5\t6\n");
+    char *x1 = strstr((char *)payload.data, "X\t1\t-32\t0\n");
+    char *y0 = strstr((char *)payload.data, "Y\t0\n");
+    assert(x0 && x1 && y0 && x0 < x1 && x1 < y0 &&
+           !strcmp(y0, "Y\t0\nEND\n"));
+    fusion_mzm_free_runtime_room_payload(&payload);
+    fusion_mzm_free_door_directory(&doors);
+    assert(doors.areas[0].entries == NULL && doors.connection_count == 0);
     cells[5] = FUSION_MZM_CLIPDATA_TILEMAP_FLAG +
                FUSION_MZM_CLIPDATA_TILEMAP_COUNT;
     assert(!fusion_mzm_serialize_runtime_room_core(
@@ -580,6 +644,10 @@ static void test_runtime_room_core(void) {
     entries[4].size--;
     assert(!fusion_mzm_read_clipdata_tables(
         &rom, &symbols, &tables, error, sizeof error));
+    entries[4].size++;
+    entries[5].size--;
+    assert(!fusion_mzm_read_door_directory(
+        &rom, &symbols, &doors, error, sizeof error));
 }
 
 int main(void) {

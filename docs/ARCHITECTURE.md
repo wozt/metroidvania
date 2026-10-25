@@ -267,10 +267,12 @@ distinguishes native black from unresolved transparent pixels. Hardware
 priority/blending and private output writes remain Python-owned. The native
 room-package path now reads the main/tilemap collision, behavior and movement
 tables from bounded ELF objects and serializes the byte-identical
-`MVROOM-NATIVE` v1 header plus its `C`, `B` and `M` Clipdata core. Doors,
-hatches, music, background records, sprites and complete runtime-room
-serialization remain Python-owned, and these native extractors are not yet
-registered in the global native task graph.
+`MVROOM-NATIVE` v1 header plus its `C`, `B` and `M` Clipdata core. It also
+decodes every production door table and `sAreaConnections`, resolving native
+same-area and cross-area destinations before serializing ordered `D`, `X` and
+location-banner `Y` records. Hatches, music, background records, sprites and
+complete runtime-room serialization remain Python-owned, and these native
+extractors are not yet registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

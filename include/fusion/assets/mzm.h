@@ -19,6 +19,9 @@ enum {
     FUSION_MZM_CLIPDATA_TILEMAP_COUNT = 208,
     FUSION_MZM_CLIPDATA_TILEMAP_FLAG = 1 << 10,
     FUSION_MZM_CLIPDATA_MOVEMENT_COUNT = 16,
+    FUSION_MZM_DOOR_RECORD_SIZE = 12,
+    FUSION_MZM_DOOR_CAPACITY = 256,
+    FUSION_MZM_AREA_CONNECTION_CAPACITY = 32,
     FUSION_MZM_ROOM_BACKGROUND_COUNT = 4,
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
     FUSION_MZM_TILESET_COUNT = 79,
@@ -192,11 +195,43 @@ typedef struct {
 } FusionMzmClipdataTables;
 
 typedef struct {
+    uint8_t type;
+    uint8_t source_room;
+    uint8_t x_start;
+    uint8_t x_end;
+    uint8_t y_start;
+    uint8_t y_end;
+    uint8_t destination_door;
+    int8_t x_exit;
+    int8_t y_exit;
+} FusionMzmDoor;
+
+typedef struct {
+    FusionMzmDoor *entries;
+    size_t count;
+} FusionMzmDoorList;
+
+typedef struct {
+    uint8_t source_area;
+    uint8_t source_door;
+    uint8_t destination_area;
+} FusionMzmAreaConnection;
+
+typedef struct {
+    FusionMzmDoorList areas[FUSION_MZM_ROOM_AREA_COUNT];
+    FusionMzmAreaConnection connections[FUSION_MZM_AREA_CONNECTION_CAPACITY];
+    size_t connection_count;
+} FusionMzmDoorDirectory;
+
+typedef struct {
     uint8_t *data;
     size_t size;
     size_t clipdata_count;
     size_t transition_count;
     size_t movement_count;
+    size_t door_count;
+    size_t exit_count;
+    size_t location_count;
 } FusionMzmRuntimeRoomPayload;
 
 /* Symbol names point into elf_data and remain valid only while that buffer is
@@ -282,9 +317,20 @@ bool fusion_mzm_read_clipdata_tables(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     FusionMzmClipdataTables *tables,
     char *error, size_t error_size);
+bool fusion_mzm_read_door_directory(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmDoorDirectory *directory,
+    char *error, size_t error_size);
+void fusion_mzm_free_door_directory(FusionMzmDoorDirectory *directory);
 bool fusion_mzm_serialize_runtime_room_core(
     const char *area, size_t room, const FusionMzmRoomRleMap *clipdata,
     const FusionMzmClipdataTables *tables,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size);
+bool fusion_mzm_serialize_runtime_room_doors(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(

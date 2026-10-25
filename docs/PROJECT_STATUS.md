@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0513 - Native Zero Mission room-door serialization
+
+- Added bounded C11 decoding of the eight production door tables and the
+  cross-area connection table directly from verified ROM/ELF objects. Door
+  kinds, source rectangles, destination indices and signed entry offsets retain
+  their native representation; the unused Test1/Test2/Test3 table remains
+  outside the production room mapping, matching the Python exporter.
+- Extended the native `MVROOM-NATIVE` v1 serializer with ordered `D` door,
+  `X` entry-offset and location-banner `Y` records. Same-area targets resolve
+  through their local door table, cross-area targets through
+  `sAreaConnections`, and none or unresolved targets keep the schema's
+  explicit zero destination.
+- Added synthetic same-area, cross-area, location-flag, signed-offset,
+  terminal-none, ownership and malformed-table coverage. The new
+  `--mzm-runtime-room-doors` command retains the core-only command and compares
+  each door-inclusive payload with Python byte for byte.
+- All 331 room payloads match: 345,686 cells produce 224,307 `C`, 2,707 `B`,
+  1,141 `M`, 761 `D`, 761 `X` and 77 `Y` records across 2,879,138 serialized
+  bytes.
+- Hatches, sprite variants, music and background records remain Python-owned;
+  private writes and complete room serialization therefore remain pending,
+  with no gameplay-status change. Audio was not modified.
+- Next: decode native hatch type/behavior/animation tables and derive each
+  room's `H` records while preserving the current door serialization.
+
 ## Patch 0512 - Native Zero Mission runtime-room core serialization
 
 - Added bounded C11 loading of the five native Clipdata lookup objects from

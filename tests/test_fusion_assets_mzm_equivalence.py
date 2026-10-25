@@ -12,8 +12,10 @@ import unittest
 from scripts import mzm_runtime_room
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
+    bg_properties,
     metatile_sheet,
     render_block_background,
+    room_background_lines,
     select_bg12,
     symbol_bytes,
     text_background,
@@ -139,6 +141,7 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
         expected_cores = []
         expected_doors = []
         expected_hatches = []
+        expected_metadata = []
         total_cells = 0
         total_clipdata = total_transitions = total_movements = 0
         total_doors = total_exits = total_locations = 0
@@ -146,7 +149,16 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
         total_core_bytes = 0
         total_door_bytes = 0
         total_hatch_bytes = 0
+        metadata_totals = {
+            "cells": 0, "clipdata": 0, "transitions": 0, "movements": 0,
+            "doors": 0, "exits": 0, "locations": 0, "hatches": 0,
+            "locks": 0, "music": 0, "layers": 0, "rows": 0, "text": 0,
+            "bytes": 0,
+        }
+        skipped_metadata = 0
         tables = mzm_runtime_room.collision_tables()
+        names = enum_values()
+        properties = bg_properties()
         rooms = source_rooms()
         doors_by_area = mzm_runtime_room.door_tables()
         targets_by_area = {
@@ -235,6 +247,58 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             total_hatch_locks += hatch_lock_count
             total_hatch_bytes += len(hatch_payload)
 
+            fields = room["fields"]
+            if fields.get("bg1Prop") != "BG_PROP_RLE_COMPRESSED":
+                skipped_metadata += 1
+                continue
+            blocks = {
+                "Bg1": rle_room(
+                    rom[symbols[fields["pBg1Data"]] - 0x08000000:]
+                )
+            }
+            for layer in ("Bg0", "Bg2"):
+                prop = properties.get(fields.get(f"{layer.lower()}Prop", ""), 0)
+                if prop & properties["BG_PROP_RLE_COMPRESSED"]:
+                    blocks[layer] = rle_room(
+                        rom[symbols[fields[f"p{layer}Data"]] - 0x08000000:]
+                    )
+            background_lines, _ = room_background_lines(
+                fields, blocks, evaluate(fields["tileset"], names),
+            )
+            metadata_lines = [*background_lines, *hatch_metadata, *lock_lines]
+            metadata_payload = mzm_runtime_room.encode_room(
+                room["area"], room["index"], width * 16, height * 16,
+                (width, height, cells), tables, doors=room_doors,
+                hatches=room_hatches, targets=targets_by_area[room["area"]],
+                music=evaluate(fields.get("musicTrack", "0"), names),
+                backgrounds=metadata_lines,
+            ).encode()
+            metadata_lines_bytes = metadata_payload.splitlines()
+            record_counts = {
+                key: sum(line.startswith(f"{prefix}\t".encode())
+                         for line in metadata_lines_bytes)
+                for key, prefix in (
+                    ("clipdata", "C"), ("transitions", "B"),
+                    ("movements", "M"), ("doors", "D"), ("exits", "X"),
+                    ("locations", "Y"), ("hatches", "H"), ("locks", "Q"),
+                    ("music", "U"), ("layers", "G"), ("rows", "R"),
+                    ("text", "T"),
+                )
+            }
+            expected_metadata.append((
+                room["area"], room["index"], width, height, len(cells),
+                *(record_counts[key] for key in (
+                    "clipdata", "transitions", "movements", "doors", "exits",
+                    "locations", "hatches", "locks", "music", "layers", "rows",
+                    "text",
+                )),
+                len(metadata_payload), hashlib.sha1(metadata_payload).hexdigest(),
+            ))
+            metadata_totals["cells"] += len(cells)
+            for key, count in record_counts.items():
+                metadata_totals[key] += count
+            metadata_totals["bytes"] += len(metadata_payload)
+
         result = subprocess.run(
             [str(BINARY), "--mzm-clipdata", str(ROM), str(ELF)],
             cwd=ROOT, text=True, capture_output=True, check=False,
@@ -314,6 +378,32 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             f"{total_clipdata}\t{total_transitions}\t{total_movements}\t"
             f"{total_doors}\t{total_exits}\t{total_locations}\t"
             f"{total_hatches}\t{total_hatch_locks}\t{total_hatch_bytes}",
+        )
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-runtime-room-metadata", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output_lines = result.stdout.splitlines()
+        actual_metadata = []
+        for line in output_lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "room")
+            actual_metadata.append((
+                fields[1], *(int(value) for value in fields[2:19]), fields[19],
+            ))
+        self.assertEqual(actual_metadata, expected_metadata)
+        self.assertEqual(
+            output_lines[-1],
+            f"summary\t{len(expected_metadata)}\t{skipped_metadata}\t"
+            f"{metadata_totals['cells']}\t{metadata_totals['clipdata']}\t"
+            f"{metadata_totals['transitions']}\t{metadata_totals['movements']}\t"
+            f"{metadata_totals['doors']}\t{metadata_totals['exits']}\t"
+            f"{metadata_totals['locations']}\t{metadata_totals['hatches']}\t"
+            f"{metadata_totals['locks']}\t{metadata_totals['music']}\t"
+            f"{metadata_totals['layers']}\t{metadata_totals['rows']}\t"
+            f"{metadata_totals['text']}\t{metadata_totals['bytes']}",
         )
 
     def test_room_background_payloads_match_python_reference(self):

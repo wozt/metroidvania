@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0515 - Native Zero Mission room metadata serialization
+
+- Extended the cumulative C11 room serializer with the room entry's `U` music,
+  `L` layout/effect, `E` effect-height, `G/R` block-layer and `T` text-layer
+  records. This reads the already bounded native room/background structures;
+  it does not modify or migrate the audio runtime.
+- Preserved symbolic room-effect names, common-metatile sheet remapping,
+  invalid-block fallback, layer/row order, text-background size semantics and
+  the production exporter's exact BG1 eligibility rule.
+- Added synthetic music, layout, effect, BG1/BG2 row, common-block, text-layer,
+  ordering and invalid-effect coverage. The new
+  `--mzm-runtime-room-metadata` command compares cumulative payloads with the
+  Python reference byte for byte.
+- All 330 exportable rooms match across 5,450,692 bytes: 330 `U` music
+  records, 784 `G` block layers, 22,426 `R` rows and 331 `T` text layers, plus
+  one `L` and `E` record per room and every previously validated room record.
+  The one room without a supported BG1 remains explicitly skipped by both
+  implementations.
+- Sprite placements and event variants plus private-output writes remain
+  Python-owned, so production authority and gameplay status do not change.
+- Next: port the `P/S/F/J/N` sprite records. That is the final payload block
+  before adding atomic native writes, switching the rebuild task to C and
+  removing the covered Python production path.
+
 ## Patch 0514 - Native Zero Mission hatch serialization
 
 - Added bounded C11 decoding of the native hatch type, animation-duration,

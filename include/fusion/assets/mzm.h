@@ -259,6 +259,10 @@ typedef struct {
     size_t location_count;
     size_t hatch_count;
     size_t hatch_lock_count;
+    size_t music_count;
+    size_t background_layer_count;
+    size_t background_row_count;
+    size_t text_background_count;
 } FusionMzmRuntimeRoomPayload;
 
 /* Symbol names point into elf_data and remain valid only while that buffer is
@@ -370,6 +374,15 @@ bool fusion_mzm_serialize_runtime_room_hatches(
     const FusionMzmClipdataTables *tables,
     const FusionMzmDoorDirectory *doors,
     const FusionMzmHatchTables *hatches,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size);
+bool fusion_mzm_serialize_runtime_room_metadata(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(

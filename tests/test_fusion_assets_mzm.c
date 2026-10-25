@@ -711,6 +711,58 @@ static void test_runtime_room_core(void) {
            weakness < collisions && collisions < lock &&
            !strcmp(lock, "Q\t1\t42\t1\t1\nEND\n"));
     fusion_mzm_free_runtime_room_payload(&payload);
+    uint16_t bg1_cells[] = {3, 0x401};
+    uint16_t bg2_cells[] = {0, 1};
+    FusionMzmRoomEntry room_entry = {
+        .tileset = 8,
+        .bg0_property = 0,
+        .bg1_property = FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED,
+        .bg2_property = FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED,
+        .bg3_property = FUSION_MZM_BG_PROPERTY_LZ77_COMPRESSED,
+        .bg3_scrolling = 3,
+        .transparency = 24,
+        .effect = 0,
+        .effect_y = UINT8_MAX,
+        .music_track = 0x1234
+    };
+    FusionMzmRoomBackgrounds room_backgrounds = {0};
+    room_backgrounds.layers[1].status = FUSION_MZM_BACKGROUND_RLE;
+    room_backgrounds.layers[1].rle = (FusionMzmRoomRleMap){
+        .width = 2, .height = 1, .cells = bg1_cells, .cell_count = 2
+    };
+    room_backgrounds.layers[2].status = FUSION_MZM_BACKGROUND_RLE;
+    room_backgrounds.layers[2].rle = (FusionMzmRoomRleMap){
+        .width = 2, .height = 1, .cells = bg2_cells, .cell_count = 2
+    };
+    room_backgrounds.layers[3].status = FUSION_MZM_BACKGROUND_TEXT;
+    room_backgrounds.layers[3].text = (FusionMzmTextTilemap){
+        .size_flag = 1, .width_tiles = 64, .height_tiles = 32
+    };
+    assert(fusion_mzm_serialize_runtime_room_metadata(
+        0, 0, &hatch_clipdata, &tables, &doors, &hatch_tables,
+        &room_entry, &room_backgrounds, &payload, error, sizeof error));
+    assert(payload.music_count == 1 && payload.background_layer_count == 2 &&
+           payload.background_row_count == 2 &&
+           payload.text_background_count == 1);
+    hatch = strstr((char *)payload.data, "H\t1\t1\t0\tnormal\t31\t0\n");
+    char *music = strstr((char *)payload.data, "U\t4660\n");
+    char *layout = strstr((char *)payload.data,
+                          "L\t8\t24\t0\t16\t64\t3\tEFFECT_NONE\nE\t255\n");
+    char *bg1 = strstr((char *)payload.data,
+                       "G\t1\t2\t1\nR\t1\t0\t3,1025\n");
+    char *bg2 = strstr((char *)payload.data,
+                       "G\t2\t2\t1\nR\t2\t0\t0,1\n");
+    char *text_background = strstr((char *)payload.data,
+                                    "T\t3\t1\t512\t256\n");
+    values = strstr((char *)payload.data, "V\t1000,1001");
+    assert(music && layout && bg1 && bg2 && text_background && values &&
+           hatch < music && music < layout && layout < bg1 && bg1 < bg2 &&
+           bg2 < text_background && text_background < values);
+    fusion_mzm_free_runtime_room_payload(&payload);
+    room_entry.effect = UINT8_MAX;
+    assert(!fusion_mzm_serialize_runtime_room_metadata(
+        0, 0, &hatch_clipdata, &tables, &doors, &hatch_tables,
+        &room_entry, &room_backgrounds, &payload, error, sizeof error));
     fusion_mzm_free_hatch_tables(&hatch_tables);
     assert(hatch_tables.locks[0].entries == NULL);
     fusion_mzm_free_door_directory(&doors);

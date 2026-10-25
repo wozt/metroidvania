@@ -922,6 +922,27 @@ static const char *hatch_type_name(uint8_t type) {
     return type < FUSION_MZM_HATCH_COUNT ? names[type] : NULL;
 }
 
+static const char *room_effect_name(uint8_t effect) {
+    static const char *names[] = {
+        "EFFECT_NONE", "EFFECT_WATER", "EFFECT_LAVA",
+        "EFFECT_WEAK_ACID", "EFFECT_LAVA_HEAT_HAZE",
+        "EFFECT_STRONG_ACID", "EFFECT_SNOWFLAKES_COLD_KNOCKBACK",
+        "EFFECT_SNOWFLAKES_COLD", "EFFECT_HEAT_BG3_HAZE",
+        "EFFECT_HEAT_BG2_BG3_HAZE", "EFFECT_BG3_GRADIENT",
+        "EFFECT_BG2_GRADIENT", "EFFECT_HAZE_BG1_BG2_BG3"
+    };
+    return effect < sizeof names / sizeof names[0] ? names[effect] : NULL;
+}
+
+static size_t runtime_sheet_block(uint16_t value) {
+    if (value & FUSION_MZM_CLIPDATA_TILEMAP_FLAG) {
+        size_t common = value - FUSION_MZM_CLIPDATA_TILEMAP_FLAG;
+        return common < FUSION_MZM_COMMON_METATILE_COUNT
+            ? FUSION_MZM_TILESET_METATILE_COUNT + common : 0;
+    }
+    return value < FUSION_MZM_TILESET_METATILE_COUNT ? value : 0;
+}
+
 static bool lowercase_area_id(const char *area, char output[32]) {
     size_t index = 0;
     for (; index < 31 && area[index]; ++index) {
@@ -940,6 +961,8 @@ static bool serialize_runtime_room(
     const FusionMzmClipdataTables *tables,
     const FusionMzmDoorDirectory *doors,
     const FusionMzmHatchTables *hatches,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     if (!payload) {
@@ -965,7 +988,10 @@ static bool serialize_runtime_room(
                      hatches->locks[area_index].count >
                          FUSION_MZM_HATCH_LOCK_CAPACITY ||
                      (hatches->locks[area_index].count &&
-                      !hatches->locks[area_index].entries)))) {
+                      !hatches->locks[area_index].entries))) ||
+        ((entry == NULL) != (backgrounds == NULL)) ||
+        (entry && (!hatches || entry->tileset >= FUSION_MZM_TILESET_COUNT ||
+                   !room_effect_name(entry->effect)))) {
         set_error(error, error_size,
                   "invalid Zero Mission runtime-room core payload");
         return false;
@@ -986,6 +1012,31 @@ static bool serialize_runtime_room(
         }
         capacity += 4096;
     }
+    if (backgrounds) {
+        size_t background_cells = 0;
+        for (size_t layer = 0; layer < 3; ++layer) {
+            const FusionMzmRoomBackground *background =
+                &backgrounds->layers[layer];
+            if (background->status != FUSION_MZM_BACKGROUND_RLE) continue;
+            if (!background->rle.cells || background->rle.width == 0 ||
+                background->rle.height == 0 ||
+                background->rle.cell_count !=
+                    (size_t)background->rle.width * background->rle.height ||
+                background_cells > SIZE_MAX - background->rle.cell_count) {
+                set_error(error, error_size,
+                          "invalid Zero Mission runtime-room background rows");
+                return false;
+            }
+            background_cells += background->rle.cell_count;
+        }
+        if (capacity > SIZE_MAX - 1024 ||
+            background_cells > (SIZE_MAX - capacity - 1024) / 8) {
+            set_error(error, error_size,
+                      "Zero Mission runtime-room payload exceeds the size bound");
+            return false;
+        }
+        capacity += 1024 + background_cells * 8;
+    }
     uint8_t *data = malloc(capacity);
     if (!data) {
         set_error(error, error_size,
@@ -997,6 +1048,8 @@ static bool serialize_runtime_room(
     size_t used = 0, clipdata_count = 0, transition_count = 0;
     size_t movement_count = 0, door_count = 0, exit_count = 0;
     size_t location_count = 0, hatch_count = 0, hatch_lock_count = 0;
+    size_t music_count = 0, background_layer_count = 0;
+    size_t background_row_count = 0, text_background_count = 0;
     if (!append_format(
             data, capacity, &used,
             "MVROOM-NATIVE\t1\tmzm\t%s\t%zu\t%zu\t%zu\n",
@@ -1207,6 +1260,72 @@ static bool serialize_runtime_room(
             }
             ++hatch_count;
         }
+        if (entry) {
+            const char *effect = room_effect_name(entry->effect);
+            if (!append_format(data, capacity, &used, "U\t%u\n",
+                               (unsigned)entry->music_track) ||
+                !append_format(
+                    data, capacity, &used,
+                    "L\t%u\t%u\t%u\t%u\t%u\t%u\t%s\nE\t%u\n",
+                    (unsigned)entry->tileset,
+                    (unsigned)entry->transparency,
+                    (unsigned)entry->bg0_property,
+                    (unsigned)entry->bg2_property,
+                    (unsigned)entry->bg3_property,
+                    (unsigned)entry->bg3_scrolling, effect,
+                    (unsigned)entry->effect_y)) {
+                goto overflow;
+            }
+            music_count = 1;
+            for (size_t layer = 0; layer < 3; ++layer) {
+                const FusionMzmRoomBackground *background =
+                    &backgrounds->layers[layer];
+                if (background->status != FUSION_MZM_BACKGROUND_RLE)
+                    continue;
+                if (!append_format(data, capacity, &used,
+                                   "G\t%zu\t%u\t%u\n", layer,
+                                   (unsigned)background->rle.width,
+                                   (unsigned)background->rle.height)) {
+                    goto overflow;
+                }
+                ++background_layer_count;
+                for (size_t row = 0; row < background->rle.height; ++row) {
+                    if (!append_format(data, capacity, &used,
+                                       "R\t%zu\t%zu\t", layer, row)) {
+                        goto overflow;
+                    }
+                    for (size_t column = 0;
+                         column < background->rle.width; ++column) {
+                        uint16_t value = background->rle.cells[
+                            row * background->rle.width + column];
+                        if (!append_format(data, capacity, &used, "%s%zu",
+                                           column ? "," : "",
+                                           runtime_sheet_block(value))) {
+                            goto overflow;
+                        }
+                    }
+                    if (!append_format(data, capacity, &used, "\n"))
+                        goto overflow;
+                    ++background_row_count;
+                }
+            }
+            for (size_t layer = 0;
+                 layer < FUSION_MZM_ROOM_BACKGROUND_COUNT; ++layer) {
+                if (layer != 0 && layer != 3) continue;
+                const FusionMzmRoomBackground *background =
+                    &backgrounds->layers[layer];
+                if (background->status != FUSION_MZM_BACKGROUND_TEXT)
+                    continue;
+                if (!append_format(
+                        data, capacity, &used, "T\t%zu\t%u\t%u\t%u\n",
+                        layer, (unsigned)background->text.size_flag,
+                        (unsigned)background->text.width_tiles * 8,
+                        (unsigned)background->text.height_tiles * 8)) {
+                    goto overflow;
+                }
+                ++text_background_count;
+            }
+        }
         if (!append_format(data, capacity, &used, "V\t")) goto overflow;
         for (size_t index = 0; index < FUSION_MZM_HATCH_COUNT; ++index) {
             if (!append_format(data, capacity, &used, "%s%u",
@@ -1274,7 +1393,9 @@ static bool serialize_runtime_room(
     data[used] = '\0';
     *payload = (FusionMzmRuntimeRoomPayload){
         data, used, clipdata_count, transition_count, movement_count,
-        door_count, exit_count, location_count, hatch_count, hatch_lock_count
+        door_count, exit_count, location_count, hatch_count, hatch_lock_count,
+        music_count, background_layer_count, background_row_count,
+        text_background_count
     };
     if (error && error_size > 0) error[0] = '\0';
     return true;
@@ -1292,7 +1413,7 @@ bool fusion_mzm_serialize_runtime_room_core(
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     return serialize_runtime_room(area, SIZE_MAX, room, clipdata, tables, NULL,
-                                  NULL, payload, error, error_size);
+                                  NULL, NULL, NULL, payload, error, error_size);
 }
 
 bool fusion_mzm_serialize_runtime_room_doors(
@@ -1309,7 +1430,8 @@ bool fusion_mzm_serialize_runtime_room_doors(
         return false;
     }
     return serialize_runtime_room(spec->id, area, room, clipdata, tables,
-                                  doors, NULL, payload, error, error_size);
+                                  doors, NULL, NULL, NULL, payload,
+                                  error, error_size);
 }
 
 bool fusion_mzm_serialize_runtime_room_hatches(
@@ -1327,7 +1449,29 @@ bool fusion_mzm_serialize_runtime_room_hatches(
         return false;
     }
     return serialize_runtime_room(spec->id, area, room, clipdata, tables,
-                                  doors, hatches, payload, error, error_size);
+                                  doors, hatches, NULL, NULL, payload,
+                                  error, error_size);
+}
+
+bool fusion_mzm_serialize_runtime_room_metadata(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size) {
+    const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+    if (!spec) {
+        if (payload) *payload = (FusionMzmRuntimeRoomPayload){0};
+        set_error(error, error_size,
+                  "invalid Zero Mission runtime-room metadata area");
+        return false;
+    }
+    return serialize_runtime_room(spec->id, area, room, clipdata, tables,
+                                  doors, hatches, entry, backgrounds, payload,
+                                  error, error_size);
 }
 
 static bool read_count(const uint8_t *data, size_t size, size_t *position,

@@ -559,6 +559,20 @@ bool fusion_mzm_export_samus(const FusionRom *rom, const uint8_t *elf, size_t el
                              const char *samus_output, const char *projectile_output,
                              FusionMzmSamusExportSummary *summary,
                              char *error, size_t error_size);
+typedef struct {
+    size_t sequences;
+    size_t frames;
+    size_t unique_bmps;
+} FusionMzmSpriteExportSummary;
+
+/* Writes the private enemy sprite library into RUNTIME_OUTPUT
+ * (runtime_index.tsv, objects/ and oam_bounds.tsv) and the sprite engine's
+ * ROM tables into METADATA_OUTPUT/sprites.tsv. Every consumed ELF symbol
+ * must hold the ROM's bytes. */
+bool fusion_mzm_export_sprites(const FusionRom *rom, const uint8_t *elf, size_t elf_size,
+                               const char *runtime_output, const char *metadata_output,
+                               FusionMzmSpriteExportSummary *summary,
+                               char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(
     FusionMzmRuntimeRoomPayload *payload);
 

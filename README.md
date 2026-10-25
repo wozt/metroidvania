@@ -312,7 +312,7 @@ Rooms show their native Zoomers, Zeelas, Rippers, Skrees, Wavers,
 Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes,
 Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets, Skulteras, Dragons and Space Pirates (with their lasers and the Chozodia alarm,
 rung by the searchlights, security lasers and searchlight eyes)
-(`python3 -m scripts.mzm_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
+(`python3 -m scripts.rebuild --task metroid_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile
 hits (flashing their stun colours), freeze under the Ice Beam, explode into particles and debris and leave the native enemy drops.
 Other enemies and bosses are not ported yet. `--spawn X Y` places Samus's feet at

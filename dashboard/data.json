@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T23:39:06+00:00",
+ "generated_at": "2026-10-25T23:57:33+00:00",
  "git": {
-  "commit": "544c0ef",
+  "commit": "c96c11f",
   "branch": "main",
   "dirty": true
  },
@@ -691,7 +691,7 @@
     "src/runtime/mzm_effects.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_projectiles.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
     "src/runtime/mzm_parasite.c",
@@ -1587,7 +1587,7 @@
     "src/runtime/mzm_acid_worm.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -1679,7 +1679,7 @@
     "src/runtime/mzm_atomic.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -1753,7 +1753,7 @@
     "src/runtime/mzm_baristute.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -1825,12 +1825,12 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.enemies.dessgeega",
@@ -1858,7 +1858,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "brinstar_010"
@@ -1883,10 +1883,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -1904,7 +1908,7 @@
    "local_sources": [
     "src/runtime/mzm_chozodia_scripted.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/mzm_message_banner.c",
     "src/runtime/room_runtime.c"
    ],
@@ -1969,7 +1973,7 @@
    "local_sources": [
     "src/runtime/mzm_chozodia_security.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/mzm_sfx.c",
     "src/runtime/mzm_gadget_sprites.c"
    ],
@@ -2052,7 +2056,7 @@
     "src/runtime/mzm_crocomire.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2113,7 +2117,7 @@
    "local_sources": [
     "src/runtime/mzm_deorem.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -2200,13 +2204,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py",
+    "tests/test_fusion_mzm_sprites_assets.c",
     "tests/test_fusion_assets_mzm_golden.py",
     "tests/test_runtime_steep_slopes.c"
    ],
@@ -2228,7 +2232,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py",
+     "tests/test_fusion_mzm_sprites_assets.c",
      "tests/test_fusion_assets_mzm_golden.py",
      "tests/test_runtime_steep_slopes.c"
     ],
@@ -2255,10 +2259,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_fusion_assets_mzm_golden.py",
@@ -2291,7 +2299,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -2351,7 +2359,7 @@
    "local_sources": [
     "src/runtime/mzm_elevator_statue.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2425,7 +2433,7 @@
     "src/runtime/mzm_escape_ship.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/mzm_door_fade.c"
    ],
    "tests": [
@@ -2494,7 +2502,7 @@
     "src/runtime/mzm_gadora.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2563,7 +2571,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -2623,7 +2631,7 @@
     "src/runtime/mzm_hive.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2699,7 +2707,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -2759,7 +2767,7 @@
     "src/runtime/mzm_imago.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2847,7 +2855,7 @@
     "src/runtime/mzm_imago_cocoon.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2930,7 +2938,7 @@
     "src/runtime/mzm_imago_larva.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3019,7 +3027,7 @@
     "src/runtime/mzm_effects.c",
     "src/runtime/mzm_audio.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "scripts/mzm_c_tables.py"
    ],
    "tests": [
@@ -3123,11 +3131,11 @@
     "src/runtime/mzm_mecha_ridley.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.enemies.space_pirate",
@@ -3190,7 +3198,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "chozodia_072"
@@ -3215,10 +3223,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -3235,7 +3247,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -3296,7 +3308,7 @@
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3371,7 +3383,7 @@
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -3461,7 +3473,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -3523,7 +3535,7 @@
     "src/runtime/mzm_space_pirate.c",
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3614,7 +3626,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -3680,7 +3692,7 @@
     "src/runtime/mzm_polyp.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3748,7 +3760,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -3810,7 +3822,7 @@
     "src/runtime/mzm_ridley.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3920,7 +3932,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3987,7 +3999,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -4047,7 +4059,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -4110,12 +4122,12 @@
     "src/runtime/mzm_effects.c",
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/mzm_in_game_cutscene.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py",
+    "tests/test_fusion_mzm_sprites_assets.c",
     "tests/test_mzm_background_effect.c"
    ],
    "dependencies": [
@@ -4172,7 +4184,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py",
+     "tests/test_fusion_mzm_sprites_assets.c",
      "tests/test_mzm_background_effect.c"
     ],
     "in_game_check": [
@@ -4198,10 +4210,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_mzm_background_effect.c",
@@ -4228,13 +4244,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.enemies.zoomer",
@@ -4251,7 +4267,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "kraid_001"
@@ -4276,10 +4292,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -4296,14 +4316,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
-    "scripts/mzm_projectile_compose.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py",
+    "tests/test_fusion_mzm_sprites_assets.c",
     "tests/test_runtime_steep_slopes.c"
    ],
    "dependencies": [
@@ -4322,7 +4341,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py",
+     "tests/test_fusion_mzm_sprites_assets.c",
      "tests/test_runtime_steep_slopes.c"
     ],
     "in_game_check": [
@@ -4348,10 +4367,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_runtime_steep_slopes.c",
@@ -4378,7 +4401,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -4436,7 +4459,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -4497,7 +4520,7 @@
     "src/runtime/mzm_space_pirate.c",
     "src/runtime/mzm_sprite_ai.h",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
@@ -4614,7 +4637,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
     "src/assets/mzm/runtime_room.c"
@@ -4678,7 +4701,7 @@
     "src/runtime/mzm_tangle_vine.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4745,7 +4768,7 @@
    "local_sources": [
     "src/runtime/mzm_tourian.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4803,7 +4826,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -4861,7 +4884,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
@@ -4922,7 +4945,7 @@
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_projectiles.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -5009,14 +5032,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
-    "scripts/mzm_projectile_compose.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.enemies.zoomer",
@@ -5033,7 +5055,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "kraid_017"
@@ -5058,10 +5080,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -5078,13 +5104,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.collision.clipdata"
@@ -5128,7 +5154,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "brinstar_000",
@@ -5154,10 +5180,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -5263,7 +5293,7 @@
     "src/runtime/mzm_gunship.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/assets/mzm/samus.c"
    ],
    "tests": [
@@ -5376,7 +5406,7 @@
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_samus.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -5444,7 +5474,7 @@
    "local_sources": [
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -5570,7 +5600,7 @@
    "local_sources": [
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -5855,8 +5885,8 @@
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
-    "scripts/mzm_message_text.py",
+    "src/assets/mzm/sprites.c",
+    "src/assets/mzm/message_text.c",
     "src/assets/mzm/export.c"
    ],
    "tests": [
@@ -6028,8 +6058,8 @@
     "src/runtime/mzm_message_banner.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_message_text.py",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/message_text.c",
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_items.c",
@@ -6118,7 +6148,7 @@
     "src/runtime/mzm_blocks.c",
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "scripts/mzm_c_tables.py",
     "scripts/dashboard.py"
    ],
@@ -6259,13 +6289,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.enemies.zoomer"
@@ -6282,7 +6312,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "brinstar_000"
@@ -6307,10 +6337,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -6328,7 +6362,7 @@
    "local_sources": [
     "src/runtime/mzm_item_sprites.c",
     "src/runtime/mzm_sprites.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "scripts/dashboard.py"
    ],
@@ -7068,7 +7102,7 @@
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_effects.c",
     "src/assets/mzm/samus.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_samus.c",
@@ -7901,7 +7935,7 @@
     "src/runtime/mzm_sprites.c",
     "src/runtime/mzm_effects.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_samus.c",
@@ -7978,7 +8012,7 @@
     "src/runtime/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_samus.c",
@@ -8076,13 +8110,13 @@
     "src/runtime/mzm_space_pirate.c",
     "src/runtime/mzm_effects.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_sprites.py",
+    "src/assets/mzm/sprites.c",
     "src/assets/mzm/samus.c"
    ],
    "tests": [
     "tests/test_mzm_samus.c",
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c"
    ],
    "dependencies": [
     "mzm.weapons.charge_beam",
@@ -8115,7 +8149,7 @@
     "unit_tests": [
      "tests/test_mzm_samus.c",
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c"
     ],
     "in_game_check": [
      "brinstar_003",
@@ -8151,10 +8185,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_sprites.py",
-      "kind": "python",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8364,7 +8402,7 @@
     "src/runtime/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c",
-    "scripts/mzm_sprites.py"
+    "src/assets/mzm/sprites.c"
    ],
    "tests": [
     "tests/test_mzm_samus.c",
@@ -14250,33 +14288,62 @@
    "status": "partial",
    "fidelity": "faithful",
    "local_sources": [
-    "scripts/mzm_sprites.py"
+    "include/fusion/assets/mzm.h",
+    "src/assets/mzm/sprites.c",
+    "src/assets/mzm/sprite_tables.c",
+    "src/assets/mzm/message_text.c",
+    "src/assets/core/sprite_library.c",
+    "scripts/rebuild.py"
    ],
    "tests": [
-    "tests/test_mzm_sprites.py"
+    "tests/test_fusion_mzm_sprites_assets.c",
+    "tests/test_fusion_sprite_library.c",
+    "tests/test_fusion_assets_mzm_golden.py"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets, Skulteras, Dragons, the elevator pads, water drops, steam vents, Gerons, unknown item blocks, map stations, save platforms (with their row 2 flash), Space Pirates and their lasers, searchlights, security lasers and searchlight eyes), plus the enemy drops, the ported particle effects and sprite debris, and the message banner with the save prompt's cursor; hard-mode and event spritesets are not resolved; the baked frozen and stun variants take frozenPaletteRowOffset as 0.",
+   "limitations": "Only sprites with a ported AI are exported (Zoomers, Zeelas, Rippers, Skrees and their explosion parts, red Zeela eyes, Wavers, Sidehoppers, Dessgeegas including the Long Beam one, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes, Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets, Skulteras, Dragons, the elevator pads, water drops, steam vents, Gerons, unknown item blocks, map stations, save platforms (with their row 2 flash), Space Pirates and their lasers, searchlights, security lasers and searchlight eyes), plus the enemy drops, the ported particle effects and sprite debris, and the message banner with the save prompt's cursor; hard-mode and event spritesets are not resolved; the baked frozen and stun variants take frozenPaletteRowOffset as 0. The native C11 metroid_sprites rebuild task writes all 20,088 sequences, 117,235 frames and 27,806 unique BMPs, the OAM bounds and sprites.tsv, byte-identical to the former Python writer; the ported sprites' tables are a generated copy of the pinned decompilation and recorded digests guard the index, bounds, tables and object names.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_sprites.py"
+     "tests/test_fusion_mzm_sprites_assets.c",
+     "tests/test_fusion_sprite_library.c",
+     "tests/test_fusion_assets_mzm_golden.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
      {
-      "test": "tests/test_mzm_sprites.py",
+      "test": "tests/test_fusion_mzm_sprites_assets.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_mzm_sprites_assets"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_sprite_library.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_sprite_library"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_mzm_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -14836,6 +14903,13 @@
     "outcome": "passed"
    },
    {
+    "name": "fusion_mzm_sprites_assets",
+    "files": [
+     "tests/test_fusion_mzm_sprites_assets.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "fusion_assets_mzm",
     "files": [
      "tests/test_fusion_assets_mzm.c"
@@ -15339,13 +15413,6 @@
     "passed": 1
    },
    {
-    "file": "tests/test_gba_oam.py",
-    "module": "tests.test_gba_oam",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_gba_tiles.py",
     "module": "tests.test_gba_tiles",
     "test_count": 3,
@@ -15465,13 +15532,6 @@
     "passed": 5
    },
    {
-    "file": "tests/test_mzm_projectile_compose.py",
-    "module": "tests.test_mzm_projectile_compose",
-    "test_count": 2,
-    "outcome": "passed",
-    "passed": 2
-   },
-   {
     "file": "tests/test_mzm_room_render.py",
     "module": "tests.test_mzm_room_render",
     "test_count": 6,
@@ -15491,13 +15551,6 @@
     "test_count": 3,
     "outcome": "passed",
     "passed": 3
-   },
-   {
-    "file": "tests/test_mzm_sprites.py",
-    "module": "tests.test_mzm_sprites",
-    "test_count": 15,
-    "outcome": "passed",
-    "passed": 15
    },
    {
     "file": "tests/test_mzm_technical_audit.py",
@@ -15746,12 +15799,18 @@
    }
   ],
   "summary": {
-   "passed": 427,
+   "passed": 406,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "c96c11f",
+   "date": "2026-10-26",
+   "subject": "Export the Samus and projectile libraries natively",
+   "scope": "project"
+  },
   {
    "commit": "544c0ef",
    "date": "2026-10-26",
@@ -16225,12 +16284,6 @@
    "date": "2026-10-22",
    "subject": "Port the Aria red crow",
    "scope": "project"
-  },
-  {
-   "commit": "560cb1f",
-   "date": "2026-10-22",
-   "subject": "Port the Aria Fleaman",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -16317,7 +16370,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000",
@@ -16336,7 +16389,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000",
@@ -16355,7 +16408,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "kraid_017"
@@ -16373,7 +16426,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "kraid_017"
@@ -16459,7 +16512,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py",
+        "tests/test_fusion_mzm_sprites_assets.c",
         "tests/test_runtime_steep_slopes.c"
        ],
        "in_game_check": [
@@ -16478,7 +16531,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py",
+        "tests/test_fusion_mzm_sprites_assets.c",
         "tests/test_runtime_steep_slopes.c"
        ],
        "in_game_check": [
@@ -16703,7 +16756,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py",
+        "tests/test_fusion_mzm_sprites_assets.c",
         "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_runtime_steep_slopes.c"
        ],
@@ -16723,7 +16776,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py",
+        "tests/test_fusion_mzm_sprites_assets.c",
         "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_runtime_steep_slopes.c"
        ],
@@ -17171,7 +17224,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py",
+        "tests/test_fusion_mzm_sprites_assets.c",
         "tests/test_mzm_background_effect.c"
        ],
        "in_game_check": [
@@ -17293,7 +17346,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "kraid_001"
@@ -17680,7 +17733,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_010"
@@ -17698,7 +17751,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_010"
@@ -18025,7 +18078,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000"
@@ -18043,7 +18096,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000"
@@ -18061,7 +18114,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000"
@@ -18079,7 +18132,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000"
@@ -18097,7 +18150,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000"
@@ -18318,7 +18371,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_sprites.py"
+        "tests/test_fusion_mzm_sprites_assets.c"
        ],
        "in_game_check": [
         "brinstar_000"
@@ -20385,7 +20438,8 @@
    ],
    "requires": [
     "roms/Metroid - Zero Mission (USA).gba",
-    "third_party/mzm/mzm_us.elf"
+    "third_party/mzm/mzm_us.elf",
+    "build/fusion_importer"
    ]
   },
   {

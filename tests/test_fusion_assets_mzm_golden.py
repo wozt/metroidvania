@@ -3,8 +3,9 @@
 
 The fixture records, for each inspection command, the SHA-256 of its whole
 standard output and its summary line, the ROM bank and symbol manifest, every
-file of the Samus and projectile sprite libraries, and every file the native
-room export writes. They were recorded once the native
+file of the Samus and projectile sprite libraries, the enemy sprite index,
+bounds and tables with the content-addressed object names, and every file the
+native room export writes. They were recorded once the native
 outputs had been proven byte-identical to the former Python exporters, which
 this file replaces as the reference. The fixture holds digests and counts
 only, no ROM-derived bytes.
@@ -77,6 +78,23 @@ def _current() -> list[str]:
                     lines.append(f"{library.name}-file\t"
                                  f"{path.relative_to(library).as_posix()}\t"
                                  f"{hashlib.sha256(path.read_bytes()).hexdigest()}")
+
+        sprites, metadata = root / "sprites", root / "metadata"
+        console = _run("--mzm-export-sprites", str(ROM), str(ELF), str(sprites),
+                       str(metadata))
+        lines.append(f"sprites-console\tstdout\t{hashlib.sha256(console).hexdigest()}")
+        for path in (metadata / "sprites.tsv", sprites / "runtime_index.tsv",
+                     sprites / "oam_bounds.tsv"):
+            lines.append(f"sprites-file\t{path.name}\t"
+                         f"{hashlib.sha256(path.read_bytes()).hexdigest()}")
+        # The objects are content-addressed: each name must be its digest,
+        # and the sorted names are recorded once.
+        objects = sorted((sprites / "objects").iterdir())
+        for path in objects:
+            if hashlib.sha256(path.read_bytes()).hexdigest() + ".bmp" != path.name:
+                raise AssertionError(f"object digest mismatch: {path.name}")
+        names = "\n".join(path.name for path in objects).encode()
+        lines.append(f"sprites-objects\t{len(objects)}\t{hashlib.sha256(names).hexdigest()}")
 
         output = root / "runtime"
         console = _run("--mzm-export-rooms", str(ROM), str(ELF), str(output))

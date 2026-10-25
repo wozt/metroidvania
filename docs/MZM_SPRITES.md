@@ -1,10 +1,21 @@
 # Zero Mission sprites
 
 The Zero Mission runtime's sprite engine follows the pinned decompilation
-(`third_party/mzm`). Everything game-specific is parsed from that source or
-read from the user's ROM at export time; nothing is stored in the repository.
+(`third_party/mzm`). Every game value is read from the user's ROM at export
+time; nothing extracted is stored in the repository.
 
-## Data (`scripts/mzm_sprites.py`, rebuild task `metroid_sprites`)
+## Data (`fusion_importer --mzm-export-sprites`, rebuild task `metroid_sprites`)
+
+The native exporter is `src/assets/mzm/sprites.c`. What only the
+decompilation source names, each ported sprite's graphics and palette
+symbols and the `FrameData` tables of its data file in source order, the
+message banner tables and the `PrimarySprite`, `SecondarySprite` and
+`MessageId` enumerators, is `src/assets/mzm/sprite_tables.c`, a generated
+copy; regenerate it when the pinned decompilation changes (a C test checks
+that every listed table still exists). The library, `oam_bounds.tsv` and
+`sprites.tsv` are byte-identical to the former `scripts/mzm_sprites.py`, which
+is removed: 20,088 sequences, 117,235 frames and 27,806 unique BMPs, written in
+about 18 seconds instead of three minutes.
 
 - Room placements (`SpriteLoadRoomSprites` / `SpriteInitPrimary`): a room
   entry's `.pDefaultSpriteData` lists `(y block, x block, slot)` triples up to
@@ -33,7 +44,7 @@ read from the user's ROM at export time; nothing is stored in the repository.
   `sCommonSpritesPal` at OBJ palette rows 2-7) with their
   `sEnemyDropOam_*` table, unflipped.
 - The message banner is rendered once per English message
-  (`Banner/<MESSAGE>/<table>/none`): `scripts/mzm_message_text.py`
+  (`Banner/<MESSAGE>/<table>/none`): `src/assets/mzm/message_text.c`
   transliterates `TextProcessMessageBanner`, `TextProcessCurrentMessage` and
   `TextDrawMessageCharacter` over the banner graphics, and `message` lines
   give the calls each text takes. The runtime's banner
@@ -45,7 +56,7 @@ read from the user's ROM at export time; nothing is stored in the repository.
   (`SpriteUtilCheckStopSpritesPose`).
 - Chozo statues (`src/runtime/mzm_chozo_statue.c`): `multi` lines carry the
   `MultiSpriteData` tables (frame timer, then each part's OAM index and
-  offsets) read from the decompilation; the statue, its parts and its ball
+  offsets) read from the ROM; the statue, its parts and its ball
   use the statue's graphics (statues export only unflipped and X-flipped
   frames, without frozen or stun variants). Sprites draw by `drawOrder`.
 

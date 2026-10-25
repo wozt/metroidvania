@@ -8,7 +8,7 @@
  * dust. Sprite debris
  * (src/sprite_debris.c) is stored here and processed by mzm_sprites, which
  * owns the collision helpers it needs. Frame durations come from the OAM
- * tables exported by scripts/mzm_sprites.py. */
+ * tables exported by the native sprite exporter (src/assets/mzm/sprites.c). */
 #ifndef MZM_EFFECTS_H
 #define MZM_EFFECTS_H
 

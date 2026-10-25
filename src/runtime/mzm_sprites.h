@@ -17,8 +17,8 @@
  * the red Zeela's eyes, and the Space Pirates with their lasers
  * (src/sprites_ai/space_pirate.c, ported in mzm_space_pirate.c). Positions are native subpixels (64 per
  * block). ROM tables (random numbers, falling speeds, jump velocities,
- * stats) and the frame durations of each OAM table come from
- * scripts/mzm_sprites.py.
+ * stats) and the frame durations of each OAM table come from the native
+ * sprite exporter (src/assets/mzm/sprites.c).
  * Combat ports SpriteUtilSamusAndSpriteCollision for sprites that hurt Samus
  * (with the screw attack kill of SpriteUtilSpriteTakeDamageFromSamusContact)
  * and the beam and missile parts of ProjectileCheckHittingSprite. A killed
@@ -195,7 +195,7 @@ enum {
 };
 extern const char *const mzm_crocomire_multi_names[MZM_CROCOMIRE_MULTI_COUNT];
 
-/* ROM tables of scripts/mzm_sprites.py (metadata/sprites.tsv). */
+/* The ROM tables of metadata/sprites.tsv (src/assets/mzm/sprites.c). */
 typedef struct {
     uint8_t random[32];             /* sSpriteRandomNumberTable */
     uint8_t generic_random[256];    /* sRandomNumberTable */

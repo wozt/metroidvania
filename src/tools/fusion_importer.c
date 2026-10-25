@@ -51,6 +51,7 @@ static void usage(const char *name) {
             "       %s --mzm-export-backgrounds ROM ELF\n"
             "       %s --mzm-export-rooms ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-export-samus ROM ELF SAMUS_DIR PROJECTILE_DIR\n"
+            "       %s --mzm-export-sprites ROM ELF RUNTIME_DIR METADATA_DIR\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -64,7 +65,7 @@ static void usage(const char *name) {
             name,
             name, name, name, name,
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name);
+            name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -2248,6 +2249,30 @@ static int export_mzm_samus(const char *rom_path, const char *elf_path,
     return 0;
 }
 
+static int export_mzm_sprites(const char *rom_path, const char *elf_path,
+                              const char *runtime, const char *metadata) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[512];
+    FusionMzmSpriteExportSummary summary;
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error) ||
+        !fusion_mzm_export_sprites(&rom, elf, elf_size, runtime, metadata, &summary,
+                                   error, sizeof error)) {
+        fprintf(stderr, "mzm-export-sprites: %s\n", error);
+        fusion_rom_close(&rom);
+        free(elf);
+        return 1;
+    }
+    printf("Zero Mission enemy sprites: %zu sequences, %zu frames, %zu unique BMPs\n",
+           summary.sequences, summary.frames, summary.unique_bmps);
+    fusion_rom_close(&rom);
+    free(elf);
+    return 0;
+}
+
 static int inspect_mzm_metatiles(const char *rom_path, const char *elf_path) {
     FusionRom rom = {0};
     uint8_t *elf = NULL;
@@ -2765,6 +2790,8 @@ int main(int argc, char **argv) {
     const char *mzm_export_output = NULL;
     const char *mzm_samus_rom_path = NULL, *mzm_samus_elf_path = NULL;
     const char *mzm_samus_output = NULL, *mzm_projectile_output = NULL;
+    const char *mzm_sprite_rom_path = NULL, *mzm_sprite_elf_path = NULL;
+    const char *mzm_sprite_runtime = NULL, *mzm_sprite_metadata = NULL;
     const char *mzm_export_background_elf_path = NULL;
     const char *mzm_table_elf_path = NULL;
     const char *mzm_table_dump = NULL;
@@ -2886,6 +2913,12 @@ int main(int argc, char **argv) {
                  i + 2 < argc) {
             mzm_runtime_sprite_rom_path = argv[++i];
             mzm_runtime_sprite_elf_path = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--mzm-export-sprites") && i + 4 < argc) {
+            mzm_sprite_rom_path = argv[++i];
+            mzm_sprite_elf_path = argv[++i];
+            mzm_sprite_runtime = argv[++i];
+            mzm_sprite_metadata = argv[++i];
         }
         else if (!strcmp(argv[i], "--mzm-export-samus") && i + 4 < argc) {
             mzm_samus_rom_path = argv[++i];
@@ -3017,6 +3050,9 @@ int main(int argc, char **argv) {
         return inspect_mzm_runtime_rooms(
             mzm_runtime_sprite_rom_path, mzm_runtime_sprite_elf_path,
             true, true, true, true);
+    if (mzm_sprite_rom_path)
+        return export_mzm_sprites(mzm_sprite_rom_path, mzm_sprite_elf_path,
+                                  mzm_sprite_runtime, mzm_sprite_metadata);
     if (mzm_samus_rom_path)
         return export_mzm_samus(mzm_samus_rom_path, mzm_samus_elf_path,
                                 mzm_samus_output, mzm_projectile_output);

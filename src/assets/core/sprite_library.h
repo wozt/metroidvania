@@ -23,6 +23,9 @@ typedef struct {
     FusionSpriteObject *packed;
     size_t packed_count;
     size_t packed_capacity;
+    /* Open-addressing digest index: packed index + 1, zero when empty. */
+    size_t *slots;
+    size_t slot_capacity;
     size_t sequences;
     size_t frames;
 } FusionSpriteLibrary;

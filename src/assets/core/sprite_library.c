@@ -82,13 +82,45 @@ bool fusion_sprite_library_begin(FusionSpriteLibrary *library,
     return true;
 }
 
+static size_t digest_hash(const char *digest) {
+    size_t hash = 0;
+    for (size_t index = 0; index < 16; ++index) {
+        char c = digest[index];
+        hash = hash * 16 + (size_t)(c <= '9' ? c - '0' : (c | 0x20) - 'a' + 10);
+    }
+    return hash;
+}
+
+static size_t *find_slot(const FusionSpriteLibrary *library, const char *digest) {
+    size_t mask = library->slot_capacity - 1;
+    for (size_t slot = digest_hash(digest) & mask;; slot = (slot + 1) & mask) {
+        size_t entry = library->slots[slot];
+        if (!entry || !strncmp(library->packed[entry - 1].digest, digest, 64))
+            return &library->slots[slot];
+    }
+}
+
+static bool grow_slots(FusionSpriteLibrary *library) {
+    size_t capacity = library->slot_capacity ? library->slot_capacity * 2 : 1024;
+    size_t *slots = calloc(capacity, sizeof *slots);
+    if (!slots) return false;
+    free(library->slots);
+    library->slots = slots;
+    library->slot_capacity = capacity;
+    for (size_t index = 0; index < library->packed_count; ++index)
+        *find_slot(library, library->packed[index].digest) = index + 1;
+    return true;
+}
+
 static bool remember_object(FusionSpriteLibrary *library, const char *digest,
                             size_t size, bool *fresh) {
-    for (size_t index = 0; index < library->packed_count; ++index) {
-        if (!strcmp(library->packed[index].digest, digest)) {
-            *fresh = false;
-            return library->packed[index].size == size;
-        }
+    if ((library->packed_count + 1) * 2 > library->slot_capacity &&
+        !grow_slots(library))
+        return false;
+    size_t *slot = find_slot(library, digest);
+    if (*slot) {
+        *fresh = false;
+        return library->packed[*slot - 1].size == size;
     }
     if (library->packed_count == library->packed_capacity) {
         size_t next = library->packed_capacity ? library->packed_capacity * 2 : 64;
@@ -101,6 +133,7 @@ static bool remember_object(FusionSpriteLibrary *library, const char *digest,
     FusionSpriteObject *object = &library->packed[library->packed_count++];
     snprintf(object->digest, sizeof object->digest, "%s", digest);
     object->size = size;
+    *slot = library->packed_count;
     *fresh = true;
     return true;
 }
@@ -152,9 +185,7 @@ static bool is_object_name(const char *name) {
 }
 
 static bool object_is_used(const FusionSpriteLibrary *library, const char *name) {
-    for (size_t index = 0; index < library->packed_count; ++index)
-        if (!strncmp(name, library->packed[index].digest, 64)) return true;
-    return false;
+    return library->slot_capacity && *find_slot(library, name) != 0;
 }
 
 static bool prune_objects(FusionSpriteLibrary *library, size_t *removed,
@@ -231,6 +262,7 @@ void fusion_sprite_library_free(FusionSpriteLibrary *library) {
     if (!library) return;
     free(library->rows);
     free(library->packed);
+    free(library->slots);
     *library = (FusionSpriteLibrary){0};
 }
 

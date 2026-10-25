@@ -84,8 +84,8 @@ typedef struct {
     bool open;
 } RoomHatch;
 
-/* One room sprite (SpriteLoadRoomSprites), exported by scripts/mzm_sprites.py:
- * block position, sprite name, graphics slot. RoomLoadEntry chooses the
+/* One room sprite (SpriteLoadRoomSprites), exported in room.tsv by
+ * src/assets/mzm/runtime_room.c: block position, sprite name, graphics slot. RoomLoadEntry chooses the
  * default, first-event or second-event variant before loading the sprites. */
 #define MAX_ROOM_SPRITES 24
 #define MAX_SPRITESET_ENTRIES 15    /* MAX_AMOUNT_OF_SPRITE_TYPES */
@@ -2434,8 +2434,9 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
     }
     SDL_SetRenderScale(renderer,1.f,1.f);
 }
-/* Zero Mission sprites: the ROM tables and OAM frame durations of
- * scripts/mzm_sprites.py, the sprite library, and the room's live sprites. */
+/* Zero Mission sprites: the ROM tables and OAM frame durations of the
+ * native sprite exporter (src/assets/mzm/sprites.c), the sprite library, and
+ * the room's live sprites. */
 /* The Zero Mission sound engine's data (scripts/mzm_audio.py). */
 #define RUNTIME_SOUND_BANK "assets/extracted/metroid/sound/runtime/sound_bank.bin"
 #define RUNTIME_SOUND_TABLES "assets/extracted/metroid/sound/runtime/sound_tables.tsv"
@@ -2763,7 +2764,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     bool ok = fgets(line, sizeof line, f) &&
               !strcmp(line, "schema\tmetroidvania-mzm-sprite-tables-v1\n");
     int random_count = 0, falling_count = 0;
-    /* The `table` lines of the AIs (scripts/mzm_sprites.py AI_TABLES), each
+    /* The `table` lines of the AIs (the native sprite exporter's ai_tables), each
      * with its exact length in the decompilation. */
     MzmSpriteTables *t = &sprites->tables;
     struct { const char *name; int16_t *destination; int capacity, length; } ai_tables[] = {
@@ -4934,7 +4935,7 @@ int main(int argc, char **argv) {
         }
         printf("Projectile library: %d native sequences\n",projectile_library.count);
     }
-    /* Sprites (scripts/mzm_sprites.py); without them the rooms stay empty. */
+    /* Sprites (src/assets/mzm/sprites.c); without them the rooms stay empty. */
     if (!mzm_power_bomb_load_windows(RUNTIME_POWER_BOMB_TABLE))
         fprintf(stderr, "No power bomb window table: python3 -m scripts.rebuild --task metroid_rooms\n");
     if (!runtime_block_tables_open(RUNTIME_BLOCK_TABLES))

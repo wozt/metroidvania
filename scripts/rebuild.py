@@ -25,7 +25,8 @@ from typing import Callable
 from scripts import export_index, native_inventory, native_parity
 from scripts.asset_layout import (
     ARIA_METADATA, ARIA_ROOMS, ARIA_SOMA_RUNTIME, ARIA_SPRITES, IMPORT_CATALOG,
-    METROID_PROJECTILES_RUNTIME, METROID_ROOMS, METROID_SAMUS_RUNTIME, SHARED_MANIFESTS,
+    METROID_METADATA, METROID_PROJECTILES_RUNTIME, METROID_ROOMS, METROID_SAMUS_RUNTIME,
+    SHARED_MANIFESTS,
     private_path)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -204,6 +205,14 @@ def _run_native_samus(samus: Path, projectiles: Path) -> Callable[[], None]:
     return action
 
 
+def _run_native_sprites(runtime: Path, metadata: Path) -> Callable[[], None]:
+    def action() -> None:
+        private_path(ROOT, runtime.relative_to(ROOT), create=True)
+        private_path(ROOT, metadata.relative_to(ROOT), create=True)
+        _run_native("--mzm-export-sprites", ROMS["metroid"], MZM_ELF, runtime, metadata)()
+    return action
+
+
 def _run_native_weapons(metadata: Path, runtime: Path) -> Callable[[], None]:
     def action() -> None:
         private_path(ROOT, metadata.relative_to(ROOT), create=True)
@@ -335,10 +344,14 @@ ASSET_TASKS = {
         requires=(ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER),
         stamps=lambda: _decomp_stamp("metroid"),
         validate=_sprite_validator(MZM_SAMUS, MZM_PROJECTILES), group="assets"),
-    "metroid_sprites": _asset_task(
-        "metroid_sprites", "metroid", "mzm_sprites", (),
-        (MZM_SPRITES, ROOT / "assets/extracted/metroid/metadata/sprites.tsv"),
-        ("metroid_rom",), _sprite_validator(MZM_SPRITES), requires=(MZM_ELF,)),
+    "metroid_sprites": Task(
+        name="metroid_sprites", version=2, dependencies=("metroid_rom",),
+        inputs=lambda: [ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER],
+        outputs=(MZM_SPRITES, ROOT / METROID_METADATA / "sprites.tsv"),
+        action=_run_native_sprites(MZM_SPRITES.parent, ROOT / METROID_METADATA),
+        requires=(ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("metroid"),
+        validate=_sprite_validator(MZM_SPRITES), group="assets"),
     # The native writer reads the ROM and the ELF only (no raw import); the
     # importer binary is an input, so a rebuilt importer reruns the export.
     "metroid_rooms": Task(

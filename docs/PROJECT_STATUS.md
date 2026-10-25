@@ -2,6 +2,42 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0531 - Native Zero Mission enemy sprites in production
+
+- Added `fusion_mzm_export_sprites` and `fusion_importer --mzm-export-sprites
+  ROM ELF RUNTIME_DIR METADATA_DIR`. The bounded C11 exporter stages each
+  ported sprite like `SpriteLoadSpriteset` and `SpriteDraw` and bakes every
+  palette variant of the former writer (frozen and stun rows, Chozo statue and
+  AI row flashes, the gunship, escape gate and ship flashes, the Metroid's
+  grab colours, the Ruins Test dynamic and reflection palettes, Mecha
+  Ridley's indexed frames with its destroyed and weapon graphics), the affine
+  Skree explosion parts, the message and area banners with their text, the
+  enemy drops, water drop and particles, `oam_bounds.tsv` and `sprites.tsv`.
+- `src/assets/mzm/message_text.c` transliterates the US text routines of
+  `src/text.c`. The 67 `MultiSpriteData` tables are now read from the ROM;
+  they equal the former evaluation of the decompilation source.
+  `src/assets/mzm/sprite_tables.c` is a generated copy of what only the
+  source names (graphics, palettes and `FrameData` tables of the ported
+  sprites, banner tables and enumerators); a C test checks that every listed
+  table still exists. The sprite library now indexes its objects by digest
+  instead of scanning them.
+- Proved the complete output against the former Python writer: 20,088
+  sequences, 117,235 frames, 27,806 unique BMPs, `oam_bounds.tsv` and
+  `sprites.tsv`, all byte-identical, in about 18 seconds instead of three
+  minutes. The `metroid_sprites` rebuild task now runs the native writer; a
+  forced production rebuild matched the reference and the next run was up to
+  date. The Zero Mission golden fixture records the command, the index, the
+  bounds, the tables and the object names, and checks each object against its
+  digest.
+- Removed `scripts/mzm_sprites.py`, `scripts/mzm_projectile_compose.py`,
+  `scripts/mzm_message_text.py`, `scripts/gba_oam.py` and their Python tests;
+  their checks moved to `tests/test_fusion_mzm_sprites_assets.c`.
+  `scripts/mzm_samus_frame.py` stays for the audio extractor.
+- No gameplay or fidelity status changed, no private assets were committed,
+  and audio remains untouched.
+- Next: migrate `raw_import` (`scripts/import_game_assets.py`), the last
+  Python asset task outside audio.
+
 ## Patch 0530 - Native Samus and projectile libraries in production
 
 - Added `fusion_mzm_export_samus` and `fusion_importer --mzm-export-samus

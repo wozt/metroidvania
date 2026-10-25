@@ -579,6 +579,7 @@ static int inspect_aria_background_composites(const char *path) {
     }
     size_t composite_count = 0, skipped_count = 0;
     size_t rendered_layer_count = 0, total_pixels = 0;
+    size_t total_bitmap_bytes = 0;
     for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
         for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
             FusionAosRoomDescriptor descriptor;
@@ -662,19 +663,47 @@ static int inspect_aria_background_composites(const char *path) {
                 fusion_rom_close(&rom);
                 return 1;
             }
-            printf("composite\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\n",
+            FusionAosBitmap24 bitmap;
+            if (!fusion_aos_serialize_composite_bmp24(
+                    &composite, &bitmap, error, sizeof error)) {
+                fprintf(stderr,
+                        "aria-background-composites: cannot serialize area %zu room %zu: %s\n",
+                        area, room, error);
+                fusion_aos_free_composite_background(&composite);
+                free_aria_rendered_layers(rendered, layer_count);
+                free(memory);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            char bitmap_digest[41];
+            if (!fusion_rom_sha1_hex(bitmap.data, bitmap.size,
+                                     bitmap_digest)) {
+                fprintf(stderr,
+                        "aria-background-composites: cannot hash bitmap for area %zu room %zu\n",
+                        area, room);
+                fusion_aos_free_bitmap24(&bitmap);
+                fusion_aos_free_composite_background(&composite);
+                free_aria_rendered_layers(rendered, layer_count);
+                free(memory);
+                fusion_rom_close(&rom);
+                return 1;
+            }
+            printf("composite\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\t%zu\t%s\n",
                    area, room, composite.width_pixels,
                    composite.height_pixels, composite.pixel_count,
-                   layer_count, digest);
+                   layer_count, digest, bitmap.size, bitmap_digest);
             ++composite_count;
             rendered_layer_count += layer_count;
             total_pixels += composite.pixel_count;
+            total_bitmap_bytes += bitmap.size;
+            fusion_aos_free_bitmap24(&bitmap);
             fusion_aos_free_composite_background(&composite);
             free_aria_rendered_layers(rendered, layer_count);
         }
     }
-    printf("summary\t%zu\t%zu\t%zu\t%zu\n", composite_count,
-           skipped_count, rendered_layer_count, total_pixels);
+    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\n", composite_count,
+           skipped_count, rendered_layer_count, total_pixels,
+           total_bitmap_bytes);
     free(memory);
     fusion_rom_close(&rom);
     return 0;

@@ -231,10 +231,11 @@ background block maps and direct/LZ77 metatile tables are expanded natively to
 their final flipped 8x8 tile entries, then rendered to RGBA with native 4-bpp
 character-base, palette-bank, flip and transparency semantics. Supported room
 layers are also composed natively at a static origin using BG1 dimensions,
-native depth keys, modulo repetition and transparent-pixel rejection. Parallax,
-affine/8-bpp layers, hardware blending, image serialization, runtime-room
-serialization and global task orchestration are still owned by the Python
-reference pipeline.
+native depth keys, modulo repetition and transparent-pixel rejection. The
+resulting RGB composites are serialized natively to byte-identical 24-bit BMP
+files with bottom-up BGR rows and aligned pitch. Parallax, affine/8-bpp layers,
+hardware blending, runtime-room TSV serialization and global task
+orchestration are still owned by the Python reference pipeline.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name

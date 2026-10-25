@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-24T22:53:10+00:00",
+ "generated_at": "2026-10-25T03:35:44+00:00",
  "git": {
-  "commit": "fbf9b01",
+  "commit": "858272e",
   "branch": "main",
   "dirty": true
  },
@@ -768,7 +768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -842,7 +842,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -979,7 +979,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1050,7 +1050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1178,7 +1178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1267,7 +1267,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1346,7 +1346,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1418,7 +1418,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1491,7 +1491,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1569,7 +1569,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1661,7 +1661,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1735,7 +1735,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1809,7 +1809,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1887,7 +1887,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -1952,7 +1952,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2034,7 +2034,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2096,7 +2096,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2184,7 +2184,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2275,7 +2275,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2334,7 +2334,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2407,7 +2407,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2476,7 +2476,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2547,7 +2547,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2605,7 +2605,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2683,7 +2683,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2741,7 +2741,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2829,7 +2829,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2912,7 +2912,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -2999,7 +2999,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3105,7 +3105,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3219,7 +3219,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3277,7 +3277,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3352,7 +3352,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3445,7 +3445,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3503,7 +3503,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3598,7 +3598,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3662,7 +3662,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3732,7 +3732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3792,7 +3792,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3904,7 +3904,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -3971,7 +3971,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4031,7 +4031,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4090,7 +4090,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4212,7 +4212,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4280,7 +4280,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4362,7 +4362,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4420,7 +4420,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4479,7 +4479,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4598,7 +4598,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4660,7 +4660,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4728,7 +4728,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4787,7 +4787,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4845,7 +4845,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4903,7 +4903,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -4993,7 +4993,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5062,7 +5062,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5158,7 +5158,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5245,7 +5245,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5358,7 +5358,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5427,7 +5427,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5553,7 +5553,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5652,7 +5652,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5772,7 +5772,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5837,7 +5837,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -5912,7 +5912,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6010,7 +6010,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6098,7 +6098,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6243,7 +6243,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6311,7 +6311,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6384,7 +6384,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6459,7 +6459,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6520,7 +6520,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6609,7 +6609,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6672,7 +6672,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6766,7 +6766,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -6862,7 +6862,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7048,7 +7048,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7137,7 +7137,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7256,7 +7256,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7315,7 +7315,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7401,7 +7401,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7483,7 +7483,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7560,7 +7560,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7639,7 +7639,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7781,7 +7781,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7864,7 +7864,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -7941,7 +7941,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8040,7 +8040,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8140,7 +8140,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8226,7 +8226,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8326,7 +8326,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8428,7 +8428,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8477,7 +8477,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8546,7 +8546,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8606,7 +8606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8676,7 +8676,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8745,7 +8745,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8801,7 +8801,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8859,7 +8859,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8916,7 +8916,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -8972,7 +8972,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9037,7 +9037,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9098,7 +9098,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9160,7 +9160,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9216,7 +9216,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9272,7 +9272,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9335,7 +9335,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9398,7 +9398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9455,7 +9455,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9518,7 +9518,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9576,7 +9576,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9638,7 +9638,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9694,7 +9694,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9762,7 +9762,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9829,7 +9829,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9905,7 +9905,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -9964,7 +9964,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10041,7 +10041,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10104,7 +10104,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10168,7 +10168,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10235,7 +10235,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10300,7 +10300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10362,7 +10362,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10433,7 +10433,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10492,7 +10492,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10554,7 +10554,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10617,7 +10617,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10674,7 +10674,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10730,7 +10730,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10789,7 +10789,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10851,7 +10851,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10919,7 +10919,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -10975,7 +10975,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11038,7 +11038,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11103,7 +11103,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11160,7 +11160,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11217,7 +11217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11284,7 +11284,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11347,7 +11347,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11417,7 +11417,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11481,7 +11481,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11546,7 +11546,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11595,7 +11595,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11667,7 +11667,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11717,7 +11717,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11825,7 +11825,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -11895,7 +11895,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12225,7 +12225,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12271,7 +12271,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12320,7 +12320,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12363,7 +12363,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12408,7 +12408,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12460,7 +12460,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12507,7 +12507,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders and 342 static-origin room composites; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables and 1115 exact RGBA room layers. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for compositing, serialization, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites and their exact BMP serialization; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables and 1115 exact RGBA room layers. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for runtime-room serialization, private-output orchestration, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12601,7 +12601,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12646,7 +12646,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12698,7 +12698,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12742,7 +12742,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12786,7 +12786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12893,7 +12893,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -12944,7 +12944,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13002,7 +13002,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13051,7 +13051,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13115,7 +13115,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13166,7 +13166,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13211,7 +13211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13260,7 +13260,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13310,7 +13310,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13359,7 +13359,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13409,7 +13409,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13435,7 +13435,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native importer source-compares 342 BG1 collision maps, complete VRAM/palette snapshots for all 343 rooms, 901 expanded static tilemaps and 150929408 rendered RGBA pixels, plus 342 static-origin RGB composites totaling 61210624 pixels. The remaining 104 absent and 24 affine layer slots are explicit; one room has no supported text layer. Python still owns image and AOSROOM-NATIVE serialization.",
+   "limitations": "The native importer source-compares 342 BG1 collision maps, complete VRAM/palette snapshots for all 343 rooms, 901 expanded static tilemaps and 150929408 rendered RGBA pixels, plus 342 static-origin RGB composites totaling 61210624 pixels and their byte-identical 183650340-byte BMP representation. The remaining 104 absent and 24 affine layer slots are explicit; one room has no supported text layer. Python still owns AOSROOM-NATIVE serialization and private output orchestration.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13448,7 +13448,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-24",
+   "last_validated": "2026-10-25",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -13485,7 +13485,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13544,7 +13544,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13590,7 +13590,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13635,7 +13635,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13685,7 +13685,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13758,7 +13758,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13803,7 +13803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13848,7 +13848,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -13906,7 +13906,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -14000,7 +14000,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -14054,7 +14054,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -14099,7 +14099,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -14143,7 +14143,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -14186,7 +14186,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -14229,7 +14229,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-24"
+    "verified_on": "2026-10-25"
    }
   },
   {
@@ -15304,6 +15304,12 @@
  },
  "timeline": [
   {
+   "commit": "858272e",
+   "date": "2026-10-25",
+   "subject": "Render Zero Mission backgrounds natively",
+   "scope": "project"
+  },
+  {
    "commit": "fbf9b01",
    "date": "2026-10-25",
    "subject": "Decode Zero Mission metatiles natively",
@@ -15775,12 +15781,6 @@
    "commit": "ffa5b85",
    "date": "2026-10-20",
    "subject": "Improve Aria SDL preview menu controls and options",
-   "scope": "project"
-  },
-  {
-   "commit": "ca58551",
-   "date": "2026-10-20",
-   "subject": "Add navigable Aria SDL menu preview",
    "scope": "project"
   }
  ],

@@ -314,6 +314,25 @@ int main(void) {
     assert(composite.rgb[0] == 255 && composite.rgb[1] == 0 &&
            composite.rgb[2] == 0 && composite.rgb[3] == 0 &&
            composite.rgb[4] == 0 && composite.rgb[5] == 255);
+    FusionAosBitmap24 bitmap;
+    assert(fusion_aos_serialize_composite_bmp24(
+        &composite, &bitmap, error, sizeof error));
+    assert(bitmap.size == 62 && bitmap.data[0] == 'B' &&
+           bitmap.data[1] == 'M' && bitmap.data[2] == 62 &&
+           bitmap.data[10] == 54 && bitmap.data[14] == 40 &&
+           bitmap.data[18] == 2 && bitmap.data[22] == 1 &&
+           bitmap.data[26] == 1 && bitmap.data[28] == 24);
+    assert(bitmap.data[54] == 0 && bitmap.data[55] == 0 &&
+           bitmap.data[56] == 255 && bitmap.data[57] == 255 &&
+           bitmap.data[58] == 0 && bitmap.data[59] == 0 &&
+           bitmap.data[60] == 0 && bitmap.data[61] == 0);
+    fusion_aos_free_bitmap24(&bitmap);
+    assert(bitmap.data == NULL && bitmap.size == 0);
+    size_t saved_pixel_count = composite.pixel_count;
+    composite.pixel_count = 1;
+    assert(!fusion_aos_serialize_composite_bmp24(
+        &composite, &bitmap, error, sizeof error));
+    composite.pixel_count = saved_pixel_count;
     fusion_aos_free_composite_background(&composite);
     assert(composite.rgb == NULL && composite.pixel_count == 0);
     assert(fusion_aos_composite_backgrounds(

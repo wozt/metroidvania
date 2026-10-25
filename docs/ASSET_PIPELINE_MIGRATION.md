@@ -75,7 +75,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
-| `scripts/aos_runtime_room.py`, `scripts/aos_room_render.py` | `src/assets/aos/runtime_room.c` | BG1 collision, graphics/palette loading, tile expansion, 4-bpp rendering and static-origin depth compositing complete; room serialization pending | synthetic metadata, resource-encoding, bounds, tile/pixel flip, palette, transparency, depth and repetition fixtures; exact comparison of 342 collision maps, 343 complete VRAM/palette snapshots, 901 final tilemaps and RGBA layers totaling 150,929,408 pixels, plus 342 complete RGB composites totaling 61,210,624 pixels; 104 absent and 24 affine layer slots remain explicit and one room has no supported text layer |
+| `scripts/aos_runtime_room.py`, `scripts/aos_room_render.py` | `src/assets/aos/runtime_room.c` | BG1 collision, graphics/palette loading, tile expansion, 4-bpp rendering, static-origin depth compositing and BMP serialization complete; room TSV serialization pending | synthetic metadata, resource-encoding, bounds, tile/pixel flip, palette, transparency, depth, repetition, BMP header, channel-order and padding fixtures; exact comparison of 342 collision maps, 343 complete VRAM/palette snapshots, 901 final tilemaps and RGBA layers totaling 150,929,408 pixels, 342 complete RGB composites totaling 61,210,624 pixels and their byte-identical 183,650,340-byte BMP representation; 104 absent and 24 affine layer slots remain explicit and one room has no supported text layer |
 | `scripts/aos_soma_pipeline.py`, `aos_object_sprites.py`, `aos_weapons.py` | `src/assets/aos/sprites.c` | not started | animation, palette, box and weapon metadata comparison |
 | `scripts/rebuild.py` | `src/assets/pipeline/rebuild.c` | not started | dependency, digest, atomic-output and dry-run comparison |
 
@@ -84,10 +84,11 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should alternate to Aria and serialize its validated
-native composites and runtime-room payloads. Aria still needs native image and
-runtime-room serialization; Zero Mission still needs compositing, doors,
-sprites and runtime-room serialization. The
+The next migration layer should complete Aria's `AOSROOM-NATIVE` v4 TSV
+serialization from its validated native collision, transition, entity and map
+records. Aria's composite image serialization is native; private output
+orchestration remains Python-owned. Zero Mission still needs compositing,
+doors, sprites and runtime-room serialization. The
 completed Zero Mission ROM bank and Aria world catalog are ready for later
 registration in the native task graph. The header extractor is
 intentionally diagnostic: it reads a

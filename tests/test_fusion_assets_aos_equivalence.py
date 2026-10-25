@@ -23,6 +23,7 @@ from scripts.import_aos_world import (
 )
 from scripts.aos_room_index import index_rows
 from scripts.aos_room_render import (
+    bmp24,
     composite_backgrounds,
     decode_background,
     load_video_memory,
@@ -265,6 +266,7 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
         total_pixels = 0
         unresolved_count = 0
         composite_pixels = 0
+        composite_bitmap_bytes = 0
         skipped_rooms = 0
         for room in decode_world(rom)["rooms"]:
             vram, palette, _ = load_video_memory(rom, room, resource_cache)
@@ -290,12 +292,15 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
             if room_layers:
                 width, height, rgb = composite_backgrounds(room_layers)
                 pixels = width * height
+                bitmap = bmp24(width, height, rgb)
                 expected_composites.append(
                     f"composite\t{room['engine_area']}\t{room['room']}\t"
                     f"{width}\t{height}\t{pixels}\t{len(room_layers)}\t"
-                    f"{hashlib.sha1(rgb).hexdigest()}"
+                    f"{hashlib.sha1(rgb).hexdigest()}\t{len(bitmap)}\t"
+                    f"{hashlib.sha1(bitmap).hexdigest()}"
                 )
                 composite_pixels += pixels
+                composite_bitmap_bytes += len(bitmap)
             else:
                 expected_composites.append(
                     f"skipped\t{room['engine_area']}\t{room['room']}"
@@ -331,7 +336,8 @@ class FusionAssetsAosEquivalenceTests(unittest.TestCase):
         self.assertEqual(
             lines[-1],
             f"summary\t{len(expected_composites) - skipped_rooms}\t"
-            f"{skipped_rooms}\t{len(expected)}\t{composite_pixels}",
+            f"{skipped_rooms}\t{len(expected)}\t{composite_pixels}\t"
+            f"{composite_bitmap_bytes}",
         )
 
     def test_bg1_collision_maps_match_python_reference(self):

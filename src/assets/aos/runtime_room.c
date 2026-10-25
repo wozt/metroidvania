@@ -37,6 +37,18 @@ static uint32_t read_u32(const uint8_t *data) {
            (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
 }
 
+static void write_u16(uint8_t *data, uint16_t value) {
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8);
+}
+
+static void write_u32(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8);
+    data[2] = (uint8_t)(value >> 16);
+    data[3] = (uint8_t)(value >> 24);
+}
+
 static bool pointer_offset(const FusionRom *rom, uint32_t pointer, size_t size,
                            size_t *offset) {
     if (pointer < GBA_ROM_BASE) return false;
@@ -427,6 +439,75 @@ bool fusion_aos_composite_backgrounds(
     *composite = (FusionAosCompositeBackground){
         width, height, rgb, pixel_count
     };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+void fusion_aos_free_bitmap24(FusionAosBitmap24 *bitmap) {
+    if (!bitmap) return;
+    free(bitmap->data);
+    *bitmap = (FusionAosBitmap24){0};
+}
+
+bool fusion_aos_serialize_composite_bmp24(
+    const FusionAosCompositeBackground *composite,
+    FusionAosBitmap24 *bitmap, char *error, size_t error_size) {
+    enum { BMP_HEADER_SIZE = 54 };
+    if (!bitmap) {
+        set_error(error, error_size, "invalid Aria bitmap output request");
+        return false;
+    }
+    *bitmap = (FusionAosBitmap24){0};
+    if (!composite || !composite->rgb || composite->width_pixels == 0 ||
+        composite->height_pixels == 0 || composite->width_pixels > 4096 ||
+        composite->height_pixels > 4096 ||
+        composite->width_pixels > SIZE_MAX / composite->height_pixels ||
+        composite->pixel_count !=
+            composite->width_pixels * composite->height_pixels ||
+        composite->width_pixels > (SIZE_MAX - 3) / 3) {
+        set_error(error, error_size, "invalid Aria RGB bitmap");
+        return false;
+    }
+    size_t row_bytes = composite->width_pixels * 3;
+    size_t pitch = (row_bytes + 3) & ~(size_t)3;
+    if (composite->height_pixels > (SIZE_MAX - BMP_HEADER_SIZE) / pitch) {
+        set_error(error, error_size, "Aria bitmap exceeds the size bound");
+        return false;
+    }
+    size_t pixel_bytes = pitch * composite->height_pixels;
+    size_t bitmap_size = BMP_HEADER_SIZE + pixel_bytes;
+    if (bitmap_size > UINT32_MAX || pixel_bytes > UINT32_MAX ||
+        composite->width_pixels > INT32_MAX ||
+        composite->height_pixels > INT32_MAX) {
+        set_error(error, error_size, "Aria bitmap exceeds the BMP format bound");
+        return false;
+    }
+    uint8_t *data = calloc(bitmap_size, 1);
+    if (!data) {
+        set_error(error, error_size, "cannot allocate Aria bitmap");
+        return false;
+    }
+    data[0] = 'B';
+    data[1] = 'M';
+    write_u32(data + 2, (uint32_t)bitmap_size);
+    write_u32(data + 10, BMP_HEADER_SIZE);
+    write_u32(data + 14, 40);
+    write_u32(data + 18, (uint32_t)composite->width_pixels);
+    write_u32(data + 22, (uint32_t)composite->height_pixels);
+    write_u16(data + 26, 1);
+    write_u16(data + 28, 24);
+    write_u32(data + 34, (uint32_t)pixel_bytes);
+    for (size_t y = 0; y < composite->height_pixels; ++y) {
+        const uint8_t *source = composite->rgb + y * row_bytes;
+        uint8_t *destination = data + BMP_HEADER_SIZE +
+            (composite->height_pixels - y - 1) * pitch;
+        for (size_t x = 0; x < composite->width_pixels; ++x) {
+            destination[x * 3] = source[x * 3 + 2];
+            destination[x * 3 + 1] = source[x * 3 + 1];
+            destination[x * 3 + 2] = source[x * 3];
+        }
+    }
+    *bitmap = (FusionAosBitmap24){data, bitmap_size};
     if (error && error_size > 0) error[0] = '\0';
     return true;
 }

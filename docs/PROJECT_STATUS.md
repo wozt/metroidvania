@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0508 - Native Aria composite bitmap serialization
+
+- Added bounded C11 serialization of native Aria RGB room composites to the
+  exact 24-bit BMP representation consumed by the runtime and editor.
+- Preserved the 54-byte little-endian BMP/DIB headers, aligned row pitch,
+  bottom-up row order, RGB-to-BGR conversion and zero-filled row padding.
+- Added synthetic header, channel-order, padding, ownership and invalid-input
+  coverage. `--aria-background-composites` now reports both the RGB and BMP
+  byte digests for each supported room.
+- All 342 supported composites produce byte-identical Python and C BMP files:
+  61,210,624 pixels serialize to 183,650,340 bytes. Area 11 room 40 remains
+  explicitly skipped because neither path finds a supported text layer.
+- `AOSROOM-NATIVE` TSV serialization, private output orchestration, parallax,
+  affine/8-bpp layers, blending and animation remain outside this contract, so
+  migration and gameplay status do not change.
+- Next: serialize every supported `AOSROOM-NATIVE` v4 room payload in C and
+  compare it byte for byte with Python; audio remains untouched.
+
 ## Patch 0507 - Native Zero Mission room-layer rendering
 
 - Added bounded C11 RGBA rendering for both Zero Mission room-background

@@ -201,6 +201,11 @@ typedef struct {
 } FusionAosCompositeBackground;
 
 typedef struct {
+    uint8_t *data;
+    size_t size;
+} FusionAosBitmap24;
+
+typedef struct {
     uint32_t entry_pointer;
     int16_t x;
     int16_t y;
@@ -294,6 +299,10 @@ bool fusion_aos_composite_backgrounds(
     char *error, size_t error_size);
 void fusion_aos_free_composite_background(
     FusionAosCompositeBackground *composite);
+bool fusion_aos_serialize_composite_bmp24(
+    const FusionAosCompositeBackground *composite,
+    FusionAosBitmap24 *bitmap, char *error, size_t error_size);
+void fusion_aos_free_bitmap24(FusionAosBitmap24 *bitmap);
 bool fusion_aos_read_entity_list(const FusionRom *rom, uint32_t pointer,
                                  FusionAosEntityList *list,
                                  char *error, size_t error_size);

@@ -49,9 +49,10 @@ python3 -m scripts.rebuild --list            # tasks, dependencies, required fil
 python3 -m scripts.audit_extracted_assets --write
 ```
 
-`--assets` verifies each ROM, then runs the existing extractors in dependency
-order: the raw import (`import_game_assets.py`, both ROMs), the Aria world
-metadata, the Aria runtime rooms, Soma, object/enemy sprites and weapons, and
+`--assets` verifies each ROM, then runs the native and remaining Python
+extractors in dependency order: the raw import (`import_game_assets.py`, both
+ROMs), the native Aria world metadata and runtime rooms, Soma, object/enemy
+sprites and weapons, and
 the Zero Mission Samus/projectile libraries (they also need the reference ELF
 `third_party/mzm/mzm_us.elf`) and runtime rooms. A full pass takes about four
 minutes; afterwards unchanged tasks are skipped in about two seconds. A task
@@ -61,8 +62,9 @@ exports carry an `export_index.tsv` of per-file SHA-256, sprite libraries are
 content-addressed). Tasks whose ROM is absent are reported as skipped. Each
 extractor can still be run directly, as described below.
 
-The Aria world importer records metadata only. The general asset importer may
-write proprietary decoded output, so everything it produces remains ignored.
+The native Aria world importer records metadata only. The general asset
+importer may write proprietary decoded output, so everything it produces
+remains ignored.
 New imports are grouped below `assets/extracted/metroid/`,
 `assets/extracted/aria/`, and `assets/extracted/shared/`. Some older room and
 editor caches remain at their historical paths until their consumers can be

@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Decode Aria's native room structures from a verified local ROM.
+"""Reference decoder for Aria's native room structures.
 
-Only structural metadata and ROM references are emitted. No graphics, audio,
-map tiles, or other ROM payload is copied into the repository.
+The production world catalog is written by the C11 importer. Python editor and
+sprite tools retain these bounded decoders until their own native migrations.
 """
 from __future__ import annotations
 
-import argparse
 import hashlib
-import json
 from pathlib import Path
 import struct
-import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 DEFAULT_ROM = ROOT / "roms/Castlevania - Aria of Sorrow (USA).gba"
 EXPECTED_SHA1 = "abd71fe01ebb201bcc133074db1dd8c5253776c7"
@@ -517,41 +512,3 @@ def decode_world(rom: bytes, *, verify_hash: bool = True) -> dict:
         "savepoints": savepoints,
         "warps": warps,
     }
-
-
-def write_catalog(catalog: dict) -> Path:
-    from scripts.import_game_assets import write_generated
-
-    relative = "rooms/aria/world.json"
-    write_generated(relative, (json.dumps(catalog, indent=2) + "\n").encode())
-    from scripts.aos_room_index import write_index
-    write_index(catalog)
-    return ROOT / "assets/extracted" / relative
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rom", type=Path, default=DEFAULT_ROM)
-    parser.add_argument(
-        "--stdout", action="store_true",
-        help="print metadata JSON instead of writing the ignored private catalog",
-    )
-    args = parser.parse_args()
-    try:
-        catalog = decode_world(args.rom.read_bytes())
-        if args.stdout:
-            print(json.dumps(catalog, indent=2))
-        else:
-            output = write_catalog(catalog)
-            print(
-                f"Aria world metadata indexed: {catalog['native_room_count']} rooms, "
-                f"{catalog['entity_count']} entities, "
-                f"{catalog['savepoint_count']} save rooms -> {output}"
-            )
-    except (OSError, ValueError) as exc:
-        raise SystemExit(f"Aria world import failed: {exc}") from exc
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

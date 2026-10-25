@@ -222,7 +222,10 @@ bounded entity placements are now native as well. The audited boss identities,
 their unique room entities and enemy-table health values are native and checked
 against the Python reference. A native aggregate reader also checks all world
 summary totals. The same library now serializes the complete world JSON and its
-derived room-browser index deterministically through atomic replacement. Its
+derived room-browser index deterministically through atomic replacement. The
+`aria_world` rebuild task writes both through `fusion_importer --aria-catalog`;
+the Python writer and index generator are gone, while the bounded Python
+decoder remains a library for editor and sprite tools. Its
 runtime-room layer also expands every compressed BG1 block/collision table and
 produces the final flipped per-cell collision map. It also resolves direct and
 LZ77 graphics resources and applies every native graphics/palette load entry to

@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0523 - Native Aria world catalog in production
+
+- The `aria_world` rebuild task now runs `build/fusion_importer --aria-catalog
+  ROM world.json rooms.tsv`. Its declared outputs include both files, and its
+  inputs are the verified ROM and importer binary, so a changed native writer
+  invalidates the task. The rebuild graph still creates and checks the ignored
+  private parent path before invoking C.
+- A forced production rebuild wrote all 343 room records and the derived
+  browser index; the following run was up to date. The resulting SHA-256
+  values are exactly the recorded post-equivalence values:
+  `7fbe92fea55c1bd53e36aa72afe0e9c972fff7359caa75f7caba4b82cdee3a7e`
+  for `world.json` and
+  `40a0ac9c850741ba02fca518acc77302b8df5089068f4f9d6410639153cbd777`
+  for `rooms.tsv`.
+- Removed the Python catalog-writing CLI from `scripts/import_aos_world.py`
+  and removed `scripts/aos_room_index.py` with its redundant index test. The
+  bounded Python decoder stays because editor previews, sprite extraction,
+  audits and object catalogs still import it; it no longer owns either
+  production catalog output.
+- The native golden test already guards both catalog files in addition to the
+  Aria inspection commands and room export. No gameplay or fidelity status
+  changed, and audio remains untouched.
+- Next: register the already byte-matched native Zero Mission ROM-bank writer
+  in `metroid_rom_bank`, then remove only its replaced Python output path.
+
 ## Patch 0522 - Native Aria room export in production
 
 - Added `fusion_aos_export_runtime_rooms` and `--aria-export-rooms ROM

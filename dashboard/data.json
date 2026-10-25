@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T21:09:21+00:00",
+ "generated_at": "2026-10-25T21:52:21+00:00",
  "git": {
-  "commit": "7f910fa",
+  "commit": "ec24262",
   "branch": "main",
   "dirty": true
  },
@@ -12496,6 +12496,7 @@
     "scripts/mzm_rom_bank.py"
    ],
    "tests": [
+    "tests/test_aos_world_import.py",
     "tests/test_fusion_assets_aos.c",
     "tests/test_fusion_assets_aos_golden.py",
     "tests/test_fusion_assets_gba.c",
@@ -12510,10 +12511,11 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, and writes the complete 685-file private room export with its SHA-256 index atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, and writes the complete 685-file private room export with its SHA-256 index atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. The Aria world catalog and both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, shared reference decoders, caches and the global rebuild graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
+     "tests/test_aos_world_import.py",
      "tests/test_fusion_assets_aos.c",
      "tests/test_fusion_assets_aos_golden.py",
      "tests/test_fusion_assets_gba.c",
@@ -12534,6 +12536,12 @@
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_aos_world_import.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
      {
       "test": "tests/test_fusion_assets_aos.c",
       "kind": "ctest",
@@ -12727,7 +12735,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Room previews, audits and editor caches are not registered yet.",
+   "limitations": "Aria world metadata and both games' runtime rooms use native C11 writers; room previews, audits, sprite pipelines and editor caches are not all native or registered yet.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12737,7 +12745,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-25",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -14653,13 +14661,6 @@
     "passed": 5
    },
    {
-    "file": "tests/test_aos_room_index.py",
-    "module": "tests.test_aos_room_index",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_aos_room_render.py",
     "module": "tests.test_aos_room_render",
     "test_count": 5,
@@ -15291,12 +15292,18 @@
    }
   ],
   "summary": {
-   "passed": 490,
+   "passed": 485,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "ec24262",
+   "date": "2026-10-25",
+   "subject": "Run the Aria room export natively",
+   "scope": "project"
+  },
   {
    "commit": "7f910fa",
    "date": "2026-10-25",
@@ -15769,12 +15776,6 @@
    "commit": "60c2f3a",
    "date": "2026-10-21",
    "subject": "Port the Aria Ghost Dancer and palette-bank sprite variants",
-   "scope": "project"
-  },
-  {
-   "commit": "ab4d098",
-   "date": "2026-10-21",
-   "subject": "Port the Aria gargoyle",
    "scope": "project"
   }
  ],
@@ -19815,7 +19816,8 @@
     "aria_rom"
    ],
    "requires": [
-    "roms/Castlevania - Aria of Sorrow (USA).gba"
+    "roms/Castlevania - Aria of Sorrow (USA).gba",
+    "build/fusion_importer"
    ]
   },
   {

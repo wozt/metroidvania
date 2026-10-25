@@ -120,9 +120,10 @@ doors, boss context, and crossover destinations remain empty until verified.
 The exact USA ROM contains a global `64x35` map table at `0x08116650`.
 `GetSaveRoomFlagFromMapPosition` proves bit 15 is the save-room flag, while
 `GetRoomPointer` resolves the encoded area and room through the twelve-entry
-directory at `0x0850EF08`. The hash-gated importer in
-`scripts/import_aos_world.py` performs bounded lookups through both tables and
-finds 17 unique save rooms. It also independently finds eight bit-14 warp rooms.
+directory at `0x0850EF08`. The hash-gated native importer in
+`src/assets/aos/world.c` performs bounded lookups through both tables and finds
+17 unique save rooms. It also independently finds eight bit-14 warp rooms; the
+retained Python decoder supplies the same structure to editor and sprite tools.
 
 | Engine area | Project area name | Room IDs | Count |
 |---:|---|---|---:|

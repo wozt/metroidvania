@@ -171,6 +171,14 @@ def _run_native(*arguments: Path | str) -> Callable[[], None]:
     return action
 
 
+def _run_native_catalog(rom: Path, world: Path,
+                        index: Path) -> Callable[[], None]:
+    def action() -> None:
+        private_path(ROOT, world.relative_to(ROOT), create=True)
+        _run_native("--aria-catalog", rom, world, index)()
+    return action
+
+
 def _verify_rom(game: str) -> Callable[[], None]:
     def action() -> None:
         valid, message = verify_roms.validate(game, ROMS[game])
@@ -206,6 +214,8 @@ def _asset_task(name: str, game: str, module: str, arguments: tuple[str, ...],
         validate=validate, group="assets")
 
 
+ARIA_WORLD = ROOT / "assets/extracted/rooms/aria/world.json"
+ARIA_WORLD_INDEX = ROOT / "assets/extracted/rooms/aria/rooms.tsv"
 ARIA_ROOM_INDEX = ROOT / ARIA_ROOMS / "runtime" / export_index.NAME
 MZM_ROOM_INDEX = ROOT / METROID_ROOMS / "runtime" / export_index.NAME
 ARIA_OBJECTS = ROOT / ARIA_SPRITES / "objects/runtime/runtime_index.tsv"
@@ -229,9 +239,15 @@ ASSET_TASKS = {
     "raw_import": _asset_task(
         "raw_import", "both", "import_game_assets", ("--scope", "all"),
         (ROOT / IMPORT_CATALOG,), ("aria_rom", "metroid_rom")),
-    "aria_world": _asset_task(
-        "aria_world", "aria", "import_aos_world", (),
-        (ROOT / "assets/extracted/rooms/aria/world.json",), ("aria_rom",)),
+    # The Python rebuild graph still creates the private parent safely; the
+    # catalog bytes themselves come exclusively from the native importer.
+    "aria_world": Task(
+        name="aria_world", version=2, dependencies=("aria_rom",),
+        inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],
+        outputs=(ARIA_WORLD, ARIA_WORLD_INDEX),
+        action=_run_native_catalog(ROMS["aria"], ARIA_WORLD, ARIA_WORLD_INDEX),
+        requires=(ROMS["aria"], NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("aria"), group="assets"),
     # The native writer reads the ROM directly. The importer binary is an
     # input, so rebuilding it invalidates the private room export.
     "aria_rooms": Task(

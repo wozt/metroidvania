@@ -30,6 +30,26 @@ int main(void) {
     assert(!memcmp(bmp + 126, (uint8_t[]){6, 5, 4, 255}, 4));
     assert(!memcmp(bmp + 130, (uint8_t[]){3, 2, 1, 255}, 4));
 
+    /* Indexed frames keep their palette indices and a padded row pitch. */
+    uint8_t indices[3 * 2] = {0, 0, 0, 0, 5, 1};
+    const uint8_t colors[6 * 3] = {0, 0, 0, 10, 20, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                   40, 50, 60};
+    uint8_t *indexed = NULL;
+    size_t indexed_size = 0;
+    int indexed_left = 0, indexed_top = 0;
+    assert(fusion_sprite_bmp8_crop(indices, 3, 2, 1, 0, colors, 6, &indexed,
+                                   &indexed_size, &indexed_left, &indexed_top,
+                                   error, sizeof error));
+    assert(indexed_size == 14 + 40 + 1024 + 4 && indexed_left == 0 && indexed_top == 1);
+    assert(indexed[28] == 8 && indexed[46] == 0 && indexed[47] == 1);
+    assert(!memcmp(indexed + 54 + 4, (uint8_t[]){30, 20, 10, 0}, 4));
+    assert(!memcmp(indexed + 54 + 20, (uint8_t[]){60, 50, 40, 0}, 4));
+    assert(indexed[1078] == 5 && indexed[1079] == 1);
+    free(indexed);
+    assert(!fusion_sprite_bmp8_crop(indices, 3, 2, 0, 0, colors, 5, &indexed,
+                                    &indexed_size, &indexed_left, &indexed_top,
+                                    error, sizeof error));
+
     FusionSpriteLibrary library;
     assert(fusion_sprite_library_init(&library, output, "private/runtime",
                                       error, sizeof error));

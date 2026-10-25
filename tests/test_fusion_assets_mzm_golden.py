@@ -2,8 +2,9 @@
 """Regression digests of the native Zero Mission importer on the local ROM.
 
 The fixture records, for each inspection command, the SHA-256 of its whole
-standard output and its summary line, the ROM bank and symbol manifest, and
-every file the native room export writes. They were recorded once the native
+standard output and its summary line, the ROM bank and symbol manifest, every
+file of the Samus and projectile sprite libraries, and every file the native
+room export writes. They were recorded once the native
 outputs had been proven byte-identical to the former Python exporters, which
 this file replaces as the reference. The fixture holds digests and counts
 only, no ROM-derived bytes.
@@ -65,6 +66,17 @@ def _current() -> list[str]:
             if path.is_file():
                 lines.append(f"bank-file\t{path.name}\t"
                              f"{hashlib.sha256(path.read_bytes()).hexdigest()}")
+
+        samus, projectiles = root / "samus", root / "projectiles"
+        console = _run("--mzm-export-samus", str(ROM), str(ELF), str(samus),
+                       str(projectiles))
+        lines.append(f"samus-console\tstdout\t{hashlib.sha256(console).hexdigest()}")
+        for library in (samus, projectiles):
+            for path in sorted(library.rglob("*")):
+                if path.is_file():
+                    lines.append(f"{library.name}-file\t"
+                                 f"{path.relative_to(library).as_posix()}\t"
+                                 f"{hashlib.sha256(path.read_bytes()).hexdigest()}")
 
         output = root / "runtime"
         console = _run("--mzm-export-rooms", str(ROM), str(ELF), str(output))

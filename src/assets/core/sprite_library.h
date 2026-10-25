@@ -55,4 +55,12 @@ bool fusion_sprite_bmp32_crop(const uint8_t *rgba, size_t width, size_t height,
                               size_t *bmp_size, int *left, int *top,
                               char *error, size_t error_size);
 
+/* Crops non-zero palette indices around the draw origin and emits an 8-bit
+ * BMP whose palette holds ``color_count`` RGB triplets (index 0 is the
+ * transparent color and the remaining entries are zero). */
+bool fusion_sprite_bmp8_crop(const uint8_t *indices, size_t width, size_t height,
+                             int origin_x, int origin_y, const uint8_t *colors,
+                             size_t color_count, uint8_t **bmp, size_t *bmp_size,
+                             int *left, int *top, char *error, size_t error_size);
+
 #endif /* FUSION_ASSETS_CORE_SPRITE_LIBRARY_H */

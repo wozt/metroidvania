@@ -1,19 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""ROM-free tests for projectile sprite composition and Samus weapon data."""
+"""ROM-free tests for the shared FrameData and projectile render helpers."""
 import struct
 import unittest
 
 from scripts import mzm_projectile_compose as projectiles
-from scripts.mzm_samus_compose import Variant, _cannon_gfx, muzzle_offset
-from scripts.mzm_samus_pipeline import cannon_offsets
-
-SOURCE = """
-const struct FrameData sNormalBeamOam_Horizontal[3] = {
-const struct FrameData sNormalBeamOam_Horizontal_Unused[3] = {
-const struct FrameData sChargedWaveBeamOam_Diagonal[8] = {
-const struct FrameData sMissileOam_Vertical[3] = {
-const struct FrameData sParticleMissileTrailOam[8] = {
-"""
 
 
 def synthetic_rom():
@@ -26,30 +16,6 @@ def synthetic_rom():
 
 
 class ProjectileTableTests(unittest.TestCase):
-    def test_tables_skip_particles_and_unused_data(self):
-        self.assertEqual(projectiles.frame_tables(SOURCE),
-                         ["sNormalBeamOam_Horizontal", "sChargedWaveBeamOam_Diagonal",
-                          "sMissileOam_Vertical"])
-        self.assertEqual(projectiles.beam_set("sChargedWaveBeamOam_Diagonal"), "WaveBeam")
-        self.assertEqual(projectiles.beam_set("sPlasmaBeamOam_Vertical_Wave"), "PlasmaBeam")
-        self.assertEqual(projectiles.beam_set("sMissileOam_Vertical"), "NormalBeam")
-
-    def test_beam_particles_cover_the_ported_trails_and_impacts(self):
-        for table in ("sParticleHittingSomethingWithWaveBeamOam",
-                      "sParticleHittingSomethingWithPlasmaBeamOam", "sParticleMissileTrailOam",
-                      "sParticleChargedWaveBeamTrailOam", "sParticleChargedFullBeamTrailOam",
-                      "sParticleChargedPistolTrailOam"):
-            self.assertIn(table, projectiles.BEAM_PARTICLES)
-        # The Plasma trails only exist with the Plasma graphics; the Ice Beam
-        # recolours the Wave and Plasma sets with sBeamPal row 2.
-        self.assertEqual(projectiles.PARTICLE_BEAM_SETS["sParticleChargedFullBeamTrailOam"],
-                         "PlasmaBeam")
-        self.assertEqual(projectiles.PARTICLE_BEAM_SETS["sParticleChargedPistolTrailOam"],
-                         "Pistol")
-        self.assertEqual(projectiles.ICE_RECOLOURED, ("WaveBeam", "PlasmaBeam"))
-        self.assertEqual(projectiles.BEAM_VARIANTS["WaveIceBeam"], ("WaveBeam", projectiles.ICE_ROW))
-        self.assertEqual(projectiles.BEAM_VARIANTS["Pistol"], ("Pistol", 5))
-
     def test_frames_stop_at_the_terminator(self):
         rom = synthetic_rom()
         symbols = {"sNormalBeamOam_Horizontal": (0x08000100, 24)}
@@ -71,42 +37,6 @@ class ProjectileTableTests(unittest.TestCase):
         palette[33] = None
         with self.assertRaisesRegex(ValueError, "unloaded palette"):
             projectiles.render(rom, bytes(vram), palette, 0x08000200, "none")
-
-
-class ArmCannonDataTests(unittest.TestCase):
-    TABLES = {
-        "sArmCannonGfxPointers_Upper_Armed_Standing": {"ACD_FORWARD": ["upper_armed_run"]},
-        "sArmCannonGfxPointers_Lower_Armed_Standing": {"ACD_FORWARD": ["lower_armed_run"]},
-        "sArmCannonGfxPointers_Upper_Left_Armed_Default": {"ACD_FORWARD": ["upper_armed_l"]},
-        "sArmCannonGfxPointers_Lower_Left_Armed_Default": {"ACD_FORWARD": ["lower_armed_l"]},
-    }
-
-    def test_armed_graphics_follow_the_native_rules(self):
-        self.assertEqual(_cannon_gfx(self.TABLES, "SPOSE_RUNNING", "ACD_FORWARD",
-                                     "right", armed=True),
-                         ("upper_armed_run", "lower_armed_run"))
-        self.assertEqual(_cannon_gfx(self.TABLES, "SPOSE_RUNNING", "ACD_FORWARD",
-                                     "left", armed=True),
-                         ("upper_armed_l", "lower_armed_l"))
-        self.assertIsNone(_cannon_gfx(self.TABLES, None, "ACD_FORWARD", "right",
-                                      armed=True))
-
-    def test_muzzle_offsets_use_native_sign_rules(self):
-        rom = bytearray(0x400)
-        struct.pack_into("<II", rom, 0x100, 0x08000200, 0x08000300)
-        struct.pack_into("<HH", rom, 0x200, 0xE5, 0x1EE)   # y=-27, x=-18
-        symbols = {"cannon": (0x08000100, 8)}
-        self.assertEqual(muzzle_offset(bytes(rom), symbols, "cannon", 0), (-18, -26))
-
-    def test_cannon_offset_table_skips_armed_duplicates(self):
-        text = cannon_offsets({
-            "PowerSuit/Standing/ACD_FORWARD/right": {"muzzle": [[18, -26]]},
-            "PowerSuit/Standing/ACD_FORWARD/right/armed": {"muzzle": [[18, -26]]},
-            "PowerSuit/pose/SPOSE_MORPH_BALL/right": {"muzzle": None},
-        })
-        self.assertEqual(text.splitlines(), [
-            "schema\tmetroidvania-samus-cannon-offsets-v1",
-            "PowerSuit/Standing/ACD_FORWARD/right\t0\t18\t-26"])
 
 
 if __name__ == "__main__":

@@ -7,19 +7,31 @@ under ignored `assets/extracted/`; never commit ROM bytes or extracted images.
 
 ## Current result
 
-The canonical full-library command is:
+The canonical full-library command is the native importer, which the
+`metroid_samus` rebuild task runs:
 
 ```sh
-python3 -m scripts.mzm_samus_pipeline
+./build/fusion_importer --mzm-export-samus \
+  "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf \
+  assets/extracted/metroid/sprites/samus/runtime \
+  assets/extracted/metroid/sprites/projectiles/runtime
 ```
 
-It composes 1,384 sequences (6,008 frames, 3,192 unique BMP objects) in about
+It composes 1,072 sequences (4,670 frames, 2,640 unique BMP objects) in about
 three seconds and stores them in a SHA-256 object store below
 `assets/extracted/metroid/sprites/samus/runtime/`. Every native variant
-resolves; none is synthesized.
+resolves; none is synthesized. All 3,840 Samus and projectile library files
+are byte-identical to the former Python writer, whose
+`scripts/mzm_samus_pipeline.py` and `scripts/mzm_samus_compose.py` are
+removed; recorded digests in `tests/fixtures/mzm_native_golden.tsv` guard them.
 
-`scripts/mzm_samus_compose.py` reproduces the native selection instead of
-heuristic candidate lists:
+`src/assets/mzm/samus.c` reproduces the native selection instead of
+heuristic candidate lists. The pointer tables it walks are
+`src/assets/mzm/samus_tables.c`, a generated copy of
+`src/data/samus/samus_animation_pointers.c` and of the projectile `FrameData`
+names of `src/data/projectile_data.c`; regenerate it when the pinned
+decompilation changes. The ELF provides the addresses, and every consumed
+symbol must hold the ROM's bytes:
 
 | Step | Native source |
 |---|---|
@@ -74,8 +86,8 @@ arm cannon offset from Samus's pixel position computed exactly like
 `SamusUpdateArmCannonPositionOffset`; projectiles spawn there.
 
 The same command also writes the projectile sprite library below
-`assets/extracted/metroid/sprites/projectiles/runtime/` with
-`scripts/mzm_projectile_compose.py`: every non-particle `FrameData` table of
+`assets/extracted/metroid/sprites/projectiles/runtime/` (566 sequences, 2,750
+frames, 1,192 unique BMPs): every non-particle `FrameData` table of
 `projectile_data.c` (beams of all five types and their charged forms, the
 pistol, missiles, super missiles, bombs and power bombs) in four flip states,
 staged like `HudGenericLoadCommonSpriteGfx` and `ProjectileLoadGraphics`
@@ -85,9 +97,9 @@ projectile position; X/Y flips mirror around it as `ProjectileDraw` does.
 
 Not yet used by the runtime: the saving, map download and frozen palette
 rows (their mechanics are missing), and effect sprites such as the Screw Attack and Speed Booster
-overlays. The semantic registry binds 600 rows for 33 actions; the only
-missing bindings are Suitless skid, Screw Attack and shinespark actions, which
-have no native Suitless sequence.
+overlays. The semantic registry binds 662 rows for 38 actions; the 18
+Suitless speedboost, skid, Screw Attack and shinespark combinations are
+reported as unavailable because they have no native Suitless sequence.
 
 ## Runtime state mapping
 

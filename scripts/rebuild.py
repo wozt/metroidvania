@@ -196,6 +196,14 @@ def _run_native_soma(output: Path) -> Callable[[], None]:
     return action
 
 
+def _run_native_samus(samus: Path, projectiles: Path) -> Callable[[], None]:
+    def action() -> None:
+        private_path(ROOT, samus.relative_to(ROOT), create=True)
+        private_path(ROOT, projectiles.relative_to(ROOT), create=True)
+        _run_native("--mzm-export-samus", ROMS["metroid"], MZM_ELF, samus, projectiles)()
+    return action
+
+
 def _run_native_weapons(metadata: Path, runtime: Path) -> Callable[[], None]:
     def action() -> None:
         private_path(ROOT, metadata.relative_to(ROOT), create=True)
@@ -318,10 +326,15 @@ ASSET_TASKS = {
         requires=(ROMS["aria"], NATIVE_IMPORTER),
         stamps=lambda: _decomp_stamp("aria"),
         validate=_sprite_validator(ARIA_WEAPONS), group="assets"),
-    "metroid_samus": _asset_task(
-        "metroid_samus", "metroid", "mzm_samus_pipeline", (),
-        (MZM_SAMUS, MZM_PROJECTILES, ROOT / METROID_SAMUS_RUNTIME / "animation_map.tsv"),
-        ("metroid_rom",), _sprite_validator(MZM_SAMUS, MZM_PROJECTILES), requires=(MZM_ELF,)),
+    "metroid_samus": Task(
+        name="metroid_samus", version=2, dependencies=("metroid_rom",),
+        inputs=lambda: [ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER],
+        outputs=(MZM_SAMUS, MZM_PROJECTILES,
+                 ROOT / METROID_SAMUS_RUNTIME / "animation_map.tsv"),
+        action=_run_native_samus(MZM_SAMUS.parent, MZM_PROJECTILES.parent),
+        requires=(ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("metroid"),
+        validate=_sprite_validator(MZM_SAMUS, MZM_PROJECTILES), group="assets"),
     "metroid_sprites": _asset_task(
         "metroid_sprites", "metroid", "mzm_sprites", (),
         (MZM_SPRITES, ROOT / "assets/extracted/metroid/metadata/sprites.tsv"),

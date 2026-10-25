@@ -9,6 +9,29 @@ from scripts import mzm_projectile_compose, mzm_sprites
 DECOMP = Path(__file__).resolve().parents[1] / "third_party/mzm"
 
 
+class ElfSymbolTests(unittest.TestCase):
+    def test_symbols_are_filtered_and_conflicts_rejected(self):
+        output = ("08230000 00000040 r sMessageBannerGfx\n"
+                  "08240000 00000020 r sMessageBannerPal\n"
+                  "08000000 00000004 t _start\n")
+        symbols = mzm_sprites.parse_symbols(output, ("sMessageBanner",))
+        self.assertEqual(symbols["sMessageBannerPal"], (0x08240000, 0x20))
+        self.assertNotIn("_start", symbols)
+        with self.assertRaisesRegex(ValueError, "conflicting"):
+            mzm_sprites.parse_symbols(output + "08240010 00000020 r sMessageBannerPal\n",
+                                      ("sMessageBanner",))
+
+    def test_only_consumed_symbol_ranges_must_match(self):
+        rom = bytes(range(256)) * 4
+        image = bytearray(rom)
+        image[0] = 0xEE                      # header-like difference is ignored
+        symbols = {"sMessageBannerPal": (0x08000010, 32)}
+        mzm_sprites.verify_symbols_against_rom(rom, bytes(image), symbols)
+        image[0x20] ^= 1
+        with self.assertRaisesRegex(ValueError, "sMessageBannerPal"):
+            mzm_sprites.verify_symbols_against_rom(rom, bytes(image), symbols)
+
+
 @unittest.skipUnless((DECOMP / "src/sprite.c").is_file(), "pinned MZM decompilation missing")
 class MzmSpriteDataTests(unittest.TestCase):
     def test_oam_bounds_keep_transparent_edges_and_follow_global_flips(self):

@@ -1,63 +1,20 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Compose Zero Mission projectile sprites from the native frame tables.
+"""Zero Mission FrameData, OAM and render helpers shared by the sprite tools.
 
-The staging mirrors the game:
-
-* ``HudGenericLoadCommonSpriteGfx`` copies ``sCommonSpritesGfx`` to OBJ VRAM
-  offset 0x800 and ``sCommonSpritesPal`` fills OBJ palette rows 2-7;
-* ``ProjectileLoadGraphics`` copies the active beam set's four 512-byte
-  blocks to OBJ offsets 0x1000/0x1400/0x1800/0x1C00 (the Pistol's first block
-  is half-sized) and patches colors 0-5 of OBJ palette row 2 with the beam
-  set's row of ``sBeamPal``;
-* ``ProjectileDraw`` draws each ``FrameData`` frame relative to the
-  projectile position and mirrors it around that point for X/Y flips.
-
-Every non-particle, non-unused ``FrameData`` table of ``projectile_data.c`` is
-exported in its four flip states with native frame durations.
+``ProjectileDraw`` and ``SpriteDraw`` draw each frame relative to the
+object's position and mirror it around that point for X/Y flips. The
+projectile library itself is written by the native importer
+(``fusion_importer --mzm-export-samus``).
 """
 from __future__ import annotations
 
-import re
 import struct
 
 from scripts.gba_oam import unpack_oam
-from scripts.gba_tiles import bgr555
 from scripts.mzm_samus_frame import rom_offset
 
-COMMON_GFX_VRAM = 0x800
-BEAM_VRAM = (0x1000, 0x1400, 0x1800, 0x1C00)
-BEAM_BLOCK_BYTES = 512
-# Beam set -> (graphics prefix, sBeamPal row) from ProjectileLoadGraphics.
-BEAM_SETS = {
-    "NormalBeam": ("sNormalBeamGfx", 0),
-    "LongBeam": ("sLongBeamGfx", 1),
-    "IceBeam": ("sIceBeamGfx", 2),
-    "WaveBeam": ("sWaveBeamGfx", 3),
-    "PlasmaBeam": ("sPlasmaBeamGfx", 4),
-    "Pistol": ("sPistolGfx", 5),
-}
 FLIPS = {"none": (False, False), "x": (True, False), "y": (False, True),
          "xy": (True, True)}
-FRAME_TABLE_RE = re.compile(r"^const\s+struct\s+FrameData\s+(s\w+Oam_\w+)\s*\[", re.M)
-
-
-def frame_tables(source: str) -> list[str]:
-    """Projectile FrameData tables, excluding particles and unused data."""
-    names = FRAME_TABLE_RE.findall(source)
-    return [name for name in names
-            if not name.startswith("sParticle") and "Unused" not in name]
-
-
-def beam_set(table: str) -> str:
-    """Beam graphics set a table is drawn with; missiles and bombs use the
-    common graphics, rendered with the default Power Beam palette row."""
-    name = table[1:]
-    if name.startswith("Charged"):
-        name = name[len("Charged"):]
-    for beam in BEAM_SETS:
-        if name.startswith(beam):
-            return beam
-    return "NormalBeam"
 
 
 def _slice(rom: bytes, pointer: int, size: int, label: str) -> bytes:
@@ -65,30 +22,6 @@ def _slice(rom: bytes, pointer: int, size: int, label: str) -> bytes:
     if offset + size > len(rom):
         raise ValueError("truncated " + label)
     return rom[offset:offset + size]
-
-
-def stage(rom: bytes, symbols, beam: str, row: int | None = None) -> tuple[bytes, list]:
-    """OBJ VRAM and the 256-color OBJ palette for one beam set (``row``
-    overrides its sBeamPal row, as ProjectileLoadGraphics does for ice)."""
-    vram = bytearray(0x8000)
-    address, size = symbols["sCommonSpritesGfx"]
-    vram[COMMON_GFX_VRAM:COMMON_GFX_VRAM + size] = _slice(rom, address, size,
-                                                          "common sprite graphics")
-    prefix, set_row = BEAM_SETS[beam]
-    row = set_row if row is None else row
-    for part, base in zip(("Top", "Bottom", "Charged_Top", "Charged_Bottom"), BEAM_VRAM):
-        length = BEAM_BLOCK_BYTES // 2 if beam == "Pistol" and part == "Top" else BEAM_BLOCK_BYTES
-        vram[base:base + length] = _slice(rom, symbols[f"{prefix}_{part}"][0], length,
-                                          f"{prefix}_{part}")
-    palette = [None] * 256
-    address, size = symbols["sCommonSpritesPal"]
-    common = _slice(rom, address, size, "common sprite palette")
-    for index in range(size // 2):
-        palette[32 + index] = bgr555(struct.unpack_from("<H", common, index * 2)[0])
-    beams = _slice(rom, symbols["sBeamPal"][0], symbols["sBeamPal"][1], "beam palette")
-    for index in range(6):
-        palette[32 + index] = bgr555(struct.unpack_from("<H", beams, (row * 16 + index) * 2)[0])
-    return bytes(vram), palette
 
 
 def frames(rom: bytes, symbols, table: str) -> list[tuple[int, int]]:
@@ -198,107 +131,3 @@ def render(rom: bytes, vram: bytes, palette, pointer: int, flip: str):
     """Pixels relative to the projectile position for one OAM frame."""
     entries = oam_entries(rom, pointer)
     return _render_entries(vram, palette, entries, flip)
-
-
-# The beam sets the Ice Beam recolours (ProjectileLoadGraphics loads its
-# sBeamPal row 2 over the Wave and Plasma graphics): their projectiles are
-# also sent as ``Projectile/<table>/<flip>/ice``.
-ICE_RECOLOURED = ("WaveBeam", "PlasmaBeam")
-ICE_ROW = 2
-
-
-def compose_all(rom: bytes, source: str, symbols, sink) -> dict:
-    """Send every projectile table and flip state to ``sink(key, frames, info)``.
-
-    ``frames`` are ``(pixels, duration)`` tuples with origin-relative pixels.
-    """
-    report = {"tables": 0, "sequences": 0, "unresolved": {}}
-    staged = {}
-    for table in frame_tables(source):
-        report["tables"] += 1
-        beam = beam_set(table)
-        try:
-            if beam not in staged:
-                staged[beam] = stage(rom, symbols, beam)
-            vram, palette = staged[beam]
-            entries = frames(rom, symbols, table)
-            for flip in FLIPS:
-                rendered = [(render(rom, vram, palette, pointer, flip), duration)
-                            for pointer, duration in entries]
-                if any(not pixels for pixels, _ in rendered):
-                    raise ValueError("projectile frame has no visible pixels")
-                sink(f"Projectile/{table[1:]}/{flip}", rendered,
-                     {"table": table, "beam_set": beam, "flip": flip})
-                report["sequences"] += 1
-            if beam in ICE_RECOLOURED:
-                key = beam + "/ice"
-                if key not in staged:
-                    staged[key] = stage(rom, symbols, beam, ICE_ROW)
-                ice_vram, ice_palette = staged[key]
-                for flip in FLIPS:
-                    rendered = [(render(rom, ice_vram, ice_palette, pointer, flip), duration)
-                                for pointer, duration in entries]
-                    sink(f"Projectile/{table[1:]}/{flip}/ice", rendered,
-                         {"table": table, "beam_set": beam, "flip": flip, "palette_row": ICE_ROW})
-                    report["sequences"] += 1
-        except (ValueError, KeyError) as exc:
-            report["unresolved"][table] = str(exc)
-    return report
-
-
-# The beam graphics ProjectileLoadGraphics loads for the equipped beams: the
-# graphics set and the sBeamPal row (ice recolours wave and plasma).
-BEAM_VARIANTS = {
-    "NormalBeam": ("NormalBeam", 0),
-    "LongBeam": ("LongBeam", 1),
-    "IceBeam": ("IceBeam", 2),
-    "WaveBeam": ("WaveBeam", 3),
-    "WaveIceBeam": ("WaveBeam", 2),
-    "PlasmaBeam": ("PlasmaBeam", 4),
-    "PlasmaIceBeam": ("PlasmaBeam", 2),
-    "Pistol": ("Pistol", 5),
-}
-# Particles drawn with the loaded beam graphics or the beam palette row.
-BEAM_PARTICLES = ("sParticleChargingBeamBeginOam", "sParticleChargingBeamChargedOam",
-                  "sParticleShootingBeamHorizontalOam", "sParticleShootingBeamDiagonallyUpOam",
-                  "sParticleShootingBeamDiagonallyDownOam", "sParticleShootingBeamUpOam",
-                  "sParticleShootingBeamDownOam", "sParticleBeamTrailingOam",
-                  "sParticleHittingSomethingWithLongBeamOam",
-                  "sParticleHittingSomethingWithIceBeamOam",
-                  "sParticleHittingSomethingWithWaveBeamOam",
-                  "sParticleHittingSomethingWithPlasmaBeamOam",
-                  "sParticleMissileTrailOam", "sParticleSuperMissileTrailOam",
-                  "sParticleChargedLongBeamTrailOam", "sParticleChargedIceBeamTrailOam",
-                  "sParticleChargedWaveBeamTrailOam", "sParticleChargedPlasmaBeamTrailOam",
-                  "sParticleChargedFullBeamTrailOam", "sParticleChargedPistolTrailOam")
-# Particles only drawn with one graphics set (their tiles are blank in the
-# others): the charged Plasma Beam trails.
-PARTICLE_BEAM_SETS = {"sParticleChargedPlasmaBeamTrailOam": "PlasmaBeam",
-                      "sParticleChargedFullBeamTrailOam": "PlasmaBeam",
-                      "sParticleChargedPistolTrailOam": "Pistol"}
-
-
-def compose_beam_particles(rom: bytes, symbols, sink) -> dict:
-    """Send each beam particle for each loaded beam variant and X flip to
-    ``sink`` as ``Particle/<table>/<variant>/<flip>``."""
-    report = {"tables": 0, "sequences": 0, "unresolved": {}}
-    for variant, (beam, row) in BEAM_VARIANTS.items():
-        vram, palette = stage(rom, symbols, beam, row)
-        for table in BEAM_PARTICLES:
-            if beam == "Pistol" and table in ("sParticleChargedIceBeamTrailOam",
-                                               "sParticleChargedWaveBeamTrailOam"):
-                continue
-            if PARTICLE_BEAM_SETS.get(table, beam) != beam:
-                continue
-            try:
-                entries = frames(rom, symbols, table)
-                for flip in ("none", "x"):
-                    rendered = [(render(rom, vram, palette, pointer, flip), duration)
-                                for pointer, duration in entries]
-                    sink(f"Particle/{table[1:]}/{variant}/{flip}", rendered,
-                         {"table": table, "variant": variant, "flip": flip})
-                    report["sequences"] += 1
-            except (ValueError, KeyError) as exc:
-                report["unresolved"][f"{table}/{variant}"] = str(exc)
-        report["tables"] += 1
-    return report

@@ -539,6 +539,26 @@ bool fusion_mzm_export_runtime_rooms(
     const FusionRom *rom, const uint8_t *elf, size_t elf_size,
     const char *output, FusionMzmExportSummary *summary,
     char *error, size_t error_size);
+typedef struct {
+    size_t samus_sequences;
+    size_t samus_frames;
+    size_t samus_unique_bmps;
+    size_t bindings;
+    size_t projectile_sequences;
+    size_t projectile_frames;
+    size_t projectile_unique_bmps;
+} FusionMzmSamusExportSummary;
+
+/* Writes the private Samus sprite library into SAMUS_OUTPUT (runtime_index.tsv,
+ * objects/, animation_map.tsv, cannon_offsets.tsv, palettes.tsv,
+ * sequences.json and manifest.json) and the projectile library into
+ * PROJECTILE_OUTPUT (runtime_index.tsv, objects/ and sequences.json). Every
+ * consumed ELF symbol must hold the ROM's bytes; any unresolved variant,
+ * projectile table or particle fails the whole export. */
+bool fusion_mzm_export_samus(const FusionRom *rom, const uint8_t *elf, size_t elf_size,
+                             const char *samus_output, const char *projectile_output,
+                             FusionMzmSamusExportSummary *summary,
+                             char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(
     FusionMzmRuntimeRoomPayload *payload);
 

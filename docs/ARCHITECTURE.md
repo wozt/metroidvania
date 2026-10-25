@@ -374,16 +374,17 @@ New private generators use three stable roots:
 
 `scripts/asset_layout.py` is the path contract. The general importer writes raw
 blocks and basic character previews below their world root and writes its
-manifest below `shared/manifests/`. `scripts/mzm_samus_pipeline.py` writes the
-canonical content-addressed Samus runtime library below
+manifest below `shared/manifests/`. `fusion_importer --mzm-export-samus`
+(`src/assets/mzm/samus.c`) writes the canonical content-addressed Samus
+runtime library below
 `metroid/sprites/samus/runtime/`; repeated pixels are stored once by SHA-256.
 One invocation composes every native animation directly from the verified
-MZM ROM, the pinned decompilation pointer tables and the matching reference
-ELF through `scripts/mzm_samus_compose.py`, which mirrors
+MZM ROM, the pinned decompilation pointer tables (generated into
+`src/assets/mzm/samus_tables.c`) and the matching reference ELF, mirroring
 `SamusUpdateGraphicsOam` (body, arm cannon animation and arm cannon graphics
 selection) and `SamusUpdatePalette` (suit palettes). Each frame records its
 native draw offset relative to Samus's position, and the runtime index uses the
-shared, versioned `metroidvania-sprite-index-v1` schema of `scripts/sprite_library.py`. Objects no longer
+shared, versioned `metroidvania-sprite-index-v1` schema of `src/assets/core/sprite_library.c`. Objects no longer
 referenced by the index are pruned; no intermediate cache is kept.
 The generated `animation_map.tsv` resolves 33 semantic actions across suit,
 facing and aim variants to exact catalogue keys. Runtime loading rejects an

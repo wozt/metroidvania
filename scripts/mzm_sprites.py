@@ -51,6 +51,7 @@ import re
 import struct
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -60,7 +61,6 @@ from scripts import mzm_message_text, mzm_projectile_compose  # noqa: E402
 from scripts.asset_layout import METROID_METADATA, METROID_SPRITES, private_path  # noqa: E402
 from scripts.gba_tiles import bgr555  # noqa: E402
 from scripts.mzm_room_render import lz77  # noqa: E402
-from scripts.mzm_samus_compose import parse_symbols, verify_symbols_against_rom  # noqa: E402
 from scripts.mzm_samus_frame import EXPECTED_SHA1, rom_offset  # noqa: E402
 from scripts.sprite_library import LibraryWriter, bmp_from_pixels, write_atomic  # noqa: E402
 
@@ -547,9 +547,59 @@ def produce_mecha_ridley(rom: bytes, symbols, vram: bytes, raw: list, tables, li
                 oam_bounds.append(f"{key}\t{index}\t{left}\t{top}\t{width}\t{height}\t{parts}")
 
 
+NM_RE = re.compile(r"^([0-9A-Fa-f]{8})\s+([0-9A-Fa-f]{8})\s+[A-Za-z]\s+(\S+)$")
+
+
+def parse_symbols(nm_output: str, prefixes: tuple[str, ...]) -> dict[str, tuple[int, int]]:
+    """Sized ELF symbols with the given name prefixes (``nm -S`` output)."""
+    found: dict[str, tuple[int, int]] = {}
+    for line in nm_output.splitlines():
+        match = NM_RE.fullmatch(line.strip())
+        if not match:
+            continue
+        address, size, name = match.groups()
+        if not name.startswith(prefixes):
+            continue
+        value = (int(address, 16), int(size, 16))
+        if name in found and found[name] != value:
+            raise ValueError("conflicting ELF symbol " + name)
+        found[name] = value
+    return found
+
+
+def verify_symbols_against_rom(rom: bytes, image: bytes, symbols) -> None:
+    """Fail unless every consumed ELF symbol holds the same bytes as the ROM.
+
+    ``image`` is the reference ELF converted with ``objcopy -O binary``; only
+    the consumed symbol ranges are compared.
+    """
+    mismatched = []
+    for name, (address, size) in sorted(symbols.items()):
+        start = rom_offset(address, rom)
+        if start + size > len(rom) or start + size > len(image):
+            mismatched.append(name)
+        elif rom[start:start + size] != image[start:start + size]:
+            mismatched.append(name)
+    if mismatched:
+        raise ValueError("reference ELF does not match the ROM for: " +
+                         ", ".join(mismatched[:5]))
+
+
+def _run_nm(nm: str, elf: Path) -> str:
+    return subprocess.run([nm, "-S", "--defined-only", str(elf)], check=True,
+                          capture_output=True, text=True).stdout
+
+
+def _elf_image(objcopy: str, elf: Path) -> bytes:
+    with tempfile.TemporaryDirectory() as directory:
+        image = Path(directory) / "reference.gba"
+        subprocess.run([objcopy, "-O", "binary", str(elf), str(image)],
+                       check=True, capture_output=True)
+        return image.read_bytes()
+
+
 def produce(root: Path, rom_path: Path, elf: Path, decomp: Path = DECOMP,
             nm: str = "arm-none-eabi-nm", objcopy: str = "arm-none-eabi-objcopy") -> dict:
-    from scripts.mzm_samus_pipeline import _elf_image, _run_nm
     rom = Path(rom_path).read_bytes()
     if hashlib.sha1(rom).hexdigest() != EXPECTED_SHA1:
         raise ValueError("original Zero Mission USA ROM SHA-1 mismatch")

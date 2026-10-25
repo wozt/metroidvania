@@ -246,7 +246,7 @@ bool fusion_sprite_bmp32_crop(const uint8_t *rgba, size_t width, size_t height,
                               size_t *bmp_size, int *left, int *top,
                               char *error, size_t error_size) {
     if (!rgba || !bmp || !bmp_size || !left || !top || width < 1 || height < 1 ||
-        width > 512 || height > 512) {
+        width > 1024 || height > 1024) {
         set_error(error, error_size, "invalid sprite bitmap request");
         return false;
     }
@@ -268,6 +268,10 @@ bool fusion_sprite_bmp32_crop(const uint8_t *rgba, size_t width, size_t height,
     }
     size_t cropped_width = max_x - min_x + 1;
     size_t cropped_height = max_y - min_y + 1;
+    if (cropped_width > 512 || cropped_height > 512) {
+        set_error(error, error_size, "sprite frame exceeds 512 pixels");
+        return false;
+    }
     size_t data_size = cropped_width * cropped_height * 4;
     *bmp_size = 122 + data_size;
     *bmp = calloc(1, *bmp_size);
@@ -299,6 +303,80 @@ bool fusion_sprite_bmp32_crop(const uint8_t *rgba, size_t width, size_t height,
             target[0] = source[2]; target[1] = source[1];
             target[2] = source[0]; target[3] = 255;
         }
+    }
+    *left = (int)min_x - origin_x;
+    *top = (int)min_y - origin_y;
+    return true;
+}
+
+bool fusion_sprite_bmp8_crop(const uint8_t *indices, size_t width, size_t height,
+                             int origin_x, int origin_y, const uint8_t *colors,
+                             size_t color_count, uint8_t **bmp, size_t *bmp_size,
+                             int *left, int *top, char *error, size_t error_size) {
+    if (!indices || !colors || !bmp || !bmp_size || !left || !top || width < 1 ||
+        height < 1 || width > 1024 || height > 1024 || color_count < 1 ||
+        color_count > 256) {
+        set_error(error, error_size, "invalid indexed sprite bitmap request");
+        return false;
+    }
+    size_t min_x = width, min_y = height, max_x = 0, max_y = 0;
+    bool visible = false;
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x = 0; x < width; ++x) {
+            uint8_t index = indices[y * width + x];
+            if (!index) continue;
+            if (index >= color_count) {
+                set_error(error, error_size,
+                          "palette index outside the preview palette");
+                return false;
+            }
+            if (x < min_x) min_x = x;
+            if (y < min_y) min_y = y;
+            if (x > max_x) max_x = x;
+            if (y > max_y) max_y = y;
+            visible = true;
+        }
+    }
+    if (!visible) {
+        set_error(error, error_size, "sprite frame has no visible pixels");
+        return false;
+    }
+    size_t cropped_width = max_x - min_x + 1;
+    size_t cropped_height = max_y - min_y + 1;
+    if (cropped_width > 512 || cropped_height > 512) {
+        set_error(error, error_size, "sprite frame exceeds 512 pixels");
+        return false;
+    }
+    size_t pitch = (cropped_width + 3) & ~(size_t)3;
+    size_t data_size = pitch * cropped_height;
+    size_t data_offset = 14 + 40 + 1024;
+    *bmp_size = data_offset + data_size;
+    *bmp = calloc(1, *bmp_size);
+    if (!*bmp) {
+        set_error(error, error_size, "cannot allocate sprite bitmap");
+        return false;
+    }
+    uint8_t *output = *bmp;
+    output[0] = 'B'; output[1] = 'M';
+    write_u32(output, 2, (uint32_t)*bmp_size);
+    write_u32(output, 10, (uint32_t)data_offset);
+    write_u32(output, 14, 40);
+    write_u32(output, 18, (uint32_t)cropped_width);
+    write_u32(output, 22, (uint32_t)cropped_height);
+    output[26] = 1; output[28] = 8;
+    write_u32(output, 34, (uint32_t)data_size);
+    write_u32(output, 38, 2835);
+    write_u32(output, 42, 2835);
+    write_u32(output, 46, 256);
+    for (size_t index = 0; index < color_count; ++index) {
+        output[54 + index * 4] = colors[index * 3 + 2];
+        output[54 + index * 4 + 1] = colors[index * 3 + 1];
+        output[54 + index * 4 + 2] = colors[index * 3];
+    }
+    for (size_t y = min_y; y <= max_y; ++y) {
+        uint8_t *row = output + data_offset + (max_y - y) * pitch;
+        for (size_t x = min_x; x <= max_x; ++x)
+            row[x - min_x] = indices[y * width + x];
     }
     *left = (int)min_x - origin_x;
     *top = (int)min_y - origin_y;

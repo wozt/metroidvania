@@ -49,6 +49,8 @@ add_library(fusion_assets STATIC
     src/assets/mzm/runtime_room.c
     src/assets/mzm/primary_sprites.c
     src/assets/mzm/export.c
+    src/assets/mzm/samus.c
+    src/assets/mzm/samus_tables.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)
@@ -154,6 +156,13 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_sprite_library_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_sprite_library_tests)
     add_test(NAME fusion_sprite_library COMMAND fusion_sprite_library_tests)
+    add_executable(fusion_mzm_samus_assets_tests tests/test_fusion_mzm_samus_assets.c)
+    target_include_directories(fusion_mzm_samus_assets_tests PRIVATE src/assets/core src/assets/mzm)
+    target_compile_definitions(fusion_mzm_samus_assets_tests PRIVATE
+        FUSION_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(fusion_mzm_samus_assets_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_mzm_samus_assets_tests)
+    add_test(NAME fusion_mzm_samus_assets COMMAND fusion_mzm_samus_assets_tests)
     add_executable(fusion_assets_mzm_tests tests/test_fusion_assets_mzm.c)
     target_link_libraries(fusion_assets_mzm_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_mzm_tests)

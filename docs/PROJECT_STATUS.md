@@ -2,6 +2,42 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0530 - Native Samus and projectile libraries in production
+
+- Added `fusion_mzm_export_samus` and `fusion_importer --mzm-export-samus
+  ROM ELF SAMUS_DIR PROJECTILE_DIR`. The bounded C11 composer mirrors
+  `SamusUpdateGraphicsOam`, `SamusUpdatePalette`, `SamusDraw` and
+  `SamusUpdateArmCannonPositionOffset` for all 832 body/cannon variants, and
+  `HudGenericLoadCommonSpriteGfx`, `ProjectileLoadGraphics` and
+  `ProjectileDraw` for every projectile table and beam particle. It writes the
+  indexed Samus frames, `animation_map.tsv`, `cannon_offsets.tsv`,
+  `palettes.tsv`, both `sequences.json` files and the manifest, and refuses
+  an ELF whose consumed symbols differ from the ROM.
+- The source pointer tables are `src/assets/mzm/samus_tables.c`, a generated
+  copy of `samus_animation_pointers.c` and of the projectile `FrameData`
+  names; a C test checks it against the decompilation's `SamusPose` enum.
+  `fusion_sprite_bmp8_crop` joins the shared sprite library, and
+  `fusion_sprite_bmp32_crop` now accepts canvases up to 1,024 pixels while
+  still capping a cropped frame at 512, as the Python writer did.
+- Proved the complete C output against the former Python writer before
+  cutover: 1,072 Samus sequences, 4,670 frames and 2,640 unique BMPs, 566
+  projectile sequences, 2,750 frames and 1,192 unique BMPs, and all 3,840
+  files byte-identical. The `metroid_samus` rebuild task now runs the native
+  writer; a forced production rebuild matched the reference, the next run was
+  up to date and `fusion_room_runtime --check-animations` validated the
+  1,072 sequences and 662 bindings.
+- Removed `scripts/mzm_samus_pipeline.py`, `scripts/mzm_samus_compose.py`
+  and `tests/test_mzm_samus_pipeline.py`; their selection, sign, mirror and
+  offset tests moved to `tests/test_fusion_mzm_samus_assets.c`. The ELF
+  helpers that `scripts/mzm_sprites.py` still needs moved into it, and
+  `scripts/mzm_projectile_compose.py` keeps only the FrameData, OAM and
+  render helpers it uses; a full `mzm_sprites` run stayed byte-identical.
+  The Zero Mission golden fixture now records every library file.
+- No gameplay or fidelity status changed, no private assets were committed,
+  and audio remains untouched.
+- Next: migrate `metroid_sprites` (`scripts/mzm_sprites.py`), reusing the
+  native FrameData and OAM renderer, then `raw_import`.
+
 ## Patch 0529 - Remove the unconsumed sprite preview decoders
 
 - `scripts/import_game_assets.py` no longer renders the hand-selected Samus and

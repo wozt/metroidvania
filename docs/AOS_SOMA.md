@@ -255,7 +255,8 @@ recovery animation) or with a backdash. Landing clears `0x20031E` instead of
 ends the attack. The weapon entity follows Soma, takes its hitbox from his
 animation frame data and deletes itself when `0x20` clears; its sprites,
 damage and the subweapon/soul attack `sub_08019478` are not ported.
-`scripts/aos_weapons.py` exports the records and their animations privately.
+`fusion_aos_export_weapons` exports the records and their animations privately;
+the `aria_weapons` rebuild task invokes it through `fusion_importer`.
 
 Weapon entity (`sub_080221CC`, classes 0, 2 and 3): its tile sheet is
 `sUnk_084F10C0[record + 0x12]`, its frame/animation descriptor

@@ -367,4 +367,23 @@ bool fusion_aos_export_soma(const FusionRom *rom, const char *output,
                             FusionAosSomaExportSummary *summary,
                             char *error, size_t error_size);
 
+typedef struct {
+    size_t weapons;
+    size_t sequences;
+    size_t frames;
+    size_t unique_bmps;
+    size_t outside_components;
+    size_t skipped_count;
+    size_t removed_stale_objects;
+    char skipped[FUSION_AOS_EXPORT_SKIP_CAPACITY][160];
+} FusionAosWeaponExportSummary;
+
+/* Writes the complete weapon records and frame metadata into METADATA_OUTPUT,
+ * and the canonical content-addressed weapon sprites into RUNTIME_OUTPUT. */
+bool fusion_aos_export_weapons(const FusionRom *rom,
+                               const char *metadata_output,
+                               const char *runtime_output,
+                               FusionAosWeaponExportSummary *summary,
+                               char *error, size_t error_size);
+
 #endif /* FUSION_ASSETS_AOS_H */

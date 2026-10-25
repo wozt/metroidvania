@@ -33,6 +33,7 @@ add_library(fusion_assets STATIC
     src/assets/aos/runtime_room.c
     src/assets/aos/export.c
     src/assets/aos/soma.c
+    src/assets/aos/weapons.c
     src/assets/aos/world.c
     src/assets/core/output.c
     src/assets/core/sha1.c

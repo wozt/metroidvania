@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0527 - Native Aria weapon library in production
+
+- Added `fusion_aos_export_weapons` and `fusion_importer
+  --aria-export-weapons ROM METADATA_DIR RUNTIME_DIR`. The bounded C11 reader
+  reconstructs the unarmed record and all 59 weapon records, the five posture
+  animations, attack animation timing, hitboxes, tile sheets, palettes and OAM
+  compositions.
+- Proved complete byte parity against the former Python writer before cutover:
+  both metadata tables, 60 sprite sequences, 416 indexed frames, 255 unique
+  BMP objects and all 258 output files are identical. The stable SHA-256 values
+  are `14e30787fc5fa591bf73bb8c19b0e07269374a939b5c1d1976a57883fe355104`
+  for `weapons.tsv`,
+  `8f8b001546ada01b8cf546f4efe0cfe770f61db031042e1363301e4ed9ed0f3d`
+  for `weapon_frames.tsv` and
+  `35ffdd7fee0a135ca2bd7fb248e30bff73bb09794ac579396e8c765282c49d84`
+  for `runtime_index.tsv`.
+- Extended the native Aria golden fixture with the command and every weapon
+  output. The `aria_weapons` rebuild task now runs the C importer, declares the
+  importer binary as an input and validates its sprite index. Removed the
+  superseded `scripts/aos_weapons.py`.
+- No gameplay or fidelity status changed, no private assets were committed,
+  and audio remains untouched.
+- Next: port the Aria object/enemy sprite writer, its frame-box metadata and
+  enemy stat table to the shared native sprite pipeline.
+
 ## Patch 0526 - Native Soma animation library in production
 
 - Added a reusable native content-addressed sprite-library writer with exact
@@ -27,7 +52,7 @@ Last updated: **2026-10-25**.
   The `aria_soma` rebuild task runs the native writer and passed a forced
   production rebuild followed by an up-to-date run. Removed the superseded
   `scripts/aos_soma_pipeline.py`; `scripts/aos_soma_sprite.py` remains a
-  shared decoder for the still-Python raw importer, object/weapon tools and
+  shared decoder for the still-Python raw importer, object tools and
   previews.
 - No gameplay or fidelity status changed, no private assets were committed,
   and audio remains untouched.

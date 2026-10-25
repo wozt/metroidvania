@@ -35,6 +35,7 @@ static void usage(const char *name) {
             "       %s --aria-catalog ROM WORLD_JSON ROOMS_TSV\n"
             "       %s --aria-export-rooms ROM OUTPUT_DIR\n"
             "       %s --aria-export-soma ROM OUTPUT_DIR\n"
+            "       %s --aria-export-weapons ROM METADATA_DIR RUNTIME_DIR\n"
             "       %s --mzm-symbols ROM ELF\n"
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-rooms ROM ELF\n"
@@ -60,7 +61,7 @@ static void usage(const char *name) {
             name, name, name, name, name, name, name, name, name, name, name,
             name,
             name, name, name, name,
-            name, name, name, name, name, name, name, name, name, name);
+            name, name, name, name, name, name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -856,6 +857,29 @@ static int export_aria_soma(const char *path, const char *output) {
            summary.soma_animations, summary.knife_animations,
            summary.frames, summary.unique_bmps);
     printf("Index: %s/runtime_index.tsv\n", output);
+    fusion_rom_close(&rom);
+    return 0;
+}
+
+static int export_aria_weapons(const char *path, const char *metadata,
+                               const char *runtime) {
+    FusionRom rom = {0};
+    FusionAosWeaponExportSummary summary;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom,
+                         error, sizeof error) ||
+        !fusion_aos_export_weapons(&rom, metadata, runtime, &summary,
+                                   error, sizeof error)) {
+        fprintf(stderr, "aria-export-weapons: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    printf("Aria weapons: %zu weapons and the unarmed record; "
+           "%zu weapon sprite sequences; %zu components "
+           "outside their tile sheet skipped\n",
+           summary.weapons, summary.sequences, summary.outside_components);
+    for (size_t index = 0; index < summary.skipped_count; ++index)
+        printf("  skipped %s\n", summary.skipped[index]);
     fusion_rom_close(&rom);
     return 0;
 }
@@ -2657,6 +2681,9 @@ int main(int argc, char **argv) {
     const char *aria_export_output = NULL;
     const char *aria_soma_rom_path = NULL;
     const char *aria_soma_output = NULL;
+    const char *aria_weapons_rom_path = NULL;
+    const char *aria_weapons_metadata = NULL;
+    const char *aria_weapons_runtime = NULL;
     const char *aria_catalog_rom_path = NULL;
     const char *aria_catalog_output_path = NULL;
     const char *aria_catalog_index_path = NULL;
@@ -2747,6 +2774,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--aria-export-soma") && i + 2 < argc) {
             aria_soma_rom_path = argv[++i];
             aria_soma_output = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--aria-export-weapons") && i + 3 < argc) {
+            aria_weapons_rom_path = argv[++i];
+            aria_weapons_metadata = argv[++i];
+            aria_weapons_runtime = argv[++i];
         }
         else if (!strcmp(argv[i], "--aria-catalog") && i + 3 < argc) {
             aria_catalog_rom_path = argv[++i];
@@ -2879,6 +2911,10 @@ int main(int argc, char **argv) {
         return export_aria_runtime_rooms(aria_export_rom_path, aria_export_output);
     if (aria_soma_rom_path)
         return export_aria_soma(aria_soma_rom_path, aria_soma_output);
+    if (aria_weapons_rom_path)
+        return export_aria_weapons(aria_weapons_rom_path,
+                                   aria_weapons_metadata,
+                                   aria_weapons_runtime);
     if (aria_catalog_rom_path)
         return write_aria_catalog(aria_catalog_rom_path, aria_catalog_output_path,
                                   aria_catalog_index_path);

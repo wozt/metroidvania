@@ -2,8 +2,8 @@
 """Regression digests of the native Aria importer on the local ROM.
 
 The fixture records the SHA-256 of every inspection command's complete
-standard output, the native world-catalog files, every file in the room export
-and every file in the content-addressed Soma library. It was recorded after
+standard output, the native world-catalog files, every file in the room export,
+and every file in the content-addressed Soma and weapon libraries. It was recorded after
 those outputs had been proven identical to the former Python writers and
 reference decoders. The fixture contains only digests, paths and summaries,
 never ROM-derived bytes.
@@ -92,6 +92,22 @@ def _current() -> list[str]:
         for path in sorted(soma.rglob("*")):
             if path.is_file():
                 lines.append(f"soma-file\t{path.relative_to(soma).as_posix()}\t"
+                             f"{_digest(path)}")
+
+        weapon_metadata = root / "weapon_metadata"
+        weapon_runtime = root / "weapons"
+        weapon_metadata.mkdir()
+        weapon_runtime.mkdir()
+        console = _run("--aria-export-weapons", str(ROM),
+                       str(weapon_metadata), str(weapon_runtime))
+        lines.append(f"weapon-console\tstdout\t{hashlib.sha256(console).hexdigest()}")
+        for path in sorted(weapon_metadata.rglob("*")):
+            if path.is_file():
+                lines.append(f"weapon-file\tmetadata/{path.relative_to(weapon_metadata).as_posix()}\t"
+                             f"{_digest(path)}")
+        for path in sorted(weapon_runtime.rglob("*")):
+            if path.is_file():
+                lines.append(f"weapon-file\truntime/{path.relative_to(weapon_runtime).as_posix()}\t"
                              f"{_digest(path)}")
     return lines
 

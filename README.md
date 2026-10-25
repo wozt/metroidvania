@@ -396,8 +396,8 @@ with:
 ```sh
 python3 -m scripts.rebuild --task aria_soma    # runs build/fusion_importer --aria-export-soma
 python3 -m scripts.rebuild --task aria_rooms   # runs build/fusion_importer --aria-export-rooms
+python3 -m scripts.rebuild --task aria_weapons # runs build/fusion_importer --aria-export-weapons
 python3 -m scripts.aos_object_sprites
-python3 -m scripts.aos_weapons
 ./build/fusion_aria_runtime --area 0 --room 6
 ```
 
@@ -419,7 +419,7 @@ through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
 Arrows (or a gamepad, see "Gamepads") move, Down crouches, X/F attacks (B; `--weapon none|INDEX` after
-`python3 -m scripts.aos_weapons`, unarmed by default; blades of weapon
+`python3 -m scripts.rebuild --task aria_weapons`, unarmed by default; blades of weapon
 classes 0 to 4 are drawn (class 1 swings with its affine rotation, class 4 fires), `--hitboxes` outlines their hitbox),
 Space/Z jumps (A), Down + jump drops through
 one-way platforms or slides, Q/Left Shift is L (backdash; Up + L high jump),

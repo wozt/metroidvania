@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T22:18:05+00:00",
+ "generated_at": "2026-10-25T22:28:13+00:00",
  "git": {
-  "commit": "2f5c25a",
+  "commit": "0f6eedf",
   "branch": "main",
   "dirty": true
  },
@@ -11852,12 +11852,12 @@
     "src/runtime/aos_weapon.c",
     "src/runtime/aos_effect.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_weapons.py",
+    "src/assets/aos/weapons.c",
     "scripts/aos_object_sprites.py"
    ],
    "tests": [
     "tests/test_aos_weapon.c",
-    "tests/test_aos_soma_sprite.py"
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11870,12 +11870,12 @@
     "sub_08042884",
     "sub_0803E058"
    ],
-   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported.",
+   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported; the native C11 asset path exports all 59 records, frame boxes and sprite sequences byte-identically.",
    "next_action": "Port sub_08033F58's player copy if its data source is traced; play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_weapon.c",
-     "tests/test_aos_soma_sprite.py"
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 0, 40 and 50 (classes 0, 2, 3) at frames 6 and 10, weapon 18 (class 1) sweeping at frames 3, 7, 11 and 16, weapon 55 (class 4) firing at frames 4, 6, 9 and 14"
@@ -11900,7 +11900,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_aos_soma_sprite.py",
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -12492,6 +12492,7 @@
     "src/assets/aos/runtime_room.c",
     "src/assets/aos/export.c",
     "src/assets/aos/soma.c",
+    "src/assets/aos/weapons.c",
     "src/assets/aos/world.c",
     "src/assets/core/export.c",
     "src/assets/core/output.c",
@@ -12525,7 +12526,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs and writes their exact private identity manifests atomically; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, writes the complete 685-file private room export, and writes all 155 files of the content-addressed Soma/knife animation library atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both identity manifests, the Aria world catalog and Soma library, the Zero Mission ROM bank and both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, shared reference decoders, caches and the global rebuild graph.",
+   "limitations": "The C11 library verifies both ROMs and writes their exact private identity manifests atomically; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, writes the complete 685-file private room export, and writes all 155 Soma/knife files plus all 258 weapon-library files atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both identity manifests, the Aria world catalog, Soma library and weapon library, the Zero Mission ROM bank and both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, shared reference decoders, caches and the global rebuild graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12753,7 +12754,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Both ROM identity manifests, Aria world metadata and Soma library, the Zero Mission ROM bank and both games' runtime rooms use native C11 writers; room previews, audits, remaining sprite pipelines and editor caches are not all native or registered yet.",
+   "limitations": "Both ROM identity manifests, Aria world metadata, Soma library and weapon library, the Zero Mission ROM bank and both games' runtime rooms use native C11 writers; room previews, audits, remaining sprite pipelines and editor caches are not all native or registered yet.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13666,36 +13667,64 @@
    "status": "functional",
    "fidelity": "faithful",
    "local_sources": [
-    "scripts/aos_weapons.py"
+    "include/fusion/assets/aos.h",
+    "src/assets/aos/weapons.c",
+    "src/assets/core/sprite_library.c",
+    "src/runtime/aos_weapon.c",
+    "scripts/rebuild.py"
    ],
    "tests": [
-    "tests/test_aos_soma_sprite.py"
+    "tests/test_aos_weapon.c",
+    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_fusion_sprite_library.c"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "All 59 weapon records and their sprites are exported; class 1 blades rotate about the entity position (the affine double-size placement is not modelled) and the class 4 casing and impact come from the object library.",
+   "limitations": "The native C11 rebuild task exports all 59 weapon records plus the unarmed record, 60 sprite sequences, 416 indexed frames, 255 unique BMPs and both metadata tables; all 258 files are byte-identical to the former Python writer and guarded by recorded digests. Class 1 blades rotate about the entity position (the affine double-size placement is not modelled), and the class 4 casing and impact come from the object library. The Python weapon writer is removed.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_soma_sprite.py"
+     "tests/test_aos_weapon.c",
+     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_fusion_sprite_library.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-25",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
      {
-      "test": "tests/test_aos_soma_sprite.py",
+      "test": "tests/test_aos_weapon.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_weapon"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
+     },
+     {
+      "test": "tests/test_fusion_sprite_library.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_sprite_library"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -15346,6 +15375,12 @@
  },
  "timeline": [
   {
+   "commit": "0f6eedf",
+   "date": "2026-10-25",
+   "subject": "Export the Soma animation library natively",
+   "scope": "project"
+  },
+  {
    "commit": "2f5c25a",
    "date": "2026-10-25",
    "subject": "Write verified ROM manifests natively",
@@ -15817,12 +15852,6 @@
    "commit": "7a0d56b",
    "date": "2026-10-22",
    "subject": "Register the Aria Erinys and Gremlin on existing ports",
-   "scope": "project"
-  },
-  {
-   "commit": "b8449d0",
-   "date": "2026-10-22",
-   "subject": "Port the Aria Valkyrie",
    "scope": "project"
   }
  ],
@@ -19908,7 +19937,8 @@
     "aria_rom"
    ],
    "requires": [
-    "roms/Castlevania - Aria of Sorrow (USA).gba"
+    "roms/Castlevania - Aria of Sorrow (USA).gba",
+    "build/fusion_importer"
    ]
   },
   {

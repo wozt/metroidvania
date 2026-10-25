@@ -196,6 +196,14 @@ def _run_native_soma(output: Path) -> Callable[[], None]:
     return action
 
 
+def _run_native_weapons(metadata: Path, runtime: Path) -> Callable[[], None]:
+    def action() -> None:
+        private_path(ROOT, metadata.relative_to(ROOT), create=True)
+        private_path(ROOT, runtime.relative_to(ROOT), create=True)
+        _run_native("--aria-export-weapons", ROMS["aria"], metadata, runtime)()
+    return action
+
+
 def _run_native_manifest(game: str, output: Path) -> Callable[[], None]:
     def action() -> None:
         private_path(ROOT, output.relative_to(ROOT), create=True)
@@ -289,11 +297,15 @@ ASSET_TASKS = {
         (ARIA_OBJECTS, ROOT / ARIA_METADATA / "enemy_frames.tsv",
          ROOT / ARIA_METADATA / "enemies.tsv"), ("aria_rom",),
         _sprite_validator(ARIA_OBJECTS)),
-    "aria_weapons": _asset_task(
-        "aria_weapons", "aria", "aos_weapons", (),
-        (ARIA_WEAPONS, ROOT / ARIA_METADATA / "weapons.tsv",
-         ROOT / ARIA_METADATA / "weapon_frames.tsv"), ("aria_rom",),
-        _sprite_validator(ARIA_WEAPONS)),
+    "aria_weapons": Task(
+        name="aria_weapons", version=2, dependencies=("aria_rom",),
+        inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],
+        outputs=(ARIA_WEAPONS, ROOT / ARIA_METADATA / "weapons.tsv",
+                 ROOT / ARIA_METADATA / "weapon_frames.tsv"),
+        action=_run_native_weapons(ROOT / ARIA_METADATA, ARIA_WEAPONS.parent),
+        requires=(ROMS["aria"], NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("aria"),
+        validate=_sprite_validator(ARIA_WEAPONS), group="assets"),
     "metroid_samus": _asset_task(
         "metroid_samus", "metroid", "mzm_samus_pipeline", (),
         (MZM_SAMUS, MZM_PROJECTILES, ROOT / METROID_SAMUS_RUNTIME / "animation_map.tsv"),

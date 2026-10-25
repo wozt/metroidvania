@@ -26,9 +26,10 @@ python3 scripts/mzm_room_render.py --area Brinstar --room 33
 
 ## Runtime backgrounds (patch 0255)
 
-`scripts/mzm_bg_layers.py` rebuilds BG VRAM and palette RAM as
-`RoomLoadTileset` and `RoomLoadBackgrounds` leave them and the runtime room
-export (`scripts/mzm_runtime_room.py`) writes, privately:
+The native importer (`src/assets/mzm/runtime_room.c`) rebuilds BG VRAM and
+palette RAM as `RoomLoadTileset` and `RoomLoadBackgrounds` leave them, and
+the runtime room export (`fusion_importer --mzm-export-rooms`, run by the
+`metroid_rooms` rebuild task) writes, privately:
 
 - `rooms/runtime/tilesets/tileset_NN.bmp`: the 1024 tileset metatiles and the
   208 common ones (doors, breakable blocks, tanks), 32 per row, 32-bit with

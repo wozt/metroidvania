@@ -287,9 +287,10 @@ serialized from the bounded `block_data.c` and haze objects. The export's
 renderer (tileset metatiles only, inferred character base) and is
 reproduced exactly by `fusion_mzm_render_export_background`.
 `fusion_mzm_export_runtime_rooms` (`src/assets/mzm/export.c`) writes the
-complete private export and its SHA-256 `export_index.tsv` atomically; the
-rebuild task still runs the Python exporter, and these native extractors are not yet
-registered in the global native task graph.
+complete private export and its SHA-256 `export_index.tsv` atomically, and
+the `metroid_rooms` rebuild task runs it through `build/fusion_importer`;
+the Python room exporter is gone. The other native extractors are not yet
+registered in the rebuild task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

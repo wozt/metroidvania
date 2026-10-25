@@ -59,7 +59,7 @@ typedef enum { ACTOR_SAMUS, ACTOR_NON_SPRITE, ACTOR_SPRITE } ClipActor;
 #define MAX_ROOM_DOORS 32
 #define MAX_ROOM_HATCHES 16
 #define HATCH_VERTICAL_SIZE 4
-/* Hatch weakness bits written by scripts/mzm_runtime_room.py. */
+/* Hatch weakness bits written by the native room export (src/assets/mzm). */
 enum { DAMAGE_BEAM = 1, DAMAGE_BOMB_PISTOL = 2, DAMAGE_MISSILE = 4,
        DAMAGE_SUPER_MISSILE = 8, DAMAGE_POWER_BOMB = 16 };
 /* Clip behaviors that start a room transition. */
@@ -105,7 +105,7 @@ typedef struct { int width, height, resolution, room; char world[16], area[40];
     RoomDoor doors[MAX_ROOM_DOORS]; int door_count;
     RoomHatch hatches[MAX_ROOM_HATCHES]; int hatch_count;
     RoomSpriteVariant sprite_variants[ROOM_SPRITE_VARIANTS];
-    /* Backgrounds (scripts/mzm_bg_layers.py): the tileset, the room's
+    /* Backgrounds (the native room export): the tileset, the room's
      * transparency and BG properties, the block layers BG0 (when RLE), BG1
      * and BG2 as sheet indices, and the LZ77 text layers BG0 and BG3. */
     int effect_y;                   /* effectY in blocks (255: none) */
@@ -303,7 +303,7 @@ failure:
     return false;
 }
 
-/* MVROOM-NATIVE room exported by scripts/mzm_runtime_room.py: one line per
+/* MVROOM-NATIVE room exported by fusion_importer --mzm-export-rooms: one line per
  * nonzero Clipdata cell with its raw value and resolved native type. */
 static bool parse_native_room(const char *path, Room *room) {
     FILE *f = fopen(path, "rb");
@@ -3661,7 +3661,7 @@ static void runtime_sprites_update(RuntimeSprites *sprites, Room *room, float cx
     sprites->frame8++;
     sprites->frame16++;
 }
-/* The room's background art (scripts/mzm_bg_layers.py): the tileset's
+/* The room's background art (the native room export): the tileset's
  * metatile sheet and the LZ77 text layers, reloaded when the room changes. */
 typedef struct {
     const Room *room;
@@ -3700,7 +3700,7 @@ static void runtime_bg_art_sync(RuntimeBgArt *art, SDL_Renderer *renderer, const
                  room->tileset);
         art->sheet = runtime_bg_texture(renderer, path);
         art->sheet_tileset = room->tileset;
-        if (!art->sheet) fprintf(stderr, "Missing tileset sheet %s (python3 -m scripts.mzm_runtime_room --all)\n", path);
+        if (!art->sheet) fprintf(stderr, "Missing tileset sheet %s (python3 -m scripts.rebuild --task metroid_rooms)\n", path);
     }
     for (int layer = 0; layer < 4; ++layer) {
         if (!room->text_present[layer]) continue;
@@ -4618,7 +4618,7 @@ int main(int argc, char **argv) {
         runtime_library_free(&checked);
         return 0;
     }
-    /* --room <area>_<NNN>: a native room exported by scripts/mzm_runtime_room.py. */
+    /* --room <area>_<NNN>: a room of the native room export. */
     char bundle_index[4096],bundle_map[4096],bundle_cannon[4096],bundle_palettes[4096];
     char native_room[4096],native_background[4096];
     bool native_format=false;
@@ -4732,8 +4732,8 @@ int main(int argc, char **argv) {
     if (!room) return 1;
     if (!(native_format ? parse_native_room(room_path,room) : parse_room(room_path,room))) {
         if (native_format)
-            fprintf(stderr,"Export it first: python3 -m scripts.mzm_runtime_room "
-                    "--area <Area> --room <number>\n");
+            fprintf(stderr,"Export the rooms first: python3 -m scripts.rebuild "
+                    "--task metroid_rooms\n");
         free(room); return 2;
     }
     printf("Runtime room %s/%s/%d %dx%d: %zu %s collision cells\n",
@@ -4936,9 +4936,9 @@ int main(int argc, char **argv) {
     }
     /* Sprites (scripts/mzm_sprites.py); without them the rooms stay empty. */
     if (!mzm_power_bomb_load_windows(RUNTIME_POWER_BOMB_TABLE))
-        fprintf(stderr, "No power bomb window table: python3 -m scripts.mzm_runtime_room --all\n");
+        fprintf(stderr, "No power bomb window table: python3 -m scripts.rebuild --task metroid_rooms\n");
     if (!runtime_block_tables_open(RUNTIME_BLOCK_TABLES))
-        fprintf(stderr, "No Zero Mission block tables: python3 -m scripts.mzm_runtime_room --all\n");
+        fprintf(stderr, "No Zero Mission block tables: python3 -m scripts.rebuild --task metroid_rooms\n");
     sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
     sprites.kinds_ok = sprites.tables_ok &&
                        runtime_library_open(&sprite_library, RUNTIME_SPRITE_LIBRARY) &&

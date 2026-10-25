@@ -2,6 +2,35 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0521 - Native Zero Mission room export in production
+
+- The `metroid_rooms` rebuild task now runs `build/fusion_importer
+  --mzm-export-rooms ROM ELF assets/extracted/metroid/rooms/runtime` instead
+  of the Python exporter. Its inputs are the ROM, the ELF and the importer
+  binary (a rebuilt importer reruns it); it depends on `metroid_rom` only, no
+  longer on the raw import, and it is skipped like a missing ROM until the
+  importer is built. The export index validator is unchanged.
+- Checked in production: the task rewrites the private export in about
+  7 seconds, a second run is up to date, a modified `room.tsv` is detected and
+  rebuilt, an identical rebuilt binary keeps it up to date, and
+  `fusion_room_runtime --room` loads and draws the exported rooms (Brinstar,
+  Kraid, Crateria, Norfair and Chozodia captures).
+- Removed the Python production path the C writer replaces:
+  `scripts/mzm_runtime_room.py`, `scripts/mzm_bg_layers.py`, their tests, the
+  room-sprite helpers of `scripts/mzm_sprites.py` and
+  `block_table_lines` / `power_bomb_window_lines` of `scripts/mzm_c_tables.py`
+  with their tests, and the equivalence tests that compared the native
+  outputs with them.
+- `tests/test_fusion_assets_mzm_golden.py` replaces those comparisons: it
+  checks the SHA-256 of the whole output of the 16 native inspection commands
+  and of each of the 1,015 export files against
+  `tests/fixtures/mzm_native_golden.tsv`, recorded from the native binary right
+  after its byte parity with Python was proven. The fixture holds digests and
+  counts only. The test takes about 35 seconds instead of several minutes.
+- The runtime's export hints, the README and the room documents now name the
+  native export; the parity and dashboard registries point at the native
+  sources and the digest test. No status changes.
+
 ## Patch 0520 - One test run per work cycle
 
 - `scripts/dashboard.py --run-tests` no longer runs the Python suite twice:

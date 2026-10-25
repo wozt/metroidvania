@@ -230,7 +230,7 @@ options are not ported, so the runtime then returns to the intro. The demos and 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 
 ```sh
-python3 -m scripts.mzm_runtime_room --area Brinstar --room 33
+python3 -m scripts.rebuild --task metroid_rooms   # runs build/fusion_importer --mzm-export-rooms
 ./build/fusion_room_runtime --room brinstar_033
 ./build/fusion_room_runtime --check-animations \
   --samus-assets assets/extracted/metroid/sprites/samus/runtime

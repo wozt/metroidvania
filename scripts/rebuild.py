@@ -156,6 +156,21 @@ def _run_module(module: str, *arguments: str) -> Callable[[], None]:
     return action
 
 
+# The C11 importer built by CMake (`cmake --build build`); a task needing it
+# is skipped, like one missing its ROM, until it is built.
+NATIVE_IMPORTER = ROOT / "build" / ("fusion_importer.exe" if sys.platform == "win32"
+                                    else "fusion_importer")
+
+
+def _run_native(*arguments: Path | str) -> Callable[[], None]:
+    def action() -> None:
+        result = subprocess.run([str(NATIVE_IMPORTER), *map(str, arguments)],
+                                cwd=ROOT, check=False)
+        if result.returncode:
+            raise ValueError(f"fusion_importer failed with exit code {result.returncode}")
+    return action
+
+
 def _verify_rom(game: str) -> Callable[[], None]:
     def action() -> None:
         valid, message = verify_roms.validate(game, ROMS[game])
@@ -241,9 +256,17 @@ ASSET_TASKS = {
         "metroid_sprites", "metroid", "mzm_sprites", (),
         (MZM_SPRITES, ROOT / "assets/extracted/metroid/metadata/sprites.tsv"),
         ("metroid_rom",), _sprite_validator(MZM_SPRITES), requires=(MZM_ELF,)),
-    "metroid_rooms": _asset_task(
-        "metroid_rooms", "metroid", "mzm_runtime_room", ("--all",), (MZM_ROOM_INDEX,),
-        ("raw_import",), _export_validator(MZM_ROOM_INDEX)),
+    # The native writer reads the ROM and the ELF only (no raw import); the
+    # importer binary is an input, so a rebuilt importer reruns the export.
+    "metroid_rooms": Task(
+        name="metroid_rooms", version=2, dependencies=("metroid_rom",),
+        inputs=lambda: [ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER],
+        outputs=(MZM_ROOM_INDEX,),
+        action=_run_native("--mzm-export-rooms", ROMS["metroid"], MZM_ELF,
+                           MZM_ROOM_INDEX.parent),
+        requires=(ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("metroid"),
+        validate=_export_validator(MZM_ROOM_INDEX), group="assets"),
     "metroid_sound": _asset_task(
         "metroid_sound", "metroid", "mzm_audio", (),
         (ROOT / "assets/extracted/metroid/sound/runtime/sound_bank.bin",

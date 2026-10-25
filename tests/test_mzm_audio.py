@@ -3,7 +3,7 @@
 from pathlib import Path
 import unittest
 
-from scripts import mzm_audio, mzm_c_tables, mzm_runtime_room, mzm_sound_ids
+from scripts import mzm_audio, mzm_c_tables, mzm_sound_ids
 
 DECOMP = Path(__file__).resolve().parents[1] / "third_party/mzm"
 
@@ -60,10 +60,6 @@ class EngineTableTests(unittest.TestCase):
         self.assertIn(f"alias\t{names['MUSIC_MAP_ROOM_2']}\t{names['MUSIC_MAP_ROOM']}", lines)
         self.assertEqual(len([line for line in lines if line.startswith("alias")]), 5)
         self.assertEqual(lines[-1], f"default\t{names['SOUND_A9']}")
-
-    def test_room_music(self):
-        self.assertEqual(mzm_runtime_room.room_music({"musicTrack": "MUSIC_BRINSTAR"}), 1)
-        self.assertEqual(mzm_runtime_room.room_music({}), 0)
 
 
 @unittest.skipUnless((DECOMP / "include/constants/audio.h").is_file(),

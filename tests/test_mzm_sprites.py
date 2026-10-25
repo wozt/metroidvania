@@ -48,38 +48,6 @@ class MzmSpriteDataTests(unittest.TestCase):
         self.assertEqual(ids["PSPRITE_ZOOMER_YELLOW"], 18)
         self.assertEqual(ids["PSPRITE_ZOOMER_RED"], 19)
 
-    def test_room_sprites_resolve_spriteset_slots(self):
-        sprites = mzm_sprites.room_sprites("Brinstar", 0, DECOMP)
-        names = [item["sprite"] for item in sprites]
-        self.assertEqual(names.count("PSPRITE_ZOOMER_YELLOW"), 6)
-        self.assertIn("PSPRITE_MORPH_BALL", names)
-        first = sprites[0]
-        self.assertEqual((first["y"], first["x"], first["slot"], first["gfx_slot"]),
-                         (22, 27, 17, 0))
-        launcher = next(item for item in sprites if item["sprite"] == "PSPRITE_MORPH_BALL_LAUNCHER")
-        self.assertEqual(launcher["gfx_slot"], 4)
-
-    def test_room_event_variants_resolve_placements_and_priority(self):
-        variants = mzm_sprites.room_sprite_variants("Brinstar", 9, DECOMP)
-        self.assertEqual([(variant["variant"], variant["event"], variant["spriteset"])
-                          for variant in variants], [(0, 0, 94), (1, 42, 94)])
-        self.assertEqual(variants[0]["sprites"], [])
-        self.assertEqual([sprite["sprite"] for sprite in variants[1]["sprites"]],
-                         ["PSPRITE_DESSGEEGA_AFTER_LONG_BEAM"])
-
-        # RoomLoadEntry checks the second event before the first one. Both
-        # choices are exported, including their different room placements.
-        variants = mzm_sprites.room_sprite_variants("Brinstar", 2, DECOMP)
-        self.assertEqual([(variant["variant"], variant["event"])
-                          for variant in variants], [(0, 0), (1, 37), (2, 2)])
-        self.assertEqual(len(variants[2]["sprites"]), 6)
-
-        statue_room = mzm_sprites.room_sprite_variants("Brinstar", 10, DECOMP)[0]
-        self.assertEqual([sprite["sprite"] for sprite in statue_room["sprites"]],
-                         ["PSPRITE_RIDLEY_STATUE", "PSPRITE_KRAID_STATUE"])
-        self.assertIn("PSPRITE_KRAID_STATUE", mzm_sprites.PORTED)
-        self.assertIn("PSPRITE_RIDLEY_STATUE", mzm_sprites.PORTED)
-
     def test_zoomer_data_file_and_tables(self):
         sprite_c = (DECOMP / "src/sprite.c").read_text(encoding="utf-8")
         graphics = mzm_sprites.pointer_table(sprite_c, "sSpritesGraphicsPointers")

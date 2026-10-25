@@ -147,7 +147,7 @@ ammunition at launch; spending the last one disarms them. While missiles are
 armed the runtime draws the `/armed` arm cannon sequences.
 
 Collision uses every native Clipdata type of the room (exported by
-`scripts/mzm_runtime_room.py` from `sClipdataCollisionTypes` and its tilemap
+the native room export from `sClipdataCollisionTypes` and its tilemap
 twin) with the `ClipdataConvertToCollision` rules per actor: solid blocks,
 doors, all six floor slopes at subpixel precision, enemy-only, stop-enemy and
 tank blocks. Known gaps, kept explicit: Samus's box is swept against those

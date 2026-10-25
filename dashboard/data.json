@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T20:38:51+00:00",
+ "generated_at": "2026-10-25T20:51:49+00:00",
  "git": {
-  "commit": "496ac82",
+  "commit": "79d768e",
   "branch": "main",
   "dirty": true
  },
@@ -856,7 +856,7 @@
     "src/runtime/mzm_audio.c",
     "src/runtime/gba_psg.c",
     "scripts/mzm_audio.py",
-    "scripts/mzm_runtime_room.py",
+    "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
     "scripts/mzm_sound_ids.py"
@@ -2203,7 +2203,7 @@
    "tests": [
     "tests/test_mzm_sprites.c",
     "tests/test_mzm_sprites.py",
-    "tests/test_mzm_runtime_room.py",
+    "tests/test_fusion_assets_mzm_golden.py",
     "tests/test_runtime_steep_slopes.c"
    ],
    "dependencies": [
@@ -2225,7 +2225,7 @@
     "unit_tests": [
      "tests/test_mzm_sprites.c",
      "tests/test_mzm_sprites.py",
-     "tests/test_mzm_runtime_room.py",
+     "tests/test_fusion_assets_mzm_golden.py",
      "tests/test_runtime_steep_slopes.c"
     ],
     "in_game_check": [
@@ -2257,7 +2257,7 @@
       "outcome": "passed"
      },
      {
-      "test": "tests/test_mzm_runtime_room.py",
+      "test": "tests/test_fusion_assets_mzm_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -4494,14 +4494,14 @@
     "src/runtime/mzm_sprite_ai.h",
     "src/runtime/mzm_sprites.c",
     "scripts/mzm_sprites.py",
-    "scripts/mzm_runtime_room.py",
+    "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
     "src/runtime/mzm_audio.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_mzm_runtime_room.py",
+    "tests/test_fusion_assets_mzm_golden.py",
     "tests/test_mzm_audio.c"
    ],
    "dependencies": [
@@ -4554,7 +4554,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_mzm_runtime_room.py",
+     "tests/test_fusion_assets_mzm_golden.py",
      "tests/test_mzm_audio.c"
     ],
     "in_game_check": [
@@ -4580,7 +4580,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_runtime_room.py",
+      "test": "tests/test_fusion_assets_mzm_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -4613,7 +4613,7 @@
     "scripts/mzm_sprites.py",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
-    "scripts/mzm_bg_layers.py"
+    "src/assets/mzm/runtime_room.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -5172,7 +5172,7 @@
     "src/runtime/mzm_blocks.c",
     "src/runtime/room_runtime.c",
     "scripts/mzm_c_tables.py",
-    "scripts/mzm_runtime_room.py",
+    "src/assets/mzm/export.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
@@ -5853,7 +5853,7 @@
     "src/runtime/room_runtime.c",
     "scripts/mzm_sprites.py",
     "scripts/mzm_message_text.py",
-    "scripts/mzm_runtime_room.py"
+    "src/assets/mzm/export.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -7150,14 +7150,14 @@
    "local_sources": [
     "src/runtime/mzm_room_gfx.c",
     "src/runtime/mzm_background_effect.c",
-    "scripts/mzm_bg_layers.py",
-    "scripts/mzm_runtime_room.py",
+    "src/assets/mzm/runtime_room.c",
+    "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_screen_shake.c"
    ],
    "tests": [
     "tests/test_mzm_room_gfx.c",
-    "tests/test_mzm_bg_layers.py",
+    "tests/test_fusion_assets_mzm_golden.py",
     "tests/test_mzm_background_effect.c",
     "tests/test_runtime_steep_slopes.c"
    ],
@@ -7201,7 +7201,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_room_gfx.c",
-     "tests/test_mzm_bg_layers.py",
+     "tests/test_fusion_assets_mzm_golden.py",
      "tests/test_mzm_background_effect.c",
      "tests/test_runtime_steep_slopes.c"
     ],
@@ -7228,7 +7228,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_mzm_bg_layers.py",
+      "test": "tests/test_fusion_assets_mzm_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -7652,7 +7652,7 @@
    "local_sources": [
     "src/runtime/mzm_hatches.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_runtime_room.py",
+    "src/assets/mzm/export.c",
     "scripts/mzm_hatch_events.py",
     "src/runtime/mzm_sfx.c",
     "src/runtime/mzm_door_fade.c",
@@ -8242,7 +8242,7 @@
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "scripts/mzm_c_tables.py",
-    "scripts/mzm_runtime_room.py"
+    "src/assets/mzm/export.c"
    ],
    "tests": [
     "tests/test_mzm_power_bomb.c",
@@ -12492,9 +12492,7 @@
     "scripts/aos_room_render.py",
     "scripts/aos_runtime_room.py",
     "scripts/import_aos_world.py",
-    "scripts/mzm_bg_layers.py",
-    "scripts/mzm_rom_bank.py",
-    "scripts/mzm_runtime_room.py"
+    "scripts/mzm_rom_bank.py"
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
@@ -12504,13 +12502,14 @@
     "tests/test_fusion_assets_mzm.c",
     "tests/test_fusion_assets_mzm_equivalence.py",
     "tests/test_fusion_assets_rom.c",
-    "tests/test_fusion_importer_header.py"
+    "tests/test_fusion_importer_header.py",
+    "tests/test_fusion_assets_mzm_golden.py"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for private-output orchestration, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. The Zero Mission room export runs natively in the metroid_rooms rebuild task; Python remains authoritative for the other private outputs, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12521,7 +12520,8 @@
      "tests/test_fusion_assets_mzm.c",
      "tests/test_fusion_assets_mzm_equivalence.py",
      "tests/test_fusion_assets_rom.c",
-     "tests/test_fusion_importer_header.py"
+     "tests/test_fusion_importer_header.py",
+     "tests/test_fusion_assets_mzm_golden.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -12597,6 +12597,12 @@
      },
      {
       "test": "tests/test_fusion_importer_header.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_fusion_assets_mzm_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -13925,24 +13931,20 @@
     "src/assets/mzm/runtime_room.c",
     "src/assets/mzm/primary_sprites.c",
     "src/assets/mzm/export.c",
-    "scripts/mzm_runtime_room.py",
-    "scripts/mzm_room_render.py",
-    "scripts/mzm_bg_layers.py",
-    "scripts/mzm_sprites.py"
+    "scripts/mzm_room_render.py"
    ],
    "tests": [
     "tests/test_fusion_assets_mzm.c",
     "tests/test_fusion_assets_mzm_equivalence.py",
     "tests/test_mzm_room_render.py",
     "tests/test_runtime_clipdata_id_0140.py",
-    "tests/test_mzm_bg_layers.py",
-    "tests/test_mzm_runtime_room.py"
+    "tests/test_fusion_assets_mzm_golden.py"
    ],
    "dependencies": [
     "assets.raw_import"
    ],
    "native_routines": [],
-   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots, 97328 metatile records, 1115 complete RGBA room layers totaling 253914112 pixels and 330 exact diagnostic background selections totaling 88427520 pixels with byte-identical 265300380-byte BMP and 88427520-byte visibility-mask representations. All 330 exportable metadata-inclusive room payloads are byte-identical across 5450692 bytes with 330 music records, 784 block layers, 22426 block rows and 331 text layers, and all 330 complete room payloads are byte-identical across 5548796 bytes with 1160 P, 1518 S, 118 F, 785 J and 608 N sprite records plus every earlier collision, door, hatch and metadata record, the BMP32 output of all 79 tileset sheets and 331 exported text layers is byte-identical across 255148900 bytes, blocks.tsv and power_bomb.tsv are byte-identical, and the export's background.bmp (the older diagnostic renderer, without common blocks) is byte-identical for all 330 rooms across 265300380 bytes. The native --mzm-export-rooms writer produces the same 1015 private files as mzm_runtime_room --all (315 rooms, 16 skipped, SHA-256 index included). One room lacks a supported BG1. Python still owns animated replacements, the Mother Ship variant and the production room export run by the rebuild task; hardware composition, BG2 movement and BG0 movement effects remain incomplete.",
+   "limitations": "The native importer was source-compared on all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots, 97328 metatile records, 1115 complete RGBA room layers totaling 253914112 pixels and 330 exact diagnostic background selections totaling 88427520 pixels with byte-identical 265300380-byte BMP and 88427520-byte visibility-mask representations. All 330 exportable metadata-inclusive room payloads are byte-identical across 5450692 bytes with 330 music records, 784 block layers, 22426 block rows and 331 text layers, and all 330 complete room payloads are byte-identical across 5548796 bytes with 1160 P, 1518 S, 118 F, 785 J and 608 N sprite records plus every earlier collision, door, hatch and metadata record, the BMP32 output of all 79 tileset sheets and 331 exported text layers is byte-identical across 255148900 bytes, blocks.tsv and power_bomb.tsv are byte-identical, and the export's background.bmp (the older diagnostic renderer, without common blocks) is byte-identical for all 330 rooms across 265300380 bytes. The native --mzm-export-rooms writer produced the same 1015 private files as the former Python exporter (315 rooms, 16 skipped, SHA-256 index included) and now runs the metroid_rooms rebuild task alone; the Python room exporter was removed and recorded SHA-256 digests of every native command output and export file guard the result. One room lacks a supported BG1. Animated tile replacements, the Mother Ship variant, hardware composition, BG2 movement and BG0 movement effects remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13950,8 +13952,7 @@
      "tests/test_fusion_assets_mzm_equivalence.py",
      "tests/test_mzm_room_render.py",
      "tests/test_runtime_clipdata_id_0140.py",
-     "tests/test_mzm_bg_layers.py",
-     "tests/test_mzm_runtime_room.py"
+     "tests/test_fusion_assets_mzm_golden.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13992,13 +13993,7 @@
       "outcome": "passed"
      },
      {
-      "test": "tests/test_mzm_bg_layers.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
-     },
-     {
-      "test": "tests/test_mzm_runtime_room.py",
+      "test": "tests/test_fusion_assets_mzm_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -14821,9 +14816,16 @@
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
     "module": "tests.test_fusion_assets_mzm_equivalence",
-    "test_count": 13,
+    "test_count": 4,
     "outcome": "passed",
-    "passed": 8
+    "passed": 4
+   },
+   {
+    "file": "tests/test_fusion_assets_mzm_golden.py",
+    "module": "tests.test_fusion_assets_mzm_golden",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
    },
    {
     "file": "tests/test_fusion_importer_header.py",
@@ -14877,9 +14879,9 @@
    {
     "file": "tests/test_mzm_audio.py",
     "module": "tests.test_mzm_audio",
-    "test_count": 9,
+    "test_count": 8,
     "outcome": "passed",
-    "passed": 9
+    "passed": 8
    },
    {
     "file": "tests/test_mzm_bg3_preview.py",
@@ -14896,18 +14898,11 @@
     "passed": 3
    },
    {
-    "file": "tests/test_mzm_bg_layers.py",
-    "module": "tests.test_mzm_bg_layers",
-    "test_count": 8,
-    "outcome": "passed",
-    "passed": 8
-   },
-   {
     "file": "tests/test_mzm_c_tables.py",
     "module": "tests.test_mzm_c_tables",
-    "test_count": 3,
+    "test_count": 1,
     "outcome": "passed",
-    "passed": 3
+    "passed": 1
    },
    {
     "file": "tests/test_mzm_composite_0126.py",
@@ -14994,13 +14989,6 @@
     "passed": 1
    },
    {
-    "file": "tests/test_mzm_runtime_room.py",
-    "module": "tests.test_mzm_runtime_room",
-    "test_count": 6,
-    "outcome": "passed",
-    "passed": 6
-   },
-   {
     "file": "tests/test_mzm_samus_body.py",
     "module": "tests.test_mzm_samus_body",
     "test_count": 3,
@@ -15045,9 +15033,9 @@
    {
     "file": "tests/test_mzm_sprites.py",
     "module": "tests.test_mzm_sprites",
-    "test_count": 15,
+    "test_count": 13,
     "outcome": "passed",
-    "passed": 15
+    "passed": 13
    },
    {
     "file": "tests/test_mzm_technical_audit.py",
@@ -15303,12 +15291,24 @@
    }
   ],
   "summary": {
-   "passed": 531,
+   "passed": 509,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "79d768e",
+   "date": "2026-10-25",
+   "subject": "Run the test suite once per work cycle",
+   "scope": "project"
+  },
+  {
+   "commit": "427942f",
+   "date": "2026-10-25",
+   "subject": "Write the Zero Mission room export natively",
+   "scope": "project"
+  },
   {
    "commit": "496ac82",
    "date": "2026-10-25",
@@ -15775,18 +15775,6 @@
    "commit": "0289c8f",
    "date": "2026-10-21",
    "subject": "Port the Aria Medusa head and its spawner",
-   "scope": "project"
-  },
-  {
-   "commit": "2770ad1",
-   "date": "2026-10-21",
-   "subject": "Port the Aria Needles enemy",
-   "scope": "project"
-  },
-  {
-   "commit": "b6d57bc",
-   "date": "2026-10-21",
-   "subject": "Mark the Aria weapon sprite asset functional",
    "scope": "project"
   }
  ],
@@ -16261,7 +16249,7 @@
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_runtime_steep_slopes.c"
        ],
        "in_game_check": [
@@ -16281,7 +16269,7 @@
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_mzm_sprites.py",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_runtime_steep_slopes.c"
        ],
        "in_game_check": [
@@ -16391,7 +16379,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16410,7 +16398,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16429,7 +16417,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16448,7 +16436,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16467,7 +16455,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -17438,7 +17426,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -17457,7 +17445,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_mzm_runtime_room.py",
+        "tests/test_fusion_assets_mzm_golden.py",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -19896,10 +19884,12 @@
    "name": "metroid_rooms",
    "group": "assets",
    "dependencies": [
-    "raw_import"
+    "metroid_rom"
    ],
    "requires": [
-    "roms/Metroid - Zero Mission (USA).gba"
+    "roms/Metroid - Zero Mission (USA).gba",
+    "third_party/mzm/mzm_us.elf",
+    "build/fusion_importer"
    ]
   },
   {

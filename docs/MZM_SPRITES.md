@@ -11,9 +11,10 @@ read from the user's ROM at export time; nothing is stored in the repository.
   `0xFF`. A slot above 16 (`MAX_AMOUNT_OF_SPRITE_TYPES + 1`) selects entry
   `(slot - 1) % 16` of the room's default spriteset (`sSpritesetPointers`:
   sprite id and graphics slot, `SpriteLoadSpriteset`); a lower slot is sprite
-  `slot - 1` in graphics slot 0. `mzm_runtime_room` writes them as `P` lines
-  (block y, block x, sprite, graphics slot, room slot). The hard-mode and
-  event spritesets are not exported.
+  `slot - 1` in graphics slot 0. The native room export writes them as `P`
+  lines (block y, block x, sprite, graphics slot, room slot) and the event
+  variants as `F`, `J` and `N` lines. The hard-mode spritesets are not
+  exported.
 - Graphics (`SpriteLoadSpriteset`, `SpriteDraw`): the LZ77 graphics of
   `sSpritesGraphicsPointers` at OBJ VRAM 0x4000 + slot * 0x800 (tile 0x200 +
   slot * 64), the palette rows of `sSpritesPalettePointers` at OBJ rows

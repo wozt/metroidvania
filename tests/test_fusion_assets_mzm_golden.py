@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: GPL-3.0-only
+"""Regression digests of the native Zero Mission importer on the local ROM.
+
+The fixture records, for each inspection command, the SHA-256 of its whole
+standard output and its summary line, and the SHA-256 of every file the
+native room export writes. They were recorded once the native outputs had
+been proven byte-identical to the former Python exporter (patches 0511 to
+0519), which this file replaces as the reference. The fixture holds digests
+and counts only, no ROM-derived bytes.
+
+Regenerate after an intended format change with
+``MZM_GOLDEN_UPDATE=1 python3 -m unittest tests.test_fusion_assets_mzm_golden``
+and review the diff.
+"""
+from __future__ import annotations
+
+import hashlib
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+BINARY = ROOT / "build/fusion_importer"
+ROM = ROOT / "roms/Metroid - Zero Mission (USA).gba"
+ELF = ROOT / "third_party/mzm/mzm_us.elf"
+FIXTURE = ROOT / "tests/fixtures/mzm_native_golden.tsv"
+SCHEMA = "metroidvania-mzm-native-golden-v1"
+COMMANDS = (
+    "--mzm-symbols", "--mzm-rooms", "--mzm-clipdata",
+    "--mzm-runtime-room-cores", "--mzm-runtime-room-doors",
+    "--mzm-runtime-room-hatches", "--mzm-runtime-room-metadata",
+    "--mzm-runtime-room-sprites", "--mzm-backgrounds", "--mzm-tilesets",
+    "--mzm-metatiles", "--mzm-background-renders",
+    "--mzm-background-composites", "--mzm-bitmaps", "--mzm-runtime-tables",
+    "--mzm-export-backgrounds",
+)
+
+
+def _run(*arguments: str) -> bytes:
+    result = subprocess.run([str(BINARY), *arguments], cwd=ROOT,
+                            capture_output=True, check=False)
+    if result.returncode:
+        raise AssertionError(f"{arguments[0]} failed: {result.stderr.decode()}")
+    return result.stdout
+
+
+def _current() -> list[str]:
+    lines = [f"schema\t{SCHEMA}"]
+    for command in COMMANDS:
+        output = _run(command, str(ROM), str(ELF))
+        text = output.decode("utf-8").rstrip("\n").split("\n")
+        lines.append(f"command\t{command}\t{hashlib.sha256(output).hexdigest()}\t"
+                     + text[-1].replace("\t", " "))
+    with tempfile.TemporaryDirectory() as directory:
+        output = Path(directory) / "runtime"
+        console = _run("--mzm-export-rooms", str(ROM), str(ELF), str(output))
+        lines.append(f"console\t{hashlib.sha256(console).hexdigest()}")
+        for path in sorted(output.rglob("*")):
+            if path.is_file():
+                lines.append(f"file\t{path.relative_to(output).as_posix()}\t"
+                             f"{hashlib.sha256(path.read_bytes()).hexdigest()}")
+    return lines
+
+
+@unittest.skipUnless(BINARY.exists() and ROM.exists() and ELF.exists(),
+                     "native importer, local Zero Mission ROM or ELF is unavailable")
+class NativeGoldenTests(unittest.TestCase):
+    def test_native_outputs_match_the_recorded_digests(self):
+        current = _current()
+        if os.environ.get("MZM_GOLDEN_UPDATE"):
+            FIXTURE.write_text("\n".join(current) + "\n", encoding="utf-8")
+        expected = FIXTURE.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(current[0], expected[0])
+        recorded = {tuple(line.split("\t")[:2]): line for line in expected[1:]}
+        produced = {tuple(line.split("\t")[:2]): line for line in current[1:]}
+        self.assertEqual(sorted(produced), sorted(recorded))
+        for key, line in produced.items():
+            self.assertEqual(line, recorded[key], key)
+
+
+if __name__ == "__main__":
+    unittest.main()

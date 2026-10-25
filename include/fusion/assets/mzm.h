@@ -33,6 +33,7 @@ enum {
     FUSION_MZM_SPRITESET_ENTRY_TYPES = 16,
     FUSION_MZM_ROOM_SPRITE_CAPACITY = 64,
     FUSION_MZM_ROOM_SPRITE_VARIANT_COUNT = 3,
+    FUSION_MZM_EXPORT_SKIP_CAPACITY = 64,
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
     FUSION_MZM_TILESET_COUNT = 79,
     FUSION_MZM_TILESET_ENTRY_SIZE = 20,
@@ -515,6 +516,29 @@ bool fusion_mzm_serialize_power_bomb_windows(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     FusionMzmTextFile *file, char *error, size_t error_size);
 void fusion_mzm_free_text_file(FusionMzmTextFile *file);
+typedef struct {
+    size_t room_count;
+    size_t skipped_count;
+    size_t sheet_count;
+    size_t text_layer_count;
+    size_t room_bytes;
+    size_t background_bytes;
+    /* The skipped rooms in export order, "item: reason". */
+    char skipped[FUSION_MZM_EXPORT_SKIP_CAPACITY][160];
+} FusionMzmExportSummary;
+
+/* Writes the runtime-room export of scripts/mzm_runtime_room.py --all into
+ * OUTPUT (the runtime rooms folder, created when missing): each exportable
+ * room's <area>_<NNN>/ text layers, room.tsv and background.bmp, the used
+ * tilesets/tileset_NN.bmp sheets, blocks.tsv and power_bomb.tsv on the first
+ * room, then export_index.tsv, every file atomically and never through a
+ * symlink. Rooms are skipped, with the reference's reason, without an RLE
+ * BG1, without tile graphics under BG1 or in an area whose name is not
+ * purely alphabetic (the hatch-event parser's rule). */
+bool fusion_mzm_export_runtime_rooms(
+    const FusionRom *rom, const uint8_t *elf, size_t elf_size,
+    const char *output, FusionMzmExportSummary *summary,
+    char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(
     FusionMzmRuntimeRoomPayload *payload);
 

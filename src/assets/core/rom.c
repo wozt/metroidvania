@@ -2,6 +2,7 @@
 #include "fusion/assets/rom.h"
 
 #include "sha1.h"
+#include "sha256.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -33,6 +34,19 @@ const FusionAssetGameSpec *fusion_asset_game_from_id(const char *id) {
     for (int i = 0; i < FUSION_ASSET_GAME_COUNT; ++i)
         if (!strcmp(id, specs[i].id)) return &specs[i];
     return NULL;
+}
+
+bool fusion_sha256_hex(const uint8_t *data, size_t size, char out[65]) {
+    static const char hex[] = "0123456789abcdef";
+    if ((!data && size != 0) || !out) return false;
+    uint8_t digest[32];
+    fusion_sha256_digest(data, size, digest);
+    for (size_t i = 0; i < sizeof digest; ++i) {
+        out[i * 2] = hex[digest[i] >> 4];
+        out[i * 2 + 1] = hex[digest[i] & 0x0F];
+    }
+    out[64] = '\0';
+    return true;
 }
 
 bool fusion_rom_sha1_hex(const uint8_t *data, size_t size, char out[41]) {

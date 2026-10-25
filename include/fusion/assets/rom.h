@@ -36,6 +36,8 @@ const FusionAssetGameSpec *fusion_asset_game_from_id(const char *id);
 /* Returns the lower-case SHA-1 digest of a memory range as 40 hexadecimal
  * characters plus a terminating NUL. */
 bool fusion_rom_sha1_hex(const uint8_t *data, size_t size, char out[41]);
+/* Lowercase SHA-256, as the export integrity indexes record it. */
+bool fusion_sha256_hex(const uint8_t *data, size_t size, char out[65]);
 
 /* Opens, bounds-checks and verifies one supported ROM. The input file is
  * never modified and its private bytes are released by fusion_rom_close. */

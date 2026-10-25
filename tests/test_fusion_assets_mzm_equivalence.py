@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -531,6 +532,64 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             "\t".join(["summary", str(len(expected)), str(skipped),
                        *(str(totals[key]) for key in ("cells", *keys, "bytes"))]),
         )
+
+    def test_native_room_export_matches_python_export(self):
+        """--mzm-export-rooms writes the tree `mzm_runtime_room --all` writes."""
+        with tempfile.TemporaryDirectory() as directory:
+            python_root = Path(directory) / "python"
+            native_output = Path(directory) / "native"
+            python_root.mkdir()
+            reference = subprocess.run(
+                [sys.executable, "-m", "scripts.mzm_runtime_room",
+                 "--root", str(python_root), "--all"],
+                cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(reference.returncode, 0, reference.stderr)
+            native = subprocess.run(
+                [str(BINARY), "--mzm-export-rooms", str(ROM), str(ELF),
+                 str(native_output)],
+                cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(native.returncode, 0, native.stderr)
+            self.assertEqual(native.stdout, reference.stdout)
+            python_output = python_root / mzm_runtime_room.RUNTIME_ROOMS
+
+            def tree(root):
+                return {path.relative_to(root).as_posix(): path.read_bytes()
+                        for path in root.rglob("*") if path.is_file()}
+
+            expected = tree(python_output)
+            actual = tree(native_output)
+            self.assertEqual(sorted(actual), sorted(expected))
+            for name, data in expected.items():
+                self.assertEqual(actual[name], data, name)
+            # A rerun rewrites the same bytes; no temporary file is left.
+            rerun = subprocess.run(
+                [str(BINARY), "--mzm-export-rooms", str(ROM), str(ELF),
+                 str(native_output)],
+                cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(rerun.returncode, 0, rerun.stderr)
+            self.assertEqual(tree(native_output), expected)
+            self.assertFalse(list(native_output.rglob("*.tmp")))
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX symlinks")
+    def test_native_room_export_refuses_symlinks_and_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "target"
+            target.mkdir()
+            link = Path(directory) / "link"
+            link.symlink_to(target, target_is_directory=True)
+            blocked = Path(directory) / "file"
+            blocked.write_text("x", encoding="utf-8")
+            for output in (link, blocked):
+                result = subprocess.run(
+                    [str(BINARY), "--mzm-export-rooms", str(ROM), str(ELF),
+                     str(output)],
+                    cwd=ROOT, text=True, capture_output=True, check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(list(target.iterdir()))
 
     def test_export_backgrounds_match_python_reference(self):
         """background.bmp exactly as produce() renders and writes it."""

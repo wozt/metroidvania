@@ -285,8 +285,10 @@ BMP32 files too, and the shared `blocks.tsv` and `power_bomb.tsv` tables are
 serialized from the bounded `block_data.c` and haze objects. The export's
 `background.bmp`, which the runtime displays, keeps the older diagnostic
 renderer (tileset metatiles only, inferred character base) and is
-reproduced exactly by `fusion_mzm_render_export_background`. Private output
-writes remain Python-owned, and these native extractors are not yet
+reproduced exactly by `fusion_mzm_render_export_background`.
+`fusion_mzm_export_runtime_rooms` (`src/assets/mzm/export.c`) writes the
+complete private export and its SHA-256 `export_index.tsv` atomically; the
+rebuild task still runs the Python exporter, and these native extractors are not yet
 registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,

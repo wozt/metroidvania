@@ -34,6 +34,7 @@ add_library(fusion_assets STATIC
     src/assets/aos/world.c
     src/assets/core/output.c
     src/assets/core/sha1.c
+    src/assets/core/sha256.c
     src/assets/core/rom.c
     src/assets/gba/decompress.c
     src/assets/gba/header.c
@@ -41,6 +42,7 @@ add_library(fusion_assets STATIC
     src/assets/mzm/rooms.c
     src/assets/mzm/runtime_room.c
     src/assets/mzm/primary_sprites.c
+    src/assets/mzm/export.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)

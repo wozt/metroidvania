@@ -73,7 +73,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | `scripts/mzm_rom_bank.py` | `src/assets/mzm/rom_bank.c` | native extractor complete, orchestration pending | synthetic malformed-ELF, bounds and serialization fixtures; exact verified-input comparison of every filtered symbol plus byte-for-byte comparison of `MZMROM01` and the manifest |
 | `scripts/mzm_room_render.py` (GBA LZ77/RLE inputs) | `src/assets/gba/decompress.c` | primitive only | compressed bytes, output length and malformed-stream comparison |
 | GBA cartridge header fields (shared input contract) | `src/assets/gba/header.c`, `fusion_importer --header`, `fusion_rom_read_gba_header` | metadata reader complete | Python-generated synthetic header, native CLI field comparison, verified local ROM identity, fixed marker and complement checksum |
-| `scripts/mzm_runtime_room.py`, `scripts/mzm_bg_layers.py` | `src/assets/mzm/rooms.c`, `src/assets/mzm/runtime_room.c` | room entries, Clipdata, BG0-BG3 payloads, standard tileset video memory, metatile tables, RGBA layer rendering and diagnostic BG1/BG2 composition complete; image and room serialization pending | synthetic table, pointer, property, custom-RLE, LZ77, VRAM-placement, palette, source-size, zero-fill, common-metatile, block-selection, screen-order, flip, transparency, foreground selection and visibility-mask bounds; exact comparison of every descriptor field, all 331 Clipdata maps, 784 RLE background layers and 331 text tilemaps totaling 1,443,436 cells, all 79 complete 64-KiB VRAM and 512-byte palette snapshots, 97,328 complete metatile records, 1,115 complete RGBA layers totaling 253,914,112 pixels and 301 exact BG1/BG2 RGB/mask composites totaling 83,362,816 pixels; 30 rooms lack one or both composite inputs, while animated updates, Mother Ship common tiles, hardware composition and runtime-room serialization remain pending |
+| `scripts/mzm_runtime_room.py`, `scripts/mzm_bg_layers.py` | `src/assets/mzm/rooms.c`, `src/assets/mzm/runtime_room.c` | room entries, Clipdata, BG0-BG3 payloads, standard tileset video memory, metatile tables, RGBA layer rendering, diagnostic BG1/BG2 selection and BMP/mask serialization complete; room serialization and private writes pending | synthetic table, pointer, property, custom-RLE, LZ77, VRAM-placement, palette, source-size, zero-fill, common-metatile, block-selection, screen-order, flip, transparency, foreground selection, BG1-only fallback, BMP and visibility-mask bounds; exact comparison of every descriptor field, all 331 Clipdata maps, 784 RLE background layers and 331 text tilemaps totaling 1,443,436 cells, all 79 complete 64-KiB VRAM and 512-byte palette snapshots, 97,328 complete metatile records, 1,115 complete RGBA layers totaling 253,914,112 pixels and 330 exact background selections totaling 88,427,520 pixels with byte-identical 265,300,380-byte BMP and 88,427,520-byte mask representations; one room lacks BG1, while animated updates, Mother Ship common tiles, hardware composition and runtime-room serialization remain pending |
 | `scripts/mzm_samus_pipeline.py`, `mzm_sprites.py` | `src/assets/mzm/sprites.c` | not started | frame, palette, OAM and duration comparison |
 | `scripts/mzm_audio.py` | `src/assets/mzm/audio.c` | not started | table and sample comparison; audio remains outside this lot |
 | `scripts/import_aos_world.py` | `src/assets/aos/world.c`, `src/assets/aos/catalog.c` | native extractor complete, orchestration pending | synthetic bounds and serialization fixtures; complete semantic comparison of `MV_AOS_WORLD_2`, byte comparison of `rooms.tsv`, deterministic atomic rewrites and all focused verified-ROM metadata comparisons |
@@ -86,11 +86,12 @@ parity percentages for either original reconstruction.
 
 ## Contracts and sequencing
 
-The next migration layer should serialize Zero Mission's native composite or
-BG1-only background selection and visibility mask, then continue toward its
-room package. Aria's composite image and `AOSROOM-NATIVE` v4 serialization are
-native; private output orchestration remains Python-owned. Zero Mission still
-needs image output, doors, sprites and runtime-room serialization. The
+The next migration layer should begin Zero Mission's runtime-room package with
+the room header and Clipdata rows, then add its doors, hatches, background
+records and sprites. Aria's composite image and `AOSROOM-NATIVE` v4
+serialization are native; private output orchestration remains Python-owned.
+Zero Mission's selected background image and visibility mask are now
+byte-identical in C, but private writes remain Python-owned. The
 completed Zero Mission ROM bank and Aria world catalog are ready for later
 registration in the native task graph. The header extractor is
 intentionally diagnostic: it reads a

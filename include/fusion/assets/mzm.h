@@ -172,6 +172,13 @@ typedef struct {
     size_t unresolved_count;
 } FusionMzmCompositeBackground;
 
+typedef struct {
+    uint8_t *bitmap;
+    size_t bitmap_size;
+    uint8_t *visibility;
+    size_t visibility_size;
+} FusionMzmSerializedBackground;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -238,7 +245,18 @@ bool fusion_mzm_compose_bg12(
     const FusionMzmRenderedBackground *bg2,
     FusionMzmCompositeBackground *composite,
     char *error, size_t error_size);
+bool fusion_mzm_select_bg12(
+    const FusionMzmRenderedBackground *bg1,
+    const FusionMzmRenderedBackground *bg2,
+    FusionMzmCompositeBackground *composite,
+    char *error, size_t error_size);
 void fusion_mzm_free_composite_background(
     FusionMzmCompositeBackground *composite);
+bool fusion_mzm_serialize_background(
+    const FusionMzmCompositeBackground *composite,
+    FusionMzmSerializedBackground *serialized,
+    char *error, size_t error_size);
+void fusion_mzm_free_serialized_background(
+    FusionMzmSerializedBackground *serialized);
 
 #endif /* FUSION_ASSETS_MZM_H */

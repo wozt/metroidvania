@@ -1798,9 +1798,11 @@ static int inspect_mzm_background_composites(const char *rom_path,
         free(elf);
         return 1;
     }
-    size_t composite_count = 0, missing_count = 0, mismatch_count = 0;
+    size_t selection_count = 0, missing_bg1_count = 0;
+    size_t bg12_count = 0, bg1_only_count = 0, mismatch_count = 0;
     size_t total_pixels = 0, total_bg1 = 0, total_bg2 = 0;
-    size_t total_unresolved = 0;
+    size_t total_unresolved = 0, total_bitmap_bytes = 0;
+    size_t total_mask_bytes = 0;
     for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
         const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
         for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
@@ -1833,20 +1835,18 @@ static int inspect_mzm_background_composites(const char *rom_path,
                                  bg1->status == FUSION_MZM_BACKGROUND_TEXT;
             bool bg2_supported = bg2->status == FUSION_MZM_BACKGROUND_RLE ||
                                  bg2->status == FUSION_MZM_BACKGROUND_TEXT;
-            if (!bg1_supported || !bg2_supported) {
-                printf("skipped\t%s\t%zu\tmissing\t%s\t%s\n",
+            if (!bg1_supported) {
+                printf("skipped\t%s\t%zu\tmissing-bg1\t%s\t%s\n",
                        spec->id, room,
                        mzm_background_status_name(bg1->status),
                        mzm_background_status_name(bg2->status));
-                ++missing_count;
+                ++missing_bg1_count;
                 fusion_mzm_free_room_backgrounds(&backgrounds);
                 continue;
             }
             FusionMzmRenderedBackground rendered_bg1 = {0};
             FusionMzmRenderedBackground rendered_bg2 = {0};
             if (!render_mzm_background(bg1, metatiles, memory, &rendered_bg1,
-                                       error, sizeof error) ||
-                !render_mzm_background(bg2, metatiles, memory, &rendered_bg2,
                                        error, sizeof error)) {
                 fprintf(stderr,
                         "mzm-background-composites: cannot render %s %zu: %s\n",
@@ -1861,21 +1861,34 @@ static int inspect_mzm_background_composites(const char *rom_path,
                 free(elf);
                 return 1;
             }
-            if (rendered_bg1.width_pixels != rendered_bg2.width_pixels ||
-                rendered_bg1.height_pixels != rendered_bg2.height_pixels) {
-                printf("skipped\t%s\t%zu\tdimensions\t%zu\t%zu\t%zu\t%zu\n",
-                       spec->id, room, rendered_bg1.width_pixels,
-                       rendered_bg1.height_pixels, rendered_bg2.width_pixels,
-                       rendered_bg2.height_pixels);
-                ++mismatch_count;
-                fusion_mzm_free_rendered_background(&rendered_bg1);
-                fusion_mzm_free_rendered_background(&rendered_bg2);
-                fusion_mzm_free_room_backgrounds(&backgrounds);
-                continue;
+            bool use_bg2 = false;
+            if (bg2_supported) {
+                if (!render_mzm_background(bg2, metatiles, memory,
+                                           &rendered_bg2,
+                                           error, sizeof error)) {
+                    fprintf(stderr,
+                            "mzm-background-composites: cannot render %s %zu BG2: %s\n",
+                            spec->id, room, error);
+                    fusion_mzm_free_rendered_background(&rendered_bg1);
+                    fusion_mzm_free_room_backgrounds(&backgrounds);
+                    free(memory);
+                    free(metatiles);
+                    fusion_mzm_free_symbols(&symbols);
+                    fusion_rom_close(&rom);
+                    free(elf);
+                    return 1;
+                }
+                if (rendered_bg1.width_pixels == rendered_bg2.width_pixels &&
+                    rendered_bg1.height_pixels == rendered_bg2.height_pixels) {
+                    use_bg2 = true;
+                } else {
+                    ++mismatch_count;
+                    fusion_mzm_free_rendered_background(&rendered_bg2);
+                }
             }
             FusionMzmCompositeBackground composite;
-            if (!fusion_mzm_compose_bg12(
-                    &rendered_bg1, &rendered_bg2, &composite,
+            if (!fusion_mzm_select_bg12(
+                    &rendered_bg1, use_bg2 ? &rendered_bg2 : NULL, &composite,
                     error, sizeof error)) {
                 fprintf(stderr,
                         "mzm-background-composites: cannot compose %s %zu: %s\n",
@@ -1890,15 +1903,12 @@ static int inspect_mzm_background_composites(const char *rom_path,
                 free(elf);
                 return 1;
             }
-            char rgb_digest[41], visibility_digest[41];
-            if (!fusion_rom_sha1_hex(composite.rgb,
-                                     composite.pixel_count * 3, rgb_digest) ||
-                !fusion_rom_sha1_hex(composite.visibility,
-                                     composite.pixel_count,
-                                     visibility_digest)) {
+            FusionMzmSerializedBackground serialized;
+            if (!fusion_mzm_serialize_background(
+                    &composite, &serialized, error, sizeof error)) {
                 fprintf(stderr,
-                        "mzm-background-composites: cannot hash %s %zu\n",
-                        spec->id, room);
+                        "mzm-background-composites: cannot serialize %s %zu: %s\n",
+                        spec->id, room, error);
                 fusion_mzm_free_composite_background(&composite);
                 fusion_mzm_free_rendered_background(&rendered_bg1);
                 fusion_mzm_free_rendered_background(&rendered_bg2);
@@ -1910,25 +1920,59 @@ static int inspect_mzm_background_composites(const char *rom_path,
                 free(elf);
                 return 1;
             }
-            printf("composite\t%s\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\t%s\n",
-                   spec->id, room, composite.width_pixels,
+            char rgb_digest[41], visibility_digest[41], bitmap_digest[41];
+            if (!fusion_rom_sha1_hex(composite.rgb,
+                                     composite.pixel_count * 3, rgb_digest) ||
+                !fusion_rom_sha1_hex(serialized.visibility,
+                                     serialized.visibility_size,
+                                     visibility_digest) ||
+                !fusion_rom_sha1_hex(serialized.bitmap,
+                                     serialized.bitmap_size,
+                                     bitmap_digest)) {
+                fprintf(stderr,
+                        "mzm-background-composites: cannot hash %s %zu\n",
+                        spec->id, room);
+                fusion_mzm_free_serialized_background(&serialized);
+                fusion_mzm_free_composite_background(&composite);
+                fusion_mzm_free_rendered_background(&rendered_bg1);
+                fusion_mzm_free_rendered_background(&rendered_bg2);
+                fusion_mzm_free_room_backgrounds(&backgrounds);
+                free(memory);
+                free(metatiles);
+                fusion_mzm_free_symbols(&symbols);
+                fusion_rom_close(&rom);
+                free(elf);
+                return 1;
+            }
+            printf("background\t%s\t%zu\t%s\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t"
+                   "%s\t%zu\t%s\t%zu\t%s\n",
+                   spec->id, room, use_bg2 ? "bg12" : "bg1",
+                   composite.width_pixels,
                    composite.height_pixels, composite.pixel_count,
                    composite.bg1_visible_count, composite.bg2_visible_count,
-                   composite.unresolved_count, rgb_digest, visibility_digest);
-            ++composite_count;
+                   composite.unresolved_count, rgb_digest,
+                   serialized.bitmap_size, bitmap_digest,
+                   serialized.visibility_size, visibility_digest);
+            ++selection_count;
+            if (use_bg2) ++bg12_count;
+            else ++bg1_only_count;
             total_pixels += composite.pixel_count;
             total_bg1 += composite.bg1_visible_count;
             total_bg2 += composite.bg2_visible_count;
             total_unresolved += composite.unresolved_count;
+            total_bitmap_bytes += serialized.bitmap_size;
+            total_mask_bytes += serialized.visibility_size;
+            fusion_mzm_free_serialized_background(&serialized);
             fusion_mzm_free_composite_background(&composite);
             fusion_mzm_free_rendered_background(&rendered_bg1);
             fusion_mzm_free_rendered_background(&rendered_bg2);
             fusion_mzm_free_room_backgrounds(&backgrounds);
         }
     }
-    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
-           composite_count, missing_count, mismatch_count, total_pixels,
-           total_bg1, total_bg2, total_unresolved);
+    printf("summary\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\n",
+           selection_count, missing_bg1_count, bg12_count, bg1_only_count,
+           mismatch_count, total_pixels, total_bg1, total_bg2,
+           total_unresolved, total_bitmap_bytes, total_mask_bytes);
     free(memory);
     free(metatiles);
     fusion_mzm_free_symbols(&symbols);

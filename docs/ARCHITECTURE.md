@@ -261,8 +261,10 @@ four-cell common blocks are appended. It renders RLE block layers from those
 tables on character base 1 and LZ77 text layers on character base 2 with native
 4-bpp palette, flip and transparency semantics. Equal-sized decoded BG1/BG2
 pairs are composed natively using the intentionally diagnostic BG1-over-BG2
-order, with a separate visibility mask for unresolved transparent pixels.
-Hardware priority/blending, bitmap output, doors, sprites and runtime-room
+order; rooms without BG2 retain their supported BG1. Both paths serialize to
+the byte-identical private 24-bit BMP and a separate raw visibility mask that
+distinguishes native black from unresolved transparent pixels. Hardware
+priority/blending, private output writes, doors, sprites and runtime-room
 serialization remain Python-owned, and these native extractors are not yet
 registered in the global native task graph.
 

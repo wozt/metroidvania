@@ -199,10 +199,12 @@ def render_block_background(width: int, height: int, blocks: tuple[int, ...],
     return bytes(rgba)
 
 
-def compose_bg12(bg1_rgba: bytes, bg2_rgba: bytes) -> tuple[bytes, bytes, dict]:
-    """Build the diagnostic BG1-over-BG2 composite from native RGBA layers."""
-    if not bg1_rgba or len(bg1_rgba) != len(bg2_rgba) or len(bg1_rgba) % 4:
-        raise ValueError("invalid Zero Mission BG1/BG2 RGBA layers")
+def select_bg12(bg1_rgba: bytes,
+                bg2_rgba: bytes | None = None) -> tuple[bytes, bytes, dict]:
+    """Select BG1 over an optional BG2 while preserving pixel visibility."""
+    if (not bg1_rgba or len(bg1_rgba) % 4 or
+            (bg2_rgba is not None and len(bg1_rgba) != len(bg2_rgba))):
+        raise ValueError("invalid Zero Mission background-selection layers")
     pixels = len(bg1_rgba) // 4
     rgb = bytearray(pixels * 3)
     visibility = bytearray(pixels)
@@ -214,7 +216,7 @@ def compose_bg12(bg1_rgba: bytes, bg2_rgba: bytes) -> tuple[bytes, bytes, dict]:
             rgb[destination:destination + 3] = bg1_rgba[source:source + 3]
             visibility[pixel] = 1
             front += 1
-        elif bg2_rgba[source + 3]:
+        elif bg2_rgba is not None and bg2_rgba[source + 3]:
             rgb[destination:destination + 3] = bg2_rgba[source:source + 3]
             visibility[pixel] = 1
             behind += 1
@@ -225,6 +227,13 @@ def compose_bg12(bg1_rgba: bytes, bg2_rgba: bytes) -> tuple[bytes, bytes, dict]:
         "bg2_visible_pixels": behind,
         "unresolved_pixels": unresolved,
     }
+
+
+def compose_bg12(bg1_rgba: bytes, bg2_rgba: bytes) -> tuple[bytes, bytes, dict]:
+    """Build the diagnostic BG1-over-BG2 composite from native RGBA layers."""
+    if bg2_rgba is None:
+        raise ValueError("invalid Zero Mission BG1/BG2 RGBA layers")
+    return select_bg12(bg1_rgba, bg2_rgba)
 
 
 def text_background(symbol: str, tileset: int) -> tuple[int, int, int, bytes]:

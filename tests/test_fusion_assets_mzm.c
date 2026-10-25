@@ -442,9 +442,42 @@ static void test_tileset_video_memory(void) {
     assert(!memcmp(composite.rgb,
                    (uint8_t[]){255, 0, 0, 0, 255, 0, 0, 0, 0}, 9));
     assert(!memcmp(composite.visibility, (uint8_t[]){1, 1, 0}, 3));
+    FusionMzmSerializedBackground serialized;
+    assert(fusion_mzm_serialize_background(
+        &composite, &serialized, error, sizeof error));
+    assert(serialized.bitmap_size == 66 &&
+           serialized.visibility_size == 3 &&
+           serialized.bitmap[0] == 'B' && serialized.bitmap[1] == 'M' &&
+           serialized.bitmap[2] == 66 && serialized.bitmap[10] == 54 &&
+           serialized.bitmap[14] == 40 && serialized.bitmap[18] == 3 &&
+           serialized.bitmap[22] == 1 && serialized.bitmap[26] == 1 &&
+           serialized.bitmap[28] == 24);
+    assert(!memcmp(serialized.bitmap + 54,
+                   (uint8_t[]){0, 0, 255, 0, 255, 0, 0, 0, 0, 0, 0, 0},
+                   12));
+    assert(!memcmp(serialized.visibility, (uint8_t[]){1, 1, 0}, 3));
+    composite.visibility[0] = 2;
+    FusionMzmSerializedBackground rejected;
+    assert(!fusion_mzm_serialize_background(
+        &composite, &rejected, error, sizeof error));
+    composite.visibility[0] = 1;
+    fusion_mzm_free_serialized_background(&serialized);
+    assert(serialized.bitmap == NULL && serialized.visibility == NULL &&
+           serialized.bitmap_size == 0 && serialized.visibility_size == 0);
     fusion_mzm_free_composite_background(&composite);
     assert(composite.rgb == NULL && composite.visibility == NULL &&
            composite.pixel_count == 0);
+    assert(fusion_mzm_select_bg12(
+        &bg1, NULL, &composite, error, sizeof error));
+    assert(composite.bg1_visible_count == 1 &&
+           composite.bg2_visible_count == 0 &&
+           composite.unresolved_count == 2);
+    assert(!memcmp(composite.rgb,
+                   (uint8_t[]){255, 0, 0, 0, 0, 0, 0, 0, 0}, 9));
+    assert(!memcmp(composite.visibility, (uint8_t[]){1, 0, 0}, 3));
+    fusion_mzm_free_composite_background(&composite);
+    assert(!fusion_mzm_compose_bg12(
+        &bg1, NULL, &composite, error, sizeof error));
     bg2.width_pixels = 2;
     assert(!fusion_mzm_compose_bg12(
         &bg1, &bg2, &composite, error, sizeof error));

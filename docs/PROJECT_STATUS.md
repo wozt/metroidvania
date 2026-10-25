@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0511 - Native Zero Mission background serialization
+
+- Added bounded C11 selection of the validated Zero Mission BG1-over-BG2
+  diagnostic composite with an explicit BG1-only fallback when BG2 is absent
+  or has incompatible dimensions.
+- Added exact private-output serialization: a bottom-up 24-bit BMP with BGR
+  channels and aligned rows, plus an owned raw one-byte-per-pixel visibility
+  mask that preserves native black separately from unresolved pixels.
+- Added synthetic BG1-only selection, BMP header/channel/padding, mask-copy,
+  ownership and malformed-mask coverage. `--mzm-background-composites` now
+  compares the complete RGB, BMP and visibility bytes for every selected room.
+- All 330 rooms with a supported BG1 match Python byte for byte: 301 select
+  BG1 over BG2 and 29 use BG1 alone. Their 88,427,520 pixels produce
+  265,300,380 BMP bytes and 88,427,520 mask bytes; 55,361,565 pixels come from
+  BG1, 3,646,119 from BG2 and 29,419,836 remain unresolved. One room has no
+  supported BG1, and no decoded BG2 required a dimension fallback.
+- This remains a static diagnostic background, not hardware composition.
+  Animated replacements, the Mother Ship common-tile variant, private file
+  writes and runtime-room serialization remain Python-owned, so gameplay and
+  migration statuses do not change.
+- Next: begin native Zero Mission runtime-room package serialization with the
+  room header and Clipdata rows, then add doors, hatches, background records
+  and sprites without touching audio.
+
 ## Patch 0510 - Native Zero Mission BG1/BG2 composites
 
 - Added bounded C11 composition of the already validated Zero Mission BG1 and

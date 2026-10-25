@@ -33,6 +33,18 @@ static uint32_t read_u32(const uint8_t *data) {
            (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
 }
 
+static void write_u16(uint8_t *data, uint16_t value) {
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8);
+}
+
+static void write_u32(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8);
+    data[2] = (uint8_t)(value >> 16);
+    data[3] = (uint8_t)(value >> 24);
+}
+
 static const FusionMzmRomSymbol *find_symbol(
     const FusionMzmRomSymbolTable *symbols, const char *name) {
     if (!symbols || (symbols->count && !symbols->entries)) return NULL;
@@ -420,24 +432,39 @@ bool fusion_mzm_compose_bg12(
     const FusionMzmRenderedBackground *bg2,
     FusionMzmCompositeBackground *composite,
     char *error, size_t error_size) {
+    if (!bg2) {
+        if (composite) *composite = (FusionMzmCompositeBackground){0};
+        set_error(error, error_size,
+                  "invalid Zero Mission BG1/BG2 composite layers");
+        return false;
+    }
+    return fusion_mzm_select_bg12(bg1, bg2, composite, error, error_size);
+}
+
+bool fusion_mzm_select_bg12(
+    const FusionMzmRenderedBackground *bg1,
+    const FusionMzmRenderedBackground *bg2,
+    FusionMzmCompositeBackground *composite,
+    char *error, size_t error_size) {
     if (!composite) {
         set_error(error, error_size,
                   "invalid Zero Mission background-composite output");
         return false;
     }
     *composite = (FusionMzmCompositeBackground){0};
-    if (!bg1 || !bg2 || !bg1->rgba || !bg2->rgba ||
+    if (!bg1 || !bg1->rgba ||
         bg1->width_pixels == 0 || bg1->height_pixels == 0 ||
-        bg1->width_pixels != bg2->width_pixels ||
-        bg1->height_pixels != bg2->height_pixels ||
         bg1->width_pixels >
             FUSION_MZM_RENDER_PIXEL_CAPACITY / bg1->height_pixels ||
         bg1->pixel_count != bg1->width_pixels * bg1->height_pixels ||
-        bg2->pixel_count != bg1->pixel_count ||
         bg1->pixel_count > FUSION_MZM_RENDER_PIXEL_CAPACITY ||
-        bg1->pixel_count > SIZE_MAX / 3) {
+        bg1->pixel_count > SIZE_MAX / 3 ||
+        (bg2 && (!bg2->rgba ||
+                 bg1->width_pixels != bg2->width_pixels ||
+                 bg1->height_pixels != bg2->height_pixels ||
+                 bg2->pixel_count != bg1->pixel_count))) {
         set_error(error, error_size,
-                  "invalid Zero Mission BG1/BG2 composite layers");
+                  "invalid Zero Mission background-selection layers");
         return false;
     }
     uint8_t *rgb = calloc(bg1->pixel_count, 3);
@@ -457,7 +484,7 @@ bool fusion_mzm_compose_bg12(
             memcpy(rgb + rgb_offset, bg1->rgba + rgba_offset, 3);
             visibility[pixel] = 1;
             ++bg1_visible;
-        } else if (bg2->rgba[rgba_offset + 3] != 0) {
+        } else if (bg2 && bg2->rgba[rgba_offset + 3] != 0) {
             memcpy(rgb + rgb_offset, bg2->rgba + rgba_offset, 3);
             visibility[pixel] = 1;
             ++bg2_visible;
@@ -468,6 +495,96 @@ bool fusion_mzm_compose_bg12(
     *composite = (FusionMzmCompositeBackground){
         bg1->width_pixels, bg1->height_pixels, rgb, visibility,
         bg1->pixel_count, bg1_visible, bg2_visible, unresolved
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+void fusion_mzm_free_serialized_background(
+    FusionMzmSerializedBackground *serialized) {
+    if (!serialized) return;
+    free(serialized->bitmap);
+    free(serialized->visibility);
+    *serialized = (FusionMzmSerializedBackground){0};
+}
+
+bool fusion_mzm_serialize_background(
+    const FusionMzmCompositeBackground *composite,
+    FusionMzmSerializedBackground *serialized,
+    char *error, size_t error_size) {
+    enum { BMP_HEADER_SIZE = 54 };
+    if (!serialized) {
+        set_error(error, error_size,
+                  "invalid Zero Mission serialized-background output");
+        return false;
+    }
+    *serialized = (FusionMzmSerializedBackground){0};
+    if (!composite || !composite->rgb || !composite->visibility ||
+        composite->width_pixels == 0 || composite->height_pixels == 0 ||
+        composite->width_pixels > 4096 || composite->height_pixels > 4096 ||
+        composite->width_pixels > SIZE_MAX / composite->height_pixels ||
+        composite->pixel_count !=
+            composite->width_pixels * composite->height_pixels ||
+        composite->width_pixels > (SIZE_MAX - 3) / 3) {
+        set_error(error, error_size,
+                  "invalid Zero Mission serialized background");
+        return false;
+    }
+    size_t row_bytes = composite->width_pixels * 3;
+    size_t pitch = (row_bytes + 3) & ~(size_t)3;
+    if (composite->height_pixels > (SIZE_MAX - BMP_HEADER_SIZE) / pitch) {
+        set_error(error, error_size,
+                  "Zero Mission background bitmap exceeds the size bound");
+        return false;
+    }
+    size_t pixel_bytes = pitch * composite->height_pixels;
+    size_t bitmap_size = BMP_HEADER_SIZE + pixel_bytes;
+    if (bitmap_size > UINT32_MAX || pixel_bytes > UINT32_MAX ||
+        composite->width_pixels > INT32_MAX ||
+        composite->height_pixels > INT32_MAX) {
+        set_error(error, error_size,
+                  "Zero Mission background bitmap exceeds the BMP format bound");
+        return false;
+    }
+    for (size_t pixel = 0; pixel < composite->pixel_count; ++pixel) {
+        if (composite->visibility[pixel] > 1) {
+            set_error(error, error_size,
+                      "invalid Zero Mission background visibility mask");
+            return false;
+        }
+    }
+    uint8_t *bitmap = calloc(bitmap_size, 1);
+    uint8_t *visibility = malloc(composite->pixel_count);
+    if (!bitmap || !visibility) {
+        free(bitmap);
+        free(visibility);
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission serialized background");
+        return false;
+    }
+    bitmap[0] = 'B';
+    bitmap[1] = 'M';
+    write_u32(bitmap + 2, (uint32_t)bitmap_size);
+    write_u32(bitmap + 10, BMP_HEADER_SIZE);
+    write_u32(bitmap + 14, 40);
+    write_u32(bitmap + 18, (uint32_t)composite->width_pixels);
+    write_u32(bitmap + 22, (uint32_t)composite->height_pixels);
+    write_u16(bitmap + 26, 1);
+    write_u16(bitmap + 28, 24);
+    write_u32(bitmap + 34, (uint32_t)pixel_bytes);
+    for (size_t y = 0; y < composite->height_pixels; ++y) {
+        const uint8_t *source = composite->rgb + y * row_bytes;
+        uint8_t *destination = bitmap + BMP_HEADER_SIZE +
+            (composite->height_pixels - y - 1) * pitch;
+        for (size_t x = 0; x < composite->width_pixels; ++x) {
+            destination[x * 3] = source[x * 3 + 2];
+            destination[x * 3 + 1] = source[x * 3 + 1];
+            destination[x * 3 + 2] = source[x * 3];
+        }
+    }
+    memcpy(visibility, composite->visibility, composite->pixel_count);
+    *serialized = (FusionMzmSerializedBackground){
+        bitmap, bitmap_size, visibility, composite->pixel_count
     };
     if (error && error_size > 0) error[0] = '\0';
     return true;

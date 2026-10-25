@@ -270,7 +270,10 @@ tables from bounded ELF objects and serializes the byte-identical
 `MVROOM-NATIVE` v1 header plus its `C`, `B` and `M` Clipdata core. It also
 decodes every production door table and `sAreaConnections`, resolving native
 same-area and cross-area destinations before serializing ordered `D`, `X` and
-location-banner `Y` records. Hatches, music, background records, sprites and
+location-banner `Y` records. It reads the hatch type, animation, tilemap,
+weakness and event-lock tables as well, derives room hatches from Clipdata and
+emits byte-identical `H/V/A/W/K/Q` records while retaining the distinction
+between hatch slots and door indices. Music, background records, sprites and
 complete runtime-room serialization remain Python-owned, and these native
 extractors are not yet registered in the global native task graph.
 

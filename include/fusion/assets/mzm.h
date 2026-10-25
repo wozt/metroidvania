@@ -22,6 +22,10 @@ enum {
     FUSION_MZM_DOOR_RECORD_SIZE = 12,
     FUSION_MZM_DOOR_CAPACITY = 256,
     FUSION_MZM_AREA_CONNECTION_CAPACITY = 32,
+    FUSION_MZM_HATCH_COUNT = 8,
+    FUSION_MZM_HATCH_ANIMATION_COUNT = 6,
+    FUSION_MZM_HATCH_LOCK_RECORD_SIZE = 8,
+    FUSION_MZM_HATCH_LOCK_CAPACITY = 32,
     FUSION_MZM_ROOM_BACKGROUND_COUNT = 4,
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
     FUSION_MZM_TILESET_COUNT = 79,
@@ -224,6 +228,27 @@ typedef struct {
 } FusionMzmDoorDirectory;
 
 typedef struct {
+    uint8_t room;
+    uint8_t event;
+    uint8_t type;
+    uint16_t hatch_mask;
+} FusionMzmHatchLockEvent;
+
+typedef struct {
+    FusionMzmHatchLockEvent *entries;
+    size_t count;
+} FusionMzmHatchLockList;
+
+typedef struct {
+    uint8_t types[FUSION_MZM_HATCH_COUNT];
+    uint8_t durations[FUSION_MZM_HATCH_ANIMATION_COUNT];
+    uint16_t tilemap_values[FUSION_MZM_HATCH_COUNT];
+    uint16_t weakness[FUSION_MZM_HATCH_COUNT];
+    uint16_t health[FUSION_MZM_HATCH_COUNT];
+    FusionMzmHatchLockList locks[FUSION_MZM_ROOM_AREA_COUNT];
+} FusionMzmHatchTables;
+
+typedef struct {
     uint8_t *data;
     size_t size;
     size_t clipdata_count;
@@ -232,6 +257,8 @@ typedef struct {
     size_t door_count;
     size_t exit_count;
     size_t location_count;
+    size_t hatch_count;
+    size_t hatch_lock_count;
 } FusionMzmRuntimeRoomPayload;
 
 /* Symbol names point into elf_data and remain valid only while that buffer is
@@ -322,6 +349,11 @@ bool fusion_mzm_read_door_directory(
     FusionMzmDoorDirectory *directory,
     char *error, size_t error_size);
 void fusion_mzm_free_door_directory(FusionMzmDoorDirectory *directory);
+bool fusion_mzm_read_hatch_tables(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmHatchTables *tables,
+    char *error, size_t error_size);
+void fusion_mzm_free_hatch_tables(FusionMzmHatchTables *tables);
 bool fusion_mzm_serialize_runtime_room_core(
     const char *area, size_t room, const FusionMzmRoomRleMap *clipdata,
     const FusionMzmClipdataTables *tables,
@@ -331,6 +363,13 @@ bool fusion_mzm_serialize_runtime_room_doors(
     size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
     const FusionMzmClipdataTables *tables,
     const FusionMzmDoorDirectory *doors,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size);
+bool fusion_mzm_serialize_runtime_room_hatches(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(

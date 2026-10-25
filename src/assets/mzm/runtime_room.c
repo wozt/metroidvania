@@ -230,6 +230,112 @@ bool fusion_mzm_read_door_directory(
     return true;
 }
 
+void fusion_mzm_free_hatch_tables(FusionMzmHatchTables *tables) {
+    if (!tables) return;
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area)
+        free(tables->locks[area].entries);
+    *tables = (FusionMzmHatchTables){0};
+}
+
+bool fusion_mzm_read_hatch_tables(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmHatchTables *tables,
+    char *error, size_t error_size) {
+    static const char *lock_symbols[FUSION_MZM_ROOM_AREA_COUNT] = {
+        "sHatchLockEventsBrinstar", "sHatchLockEventsKraid", NULL,
+        NULL, NULL, "sHatchLockEventsCrateria",
+        "sHatchLockEventsChozodia", NULL, NULL, NULL, NULL
+    };
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID ||
+        !symbols || !tables) {
+        set_error(error, error_size,
+                  "invalid Zero Mission hatch-table request");
+        return false;
+    }
+    *tables = (FusionMzmHatchTables){0};
+    const FusionMzmRomSymbol *types = find_symbol(symbols, "sHatchTypeTable");
+    const FusionMzmRomSymbol *durations =
+        find_symbol(symbols, "sHatchesAnimationDurationCounter");
+    const FusionMzmRomSymbol *tilemaps =
+        find_symbol(symbols, "sHatchesTilemapValues");
+    const FusionMzmRomSymbol *behaviors =
+        find_symbol(symbols, "sHatchBehaviors");
+    size_t type_offset, duration_offset, tilemap_offset, behavior_offset;
+    if (!types || types->size != FUSION_MZM_HATCH_COUNT ||
+        !durations ||
+        durations->size != FUSION_MZM_HATCH_ANIMATION_COUNT ||
+        !tilemaps || tilemaps->size != FUSION_MZM_HATCH_COUNT * 2 ||
+        !behaviors || behaviors->size != FUSION_MZM_HATCH_COUNT * 4 ||
+        !pointer_offset(rom, types->address, types->size, &type_offset) ||
+        !pointer_offset(rom, durations->address, durations->size,
+                        &duration_offset) ||
+        !pointer_offset(rom, tilemaps->address, tilemaps->size,
+                        &tilemap_offset) ||
+        !pointer_offset(rom, behaviors->address, behaviors->size,
+                        &behavior_offset)) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission hatch tables");
+        return false;
+    }
+    memcpy(tables->types, rom->data + type_offset, sizeof tables->types);
+    memcpy(tables->durations, rom->data + duration_offset,
+           sizeof tables->durations);
+    for (size_t index = 0; index < FUSION_MZM_HATCH_COUNT; ++index) {
+        if (tables->types[index] >= FUSION_MZM_HATCH_COUNT) {
+            set_error(error, error_size,
+                      "invalid Zero Mission hatch type mapping");
+            return false;
+        }
+        tables->tilemap_values[index] =
+            read_u16(rom->data + tilemap_offset + index * 2);
+        tables->weakness[index] =
+            read_u16(rom->data + behavior_offset + index * 4);
+        tables->health[index] =
+            read_u16(rom->data + behavior_offset + index * 4 + 2);
+    }
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        if (!lock_symbols[area]) continue;
+        const FusionMzmRomSymbol *symbol =
+            find_symbol(symbols, lock_symbols[area]);
+        size_t offset;
+        if (!symbol || symbol->size == 0 ||
+            symbol->size % FUSION_MZM_HATCH_LOCK_RECORD_SIZE != 0 ||
+            symbol->size / FUSION_MZM_HATCH_LOCK_RECORD_SIZE >
+                FUSION_MZM_HATCH_LOCK_CAPACITY ||
+            !pointer_offset(rom, symbol->address, symbol->size, &offset)) {
+            fusion_mzm_free_hatch_tables(tables);
+            set_error(error, error_size,
+                      "missing or invalid Zero Mission hatch lock table");
+            return false;
+        }
+        size_t count = symbol->size / FUSION_MZM_HATCH_LOCK_RECORD_SIZE;
+        FusionMzmHatchLockEvent *entries = calloc(count, sizeof *entries);
+        if (!entries) {
+            fusion_mzm_free_hatch_tables(tables);
+            set_error(error, error_size,
+                      "cannot allocate Zero Mission hatch lock table");
+            return false;
+        }
+        for (size_t index = 0; index < count; ++index) {
+            const uint8_t *data = rom->data + offset +
+                index * FUSION_MZM_HATCH_LOCK_RECORD_SIZE;
+            if (data[2] > 3) {
+                free(entries);
+                fusion_mzm_free_hatch_tables(tables);
+                set_error(error, error_size,
+                          "invalid Zero Mission hatch lock type");
+                return false;
+            }
+            entries[index] = (FusionMzmHatchLockEvent){
+                data[0], data[1], data[2], read_u16(data + 3)
+            };
+        }
+        tables->locks[area] = (FusionMzmHatchLockList){entries, count};
+    }
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 bool fusion_mzm_read_tileset_entry(const FusionRom *rom,
                                    const FusionMzmRomSymbolTable *symbols,
                                    size_t index, FusionMzmTilesetEntry *entry,
@@ -808,6 +914,14 @@ static const char *door_kind_name(uint8_t type) {
     return NULL;
 }
 
+static const char *hatch_type_name(uint8_t type) {
+    static const char *names[FUSION_MZM_HATCH_COUNT] = {
+        "none", "unused", "normal", "missile", "super_missile",
+        "power_bomb", "locked", "locked_navigation"
+    };
+    return type < FUSION_MZM_HATCH_COUNT ? names[type] : NULL;
+}
+
 static bool lowercase_area_id(const char *area, char output[32]) {
     size_t index = 0;
     for (; index < 31 && area[index]; ++index) {
@@ -825,6 +939,7 @@ static bool serialize_runtime_room(
     const FusionMzmRoomRleMap *clipdata,
     const FusionMzmClipdataTables *tables,
     const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     if (!payload) {
@@ -845,7 +960,12 @@ static bool serialize_runtime_room(
                    (doors->areas[area_index].count &&
                     !doors->areas[area_index].entries) ||
                    doors->connection_count >
-                       FUSION_MZM_AREA_CONNECTION_CAPACITY))) {
+                       FUSION_MZM_AREA_CONNECTION_CAPACITY)) ||
+        (hatches && (!doors || area_index >= FUSION_MZM_ROOM_AREA_COUNT ||
+                     hatches->locks[area_index].count >
+                         FUSION_MZM_HATCH_LOCK_CAPACITY ||
+                     (hatches->locks[area_index].count &&
+                      !hatches->locks[area_index].entries)))) {
         set_error(error, error_size,
                   "invalid Zero Mission runtime-room core payload");
         return false;
@@ -858,6 +978,14 @@ static bool serialize_runtime_room(
         return false;
     }
     capacity += door_capacity * 256;
+    if (hatches) {
+        if (capacity > SIZE_MAX - 4096) {
+            set_error(error, error_size,
+                      "Zero Mission runtime-room payload exceeds the size bound");
+            return false;
+        }
+        capacity += 4096;
+    }
     uint8_t *data = malloc(capacity);
     if (!data) {
         set_error(error, error_size,
@@ -868,7 +996,7 @@ static bool serialize_runtime_room(
     size_t height_pixels = (size_t)clipdata->height * 16;
     size_t used = 0, clipdata_count = 0, transition_count = 0;
     size_t movement_count = 0, door_count = 0, exit_count = 0;
-    size_t location_count = 0;
+    size_t location_count = 0, hatch_count = 0, hatch_lock_count = 0;
     if (!append_format(
             data, capacity, &used,
             "MVROOM-NATIVE\t1\tmzm\t%s\t%zu\t%zu\t%zu\n",
@@ -1000,13 +1128,153 @@ static bool serialize_runtime_room(
             ++location_count;
         }
     }
+    if (hatches) {
+        enum {
+            CLIPDATA_TYPE_DOOR = 11,
+            CLIP_BEHAVIOR_DOOR_START = 127,
+            ROOM_HATCH_CAPACITY = 16
+        };
+        const FusionMzmDoorList *list = &doors->areas[area_index];
+        size_t hatch_doors[ROOM_HATCH_CAPACITY];
+        size_t hatch_door_count = 0;
+        for (size_t index = 0; index < list->count; ++index) {
+            const FusionMzmDoor *door = &list->entries[index];
+            uint8_t kind = door->type & 0xF;
+            if (door->source_room != room || (kind != 3 && kind != 4))
+                continue;
+            if (hatch_door_count == ROOM_HATCH_CAPACITY) {
+                free(data);
+                set_error(error, error_size,
+                          "Zero Mission room exceeds the hatch capacity");
+                return false;
+            }
+            hatch_doors[hatch_door_count++] = index;
+        }
+        for (size_t slot = 0; slot < hatch_door_count; ++slot) {
+            size_t door_index = hatch_doors[slot];
+            const FusionMzmDoor *door = &list->entries[door_index];
+            size_t position = (size_t)clipdata->width * door->y_start +
+                              door->x_start;
+            if (position >= clipdata->cell_count) {
+                free(data);
+                set_error(error, error_size,
+                          "Zero Mission hatch lies outside room Clipdata");
+                return false;
+            }
+            uint16_t raw = position + 1 < clipdata->cell_count
+                ? clipdata->cells[position + 1] : 0;
+            uint8_t collision;
+            uint16_t behavior;
+            if (!resolve_clipdata(raw, tables, &collision, &behavior)) {
+                free(data);
+                set_error(error, error_size,
+                          "Zero Mission hatch Clipdata is outside native tables");
+                return false;
+            }
+            bool facing_right = collision == CLIPDATA_TYPE_DOOR;
+            if (!facing_right) {
+                if (position == 0 ||
+                    !resolve_clipdata(clipdata->cells[position - 1], tables,
+                                      &collision, &behavior)) {
+                    free(data);
+                    set_error(error, error_size,
+                              "Zero Mission hatch has no bounded Clipdata side");
+                    return false;
+                }
+            }
+            size_t mapping = 0;
+            if (behavior > CLIP_BEHAVIOR_DOOR_START &&
+                behavior <= CLIP_BEHAVIOR_DOOR_START + 5) {
+                mapping = behavior - CLIP_BEHAVIOR_DOOR_START;
+            }
+            uint8_t hatch_type = hatches->types[mapping];
+            const char *name = hatch_type_name(hatch_type);
+            if (!name) {
+                free(data);
+                set_error(error, error_size,
+                          "invalid Zero Mission mapped hatch type");
+                return false;
+            }
+            if (hatch_type < 2) continue;
+            int x = (int)door->x_start + (facing_right ? 1 : -1);
+            if (!append_format(
+                    data, capacity, &used,
+                    "H\t%zu\t%d\t%u\t%s\t%u\t%u\n",
+                    door_index, x, (unsigned)door->y_start, name,
+                    (unsigned)hatches->weakness[hatch_type],
+                    (unsigned)hatches->health[hatch_type])) {
+                goto overflow;
+            }
+            ++hatch_count;
+        }
+        if (!append_format(data, capacity, &used, "V\t")) goto overflow;
+        for (size_t index = 0; index < FUSION_MZM_HATCH_COUNT; ++index) {
+            if (!append_format(data, capacity, &used, "%s%u",
+                               index ? "," : "",
+                               (unsigned)hatches->tilemap_values[index])) {
+                goto overflow;
+            }
+        }
+        if (!append_format(data, capacity, &used, "\nA\t")) goto overflow;
+        for (size_t index = 0;
+             index < FUSION_MZM_HATCH_ANIMATION_COUNT; ++index) {
+            if (!append_format(data, capacity, &used, "%s%u",
+                               index ? "," : "",
+                               (unsigned)hatches->durations[index])) {
+                goto overflow;
+            }
+        }
+        if (!append_format(data, capacity, &used, "\nW\t")) goto overflow;
+        for (size_t index = 0; index < FUSION_MZM_HATCH_COUNT; ++index) {
+            if (!append_format(data, capacity, &used, "%s%u:%u",
+                               index ? "," : "",
+                               (unsigned)hatches->weakness[index],
+                               (unsigned)hatches->health[index])) {
+                goto overflow;
+            }
+        }
+        if (!append_format(data, capacity, &used, "\nK\t")) goto overflow;
+        for (size_t index = 0;
+             index < FUSION_MZM_CLIPDATA_TILEMAP_COUNT; ++index) {
+            if (!append_format(data, capacity, &used, "%s%u",
+                               index ? "," : "",
+                               (unsigned)tables->tilemap_collision[index])) {
+                goto overflow;
+            }
+        }
+        if (!append_format(data, capacity, &used, "\n")) goto overflow;
+        const FusionMzmHatchLockList *locks = &hatches->locks[area_index];
+        for (size_t slot = 0; slot < ROOM_HATCH_CAPACITY; ++slot) {
+            for (size_t lock = 0; lock < locks->count; ++lock) {
+                const FusionMzmHatchLockEvent *event = &locks->entries[lock];
+                if (event->room != room ||
+                    !(event->hatch_mask & (uint16_t)(1u << slot))) {
+                    continue;
+                }
+                if (slot >= hatch_door_count) {
+                    free(data);
+                    set_error(error, error_size,
+                              "Zero Mission hatch lock references a missing slot");
+                    return false;
+                }
+                if (!append_format(data, capacity, &used,
+                                   "Q\t%zu\t%u\t%u\t%u\n",
+                                   hatch_doors[slot], (unsigned)event->event,
+                                   (unsigned)(event->type & 1),
+                                   (unsigned)(event->type >= 2))) {
+                    goto overflow;
+                }
+                ++hatch_lock_count;
+            }
+        }
+    }
     if (5 > capacity - used) goto overflow;
     memcpy(data + used, "END\n", 4);
     used += 4;
     data[used] = '\0';
     *payload = (FusionMzmRuntimeRoomPayload){
         data, used, clipdata_count, transition_count, movement_count,
-        door_count, exit_count, location_count
+        door_count, exit_count, location_count, hatch_count, hatch_lock_count
     };
     if (error && error_size > 0) error[0] = '\0';
     return true;
@@ -1024,7 +1292,7 @@ bool fusion_mzm_serialize_runtime_room_core(
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size) {
     return serialize_runtime_room(area, SIZE_MAX, room, clipdata, tables, NULL,
-                                  payload, error, error_size);
+                                  NULL, payload, error, error_size);
 }
 
 bool fusion_mzm_serialize_runtime_room_doors(
@@ -1041,7 +1309,25 @@ bool fusion_mzm_serialize_runtime_room_doors(
         return false;
     }
     return serialize_runtime_room(spec->id, area, room, clipdata, tables,
-                                  doors, payload, error, error_size);
+                                  doors, NULL, payload, error, error_size);
+}
+
+bool fusion_mzm_serialize_runtime_room_hatches(
+    size_t area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    const FusionMzmDoorDirectory *doors,
+    const FusionMzmHatchTables *hatches,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size) {
+    const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+    if (!spec) {
+        if (payload) *payload = (FusionMzmRuntimeRoomPayload){0};
+        set_error(error, error_size,
+                  "invalid Zero Mission runtime-room hatch area");
+        return false;
+    }
+    return serialize_runtime_room(spec->id, area, room, clipdata, tables,
+                                  doors, hatches, payload, error, error_size);
 }
 
 static bool read_count(const uint8_t *data, size_t size, size_t *position,

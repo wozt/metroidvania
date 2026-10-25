@@ -138,11 +138,14 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
         expected = []
         expected_cores = []
         expected_doors = []
+        expected_hatches = []
         total_cells = 0
         total_clipdata = total_transitions = total_movements = 0
         total_doors = total_exits = total_locations = 0
+        total_hatches = total_hatch_locks = 0
         total_core_bytes = 0
         total_door_bytes = 0
+        total_hatch_bytes = 0
         tables = mzm_runtime_room.collision_tables()
         rooms = source_rooms()
         doors_by_area = mzm_runtime_room.door_tables()
@@ -150,6 +153,10 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             area: mzm_runtime_room.area_targets(area)
             for area in {room["area"] for room in rooms}
         }
+        hatch_types, hatch_behaviors = mzm_runtime_room.hatch_tables()
+        hatch_metadata = mzm_runtime_room.hatch_animation_lines(
+            tables, hatch_behaviors,
+        )
         for room in rooms:
             pointer = symbols[room["fields"]["pClipData"]]
             width, height, cells = rle_room(rom[pointer - 0x08000000:])
@@ -196,6 +203,37 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             total_exits += exit_count
             total_locations += location_count
             total_door_bytes += len(door_payload)
+
+            room_doors = doors_by_area.get(room["area"], [])
+            room_hatches = mzm_runtime_room.room_hatches(
+                room_doors, room["index"], (width, height, cells), tables,
+                hatch_types, hatch_behaviors,
+            )
+            lock_lines = mzm_runtime_room.hatch_lock_lines(
+                room["area"], room["index"], room_doors,
+            ) if room["area"].isalpha() else []
+            metadata = [*hatch_metadata, *lock_lines]
+            hatch_payload = mzm_runtime_room.encode_room(
+                room["area"], room["index"], width * 16, height * 16,
+                (width, height, cells), tables, doors=room_doors,
+                hatches=room_hatches, targets=targets_by_area[room["area"]],
+                backgrounds=metadata,
+            ).encode()
+            hatch_lines = hatch_payload.splitlines()
+            hatch_count = sum(line.startswith(b"H\t") for line in hatch_lines)
+            hatch_lock_count = sum(
+                line.startswith(b"Q\t") for line in hatch_lines
+            )
+            expected_hatches.append((
+                room["area"], room["index"], width, height, len(cells),
+                clipdata_count, transition_count, movement_count,
+                door_count, exit_count, location_count, hatch_count,
+                hatch_lock_count, len(hatch_payload),
+                hashlib.sha1(hatch_payload).hexdigest(),
+            ))
+            total_hatches += hatch_count
+            total_hatch_locks += hatch_lock_count
+            total_hatch_bytes += len(hatch_payload)
 
         result = subprocess.run(
             [str(BINARY), "--mzm-clipdata", str(ROM), str(ELF)],
@@ -254,6 +292,28 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
             f"{total_clipdata}\t{total_transitions}\t{total_movements}\t"
             f"{total_doors}\t{total_exits}\t{total_locations}\t"
             f"{total_door_bytes}",
+        )
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-runtime-room-hatches", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output_lines = result.stdout.splitlines()
+        actual_hatches = []
+        for line in output_lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "room")
+            actual_hatches.append((
+                fields[1], *(int(value) for value in fields[2:15]), fields[15],
+            ))
+        self.assertEqual(actual_hatches, expected_hatches)
+        self.assertEqual(
+            output_lines[-1],
+            f"summary\t{len(expected_hatches)}\t{total_cells}\t"
+            f"{total_clipdata}\t{total_transitions}\t{total_movements}\t"
+            f"{total_doors}\t{total_exits}\t{total_locations}\t"
+            f"{total_hatches}\t{total_hatch_locks}\t{total_hatch_bytes}",
         )
 
     def test_room_background_payloads_match_python_reference(self):

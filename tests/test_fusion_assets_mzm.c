@@ -504,7 +504,15 @@ static void test_runtime_room_core(void) {
         BRINSTAR_DOOR_OFFSET = 0x640,
         KRAID_DOOR_OFFSET = 0x680,
         DEFAULT_DOOR_OFFSET = 0x6A0,
-        CONNECTION_OFFSET = 0x6C0
+        CONNECTION_OFFSET = 0x6C0,
+        HATCH_TYPE_OFFSET = 0x6E0,
+        HATCH_DURATION_OFFSET = 0x6E8,
+        HATCH_TILEMAP_OFFSET = 0x6F0,
+        HATCH_BEHAVIOR_OFFSET = 0x700,
+        BRINSTAR_LOCK_OFFSET = 0x720,
+        KRAID_LOCK_OFFSET = 0x728,
+        CRATERIA_LOCK_OFFSET = 0x730,
+        CHOZODIA_LOCK_OFFSET = 0x738
     };
     uint8_t bytes[FIXTURE_SIZE] = {0};
     bytes[COLLISION_OFFSET + 16] = 1;
@@ -513,6 +521,8 @@ static void test_runtime_room_core(void) {
     write_u16(bytes, BEHAVIOR_OFFSET + 39 * 2, 4);
     write_u16(bytes, BEHAVIOR_OFFSET + 40 * 2, 5);
     write_u16(bytes, BEHAVIOR_OFFSET + 24 * 2, 8);
+    bytes[COLLISION_OFFSET + 33] = 11;
+    write_u16(bytes, BEHAVIOR_OFFSET + 33 * 2, 129);
     bytes[TILE_COLLISION_OFFSET + 1] = 1;
     write_u16(bytes, TILE_BEHAVIOR_OFFSET + 1 * 2, 9);
     write_u16(bytes, MOVEMENT_OFFSET + 8 * 2, 8);
@@ -520,7 +530,7 @@ static void test_runtime_room_core(void) {
     uint8_t *door = bytes + BRINSTAR_DOOR_OFFSET;
     memcpy(door, (uint8_t[]){0x51, 0, 1, 2, 3, 4, 0, 5, 6}, 9);
     door += FUSION_MZM_DOOR_RECORD_SIZE;
-    memcpy(door, (uint8_t[]){0x14, 0, 10, 10, 11, 14, 2, 0xE0, 0}, 9);
+    memcpy(door, (uint8_t[]){0x14, 0, 0, 0, 0, 3, 2, 0xE0, 0}, 9);
     door += FUSION_MZM_DOOR_RECORD_SIZE;
     memcpy(door, (uint8_t[]){0x12, 1, 20, 21, 22, 23, 1, 12, 0xF0}, 9);
     door += FUSION_MZM_DOOR_RECORD_SIZE;
@@ -532,6 +542,28 @@ static void test_runtime_room_core(void) {
     memset(bytes + DEFAULT_DOOR_OFFSET, 0, FUSION_MZM_DOOR_RECORD_SIZE);
     memcpy(bytes + CONNECTION_OFFSET,
            (uint8_t[]){0, 0, 1, UINT8_MAX, UINT8_MAX, UINT8_MAX}, 6);
+    memcpy(bytes + HATCH_TYPE_OFFSET,
+           (uint8_t[]){0, 6, 2, 3, 4, 5, 6, 7}, 8);
+    memcpy(bytes + HATCH_DURATION_OFFSET,
+           (uint8_t[]){3, 3, 3, 3, 3, UINT8_MAX}, 6);
+    for (size_t index = 0; index < FUSION_MZM_HATCH_COUNT; ++index) {
+        write_u16(bytes, HATCH_TILEMAP_OFFSET + index * 2,
+                  (uint16_t)(1000 + index));
+    }
+    const uint16_t weaknesses[FUSION_MZM_HATCH_COUNT] = {
+        31, 31, 31, 12, 8, 16, 31, 31
+    };
+    for (size_t index = 0; index < FUSION_MZM_HATCH_COUNT; ++index)
+        write_u16(bytes, HATCH_BEHAVIOR_OFFSET + index * 4,
+                  weaknesses[index]);
+    memcpy(bytes + BRINSTAR_LOCK_OFFSET,
+           (uint8_t[]){0, 42, 3, 1, 0, 0, 0, 0}, 8);
+    memcpy(bytes + KRAID_LOCK_OFFSET,
+           (uint8_t[]){UINT8_MAX, 0, 0, 0, 0, 0, 0, 0}, 8);
+    memcpy(bytes + CRATERIA_LOCK_OFFSET,
+           (uint8_t[]){UINT8_MAX, 0, 0, 0, 0, 0, 0, 0}, 8);
+    memcpy(bytes + CHOZODIA_LOCK_OFFSET,
+           (uint8_t[]){UINT8_MAX, 0, 0, 0, 0, 0, 0, 0}, 8);
     FusionMzmRomSymbol entries[] = {
         {"sClipdataCollisionTypes", 0x08000000 + COLLISION_OFFSET,
          FUSION_MZM_CLIPDATA_COUNT, 0},
@@ -562,6 +594,23 @@ static void test_runtime_room_core(void) {
         {"sTestDoors", 0x08000000 + DEFAULT_DOOR_OFFSET,
          FUSION_MZM_DOOR_RECORD_SIZE, 12},
         {"sAreaConnections", 0x08000000 + CONNECTION_OFFSET, 6, 13},
+        {"sHatchTypeTable", 0x08000000 + HATCH_TYPE_OFFSET,
+         FUSION_MZM_HATCH_COUNT, 14},
+        {"sHatchesAnimationDurationCounter",
+         0x08000000 + HATCH_DURATION_OFFSET,
+         FUSION_MZM_HATCH_ANIMATION_COUNT, 15},
+        {"sHatchesTilemapValues", 0x08000000 + HATCH_TILEMAP_OFFSET,
+         FUSION_MZM_HATCH_COUNT * 2, 16},
+        {"sHatchBehaviors", 0x08000000 + HATCH_BEHAVIOR_OFFSET,
+         FUSION_MZM_HATCH_COUNT * 4, 17},
+        {"sHatchLockEventsBrinstar", 0x08000000 + BRINSTAR_LOCK_OFFSET,
+         FUSION_MZM_HATCH_LOCK_RECORD_SIZE, 18},
+        {"sHatchLockEventsKraid", 0x08000000 + KRAID_LOCK_OFFSET,
+         FUSION_MZM_HATCH_LOCK_RECORD_SIZE, 19},
+        {"sHatchLockEventsCrateria", 0x08000000 + CRATERIA_LOCK_OFFSET,
+         FUSION_MZM_HATCH_LOCK_RECORD_SIZE, 20},
+        {"sHatchLockEventsChozodia", 0x08000000 + CHOZODIA_LOCK_OFFSET,
+         FUSION_MZM_HATCH_LOCK_RECORD_SIZE, 21},
     };
     FusionMzmRomSymbolTable symbols = {
         entries, sizeof entries / sizeof entries[0], 0
@@ -621,7 +670,7 @@ static void test_runtime_room_core(void) {
     assert(strstr((char *)payload.data,
                   "D\t0\tarea\t1\t2\t3\t4\tkraid_002\t7\t10\t-12\t16\n"));
     assert(strstr((char *)payload.data,
-                  "D\t1\thatch\t10\t10\t11\t14\tbrinstar_001\t20\t23\t12\t-16\n"));
+                  "D\t1\thatch\t0\t0\t0\t3\tbrinstar_001\t20\t23\t12\t-16\n"));
     assert(strstr((char *)payload.data,
                   "D\t3\tnone\t0\t0\t0\t0\t-\t0\t0\t0\t0\n"));
     char *x0 = strstr((char *)payload.data, "X\t0\t5\t6\n");
@@ -630,6 +679,40 @@ static void test_runtime_room_core(void) {
     assert(x0 && x1 && y0 && x0 < x1 && x1 < y0 &&
            !strcmp(y0, "Y\t0\nEND\n"));
     fusion_mzm_free_runtime_room_payload(&payload);
+    FusionMzmHatchTables hatch_tables;
+    assert(fusion_mzm_read_hatch_tables(
+        &rom, &symbols, &hatch_tables, error, sizeof error));
+    assert(hatch_tables.types[1] == 6 &&
+           hatch_tables.durations[5] == UINT8_MAX &&
+           hatch_tables.tilemap_values[3] == 1003 &&
+           hatch_tables.weakness[3] == 12 &&
+           hatch_tables.locks[0].count == 1 &&
+           hatch_tables.locks[0].entries[0].hatch_mask == 1);
+    uint16_t hatch_cells[] = {0, 33, 0, 0, 0, 0};
+    FusionMzmRoomRleMap hatch_clipdata = {
+        .width = 2, .height = 3, .cells = hatch_cells, .cell_count = 6
+    };
+    assert(fusion_mzm_serialize_runtime_room_hatches(
+        0, 0, &hatch_clipdata, &tables, &doors, &hatch_tables, &payload,
+        error, sizeof error));
+    assert(payload.hatch_count == 1 && payload.hatch_lock_count == 1);
+    char *hatch = strstr((char *)payload.data,
+                         "H\t1\t1\t0\tnormal\t31\t0\n");
+    char *values = strstr((char *)payload.data,
+                          "V\t1000,1001,1002,1003,1004,1005,1006,1007\n");
+    char *durations = strstr((char *)payload.data,
+                             "A\t3,3,3,3,3,255\n");
+    char *weakness = strstr((char *)payload.data,
+                            "W\t31:0,31:0,31:0,12:0,8:0,16:0,31:0,31:0\n");
+    char *collisions = strstr((char *)payload.data, "K\t0,1,");
+    char *lock = strstr((char *)payload.data, "Q\t1\t42\t1\t1\n");
+    assert(hatch && values && durations && weakness && collisions && lock &&
+           hatch < values && values < durations && durations < weakness &&
+           weakness < collisions && collisions < lock &&
+           !strcmp(lock, "Q\t1\t42\t1\t1\nEND\n"));
+    fusion_mzm_free_runtime_room_payload(&payload);
+    fusion_mzm_free_hatch_tables(&hatch_tables);
+    assert(hatch_tables.locks[0].entries == NULL);
     fusion_mzm_free_door_directory(&doors);
     assert(doors.areas[0].entries == NULL && doors.connection_count == 0);
     cells[5] = FUSION_MZM_CLIPDATA_TILEMAP_FLAG +
@@ -648,6 +731,10 @@ static void test_runtime_room_core(void) {
     entries[5].size--;
     assert(!fusion_mzm_read_door_directory(
         &rom, &symbols, &doors, error, sizeof error));
+    entries[5].size++;
+    entries[14].size--;
+    assert(!fusion_mzm_read_hatch_tables(
+        &rom, &symbols, &hatch_tables, error, sizeof error));
 }
 
 int main(void) {

@@ -2,6 +2,32 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0514 - Native Zero Mission hatch serialization
+
+- Added bounded C11 decoding of the native hatch type, animation-duration,
+  tilemap-value and weakness/health tables plus all 19 hatch-lock event
+  records from their verified ROM/ELF objects.
+- Reproduced `ConnectionLoadDoors` hatch derivation from each room's door and
+  Clipdata records, including facing detection, behavior-to-type mapping,
+  source-door identity and the native 16-slot capacity.
+- Extended `MVROOM-NATIVE` serialization with ordered `H`, `V`, `A`, `W`, `K`
+  and `Q` records. Event masks remain hatch-slot based and are resolved back
+  to global door indices without confusing the two index spaces.
+- Added synthetic facing, type mapping, weakness, animation, collision-table,
+  event timing/class, ordering, ownership and malformed-table coverage. The
+  new `--mzm-runtime-room-hatches` command compares every cumulative payload
+  with Python byte for byte.
+- All 331 payloads match across 3,085,641 bytes. They contain 506 `H` hatch
+  records and 22 `Q` lock conditions in addition to the previously validated
+  224,307 `C`, 2,707 `B`, 1,141 `M`, 761 `D`, 761 `X` and 77 `Y` records;
+  every room also carries its exact `V/A/W/K` runtime tables.
+- Sprite placements/variants, music, background records and private writes
+  remain Python-owned, so gameplay status and production authority do not
+  change. Audio was not modified.
+- Next: serialize room-entry music and background records, then port sprite
+  variants. Once those complete the payload, add native private writes, switch
+  the rebuild task to C and delete only the Python paths proven redundant.
+
 ## Patch 0513 - Native Zero Mission room-door serialization
 
 - Added bounded C11 decoding of the eight production door tables and the

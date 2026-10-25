@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T19:01:08+00:00",
+ "generated_at": "2026-10-25T19:51:17+00:00",
  "git": {
-  "commit": "eb4960c",
+  "commit": "3cf8f42",
   "branch": "main",
   "dirty": true
  },
@@ -12508,7 +12508,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, and the exact BMP32 tileset sheets and text layers of the room export. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for private-output orchestration, caches and the global rebuild task graph.",
+   "limitations": "The C11 library verifies both ROMs; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and its exact background.bmp images. The outputs pass complete semantic or byte equivalence as appropriate. Python remains authoritative for private-output orchestration, caches and the global rebuild task graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13939,7 +13939,7 @@
     "assets.raw_import"
    ],
    "native_routines": [],
-   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots, 97328 metatile records, 1115 complete RGBA room layers totaling 253914112 pixels and 330 exact diagnostic background selections totaling 88427520 pixels with byte-identical 265300380-byte BMP and 88427520-byte visibility-mask representations. All 330 exportable metadata-inclusive room payloads are byte-identical across 5450692 bytes with 330 music records, 784 block layers, 22426 block rows and 331 text layers, and all 330 complete room payloads are byte-identical across 5548796 bytes with 1160 P, 1518 S, 118 F, 785 J and 608 N sprite records plus every earlier collision, door, hatch and metadata record, and the BMP32 output of all 79 tileset sheets and 331 exported text layers is byte-identical across 255148900 bytes. One room lacks a supported BG1. The export's background.bmp comes from the older diagnostic renderer and differs from the native VRAM selection in 289 rooms. Python still owns that image, animated replacements, the Mother Ship variant, private writes and the production room export; hardware composition, BG2 movement and BG0 movement effects remain incomplete.",
+   "limitations": "The native importer source-compares all 331 RoomEntryRom descriptors, their 345686 Clipdata cells, every BG0-BG3 payload, all 79 standard RoomLoadTileset VRAM/palette snapshots, 97328 metatile records, 1115 complete RGBA room layers totaling 253914112 pixels and 330 exact diagnostic background selections totaling 88427520 pixels with byte-identical 265300380-byte BMP and 88427520-byte visibility-mask representations. All 330 exportable metadata-inclusive room payloads are byte-identical across 5450692 bytes with 330 music records, 784 block layers, 22426 block rows and 331 text layers, and all 330 complete room payloads are byte-identical across 5548796 bytes with 1160 P, 1518 S, 118 F, 785 J and 608 N sprite records plus every earlier collision, door, hatch and metadata record, the BMP32 output of all 79 tileset sheets and 331 exported text layers is byte-identical across 255148900 bytes, blocks.tsv and power_bomb.tsv are byte-identical, and the export's background.bmp (the older diagnostic renderer, without common blocks) is byte-identical for all 330 rooms across 265300380 bytes. One room lacks a supported BG1. Python still owns animated replacements, the Mother Ship variant, private writes and the production room export; hardware composition, BG2 movement and BG0 movement effects remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14818,7 +14818,7 @@
    {
     "file": "tests/test_fusion_assets_mzm_equivalence.py",
     "module": "tests.test_fusion_assets_mzm_equivalence",
-    "test_count": 9,
+    "test_count": 11,
     "outcome": "passed",
     "passed": 7
    },
@@ -15307,6 +15307,12 @@
  },
  "timeline": [
   {
+   "commit": "3cf8f42",
+   "date": "2026-10-25",
+   "subject": "Serialize Zero Mission runtime bitmaps natively",
+   "scope": "project"
+  },
+  {
    "commit": "eb4960c",
    "date": "2026-10-25",
    "subject": "Serialize Zero Mission room sprites natively",
@@ -15778,12 +15784,6 @@
    "commit": "4a38355",
    "date": "2026-10-21",
    "subject": "Port the Aria class 5 weapon entity",
-   "scope": "project"
-  },
-  {
-   "commit": "0ee5754",
-   "date": "2026-10-21",
-   "subject": "Port Aria class 4 guns and move shared effects to their own module",
    "scope": "project"
   }
  ],

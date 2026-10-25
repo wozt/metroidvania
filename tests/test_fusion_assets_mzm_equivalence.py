@@ -532,6 +532,84 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                        *(str(totals[key]) for key in ("cells", *keys, "bytes"))]),
         )
 
+    def test_export_backgrounds_match_python_reference(self):
+        """background.bmp exactly as produce() renders and writes it."""
+        from scripts import mzm_room_render as render
+        expected = []
+        total_bytes = 0
+        skipped = 0
+        for room in source_rooms():
+            fields = room["fields"]
+            if fields.get("bg1Prop") != "BG_PROP_RLE_COMPRESSED":
+                skipped += 1
+                continue
+            gfx, palette, table = render.decoded_tileset(int(fields["tileset"]))
+            layers = {
+                layer: rle_room(render.room_blob(fields[f"p{layer}Data"]))
+                for layer in ("Bg1", "Bg2")
+                if fields.get(f"{layer.lower()}Prop") == "BG_PROP_RLE_COMPRESSED"
+            }
+            width, height, bg1 = layers["Bg1"]
+            words = [word for index in set(bg1) if index < len(table)
+                     for word in table[index]]
+            base, _ = render.graphic_base(words, len(gfx) // 32)
+            mask1 = bytearray(width * 16 * height * 16)
+            rgb, _, _ = render.render_layer(width, height, bg1, table, gfx,
+                                            palette, base, visibility=mask1)
+            if "Bg2" in layers and layers["Bg2"][:2] == (width, height):
+                mask2 = bytearray(len(mask1))
+                rgb2, _, _ = render.render_layer(
+                    width, height, layers["Bg2"][2], table, gfx, palette, base,
+                    visibility=mask2,
+                )
+                rgb, _ = render.compose_partial_bg12(rgb, mask1, rgb2, mask2)
+            bitmap = bmp24(width * 16, height * 16, bytes(rgb))
+            expected.append((room["area"], room["index"], width * 16,
+                             height * 16, len(bitmap),
+                             hashlib.sha1(bitmap).hexdigest()))
+            total_bytes += len(bitmap)
+        result = subprocess.run(
+            [str(BINARY), "--mzm-export-backgrounds", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        lines = result.stdout.splitlines()
+        actual = []
+        for line in lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "background")
+            actual.append((fields[1], int(fields[2]), int(fields[3]),
+                           int(fields[4]), int(fields[8]), fields[9]))
+        self.assertEqual(actual, expected)
+        self.assertEqual(lines[-1],
+                         f"summary\t{len(expected)}\t{skipped}\t{total_bytes}")
+
+    def test_runtime_tables_match_python_reference(self):
+        """blocks.tsv and power_bomb.tsv as the room export writes them."""
+        from scripts.mzm_c_tables import block_table_lines, power_bomb_window_lines
+        expected = {
+            "blocks.tsv": "\n".join(block_table_lines(
+                mzm_runtime_room.collision_tables())) + "\n",
+            "power_bomb.tsv": "\n".join(power_bomb_window_lines()) + "\n",
+        }
+        result = subprocess.run(
+            [str(BINARY), "--mzm-runtime-tables", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [
+            f"table\t{name}\t{len(text.encode())}\t"
+            f"{hashlib.sha1(text.encode()).hexdigest()}"
+            for name, text in expected.items()
+        ])
+        for name, text in expected.items():
+            dump = subprocess.run(
+                [str(BINARY), "--mzm-runtime-tables", str(ROM), str(ELF), name],
+                cwd=ROOT, capture_output=True, check=False,
+            )
+            self.assertEqual(dump.returncode, 0, dump.stderr)
+            self.assertEqual(dump.stdout, text.encode())
+
     def test_runtime_bitmaps_match_python_reference(self):
         """The tileset sheets and text layers the room export writes."""
         expected = []

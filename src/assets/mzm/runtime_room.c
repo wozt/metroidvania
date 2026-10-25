@@ -80,6 +80,18 @@ static const FusionMzmRomSymbol *find_symbol_at(
     return NULL;
 }
 
+/* The first sized symbol at an address (array data, not a label). */
+static const FusionMzmRomSymbol *find_sized_symbol_at(
+    const FusionMzmRomSymbolTable *symbols, uint32_t address) {
+    if (!symbols || (symbols->count && !symbols->entries)) return NULL;
+    for (size_t index = 0; index < symbols->count; ++index) {
+        if (symbols->entries[index].address == address &&
+            symbols->entries[index].size > 0)
+            return &symbols->entries[index];
+    }
+    return NULL;
+}
+
 static const uint8_t *bounded_symbol_data(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     const char *name, size_t required_size) {
@@ -790,6 +802,204 @@ bool fusion_mzm_serialize_bmp32(
     return true;
 }
 
+/* render_layer: one RLE layer into RGB and its visibility mask. */
+static void render_export_layer(const FusionMzmRoomRleMap *map,
+                                const uint8_t *metatiles, size_t metatile_count,
+                                const uint8_t *graphics, size_t tile_count,
+                                const uint8_t *palette, size_t palette_size,
+                                size_t base, uint8_t *rgb, uint8_t *visibility) {
+    size_t width = (size_t)map->width * 16;
+    for (size_t block_y = 0; block_y < map->height; ++block_y) {
+        for (size_t block_x = 0; block_x < map->width; ++block_x) {
+            size_t block = map->cells[block_y * map->width + block_x];
+            if (block >= metatile_count) continue;
+            for (size_t cell = 0; cell < FUSION_MZM_METATILE_CELLS; ++cell) {
+                uint16_t word = read_u16(metatiles + block * 8 + cell * 2);
+                size_t bank = (word >> 12) & 15;
+                size_t index = word & 1023;
+                if (index < base || index - base >= tile_count || bank < 3)
+                    continue;
+                const uint8_t *tile = graphics + (index - base) * 32;
+                for (size_t y = 0; y < 8; ++y) {
+                    for (size_t x = 0; x < 8; ++x) {
+                        size_t source_x = (word & 0x400) ? 7 - x : x;
+                        size_t source_y = (word & 0x800) ? 7 - y : y;
+                        uint8_t color_index =
+                            (tile[source_y * 4 + source_x / 2] >>
+                             (4 * (source_x & 1))) & 15;
+                        size_t entry = (bank - 2) * 16 + color_index;
+                        if (entry * 2 + 2 > palette_size) continue;
+                        uint16_t color = read_u16(palette + entry * 2);
+                        size_t pixel = (block_y * 16 + cell / 2 * 8 + y) * width +
+                                       block_x * 16 + cell % 2 * 8 + x;
+                        rgb[pixel * 3] = (uint8_t)((color & 31) * 255 / 31);
+                        rgb[pixel * 3 + 1] =
+                            (uint8_t)(((color >> 5) & 31) * 255 / 31);
+                        rgb[pixel * 3 + 2] =
+                            (uint8_t)(((color >> 10) & 31) * 255 / 31);
+                        if (color_index != 0) visibility[pixel] = 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool fusion_mzm_render_export_background(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
+    FusionMzmCompositeBackground *composite, bool *no_base,
+    char *error, size_t error_size) {
+    if (!composite || !no_base) {
+        set_error(error, error_size,
+                  "invalid Zero Mission export-background output");
+        return false;
+    }
+    *composite = (FusionMzmCompositeBackground){0};
+    *no_base = false;
+    const FusionMzmRoomBackground *bg1 =
+        backgrounds ? &backgrounds->layers[1] : NULL;
+    const FusionMzmRoomBackground *bg2 =
+        backgrounds ? &backgrounds->layers[2] : NULL;
+    FusionMzmTilesetEntry tileset;
+    if (!rom || !entry || !bg1 || bg1->status != FUSION_MZM_BACKGROUND_RLE ||
+        !bg1->rle.cells ||
+        bg1->rle.cell_count != (size_t)bg1->rle.width * bg1->rle.height ||
+        bg1->rle.cell_count == 0 ||
+        !fusion_mzm_read_tileset_entry(rom, symbols, entry->tileset, &tileset,
+                                       error, error_size)) {
+        if (error && error_size && !error[0])
+            set_error(error, error_size,
+                      "invalid Zero Mission export-background request");
+        return false;
+    }
+    const FusionMzmRomSymbol *tilemap =
+        find_sized_symbol_at(symbols, tileset.tilemap_pointer);
+    const FusionMzmRomSymbol *palette =
+        find_sized_symbol_at(symbols, tileset.palette_pointer);
+    size_t tilemap_offset, palette_offset, graphics_offset;
+    /* metatiles(): a u16 header, then up to 1024 quadruples. */
+    if (!tilemap || tilemap->size < 10 || tilemap->size > 32768 ||
+        (tilemap->size - 2) / 8 == 0 || (tilemap->size - 2) / 8 > 1024 ||
+        !palette ||
+        !pointer_offset(rom, tilemap->address, tilemap->size, &tilemap_offset) ||
+        !pointer_offset(rom, palette->address, palette->size, &palette_offset) ||
+        !pointer_offset(rom, tileset.graphics_pointer, 4, &graphics_offset)) {
+        set_error(error, error_size,
+                  "invalid Zero Mission export-background tileset data");
+        return false;
+    }
+    size_t metatile_count = (tilemap->size - 2) / 8;
+    const uint8_t *metatiles = rom->data + tilemap_offset + 2;
+    uint32_t graphics_size = fusion_gba_uncompressed_size(
+        rom->data + graphics_offset, rom->size - graphics_offset);
+    uint8_t *graphics = graphics_size ? malloc(graphics_size) : NULL;
+    size_t decoded = 0;
+    if (!graphics ||
+        !fusion_gba_lz77_uncompress(rom->data + graphics_offset,
+                                    rom->size - graphics_offset, graphics,
+                                    graphics_size, &decoded) ||
+        decoded != graphics_size) {
+        free(graphics);
+        set_error(error, error_size,
+                  "invalid Zero Mission export-background tile graphics");
+        return false;
+    }
+    size_t tile_count = graphics_size / 32;
+    /* graphic_base: the candidate covering the most BG1 tile indices,
+     * 192 on a tie; each distinct in-table block counts its four tiles. */
+    static const size_t candidates[2] = {192, 704};
+    size_t coverage[2] = {0, 0};
+    uint8_t *seen = calloc(metatile_count, 1);
+    if (!seen) {
+        free(graphics);
+        set_error(error, error_size, "cannot allocate Zero Mission block set");
+        return false;
+    }
+    for (size_t cell = 0; cell < bg1->rle.cell_count; ++cell) {
+        size_t block = bg1->rle.cells[cell];
+        if (block >= metatile_count || seen[block]) continue;
+        seen[block] = 1;
+        for (size_t word = 0; word < FUSION_MZM_METATILE_CELLS; ++word) {
+            size_t index = read_u16(metatiles + block * 8 + word * 2) & 1023;
+            for (size_t candidate = 0; candidate < 2; ++candidate) {
+                if (index >= candidates[candidate] &&
+                    index < candidates[candidate] + tile_count) {
+                    ++coverage[candidate];
+                }
+            }
+        }
+    }
+    free(seen);
+    if (coverage[0] == 0 && coverage[1] == 0) {
+        free(graphics);
+        *no_base = true;
+        set_error(error, error_size,
+                  "no BG metatile indices refer to tileset graphics");
+        return false;
+    }
+    size_t base = coverage[1] > coverage[0] ? candidates[1] : candidates[0];
+    size_t width = (size_t)bg1->rle.width * 16;
+    size_t height = (size_t)bg1->rle.height * 16;
+    size_t pixels = width * height;
+    /* Only a BG2 property of exactly BG_PROP_RLE_COMPRESSED is composed
+     * (not BG_PROP_MOVING, which also carries the RLE bit). */
+    bool use_bg2 = bg2 && bg2->status == FUSION_MZM_BACKGROUND_RLE &&
+                   entry->bg2_property == FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED &&
+                   bg2->rle.cells && bg2->rle.width == bg1->rle.width &&
+                   bg2->rle.height == bg1->rle.height;
+    uint8_t *rgb = calloc(pixels, 3);
+    uint8_t *mask = calloc(pixels, 1);
+    uint8_t *rgb2 = use_bg2 ? calloc(pixels, 3) : NULL;
+    uint8_t *mask2 = use_bg2 ? calloc(pixels, 1) : NULL;
+    if (!rgb || !mask || (use_bg2 && (!rgb2 || !mask2))) {
+        free(graphics);
+        free(rgb);
+        free(mask);
+        free(rgb2);
+        free(mask2);
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission export background");
+        return false;
+    }
+    const uint8_t *palette_data = rom->data + palette_offset;
+    render_export_layer(&bg1->rle, metatiles, metatile_count, graphics,
+                        tile_count, palette_data, palette->size, base, rgb, mask);
+    size_t bg1_visible = 0, bg2_visible = 0, unresolved = 0;
+    if (use_bg2) {
+        render_export_layer(&bg2->rle, metatiles, metatile_count, graphics,
+                            tile_count, palette_data, palette->size, base,
+                            rgb2, mask2);
+        /* compose_partial_bg12: visible BG1, else visible BG2, else black. */
+        for (size_t pixel = 0; pixel < pixels; ++pixel) {
+            if (mask[pixel]) {
+                ++bg1_visible;
+            } else if (mask2[pixel]) {
+                memcpy(rgb + pixel * 3, rgb2 + pixel * 3, 3);
+                mask[pixel] = 1;
+                ++bg2_visible;
+            } else {
+                memset(rgb + pixel * 3, 0, 3);
+                ++unresolved;
+            }
+        }
+    } else {
+        for (size_t pixel = 0; pixel < pixels; ++pixel) {
+            if (mask[pixel]) ++bg1_visible;
+            else ++unresolved;
+        }
+    }
+    free(graphics);
+    free(rgb2);
+    free(mask2);
+    *composite = (FusionMzmCompositeBackground){
+        width, height, rgb, mask, pixels, bg1_visible, bg2_visible, unresolved
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
 void fusion_mzm_free_composite_background(
     FusionMzmCompositeBackground *composite) {
     if (!composite) return;
@@ -961,18 +1171,6 @@ bool fusion_mzm_serialize_background(
     return true;
 }
 
-/* The first sized symbol at an address (array data, not a label). */
-static const FusionMzmRomSymbol *find_sized_symbol_at(
-    const FusionMzmRomSymbolTable *symbols, uint32_t address) {
-    if (!symbols || (symbols->count && !symbols->entries)) return NULL;
-    for (size_t index = 0; index < symbols->count; ++index) {
-        if (symbols->entries[index].address == address &&
-            symbols->entries[index].size > 0)
-            return &symbols->entries[index];
-    }
-    return NULL;
-}
-
 bool fusion_mzm_read_spritesets(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     FusionMzmSpritesetTable *table,
@@ -1099,6 +1297,307 @@ bool fusion_mzm_read_room_sprites(
     }
     if (error && error_size > 0) error[0] = '\0';
     return true;
+}
+
+void fusion_mzm_free_text_file(FusionMzmTextFile *file) {
+    if (!file) return;
+    free(file->data);
+    *file = (FusionMzmTextFile){0};
+}
+
+/* A bounded ELF object holding `count` elements of `element` bytes. */
+static const uint8_t *table_data(const FusionRom *rom,
+                                 const FusionMzmRomSymbolTable *symbols,
+                                 const char *name, size_t element,
+                                 size_t *count) {
+    const FusionMzmRomSymbol *symbol = find_symbol(symbols, name);
+    size_t offset;
+    if (!symbol || symbol->size == 0 || symbol->size % element != 0 ||
+        !pointer_offset(rom, symbol->address, symbol->size, &offset)) {
+        return NULL;
+    }
+    *count = symbol->size / element;
+    return rom->data + offset;
+}
+
+static bool append_u16_list(uint8_t *data, size_t capacity, size_t *used,
+                            const char *prefix, const uint8_t *values,
+                            size_t count) {
+    if (!append_format(data, capacity, used, "%s\t", prefix)) return false;
+    for (size_t index = 0; index < count; ++index) {
+        if (!append_format(data, capacity, used, "%s%u", index ? "," : "",
+                           (unsigned)read_u16(values + index * 2))) {
+            return false;
+        }
+    }
+    return append_format(data, capacity, used, "\n");
+}
+
+bool fusion_mzm_serialize_block_tables(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const FusionMzmClipdataTables *tables, FusionMzmTextFile *file,
+    char *error, size_t error_size) {
+    enum {
+        CAPACITY = 1 << 15,
+        TIMER_STEPS = 13,
+        TANK_LIST_SIZE = 4,
+        DIFFICULTY_COUNT = 3,
+        DIFFICULTY_NORMAL = 1,           /* DIFF_NORMAL */
+        TILEMAP_FLAG = 0x400,            /* CLIPDATA_TILEMAP_FLAG */
+        TILEMAP_AIR = 0x00,              /* CLIPDATA_TILEMAP_AIR */
+        TILEMAP_WATER = 0x3C,            /* CLIPDATA_TILEMAP_WATER */
+        TILEMAP_STOP_ENEMY_AIR = 0x3D,   /* CLIPDATA_TILEMAP_STOP_ENEMY_AIR */
+        TILEMAP_SOLID2 = 0x3E,           /* CLIPDATA_TILEMAP_SOLID2 */
+        TILEMAP_NON_POWER_GRIP = 0x3F    /* CLIPDATA_TILEMAP_NON_POWER_GRIP */
+    };
+    if (!file) {
+        set_error(error, error_size, "invalid Zero Mission block-table output");
+        return false;
+    }
+    *file = (FusionMzmTextFile){0};
+    size_t damage_count = 0, behavior_count = 0, weakness_count = 0;
+    size_t reforming_count = 0, timer_count = 0, tank_count = 0;
+    size_t area_count = 0, increase_count = 0, start_count = 0;
+    size_t chain_count = 0, subchain_count = 0;
+    const uint8_t *damage = NULL, *behaviors = NULL, *weakness = NULL;
+    const uint8_t *reforming = NULL, *timers = NULL, *tanks = NULL;
+    const uint8_t *areas = NULL, *increases = NULL, *start = NULL;
+    const uint8_t *chains = NULL, *subchains = NULL;
+    if (rom && tables) {
+        damage = table_data(rom, symbols, "sClipdataAffectingActionDamageTypes",
+                            2, &damage_count);
+        /* struct BlockBehavior: lifeType, subType, type, then the
+         * isSpeedboost:4 / isBombChain:4 bit fields (low nibble first). */
+        behaviors = table_data(rom, symbols, "sBlockBehaviors", 4,
+                               &behavior_count);
+        weakness = table_data(rom, symbols, "sBlockWeaknesses", 2,
+                              &weakness_count);
+        reforming = table_data(rom, symbols, "sReformingBlocksTilemapValue", 2,
+                               &reforming_count);
+        timers = table_data(rom, symbols, "sBrokenBlocksTimers", TIMER_STEPS,
+                            &timer_count);
+        /* struct TankBehavior: itemType, underwater, messageId, padding,
+         * revealedClipdata, padding. */
+        tanks = table_data(rom, symbols, "sTankBehaviors", 8, &tank_count);
+        areas = table_data(rom, symbols, "sNumberOfTanksPerArea",
+                           TANK_LIST_SIZE, &area_count);
+        increases = table_data(rom, symbols, "sTankIncreaseAmount",
+                               TANK_LIST_SIZE, &increase_count);
+        start = table_data(rom, symbols, "sStartingHealthAmmo", TANK_LIST_SIZE,
+                           &start_count);
+        /* struct BombChainReverseData: typeFlag, padding, behavior. */
+        chains = table_data(rom, symbols, "sBombChainReverseData", 4,
+                            &chain_count);
+        subchains = table_data(rom, symbols, "sSubBombChainPositionOffset", 4,
+                               &subchain_count);
+    }
+    if (!damage || !behaviors || !weakness || !reforming || !timers ||
+        !tanks || !areas || !increases || !start || !chains || !subchains ||
+        start_count != 1 || increase_count != DIFFICULTY_COUNT ||
+        weakness_count != reforming_count || weakness_count != timer_count) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission block tables");
+        return false;
+    }
+    uint8_t *data = malloc(CAPACITY);
+    if (!data) {
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission block tables");
+        return false;
+    }
+    size_t used = 0;
+    if (!append_format(data, CAPACITY, &used,
+                       "schema\tmetroidvania-mzm-blocks-v1\n") ||
+        !append_u16_list(data, CAPACITY, &used, "damage", damage,
+                         damage_count)) {
+        goto overflow;
+    }
+    for (size_t index = 0; index < behavior_count; ++index) {
+        const uint8_t *behavior = behaviors + index * 4;
+        if (!append_format(data, CAPACITY, &used,
+                           "behavior\t%zu\t%u\t%u\t%u\t%u\t%u\n", index,
+                           (unsigned)behavior[0], (unsigned)behavior[1],
+                           (unsigned)behavior[2], (unsigned)(behavior[3] & 0xF),
+                           (unsigned)(behavior[3] >> 4))) {
+            goto overflow;
+        }
+    }
+    if (!append_u16_list(data, CAPACITY, &used, "weakness", weakness,
+                         weakness_count) ||
+        !append_u16_list(data, CAPACITY, &used, "reforming", reforming,
+                         reforming_count)) {
+        goto overflow;
+    }
+    for (size_t type = 0; type < timer_count; ++type) {
+        if (!append_format(data, CAPACITY, &used, "timers\t%zu\t", type))
+            goto overflow;
+        for (size_t step = 0; step < TIMER_STEPS; ++step) {
+            if (!append_format(data, CAPACITY, &used, "%s%u", step ? "," : "",
+                               (unsigned)timers[type * TIMER_STEPS + step])) {
+                goto overflow;
+            }
+        }
+        if (!append_format(data, CAPACITY, &used, "\n")) goto overflow;
+    }
+    if (!append_format(data, CAPACITY, &used, "tank\t")) goto overflow;
+    for (size_t index = 0; index < tank_count; ++index) {
+        if (!append_format(data, CAPACITY, &used, "%s%u", index ? "," : "",
+                           (unsigned)read_u16(tanks + index * 8 + 4))) {
+            goto overflow;
+        }
+    }
+    if (!append_format(data, CAPACITY, &used, "\n")) goto overflow;
+    /* MESSAGE_NONE is -1 in the MessageId enum, stored as 0xFF. */
+    for (size_t index = 0; index < tank_count; ++index) {
+        const uint8_t *tank = tanks + index * 8;
+        if (!append_format(data, CAPACITY, &used,
+                           "tankitem\t%zu\t%u\t%u\t%d\n", index,
+                           (unsigned)tank[0], (unsigned)tank[1],
+                           (int)(int8_t)tank[2])) {
+            goto overflow;
+        }
+    }
+    /* The starting amounts, the game total (the last area's row), the
+     * normal difficulty's increase, then each difficulty's. */
+    const struct {
+        const char *label;
+        const uint8_t *row;
+    } rows[3 + DIFFICULTY_COUNT] = {
+        {"start", start},
+        {"total", areas + (area_count - 1) * TANK_LIST_SIZE},
+        {"increase", increases + DIFFICULTY_NORMAL * TANK_LIST_SIZE},
+        {"increase0", increases},
+        {"increase1", increases + TANK_LIST_SIZE},
+        {"increase2", increases + 2 * TANK_LIST_SIZE},
+    };
+    for (size_t row = 0; row < sizeof rows / sizeof rows[0]; ++row) {
+        if (!append_format(data, CAPACITY, &used, "tanklist\t%s\t%u,%u,%u,%u\n",
+                           rows[row].label, (unsigned)rows[row].row[0],
+                           (unsigned)rows[row].row[1], (unsigned)rows[row].row[2],
+                           (unsigned)rows[row].row[3])) {
+            goto overflow;
+        }
+    }
+    if (!append_format(data, CAPACITY, &used, "makesolid\t%u\t%u\t%u\n",
+                       TILEMAP_FLAG | TILEMAP_SOLID2,
+                       TILEMAP_FLAG | TILEMAP_STOP_ENEMY_AIR,
+                       TILEMAP_FLAG | TILEMAP_NON_POWER_GRIP) ||
+        !append_format(data, CAPACITY, &used, "tankclip\t%u\t%u\n",
+                       TILEMAP_AIR, TILEMAP_FLAG | TILEMAP_WATER)) {
+        goto overflow;
+    }
+    for (size_t index = 0; index < chain_count; ++index) {
+        const uint8_t *chain = chains + index * 4;
+        if (!append_format(data, CAPACITY, &used, "chain\t%zu\t%u\t%u\n",
+                           index, (unsigned)chain[0],
+                           (unsigned)read_u16(chain + 2))) {
+            goto overflow;
+        }
+    }
+    for (size_t index = 0; index < subchain_count; ++index) {
+        const uint8_t *offsets = subchains + index * 4;
+        if (!append_format(data, CAPACITY, &used, "subchain\t%zu\t%d,%d,%d,%d\n",
+                           index, (int)(int8_t)offsets[0],
+                           (int)(int8_t)offsets[1], (int)(int8_t)offsets[2],
+                           (int)(int8_t)offsets[3])) {
+            goto overflow;
+        }
+    }
+    if (!append_format(data, CAPACITY, &used, "main\t")) goto overflow;
+    for (size_t index = 0; index < FUSION_MZM_CLIPDATA_COUNT; ++index) {
+        if (!append_format(data, CAPACITY, &used, "%s%u:%u", index ? "," : "",
+                           (unsigned)tables->collision[index],
+                           (unsigned)tables->behavior[index])) {
+            goto overflow;
+        }
+    }
+    if (!append_format(data, CAPACITY, &used, "\ntilemap\t")) goto overflow;
+    for (size_t index = 0; index < FUSION_MZM_CLIPDATA_TILEMAP_COUNT; ++index) {
+        if (!append_format(data, CAPACITY, &used, "%s%u:%u", index ? "," : "",
+                           (unsigned)tables->tilemap_collision[index],
+                           (unsigned)tables->tilemap_behavior[index])) {
+            goto overflow;
+        }
+    }
+    if (!append_format(data, CAPACITY, &used, "\n")) goto overflow;
+    *file = (FusionMzmTextFile){data, used};
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+
+overflow:
+    free(data);
+    set_error(error, error_size, "Zero Mission block tables exceed the size bound");
+    return false;
+}
+
+bool fusion_mzm_serialize_power_bomb_windows(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmTextFile *file, char *error, size_t error_size) {
+    if (!file) {
+        set_error(error, error_size, "invalid Zero Mission power-bomb output");
+        return false;
+    }
+    *file = (FusionMzmTextFile){0};
+    size_t count = 0;
+    const uint8_t *pointers = rom ? table_data(
+        rom, symbols, "sHaze_PowerBomb_WindowValuesPointers", 4, &count) : NULL;
+    if (!pointers) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission power-bomb window table");
+        return false;
+    }
+    /* Each s16 value prints in at most seven bytes, each line within 32
+     * more. */
+    size_t capacity = 64;
+    for (size_t axis = 0; axis < count; ++axis) {
+        const FusionMzmRomSymbol *values =
+            find_sized_symbol_at(symbols, read_u32(pointers + axis * 4));
+        size_t offset;
+        if (!values || values->size % 2 != 0 ||
+            values->size > (SIZE_MAX - capacity - 32) / 4 ||
+            !pointer_offset(rom, values->address, values->size, &offset)) {
+            set_error(error, error_size,
+                      "Zero Mission power-bomb window has no bounded array symbol");
+            return false;
+        }
+        capacity += 32 + values->size * 4;  /* "-32768," per two bytes */
+    }
+    uint8_t *data = malloc(capacity);
+    if (!data) {
+        set_error(error, error_size, "cannot allocate Zero Mission power-bomb windows");
+        return false;
+    }
+    size_t used = 0;
+    if (!append_format(data, capacity, &used,
+                       "schema\tmetroidvania-mzm-power-bomb-v1\n")) {
+        goto overflow;
+    }
+    for (size_t axis = 0; axis < count; ++axis) {
+        const FusionMzmRomSymbol *values =
+            find_sized_symbol_at(symbols, read_u32(pointers + axis * 4));
+        size_t offset;
+        if (!pointer_offset(rom, values->address, values->size, &offset) ||
+            !append_format(data, capacity, &used, "window\t%zu\t", axis)) {
+            goto overflow;
+        }
+        for (size_t index = 0; index < values->size / 2; ++index) {
+            if (!append_format(data, capacity, &used, "%s%d", index ? "," : "",
+                               (int)(int16_t)read_u16(rom->data + offset +
+                                                      index * 2))) {
+                goto overflow;
+            }
+        }
+        if (!append_format(data, capacity, &used, "\n")) goto overflow;
+    }
+    *file = (FusionMzmTextFile){data, used};
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+
+overflow:
+    free(data);
+    set_error(error, error_size,
+              "Zero Mission power-bomb windows exceed the size bound");
+    return false;
 }
 
 void fusion_mzm_free_runtime_room_payload(

@@ -42,6 +42,8 @@ static void usage(const char *name) {
             "       %s --mzm-runtime-room-metadata ROM ELF\n"
             "       %s --mzm-runtime-room-sprites ROM ELF\n"
             "       %s --mzm-bitmaps ROM ELF\n"
+            "       %s --mzm-runtime-tables ROM ELF [FILE]\n"
+            "       %s --mzm-export-backgrounds ROM ELF\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -54,7 +56,7 @@ static void usage(const char *name) {
             name, name, name, name, name, name, name, name, name, name, name,
             name,
             name, name, name, name,
-            name, name, name, name);
+            name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -1941,6 +1943,148 @@ fail:
     return status;
 }
 
+/* Prints the size and SHA-1 of the native blocks.tsv and power_bomb.tsv;
+ * with DUMP set, writes their bytes to stdout instead. */
+static int inspect_mzm_runtime_tables(const char *rom_path,
+                                      const char *elf_path,
+                                      const char *dump) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256];
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmClipdataTables tables;
+    FusionMzmTextFile blocks = {0}, windows = {0};
+    int status = 1;
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error) ||
+        !fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error) ||
+        !fusion_mzm_read_clipdata_tables(&rom, &symbols, &tables,
+                                         error, sizeof error) ||
+        !fusion_mzm_serialize_block_tables(&rom, &symbols, &tables, &blocks,
+                                           error, sizeof error) ||
+        !fusion_mzm_serialize_power_bomb_windows(&rom, &symbols, &windows,
+                                                 error, sizeof error)) {
+        fprintf(stderr, "mzm-runtime-tables: %s\n", error);
+        goto done;
+    }
+    const struct {
+        const char *name;
+        const FusionMzmTextFile *file;
+    } files[] = {{"blocks.tsv", &blocks}, {"power_bomb.tsv", &windows}};
+    for (size_t index = 0; index < 2; ++index) {
+        if (dump) {
+            if (!strcmp(dump, files[index].name))
+                fwrite(files[index].file->data, 1, files[index].file->size,
+                       stdout);
+            continue;
+        }
+        char digest[41];
+        if (!fusion_rom_sha1_hex(files[index].file->data,
+                                 files[index].file->size, digest)) {
+            fprintf(stderr, "mzm-runtime-tables: cannot hash %s\n",
+                    files[index].name);
+            goto done;
+        }
+        printf("table\t%s\t%zu\t%s\n", files[index].name,
+               files[index].file->size, digest);
+    }
+    status = 0;
+done:
+    fusion_mzm_free_text_file(&blocks);
+    fusion_mzm_free_text_file(&windows);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return status;
+}
+
+/* Prints each exportable room's background.bmp (the older diagnostic
+ * render the runtime export writes): size, coverage and SHA-1. */
+static int inspect_mzm_export_backgrounds(const char *rom_path,
+                                          const char *elf_path) {
+    FusionRom rom = {0};
+    uint8_t *elf = NULL;
+    size_t elf_size = 0;
+    char error[256] = "";
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmRoomDirectory directory;
+    int status = 1;
+    size_t rooms = 0, skipped = 0, total_bytes = 0;
+    if (!fusion_rom_open(FUSION_ASSET_GAME_METROID, rom_path, &rom,
+                         error, sizeof error) ||
+        !read_file(elf_path, &elf, &elf_size, error, sizeof error) ||
+        !fusion_mzm_read_rom_symbols(&rom, elf, elf_size, &symbols,
+                                     error, sizeof error) ||
+        !fusion_mzm_read_room_directory(&rom, &symbols, &directory,
+                                        error, sizeof error)) {
+        goto done;
+    }
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        const FusionMzmRoomAreaSpec *spec = fusion_mzm_room_area_spec(area);
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionMzmRoomEntry entry;
+            FusionMzmRoomBackgrounds backgrounds = {0};
+            FusionMzmCompositeBackground composite;
+            FusionMzmSerializedBackground serialized;
+            bool no_base = false;
+            if (!fusion_mzm_read_room_entry(&rom, &directory, area, room,
+                                            &entry, error, sizeof error))
+                goto done;
+            if (entry.bg1_property != FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED) {
+                ++skipped;
+                continue;
+            }
+            error[0] = '\0';
+            if (!fusion_mzm_read_room_backgrounds(&rom, &entry, &backgrounds,
+                                                  error, sizeof error) ||
+                !fusion_mzm_render_export_background(
+                    &rom, &symbols, &entry, &backgrounds, &composite,
+                    &no_base, error, sizeof error)) {
+                fusion_mzm_free_room_backgrounds(&backgrounds);
+                if (no_base) {
+                    printf("skipped\t%s\t%zu\t%s\n", spec->id, room, error);
+                    ++skipped;
+                    continue;
+                }
+                goto done;
+            }
+            fusion_mzm_free_room_backgrounds(&backgrounds);
+            bool serialized_ok = fusion_mzm_serialize_background(
+                &composite, &serialized, error, sizeof error);
+            char digest[41] = "";
+            bool hashed = serialized_ok &&
+                fusion_rom_sha1_hex(serialized.bitmap, serialized.bitmap_size,
+                                    digest);
+            if (hashed) {
+                printf("background\t%s\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%zu\t%s\n",
+                       spec->id, room, composite.width_pixels,
+                       composite.height_pixels, composite.bg1_visible_count,
+                       composite.bg2_visible_count, composite.unresolved_count,
+                       serialized.bitmap_size, digest);
+                total_bytes += serialized.bitmap_size;
+                ++rooms;
+            }
+            if (serialized_ok) fusion_mzm_free_serialized_background(&serialized);
+            fusion_mzm_free_composite_background(&composite);
+            if (!hashed) {
+                if (!error[0]) snprintf(error, sizeof error, "cannot hash background");
+                goto done;
+            }
+        }
+    }
+    printf("summary\t%zu\t%zu\t%zu\n", rooms, skipped, total_bytes);
+    status = 0;
+done:
+    if (status) fprintf(stderr, "mzm-export-backgrounds: %s\n", error);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&rom);
+    free(elf);
+    return status;
+}
+
 static int inspect_mzm_metatiles(const char *rom_path, const char *elf_path) {
     FusionRom rom = {0};
     uint8_t *elf = NULL;
@@ -2438,6 +2582,11 @@ int main(int argc, char **argv) {
     const char *mzm_runtime_metadata_rom_path = NULL;
     const char *mzm_runtime_sprite_rom_path = NULL;
     const char *mzm_bitmap_rom_path = NULL;
+    const char *mzm_table_rom_path = NULL;
+    const char *mzm_export_background_rom_path = NULL;
+    const char *mzm_export_background_elf_path = NULL;
+    const char *mzm_table_elf_path = NULL;
+    const char *mzm_table_dump = NULL;
     const char *mzm_bitmap_elf_path = NULL;
     const char *mzm_runtime_sprite_elf_path = NULL;
     const char *mzm_runtime_metadata_elf_path = NULL;
@@ -2534,6 +2683,15 @@ int main(int argc, char **argv) {
             mzm_runtime_sprite_rom_path = argv[++i];
             mzm_runtime_sprite_elf_path = argv[++i];
         }
+        else if (!strcmp(argv[i], "--mzm-export-backgrounds") && i + 2 < argc) {
+            mzm_export_background_rom_path = argv[++i];
+            mzm_export_background_elf_path = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--mzm-runtime-tables") && i + 2 < argc) {
+            mzm_table_rom_path = argv[++i];
+            mzm_table_elf_path = argv[++i];
+            if (i + 1 < argc && argv[i + 1][0] != '-') mzm_table_dump = argv[++i];
+        }
         else if (!strcmp(argv[i], "--mzm-bitmaps") && i + 2 < argc) {
             mzm_bitmap_rom_path = argv[++i];
             mzm_bitmap_elf_path = argv[++i];
@@ -2629,6 +2787,12 @@ int main(int argc, char **argv) {
         return inspect_mzm_runtime_rooms(
             mzm_runtime_sprite_rom_path, mzm_runtime_sprite_elf_path,
             true, true, true, true);
+    if (mzm_export_background_rom_path)
+        return inspect_mzm_export_backgrounds(mzm_export_background_rom_path,
+                                              mzm_export_background_elf_path);
+    if (mzm_table_rom_path)
+        return inspect_mzm_runtime_tables(mzm_table_rom_path,
+                                          mzm_table_elf_path, mzm_table_dump);
     if (mzm_bitmap_rom_path)
         return inspect_mzm_bitmaps(mzm_bitmap_rom_path, mzm_bitmap_elf_path);
     if (mzm_background_rom_path)

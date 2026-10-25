@@ -281,9 +281,12 @@ entry's default and event sprite data are read from bounded ELF symbols and
 resolved against a table of the decompilation's PrimarySprite names. The
 native serializer therefore covers the complete room TSV payload. The
 metatile sheets and text layers are rendered and serialized as the export's
-BMP32 files too; the export's `background.bmp` (an older diagnostic render)
-is not yet reproduced natively, and private output writes remain
-Python-owned, and these native extractors are not yet
+BMP32 files too, and the shared `blocks.tsv` and `power_bomb.tsv` tables are
+serialized from the bounded `block_data.c` and haze objects. The export's
+`background.bmp`, which the runtime displays, keeps the older diagnostic
+renderer (tileset metatiles only, inferred character base) and is
+reproduced exactly by `fusion_mzm_render_export_background`. Private output
+writes remain Python-owned, and these native extractors are not yet
 registered in the global native task graph.
 
 `fusion_native_editor_core` contains the project-owned native map model,

@@ -789,6 +789,187 @@ static void test_runtime_room_core(void) {
         &rom, &symbols, &hatch_tables, error, sizeof error));
 }
 
+static void test_export_background(void) {
+    enum {
+        FIXTURE_SIZE = 0x1000, TABLE = 0x100, GRAPHICS = 0x800,
+        PALETTE = 0x900, TILEMAP = 0xB00
+    };
+    uint8_t *bytes = calloc(FIXTURE_SIZE, 1);
+    assert(bytes);
+    write_u32(bytes, TABLE, 0x08000000 + GRAPHICS);
+    write_u32(bytes, TABLE + 4, 0x08000000 + PALETTE);
+    write_u32(bytes, TABLE + 8, 0x08000000 + GRAPHICS);
+    write_u32(bytes, TABLE + 12, 0x08000000 + TILEMAP);
+    /* Tile 0 is color 1 throughout, tile 1 color 0. */
+    uint8_t graphics[64] = {0};
+    memset(graphics, 0x11, 32);
+    write_lz77_literals(bytes, GRAPHICS, graphics, sizeof graphics);
+    write_u16(bytes, PALETTE + 32 + 2, 31);          /* bank 3 color 1: red */
+    write_u16(bytes, PALETTE + 32, 31 << 10);        /* bank 3 color 0: blue */
+    for (size_t cell = 0; cell < 4; ++cell) {
+        write_u16(bytes, TILEMAP + 2 + cell * 2, 0x3000 | 192);
+        write_u16(bytes, TILEMAP + 10 + cell * 2, 0x3000 | 193);
+    }
+    FusionMzmRomSymbol entries[] = {
+        {"sTilesetEntries", 0x08000000 + TABLE,
+         FUSION_MZM_TILESET_COUNT * FUSION_MZM_TILESET_ENTRY_SIZE, 0},
+        {"sPalette", 0x08000000 + PALETTE, 14 * 32, 1},
+        {"sTilemap", 0x08000000 + TILEMAP, 18, 2},
+    };
+    FusionMzmRomSymbolTable symbols = {entries, 3, 0};
+    FusionRom rom = {bytes, FIXTURE_SIZE, FUSION_ASSET_GAME_METROID};
+    /* BG1: block 0, block 1 (color 0), a common block (not drawn). */
+    uint16_t bg1_cells[] = {0, 1, 0x401};
+    uint16_t bg2_cells[] = {1, 0, 0};
+    FusionMzmRoomBackgrounds backgrounds = {0};
+    backgrounds.layers[1].status = FUSION_MZM_BACKGROUND_RLE;
+    backgrounds.layers[1].rle = (FusionMzmRoomRleMap){
+        .width = 3, .height = 1, .cells = bg1_cells, .cell_count = 3};
+    backgrounds.layers[2].status = FUSION_MZM_BACKGROUND_RLE;
+    backgrounds.layers[2].rle = (FusionMzmRoomRleMap){
+        .width = 3, .height = 1, .cells = bg2_cells, .cell_count = 3};
+    FusionMzmRoomEntry room = {
+        .tileset = 0, .bg1_property = FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED,
+        .bg2_property = FUSION_MZM_BG_PROPERTY_RLE_COMPRESSED};
+    FusionMzmCompositeBackground composite;
+    bool no_base;
+    char error[160];
+    assert(fusion_mzm_render_export_background(&rom, &symbols, &room,
+                                               &backgrounds, &composite,
+                                               &no_base, error, sizeof error));
+    /* Block 0 from BG1; blocks 1 (BG1 color 0) and 2 (a common block, not
+     * drawn) from BG2's block 0. */
+    assert(composite.width_pixels == 48 && composite.height_pixels == 16 &&
+           composite.bg1_visible_count == 256 &&
+           composite.bg2_visible_count == 512 &&
+           composite.unresolved_count == 0);
+    assert(composite.rgb[0] == 255 && composite.rgb[2] == 0 &&
+           composite.rgb[16 * 3] == 255 && composite.rgb[32 * 3] == 255);
+    fusion_mzm_free_composite_background(&composite);
+    /* A BG_PROP_MOVING BG2 is not composed: BG1's painted color 0 (blue)
+     * shows, invisible in the mask. */
+    room.bg2_property = 0x30;
+    assert(fusion_mzm_render_export_background(&rom, &symbols, &room,
+                                               &backgrounds, &composite,
+                                               &no_base, error, sizeof error));
+    assert(composite.rgb[16 * 3] == 0 && composite.rgb[16 * 3 + 2] == 255 &&
+           composite.visibility[16] == 0 && composite.bg1_visible_count == 256);
+    fusion_mzm_free_composite_background(&composite);
+    /* No BG1 tile reaches the graphics: the export skips the room. */
+    uint16_t common_cells[] = {0x401, 0x402, 0x403};
+    backgrounds.layers[1].rle.cells = common_cells;
+    assert(!fusion_mzm_render_export_background(&rom, &symbols, &room,
+                                                &backgrounds, &composite,
+                                                &no_base, error, sizeof error));
+    assert(no_base && !strcmp(error, "no BG metatile indices refer to tileset graphics"));
+    free(bytes);
+}
+
+static void test_runtime_tables(void) {
+    enum {
+        DAMAGE = 0x00, BEHAVIORS = 0x08, WEAKNESS = 0x10, REFORMING = 0x14,
+        TIMERS = 0x18, TANKS = 0x34, AREAS = 0x44, INCREASES = 0x4C,
+        START = 0x58, CHAINS = 0x5C, SUBCHAINS = 0x64, POINTERS = 0x68,
+        WINDOW0 = 0x78, WINDOW1 = 0x80, FIXTURE_SIZE = 0x100
+    };
+    const uint32_t ROM_BASE = 0x08000000;
+    uint8_t bytes[FIXTURE_SIZE] = {0};
+    write_u16(bytes, DAMAGE + 2, 4096);
+    memcpy(bytes + BEHAVIORS, (uint8_t[]){1, 2, 3, 0x10, 3, 4, 14, 0x01}, 8);
+    write_u16(bytes, WEAKNESS, 65535);
+    write_u16(bytes, WEAKNESS + 2, 178);
+    write_u16(bytes, REFORMING, 1024);
+    write_u16(bytes, REFORMING + 2, 1029);
+    bytes[TIMERS + 2] = 4;
+    bytes[TIMERS + 13 + 7] = 255;
+    memcpy(bytes + TANKS, (uint8_t[]){0, 0, 0xFF, 0, 0x1C, 0x04, 0, 0,
+                                      2, 1, 1, 0, 0, 0, 0, 0}, 16);
+    memcpy(bytes + AREAS, (uint8_t[]){1, 2, 3, 4, 12, 50, 15, 9}, 8);
+    memcpy(bytes + INCREASES,
+           (uint8_t[]){100, 5, 2, 2, 101, 6, 3, 3, 50, 2, 1, 1}, 12);
+    memcpy(bytes + START, (uint8_t[]){99, 0, 0, 0}, 4);
+    memcpy(bytes + CHAINS, (uint8_t[]){1, 0, 38, 0, 2, 0, 39, 0}, 8);
+    memcpy(bytes + SUBCHAINS, (uint8_t[]){1, 1, 0xFF, 1}, 4);
+    write_u32(bytes, POINTERS, ROM_BASE + WINDOW0);
+    write_u32(bytes, POINTERS + 4, ROM_BASE + WINDOW1);
+    write_u32(bytes, POINTERS + 8, ROM_BASE + WINDOW0);
+    write_u16(bytes, WINDOW0 + 2, (uint16_t)-2);
+    write_u16(bytes, WINDOW1, 300);
+    FusionRom rom = {bytes, sizeof bytes, FUSION_ASSET_GAME_METROID};
+    FusionMzmRomSymbol entries[] = {
+        {"sClipdataAffectingActionDamageTypes", ROM_BASE + DAMAGE, 4, 0},
+        {"sBlockBehaviors", ROM_BASE + BEHAVIORS, 8, 1},
+        {"sBlockWeaknesses", ROM_BASE + WEAKNESS, 4, 2},
+        {"sReformingBlocksTilemapValue", ROM_BASE + REFORMING, 4, 3},
+        {"sBrokenBlocksTimers", ROM_BASE + TIMERS, 26, 4},
+        {"sTankBehaviors", ROM_BASE + TANKS, 16, 5},
+        {"sNumberOfTanksPerArea", ROM_BASE + AREAS, 8, 6},
+        {"sTankIncreaseAmount", ROM_BASE + INCREASES, 12, 7},
+        {"sStartingHealthAmmo", ROM_BASE + START, 4, 8},
+        {"sBombChainReverseData", ROM_BASE + CHAINS, 8, 9},
+        {"sSubBombChainPositionOffset", ROM_BASE + SUBCHAINS, 4, 10},
+        {"sHaze_PowerBomb_WindowValuesPointers", ROM_BASE + POINTERS, 12, 11},
+        {"sHaze_PowerBomb_Values0", ROM_BASE + WINDOW0, 4, 12},
+        {"sHaze_PowerBomb_Values1", ROM_BASE + WINDOW1, 2, 13},
+    };
+    FusionMzmRomSymbolTable symbols = {entries, sizeof entries / sizeof entries[0], 0};
+    static FusionMzmClipdataTables tables;
+    tables.collision[1] = 12;
+    tables.behavior[1] = 3;
+    tables.tilemap_collision[207] = 1;
+    tables.tilemap_behavior[207] = 26;
+    FusionMzmTextFile file;
+    char error[160];
+    assert(fusion_mzm_serialize_block_tables(&rom, &symbols, &tables, &file,
+                                             error, sizeof error));
+    const char *expected =
+        "schema\tmetroidvania-mzm-blocks-v1\n"
+        "damage\t0,4096\n"
+        "behavior\t0\t1\t2\t3\t0\t1\n"
+        "behavior\t1\t3\t4\t14\t1\t0\n"
+        "weakness\t65535,178\n"
+        "reforming\t1024,1029\n"
+        "timers\t0\t0,0,4,0,0,0,0,0,0,0,0,0,0\n"
+        "timers\t1\t0,0,0,0,0,0,0,255,0,0,0,0,0\n"
+        "tank\t1052,0\n"
+        "tankitem\t0\t0\t0\t-1\n"
+        "tankitem\t1\t2\t1\t1\n"
+        "tanklist\tstart\t99,0,0,0\n"
+        "tanklist\ttotal\t12,50,15,9\n"
+        "tanklist\tincrease\t101,6,3,3\n"
+        "tanklist\tincrease0\t100,5,2,2\n"
+        "tanklist\tincrease1\t101,6,3,3\n"
+        "tanklist\tincrease2\t50,2,1,1\n"
+        "makesolid\t1086\t1085\t1087\n"
+        "tankclip\t0\t1084\n"
+        "chain\t0\t1\t38\n"
+        "chain\t1\t2\t39\n"
+        "subchain\t0\t1,1,-1,1\n"
+        "main\t0:0,12:3,0:0,";
+    assert(file.size > strlen(expected) &&
+           !memcmp(file.data, expected, strlen(expected)));
+    assert(strstr((char *)file.data, ",1:26\n") ==
+           (char *)file.data + file.size - 6);
+    fusion_mzm_free_text_file(&file);
+    assert(file.data == NULL);
+    assert(fusion_mzm_serialize_power_bomb_windows(&rom, &symbols, &file,
+                                                   error, sizeof error));
+    assert(file.size == strlen("schema\tmetroidvania-mzm-power-bomb-v1\n"
+                               "window\t0\t0,-2\nwindow\t1\t300\n"
+                               "window\t2\t0,-2\n") &&
+           !memcmp(file.data,
+                   "schema\tmetroidvania-mzm-power-bomb-v1\n"
+                   "window\t0\t0,-2\nwindow\t1\t300\nwindow\t2\t0,-2\n",
+                   file.size));
+    fusion_mzm_free_text_file(&file);
+    entries[7].size = 8;   /* two difficulties instead of three */
+    assert(!fusion_mzm_serialize_block_tables(&rom, &symbols, &tables, &file,
+                                              error, sizeof error));
+    entries[13].size = 3;  /* an odd s16 array */
+    assert(!fusion_mzm_serialize_power_bomb_windows(&rom, &symbols, &file,
+                                                    error, sizeof error));
+}
+
 static void test_bitmaps(void) {
     /* A 2 x 1 RGBA image: BGRA pixels after the 122-byte V4 header, a
      * negative height (top-down) and BI_BITFIELDS masks. */
@@ -991,6 +1172,8 @@ int main(void) {
     test_runtime_room_core();
     test_runtime_room_sprites();
     test_bitmaps();
+    test_runtime_tables();
+    test_export_background();
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

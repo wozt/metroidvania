@@ -2,6 +2,47 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0518 - Native Zero Mission export tables and background image
+
+- Ported the export's `background.bmp` renderer exactly
+  (`fusion_mzm_render_export_background`): the older diagnostic path of
+  `scripts/mzm_room_render.py` that `produce()` uses, not the VRAM
+  selection. It draws only the tileset's own metatiles (common blocks such
+  as hatches stay black, since the runtime animates them from the
+  `H/V/A` records), takes tiles from the decompressed tileset graphics at
+  the character base inferred from BG1 (`graphic_base`: 192, or 704 with
+  more coverage), maps BG rows 3 to 15 to source palette rows 1 to 13, paints
+  color 0 without making it visible, and composes BG1 over BG2 only when
+  BG2's property is exactly `BG_PROP_RLE_COMPRESSED` (`BG_PROP_MOVING`
+  layers are not composed). A room whose BG1 reaches no tile graphics is
+  reported as skipped, like the Python `ValueError`. The new
+  `--mzm-export-backgrounds` command and a real-ROM equivalence test match
+  all 330 exportable rooms' bitmaps byte for byte (265,300,380 bytes), with
+  synthetic coverage of composition, the `BG_PROP_MOVING` rule, painted
+  color 0, common blocks and the skip.
+
+- Added `fusion_mzm_serialize_block_tables` for `blocks.tsv`: the action
+  damage types, block behaviors (with the `isSpeedboost` / `isBombChain` bit
+  fields), weaknesses, reforming tiles, broken-block timers, tank behaviors
+  and the start/total/increase tank lists, the bomb-chain tables and every
+  raw Clipdata value's collision and behavior, read from the bounded
+  `block_data.c` ELF objects. Element counts come from the object sizes;
+  the `makesolid` / `tankclip` Clipdata values and `DIFF_NORMAL` are named
+  constants of the decompilation, and `MESSAGE_NONE` (0xFF) prints as -1
+  like its enum value.
+- Added `fusion_mzm_serialize_power_bomb_windows` for `power_bomb.tsv`: the
+  s16 window values of every `sHaze_PowerBomb_WindowValuesPointers` entry.
+- The new `--mzm-runtime-tables` command and a real-ROM equivalence test
+  match `block_table_lines` (4,643 bytes) and `power_bomb_window_lines`
+  (201,326 bytes) byte for byte, with synthetic coverage of the bit fields,
+  the signed message and offsets, the difficulty rows and malformed sizes.
+- Every private file of the Zero Mission room export except the export
+  index now has a byte-identical native serializer: `room.tsv`,
+  `background.bmp`, `bg0.bmp` / `bg3.bmp`, the tileset sheets, `blocks.tsv`
+  and `power_bomb.tsv`. Production authority and gameplay status do not
+  change; the native writer, the export index and the rebuild cutover come
+  next.
+
 ## Patch 0517 - Native Zero Mission runtime bitmaps
 
 - Added `fusion_mzm_render_metatile_sheet` (every block value of a tileset,

@@ -205,6 +205,11 @@ typedef struct {
 } FusionMzmBitmap;
 
 typedef struct {
+    uint8_t *data;
+    size_t size;
+} FusionMzmTextFile;
+
+typedef struct {
     uint8_t collision[FUSION_MZM_CLIPDATA_COUNT];
     uint16_t behavior[FUSION_MZM_CLIPDATA_COUNT];
     uint8_t tilemap_collision[FUSION_MZM_CLIPDATA_TILEMAP_COUNT];
@@ -407,6 +412,21 @@ bool fusion_mzm_select_bg12(
     const FusionMzmRenderedBackground *bg2,
     FusionMzmCompositeBackground *composite,
     char *error, size_t error_size);
+/* The runtime export's background.bmp image
+ * (scripts/mzm_runtime_room.py::produce): the older diagnostic renderer of
+ * scripts/mzm_room_render.py. Only the tileset's own metatiles are drawn
+ * (common blocks stay black), tiles come from the decompressed tileset
+ * graphics at the character base inferred from BG1 (graphic_base: 192 or
+ * 704), BG rows 3 to 15 use source palette rows 1 to 13 and color 0 is drawn
+ * but not visible; BG1 goes over BG2 when BG2's property is exactly
+ * BG_PROP_RLE_COMPRESSED and its layer has the same size. *no_base is set (with false) when no BG1 tile reaches the graphics,
+ * which the export reports as a skipped room. */
+bool fusion_mzm_render_export_background(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const FusionMzmRoomEntry *entry,
+    const FusionMzmRoomBackgrounds *backgrounds,
+    FusionMzmCompositeBackground *composite, bool *no_base,
+    char *error, size_t error_size);
 void fusion_mzm_free_composite_background(
     FusionMzmCompositeBackground *composite);
 bool fusion_mzm_serialize_background(
@@ -481,6 +501,20 @@ bool fusion_mzm_serialize_runtime_room_sprites(
     const FusionMzmRoomSprites *sprites,
     FusionMzmRuntimeRoomPayload *payload,
     char *error, size_t error_size);
+/* blocks.tsv (metroidvania-mzm-blocks-v1): the block, tank and bomb-chain
+ * tables of src/data/block_data.c read from bounded ELF objects, then each
+ * raw Clipdata value's collision type and behavior, as
+ * scripts/mzm_c_tables.py::block_table_lines writes them. */
+bool fusion_mzm_serialize_block_tables(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const FusionMzmClipdataTables *tables, FusionMzmTextFile *file,
+    char *error, size_t error_size);
+/* power_bomb.tsv (metroidvania-mzm-power-bomb-v1): each
+ * sHaze_PowerBomb_WindowValuesPointers entry's s16 window values. */
+bool fusion_mzm_serialize_power_bomb_windows(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmTextFile *file, char *error, size_t error_size);
+void fusion_mzm_free_text_file(FusionMzmTextFile *file);
 void fusion_mzm_free_runtime_room_payload(
     FusionMzmRuntimeRoomPayload *payload);
 

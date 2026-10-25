@@ -2,6 +2,36 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0528 - Native Aria object and enemy sprite library
+
+- Added `fusion_aos_export_objects` and `fusion_importer
+  --aria-export-objects ROM METADATA_DIR RUNTIME_DIR`. The bounded C11 reader
+  reconstructs the two wooden-door palette cycles, all 50 traced enemy and
+  palette variants, their complete animation descriptors and static child
+  frames, ten shared effects, frame boxes, anchors, walker probes, the Skull
+  Archer volleys, death blink and screen margins, plus all 113 enemy stat
+  records.
+- Proved the complete C output against the former Python writer before
+  cutover: 348 sequences, 1,344 indexed frames, 825 unique BMP objects and all
+  828 files are byte-identical. The stable SHA-256 values are
+  `3c07faf9c4ae4e0cdefe7e8a5828404d0acb7e8041b1d3359cd18317cdb65891`
+  for `enemy_frames.tsv`,
+  `af6836386beb0a185c0872f426727d80c8c0171f8b2916112868eedc88779911`
+  for `enemies.tsv` and
+  `b1231671a3666327a5deca10161be56a671c4179f2d4677c69d045d7d859bb47`
+  for `runtime_index.tsv`.
+- Extended the native Aria golden fixture with the command and every object
+  output. The `aria_objects` rebuild task now runs the C importer and validates
+  the generated sprite index. Removed `scripts/aos_object_sprites.py` and its
+  superseded Python-only unit tests; native source and golden evidence now
+  back every affected parity entry.
+- The feature remains partial because only objects with traced creation paths
+  are catalogued; this migration changes the implementation language, not its
+  gameplay or fidelity status. No private assets were committed, and audio
+  remains untouched.
+- Next: migrate the remaining Python raw-import/catalog cache writer or begin
+  the native Zero Mission Samus/projectile sprite-library pipeline.
+
 ## Patch 0527 - Native Aria weapon library in production
 
 - Added `fusion_aos_export_weapons` and `fusion_importer
@@ -52,8 +82,7 @@ Last updated: **2026-10-25**.
   The `aria_soma` rebuild task runs the native writer and passed a forced
   production rebuild followed by an up-to-date run. Removed the superseded
   `scripts/aos_soma_pipeline.py`; `scripts/aos_soma_sprite.py` remains a
-  shared decoder for the still-Python raw importer, object tools and
-  previews.
+  shared decoder for the still-Python raw importer and previews.
 - No gameplay or fidelity status changed, no private assets were committed,
   and audio remains untouched.
 - Next: reuse the native sprite-library writer for the Aria weapon records and

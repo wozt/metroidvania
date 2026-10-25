@@ -491,7 +491,7 @@ open/close timer. `sub_0803CC70` registers a palette script that
 `sub_0803C150` plays: a u16 entry count, then (bank, duration) entries copied
 into the object's palette slot in a loop; 0x08525564 cycles banks 3, 4, 5
 (7 frames each), 0x08525574 banks 9, 10, 11, 10 (10 frames).
-`scripts/aos_object_sprites.py` exports each style as a looping sequence. The
+`fusion_aos_export_objects` exports each style as a looping sequence. The
 runtime mirrors doors that face left, as Soma's frames are mirrored; the
 generic draw (`0x03004564` in IWRAM) is not traced, but this places both
 edge doors inside their doorway art (rooms 0/3 and 0/16).
@@ -529,7 +529,7 @@ death below. A bat created while gEwramData + 0x8E bit 0x40 is set (by
 `sub_0804CC14`; meaning not traced) skips the ceiling search and the hit
 callback and stays in state 4 (`sub_080AD6AC`): animation 1, no activity
 window, no collision pass. `src/runtime/aos_enemy.c` ports the framework parts above and the
-bat; `scripts/aos_object_sprites.py` exports its animations and boxes.
+bat; the native object exporter writes its animations and boxes.
 
 Collisions and damage. Every entity has a collision block at `+0x70`
 (`sub_0804277C`): type (`+0x70`: player 1, weapon 3, secondary weapon 5,
@@ -735,7 +735,7 @@ callbacks and rewards remain outside the runtime.
 The next constructor-table batch connects ten early bestiary identities:
 Skeleton (0x02), Peeping Eye (0x06), Killer Fish (0x07), Bone Pillar (0x08),
 Buer (0x0A), White Dragon (0x0B), Ghost (0x0E), Rock Armor (0x12), Giant Ghost
-(0x13) and Winged Skeleton (0x14). `scripts/aos_object_sprites.py` exports
+(0x13) and Winged Skeleton (0x14). `fusion_aos_export_objects` exports
 their native sheets, palettes, animation descriptors, direct child frames and
 frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert

@@ -3,7 +3,7 @@
 
 The fixture records the SHA-256 of every inspection command's complete
 standard output, the native world-catalog files, every file in the room export,
-and every file in the content-addressed Soma and weapon libraries. It was recorded after
+and every file in the content-addressed Soma, weapon and object libraries. It was recorded after
 those outputs had been proven identical to the former Python writers and
 reference decoders. The fixture contains only digests, paths and summaries,
 never ROM-derived bytes.
@@ -108,6 +108,22 @@ def _current() -> list[str]:
         for path in sorted(weapon_runtime.rglob("*")):
             if path.is_file():
                 lines.append(f"weapon-file\truntime/{path.relative_to(weapon_runtime).as_posix()}\t"
+                             f"{_digest(path)}")
+
+        object_metadata = root / "object_metadata"
+        object_runtime = root / "objects"
+        object_metadata.mkdir()
+        object_runtime.mkdir()
+        console = _run("--aria-export-objects", str(ROM),
+                       str(object_metadata), str(object_runtime))
+        lines.append(f"object-console\tstdout\t{hashlib.sha256(console).hexdigest()}")
+        for path in sorted(object_metadata.rglob("*")):
+            if path.is_file():
+                lines.append(f"object-file\tmetadata/{path.relative_to(object_metadata).as_posix()}\t"
+                             f"{_digest(path)}")
+        for path in sorted(object_runtime.rglob("*")):
+            if path.is_file():
+                lines.append(f"object-file\truntime/{path.relative_to(object_runtime).as_posix()}\t"
                              f"{_digest(path)}")
     return lines
 

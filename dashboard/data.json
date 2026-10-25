@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T22:28:13+00:00",
+ "generated_at": "2026-10-25T23:04:38+00:00",
  "git": {
-  "commit": "0f6eedf",
+  "commit": "c63ad23",
   "branch": "main",
   "dirty": true
  },
@@ -8503,10 +8503,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -8532,7 +8533,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)"
@@ -8555,6 +8557,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8572,10 +8580,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -8592,7 +8601,8 @@
    "next_action": "Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245"
@@ -8615,6 +8625,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8632,10 +8648,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.skull_archer"
@@ -8662,7 +8679,8 @@
    "next_action": "Compare against an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)"
@@ -8685,6 +8703,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8702,10 +8726,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -8731,7 +8756,8 @@
    "next_action": "Port the crow's sounds and palette bits once the Aria sound and palette paths exist.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits"
@@ -8754,6 +8780,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8771,10 +8803,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -8787,7 +8820,8 @@
    "next_action": "Port per-segment collision and hit callbacks.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_01_room_003: Bone Pillar record at x 352, y 767"
@@ -8810,6 +8844,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8827,10 +8867,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -8845,7 +8886,8 @@
    "next_action": "Port fire collision and the bounce state machine.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_012: Buer record at x 128, y 504"
@@ -8868,6 +8910,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8885,10 +8933,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.lubicant"
@@ -8902,7 +8951,8 @@
    "next_action": "Follow the Lubicant's open items.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)"
@@ -8925,6 +8975,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8942,10 +8998,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.gorgon"
@@ -8958,7 +9015,8 @@
    "next_action": "Refine the shared gait and collision probes when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
@@ -8981,6 +9039,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -8998,10 +9062,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -9023,7 +9088,8 @@
    "next_action": "Trace the area 4 draw routine sub_0806CCE8.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113"
@@ -9046,6 +9112,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9063,10 +9135,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.skeleton_knight"
@@ -9084,7 +9157,8 @@
    "next_action": "Check a kill in game (the capture input cannot stop attacking, which keeps it guarding); compare against an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits (frame 30), walks to Soma and strikes him (frames 20 and 60 walking right); attacking with --repeat 2 it raises its shield (frames 80 and 140) and two blows deal 0 damage over 300 frames"
@@ -9107,6 +9181,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9125,10 +9205,11 @@
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_effect.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.axe_armor"
@@ -9146,7 +9227,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
@@ -9169,6 +9251,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9186,10 +9274,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.curly"
@@ -9202,7 +9291,8 @@
    "next_action": "Follow Curly's open items.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durgas pace toward Soma and attack in reach at frames 30 and 120"
@@ -9225,6 +9315,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9242,10 +9338,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.valkyrie"
@@ -9258,7 +9355,8 @@
    "next_action": "Follow the Valkyrie's open items.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)"
@@ -9281,6 +9379,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9298,10 +9402,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.bat"
@@ -9321,7 +9426,8 @@
    "next_action": "Find what releases a carried Fleaman (step 1).",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)"
@@ -9344,6 +9450,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9361,10 +9473,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -9384,7 +9497,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)"
@@ -9407,6 +9521,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9424,10 +9544,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9441,7 +9562,8 @@
    "next_action": "Port the fade and attack state machine.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_018: Ghost producer record at x 0, y 0"
@@ -9464,6 +9586,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9481,10 +9609,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.medusa_head"
@@ -9504,7 +9633,8 @@
    "next_action": "Trace the room blend coefficients for semi-transparent sprites.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330"
@@ -9527,6 +9657,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9544,10 +9680,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9562,7 +9699,8 @@
    "next_action": "Port the three children and palette/fade behavior.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_01_room_008: Giant Ghost record at x 160, y 224"
@@ -9585,6 +9723,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9602,10 +9746,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9624,7 +9769,8 @@
    "next_action": "Refine the gait and collision probes when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP"
@@ -9647,6 +9793,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9664,10 +9816,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.gargoyle"
@@ -9680,7 +9833,8 @@
    "next_action": "Follow the gargoyle's open items.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)"
@@ -9703,6 +9857,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9720,10 +9880,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9748,7 +9909,8 @@
    "next_action": "Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP"
@@ -9771,6 +9933,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9788,10 +9956,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9815,7 +9984,8 @@
    "next_action": "Refine acceleration and helper OAM flags when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage"
@@ -9838,6 +10008,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9855,11 +10031,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_aos_object_sprites.py"
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9885,7 +10061,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_aos_object_sprites.py"
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames"
@@ -9910,7 +10086,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_aos_object_sprites.py",
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -9931,10 +10107,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.merman"
@@ -9950,7 +10127,8 @@
    "next_action": "Port the water probe and linked fish producer.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_016: Killer Fish record at x 384, y 184"
@@ -9973,6 +10151,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -9991,11 +10175,11 @@
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_effect.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_aos_object_sprites.py"
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10021,7 +10205,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_aos_object_sprites.py"
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120"
@@ -10046,7 +10230,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_aos_object_sprites.py",
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -10067,10 +10251,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10090,7 +10275,8 @@
    "next_action": "Trace sub_08021654; compare against an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)"
@@ -10113,6 +10299,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10130,10 +10322,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10154,7 +10347,8 @@
    "next_action": "Port the petrification of gold heads with Soma's status effects.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP"
@@ -10177,6 +10371,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10194,10 +10394,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10221,7 +10422,8 @@
    "next_action": "Compare the water-surface crossing height and spawner screen coordinates against an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts"
@@ -10244,6 +10446,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10261,10 +10469,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10286,7 +10495,8 @@
    "next_action": "Trace sub_08046100 to draw the trigger; compare against an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)"
@@ -10309,6 +10519,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10326,10 +10542,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10348,7 +10565,8 @@
    "next_action": "Play the sound once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21"
@@ -10371,6 +10589,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10389,10 +10613,11 @@
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy.h",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10419,7 +10644,8 @@
    "next_action": "Compare the three delayed effect trails and palette behavior against an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180"
@@ -10442,6 +10668,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10459,10 +10691,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10478,7 +10711,8 @@
    "next_action": "Trace the state-3 visual variant selection and ceiling probe.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_018: Peeping Eye record at x 568, y 176"
@@ -10501,6 +10735,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10518,10 +10758,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.blue_crow"
@@ -10540,7 +10781,8 @@
    "next_action": "Follow the blue crow's open items.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)"
@@ -10563,6 +10805,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10580,10 +10828,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.fleaman"
@@ -10603,7 +10852,8 @@
    "next_action": "Compare the blade animation marker and acceleration rounding frame by frame with an emulator.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts"
@@ -10626,6 +10876,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10643,10 +10899,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10660,7 +10917,8 @@
    "next_action": "Port the probe walker and armor attack/reaction states.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_024: Rock Armor record at x 576, y 184"
@@ -10683,6 +10941,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10700,10 +10964,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.harpy"
@@ -10716,7 +10981,8 @@
    "next_action": "Refine the shared acceleration and activity-region clamping when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP"
@@ -10739,6 +11005,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10756,10 +11028,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10775,7 +11048,8 @@
    "next_action": "Port the bone children and attack timing.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_006: skeleton record at x 128, y 176"
@@ -10798,6 +11072,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10815,10 +11095,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10837,7 +11118,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)"
@@ -10860,6 +11142,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10877,10 +11165,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.axe_armor"
@@ -10905,7 +11194,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_024: kill at frame 159 (--spawn 200 176 --atk 80 --repeat 2, buttons 0x12), the pieces and their dust captured at frames 199 and 213"
@@ -10928,6 +11218,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -10945,10 +11241,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.lubicant"
@@ -10961,7 +11258,8 @@
    "next_action": "Follow the Lubicant's open items.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)"
@@ -10984,6 +11282,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11001,10 +11305,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11024,7 +11329,8 @@
    "next_action": "Refine acceleration and the orb affine transform when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input"
@@ -11047,6 +11353,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11064,10 +11376,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.curly"
@@ -11089,7 +11402,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)"
@@ -11112,6 +11426,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11129,10 +11449,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11146,7 +11467,8 @@
    "next_action": "Trace the remaining affine scale/matrix sequence, damage callbacks and attack state machine.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_013: White Dragon record at x 208, y 104"
@@ -11169,6 +11491,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11186,10 +11514,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11203,7 +11532,8 @@
    "next_action": "Port the wing probes and dive attack.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_002: Winged Skeleton producer record at x 0, y 0"
@@ -11226,6 +11556,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11243,10 +11579,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11270,7 +11607,8 @@
    "next_action": "Play the zombie's sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
@@ -11293,6 +11631,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11310,10 +11654,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie_soldier"
@@ -11333,7 +11678,8 @@
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_03_room_004: the officer at x 464 walks in and slashes (frame 47); a knife kill (--spawn 420 191 --atk 200 --repeat 2, buttons 0x12) at frame 59 shows flames and gibs at frames 63 and 73"
@@ -11356,6 +11702,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11373,10 +11725,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -11403,7 +11756,8 @@
    "next_action": "Play the soldier's sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_015: knife kill at frame 241 (--spawn 250 430 --atk 80 --repeat 2) with gibs at frames 243, 249 and 257; a grenade bursting on Soma at frames 232, 238 and 246 (--spawn 170 430, effects 3 then 12)"
@@ -11426,6 +11780,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -11442,11 +11802,11 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_door.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
     "tests/test_aos_door.c",
-    "tests/test_aos_object_sprites.py"
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11461,7 +11821,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_door.c",
-     "tests/test_aos_object_sprites.py"
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [
      "aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)"
@@ -11486,7 +11846,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_aos_object_sprites.py",
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -11853,7 +12213,7 @@
     "src/runtime/aos_effect.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/weapons.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
     "tests/test_aos_weapon.c",
@@ -12491,6 +12851,7 @@
     "src/assets/aos/catalog.c",
     "src/assets/aos/runtime_room.c",
     "src/assets/aos/export.c",
+    "src/assets/aos/objects.c",
     "src/assets/aos/soma.c",
     "src/assets/aos/weapons.c",
     "src/assets/aos/world.c",
@@ -12526,7 +12887,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs and writes their exact private identity manifests atomically; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, writes the complete 685-file private room export, and writes all 155 Soma/knife files plus all 258 weapon-library files atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both identity manifests, the Aria world catalog, Soma library and weapon library, the Zero Mission ROM bank and both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, shared reference decoders, caches and the global rebuild graph.",
+   "limitations": "The C11 library verifies both ROMs and writes their exact private identity manifests atomically; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, writes the complete 685-file private room export, and writes all 155 Soma/knife, 258 weapon and 828 traced-object library files atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both identity manifests, the Aria world catalog, Soma, weapon and object libraries, the Zero Mission ROM bank and both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, shared reference decoders, caches and the global rebuild graph.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12754,7 +13115,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Both ROM identity manifests, Aria world metadata, Soma library and weapon library, the Zero Mission ROM bank and both games' runtime rooms use native C11 writers; room previews, audits, remaining sprite pipelines and editor caches are not all native or registered yet.",
+   "limitations": "Both ROM identity manifests, Aria world metadata, Soma, weapon and object libraries, the Zero Mission ROM bank and both games' runtime rooms use native C11 writers; room previews, audits, remaining sprite pipelines and editor caches are not all native or registered yet.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -12992,12 +13353,12 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "scripts/aos_object_sprites.py",
+    "src/assets/aos/objects.c",
     "src/runtime/aos_enemy.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_aos_object_sprites.py"
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "assets.aria_objects"
@@ -13008,7 +13369,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_aos_object_sprites.py"
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13031,7 +13392,7 @@
       "exists": true
      },
      {
-      "test": "tests/test_aos_object_sprites.py",
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -13165,10 +13526,11 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "scripts/aos_object_sprites.py"
+    "src/assets/aos/objects.c"
    ],
    "tests": [
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_fusion_assets_aos_golden.py"
    ],
    "dependencies": [
     "assets.aria_enemy_batch_0469"
@@ -13178,7 +13540,8 @@
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_fusion_assets_aos_golden.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13199,6 +13562,12 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_fusion_assets_aos_golden.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -13214,36 +13583,51 @@
    "status": "partial",
    "fidelity": "faithful",
    "local_sources": [
-    "scripts/aos_object_sprites.py"
+    "include/fusion/assets/aos.h",
+    "src/assets/aos/objects.c",
+    "src/assets/core/sprite_library.c",
+    "scripts/rebuild.py"
    ],
    "tests": [
-    "tests/test_aos_object_sprites.py"
+    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_fusion_sprite_library.c"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Only objects and enemies whose create routine is traced (wooden door, bat, zombie with its puddle and drip frames, Merman with its animation-6 shot, Blue Crow, Siren and Harpy with shot/death frames 8..14, Tiny Devil and Imp with Imp death frame 0x15, Gorgon and Catoblepas with breath/death frames 17..26, Ripper with its animation-1 blade, zombie soldier with its grenade and gib frames, axe armor with its walker probe table, skull archer with its volley table and arrow frame, needles with its piece frames, the Medusa head in both palettes, the zombie officer with its gib frames, the gargoyle, the Ghost Dancer in three palettes, Curly and Durga, the Valkyrie and Erinys, the Gremlin, the skeleton knight, the dead warrior and its ember effect, the Fleaman, the red crow, the Mimic, the dead crusader, Nemesis with its four direct frames, helper anchors and translucent technical effect children, Skull Millione, Cagnazzo and Lubicant with the fin frame, the Killer and Lightning Dolls with their five piece frames, the beam skeleton with its beam, flash and bone frames and their probe points), plus the crow's feather frame and the shared effects of the common sheet 0x081C15F4 and frames 0x0820ED60: the death flame (animation 0, OBJ row 7 = bank 3 of 0x082099FC) the blood splash (animation 13, OBJ row 8 = bank 4) the smoke particles (animation 5, rows 6 and 5 = banks 2 and 1) and the drifting fire, spark, dust and impact of sub_08045CEC (animations 1, 16, 4 and 7) and the shell casing (frame 0x35).",
+   "limitations": "The native C11 rebuild task exports 348 traced door, enemy and shared-effect sequences, 1,344 indexed frames, 825 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 828 files are byte-identical to the former Python writer and guarded by recorded digests. Coverage remains partial because only objects and enemies whose create routine is traced are catalogued: wooden door, the 50 named enemy/palette variants and child frames, the common death flame, blood, smoke, fire, spark, dust, impact, ember and casing effects. The Python object writer is removed.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_object_sprites.py"
+     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_fusion_sprite_library.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-23",
+   "last_validated": "2026-10-25",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
      {
-      "test": "tests/test_aos_object_sprites.py",
+      "test": "tests/test_fusion_assets_aos_golden.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
+     },
+     {
+      "test": "tests/test_fusion_sprite_library.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_sprite_library"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -13613,7 +13997,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports all 83 Soma animations and the one supported knife animation as 382 indexed frames and 152 unique BMPs; all 155 files are byte-identical to the former Python writer and guarded by recorded digests. Animation-specific palette banks are preserved. Knife animation 1 still has unsupported multi-component OAM. The Python writer is removed; its decoder remains for previews and unmigrated Python asset tools.",
+   "limitations": "The native C11 rebuild task exports all 83 Soma animations and the one supported knife animation as 382 indexed frames and 152 unique BMPs; all 155 files are byte-identical to the former Python writer and guarded by recorded digests. Animation-specific palette banks are preserved. Knife animation 1 still has unsupported multi-component OAM. The Python writer is removed; its decoder remains for previews and the still-Python raw importer.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14751,13 +15135,6 @@
     "passed": 4
    },
    {
-    "file": "tests/test_aos_object_sprites.py",
-    "module": "tests.test_aos_object_sprites",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_aos_room_render.py",
     "module": "tests.test_aos_room_render",
     "test_count": 5,
@@ -15368,12 +15745,18 @@
    }
   ],
   "summary": {
-   "passed": 475,
+   "passed": 470,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "c63ad23",
+   "date": "2026-10-25",
+   "subject": "Export the Aria weapon library natively",
+   "scope": "project"
+  },
   {
    "commit": "0f6eedf",
    "date": "2026-10-25",
@@ -15846,12 +16229,6 @@
    "commit": "4da9ca9",
    "date": "2026-10-22",
    "subject": "Port the Aria skeleton knight",
-   "scope": "project"
-  },
-  {
-   "commit": "7a0d56b",
-   "date": "2026-10-22",
-   "subject": "Register the Aria Erinys and Gremlin on existing ports",
    "scope": "project"
   }
  ],
@@ -18142,7 +18519,8 @@
       "note": "Bat enemy",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245"
@@ -18159,7 +18537,8 @@
       "note": "Zombie and generic enemy death",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
@@ -18176,7 +18555,8 @@
       "note": "Skeleton",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_006: skeleton record at x 128, y 176"
@@ -18193,7 +18573,8 @@
       "note": "Merman",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts"
@@ -18210,7 +18591,8 @@
       "note": "Axe armor, its axe and the probe walker",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)"
@@ -18227,7 +18609,8 @@
       "note": "Skull archer and its arrows",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_024: kill at frame 159 (--spawn 200 176 --atk 80 --repeat 2, buttons 0x12), the pieces and their dust captured at frames 199 and 213"
@@ -18244,7 +18627,8 @@
       "note": "Peeping Eye",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_018: Peeping Eye record at x 568, y 176"
@@ -18261,7 +18645,8 @@
       "note": "Killer Fish",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_016: Killer Fish record at x 384, y 184"
@@ -18278,7 +18663,8 @@
       "note": "Bone Pillar",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_01_room_003: Bone Pillar record at x 352, y 767"
@@ -18295,7 +18681,8 @@
       "note": "Blue crow enemy",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits"
@@ -18312,7 +18699,8 @@
       "note": "Buer",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_012: Buer record at x 128, y 504"
@@ -18329,7 +18717,8 @@
       "note": "White Dragon",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_013: White Dragon record at x 208, y 104"
@@ -18346,7 +18735,8 @@
       "note": "Zombie soldier and its grenade",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_015: knife kill at frame 241 (--spawn 250 430 --atk 80 --repeat 2) with gibs at frames 243, 249 and 257; a grenade bursting on Soma at frames 232, 238 and 246 (--spawn 170 430, effects 3 then 12)"
@@ -18363,7 +18753,8 @@
       "note": "Skeleton knight",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)"
@@ -18380,7 +18771,8 @@
       "note": "Ghost",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_018: Ghost producer record at x 0, y 0"
@@ -18397,7 +18789,8 @@
       "note": "Siren (Harpy's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP"
@@ -18414,7 +18807,8 @@
       "note": "Tiny Devil",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input"
@@ -18431,7 +18825,8 @@
       "note": "Durga (Curly's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durgas pace toward Soma and attack in reach at frames 30 and 120"
@@ -18448,7 +18843,8 @@
       "note": "Rock Armor",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_024: Rock Armor record at x 576, y 184"
@@ -18465,7 +18861,8 @@
       "note": "Giant Ghost",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_01_room_008: Giant Ghost record at x 160, y 224"
@@ -18482,7 +18879,8 @@
       "note": "Winged Skeleton",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_002: Winged Skeleton producer record at x 0, y 0"
@@ -18535,7 +18933,8 @@
       "note": "Fleaman",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)"
@@ -18588,7 +18987,8 @@
       "note": "Catoblepas (Gorgon's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
@@ -18605,7 +19005,8 @@
       "note": "Ghost Dancer",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330"
@@ -18635,7 +19036,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_aos_object_sprites.py"
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames"
@@ -18652,7 +19053,8 @@
       "note": "Zombie officer",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_03_room_004: the officer at x 464 walks in and slashes (frame 47); a knife kill (--spawn 420 191 --atk 200 --repeat 2, buttons 0x12) at frame 59 shows flames and gibs at frames 63 and 73"
@@ -18729,7 +19131,8 @@
       "note": "Nemesis",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180"
@@ -18770,7 +19173,8 @@
       "note": "Valkyrie",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)"
@@ -18799,7 +19203,8 @@
       "note": "Curly",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113"
@@ -18828,7 +19233,8 @@
       "note": "Red crow",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)"
@@ -18857,7 +19263,8 @@
       "note": "Dead warrior",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
@@ -18886,7 +19293,8 @@
       "note": "Imp",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage"
@@ -18915,7 +19323,8 @@
       "note": "Gorgon",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP"
@@ -18968,7 +19377,8 @@
       "note": "Gremlin (the gargoyle's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)"
@@ -18985,7 +19395,8 @@
       "note": "Harpy",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP"
@@ -19002,7 +19413,8 @@
       "note": "Medusa head and its spawner",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP"
@@ -19032,7 +19444,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_aos_object_sprites.py"
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120"
@@ -19085,7 +19497,8 @@
       "note": "Needles and its pieces",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21"
@@ -19210,7 +19623,8 @@
       "note": "Cagnazzo (Lubicant's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)"
@@ -19227,7 +19641,8 @@
       "note": "Ripper",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts"
@@ -19328,7 +19743,8 @@
       "note": "Dead crusader",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits (frame 30), walks to Soma and strikes him (frames 20 and 60 walking right); attacking with --repeat 2 it raises its shield (frames 80 and 140) and two blows deal 0 damage over 300 frames"
@@ -19393,7 +19809,8 @@
       "note": "Gargoyle",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)"
@@ -19422,7 +19839,8 @@
       "note": "Beam skeleton",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)"
@@ -19451,7 +19869,8 @@
       "note": "Skull Millione (Lubicant's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)"
@@ -19516,7 +19935,8 @@
       "note": "Mimic",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)"
@@ -19545,7 +19965,8 @@
       "note": "Erinys (the Valkyrie's routines)",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)"
@@ -19562,7 +19983,8 @@
       "note": "Lubicant",
       "evidence": {
        "unit_tests": [
-        "tests/test_aos_enemy.c"
+        "tests/test_aos_enemy.c",
+        "tests/test_fusion_assets_aos_golden.py"
        ],
        "in_game_check": [
         "aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)"
@@ -19927,7 +20349,8 @@
     "aria_rom"
    ],
    "requires": [
-    "roms/Castlevania - Aria of Sorrow (USA).gba"
+    "roms/Castlevania - Aria of Sorrow (USA).gba",
+    "build/fusion_importer"
    ]
   },
   {

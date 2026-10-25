@@ -309,9 +309,12 @@ runtime indexes and stale-object pruning. `fusion_aos_export_soma` uses it to
 write all 83 Soma animations and the supported knife animation; `aria_soma`
 runs this through `fusion_importer --aria-export-soma`, and the former Python
 production writer is gone. The Python Soma decoder remains for preview and
-unmigrated asset-tool consumers. `fusion_aos_export_weapons` uses the same
+the still-Python raw importer. `fusion_aos_export_weapons` uses the same
 writer for all 59 weapon records, 60 sprite sequences and their frame hitbox
 metadata; `aria_weapons` now runs entirely through the native importer too.
+`fusion_aos_export_objects` likewise writes the traced door, enemy and shared
+effect library, frame boxes, anchors, probe/volley metadata and all 113 enemy
+stat records; `aria_objects` no longer invokes Python.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

@@ -397,7 +397,7 @@ with:
 python3 -m scripts.rebuild --task aria_soma    # runs build/fusion_importer --aria-export-soma
 python3 -m scripts.rebuild --task aria_rooms   # runs build/fusion_importer --aria-export-rooms
 python3 -m scripts.rebuild --task aria_weapons # runs build/fusion_importer --aria-export-weapons
-python3 -m scripts.aos_object_sprites
+python3 -m scripts.rebuild --task aria_objects # runs build/fusion_importer --aria-export-objects
 ./build/fusion_aria_runtime --area 0 --room 6
 ```
 
@@ -413,7 +413,7 @@ including Nemesis and its linked helper, the Killer and Lightning Dolls and thei
 is knocked back, or dies at 0 HP) and dies to his weapon with native rules
 (`--atk/--def/--hp` set diagnostic stats, the new-game stats are not traced);
 wooden doors open natively with
-their native sprite and palette cycle (`python3 -m scripts.aos_object_sprites`).
+their native sprite and palette cycle (`python3 -m scripts.rebuild --task aria_objects`).
 Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn

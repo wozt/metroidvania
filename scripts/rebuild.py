@@ -204,6 +204,14 @@ def _run_native_weapons(metadata: Path, runtime: Path) -> Callable[[], None]:
     return action
 
 
+def _run_native_objects(metadata: Path, runtime: Path) -> Callable[[], None]:
+    def action() -> None:
+        private_path(ROOT, metadata.relative_to(ROOT), create=True)
+        private_path(ROOT, runtime.relative_to(ROOT), create=True)
+        _run_native("--aria-export-objects", ROMS["aria"], metadata, runtime)()
+    return action
+
+
 def _run_native_manifest(game: str, output: Path) -> Callable[[], None]:
     def action() -> None:
         private_path(ROOT, output.relative_to(ROOT), create=True)
@@ -292,11 +300,15 @@ ASSET_TASKS = {
         requires=(ROMS["aria"], NATIVE_IMPORTER),
         stamps=lambda: _decomp_stamp("aria"),
         validate=_sprite_validator(ARIA_SOMA), group="assets"),
-    "aria_objects": _asset_task(
-        "aria_objects", "aria", "aos_object_sprites", (),
-        (ARIA_OBJECTS, ROOT / ARIA_METADATA / "enemy_frames.tsv",
-         ROOT / ARIA_METADATA / "enemies.tsv"), ("aria_rom",),
-        _sprite_validator(ARIA_OBJECTS)),
+    "aria_objects": Task(
+        name="aria_objects", version=2, dependencies=("aria_rom",),
+        inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],
+        outputs=(ARIA_OBJECTS, ROOT / ARIA_METADATA / "enemy_frames.tsv",
+                 ROOT / ARIA_METADATA / "enemies.tsv"),
+        action=_run_native_objects(ROOT / ARIA_METADATA, ARIA_OBJECTS.parent),
+        requires=(ROMS["aria"], NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("aria"),
+        validate=_sprite_validator(ARIA_OBJECTS), group="assets"),
     "aria_weapons": Task(
         name="aria_weapons", version=2, dependencies=("aria_rom",),
         inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],

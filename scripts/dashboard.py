@@ -207,8 +207,14 @@ def python_test_modules(tests_dir: Path = ROOT / "tests") -> dict[str, dict]:
     return modules
 
 
+# The CTest entry that runs the Python suite; --run-tests runs that suite
+# itself (recording each test), so CTest skips it instead of running it twice.
+PYTHON_SUITE_CTEST = "python_tooling_and_data"
+
+
 def run_ctest(build: Path) -> dict[str, str]:
-    result = subprocess.run(["ctest", "--test-dir", str(build)], cwd=ROOT,
+    result = subprocess.run(["ctest", "--test-dir", str(build),
+                             "-E", f"^{PYTHON_SUITE_CTEST}$"], cwd=ROOT,
                             capture_output=True, text=True, check=False)
     outcomes = {}
     for match in re.finditer(r"Test\s+#\d+:\s+([\w-]+)\s+\.+\s*(\*{0,3}\s*\w[^\n]*?)\s+[\d.]+ sec",
@@ -554,6 +560,10 @@ def build(run_tests: bool = False, build_dir: Path = ROOT / "build",
         if (build_dir / "CTestTestfile.cmake").is_file():
             ctest_results = run_ctest(build_dir)
         python_results = run_python_tests()
+        if ctest_results is not None and PYTHON_SUITE_CTEST in ctest:
+            ctest_results[PYTHON_SUITE_CTEST] = (
+                "failed" if any("failed" in module.values()
+                                for module in python_results.values()) else "passed")
     generated = (now or datetime.now(timezone.utc)).replace(microsecond=0)
     for item in features:
         item["verification"] = _verify(item, ctest, python, ctest_results, python_results)
@@ -719,6 +729,18 @@ def main(argv: list[str] | None = None) -> int:
           f"{overall['with_passing_tests']} with passing tests")
     for path in paths:
         print("Wrote", path.relative_to(ROOT) if path.is_relative_to(ROOT) else path)
+    if data["tests"]["ran"]:
+        summary = data["tests"].get("summary", {})
+        print(f"Tests: {summary.get('passed', 0)} passed, {summary.get('failed', 0)} failed, "
+              f"{summary.get('other', 0)} other")
+        failed = ([item["name"] for item in data["tests"]["ctest"]
+                   if item["outcome"] == "failed"] +
+                  [item["module"] for item in data["tests"]["python"]
+                   if item["outcome"] == "failed"])
+        for name in failed:
+            print("Failed test:", name, file=sys.stderr)
+        if failed:
+            return 1
     return 0
 
 

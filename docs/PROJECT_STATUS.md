@@ -2,6 +2,48 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0520 - One test run per work cycle
+
+- `scripts/dashboard.py --run-tests` no longer runs the Python suite twice:
+  its CTest run skips `python_tooling_and_data`, whose outcome now comes from
+  the suite's own recorded run. It also prints the pass/fail totals and the
+  failed tests and exits non-zero when one failed, so it serves as the single
+  full test run of a cycle (covered by a new dashboard test).
+- `AGENTS.md` now asks for targeted tests while working and one ordered end
+  of cycle run (build, `native_parity`, `dashboard --run-tests`,
+  `check_generated`) instead of separate `unittest`, `ctest` and leak-check
+  runs, which ran the slow Python suite up to four times per cycle.
+
+## Patch 0519 - Native Zero Mission room export writer
+
+- Added `fusion_mzm_export_runtime_rooms` and `--mzm-export-rooms ROM ELF
+  OUTPUT_DIR`: the complete private export of `scripts/mzm_runtime_room.py
+  --all` from the ROM and ELF alone. In the reference's order it writes each
+  exportable room's `<area>_<NNN>/bg0.bmp` / `bg3.bmp`, `room.tsv` and
+  `background.bmp`, `blocks.tsv` and `power_bomb.tsv` with the first room,
+  each used `tilesets/tileset_NN.bmp` once, then `export_index.tsv` (files
+  sorted by path with their SHA-256, skipped rooms sorted, reasons
+  whitespace-collapsed). Every file goes through the atomic writer, and
+  symlinked outputs, temporaries or directory components are refused, as in
+  `private_path` / `write_atomic`.
+- Measured and reproduced the production skip rules: no RLE BG1, no BG1 tile
+  in the tileset graphics, and an area name that is not purely alphabetic,
+  because `produce()` reads the hatch lock events without the equivalence
+  tests' `isalpha()` guard and `parse_hatch_lock_events` rejects the Test1 to
+  Test3 areas. Production therefore exports 315 rooms and skips 16; the
+  console summary matches the reference's line for line.
+- Added a native SHA-256 (FIPS 180-4, `fusion_sha256_hex`) with the standard
+  vectors and the 55/56/64-byte padding boundaries.
+- A real-ROM test runs both exporters into temporary roots and requires the
+  same 1,015 files byte for byte, index included, the same console output,
+  an identical rerun without leftover temporaries, and the refusal of a
+  symlinked or non-directory output. The native export takes about 9 seconds
+  against about 2 minutes 40 for the Python one on this machine.
+- The rebuild task still runs the Python exporter; switching
+  `metroid_rooms` to the native writer, checking runtime/editor consumption
+  and incremental rebuilds, then removing the Python production path come
+  next. Gameplay status does not change.
+
 ## Patch 0518 - Native Zero Mission export tables and background image
 
 - Ported the export's `background.bmp` renderer exactly

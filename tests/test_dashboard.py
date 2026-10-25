@@ -311,6 +311,25 @@ class OutputTests(unittest.TestCase):
         ctest.assert_not_called()
         python.assert_not_called()
 
+    def test_run_tests_runs_the_python_suite_once(self):
+        """CTest skips its Python-suite entry; the suite's own run decides it."""
+        with tempfile.TemporaryDirectory() as directory:
+            build_dir = Path(directory)
+            (build_dir / "CTestTestfile.cmake").write_text("", encoding="utf-8")
+            for failed in (False, True):
+                module = next(iter(dashboard.python_test_modules()))
+                results = {module: {"test_x": "failed" if failed else "passed"}}
+                with mock.patch.object(dashboard, "run_ctest", return_value={}) as ctest, \
+                        mock.patch.object(dashboard, "run_python_tests",
+                                          return_value=results) as python:
+                    data = dashboard.build(run_tests=True, build_dir=build_dir)
+                ctest.assert_called_once_with(build_dir)
+                python.assert_called_once_with()
+                suite = [item for item in data["tests"]["ctest"]
+                         if item["name"] == dashboard.PYTHON_SUITE_CTEST]
+                if suite:
+                    self.assertEqual(suite[0]["outcome"], "failed" if failed else "passed")
+
     def test_generation_does_not_run_tests_unless_asked(self):
         with mock.patch.object(dashboard, "run_ctest") as ctest, \
                 mock.patch.object(dashboard, "run_python_tests") as python:

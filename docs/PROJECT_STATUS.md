@@ -1,6 +1,25 @@
 # Project status
 
-Last updated: **2026-10-25**.
+Last updated: **2026-10-26**.
+
+## Patch 0529 - Remove the unconsumed sprite preview decoders
+
+- `scripts/import_game_assets.py` no longer renders the hand-selected Samus and
+  Soma `animations/basic` BMP previews: no tool, editor path or runtime read
+  them since the native Samus and Soma libraries took over. The `sprites`
+  import scope and the catalog's `decoded_sprites` list are removed; the
+  `raw` and `all` scopes are unchanged.
+- Removed the Python modules that only served those previews,
+  `scripts/mzm_samus_sprite.py`, `scripts/aos_soma_sprite.py`,
+  `scripts/mzm_samus_body.py` and `scripts/mzm_samus_oam_decode.py`, with their
+  five test files. `gba_oam`, `gba_tiles` and `mzm_samus_frame` keep live
+  consumers. A reachability sweep of the remaining scripts found no other
+  dead module: editor, viewer-demo and sprite-cache tools are still used.
+- Updated the registries and `docs/MZM_SAMUS.md`, `docs/AOS_SOMA.md` and
+  `docs/ASSET_PIPELINE_MIGRATION.md`. No status changed, no private assets
+  were committed, and audio remains untouched.
+- Next: migrate the remaining Python production tasks (`metroid_samus`,
+  `metroid_sprites`, then `raw_import`).
 
 ## Patch 0528 - Native Aria object and enemy sprite library
 

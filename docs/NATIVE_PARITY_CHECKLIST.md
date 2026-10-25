@@ -227,7 +227,7 @@ Evidence: in game: `chozodia_042`.
 
 Native evidence: `mzm:c:src/samus.c:SamusUpdateAnimation`, `mzm:c:src/samus.c:SamusUpdateGraphicsOam`, `mzm:c:src/samus.c:SamusUpdatePalette`.  
 Local implementation: [`scripts/mzm_samus_pipeline.py`](../scripts/mzm_samus_pipeline.py), [`scripts/mzm_samus_compose.py`](../scripts/mzm_samus_compose.py), [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c).  
-Tests: [`tests/test_mzm_samus_pipeline.py`](../tests/test_mzm_samus_pipeline.py), [`tests/test_mzm_samus_palette_banks.py`](../tests/test_mzm_samus_palette_banks.py), [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
+Tests: [`tests/test_mzm_samus_pipeline.py`](../tests/test_mzm_samus_pipeline.py), [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
 Known divergences: Not compared frame by frame with an emulator.  
 Next action: Compare representative animation and palette sequences frame by frame with an emulator.
 Evidence: in game: `brinstar_000`, `chozodia_000`, `chozodia_042`.

@@ -176,47 +176,9 @@ The semantic registry can be validated without opening a window:
   --samus-assets assets/extracted/metroid/sprites/samus/runtime
 ```
 
-`scripts/mzm_samus_sprite.py` reconstructs the four Power Suit animations used
-by the local asset preview. The addresses below come from exact symbols in the pinned
-`mzm` source and a matching `mzm_us` build, not from scan heuristics.
-
-| Preview state | MZM source animation | Frame address | Cannon animation | Frames | Durations at 60 Hz |
-|---|---|---:|---:|---:|---|
-| Idle | `sSamusAnim_PowerSuit_Right_Standing` | `0x08248744` | `0x08234430` | 4 | `16,16,16,16` |
-| Run | `sSamusAnim_PowerSuit_Right_Running` | `0x08248034` | `0x08234120` | 10 | ten times `2` |
-| Jump | `sSamusAnim_PowerSuit_Right_Spinning` | `0x0824FE58` | `0x08234F38` | 8 | `2,1,2,1,2,1,2,1` |
-| Attack | `sSamusAnim_PowerSuit_Right_Shooting` | `0x08248884` | `0x082344B0` | 3 | `2,2,4` |
-
-The normal Power Suit palette is `sSamusPal_PowerSuit_Default` at ROM offset
-`0x2376A8`; normal rendering copies its first two 16-color rows. Idle uses the
-forward-standing cannon graphics at `0x082337EC` and `0x082338AC`. Attack uses
-the forward-right default graphics at `0x0823236C` and `0x082324AC`.
-
-Generate every local animation from the repository root:
-
-```sh
-for animation in idle run jump attack; do
-  python3 scripts/mzm_samus_sprite.py \
-    --rom "roms/Metroid - Zero Mission (USA).gba" \
-    --animation "$animation" \
-    --output-dir assets/extracted/metroid/sprites/samus/animations/basic
-done
-```
-
-Use `--frame N --output assets/extracted/metroid/sprites/samus/animations/diagnostic/frame.bmp`
-to export one record for diagnostics. The GTK4 asset viewer displays the generated frames;
-their source-defined durations are retained as metadata for the future runtime.
-
-Batch output uses a shared transparent canvas centered on Samus's OAM X axis,
-with common vertical bounds per animation. This preserves the game-space anchor
-and prevents jitter between differently sized records. The idle sequence is
-`0,1,2,1`; the duplicate image is intentional. Un-aimed run and spin records
-use empty cannon OAM because their visible arm pixels are already in the body.
-
-The jump state represents the repeating `SPOSE_SPINNING` section. The separate
-one-record `SPOSE_STARTING_SPIN_JUMP` transition is not replayed on every loop.
-This is verified visual extraction, not execution of the original MZM state
-machine.
+The early Power Suit preview tool (`scripts/mzm_samus_sprite.py`) and its
+`animations/basic` BMPs are removed: the runtime library above covers every
+pose, and nothing read those previews.
 
 ## Verified data formats
 
@@ -253,17 +215,8 @@ unsupported because the verified animations do not require them.
 
 ### Palette
 
-`scripts/mzm_samus_body.py` can map 1 to 16 consecutive BGR555 rows into an
-explicit OBJ bank range. It rejects any OAM bank not loaded by the caller. A
-body-only diagnostic using the verified standing frame is:
-
-```sh
-python3 scripts/mzm_samus_body.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --frame-pointer 0x08248744 --palette-offset 0x2376A8 \
-  --palette-rows 2 --first-bank 0 \
-  --output assets/extracted/previews/samus_body.bmp
-```
+The runtime library exports every palette row and its native effects; see
+`palettes.tsv` and the `SamusUpdatePalette` selection in `src/runtime/mzm_samus.c`.
 
 ## Active diagnostic workflow
 
@@ -274,14 +227,6 @@ python3 scripts/mzm_samus_frame.py \
   --rom "roms/Metroid - Zero Mission (USA).gba" \
   --frame-pointer 0xVERIFIED \
   --output assets/extracted/mzm/samus_frame_vram.bin
-```
-
-Decode its confirmed compact OAM format:
-
-```sh
-python3 scripts/mzm_samus_oam_decode.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --frame-pointer 0xVERIFIED
 ```
 
 Every active diagnostic validates pointers, bounds and slot capacities. The

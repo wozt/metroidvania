@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-25T23:04:38+00:00",
+ "generated_at": "2026-10-25T23:13:00+00:00",
  "git": {
-  "commit": "c63ad23",
+  "commit": "87db8c4",
   "branch": "main",
   "dirty": true
  },
@@ -786,7 +786,6 @@
    ],
    "tests": [
     "tests/test_mzm_samus_pipeline.py",
-    "tests/test_mzm_samus_palette_banks.py",
     "tests/test_mzm_samus.c"
    ],
    "dependencies": [],
@@ -800,7 +799,6 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_samus_pipeline.py",
-     "tests/test_mzm_samus_palette_banks.py",
      "tests/test_mzm_samus.c"
     ],
     "in_game_check": [
@@ -819,12 +817,6 @@
     "tests": [
      {
       "test": "tests/test_mzm_samus_pipeline.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
-     },
-     {
-      "test": "tests/test_mzm_samus_palette_banks.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -13985,11 +13977,9 @@
     "include/fusion/assets/aos.h",
     "src/assets/aos/soma.c",
     "src/assets/core/sprite_library.c",
-    "scripts/aos_soma_sprite.py",
     "scripts/rebuild.py"
    ],
    "tests": [
-    "tests/test_aos_soma_sprite.py",
     "tests/test_fusion_sprite_library.c",
     "tests/test_fusion_assets_aos_golden.py"
    ],
@@ -13997,11 +13987,10 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports all 83 Soma animations and the one supported knife animation as 382 indexed frames and 152 unique BMPs; all 155 files are byte-identical to the former Python writer and guarded by recorded digests. Animation-specific palette banks are preserved. Knife animation 1 still has unsupported multi-component OAM. The Python writer is removed; its decoder remains for previews and the still-Python raw importer.",
+   "limitations": "The native C11 rebuild task exports all 83 Soma animations and the one supported knife animation as 382 indexed frames and 152 unique BMPs; all 155 files are byte-identical to the former Python writer and guarded by recorded digests. Animation-specific palette banks are preserved. Knife animation 1 still has unsupported multi-component OAM. The Python writer and its unconsumed preview decoder are removed.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_soma_sprite.py",
      "tests/test_fusion_sprite_library.c",
      "tests/test_fusion_assets_aos_golden.py"
     ],
@@ -14009,18 +13998,12 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-25",
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
-     {
-      "test": "tests/test_aos_soma_sprite.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
-     },
      {
       "test": "tests/test_fusion_sprite_library.c",
       "kind": "ctest",
@@ -14491,8 +14474,7 @@
     "scripts/mzm_samus_compose.py"
    ],
    "tests": [
-    "tests/test_mzm_samus_pipeline.py",
-    "tests/test_mzm_samus_palette_banks.py"
+    "tests/test_mzm_samus_pipeline.py"
    ],
    "dependencies": [
     "assets.rom_verification"
@@ -14502,8 +14484,7 @@
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_samus_pipeline.py",
-     "tests/test_mzm_samus_palette_banks.py"
+     "tests/test_mzm_samus_pipeline.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14517,12 +14498,6 @@
     "tests": [
      {
       "test": "tests/test_mzm_samus_pipeline.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
-     },
-     {
-      "test": "tests/test_mzm_samus_palette_banks.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -15142,13 +15117,6 @@
     "passed": 5
    },
    {
-    "file": "tests/test_aos_soma_sprite.py",
-    "module": "tests.test_aos_soma_sprite",
-    "test_count": 9,
-    "outcome": "passed",
-    "passed": 9
-   },
-   {
     "file": "tests/test_aos_world_import.py",
     "module": "tests.test_aos_world_import",
     "test_count": 7,
@@ -15450,13 +15418,6 @@
     "passed": 1
    },
    {
-    "file": "tests/test_mzm_samus_body.py",
-    "module": "tests.test_mzm_samus_body",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
     "file": "tests/test_mzm_samus_frame.py",
     "module": "tests.test_mzm_samus_frame",
     "test_count": 3,
@@ -15464,32 +15425,11 @@
     "passed": 3
    },
    {
-    "file": "tests/test_mzm_samus_oam_decode.py",
-    "module": "tests.test_mzm_samus_oam_decode",
-    "test_count": 4,
-    "outcome": "passed",
-    "passed": 4
-   },
-   {
-    "file": "tests/test_mzm_samus_palette_banks.py",
-    "module": "tests.test_mzm_samus_palette_banks",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_mzm_samus_pipeline.py",
     "module": "tests.test_mzm_samus_pipeline",
     "test_count": 12,
     "outcome": "passed",
     "passed": 12
-   },
-   {
-    "file": "tests/test_mzm_samus_sprite.py",
-    "module": "tests.test_mzm_samus_sprite",
-    "test_count": 8,
-    "outcome": "passed",
-    "passed": 8
    },
    {
     "file": "tests/test_mzm_sprites.py",
@@ -15745,12 +15685,18 @@
    }
   ],
   "summary": {
-   "passed": 470,
+   "passed": 441,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "87db8c4",
+   "date": "2026-10-26",
+   "subject": "Export the Aria object library natively",
+   "scope": "project"
+  },
   {
    "commit": "c63ad23",
    "date": "2026-10-25",
@@ -16223,12 +16169,6 @@
    "commit": "bb2032a",
    "date": "2026-10-22",
    "subject": "Port the Aria dead warrior",
-   "scope": "project"
-  },
-  {
-   "commit": "4da9ca9",
-   "date": "2026-10-22",
-   "subject": "Port the Aria skeleton knight",
    "scope": "project"
   }
  ],

@@ -30,10 +30,9 @@ offsets. The library uses the shared `metroidvania-sprite-index-v1` format,
 written by `src/assets/core/sprite_library.c`, the same one the SDL runtime
 loads for Samus.
 
-The former production writer `scripts/aos_soma_pipeline.py` is removed.
-`scripts/aos_soma_sprite.py` remains a decoder library and editor preview
-generator for six hand-selected sequences and for Python asset tools that have
-not yet migrated.
+The former production writer `scripts/aos_soma_pipeline.py` is removed, and
+so is the `scripts/aos_soma_sprite.py` preview decoder, whose six hand-selected
+`animations/basic` sequences no tool read any more.
 
 ## Frontend and portable saves
 

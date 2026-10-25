@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Extract the portions of each verified ROM described by pinned decomp DBs.
 
-This command performs RAW extraction (not decoding of all assets). It also
-renders the already-verified Samus and Soma animations as real BMP sprites.
+This command performs RAW extraction (not decoding of all assets) and writes
+the Zero Mission room descriptor catalog and world atlas.
 All generated files stay under ignored assets/extracted/. Never publish them.
 """
 from __future__ import annotations
@@ -23,10 +23,8 @@ if str(ROOT) not in sys.path:
 
 from scripts.asset_layout import (  # noqa: E402
     ARIA_RAW,
-    ARIA_SOMA,
     IMPORT_CATALOG,
     METROID_RAW,
-    METROID_SAMUS,
 )
 
 OUTPUT = ROOT / "assets" / "extracted"
@@ -35,10 +33,6 @@ ROMS = {
                 "5de8536afe1f0078ee6fe1089f890e8c7aa0a6e8", "mzm"),
     "aria": ("Castlevania - Aria of Sorrow (USA).gba",
              "abd71fe01ebb201bcc133074db1dd8c5253776c7", "cvaos"),
-}
-_ANIMATIONS = {
-    "samus": ("idle", "run", "jump", "attack"),
-    "soma": ("idle", "run", "jump", "attack", "run_start", "run_stop"),
 }
 _ALLOWED_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
 
@@ -141,48 +135,6 @@ def extract_database_entries(db: list[dict[str, Any]], rom: bytes, world: str,
     return entries
 
 
-def render_sprites(roms: dict[str, bytes]) -> list[dict[str, Any]]:
-    # Use the existing reverse-engineered, validated OAM decoders. Their output
-    # includes transparent backgrounds and native frame timing metadata.
-    from scripts import mzm_samus_sprite as samus
-    from scripts import aos_soma_sprite as soma
-
-    builders = {
-        "idle": (samus.POWER_SUIT_IDLE_FRAME_COUNT, samus.make_power_suit_idle_right),
-        "run": (samus.POWER_SUIT_RUN_FRAME_COUNT, samus.make_power_suit_run_right),
-        "jump": (samus.POWER_SUIT_JUMP_FRAME_COUNT, samus.make_power_suit_jump_right),
-        "attack": (samus.POWER_SUIT_ATTACK_FRAME_COUNT, samus.make_power_suit_attack_right),
-    }
-    rendered = []
-    for name in _ANIMATIONS["samus"]:
-        total, builder = builders[name]
-        bounds = samus.aligned_canvas_bounds([
-            builder(roms["metroid"], frame)[1] for frame in range(total)
-        ])
-        for frame in range(total):
-            data, info = builder(roms["metroid"], frame, bounds)
-            path = (METROID_SAMUS.relative_to("assets/extracted")
-                    / "animations/basic" / f"{name}_{frame}.bmp").as_posix()
-            write_generated(path, data)
-            rendered.append({"path": path, "world": "metroid", "actor": "samus",
-                             "animation": name, "frame": frame,
-                             "duration_ticks": info["frame"]["duration"],
-                             "status": "DECODED_BMP"})
-    for name in _ANIMATIONS["soma"]:
-        bounds = soma.animation_canvas_bounds(roms["aria"], name)
-        for frame in range(soma.SOMA_ANIMATIONS[name]["frame_count"]):
-            data, info = soma.make_soma_animation_frame(
-                roms["aria"], name, frame, bounds)
-            path = (ARIA_SOMA.relative_to("assets/extracted")
-                    / "animations/basic" / f"{name}_{frame}.bmp").as_posix()
-            write_generated(path, data)
-            rendered.append({"path": path, "world": "aria", "actor": "soma",
-                             "animation": name, "frame": frame,
-                             "duration_ticks": info["duration"],
-                             "status": "DECODED_BMP"})
-    return rendered
-
-
 def references_for(world: str, decomp_root: Path) -> dict[str, list[str]]:
     # These SOURCE paths are navigation references, not extracted scene/music
     # previews or editable room entities.
@@ -223,7 +175,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "warning": "Private extracted Nintendo/Konami data. NEVER commit or redistribute.",
         "sources": {w: {"expected_sha1": data[1], "decomp": data[2]}
                     for w, data in ROMS.items()},
-        "raw_entries": [], "decoded_sprites": [], "references": {},
+        "raw_entries": [], "references": {},
         "not_yet_decoded": ["full room tilemap geometry", "complete world maps",
              "enemy and object sprites/stats/placements", "music tracks as playable audio",
              "sound effects as playable audio", "cutscene timelines/scripts"],
@@ -240,8 +192,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         manifest["references"][world] = references_for(world, root)
         if args.scope in ("all", "raw"):
             manifest["raw_entries"].extend(extract_database_entries(db, roms[world], world))
-    if args.scope in ("all", "sprites"):
-        manifest["decoded_sprites"] = render_sprites(roms)
     counts = Counter(item["role"] for item in manifest["raw_entries"])
     # Original RoomEntryRom descriptors, not decoded room pixels.
     if args.scope == "all":
@@ -258,7 +208,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     manifest["summary"] = {
         "raw_blocks": len(manifest["raw_entries"]),
         "raw_bytes": sum(item["length"] for item in manifest["raw_entries"]),
-        "decoded_sprite_frames": len(manifest["decoded_sprites"]),
         "raw_categories": dict(sorted(counts.items())),
     }
     catalog_path = IMPORT_CATALOG.relative_to("assets/extracted").as_posix()
@@ -273,7 +222,7 @@ def main() -> int:
                         default=ROOT / "roms" / ROMS["metroid"][0])
     parser.add_argument("--aria", type=Path,
                         default=ROOT / "roms" / ROMS["aria"][0])
-    parser.add_argument("--scope", choices=("all", "sprites", "raw"), default="all")
+    parser.add_argument("--scope", choices=("all", "raw"), default="all")
     args = parser.parse_args()
     try:
         manifest = run(args)
@@ -283,7 +232,6 @@ def main() -> int:
     print("Authentic local import: verified both ROM SHA-1 fingerprints")
     print(f"Raw decomp-identified blocks: {summary['raw_blocks']} "
           f"({summary['raw_bytes']} bytes, format NOT decoded)")
-    print(f"Decoded native sprite frames: {summary['decoded_sprite_frames']}")
     if "native_rooms" in manifest:
         print(f"Original MZM room descriptors: {manifest['native_rooms']['metroid']['count']} (metadata only)")
     print(f"Private catalog: {ROOT / IMPORT_CATALOG}")

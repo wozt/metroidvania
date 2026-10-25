@@ -394,7 +394,7 @@ Run the experimental SDL3 Aria of Sorrow runtime (Soma in one native room)
 with:
 
 ```sh
-python3 -m scripts.aos_soma_pipeline
+python3 -m scripts.rebuild --task aria_soma    # runs build/fusion_importer --aria-export-soma
 python3 -m scripts.rebuild --task aria_rooms   # runs build/fusion_importer --aria-export-rooms
 python3 -m scripts.aos_object_sprites
 python3 -m scripts.aos_weapons

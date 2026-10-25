@@ -3,7 +3,7 @@
  *
  * Loads a room exported by fusion_importer (AOSROOM-NATIVE
  * collision bytes and background.bmp) and Soma's sprite library from
- * scripts/aos_soma_pipeline.py, then runs the ported player frame
+ * fusion_importer --aria-export-soma, then runs the ported player frame
  * aos_soma_update at 60 Hz. The library's animation_NNN keys are the
  * native animation descriptor indices, and their durations drive the
  * animation timing. Room transitions and a portable frontend save can select

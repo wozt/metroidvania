@@ -442,12 +442,13 @@ class NativeParityTests(unittest.TestCase):
         names = {path.name for path in sources}
         self.assertLessEqual({"aos_weapons.py", "aos_object_sprites.py", "sprite_library.py",
                               "asset_layout.py"}, names)
-        for name in ("aria_rom", "metroid_rom", "aria_world", "aria_rooms",
+        for name in ("aria_rom", "metroid_rom", "aria_world", "aria_rooms", "aria_soma",
                      "metroid_rooms", "metroid_rom_bank"):
             self.assertEqual(rebuild.TASKS[name].group, "assets")
         self.assertIn(rebuild.ROMS["aria"], rebuild.TASKS["aria_rooms"].requires)
         self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_rooms"].requires)
         self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_world"].requires)
+        self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_soma"].requires)
         self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["aria_rom"].requires)
         self.assertIn(rebuild.NATIVE_IMPORTER, rebuild.TASKS["metroid_rom"].requires)
         self.assertEqual(rebuild.TASKS["aria_rom"].inputs(),

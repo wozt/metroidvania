@@ -189,6 +189,13 @@ def _run_native_rom_bank(rom: Path, elf: Path, bank: Path,
     return action
 
 
+def _run_native_soma(output: Path) -> Callable[[], None]:
+    def action() -> None:
+        private_path(ROOT, output.relative_to(ROOT), create=True)
+        _run_native("--aria-export-soma", ROMS["aria"], output)()
+    return action
+
+
 def _run_native_manifest(game: str, output: Path) -> Callable[[], None]:
     def action() -> None:
         private_path(ROOT, output.relative_to(ROOT), create=True)
@@ -270,9 +277,13 @@ ASSET_TASKS = {
         requires=(ROMS["aria"], NATIVE_IMPORTER),
         stamps=lambda: _decomp_stamp("aria"),
         validate=_export_validator(ARIA_ROOM_INDEX), group="assets"),
-    "aria_soma": _asset_task(
-        "aria_soma", "aria", "aos_soma_pipeline", (), (ARIA_SOMA,), ("aria_rom",),
-        _sprite_validator(ARIA_SOMA)),
+    "aria_soma": Task(
+        name="aria_soma", version=2, dependencies=("aria_rom",),
+        inputs=lambda: [ROMS["aria"], NATIVE_IMPORTER],
+        outputs=(ARIA_SOMA,), action=_run_native_soma(ARIA_SOMA.parent),
+        requires=(ROMS["aria"], NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("aria"),
+        validate=_sprite_validator(ARIA_SOMA), group="assets"),
     "aria_objects": _asset_task(
         "aria_objects", "aria", "aos_object_sprites", (),
         (ARIA_OBJECTS, ROOT / ARIA_METADATA / "enemy_frames.tsv",

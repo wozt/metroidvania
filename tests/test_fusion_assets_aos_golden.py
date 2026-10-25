@@ -2,10 +2,11 @@
 """Regression digests of the native Aria importer on the local ROM.
 
 The fixture records the SHA-256 of every inspection command's complete
-standard output, the native world-catalog files and every file in the room
-export. It was recorded after those outputs had been proven identical to the
-former Python room exporter and reference decoders. The fixture contains only
-digests, paths and summaries, never ROM-derived bytes.
+standard output, the native world-catalog files, every file in the room export
+and every file in the content-addressed Soma library. It was recorded after
+those outputs had been proven identical to the former Python writers and
+reference decoders. The fixture contains only digests, paths and summaries,
+never ROM-derived bytes.
 
 Regenerate after an intended format change with
 ``AOS_GOLDEN_UPDATE=1 python3 -m unittest tests.test_fusion_assets_aos_golden``
@@ -81,6 +82,16 @@ def _current() -> list[str]:
         for path in sorted(output.rglob("*")):
             if path.is_file():
                 lines.append(f"export-file\t{path.relative_to(output).as_posix()}\t"
+                             f"{_digest(path)}")
+
+        soma = root / "soma"
+        soma.mkdir()
+        console = _run("--aria-export-soma", str(ROM), str(soma))
+        normalized = console.replace(str(soma).encode(), b"<OUTPUT>")
+        lines.append(f"soma-console\tstdout\t{hashlib.sha256(normalized).hexdigest()}")
+        for path in sorted(soma.rglob("*")):
+            if path.is_file():
+                lines.append(f"soma-file\t{path.relative_to(soma).as_posix()}\t"
                              f"{_digest(path)}")
     return lines
 

@@ -7,16 +7,17 @@ under ignored `assets/extracted/`; never commit ROM bytes or extracted images.
 ## Canonical Soma library
 
 ```sh
-python3 -m scripts.aos_soma_pipeline
+python3 -m scripts.rebuild --task aria_soma
 ./build/fusion_room_runtime --check-library \
   assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv
 ```
 
-The pipeline verifies the USA ROM SHA-1 and exports every animation listed by
+The native C11 pipeline verifies the USA ROM SHA-1 and exports every animation listed by
 Soma's native animation descriptor (`0x080E11C4`): 83 animations, 376 frames.
 Each frame selects a 64x64 body cell from the graphics descriptor
-(`0x080E11D4`, 37 sheets of four cells) and is colorized with palette bank 0
-of the palette descriptor (`0x082097D4`). Frames keep their native 60 Hz
+(`0x080E11D4`, 37 sheets of four cells) and is colorized with the
+animation-specific bank selected by the native table at `0x080E126C`
+from the palette descriptor (`0x082097D4`). Frames keep their native 60 Hz
 durations, are cropped, and carry their offset from Soma's draw origin, which
 lies 32 pixels right of and 47 pixels below the cell's top-left corner. Keys
 are `Soma/animation_NNN` by native index; `animations.json` records frame ids,
@@ -25,11 +26,14 @@ start 26).
 
 The knife descriptors (`0x0822B6C0` animation, `0x081AC54C` graphics,
 `0x082098B8` palette) add `Knife/animation_000` with origin-relative OAM
-offsets. The library uses the shared `metroidvania-sprite-index-v1` format of
-`scripts/sprite_library.py`, the same one the SDL runtime loads for Samus.
+offsets. The library uses the shared `metroidvania-sprite-index-v1` format,
+written by `src/assets/core/sprite_library.c`, the same one the SDL runtime
+loads for Samus.
 
-The older `scripts/aos_soma_sprite.py` remains the decoder library and the
-editor preview generator for six hand-selected sequences.
+The former production writer `scripts/aos_soma_pipeline.py` is removed.
+`scripts/aos_soma_sprite.py` remains a decoder library and editor preview
+generator for six hand-selected sequences and for Python asset tools that have
+not yet migrated.
 
 ## Frontend and portable saves
 
@@ -53,9 +57,9 @@ souls, event flags, map state and SRAM layout remain open reconstruction work.
 
 ## Explicitly unresolved
 
-- Palette banks 1-6 of Soma's palette descriptor are not identified. Some
-  transformation animations (native indices 33-35 and 42-44)
-  clearly need another bank and currently render with bank 0.
+- Palette banks 1 and 6 of Soma's palette descriptor are not referenced by the
+  native per-animation table and remain unidentified. Every exported
+  animation uses its selected native bank rather than guessing bank 0.
 - Only the knife weapon is located. `Knife/animation_001` uses multi-component
   OAM records that the decoder rejects, and the weapon table for every other
   weapon has not been found.
@@ -436,8 +440,8 @@ Soma's 83 animations use bank 0 except 0x21-0x22 (bank 2, a white
 silhouette), 0x2A-0x2B (bank 3, a red demon), 0x49-0x4A (bank 4, a grey
 Soma) and 0x4B (bank 5); banks 1 and 6 are not referenced by this table.
 One-shot requests through `+0x20` do not reload the palette, so they keep the
-previous one; `scripts/aos_soma_pipeline.py` colorizes each animation with
-its own bank.
+previous one; the production C11 writer colorizes each exported animation
+with its own bank.
 
 Room objects. `sub_0800F4F8` walks the room's entity records (sorted by
 X) and `sub_0800F1FC` spawns those whose X lies within the BG1 X - 80 ..

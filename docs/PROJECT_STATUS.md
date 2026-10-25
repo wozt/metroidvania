@@ -2,6 +2,38 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0526 - Native Soma animation library in production
+
+- Added a reusable native content-addressed sprite-library writer with exact
+  cropped BITMAPV4 serialization, SHA-256 object names, deterministic runtime
+  indexes, atomic output and stale-object pruning. Its ROM-free C test covers
+  bitmap orientation and offsets, deduplication, indexing and pruning.
+- Added `fusion_aos_export_soma` and `fusion_importer --aria-export-soma ROM
+  OUTPUT_DIR`. The C reader reconstructs all 83 Soma animations with their
+  animation-specific palette banks and native durations, plus the one
+  supported knife animation; the second knife animation remains explicitly
+  unresolved because its OAM composition is unsupported.
+- Compared the complete Python and C exports before cutover: all 155 files are
+  byte-identical (382 indexed frames and 152 unique BMP objects). The native
+  writer took about 0.13 seconds here versus 0.91 seconds for Python. The
+  stable SHA-256 values are
+  `3d2ddcecd9159adbd0996a6b93a7c446dd1561b4fa93f88927b8037721a4316f`
+  for `runtime_index.tsv`,
+  `c0c4870ca27de95c72eb40aa802a09e49e0e3265f6f597f5406ef6da5a18abf1`
+  for `animations.json` and
+  `9bd84a18510ec53841feb4c431e630265690a198f6bfe854a9e13787d121e5d1`
+  for `manifest.json`.
+- The golden Aria fixture now guards the command and every Soma-library file.
+  The `aria_soma` rebuild task runs the native writer and passed a forced
+  production rebuild followed by an up-to-date run. Removed the superseded
+  `scripts/aos_soma_pipeline.py`; `scripts/aos_soma_sprite.py` remains a
+  shared decoder for the still-Python raw importer, object/weapon tools and
+  previews.
+- No gameplay or fidelity status changed, no private assets were committed,
+  and audio remains untouched.
+- Next: reuse the native sprite-library writer for the Aria weapon records and
+  blade sprites, prove complete output parity, then switch `aria_weapons`.
+
 ## Patch 0525 - Native verified-ROM manifests in production
 
 - Added `fusion_rom_write_manifest` and `fusion_importer --rom-manifest GAME

@@ -353,4 +353,18 @@ bool fusion_aos_export_runtime_rooms(const FusionRom *rom, const char *output,
                                      FusionAosExportSummary *summary,
                                      char *error, size_t error_size);
 
+typedef struct {
+    size_t soma_animations;
+    size_t knife_animations;
+    size_t frames;
+    size_t unique_bmps;
+    size_t removed_stale_objects;
+} FusionAosSomaExportSummary;
+
+/* Writes the canonical content-addressed Soma/knife animation library to the
+ * supplied private runtime folder. */
+bool fusion_aos_export_soma(const FusionRom *rom, const char *output,
+                            FusionAosSomaExportSummary *summary,
+                            char *error, size_t error_size);
+
 #endif /* FUSION_ASSETS_AOS_H */

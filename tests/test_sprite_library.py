@@ -4,9 +4,6 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
-
-from scripts import aos_soma_pipeline
 from scripts.asset_layout import ARIA_SOMA_RUNTIME
 from scripts.sprite_library import INDEX_SCHEMA, LibraryWriter, bmp_from_pixels
 
@@ -43,28 +40,6 @@ class LibraryWriterTests(unittest.TestCase):
             lines = (writer.destination / "runtime_index.tsv").read_text().splitlines()
             self.assertEqual(lines[0], "schema\t" + INDEX_SCHEMA)
             self.assertTrue(lines[2].startswith("Soma/animation_000\t1\t2\t0\t-1\t"))
-
-
-class SomaOriginTests(unittest.TestCase):
-    def test_body_cells_are_placed_relative_to_somas_origin(self):
-        rgba = bytearray(64 * 64 * 4)
-        rgba[(47 * 64 + 32) * 4:(47 * 64 + 32) * 4 + 4] = bytes((1, 2, 3, 255))
-        with mock.patch.object(aos_soma_pipeline, "extract_cell_tiles",
-                               return_value=(b"", {"sheet_index": 0, "quadrant": (0, 0)})), \
-                mock.patch.object(aos_soma_pipeline, "decode_cell",
-                                  return_value=(bytes(rgba), 64, 64)):
-            (_, left, top), _ = aos_soma_pipeline.soma_frame(b"", 0, b"")
-        self.assertEqual((left, top), (0, 0))
-
-    def test_knife_offsets_come_from_its_oam_position(self):
-        rgba = bytes((5, 6, 7, 255)) + bytes(4 * 63)
-        metadata = {"width": 8, "height": 8, "position": (32 + 12, 47 - 20)}
-        with mock.patch.object(aos_soma_pipeline, "extract_knife_frame",
-                               return_value=(b"", metadata)), \
-                mock.patch.object(aos_soma_pipeline, "decode_tiles",
-                                  return_value=(rgba, 8, 8)):
-            (_, left, top), _ = aos_soma_pipeline.knife_frame(b"", 0, b"")
-        self.assertEqual((left, top), (12, -20))
 
 
 if __name__ == "__main__":

@@ -32,11 +32,13 @@ add_library(fusion_assets STATIC
     src/assets/aos/catalog.c
     src/assets/aos/runtime_room.c
     src/assets/aos/export.c
+    src/assets/aos/soma.c
     src/assets/aos/world.c
     src/assets/core/output.c
     src/assets/core/sha1.c
     src/assets/core/sha256.c
     src/assets/core/export.c
+    src/assets/core/sprite_library.c
     src/assets/core/rom.c
     src/assets/gba/decompress.c
     src/assets/gba/header.c
@@ -145,6 +147,11 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_assets_aos_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_aos_tests)
     add_test(NAME fusion_assets_aos COMMAND fusion_assets_aos_tests)
+    add_executable(fusion_sprite_library_tests tests/test_fusion_sprite_library.c)
+    target_include_directories(fusion_sprite_library_tests PRIVATE src/assets/core)
+    target_link_libraries(fusion_sprite_library_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_sprite_library_tests)
+    add_test(NAME fusion_sprite_library COMMAND fusion_sprite_library_tests)
     add_executable(fusion_assets_mzm_tests tests/test_fusion_assets_mzm.c)
     target_link_libraries(fusion_assets_mzm_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_mzm_tests)

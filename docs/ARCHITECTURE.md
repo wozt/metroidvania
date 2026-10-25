@@ -303,7 +303,13 @@ reproduced exactly by `fusion_mzm_render_export_background`.
 complete private export and its SHA-256 `export_index.tsv` atomically, and
 the `metroid_rooms` rebuild task runs it through `build/fusion_importer`;
 the Python room exporter is gone. The other native extractors are not yet
-registered in the rebuild task graph.
+registered in the rebuild task graph. The shared native sprite-library writer
+now owns cropped BITMAPV4 frames, SHA-256 object deduplication, deterministic
+runtime indexes and stale-object pruning. `fusion_aos_export_soma` uses it to
+write all 83 Soma animations and the supported knife animation; `aria_soma`
+runs this through `fusion_importer --aria-export-soma`, and the former Python
+production writer is gone. The Python Soma decoder remains for preview and
+unmigrated asset-tool consumers.
 
 `fusion_native_editor_core` contains the project-owned native map model,
 selection operations and display-independent CLI launcher:

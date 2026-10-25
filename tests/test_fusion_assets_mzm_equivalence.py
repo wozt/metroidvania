@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import unittest
 
+from scripts import mzm_runtime_room
 from scripts.mzm_c_tables import enum_values, evaluate
 from scripts.mzm_bg_layers import (
     metatile_sheet,
@@ -135,7 +136,11 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                    for row in symbol_rows
                    if (parts := row.split("\t"))[0] == "symbol"}
         expected = []
+        expected_cores = []
         total_cells = 0
+        total_clipdata = total_transitions = total_movements = 0
+        total_core_bytes = 0
+        tables = mzm_runtime_room.collision_tables()
         for room in source_rooms():
             pointer = symbols[room["fields"]["pClipData"]]
             width, height, cells = rle_room(rom[pointer - 0x08000000:])
@@ -144,6 +149,23 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                              width, height, len(cells),
                              hashlib.sha1(canonical).hexdigest()))
             total_cells += len(cells)
+            payload = mzm_runtime_room.encode_room(
+                room["area"], room["index"], width * 16, height * 16,
+                (width, height, cells), tables,
+            ).encode()
+            lines = payload.splitlines()
+            clipdata_count = sum(line.startswith(b"C\t") for line in lines)
+            transition_count = sum(line.startswith(b"B\t") for line in lines)
+            movement_count = sum(line.startswith(b"M\t") for line in lines)
+            expected_cores.append((
+                room["area"], room["index"], width, height, len(cells),
+                clipdata_count, transition_count, movement_count, len(payload),
+                hashlib.sha1(payload).hexdigest(),
+            ))
+            total_clipdata += clipdata_count
+            total_transitions += transition_count
+            total_movements += movement_count
+            total_core_bytes += len(payload)
 
         result = subprocess.run(
             [str(BINARY), "--mzm-clipdata", str(ROM), str(ELF)],
@@ -161,6 +183,26 @@ class FusionAssetsMzmEquivalenceTests(unittest.TestCase):
                            fields[8]))
         self.assertEqual(actual, expected)
         self.assertEqual(lines[-1], f"summary\t{len(expected)}\t{total_cells}")
+
+        result = subprocess.run(
+            [str(BINARY), "--mzm-runtime-room-cores", str(ROM), str(ELF)],
+            cwd=ROOT, text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output_lines = result.stdout.splitlines()
+        actual_cores = []
+        for line in output_lines[:-1]:
+            fields = line.split("\t")
+            self.assertEqual(fields[0], "room")
+            actual_cores.append((fields[1], *(int(value) for value in fields[2:10]),
+                                 fields[10]))
+        self.assertEqual(actual_cores, expected_cores)
+        self.assertEqual(
+            output_lines[-1],
+            f"summary\t{len(expected_cores)}\t{total_cells}\t"
+            f"{total_clipdata}\t{total_transitions}\t{total_movements}\t"
+            f"{total_core_bytes}",
+        )
 
     def test_room_background_payloads_match_python_reference(self):
         rom = ROM.read_bytes()

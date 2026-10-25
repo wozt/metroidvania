@@ -493,6 +493,95 @@ static void test_tileset_video_memory(void) {
     free(bytes);
 }
 
+static void test_runtime_room_core(void) {
+    enum {
+        FIXTURE_SIZE = 0x800,
+        COLLISION_OFFSET = 0x20,
+        BEHAVIOR_OFFSET = 0x100,
+        TILE_COLLISION_OFFSET = 0x280,
+        TILE_BEHAVIOR_OFFSET = 0x380,
+        MOVEMENT_OFFSET = 0x600
+    };
+    uint8_t bytes[FIXTURE_SIZE] = {0};
+    bytes[COLLISION_OFFSET + 16] = 1;
+    bytes[COLLISION_OFFSET + 32] = 11;
+    write_u16(bytes, BEHAVIOR_OFFSET + 32 * 2, 3);
+    write_u16(bytes, BEHAVIOR_OFFSET + 39 * 2, 4);
+    write_u16(bytes, BEHAVIOR_OFFSET + 40 * 2, 5);
+    write_u16(bytes, BEHAVIOR_OFFSET + 24 * 2, 8);
+    bytes[TILE_COLLISION_OFFSET + 1] = 1;
+    write_u16(bytes, TILE_BEHAVIOR_OFFSET + 1 * 2, 9);
+    write_u16(bytes, MOVEMENT_OFFSET + 8 * 2, 8);
+    write_u16(bytes, MOVEMENT_OFFSET + 9 * 2, 9);
+    FusionMzmRomSymbol entries[] = {
+        {"sClipdataCollisionTypes", 0x08000000 + COLLISION_OFFSET,
+         FUSION_MZM_CLIPDATA_COUNT, 0},
+        {"sClipdataBehaviorTypes", 0x08000000 + BEHAVIOR_OFFSET,
+         FUSION_MZM_CLIPDATA_COUNT * 2, 1},
+        {"sClipdataCollisionTypes_Tilemap",
+         0x08000000 + TILE_COLLISION_OFFSET,
+         FUSION_MZM_CLIPDATA_TILEMAP_COUNT, 2},
+        {"sClipdataBehaviorTypes_Tilemap",
+         0x08000000 + TILE_BEHAVIOR_OFFSET,
+         FUSION_MZM_CLIPDATA_TILEMAP_COUNT * 2, 3},
+        {"sMovementClipdataValues", 0x08000000 + MOVEMENT_OFFSET,
+         FUSION_MZM_CLIPDATA_MOVEMENT_COUNT * 2, 4},
+    };
+    FusionMzmRomSymbolTable symbols = {
+        entries, sizeof entries / sizeof entries[0], 0
+    };
+    FusionRom rom = {bytes, sizeof bytes, FUSION_ASSET_GAME_METROID};
+    char error[160];
+    FusionMzmClipdataTables tables;
+    assert(fusion_mzm_read_clipdata_tables(
+        &rom, &symbols, &tables, error, sizeof error));
+    assert(tables.collision[16] == 1 && tables.collision[32] == 11 &&
+           tables.behavior[32] == 3 && tables.behavior[39] == 4 &&
+           tables.tilemap_collision[1] == 1 &&
+           tables.tilemap_behavior[1] == 9 && tables.movement[9] == 9);
+    uint16_t cells[] = {16, 32, 39, 40, 24, 0x401};
+    FusionMzmRoomRleMap clipdata = {
+        .width = 2, .height = 3, .cells = cells, .cell_count = 6
+    };
+    FusionMzmRuntimeRoomPayload payload;
+    assert(fusion_mzm_serialize_runtime_room_core(
+        "Brinstar", 7, &clipdata, &tables, &payload,
+        error, sizeof error));
+    static const char expected[] =
+        "MVROOM-NATIVE\t1\tmzm\tBrinstar\t7\t32\t48\n"
+        "C\t0\t0\t16\t1\n"
+        "C\t1\t0\t32\t11\n"
+        "B\t1\t0\tdoor\n"
+        "C\t0\t1\t39\t0\n"
+        "B\t0\t1\tup\n"
+        "C\t1\t1\t40\t0\n"
+        "B\t1\t1\tdown\n"
+        "C\t0\t2\t24\t0\n"
+        "M\t0\t2\t8\n"
+        "C\t1\t2\t1025\t1\n"
+        "M\t1\t2\t9\n"
+        "END\n";
+    assert(payload.size == sizeof expected - 1 &&
+           !memcmp(payload.data, expected, sizeof expected) &&
+           payload.clipdata_count == 6 && payload.transition_count == 3 &&
+           payload.movement_count == 2);
+    fusion_mzm_free_runtime_room_payload(&payload);
+    assert(payload.data == NULL && payload.size == 0 &&
+           payload.clipdata_count == 0);
+    cells[5] = FUSION_MZM_CLIPDATA_TILEMAP_FLAG +
+               FUSION_MZM_CLIPDATA_TILEMAP_COUNT;
+    assert(!fusion_mzm_serialize_runtime_room_core(
+        "Brinstar", 7, &clipdata, &tables, &payload,
+        error, sizeof error));
+    cells[5] = 0x401;
+    assert(!fusion_mzm_serialize_runtime_room_core(
+        "Bad\tArea", 7, &clipdata, &tables, &payload,
+        error, sizeof error));
+    entries[4].size--;
+    assert(!fusion_mzm_read_clipdata_tables(
+        &rom, &symbols, &tables, error, sizeof error));
+}
+
 int main(void) {
     uint8_t elf[ELF_SIZE];
     uint8_t rom_bytes[ROM_SIZE] = {0};
@@ -537,6 +626,7 @@ int main(void) {
     test_room_rle(&rom);
     test_room_backgrounds();
     test_tileset_video_memory();
+    test_runtime_room_core();
 
     elf[0] = 0;
     assert(!fusion_mzm_read_rom_symbols(&rom, elf, sizeof elf, &table,

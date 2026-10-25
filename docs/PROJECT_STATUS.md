@@ -2,6 +2,29 @@
 
 Last updated: **2026-10-25**.
 
+## Patch 0512 - Native Zero Mission runtime-room core serialization
+
+- Added bounded C11 loading of the five native Clipdata lookup objects from
+  the verified ROM through the pinned ELF: main/tilemap collision types,
+  main/tilemap behaviors and movement values. No generated table is tracked.
+- Added serialization of the `MVROOM-NATIVE` v1 header and the complete
+  Clipdata-derived core in native row order: non-air `C` records, door and
+  vertical-transition `B` records, movement-affecting `M` records, then `END`.
+- Preserved the native cleared-RAM behavior for raw values between
+  `CLIPDATA_COUNT` and `CLIPDATA_TILEMAP_FLAG`, rejected values beyond the
+  tilemap table, and derived pixel dimensions from the decoded 16x16 cells.
+- Added synthetic table bounds, main/tilemap lookup, transition, movement,
+  ownership, invalid-area and out-of-range-value coverage. The new
+  `--mzm-runtime-room-cores` command compares every complete core payload.
+- All 331 room cores match Python byte for byte: 345,686 cells produce 224,307
+  `C` records, 2,707 `B` records, 1,141 `M` records and 2,837,039 serialized
+  bytes.
+- Doors, exits, hatches, sprite variants, music and background records remain
+  outside this core payload. Private writes and complete room serialization
+  therefore remain Python-owned, with no gameplay-status change.
+- Next: read and serialize native Zero Mission door records, including `D`,
+  `X` and location-banner `Y` lines, without touching audio.
+
 ## Patch 0511 - Native Zero Mission background serialization
 
 - Added bounded C11 selection of the validated Zero Mission BG1-over-BG2

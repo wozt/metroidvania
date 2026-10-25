@@ -15,6 +15,10 @@ enum {
     FUSION_MZM_ROOM_ENTRY_SIZE = 60,
     FUSION_MZM_ROOM_CAPACITY = 512,
     FUSION_MZM_ROOM_RLE_CELL_CAPACITY = 6144,
+    FUSION_MZM_CLIPDATA_COUNT = 176,
+    FUSION_MZM_CLIPDATA_TILEMAP_COUNT = 208,
+    FUSION_MZM_CLIPDATA_TILEMAP_FLAG = 1 << 10,
+    FUSION_MZM_CLIPDATA_MOVEMENT_COUNT = 16,
     FUSION_MZM_ROOM_BACKGROUND_COUNT = 4,
     FUSION_MZM_TEXT_TILE_CELL_CAPACITY = 4096,
     FUSION_MZM_TILESET_COUNT = 79,
@@ -179,6 +183,22 @@ typedef struct {
     size_t visibility_size;
 } FusionMzmSerializedBackground;
 
+typedef struct {
+    uint8_t collision[FUSION_MZM_CLIPDATA_COUNT];
+    uint16_t behavior[FUSION_MZM_CLIPDATA_COUNT];
+    uint8_t tilemap_collision[FUSION_MZM_CLIPDATA_TILEMAP_COUNT];
+    uint16_t tilemap_behavior[FUSION_MZM_CLIPDATA_TILEMAP_COUNT];
+    uint16_t movement[FUSION_MZM_CLIPDATA_MOVEMENT_COUNT];
+} FusionMzmClipdataTables;
+
+typedef struct {
+    uint8_t *data;
+    size_t size;
+    size_t clipdata_count;
+    size_t transition_count;
+    size_t movement_count;
+} FusionMzmRuntimeRoomPayload;
+
 /* Symbol names point into elf_data and remain valid only while that buffer is
  * alive. The returned entry array is released with fusion_mzm_free_symbols. */
 bool fusion_mzm_read_rom_symbols(const FusionRom *rom,
@@ -258,5 +278,16 @@ bool fusion_mzm_serialize_background(
     char *error, size_t error_size);
 void fusion_mzm_free_serialized_background(
     FusionMzmSerializedBackground *serialized);
+bool fusion_mzm_read_clipdata_tables(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmClipdataTables *tables,
+    char *error, size_t error_size);
+bool fusion_mzm_serialize_runtime_room_core(
+    const char *area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size);
+void fusion_mzm_free_runtime_room_payload(
+    FusionMzmRuntimeRoomPayload *payload);
 
 #endif /* FUSION_ASSETS_MZM_H */

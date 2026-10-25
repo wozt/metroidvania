@@ -3,6 +3,7 @@
 
 #include "fusion/assets/gba.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,19 @@ static void write_u32(uint8_t *data, uint32_t value) {
     data[3] = (uint8_t)(value >> 24);
 }
 
+static bool append_format(uint8_t *data, size_t capacity, size_t *used,
+                          const char *format, ...) {
+    if (*used >= capacity) return false;
+    va_list arguments;
+    va_start(arguments, format);
+    int written = vsnprintf((char *)data + *used, capacity - *used,
+                            format, arguments);
+    va_end(arguments);
+    if (written < 0 || (size_t)written >= capacity - *used) return false;
+    *used += (size_t)written;
+    return true;
+}
+
 static const FusionMzmRomSymbol *find_symbol(
     const FusionMzmRomSymbolTable *symbols, const char *name) {
     if (!symbols || (symbols->count && !symbols->entries)) return NULL;
@@ -64,6 +78,63 @@ static const FusionMzmRomSymbol *find_symbol_at(
             return &symbols->entries[index];
     }
     return NULL;
+}
+
+static const uint8_t *bounded_symbol_data(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    const char *name, size_t required_size) {
+    const FusionMzmRomSymbol *symbol = find_symbol(symbols, name);
+    size_t offset;
+    if (!symbol || symbol->size < required_size ||
+        !pointer_offset(rom, symbol->address, required_size, &offset)) {
+        return NULL;
+    }
+    return rom->data + offset;
+}
+
+bool fusion_mzm_read_clipdata_tables(
+    const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
+    FusionMzmClipdataTables *tables,
+    char *error, size_t error_size) {
+    if (!rom || !rom->data || rom->game != FUSION_ASSET_GAME_METROID ||
+        !symbols || !tables) {
+        set_error(error, error_size,
+                  "invalid Zero Mission Clipdata-table request");
+        return false;
+    }
+    *tables = (FusionMzmClipdataTables){0};
+    const uint8_t *collision = bounded_symbol_data(
+        rom, symbols, "sClipdataCollisionTypes", FUSION_MZM_CLIPDATA_COUNT);
+    const uint8_t *behavior = bounded_symbol_data(
+        rom, symbols, "sClipdataBehaviorTypes",
+        FUSION_MZM_CLIPDATA_COUNT * 2);
+    const uint8_t *tilemap_collision = bounded_symbol_data(
+        rom, symbols, "sClipdataCollisionTypes_Tilemap",
+        FUSION_MZM_CLIPDATA_TILEMAP_COUNT);
+    const uint8_t *tilemap_behavior = bounded_symbol_data(
+        rom, symbols, "sClipdataBehaviorTypes_Tilemap",
+        FUSION_MZM_CLIPDATA_TILEMAP_COUNT * 2);
+    const uint8_t *movement = bounded_symbol_data(
+        rom, symbols, "sMovementClipdataValues",
+        FUSION_MZM_CLIPDATA_MOVEMENT_COUNT * 2);
+    if (!collision || !behavior || !tilemap_collision ||
+        !tilemap_behavior || !movement) {
+        set_error(error, error_size,
+                  "missing or invalid Zero Mission Clipdata tables");
+        return false;
+    }
+    memcpy(tables->collision, collision, sizeof tables->collision);
+    memcpy(tables->tilemap_collision, tilemap_collision,
+           sizeof tables->tilemap_collision);
+    for (size_t index = 0; index < FUSION_MZM_CLIPDATA_COUNT; ++index)
+        tables->behavior[index] = read_u16(behavior + index * 2);
+    for (size_t index = 0; index < FUSION_MZM_CLIPDATA_TILEMAP_COUNT; ++index)
+        tables->tilemap_behavior[index] =
+            read_u16(tilemap_behavior + index * 2);
+    for (size_t index = 0; index < FUSION_MZM_CLIPDATA_MOVEMENT_COUNT; ++index)
+        tables->movement[index] = read_u16(movement + index * 2);
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
 }
 
 bool fusion_mzm_read_tileset_entry(const FusionRom *rom,
@@ -588,6 +659,147 @@ bool fusion_mzm_serialize_background(
     };
     if (error && error_size > 0) error[0] = '\0';
     return true;
+}
+
+void fusion_mzm_free_runtime_room_payload(
+    FusionMzmRuntimeRoomPayload *payload) {
+    if (!payload) return;
+    free(payload->data);
+    *payload = (FusionMzmRuntimeRoomPayload){0};
+}
+
+static bool valid_area_id(const char *area) {
+    if (!area || !area[0]) return false;
+    for (size_t index = 0; index < 32; ++index) {
+        unsigned char value = (unsigned char)area[index];
+        if (value == '\0') return true;
+        if (!((value >= 'a' && value <= 'z') ||
+              (value >= 'A' && value <= 'Z') ||
+              (value >= '0' && value <= '9') || value == '_')) {
+            return false;
+        }
+    }
+    return false;
+}
+
+static bool resolve_clipdata(
+    uint16_t raw, const FusionMzmClipdataTables *tables,
+    uint8_t *collision, uint16_t *behavior) {
+    if (raw < FUSION_MZM_CLIPDATA_COUNT) {
+        *collision = tables->collision[raw];
+        *behavior = tables->behavior[raw];
+        return true;
+    }
+    if (raw < FUSION_MZM_CLIPDATA_TILEMAP_FLAG) {
+        *collision = 0;
+        *behavior = 0;
+        return true;
+    }
+    size_t index = raw - FUSION_MZM_CLIPDATA_TILEMAP_FLAG;
+    if (index >= FUSION_MZM_CLIPDATA_TILEMAP_COUNT) return false;
+    *collision = tables->tilemap_collision[index];
+    *behavior = tables->tilemap_behavior[index];
+    return true;
+}
+
+bool fusion_mzm_serialize_runtime_room_core(
+    const char *area, size_t room, const FusionMzmRoomRleMap *clipdata,
+    const FusionMzmClipdataTables *tables,
+    FusionMzmRuntimeRoomPayload *payload,
+    char *error, size_t error_size) {
+    if (!payload) {
+        set_error(error, error_size,
+                  "invalid Zero Mission runtime-room output request");
+        return false;
+    }
+    *payload = (FusionMzmRuntimeRoomPayload){0};
+    if (!valid_area_id(area) || room >= FUSION_MZM_ROOM_CAPACITY ||
+        !clipdata || !tables || !clipdata->cells ||
+        clipdata->width == 0 || clipdata->height == 0 ||
+        clipdata->cell_count !=
+            (size_t)clipdata->width * clipdata->height ||
+        clipdata->cell_count > FUSION_MZM_ROOM_RLE_CELL_CAPACITY ||
+        clipdata->cell_count > (SIZE_MAX - 256) / 96) {
+        set_error(error, error_size,
+                  "invalid Zero Mission runtime-room core payload");
+        return false;
+    }
+    size_t capacity = 256 + clipdata->cell_count * 96;
+    uint8_t *data = malloc(capacity);
+    if (!data) {
+        set_error(error, error_size,
+                  "cannot allocate Zero Mission runtime-room core payload");
+        return false;
+    }
+    size_t width_pixels = (size_t)clipdata->width * 16;
+    size_t height_pixels = (size_t)clipdata->height * 16;
+    size_t used = 0, clipdata_count = 0, transition_count = 0;
+    size_t movement_count = 0;
+    if (!append_format(
+            data, capacity, &used,
+            "MVROOM-NATIVE\t1\tmzm\t%s\t%zu\t%zu\t%zu\n",
+            area, room, width_pixels, height_pixels)) {
+        goto overflow;
+    }
+    for (size_t y = 0; y < clipdata->height; ++y) {
+        for (size_t x = 0; x < clipdata->width; ++x) {
+            uint16_t raw = clipdata->cells[y * clipdata->width + x];
+            if (raw == 0) continue;
+            uint8_t collision;
+            uint16_t behavior;
+            if (!resolve_clipdata(raw, tables, &collision, &behavior)) {
+                free(data);
+                set_error(error, error_size,
+                          "Zero Mission Clipdata value is outside native tables");
+                return false;
+            }
+            if (!append_format(data, capacity, &used,
+                               "C\t%zu\t%zu\t%u\t%u\n",
+                               x, y, (unsigned)raw,
+                               (unsigned)collision)) {
+                goto overflow;
+            }
+            ++clipdata_count;
+            const char *transition = NULL;
+            if (behavior == 3) transition = "door";
+            else if (behavior == 4) transition = "up";
+            else if (behavior == 5) transition = "down";
+            if (transition) {
+                if (!append_format(data, capacity, &used,
+                                   "B\t%zu\t%zu\t%s\n",
+                                   x, y, transition)) {
+                    goto overflow;
+                }
+                ++transition_count;
+            }
+            uint16_t movement =
+                behavior < FUSION_MZM_CLIPDATA_MOVEMENT_COUNT
+                    ? tables->movement[behavior] : 0;
+            if (movement != 0) {
+                if (!append_format(data, capacity, &used,
+                                   "M\t%zu\t%zu\t%u\n",
+                                   x, y, (unsigned)movement)) {
+                    goto overflow;
+                }
+                ++movement_count;
+            }
+        }
+    }
+    if (5 > capacity - used) goto overflow;
+    memcpy(data + used, "END\n", 4);
+    used += 4;
+    data[used] = '\0';
+    *payload = (FusionMzmRuntimeRoomPayload){
+        data, used, clipdata_count, transition_count, movement_count
+    };
+    if (error && error_size > 0) error[0] = '\0';
+    return true;
+
+overflow:
+    free(data);
+    set_error(error, error_size,
+              "Zero Mission runtime-room core payload exceeds the size bound");
+    return false;
 }
 
 static bool read_count(const uint8_t *data, size_t size, size_t *position,

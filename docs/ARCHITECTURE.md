@@ -264,7 +264,11 @@ pairs are composed natively using the intentionally diagnostic BG1-over-BG2
 order; rooms without BG2 retain their supported BG1. Both paths serialize to
 the byte-identical private 24-bit BMP and a separate raw visibility mask that
 distinguishes native black from unresolved transparent pixels. Hardware
-priority/blending, private output writes, doors, sprites and runtime-room
+priority/blending and private output writes remain Python-owned. The native
+room-package path now reads the main/tilemap collision, behavior and movement
+tables from bounded ELF objects and serializes the byte-identical
+`MVROOM-NATIVE` v1 header plus its `C`, `B` and `M` Clipdata core. Doors,
+hatches, music, background records, sprites and complete runtime-room
 serialization remain Python-owned, and these native extractors are not yet
 registered in the global native task graph.
 

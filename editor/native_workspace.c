@@ -12,6 +12,7 @@
 #include <string.h>
 #include <glib/gstdio.h>
 #include <sys/stat.h>
+#include "core/editor_cli_launcher.h"
 
 /* An in-process reverse-link handoff contains only validated saved identifiers.
  * The destination editor applies it as a normal undoable staged action. */
@@ -626,7 +627,7 @@ static gboolean project_command(NativeWorkspace *doc, const char *action,
     snprintf(width, sizeof(width), "%u", doc->map->width[0] * 16);
     snprintf(height, sizeof(height), "%u", doc->map->height[0] * 16);
     GPtrArray *args = g_ptr_array_new();
-    const char *const base[] = {"python3", "scripts/editor_cli.py", command_option,
+    const char *const base[] = {(gchar *)fusion_editor_cli_program(), command_option,
         doc->project_aria ? "--world=aria" : "--world=zero_mission", NULL};
     for (guint i = 0; base[i]; ++i) g_ptr_array_add(args, (gpointer)base[i]);
     if (strcmp(action, "catalog")) {
@@ -2465,7 +2466,7 @@ static void project_door_list_targets_0114(GtkButton *button, gpointer userdata)
     gchar *area_arg = g_strdup_printf("--target-area=%u", area);
     gchar *room_arg = g_strdup_printf("--target-room=%d",
         gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->room)));
-    gchar *args[] = {"python3", "scripts/editor_cli.py",
+    gchar *args[] = {(gchar *)fusion_editor_cli_program(),
         "--command=door-target-list", world_arg, area_arg, room_arg,
         "--format=tsv", NULL};
     gchar *out = NULL, *err = NULL;
@@ -2800,7 +2801,7 @@ static void project_door_prepare_return_0115(GtkButton *button, gpointer userdat
     gchar *area = g_strdup_printf("--area=%s", origin->project_area);
     gchar *room = g_strdup_printf("--room=%u", origin->project_room);
     gchar *door = g_strdup_printf("--source-door-id=%u", form->door_id);
-    gchar *argv[] = {"python3", "scripts/editor_cli.py", "--command=door-return-plan",
+    gchar *argv[] = {(gchar *)fusion_editor_cli_program(), "--command=door-return-plan",
         origin->project_aria ? "--world=aria" : "--world=zero_mission",
         area, room, door, "--format=tsv", NULL};
     gchar *out = NULL, *err = NULL;
@@ -5638,7 +5639,7 @@ static void start_import(NativeWorkspace *doc, const char *area, unsigned number
         "--world=aria" : "--world=zero_mission";
     GSubprocess *proc = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "scripts/editor_cli.py", "--command=room-open",
+        &error, (gchar *)fusion_editor_cli_program(), "--command=room-open",
         world, "--area", area, "--room", room_text, "--format=text", NULL);
     if (!proc) {
         message(doc, error ? error->message : "Python importer unavailable");

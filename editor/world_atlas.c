@@ -3,6 +3,7 @@
 #include "world_atlas.h"
 #include <stdio.h>
 #include <string.h>
+#include "core/editor_cli_launcher.h"
 
 typedef struct {
     guint area, room, x, y, save, warp, provenance, tile;
@@ -102,7 +103,7 @@ static gboolean reload_rows(WorldGrid *w)
     gchar *out = NULL, *err = NULL;
     GError *spawn_error = NULL;
     gint exit_status = -1;
-    gchar *argv[] = {"python3", "scripts/editor_cli.py",
+    gchar *argv[] = {(gchar *)fusion_editor_cli_program(),
                      "--command=placement-list", "--world",
                      w->world ? "aria" : "zero_mission", "--format=tsv", NULL};
     gboolean launched = g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
@@ -764,8 +765,7 @@ static void connections_refresh_0116(WorldGrid *w)
         g_strdup_printf("--room=%u", selected_room) : NULL;
     gchar *args[9];
     guint argc = 0;
-    args[argc++] = "python3";
-    args[argc++] = "scripts/editor_cli.py";
+    args[argc++] = (gchar *)fusion_editor_cli_program();
     args[argc++] = "--command=connection-list";
     args[argc++] = world_arg;
     if (area_arg) args[argc++] = area_arg;
@@ -878,7 +878,7 @@ static void placement_refresh(GtkButton *button, gpointer userdata)
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint code = -1;
-    gchar *args[] = {"python3", "scripts/editor_cli.py", "--command=room-list",
+    gchar *args[] = {(gchar *)fusion_editor_cli_program(), "--command=room-list",
                      "--source=draft", "--format=tsv", NULL};
     gboolean ok = g_spawn_sync(NULL, args, NULL, G_SPAWN_SEARCH_PATH,
                                NULL, NULL, &out, &err, &code, &error);
@@ -922,7 +922,7 @@ static void placement_save(GtkButton *button, gpointer userdata)
     const char *id = gtk_string_object_get_string(GTK_STRING_OBJECT(item));
     gchar *x = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(xspin)));
     gchar *y = g_strdup_printf("%d", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(yspin)));
-    gchar *args[] = {"python3", "scripts/editor_cli.py", "--command=room-place",
+    gchar *args[] = {(gchar *)fusion_editor_cli_program(), "--command=room-place",
                      "--room", (gchar *)id, "--x", x, "--y", y,
                      "--format=text", NULL};
     gchar *out = NULL, *err = NULL;

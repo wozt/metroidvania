@@ -72,7 +72,7 @@ class ProjectEntityTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1] / "editor/native_workspace.c").read_text()
         self.assertIn("item->project_owned", source)
         self.assertIn("Project entity", source)
-        self.assertIn('"scripts/editor_cli.py"', source)
+        self.assertIn('fusion_editor_cli_program()', source)
         self.assertIn('"entity-create"', source)
         self.assertIn('"collision-set"', source)
         self.assertIn('"door-create"', source)

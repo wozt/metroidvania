@@ -3,6 +3,7 @@
 #include "room_browser.h"
 #include <stdio.h>
 #include <string.h>
+#include "core/editor_cli_launcher.h"
 
 typedef struct {
     NativeWorkspace *workspace;
@@ -255,7 +256,7 @@ static void audit_rooms(GtkButton *button, gpointer userdata)
             selected_area - 1);
         process = g_subprocess_new(
             G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-            &error, "python3", "scripts/editor_cli.py", "--command=room-audit",
+            &error, (gchar *)fusion_editor_cli_program(), "--command=room-audit",
             browser->world == ROOM_WORLD_ARIA ? "--world=aria" : "--world=zero_mission",
             area_option, report_option, "--workers=1", "--format=text", NULL);
     } else {
@@ -263,7 +264,7 @@ static void audit_rooms(GtkButton *button, gpointer userdata)
             browser->world == ROOM_WORLD_ARIA ? "aria" : "zero_mission");
         process = g_subprocess_new(
             G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-            &error, "python3", "scripts/editor_cli.py", "--command=room-audit",
+            &error, (gchar *)fusion_editor_cli_program(), "--command=room-audit",
             browser->world == ROOM_WORLD_ARIA ? "--world=aria" : "--world=zero_mission",
             report_option, "--workers=4", "--format=text", NULL);
     }
@@ -300,7 +301,7 @@ static void render_selected(GtkButton *button, gpointer userdata)
     GError *error = NULL;
     GSubprocess *proc = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "scripts/editor_cli.py", "--command=room-render",
+        &error, (gchar *)fusion_editor_cli_program(), "--command=room-render",
         browser->world == ROOM_WORLD_ARIA ? "--world=aria" : "--world=zero_mission",
         "--area", area_arg, "--room", room, "--format=text", NULL);
     if (!proc) {
@@ -594,7 +595,7 @@ static void room_browser_refresh_drafts(RoomBrowser *browser)
     GError *error = NULL;
     GSubprocess *process = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "scripts/editor_cli.py", "--command=room-list",
+        &error, (gchar *)fusion_editor_cli_program(), "--command=room-list",
         "--world", world, "--source=draft", "--format=tsv", NULL);
     if (!process) {
         gtk_label_set_text(GTK_LABEL(browser->status),
@@ -703,9 +704,9 @@ static void room_draft_submit(GtkButton *button, gpointer userdata)
         gtk_label_set_text(GTK_LABEL(form->feedback), "Invalid area selection.");
         return;
     }
-    if (!g_file_test("scripts/editor_cli.py", G_FILE_TEST_IS_REGULAR)) {
+    if (!g_file_test(fusion_editor_cli_program(), G_FILE_TEST_IS_EXECUTABLE)) {
         gtk_label_set_text(GTK_LABEL(form->feedback),
-            "Run the editor from the metroidvania project root (shared backend CLI missing).");
+            "Build the project first (shared backend CLI missing).");
         return;
     }
 
@@ -718,7 +719,7 @@ static void room_draft_submit(GtkButton *button, gpointer userdata)
     /* Argument vector; no shell, no ROM file paths, create-only Python CLI. */
     GSubprocess *process = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "scripts/editor_cli.py", "--command=room-create",
+        &error, (gchar *)fusion_editor_cli_program(), "--command=room-create",
         "--world", world, "--area", area_buf, "--slug", slug,
         "--name", name, "--width-screens", width_buf,
         "--height-screens", height_buf, "--format=text", NULL);

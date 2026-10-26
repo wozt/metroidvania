@@ -16,12 +16,30 @@ function(fusion_enable_warnings target)
     endif()
 endfunction()
 
+add_library(fusion_json STATIC src/core/json.c)
+target_include_directories(fusion_json PUBLIC include)
+if(NOT WIN32)
+    target_link_libraries(fusion_json PUBLIC m)
+endif()
+fusion_enable_warnings(fusion_json)
+
+add_library(fusion_editor_backend STATIC
+    src/editor_backend/catalog.c
+    src/editor_backend/cli.c
+    src/editor_backend/commands.c
+    src/editor_backend/common.c
+    src/editor_backend/drafts.c
+)
+target_link_libraries(fusion_editor_backend PUBLIC fusion_json)
+fusion_enable_warnings(fusion_editor_backend)
+
 add_library(fusion_native_editor_core STATIC
     src/core/editor_cli_launcher.c
     src/core/native_map.c
     src/core/native_selection.c
 )
 target_include_directories(fusion_native_editor_core PUBLIC include)
+target_link_libraries(fusion_native_editor_core PUBLIC fusion_editor_backend)
 target_compile_definitions(fusion_native_editor_core
     PRIVATE
         FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
@@ -55,11 +73,11 @@ add_library(fusion_assets STATIC
     src/assets/mzm/sprites.c
     src/assets/mzm/sprite_tables.c
     src/assets/mzm/music_names.c
-    src/assets/core/json.c
     src/assets/core/raw_import.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)
+target_link_libraries(fusion_assets PUBLIC fusion_json)
 fusion_enable_warnings(fusion_assets)
 
 add_executable(fusion_importer src/tools/fusion_importer.c)

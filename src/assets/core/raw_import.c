@@ -8,7 +8,7 @@
 #include "fusion/assets/raw_import.h"
 
 #include "export.h"
-#include "json.h"
+#include "core/json.h"
 
 #include <stdarg.h>
 #include <stdio.h>

@@ -3,6 +3,7 @@
 #include "object_catalog.h"
 #include <stdio.h>
 #include <string.h>
+#include "core/editor_cli_launcher.h"
 
 typedef struct {
     GtkWidget *page, *zero_list, *aria_list, *status, *details;
@@ -58,7 +59,7 @@ static void refresh(GtkButton *button, gpointer userdata)
     gchar *out = NULL, *err = NULL;
     GError *error = NULL;
     gint status = -1;
-    gchar *argv[] = {"python3", "scripts/editor_cli.py",
+    gchar *argv[] = {(gchar *)fusion_editor_cli_program(),
                      "--command=list-assets", "--format=tsv", NULL};
     gboolean launched = g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
                                      NULL, NULL, &out, &err, &status, &error);

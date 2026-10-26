@@ -416,7 +416,7 @@ class EditorCliTests(unittest.TestCase):
             ROOT / "editor/story_workspace.c",
         ]
         combined = "\n".join(path.read_text(encoding="utf-8") for path in sources)
-        self.assertIn("scripts/editor_cli.py", combined)
+        self.assertIn("fusion_editor_cli_program()", combined)
         for legacy in (
                 '"scripts.authored_rooms"', '"scripts.map_placements"',
                 '"scripts.project_room_entities"', '"scripts.object_catalog"',

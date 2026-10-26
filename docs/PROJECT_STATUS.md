@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0534 - Native editor backend, first commands
+
+- Added `src/editor_backend/` (library `fusion_editor_backend`) and the shared
+  `fusion_json` library (`src/core/json.c`): a JSON reader whose values and
+  error messages match Python's `json.loads`, and a writer byte-identical to
+  `json.dumps` in compact and `indent=2` forms.
+- `fusion_editor_cli` now runs `capabilities`, `project-info`, `list-worlds`,
+  `list-areas`, `list-rooms`/`room-list`, `room-inspect`, `room-validate` and
+  `placement-list` natively, with the argparse-compatible options and the
+  text, JSON and TSV results; other commands, `--help` and batches are still
+  forwarded to `scripts/editor_cli.py` (`FUSION_EDITOR_PYTHON_BACKEND=1`
+  forces Python). `tests/test_editor_cli_native_parity.py` compares both on
+  360 cases, all identical.
+- The GTK editor calls `fusion_editor_cli_program()` instead of
+  `python3 scripts/editor_cli.py`.
+- No gameplay status changed and no private assets were committed.
+- Next: port the project-room commands (entities, collision, events, doors,
+  transitions), then drafts, story, rendering and the world overview.
+
 ## Patch 0533 - Remove uncalled Python tools and stale script references
 
 - The user goal is now a project without Python. This batch removes the four

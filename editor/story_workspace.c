@@ -6,6 +6,7 @@
 #include <glib/gstdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "core/editor_cli_launcher.h"
 
 typedef struct {
     GtkWidget *page, *view, *status, *tracks[3], *scene_select;
@@ -157,7 +158,7 @@ static void validate_save(GtkButton *button,gpointer userdata)
     gchar *stdout_data=NULL,*stderr_data=NULL;
     gint wait=0;
     if(valid){
-        gchar *argv[]={"python3","scripts/editor_cli.py","--command=story-save",
+        gchar *argv[]={(gchar *)fusion_editor_cli_program(),"--command=story-save",
             "--kind",(gchar *)tab->kind,"--input",temporary,
             "--target",(gchar *)tab->source,"--format=text",NULL};
         valid=g_spawn_sync(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,

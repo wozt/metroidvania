@@ -2,6 +2,8 @@
 #define _POSIX_C_SOURCE 200809L
 #include "core/editor_cli_launcher.h"
 
+#include "../editor_backend/backend.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +17,11 @@
 #error "FUSION_BINARY_DIR must identify the build directory"
 #endif
 
+const char *fusion_editor_cli_program(void)
+{
+    return FUSION_BINARY_DIR "/fusion_editor_cli";
+}
+
 int fusion_editor_cli_launch(int argc, char **argv, bool remove_headless)
 {
     static const char script[] = FUSION_SOURCE_DIR "/scripts/editor_cli.py";
@@ -25,6 +32,24 @@ int fusion_editor_cli_launch(int argc, char **argv, bool remove_headless)
     if (argc < 1 || !argv) {
         fputs("Invalid editor CLI arguments\n", stderr);
         return 127;
+    }
+    /* The native backend runs every ported command; the others, the help
+     * text and batches still go to the Python backend. */
+    if (!getenv("FUSION_EDITOR_PYTHON_BACKEND")) {
+        char **native = calloc((size_t)argc + 1U, sizeof(*native));
+        int count = 0;
+        if (!native) {
+            fputs("Editor CLI argument allocation failed\n", stderr);
+            return 127;
+        }
+        for (source = 0; source < argc; ++source) {
+            if (source && remove_headless && strcmp(argv[source], "--headless") == 0) continue;
+            native[count++] = argv[source];
+        }
+        bool handled = false;
+        int code = feb_cli_main(count, native, FUSION_SOURCE_DIR, &handled);
+        free(native);
+        if (handled) return code;
     }
     forwarded = calloc((size_t)argc + 2U, sizeof(*forwarded));
     if (!forwarded) {

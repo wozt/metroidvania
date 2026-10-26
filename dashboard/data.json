@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T00:18:11+00:00",
+ "generated_at": "2026-10-26T00:38:19+00:00",
  "git": {
-  "commit": "424da37",
+  "commit": "3e6e1e5",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 145,
    "functional_or_better_percent": 74.0,
-   "with_passing_tests": 184,
-   "with_passing_tests_percent": 93.9,
+   "with_passing_tests": 183,
+   "with_passing_tests_percent": 93.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -523,8 +523,8 @@
    },
    "functional_or_better": 8,
    "functional_or_better_percent": 34.8,
-   "with_passing_tests": 23,
-   "with_passing_tests_percent": 100.0,
+   "with_passing_tests": 22,
+   "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_early_enemy_components_0477",
@@ -14675,8 +14675,10 @@
    "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
-    "sources_found": true,
-    "missing_sources": [],
+    "sources_found": false,
+    "missing_sources": [
+     "src/assets/core/json.c"
+    ],
     "tests": [
      {
       "test": "tests/test_fusion_raw_import.c",
@@ -14701,9 +14703,12 @@
       "outcome": "passed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-10-26"
+    "verdict": "missing_sources",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run",
+     "missing sources: src/assets/core/json.c"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15417,6 +15422,13 @@
     "passed": 17
    },
    {
+    "file": "tests/test_editor_cli_native_parity.py",
+    "module": "tests.test_editor_cli_native_parity",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
     "file": "tests/test_editor_tab_layers.py",
     "module": "tests.test_editor_tab_layers",
     "test_count": 4,
@@ -15810,12 +15822,18 @@
    }
   ],
   "summary": {
-   "passed": 392,
+   "passed": 393,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "3e6e1e5",
+   "date": "2026-10-26",
+   "subject": "Remove uncalled Python tools and stale script references",
+   "scope": "project"
+  },
   {
    "commit": "424da37",
    "date": "2026-10-26",
@@ -16288,12 +16306,6 @@
    "commit": "6018568",
    "date": "2026-10-22",
    "subject": "Port Aria Skull Millione, Cagnazzo and Lubicant",
-   "scope": "project"
-  },
-  {
-   "commit": "c911697",
-   "date": "2026-10-22",
-   "subject": "Port the Aria dead crusader",
    "scope": "project"
   }
  ],

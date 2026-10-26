@@ -5,6 +5,7 @@
 #include "backend.h"
 
 #include "catalog.h"
+#include "commands_room.h"
 #include "common.h"
 #include "drafts.h"
 
@@ -259,6 +260,7 @@ static const char *const native_commands[] = {
 };
 
 bool feb_is_native(const char *command) {
+    if (command && feb_is_room_command(command)) return true;
     for (size_t index = 0; command && index < COUNT(native_commands); ++index)
         if (!strcmp(native_commands[index], command)) return true;
     return false;
@@ -565,7 +567,6 @@ static bool command_placement_list(const char *root, const FusionJson *options,
 
 bool feb_execute(const char *command, const FusionJson *options, const char *root_option,
                  const char *repository, bool dry_run, FusionJson *data, FebError *error) {
-    (void)dry_run;
     *data = fusion_json_object();
     bool known = false;
     const char *const *fields = feb_command_fields(command, &known);
@@ -593,6 +594,8 @@ bool feb_execute(const char *command, const FusionJson *options, const char *roo
         ok = command_room_validate(root, options, data, error);
     else if (!strcmp(command, "placement-list"))
         ok = command_placement_list(root, options, data, error);
+    else if (feb_is_room_command(command))
+        ok = feb_room_command(command, options, root, repository, dry_run, data, error);
     else ok = feb_fail(error, FEB_EXIT_UNAVAILABLE, "%s is not ported to the native backend",
                        command);
     if (!ok) fusion_json_free(data);

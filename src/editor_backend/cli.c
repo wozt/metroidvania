@@ -343,6 +343,200 @@ static bool tsv_row(Text *text, const FusionJson *item, const char *const (*fiel
     return text_puts(text, "\n") || feb_oom(error);
 }
 
+/* A TSV field built by the caller. */
+static bool tsv_text(Text *text, const char *field, bool first, FebError *error) {
+    FusionJson value = {.kind = FUSION_JSON_STRING, .string = (char *)field};
+    return tsv_field(text, &value, first, error);
+}
+
+static bool tsv_flag(Text *text, const FusionJson *value, FebError *error) {
+    return tsv_text(text, value && value->kind == FUSION_JSON_BOOL && value->boolean ? "1" : "0",
+                    false, error);
+}
+
+static bool tsv_end(Text *text, FebError *error) {
+    return text_puts(text, "\n") || feb_oom(error);
+}
+
+/* The project-room TSV listings of _tsv_result(). */
+static bool tsv_room_result(const char *command, const FusionJson *data, Text *text,
+                            FebError *error) {
+    if (!strcmp(command, "collision-list")) {
+        const FusionJson *cells = fusion_json_member(data, "cells");
+        for (size_t index = 0; index < cells->count; ++index) {
+            const FusionJson *cell = &cells->items[index];
+            if (!tsv_field(text, fusion_json_member(cell, "x"), true, error) ||
+                !tsv_field(text, fusion_json_member(cell, "y"), false, error) ||
+                !tsv_field(text, fusion_json_member(cell, "type"), false, error) ||
+                !tsv_field(text, fusion_json_member(data, "resolution_px"), false, error) ||
+                !tsv_end(text, error))
+                return false;
+        }
+        return true;
+    }
+    if (!strcmp(command, "door-list") || !strcmp(command, "door-target-list")) {
+        static const char *const fields[][2] = {
+            {"id", NULL}, {"x", NULL}, {"y", NULL}, {"width", NULL}, {"height", NULL},
+            {"label", NULL}, {"door_type", NULL}, {"facing", NULL}};
+        const FusionJson *doors = fusion_json_member(data, "doors");
+        for (size_t index = 0; index < doors->count; ++index) {
+            const FusionJson *door = &doors->items[index];
+            for (size_t field = 0; field < COUNT(fields); ++field)
+                if (!tsv_field(text, path(door, fields[field][0], NULL), field == 0, error))
+                    return false;
+            const FusionJson *source = fusion_json_member(door, "native_source");
+            char identity[512] = "-";
+            if (source) {
+                char parts[3][160];
+                const char *const keys[] = {"index", "variant", "native_type"};
+                for (int part = 0; part < 3; ++part) {
+                    Text piece = {0};
+                    FebError ignored;
+                    if (!tsv_field(&piece, fusion_json_member(source, keys[part]), true, &ignored)) {
+                        free(piece.data);
+                        return feb_fail(error, FEB_EXIT_USAGE, "unsafe TSV field returned by backend");
+                    }
+                    snprintf(parts[part], sizeof parts[part], "%s", piece.data ? piece.data : "");
+                    free(piece.data);
+                }
+                snprintf(identity, sizeof identity, "%s,%s,%s", parts[0], parts[1], parts[2]);
+            }
+            if (!tsv_text(text, identity, false, error) || !tsv_end(text, error)) return false;
+        }
+        return true;
+    }
+    if (!strcmp(command, "transition-list")) {
+        static const char *const fields[][2] = {
+            {"id", NULL}, {"source_door_id", NULL}, {"target_world", NULL},
+            {"target_area", NULL}, {"target_room", NULL}, {"target_door_id", NULL},
+            {"spawn_x", NULL}, {"spawn_y", NULL}};
+        const FusionJson *items = fusion_json_member(data, "transitions");
+        for (size_t index = 0; index < items->count; ++index)
+            if (!tsv_row(text, &items->items[index], fields, COUNT(fields), error)) return false;
+        return true;
+    }
+    if (!strcmp(command, "door-return-plan")) {
+        static const char *const fields[][2] = {
+            {"source_world", NULL}, {"source_area", NULL}, {"source_room", NULL},
+            {"source_door_id", NULL}, {"target_world", NULL}, {"target_area", NULL},
+            {"target_room", NULL}, {"target_door_id", NULL}, {"spawn_x", NULL},
+            {"spawn_y", NULL}};
+        return tsv_row(text, data, fields, COUNT(fields), error);
+    }
+    if (!strcmp(command, "connection-list")) {
+        static const char *const fields[][2] = {
+            {"world", NULL}, {"area", NULL}, {"room", NULL}, {"door_id", NULL},
+            {"target_world", NULL}, {"target_area", NULL}, {"target_room", NULL},
+            {"target_door_id", NULL}, {"state", NULL}};
+        const FusionJson *items = fusion_json_member(data, "connections");
+        for (size_t index = 0; index < items->count; ++index) {
+            const FusionJson *item = &items->items[index];
+            for (size_t field = 0; field < COUNT(fields); ++field)
+                if (!tsv_field(text, path(item, fields[field][0], NULL), field == 0, error))
+                    return false;
+            if (!tsv_flag(text, fusion_json_member(item, "reciprocal"), error) ||
+                !tsv_end(text, error))
+                return false;
+        }
+        return true;
+    }
+    if (!strcmp(command, "event-list")) {
+        static const char *const fields[][2] = {
+            {"id", NULL}, {"kind", NULL}, {"x", NULL}, {"y", NULL}, {"width", NULL},
+            {"height", NULL}, {"label", NULL}, {"trigger_type", NULL}, {"action_type", NULL},
+            {"action_ref", NULL}};
+        const FusionJson *events = fusion_json_member(data, "events");
+        for (size_t index = 0; index < events->count; ++index) {
+            const FusionJson *event = &events->items[index];
+            for (size_t field = 0; field < COUNT(fields); ++field)
+                if (!tsv_field(text, path(event, fields[field][0], NULL), field == 0, error))
+                    return false;
+            if (!tsv_flag(text, fusion_json_member(event, "once"), error) ||
+                !tsv_field(text, fusion_json_member(event, "condition_mode"), false, error))
+                return false;
+            Text joined = {0};
+            const FusionJson *conditions = fusion_json_member(event, "conditions");
+            bool ok = true;
+            for (size_t entry = 0; ok && entry < conditions->count; ++entry) {
+                const FusionJson *condition = &conditions->items[entry];
+                const FusionJson *negated = fusion_json_member(condition, "negated");
+                ok = (!entry || text_puts(&joined, ";")) &&
+                     text_puts(&joined, fusion_json_member(condition, "type")->string) &&
+                     text_puts(&joined, ",") &&
+                     text_puts(&joined, fusion_json_member(condition, "ref")->string) &&
+                     text_puts(&joined, negated && negated->boolean ? ",1" : ",0");
+            }
+            ok = ok && tsv_text(text, joined.data ? joined.data : "-", false, error) &&
+                 tsv_end(text, error);
+            free(joined.data);
+            if (!ok) return error->message[0] ? false : feb_oom(error);
+        }
+        return true;
+    }
+    if (!strcmp(command, "event-validate")) {
+        const FusionJson *events = fusion_json_member(data, "events");
+        for (size_t index = 0; index < events->count; ++index) {
+            const FusionJson *item = &events->items[index];
+            if (!tsv_field(text, fusion_json_member(item, "id"), true, error) ||
+                !tsv_field(text, fusion_json_member(item, "action_type"), false, error) ||
+                !tsv_field(text, fusion_json_member(item, "action_ref"), false, error) ||
+                !tsv_flag(text, fusion_json_member(item, "valid"), error) ||
+                !tsv_field(text, fusion_json_member(item, "reference_status"), false, error) ||
+                !tsv_field(text, fusion_json_member(item, "condition_mode"), false, error) ||
+                !tsv_field(text, fusion_json_member(item, "condition_count"), false, error) ||
+                !tsv_flag(text, fusion_json_member(item, "conditions_valid"), error))
+                return false;
+            Text joined = {0};
+            const FusionJson *conditions = fusion_json_member(item, "conditions");
+            bool ok = true;
+            for (size_t entry = 0; ok && entry < conditions->count; ++entry) {
+                char index_text[32];
+                snprintf(index_text, sizeof index_text, "%s%lld:", entry ? ";" : "",
+                         (long long)fusion_json_member(&conditions->items[entry], "index")->integer);
+                ok = text_puts(&joined, index_text) &&
+                     text_puts(&joined, fusion_json_member(&conditions->items[entry],
+                                                           "reference_status")->string);
+            }
+            ok = ok && tsv_text(text, joined.data ? joined.data : "-", false, error) &&
+                 tsv_end(text, error);
+            free(joined.data);
+            if (!ok) return error->message[0] ? false : feb_oom(error);
+        }
+        return true;
+    }
+    if (!strcmp(command, "entity-list")) {
+        static const char *const fields[][2] = {
+            {"id", NULL}, {"kind", NULL}, {"x", NULL}, {"y", NULL}, {"label", NULL},
+            {"native_type", NULL}};
+        const FusionJson *preview = fusion_json_member(data, "preview");
+        const FusionJson *entities = fusion_json_member(data, "entities");
+        for (size_t index = 0; index < entities->count; ++index) {
+            const FusionJson *entity = &entities->items[index];
+            for (size_t field = 0; field < COUNT(fields); ++field)
+                if (!tsv_field(text, path(entity, fields[field][0], NULL), field == 0, error))
+                    return false;
+            if (preview && preview->boolean) {
+                const FusionJson *item = path(entity, "settings", "item_id");
+                FusionJson missing = {.kind = FUSION_JSON_NUMBER, .integral = true, .integer = -1};
+                if (!tsv_field(text, item ? item : &missing, false, error)) return false;
+            }
+            if (!tsv_end(text, error)) return false;
+        }
+        return true;
+    }
+    if (!strcmp(command, "entity-item-settings")) {
+        const FusionJson *settings = fusion_json_member(data, "settings");
+        const char *const keys[] = {"item_id", "parameter_0", "parameter_1", "flags"};
+        FusionJson zero = {.kind = FUSION_JSON_NUMBER, .integral = true, .integer = 0};
+        for (size_t index = 0; index < 4; ++index) {
+            const FusionJson *value = fusion_json_member(settings, keys[index]);
+            if (!tsv_field(text, value ? value : &zero, index == 0, error)) return false;
+        }
+        return tsv_end(text, error);
+    }
+    return feb_fail(error, FEB_EXIT_USAGE, "TSV output is unavailable for %s", command);
+}
+
 /* _tsv_result() for the ported commands. */
 static bool tsv_result(const char *command, const FusionJson *data, Text *text,
                        FebError *error) {
@@ -369,7 +563,7 @@ static bool tsv_result(const char *command, const FusionJson *data, Text *text,
                 return false;
         return true;
     }
-    return feb_fail(error, FEB_EXIT_USAGE, "TSV output is unavailable for %s", command);
+    return tsv_room_result(command, data, text, error);
 }
 
 static bool has_dotdot(const char *path_text) {

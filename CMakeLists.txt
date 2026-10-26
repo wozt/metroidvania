@@ -16,7 +16,7 @@ function(fusion_enable_warnings target)
     endif()
 endfunction()
 
-add_library(fusion_json STATIC src/core/json.c)
+add_library(fusion_json STATIC src/core/json.c src/core/toml.c)
 target_include_directories(fusion_json PUBLIC include)
 if(NOT WIN32)
     target_link_libraries(fusion_json PUBLIC m)
@@ -27,6 +27,9 @@ add_library(fusion_editor_backend STATIC
     src/editor_backend/catalog.c
     src/editor_backend/cli.c
     src/editor_backend/commands.c
+    src/editor_backend/commands_room.c
+    src/editor_backend/project_room.c
+    src/editor_backend/story.c
     src/editor_backend/common.c
     src/editor_backend/drafts.c
 )

@@ -2,6 +2,29 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0541 - Native editor project-room and story commands
+
+- Added a bounded TOML reader (`src/core/toml.c`, part of `fusion_json`)
+  whose documents equal `tomllib` on every tracked story and cutscene file,
+  and the editor backend's story validation (`src/editor_backend/story.c`),
+  project-room data model (`project_room.c`: scope, v1-v3 migration, strict
+  v4 validation, staged and saved loading, atomic saving, the saved-door
+  connection graph) and commands (`commands_room.c`).
+- `fusion_editor_cli` now runs 37 more commands natively: the collision,
+  event, door and transition commands (including `door-adopt`, `door-link`,
+  `door-target-list`, `door-return-plan` and `connection-list`), the entity
+  list/inspect/move/delete/item-settings commands, `story-validate`,
+  `story-save` and `project-validate`, with their TSV listings. The
+  catalog-backed entity commands, drafts, rendering and audits still go to
+  Python.
+- `tests/test_editor_cli_native_room_parity.py` runs 86 commands, including
+  the editor staging token, on two copies of a fixture root, one per
+  backend: every output and the final file trees are identical.
+- No gameplay status changed and no private assets were committed.
+- Next: the catalog-backed entity commands (`object_catalog`,
+  `import_aos_world`), the draft and placement mutations, then rendering,
+  audits and the world overview.
+
 ## Patch 0540 - Native Zero Mission sound export
 
 - Audio is now in scope for the migration. Added `fusion_mzm_export_sound`

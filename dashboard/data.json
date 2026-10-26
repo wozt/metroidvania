@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T04:09:04+00:00",
+ "generated_at": "2026-10-26T04:31:48+00:00",
  "git": {
-  "commit": "312a5a0",
+  "commit": "d2bf7a6",
   "branch": "main",
   "dirty": true
  },
@@ -15491,6 +15491,13 @@
     "passed": 1
    },
    {
+    "file": "tests/test_editor_cli_native_room_parity.py",
+    "module": "tests.test_editor_cli_native_room_parity",
+    "test_count": 1,
+    "outcome": "passed",
+    "passed": 1
+   },
+   {
     "file": "tests/test_editor_tab_layers.py",
     "module": "tests.test_editor_tab_layers",
     "test_count": 4,
@@ -15863,12 +15870,18 @@
    }
   ],
   "summary": {
-   "passed": 392,
+   "passed": 393,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d2bf7a6",
+   "date": "2026-10-26",
+   "subject": "Export the Zero Mission sound data natively",
+   "scope": "project"
+  },
   {
    "commit": "312a5a0",
    "date": "2026-10-26",
@@ -16341,12 +16354,6 @@
    "commit": "dcf3e50",
    "date": "2026-10-23",
    "subject": "Match Nemesis effect child timing",
-   "scope": "project"
-  },
-  {
-   "commit": "50bd4db",
-   "date": "2026-10-23",
-   "subject": "Port Nemesis technical effect slots",
    "scope": "project"
   }
  ],

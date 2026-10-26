@@ -2,6 +2,29 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0539 - Native routine inventory discovery
+
+- Added the reusable C11 inventory scanner and `fusion_inventory
+  --audit-routines`. It lexically masks C comments and literals, discovers C
+  definitions and marked assembly functions, preserves source metadata and
+  stable duplicate ordering, and folds matching assembly variants into their
+  C definitions with the same rules as the v6 reference inventory.
+- The native audit matches all 2,970 Zero Mission and 3,573 Aria routine
+  records for identity, kind, source, line, linkage, description, source
+  address, body offset and assembly variants. It also resolves and compares
+  every direct and ambiguous lexical call after excluding the separately
+  tracked indirect-table targets.
+- ROM-free native tests cover comment/string masking, documentation-derived
+  addresses, symbol-derived addresses, internal linkage, duplicate call
+  removal, assembly branches and C-over-assembly deduplication. A CTest audits
+  both complete pinned source trees against the tracked fragmented inventory.
+- The production `inventory` task deliberately remains Python-backed:
+  declarations, data symbols, types, constants, callback/address relations,
+  category propagation and deterministic fragment writing are not native yet.
+  No reconstruction or gameplay status changed.
+- Next: port those remaining v6 collections and relations, then prove every
+  inventory fragment byte-identical before switching the rebuild action.
+
 ## Patch 0538 - Native parity-checklist generation
 
 - Added `fusion_checklist` and the reusable C11 checklist renderer. It loads

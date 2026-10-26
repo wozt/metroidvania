@@ -75,7 +75,11 @@ are preserved and unsafe state/output paths are rejected. The twelve migrated
 asset actions run the C11 importer. `checklist` is generated directly in C11
 by `fusion_checklist`, with byte-identical Markdown and Aria backlog output.
 Only `inventory` and `metroid_sound` remain explicitly marked as temporary
-Python-backed actions.
+Python-backed actions. The first inventory migration slice is available as
+`fusion_inventory --audit-routines`: its C11 scanner reproduces all 6,543
+tracked C/assembly routine records and their direct-call resolution across
+both pinned source trees, but the production writer stays on Python until the
+remaining record collections, classification and sharding are equivalent.
 
 The native Aria world importer records metadata only. The general asset
 importer may write proprietary decoded output, so everything it produces
@@ -98,6 +102,7 @@ without reading either ROM:
 build/fusion_rebuild --all
 build/fusion_rebuild --all --dry-run
 build/fusion_checklist --check
+build/fusion_inventory --audit-routines
 ```
 
 The command currently registers the inventory and checklist tasks. It hashes

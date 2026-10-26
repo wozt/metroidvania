@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T03:46:12+00:00",
+ "generated_at": "2026-10-26T03:57:36+00:00",
  "git": {
-  "commit": "899934f",
+  "commit": "6995327",
   "branch": "main",
   "dirty": true
  },
@@ -13060,21 +13060,26 @@
    "status": "functional",
    "fidelity": "n/a",
    "local_sources": [
+    "include/fusion/pipeline/inventory.h",
     "scripts/native_inventory.py",
     "scripts/native_parity.py",
+    "src/pipeline/inventory.c",
     "src/pipeline/checklist.c",
+    "src/tools/fusion_inventory.c",
     "src/tools/fusion_checklist.c",
     "data/native_parity/aos_unassigned_routines.tsv"
    ],
    "tests": [
+    "tests/test_fusion_inventory.c",
     "tests/test_native_parity.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Source discovery and classification still run in Python, and lexical analysis cannot prove dynamic dispatch or runtime evidence. Checklist validation and rendering are native C11: every inventory shard is checksum-validated, and both the Markdown view and the complete Aria backlog with separate call-graph suggestions are byte-identical to the reference.",
+   "limitations": "The C11 scanner and audit reproduce all 6,543 tracked C/assembly routine identities, source metadata, stable assembly folding and direct/ambiguous lexical calls across both pinned trees. Checklist validation and rendering are also native and byte-identical. The production inventory action remains Python-backed until declarations, data, types, constants, callback/address relations, category propagation and deterministic sharding are ported; lexical analysis still cannot prove dynamic dispatch or runtime evidence.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
+     "tests/test_fusion_inventory.c",
      "tests/test_native_parity.py"
     ],
     "in_game_check": [],
@@ -13087,6 +13092,16 @@
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_fusion_inventory.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_inventory_scanner"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_native_parity.py",
       "kind": "python",
@@ -13160,28 +13175,33 @@
    "fidelity": "n/a",
    "local_sources": [
     "include/fusion/pipeline/rebuild.h",
+    "include/fusion/pipeline/inventory.h",
     "src/pipeline/tasks.c",
     "src/pipeline/graph.c",
     "src/pipeline/cache.c",
     "src/pipeline/plan.c",
     "src/pipeline/actions.c",
     "src/pipeline/checklist.c",
+    "src/pipeline/inventory.c",
     "src/tools/fusion_rebuild.c",
     "src/tools/fusion_checklist.c",
+    "src/tools/fusion_inventory.c",
     "scripts/rebuild.py",
     "scripts/export_index.py"
    ],
    "tests": [
     "tests/test_fusion_rebuild.c",
+    "tests/test_fusion_inventory.c",
     "tests/test_native_parity.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The native C11 orchestrator owns the complete 15-task registry and graph, v1 state, exact fingerprints, output validation, incremental planning and real action execution. It records every successful action before its dependents, preserves unknown cache fields, rejects unsafe paths and resumes after failures. The twelve migrated asset actions dispatch to the C11 importer. The checklist action now validates every inventory fragment and the annotation TSV and writes byte-identical Markdown and Aria backlog outputs directly in C11; only inventory generation and Zero Mission audio remain temporary Python-backed actions.",
+   "limitations": "The native C11 orchestrator owns the complete 15-task registry and graph, v1 state, exact fingerprints, output validation, incremental planning and real action execution. It records every successful action before its dependents, preserves unknown cache fields, rejects unsafe paths and resumes after failures. The twelve migrated asset actions dispatch to the C11 importer, and checklist generation is native and byte-identical. The first inventory slice now audits all routine records and direct calls natively, but inventory generation and Zero Mission audio remain the two temporary Python-backed actions until the other inventory collections and writer are ported.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_rebuild.c",
+     "tests/test_fusion_inventory.c",
      "tests/test_native_parity.py"
     ],
     "in_game_check": [],
@@ -13200,6 +13220,16 @@
       "registered": true,
       "ctest": [
        "fusion_rebuild_graph"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_inventory.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_inventory_scanner"
       ],
       "outcome": "passed",
       "exists": true
@@ -15004,6 +15034,18 @@
     "outcome": "passed"
    },
    {
+    "name": "fusion_inventory_routines_current",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
+    "name": "fusion_inventory_scanner",
+    "files": [
+     "tests/test_fusion_inventory.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "editor_cli_headless",
     "files": [],
     "outcome": "passed"
@@ -15862,12 +15904,18 @@
    }
   ],
   "summary": {
-   "passed": 400,
+   "passed": 402,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "6995327",
+   "date": "2026-10-26",
+   "subject": "Generate parity checklists natively",
+   "scope": "project"
+  },
   {
    "commit": "899934f",
    "date": "2026-10-26",
@@ -16340,12 +16388,6 @@
    "commit": "bfdb517",
    "date": "2026-10-23",
    "subject": "Port the Aria Nemesis linked helper",
-   "scope": "project"
-  },
-  {
-   "commit": "1bbce5a",
-   "date": "2026-10-23",
-   "subject": "Port the Aria Nemesis enemy",
    "scope": "project"
   }
  ],

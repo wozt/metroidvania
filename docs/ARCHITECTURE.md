@@ -191,8 +191,13 @@ shell. `fusion_checklist` validates every checksummed inventory fragment and
 the annotation TSV, then generates the Markdown checklist and Aria backlog
 byte-identically in C11; the native orchestrator calls its library directly
 and the legacy runner delegates to its CLI. Inventory generation and audio are
-the two remaining Python actions; the inventory must be ported before the
-legacy orchestrator can be removed.
+the two remaining Python actions. `fusion_inventory --audit-routines` now
+ports the lexical C/assembly function scanner, stable C-over-assembly
+deduplication and direct/ambiguous call resolution: all 2,970 Zero Mission and
+3,573 Aria routine identities and source metadata match the tracked v6
+fragments. Declarations, data, types, constants, callback/address relations,
+classification and deterministic fragment writing still have to move before
+the inventory action and legacy orchestrator can be cut over.
 
 Routine categories record their evidence (`category_evidence`, schema v6):
 `path` when the source location decides it (all of Zero Mission's sorted

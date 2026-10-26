@@ -5,8 +5,6 @@ import unittest
 from pathlib import Path
 from scripts import project_room_entities as pe
 from scripts import project_connection_graph as graph
-from scripts import editor_backend
-from scripts import editor_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,8 +50,10 @@ class ConnectionGraph0116(unittest.TestCase):
             self.assertEqual(saved.read_bytes(),original)
 
     def test_backend_and_cli_contract(self):
-        self.assertIn('connection-list',editor_backend.COMMAND_FIELDS)
-        self.assertIn('connection-list',editor_cli.TSV_COMMANDS)
+        backend=(ROOT/'src/editor_backend/commands.c').read_text()
+        cli=(ROOT/'src/editor_backend/cli.c').read_text()
+        self.assertIn('{"connection-list",',backend)
+        self.assertIn('"connection-list",',cli)
         c=(ROOT/'editor/world_atlas.c').read_text()
         for phrase in ('PATCH_0116_CONNECTION_VISUALIZATION',
                        'gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), grid);',

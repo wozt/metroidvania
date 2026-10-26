@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T06:02:12+00:00",
+ "generated_at": "2026-10-26T06:22:08+00:00",
  "git": {
-  "commit": "abcffcf",
+  "commit": "419a7a8",
   "branch": "main",
   "dirty": true
  },
@@ -12730,29 +12730,44 @@
    "status": "functional",
    "fidelity": "n/a",
    "local_sources": [
+    "include/core/editor_cli_launcher.h",
+    "src/core/editor_cli_launcher.c",
+    "src/editor_backend/cli.c",
     "src/tools/editor_cli.c"
    ],
    "tests": [
+    "tests/test_editor_backend.c",
     "tests/test_editor_cli.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "",
+   "limitations": "All commands, batches, help, formatting and safe outputs run directly in C11; the former Python CLI and its three transitional C/Python parity suites are removed.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
+     "tests/test_editor_backend.c",
      "tests/test_editor_cli.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_editor_backend.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "editor_backend_native_contract"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_editor_cli.py",
       "kind": "python",
@@ -13103,30 +13118,40 @@
     "scripts/object_catalog.py"
    ],
    "tests": [
+    "tests/test_editor_backend.c",
     "tests/test_object_catalog.py",
-    "tests/test_object_catalog_ui.py",
-    "tests/test_editor_cli_native_room_parity.py"
+    "tests/test_object_catalog_ui.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The Python catalog remains for the batch mode and the Python tests until they are ported.",
+   "limitations": "The production catalog and batch command are native; the Python catalog remains only for focused tests that have not yet been ported.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
+     "tests/test_editor_backend.c",
      "tests/test_object_catalog.py",
-     "tests/test_object_catalog_ui.py",
-     "tests/test_editor_cli_native_room_parity.py"
+     "tests/test_object_catalog_ui.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_editor_backend.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "editor_backend_native_contract"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_object_catalog.py",
       "kind": "python",
@@ -13135,12 +13160,6 @@
      },
      {
       "test": "tests/test_object_catalog_ui.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
-     },
-     {
-      "test": "tests/test_editor_cli_native_room_parity.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -13248,36 +13267,40 @@
     "src/editor_backend/audit.c"
    ],
    "tests": [
-    "tests/test_native_rooms.py",
-    "tests/test_editor_cli_native_workspace_parity.py"
+    "tests/test_editor_backend.c",
+    "tests/test_native_rooms.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Edits are private overrides; runtimes do not apply them yet.",
+   "limitations": "The production workspace and headless commands are native, and edits remain private overrides that the runtimes do not apply yet.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_native_rooms.py",
-     "tests/test_editor_cli_native_workspace_parity.py"
+     "tests/test_editor_backend.c",
+     "tests/test_native_rooms.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
      {
-      "test": "tests/test_native_rooms.py",
-      "kind": "python",
+      "test": "tests/test_editor_backend.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "editor_backend_native_contract"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
-      "test": "tests/test_editor_cli_native_workspace_parity.py",
+      "test": "tests/test_native_rooms.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -15054,6 +15077,13 @@
     "outcome": "passed"
    },
    {
+    "name": "editor_backend_native_contract",
+    "files": [
+     "tests/test_editor_backend.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "native_map_contract",
     "files": [
      "tests/test_native_map.c"
@@ -15502,30 +15532,9 @@
    {
     "file": "tests/test_editor_cli.py",
     "module": "tests.test_editor_cli",
-    "test_count": 17,
+    "test_count": 15,
     "outcome": "passed",
-    "passed": 17
-   },
-   {
-    "file": "tests/test_editor_cli_native_parity.py",
-    "module": "tests.test_editor_cli_native_parity",
-    "test_count": 1,
-    "outcome": "passed",
-    "passed": 1
-   },
-   {
-    "file": "tests/test_editor_cli_native_room_parity.py",
-    "module": "tests.test_editor_cli_native_room_parity",
-    "test_count": 1,
-    "outcome": "passed",
-    "passed": 1
-   },
-   {
-    "file": "tests/test_editor_cli_native_workspace_parity.py",
-    "module": "tests.test_editor_cli_native_workspace_parity",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
+    "passed": 15
    },
    {
     "file": "tests/test_editor_tab_layers.py",
@@ -15900,12 +15909,18 @@
    }
   ],
   "summary": {
-   "passed": 396,
+   "passed": 390,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "419a7a8",
+   "date": "2026-10-26",
+   "subject": "Run every editor command, batches and the world overview natively",
+   "scope": "project"
+  },
   {
    "commit": "abcffcf",
    "date": "2026-10-26",
@@ -16378,12 +16393,6 @@
    "commit": "e398717",
    "date": "2026-10-23",
    "subject": "Port Aria Merman and Ripper state machines",
-   "scope": "project"
-  },
-  {
-   "commit": "b7f4b08",
-   "date": "2026-10-23",
-   "subject": "Port Tiny Devil and Imp state machines",
    "scope": "project"
   }
  ],

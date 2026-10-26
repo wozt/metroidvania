@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0546 - Remove the Python editor CLI
+
+- Removed `scripts/editor_cli.py` and the `FUSION_EDITOR_PYTHON_BACKEND`
+  escape hatch. `fusion_editor_cli` and `fusion_map_editor --headless` now
+  invoke the C11 parser/backend directly for every command, batch, help and
+  formatting path; the launcher can no longer execute Python.
+- Replaced the three transitional native-versus-Python editor parity suites
+  with `tests/test_editor_backend.c`. The ROM-free native contract exercises
+  the complete command registry, CLI JSON and error envelopes, unavailable
+  commands, atomic dry-run batches, project information, both collision
+  resolutions, collision persistence, entities, doors, events, validation and
+  deterministic room-package export.
+- The remaining functional CLI test now drives the native executable instead
+  of importing or spawning Python. The connection and target-door source
+  contracts inspect the native command tables. Maintained first-party Python
+  files fell from 113 to 109 after the CLI and three parity suites were
+  removed; no gameplay status changed.
+- `scripts/editor_backend.py` is no longer a production path. It remains only
+  because five focused legacy tests still import its helpers; those tests and
+  their already-ported support modules are the next editor deletion boundary.
+- Next: replace those five editor-backend tests with native contracts, remove
+  `editor_backend.py`, then prune the Python room/entity modules that have no
+  remaining consumers.
+
 ## Patch 0545 - Every editor command runs natively
 
 - Ported the Aria room renderer, its editable workroom export and the Aria

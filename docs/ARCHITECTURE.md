@@ -352,8 +352,8 @@ selection operations and display-independent CLI launcher:
 - `src/core/native_map.c`: versioned `MVNATIVE 1` room work files, editing,
   history and atomic override persistence;
 - `src/core/native_selection.c`: bounded rectangular metatile selection moves.
-- `src/core/editor_cli_launcher.c`: replaces the process with the versioned
-  shared Python backend; no GTK initialization occurs on this path.
+- `src/core/editor_cli_launcher.c`: invokes the versioned C11 backend directly;
+  no Python process or GTK initialization occurs on this path.
 - `src/tools/native_map_cli.c`: internal display-independent adapter around the
   exact `native_map_load/edit/save` implementation used by GTK. The public CLI
   uses it for BG1/BG2 inspection, reads, writes and flood fills.
@@ -428,14 +428,14 @@ so one-shot transitions end exactly when their native animation ends.
 Historical room/editor caches are migrated only with their consumers, never
 by an unverified bulk move.
 
-`scripts/editor_backend.py` is the shared operation layer for headless commands
-and GTK subprocess actions. It owns draft rooms, global-map placements, project
-entities, story validation/storage and native workspace orchestration. GTK's
-interactive tile canvas and the headless tile commands share the C native-map
-core rather than duplicating its file or editing rules. `scripts/room_audit.py`
-executes real MZM and Aria
-decoders for every discovered room, isolates work by native area and emits a
-structured private report. It does not replace either future gameplay engine.
+`fusion_editor_backend` is the shared C11 operation layer for headless commands
+and GTK subprocess actions. It owns draft rooms, global-map placements,
+project entities, story validation/storage, native workspace orchestration,
+render audits and room-package export. GTK's interactive tile canvas and the
+headless tile commands share the same C native-map core rather than duplicating
+its file or editing rules. The superseded Python CLI has been removed;
+`scripts/editor_backend.py` remains test-only until its last focused contracts
+are replaced by native tests. Neither editor path replaces a gameplay engine.
 
 Tracked outputs contain metadata only:
 

@@ -6,17 +6,11 @@ import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 import tempfile
 import unittest
-from unittest import mock
-
-from scripts.editor_cli import CliUsageError, _safe_output
-from scripts.editor_backend import _event_validation, execute
-from scripts import project_room_entities as project_rooms
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "scripts/editor_cli.py"
+CLI = ROOT / "build/fusion_editor_cli"
 
 
 class EditorCliTests(unittest.TestCase):
@@ -25,7 +19,7 @@ class EditorCliTests(unittest.TestCase):
         environment.pop("DISPLAY", None)
         environment.pop("WAYLAND_DISPLAY", None)
         return subprocess.run(
-            [sys.executable, str(CLI), *arguments], cwd=ROOT,
+            [str(CLI), *arguments], cwd=ROOT,
             env=environment, text=True, capture_output=True, check=False)
 
     def test_project_info_is_clean_json_without_display(self):
@@ -296,63 +290,6 @@ class EditorCliTests(unittest.TestCase):
                         "--confirm=true", "--format=json")
                     self.assertEqual(deleted.returncode, 0, deleted.stderr)
 
-    def test_event_reference_validation_resolves_every_action_family(self):
-        document = project_rooms._new("mzm", "Brinstar", 5, 64, 64)
-        entity = project_rooms.create(
-            document, "ENEMY", 0, 0, "Spawn target")
-        door = project_rooms.door_create(
-            document, 0, 0, 16, 16, "Exit", "normal", "left")
-        transition = project_rooms.transition_create(
-            document, door["id"], "aria", "0", 1, 0, 0, 0)
-        first = project_rooms.event_create(
-            document, "EVENT", 0, 0, 16, 16, "Checkpoint", "enter",
-            "checkpoint", "checkpoint:test_room", False,
-            conditions=[{
-                "type": "story_flag", "ref": "flag:start_choice_locked",
-                "negated": False,
-            }])
-        references = (
-            ("story", "timeline:shared.start_choice"),
-            ("story", "cutscene:interzone_first_meeting"),
-            ("spawn", f"entity:{entity['id']}"),
-            ("toggle", f"event:{first['id']}"),
-            ("transition", f"transition:{transition['id']}"),
-        )
-        for index, (action, reference) in enumerate(references, 1):
-            project_rooms.event_create(
-                document, "TRIGGER", 16, 16, 16, 16,
-                f"Reference {index}", "interact", action, reference, False)
-        first["condition_mode"] = "any"
-        first["conditions"] = [
-            {"type": "story_flag", "ref": "flag:start_choice_locked",
-             "negated": False},
-            {"type": "event_complete", "ref": "event:2", "negated": False},
-            {"type": "entity_present", "ref": f"entity:{entity['id']}",
-             "negated": True},
-            {"type": "transition_ready",
-             "ref": f"transition:{transition['id']}", "negated": False},
-            {"type": "checkpoint_active", "ref": "checkpoint:test_room",
-             "negated": False},
-        ]
-        records = _event_validation(document, ROOT)
-        self.assertTrue(all(record["valid"] for record in records), records)
-        self.assertEqual(
-            [condition["reference_status"]
-             for condition in records[0]["conditions"]],
-            ["verified_story_flag", "verified_project_event",
-             "verified_project_entity", "verified_project_transition",
-             "valid_checkpoint_key"])
-        with self.assertRaisesRegex(ValueError, "referenced by a project event"):
-            project_rooms.delete(document, entity["id"])
-        with self.assertRaisesRegex(ValueError, "referenced by a project event"):
-            project_rooms.transition_delete(document, transition["id"])
-        with self.assertRaisesRegex(ValueError, "referenced by another project event"):
-            project_rooms.event_delete(document, first["id"])
-        document["events"][-1]["action_ref"] = "transition:999"
-        self.assertEqual(
-            _event_validation(document, ROOT)[-1]["reference_status"],
-            "missing_project_transition")
-
     def test_story_save_validates_and_writes_through_backend(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -387,28 +324,6 @@ class EditorCliTests(unittest.TestCase):
             self.assertFalse(payload["data"]["persisted"])
             self.assertEqual(payload["created_paths"], [])
 
-    def test_tile_fill_uses_native_core_adapter_without_writing_in_dry_run(self):
-        room = {"world": "zero_mission", "area": "Brinstar", "room": 3,
-                "native_id": "mzm:brinstar:003"}
-        base = ROOT / "assets/extracted/rooms/metroid/workrooms/test.mvnative"
-        override = ROOT / "assets/extracted/overrides/metroid/test.mvnative"
-        with (mock.patch("scripts.editor_backend._native_room", return_value=room),
-              mock.patch("scripts.editor_backend._native_workspace_paths",
-                         return_value=(base, override)),
-              mock.patch("scripts.editor_backend._check_native_path"),
-              mock.patch("scripts.editor_backend._native_map_tool",
-                         return_value=["CHANGED", "1"]) as adapter):
-            result = execute("tile-fill", {
-                "world": "zero_mission", "area": "Brinstar", "room": 3,
-                "layer": "bg2", "x": 4, "y": 5, "tile_id": 7,
-            }, root=ROOT, dry_run=True)
-        self.assertTrue(result["changed"])
-        self.assertFalse(result["persisted"])
-        arguments = adapter.call_args.args[1]
-        self.assertIn("--command=fill", arguments)
-        self.assertIn("--dry-run=true", arguments)
-        self.assertFalse(any(value.startswith("--output=") for value in arguments))
-
     def test_gui_business_operations_reference_only_shared_cli(self):
         sources = [
             ROOT / "editor/room_browser.c", ROOT / "editor/native_workspace.c",
@@ -430,8 +345,10 @@ class EditorCliTests(unittest.TestCase):
             target.mkdir()
             link = root / "link"
             link.symlink_to(target, target_is_directory=True)
-            with self.assertRaises(CliUsageError):
-                _safe_output(link / "result.json", "{}\n")
+            completed = self.run_cli(
+                "--command=project-info", "--format=json",
+                f"--output={link / 'result.json'}")
+            self.assertEqual(completed.returncode, 2)
 
     def test_batch_refuses_symlink_parent(self):
         with tempfile.TemporaryDirectory() as directory:

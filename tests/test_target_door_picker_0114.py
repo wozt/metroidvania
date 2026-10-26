@@ -41,12 +41,12 @@ class TargetDoorPicker0114(unittest.TestCase):
 
     def test_gtk_picker_and_cli_contract(self):
         c = (ROOT / 'editor/native_workspace.c').read_text()
-        cli = (ROOT / 'scripts/editor_cli.py').read_text()
+        cli = (ROOT / 'src/editor_backend/commands.c').read_text()
         for text in ('project_door_list_targets_0114(', 'project_door_target_chosen_0114(',
                      'List saved target doors', '--command=door-target-list',
                      'project_door_link_0102(', 'form->target_choice_ids'):
             self.assertIn(text, c)
-        self.assertIn('"door-target-list"', cli)
+        self.assertIn('{"door-target-list",', cli)
 
 
 if __name__ == '__main__':

@@ -18,7 +18,7 @@ all private overrides remain under the ignored `assets/extracted/` tree.
 ```sh
 ./build/fusion_editor_cli --command=project-info --format=json
 ./build/fusion_map_editor --headless --command=list-worlds --format=json
-python3 scripts/editor_cli.py --command=room-audit \
+build/fusion_editor_cli --command=room-audit \
   --world=zero_mission --workers=4 --report=zero_mission_ci --format=text
 ```
 

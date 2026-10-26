@@ -51,8 +51,8 @@ bool feb_unknown_options(const FusionJson *options, const char *const *fields,
 bool feb_execute(const char *command, const FusionJson *options, const char *root,
                  const char *repository, bool dry_run, FusionJson *data, FebError *error);
 
-/* The command-line interface; ``handled`` is false when the command must be
- * forwarded to the remaining Python backend. */
+/* The command-line interface. ``handled`` is true for every parsed request;
+ * it remains explicit for the GTK launcher contract. */
 int feb_cli_main(int argc, char **argv, const char *repository, bool *handled);
 
 #endif /* FUSION_EDITOR_BACKEND_H */

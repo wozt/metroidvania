@@ -285,6 +285,14 @@ if(BUILD_TESTING)
     set_tests_properties(editor_cli_headless PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
+    add_executable(fusion_editor_backend_tests tests/test_editor_backend.c)
+    target_include_directories(fusion_editor_backend_tests PRIVATE src/editor_backend)
+    target_compile_definitions(fusion_editor_backend_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_link_libraries(fusion_editor_backend_tests PRIVATE fusion_editor_backend)
+    fusion_enable_warnings(fusion_editor_backend_tests)
+    add_test(NAME editor_backend_native_contract COMMAND fusion_editor_backend_tests)
+
     add_executable(fusion_native_map_tests tests/test_native_map.c)
     target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
     fusion_enable_warnings(fusion_native_map_tests)

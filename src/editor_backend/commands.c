@@ -260,7 +260,8 @@ static const char *const mutating_commands[] = {
 
 #define COUNT(array) (sizeof (array) / sizeof (array)[0])
 
-/* The commands implemented here; the others still run in Python. */
+/* Commands implemented directly here; room/workspace commands have their own
+ * native dispatch tables. */
 static const char *const native_commands[] = {
     "capabilities", "project-info", "list-worlds", "list-areas", "list-rooms",
     "room-list", "room-inspect", "room-validate", "placement-list", "room-create",

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T05:25:13+00:00",
+ "generated_at": "2026-10-26T06:02:12+00:00",
  "git": {
-  "commit": "17181fb",
+  "commit": "abcffcf",
   "branch": "main",
   "dirty": true
  },
@@ -13243,7 +13243,9 @@
     "src/core/native_map.c",
     "src/editor_backend/workspace.c",
     "src/editor_backend/mzm_render.c",
-    "src/editor_backend/mzm_workspace.c"
+    "src/editor_backend/mzm_workspace.c",
+    "src/editor_backend/aria_render.c",
+    "src/editor_backend/audit.c"
    ],
    "tests": [
     "tests/test_native_rooms.py",
@@ -13358,7 +13360,8 @@
    "fidelity": "partial",
    "local_sources": [
     "editor/world_atlas.c",
-    "scripts/mzm_world_atlas.py"
+    "src/editor_backend/world_overview.c",
+    "src/tools/world_overview.c"
    ],
    "tests": [
     "tests/test_mzm_world_atlas.py"
@@ -15520,9 +15523,9 @@
    {
     "file": "tests/test_editor_cli_native_workspace_parity.py",
     "module": "tests.test_editor_cli_native_workspace_parity",
-    "test_count": 2,
+    "test_count": 3,
     "outcome": "passed",
-    "passed": 2
+    "passed": 3
    },
    {
     "file": "tests/test_editor_tab_layers.py",
@@ -15897,12 +15900,18 @@
    }
   ],
   "summary": {
-   "passed": 395,
+   "passed": 396,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "abcffcf",
+   "date": "2026-10-26",
+   "subject": "Render and open Zero Mission rooms natively in the editor",
+   "scope": "project"
+  },
   {
    "commit": "17181fb",
    "date": "2026-10-26",
@@ -16375,12 +16384,6 @@
    "commit": "b7f4b08",
    "date": "2026-10-23",
    "subject": "Port Tiny Devil and Imp state machines",
-   "scope": "project"
-  },
-  {
-   "commit": "2fde524",
-   "date": "2026-10-23",
-   "subject": "Port Harpy and Gorgon enemy families",
    "scope": "project"
   }
  ],

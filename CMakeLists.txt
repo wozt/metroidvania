@@ -37,6 +37,9 @@ add_library(fusion_editor_backend STATIC
     src/editor_backend/generated.c
     src/editor_backend/mzm_render.c
     src/editor_backend/mzm_workspace.c
+    src/editor_backend/aria_render.c
+    src/editor_backend/audit.c
+    src/editor_backend/world_overview.c
     src/core/native_map.c
 )
 find_package(ZLIB REQUIRED)
@@ -127,6 +130,11 @@ fusion_enable_warnings(fusion_sound_ids)
 add_executable(fusion_importer src/tools/fusion_importer.c)
 target_link_libraries(fusion_importer PRIVATE fusion_assets)
 fusion_enable_warnings(fusion_importer)
+
+add_executable(fusion_world_overview src/tools/world_overview.c)
+target_link_libraries(fusion_world_overview PRIVATE fusion_editor_backend)
+target_compile_definitions(fusion_world_overview PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+fusion_enable_warnings(fusion_world_overview)
 
 add_executable(fusion_editor_cli src/tools/editor_cli.c)
 target_link_libraries(fusion_editor_cli PRIVATE fusion_native_editor_core)

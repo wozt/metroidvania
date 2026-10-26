@@ -22,6 +22,11 @@ const char *fusion_editor_cli_program(void)
     return FUSION_BINARY_DIR "/fusion_editor_cli";
 }
 
+const char *fusion_world_overview_program(void)
+{
+    return FUSION_BINARY_DIR "/fusion_world_overview";
+}
+
 int fusion_editor_cli_launch(int argc, char **argv, bool remove_headless)
 {
     static const char script[] = FUSION_SOURCE_DIR "/scripts/editor_cli.py";

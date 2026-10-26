@@ -669,6 +669,19 @@ static bool text_result(const char *command, const FusionJson *data, const FebEr
     if (failure)
         return text_puts(text, command) && text_puts(text, ": ") &&
                text_puts(text, failure->message);
+    if (!strcmp(command, "room-audit")) {
+        const FusionJson *summary = fusion_json_member(data, "summary");
+        char line[64];
+        snprintf(line, sizeof line, ": %lld rooms; ",
+                 (long long)fusion_json_member(data, "room_count")->integer);
+        bool ok = text_puts(text, command) && text_puts(text, line);
+        for (size_t index = 0; ok && index < summary->count; ++index) {
+            snprintf(line, sizeof line, "%s%s=%lld", index ? ", " : "", summary->keys[index],
+                     (long long)summary->items[index].integer);
+            ok = text_puts(text, line);
+        }
+        return ok;
+    }
     char *json = NULL;
     if (!fusion_json_write(data, 2, &json, NULL)) return false;
     bool ok = text_puts(text, command) && text_puts(text, ": success\n") && text_puts(text, json);
@@ -703,9 +716,131 @@ static bool json_result(const char *command, FusionJson *data, const FebError *f
     return ok;
 }
 
-static bool world_is(const Arguments *arguments, const char *world) {
-    const char *value = value_of(arguments, "world");
-    return value && !strcmp(value, world);
+/* The help text, from the parser's options in declaration order. */
+static void print_help(void) {
+    fputs("usage: fusion_editor_cli [-h] [--version] (--command COMMAND | --batch BATCH)\n"
+          "                         [options]\n\n"
+          "Headless command-line interface for the shared Metroidvania editor backend.\n\n"
+          "options:\n"
+          "  -h, --help            show this help message and exit\n"
+          "  --version             show program's version number and exit\n", stdout);
+    for (size_t index = 2; index < COUNT(options_table); ++index) {
+        const Option *option = &options_table[index];
+        char metavar[64];
+        if (option->kind == OPTION_CHOICE) {
+            snprintf(metavar, sizeof metavar, "{json,text,tsv}");
+        } else if (option->kind == OPTION_BOOL) {
+            snprintf(metavar, sizeof metavar, "{true,false}");
+        } else {
+            size_t used = 0;
+            for (const char *c = option->dest; *c && used + 1 < sizeof metavar; ++c)
+                metavar[used++] = (char)(*c >= 'a' && *c <= 'z' ? *c - 'a' + 'A' : *c);
+            metavar[used] = '\0';
+        }
+        printf("  %s %s\n", option->flag, metavar);
+    }
+    puts("\nThe commands, their options and capabilities are listed by\n"
+         "--command=capabilities.");
+}
+
+/* _read_batch(): the bounded operations array of a batch file. */
+static bool read_batch(const char *path, FusionJson *operations, FebError *error) {
+    static const char refused[] = "batch must be a non-symlink JSON file no larger than 1 MiB";
+    char copy[FEB_PATH_CAPACITY], absolute[FEB_PATH_CAPACITY], current[FEB_PATH_CAPACITY] = "";
+    snprintf(copy, sizeof copy, "%s", path);
+    for (char *part = strtok(copy, "/"); part; part = strtok(NULL, "/"))
+        if (!strcmp(part, ".."))
+            return feb_fail(error, FEB_EXIT_USAGE, "%s", refused);
+    if (!feb_absolute(path, absolute)) return feb_fail(error, FEB_EXIT_USAGE, "%s", refused);
+    snprintf(copy, sizeof copy, "%s", absolute);
+    for (char *part = strtok(copy, "/"); part; part = strtok(NULL, "/")) {
+        if (!strcmp(part, ".")) continue;
+        size_t used = strlen(current);
+        snprintf(current + used, sizeof current - used, "/%s", part);
+        if (feb_is_symlink(current)) return feb_fail(error, FEB_EXIT_USAGE, "%s", refused);
+    }
+    long long size = 0;
+    if (!feb_is_regular(absolute, &size) || size > 1024 * 1024)
+        return feb_fail(error, FEB_EXIT_USAGE, "%s", refused);
+    char detail[512];
+    FusionJson document;
+    if (!feb_load_json(absolute, 1024 * 1024, &document, detail, sizeof detail))
+        return feb_fail(error, FEB_EXIT_USAGE, "invalid batch JSON: %s", detail);
+    if (document.kind != FUSION_JSON_OBJECT || document.count != 1 ||
+        strcmp(document.keys[0], "operations")) {
+        fusion_json_free(&document);
+        return feb_fail(error, FEB_EXIT_USAGE, "batch must contain only an operations array");
+    }
+    FusionJson list = document.items[0];
+    document.items[0] = fusion_json_null();
+    fusion_json_free(&document);
+    if (list.kind != FUSION_JSON_ARRAY || list.count < 1 || list.count > 100) {
+        fusion_json_free(&list);
+        return feb_fail(error, FEB_EXIT_USAGE, "batch operations must contain 1..100 entries");
+    }
+    for (size_t index = 0; index < list.count; ++index)
+        if (list.items[index].kind != FUSION_JSON_OBJECT) {
+            fusion_json_free(&list);
+            return feb_fail(error, FEB_EXIT_USAGE, "every batch operation must be an object");
+        }
+    *operations = list;
+    return true;
+}
+
+/* The batch result: every operation in order, stopping at the first failure. */
+static bool run_batch(const Arguments *arguments, const char *repository, const char **command,
+                      FusionJson *data, FebError *error) {
+    FusionJson operations;
+    if (!read_batch(value_of(arguments, "batch"), &operations, error)) return false;
+    bool atomic = flag_of(arguments, "atomic"), dry_run = flag_of(arguments, "dry_run");
+    for (size_t index = 0; atomic && !dry_run && index < operations.count; ++index) {
+        const FusionJson *name = fusion_json_member(&operations.items[index], "command");
+        if (name && name->kind == FUSION_JSON_STRING && feb_is_mutating(name->string)) {
+            fusion_json_free(&operations);
+            return feb_fail(error, FEB_EXIT_UNAVAILABLE,
+                            "atomic persistent mutations are unavailable; use --dry-run=true");
+        }
+    }
+    *command = "batch";
+    const char *root = value_of(arguments, "root") ? value_of(arguments, "root") : repository;
+    FusionJson results = fusion_json_array();
+    bool ok = true;
+    for (size_t index = 0; ok && index < operations.count; ++index) {
+        const FusionJson *operation = &operations.items[index];
+        const FusionJson *name = fusion_json_member(operation, "command");
+        FusionJson entry = fusion_json_object(), copy = fusion_json_null(), options, result;
+        ok = (!name || fusion_json_clone(name, &copy)) && feb_put(&entry, "command", copy);
+        if (!ok) {
+            fusion_json_free(&entry);
+            ok = feb_oom(error);
+            break;
+        }
+        if (!name || name->kind != FUSION_JSON_STRING) {
+            fusion_json_free(&entry);
+            ok = feb_fail(error, FEB_EXIT_USAGE, "operation command is required");
+            break;
+        }
+        options = fusion_json_object();
+        for (size_t key = 0; ok && key < operation->count; ++key) {
+            if (!strcmp(operation->keys[key], "command")) continue;
+            ok = (fusion_json_clone(&operation->items[key], &copy) &&
+                  fusion_json_set(&options, operation->keys[key], copy)) || feb_oom(error);
+        }
+        ok = ok && feb_execute(name->string, &options, root, repository, dry_run, &result, error);
+        fusion_json_free(&options);
+        ok = ok && ((feb_put(&entry, "data", result) && fusion_json_push(&results, entry)) ||
+                    feb_oom(error));
+        if (!ok) fusion_json_free(&entry);
+    }
+    fusion_json_free(&operations);
+    *data = fusion_json_object();
+    ok = ok && ((feb_put_bool(data, "atomic", atomic) && feb_put_bool(data, "dry_run", dry_run) &&
+                 feb_put(data, "results", results)) || feb_oom(error));
+    if (!ok) {
+        fusion_json_free(&results);
+        fusion_json_free(data);
+    }
+    return ok;
 }
 
 int feb_cli_main(int argc, char **argv, const char *repository, bool *handled) {
@@ -714,11 +849,12 @@ int feb_cli_main(int argc, char **argv, const char *repository, bool *handled) {
     Arguments arguments;
     const char *format = "text", *command = "unknown";
     FusionJson options = {0}, data = {0}, created = fusion_json_array();
+    bool batch_mode = false;
     Text payload = {0};
     bool ok = parse_arguments(argc, argv, &arguments, &failure);
     if (ok && arguments.help) {
-        *handled = false;  /* the help text still comes from the Python parser */
-        return 0;
+        print_help();
+        return FEB_EXIT_SUCCESS;
     }
     if (ok && arguments.version) {
         puts(FEB_BACKEND_VERSION);
@@ -731,20 +867,21 @@ int feb_cli_main(int argc, char **argv, const char *repository, bool *handled) {
         bool has_command = requested && requested[0], has_batch = batch && batch[0];
         if (has_command == has_batch) {
             ok = feb_fail(&failure, FEB_EXIT_USAGE, "provide exactly one of --command or --batch");
-        } else if (has_batch || !feb_is_native(requested) ||
-                   ((!strcmp(requested, "room-render") || !strcmp(requested, "room-open")) &&
-                    !world_is(&arguments, "zero_mission"))) {
-            /* The Aria room renderer and workroom export still run in Python. */
-            *handled = false;
-            return 0;
+        } else if (has_batch) {
+            batch_mode = true;
         } else {
             command = requested;
         }
     }
-    if (ok && !strcmp(format, "tsv") && !is_tsv_command(command))
+    if (ok && batch_mode) {
+        ok = strcmp(format, "tsv")
+            ? run_batch(&arguments, repository, &command, &data, &failure)
+            : feb_fail(&failure, FEB_EXIT_USAGE, "TSV output is unavailable for batches");
+    }
+    if (ok && !batch_mode && !strcmp(format, "tsv") && !is_tsv_command(command))
         ok = feb_fail(&failure, FEB_EXIT_USAGE, "TSV output is unavailable for %s", command);
-    if (ok && !clean_options(&arguments, &options)) ok = feb_oom(&failure);
-    if (ok) {
+    if (ok && !batch_mode && !clean_options(&arguments, &options)) ok = feb_oom(&failure);
+    if (ok && !batch_mode) {
         bool known = false;
         const char *const *fields = feb_command_fields(command, &known);
         char unknown[FEB_MESSAGE_CAPACITY];
@@ -753,7 +890,7 @@ int feb_cli_main(int argc, char **argv, const char *repository, bool *handled) {
                           unknown);
     }
     const char *root = value_of(&arguments, "root") ? value_of(&arguments, "root") : repository;
-    if (ok)
+    if (ok && !batch_mode)
         ok = feb_execute(command, &options, root, repository, flag_of(&arguments, "dry_run"),
                          &data, &failure);
     if (ok && data.kind == FUSION_JSON_OBJECT) {

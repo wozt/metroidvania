@@ -12,6 +12,8 @@
 #include "workspace.h"
 #include "mzm_render.h"
 #include "mzm_workspace.h"
+#include "aria_render.h"
+#include "audit.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -263,7 +265,7 @@ static const char *const native_commands[] = {
     "capabilities", "project-info", "list-worlds", "list-areas", "list-rooms",
     "room-list", "room-inspect", "room-validate", "placement-list", "room-create",
     "room-place", "room-move", "room-unplace", "list-assets", "entity-catalog",
-    "room-render", "room-open",
+    "room-render", "room-open", "room-audit", "project-audit",
 };
 
 bool feb_is_native(const char *command) {
@@ -714,9 +716,15 @@ static bool command_room_render(const char *repository, const FusionJson *option
     if (!feb_world(feb_option(options, "world"), &world, error) ||
         !feb_integer(feb_option(options, "room"), "room", 0, 999, &id, error))
         return false;
-    if (strcmp(world, "zero_mission"))
-        return feb_fail(error, FEB_EXIT_UNAVAILABLE, "the Aria room renderer is not ported");
     FusionJson rooms, result;
+    if (strcmp(world, "zero_mission")) {
+        int64_t area = 0;
+        if (!feb_integer(feb_option(options, "area"), "area", 0, 11, &area, error) ||
+            !feb_aria_render_room(repository, area, id, !dry_run, &result, error))
+            return false;
+        return (feb_put(data, "render", result) && feb_put_bool(data, "persisted", !dry_run)) ||
+               feb_oom(error);
+    }
     if (!feb_filter_native_rooms(repository, world, feb_option(options, "area"), &rooms, error))
         return false;
     const FusionJson *match = NULL;
@@ -766,9 +774,12 @@ static bool command_room_open(const char *root, const char *repository, const Fu
     }
     ok = ok && feb_require_repository_root(root, repository, error);
     if (ok && strcmp(world, "zero_mission"))
-        ok = feb_fail(error, FEB_EXIT_UNAVAILABLE, "the Aria workroom export is not ported");
-    ok = ok && feb_mzm_workspace_export(repository, fusion_json_member(match, "area")->string, id,
-                                        &workspace, error);
+        ok = feb_aria_workspace_export(repository,
+                                       fusion_json_member(match, "area_index")->integer, id,
+                                       &workspace, error);
+    else if (ok)
+        ok = feb_mzm_workspace_export(repository, fusion_json_member(match, "area")->string, id,
+                                      &workspace, error);
     if (ok) {
         FusionJson created = fusion_json_array();
         static const char *const keys[] = {"atlas", "base", "workroom", "override", "collision",
@@ -786,6 +797,72 @@ static bool command_room_open(const char *root, const char *repository, const Fu
               feb_put(data, "created_paths", created)) || feb_oom(error);
     }
     fusion_json_free(&rooms);
+    return ok;
+}
+
+static bool audit_workers(const FusionJson *options, int64_t *workers, FebError *error) {
+    FusionJson one = fusion_json_int(1);
+    const FusionJson *value = feb_option(options, "workers");
+    return feb_integer(value ? value : &one, "workers", 1, 8, workers, error);
+}
+
+static bool command_room_audit(const char *repository, const FusionJson *options, bool dry_run,
+                               FusionJson *data, FebError *error) {
+    const char *world = NULL;
+    int64_t workers = 1;
+    if (!feb_world(feb_option(options, "world"), &world, error) ||
+        !audit_workers(options, &workers, error))
+        return false;
+    FusionJson report;
+    if (!feb_audit_world(repository, world, feb_option(options, "area"), workers, &report, error))
+        return false;
+    const FusionJson *name = feb_option(options, "report");
+    bool ok = true;
+    if (name && name->kind != FUSION_JSON_NULL) {
+        /* [a-z0-9][a-z0-9_-]{0,63} */
+        const char *text = name->kind == FUSION_JSON_STRING ? name->string : "";
+        size_t length = strlen(text);
+        bool valid = length >= 1 && length <= 64 &&
+                     ((text[0] >= 'a' && text[0] <= 'z') || (text[0] >= '0' && text[0] <= '9'));
+        for (size_t index = 1; valid && index < length; ++index)
+            valid = (text[index] >= 'a' && text[index] <= 'z') ||
+                    (text[index] >= '0' && text[index] <= '9') || text[index] == '_' ||
+                    text[index] == '-';
+        if (!valid) ok = feb_fail(error, FEB_EXIT_OPERATION, "report must be a lowercase safe identifier");
+        if (ok && !dry_run) {
+            char file[96], path[FEB_PATH_CAPACITY];
+            snprintf(file, sizeof file, "%s.json", text);
+            ok = feb_audit_write_report(repository, &report, file, path, error) &&
+                 (feb_put_string(&report, "report_path", path) || feb_oom(error));
+        }
+    }
+    if (!ok) {
+        fusion_json_free(&report);
+        return false;
+    }
+    fusion_json_free(data);
+    *data = report;
+    return true;
+}
+
+static bool command_project_audit(const char *root, const char *repository,
+                                  const FusionJson *options, FusionJson *data, FebError *error) {
+    int64_t workers = 1;
+    if (!audit_workers(options, &workers, error)) return false;
+    FusionJson validation = fusion_json_object(), audits = fusion_json_object();
+    bool ok = feb_project_validation(root, &validation, error);
+    static const char *const worlds[] = {"zero_mission", "aria"};
+    for (int world = 0; ok && world < 2; ++world) {
+        FusionJson report;
+        ok = feb_audit_world(repository, worlds[world], NULL, workers, &report, error) &&
+             (feb_put(&audits, worlds[world], report) || feb_oom(error));
+    }
+    ok = ok && ((feb_put(data, "validation", validation) && feb_put(data, "render_audits", audits)) ||
+                feb_oom(error));
+    if (!ok) {
+        fusion_json_free(&validation);
+        fusion_json_free(&audits);
+    }
     return ok;
 }
 
@@ -824,6 +901,10 @@ bool feb_execute(const char *command, const FusionJson *options, const char *roo
         ok = command_room_place(root, options, dry_run, data, error);
     else if (!strcmp(command, "room-unplace"))
         ok = command_room_unplace(root, options, dry_run, data, error);
+    else if (!strcmp(command, "room-audit"))
+        ok = command_room_audit(repository, options, dry_run, data, error);
+    else if (!strcmp(command, "project-audit"))
+        ok = command_project_audit(root, repository, options, data, error);
     else if (!strcmp(command, "room-open"))
         ok = command_room_open(root, repository, options, dry_run, data, error);
     else if (!strcmp(command, "room-render"))

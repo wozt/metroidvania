@@ -57,6 +57,28 @@ def _fixture(base):
                       "native_type": "pickup:02",
                       "settings": {"item_id": 3, "parameter_0": 0, "parameter_1": 1,
                                    "flags": 0}}]}, indent=1))
+    scope = {"world": "zero_mission", "area": "Brinstar", "room": 5, "width": 256, "height": 160}
+    batches = {
+        "batch_ok.json": {"operations": [
+            {"command": "list-worlds"},
+            {"command": "collision-set", **scope, "x": 6, "y": 2, "collision_type": "hazard"},
+            {"command": "collision-get", **scope, "x": "6", "y": 2},
+            {"command": "entity-create", **scope, "kind": "ENEMY", "x": 48, "y": 32,
+             "label": "Batch"}]},
+        "batch_unknown.json": {"operations": [{"command": "list-worlds"},
+                                              {"command": "nope"}]},
+        "batch_option.json": {"operations": [{"command": "list-worlds", "world": "aria"}]},
+        "batch_missing.json": {"operations": [{"world": "aria"}]},
+        "batch_object.json": {"operations": [1]},
+        "batch_empty.json": {"operations": []},
+        "batch_many.json": {"operations": [{"command": "list-worlds"}] * 101},
+        "batch_extra.json": {"operations": [{"command": "list-worlds"}], "more": 1},
+        "batch_list.json": [{"command": "list-worlds"}],
+        "batch_render.json": {"operations": [{"command": "capabilities"}]},
+    }
+    for name, document in batches.items():
+        (base / name).write_text(json.dumps(document))
+    (base / "batch_broken.json").write_text('{"operations": [}')
     return base
 
 
@@ -236,6 +258,14 @@ SEQUENCE = [
     ["--command=story-save", "--kind=timeline", "--input=story_in.toml",
      "--target=data/story/other.toml"],
     ["--command=project-validate", "--format=json"],
+    ["--command=room-export", "--world=zero_mission", "--area=Brinstar", "--room=5",
+     "--dry-run", "--format=json"],
+    ["--command=room-export", "--world=zero_mission", "--area=Brinstar", "--room=5",
+     "--format=json"],
+    ["--command=room-export", "--world=zero_mission", "--area=Brinstar", "--room=5"],
+    ["--command=room-export", "--world=aria", "--area=1", "--room=3", "--format=json"],
+    ["--command=room-export", "--world=aria", "--area=1", "--room=9"],
+    ["--command=room-export", "--world=zero_mission", "--area=Brinstar", "--room=6"],
     ["--command=room-create", "--world=zero_mission", "--area=0", "--slug=hall", "--name=Hall",
      "--width-screens=2", "--format=json"],
     ["--command=room-create", "--world=zero_mission", "--area=0", "--slug=hall", "--name=Again"],
@@ -266,6 +296,27 @@ SEQUENCE = [
     ["--command=room-unplace", "--room=nobody", "--confirm=true"],
     ["--command=placement-list", "--format=json"],
 ]
+BATCHES = [
+    ["--batch=batch_ok.json", "--format=json"],
+    ["--batch=batch_ok.json", "--dry-run=true"],
+    ["--batch=batch_ok.json", "--atomic=true"],
+    ["--batch=batch_ok.json", "--atomic=true", "--dry-run=true", "--format=json"],
+    ["--batch=batch_ok.json", "--format=tsv"],
+    ["--batch=batch_unknown.json", "--format=json"],
+    ["--batch=batch_option.json"],
+    ["--batch=batch_missing.json"],
+    ["--batch=batch_object.json"],
+    ["--batch=batch_empty.json"],
+    ["--batch=batch_many.json"],
+    ["--batch=batch_extra.json"],
+    ["--batch=batch_list.json"],
+    ["--batch=batch_broken.json", "--format=json"],
+    ["--batch=batch_absent.json"],
+    ["--batch=../batch_ok.json"],
+    ["--batch=batch_render.json", "--command=list-worlds"],
+    ["--command=nope"],
+    ["--command=nope", "--format=json"],
+]
 STAGED = [
     ["--command=collision-set", *Z, "--x=4", "--y=4", "--type=air"],
     ["--command=collision-list", *Z, "--format=json"],
@@ -288,6 +339,10 @@ class NativeRoomParityTests(unittest.TestCase):
             native = _fixture(Path(directory) / "native")
             for arguments in SEQUENCE:
                 with self.subTest(arguments=arguments[:2]):
+                    self.assertEqual(_run(arguments, native, False),
+                                     _run(arguments, python, True))
+            for arguments in BATCHES:
+                with self.subTest(batch=arguments):
                     self.assertEqual(_run(arguments, native, False),
                                      _run(arguments, python, True))
             for token in ("12345678-1234-1234-1234-123456789abc", "bad-token"):

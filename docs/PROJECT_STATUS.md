@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0545 - Every editor command runs natively
+
+- Ported the Aria room renderer, its editable workroom export and the Aria
+  room annotations (`aos_room_render.py`, `aos_native_workspace.py`, the Aria
+  half of `room_annotations.py`) to `src/editor_backend/aria_render.c`, the
+  render audit (`room_audit.py`) to `audit.c`, and `room-export`
+  (`project_room_package.py`) to `commands_room.c`. The Aria world catalog
+  comes from the native importer's writer on the verified ROM.
+- All 64 editor commands, `--batch` and `--help` now run in C; the launcher
+  no longer needs the Python CLI (it is kept only until its tests are ported).
+- `world_overview.py` and `mzm_world_atlas.run()` became the native
+  `fusion_world_overview` tool, which the GTK world atlas now runs instead of
+  `python3 -m scripts.world_overview`.
+- Evidence: on all 343 Aria rooms, every `room-render` and `room-open` output
+  and written file is byte-identical to Python; eleven `room-audit` scopes
+  match once the timings are masked; seven world overview runs (indexing
+  from scratch, preview batches, usage errors) produce identical stdout and
+  files. The room parity test gained six `room-export` cases and the
+  workspace parity test gained the audits; nineteen batch and unknown-command
+  cases match the Python CLI.
+- No gameplay status changed and no private assets were committed.
+- Next: remove the Python editor backend (`editor_backend.py`,
+  `editor_cli.py` and the modules ported above) with their Python tests,
+  replacing the parity tests with C tests.
+
 ## Patch 0544 - Native Zero Mission room render and workroom export
 
 - Ported the editor's Zero Mission room renderer (`mzm_room_render.py`) to

@@ -45,10 +45,10 @@ sequencer. Native gameplay kernels and 1:1 scene playback are later milestones.
 Run:
 
 ```sh
-python3 -m scripts.world_overview --world mzm --area 0 --budget 6
-python3 -m scripts.world_overview --world aria --area 0 --budget 6
-python3 -m scripts.validate_story_assets --kind timeline data/story/timeline.toml
-python3 -m scripts.validate_story_assets --kind cutscene data/cutscenes/interzone_first_meeting.toml
+./build/fusion_world_overview --world mzm --area 0 --budget 6
+./build/fusion_world_overview --world aria --area 0 --budget 6
+./build/fusion_editor_cli --command=story-validate --kind=timeline --input=data/story/timeline.toml
+./build/fusion_editor_cli --command=story-validate --kind=cutscene --input=data/cutscenes/interzone_first_meeting.toml
 ./build/fusion_map_editor
 ```
 

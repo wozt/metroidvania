@@ -1342,7 +1342,7 @@ static void begin_generation(WorldGrid *w)
     GError *error = NULL;
     GSubprocess *proc = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
-        &error, "python3", "-m", "scripts.world_overview",
+        &error, fusion_world_overview_program(),
         "--world", world_code(w), "--area", area, "--budget", budget_arg, NULL);
     g_free(area);
     g_free(budget_arg);

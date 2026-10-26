@@ -9,7 +9,11 @@
 #include "project_room.h"
 #include "story.h"
 
+#include "fusion/assets/rom.h"
+
 #include <dirent.h>
+#include <stdarg.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +34,7 @@ static const char *const room_commands[] = {
     "transition-list", "transition-create", "transition-update", "transition-delete",
     "transition-validate", "entity-list", "entity-inspect", "entity-create", "entity-move",
     "entity-update", "entity-delete", "entity-assign", "entity-item-settings", "story-validate", "story-save", "project-validate",
+    "room-export",
 };
 
 bool feb_is_room_command(const char *command) {
@@ -1553,7 +1558,7 @@ static size_t list_files(const char *folder, const char *suffix, char **names, s
 }
 
 /* _project_validation(). */
-static bool project_validation(const char *root, FusionJson *data, FebError *error) {
+bool feb_project_validation(const char *root, FusionJson *data, FebError *error) {
     char path[FEB_PATH_CAPACITY];
     FusionJson timeline;
     int64_t count = 0;
@@ -1682,6 +1687,359 @@ static bool project_validation(const char *root, FusionJson *data, FebError *err
     return ok;
 }
 
+/* project_room_package.read_saved(): only saved data, never the editor's
+ * unsaved staging file. */
+static bool read_saved(const char *root, const FebRoomScope *scope, FusionJson *document,
+                       FebError *error) {
+    char path[FEB_PATH_CAPACITY];
+    FebRoomScope fixed = *scope;
+    fixed.width = fixed.height = 16;
+    if (!feb_room_path(root, &fixed, path, error) || !feb_room_check_path(root, path, false, error))
+        return false;
+    long long size = 0;
+    if (!feb_is_regular(path, &size) || size > ROOM_LIMIT_BYTES)
+        return feb_fail(error, FEB_EXIT_OPERATION,
+                        "room-export requires a saved project room document");
+    char detail[256];
+    if (!feb_load_json(path, ROOM_LIMIT_BYTES, document, detail, sizeof detail))
+        return feb_fail(error, FEB_EXIT_OPERATION, "invalid saved project room document");
+    if (document->kind != FUSION_JSON_OBJECT) {
+        fusion_json_free(document);
+        return feb_fail(error, FEB_EXIT_OPERATION, "invalid saved project room document");
+    }
+    FusionJson world = fusion_json_string(scope->world), area = fusion_json_string(scope->area),
+               room = fusion_json_int(scope->room);
+    bool ok = feb_room_migrate(document, error) &&
+              feb_room_validate(document, &world, &area, &room,
+                                fusion_json_member(document, "width_px"),
+                                fusion_json_member(document, "height_px"), error);
+    fusion_json_free(&world);
+    fusion_json_free(&area);
+    if (!ok) fusion_json_free(document);
+    return ok;
+}
+
+/* A copy with every object's keys sorted (json.dumps(sort_keys=True)). */
+static bool sorted_copy(const FusionJson *value, FusionJson *copy) {
+    if (value->kind == FUSION_JSON_ARRAY) {
+        *copy = fusion_json_array();
+        for (size_t index = 0; index < value->count; ++index) {
+            FusionJson item;
+            if (!sorted_copy(&value->items[index], &item) || !fusion_json_push(copy, item)) {
+                fusion_json_free(copy);
+                return false;
+            }
+        }
+        return true;
+    }
+    if (value->kind != FUSION_JSON_OBJECT) return fusion_json_clone(value, copy);
+    size_t *order = malloc((value->count ? value->count : 1) * sizeof *order);
+    if (!order) return false;
+    for (size_t index = 0; index < value->count; ++index) order[index] = index;
+    for (size_t index = 1; index < value->count; ++index)
+        for (size_t at = index; at > 0 && strcmp(value->keys[order[at - 1]],
+                                                 value->keys[order[at]]) > 0; --at) {
+            size_t swap = order[at];
+            order[at] = order[at - 1];
+            order[at - 1] = swap;
+        }
+    *copy = fusion_json_object();
+    bool ok = true;
+    for (size_t index = 0; ok && index < value->count; ++index) {
+        FusionJson item;
+        ok = sorted_copy(&value->items[order[index]], &item) &&
+             fusion_json_set(copy, value->keys[order[index]], item);
+    }
+    free(order);
+    if (!ok) fusion_json_free(copy);
+    return ok;
+}
+
+/* The items of a list sorted by one or two integer keys (stable). */
+static const FusionJson **sorted_items(const FusionJson *list, const char *first,
+                                       const char *second) {
+    const FusionJson **items = malloc((list->count ? list->count : 1) * sizeof *items);
+    if (!items) return NULL;
+    for (size_t index = 0; index < list->count; ++index) items[index] = &list->items[index];
+    for (size_t index = 1; index < list->count; ++index)
+        for (size_t at = index; at > 0; --at) {
+            int64_t a = integer(items[at - 1], first), b = integer(items[at], first);
+            if (a == b && second) {
+                a = integer(items[at - 1], second);
+                b = integer(items[at], second);
+            }
+            if (a <= b) break;
+            const FusionJson *swap = items[at];
+            items[at] = items[at - 1];
+            items[at - 1] = swap;
+        }
+    return items;
+}
+
+static bool append_text(char **text, size_t *size, const char *format, ...) {
+    va_list arguments;
+    va_start(arguments, format);
+    char line[512];
+    int length = vsnprintf(line, sizeof line, format, arguments);
+    va_end(arguments);
+    if (length < 0 || (size_t)length >= sizeof line) return false;
+    char *grown = realloc(*text, *size + (size_t)length + 1);
+    if (!grown) return false;
+    memcpy(grown + *size, line, (size_t)length + 1);
+    *text = grown;
+    *size += (size_t)length;
+    return true;
+}
+
+/* preview_bytes(): the bounded, non-gameplay preview of the package. */
+static bool preview_text(const FusionJson *document, char **text, size_t *size) {
+    static const char *const ids[][2] = {{"solid", "1"}, {"one_way", "2"}, {"hazard", "3"},
+                                         {"slope_up", "4"}, {"slope_down", "5"}, {"water", "6"},
+                                         {"air", "7"}};
+    const FusionJson *collision = fusion_json_member(document, "collision");
+    int64_t step = integer(collision, "resolution_px");
+    *text = NULL;
+    *size = 0;
+    bool ok = append_text(text, size, "MVROOM-PREVIEW\t1\t%s\t%s\t%lld\t%lld\t%lld\t%lld\n",
+                          string(document, "world"), string(document, "area"),
+                          (long long)integer(document, "room"),
+                          (long long)integer(document, "width_px"),
+                          (long long)integer(document, "height_px"), (long long)step);
+    const FusionJson *cells = fusion_json_member(collision, "cells");
+    const FusionJson **items = sorted_items(cells, "y", "x");
+    ok = ok && items;
+    for (size_t index = 0; ok && index < cells->count; ++index) {
+        const char *type = string(items[index], "type"), *id = "0";
+        for (size_t kind = 0; kind < COUNT(ids); ++kind)
+            if (!strcmp(ids[kind][0], type)) id = ids[kind][1];
+        ok = append_text(text, size, "C\t%lld\t%lld\t%lld\t%lld\t%s\n",
+                         (long long)(integer(items[index], "x") * step),
+                         (long long)(integer(items[index], "y") * step), (long long)step,
+                         (long long)step, id);
+    }
+    free(items);
+    static const char *const lists[][2] = {{"doors", "D"}, {"entities", "E"}, {"events", "V"}};
+    for (size_t list = 0; ok && list < COUNT(lists); ++list) {
+        const FusionJson *entries = fusion_json_member(document, lists[list][0]);
+        items = sorted_items(entries, "id", NULL);
+        ok = items != NULL;
+        for (size_t index = 0; ok && index < entries->count; ++index) {
+            bool entity = list == 1;
+            ok = append_text(text, size, "%s\t%lld\t%lld\t%lld\t%lld\t0\n", lists[list][1],
+                             (long long)integer(items[index], "x"),
+                             (long long)integer(items[index], "y"),
+                             (long long)(entity ? 16 : integer(items[index], "width")),
+                             (long long)(entity ? 16 : integer(items[index], "height")));
+        }
+        free(items);
+    }
+    ok = ok && append_text(text, size, "END\n");
+    if (!ok) {
+        free(*text);
+        *text = NULL;
+    }
+    return ok;
+}
+
+static bool same_file(const char *path, const char *data, size_t size) {
+    char *current = NULL;
+    size_t current_size = 0;
+    bool same = !feb_is_symlink(path) && feb_read_text(path, size + 1, &current, &current_size) &&
+                current_size == size && !memcmp(current, data, size);
+    free(current);
+    return same;
+}
+
+static bool write_new(const char *path, const char *data, size_t size) {
+    int descriptor = open(path, O_WRONLY | O_CREAT | O_EXCL, 0666);
+    if (descriptor < 0) return false;
+    bool ok = write(descriptor, data, size) == (ssize_t)size && fsync(descriptor) == 0;
+    return close(descriptor) == 0 && ok;
+}
+
+static void remove_tree(const char *path) {
+    char file[FEB_PATH_CAPACITY + 32];
+    static const char *const names[] = {"room.json", "preview.tsv"};
+    for (size_t index = 0; index < COUNT(names); ++index) {
+        snprintf(file, sizeof file, "%s/%s", path, names[index]);
+        unlink(file);
+    }
+    rmdir(path);
+}
+
+/* room-export: the immutable, content-addressed project room package. */
+static bool room_export(const char *root, const char *repository, const FusionJson *options,
+                        bool dry_run, FusionJson *data, FebError *error) {
+    FusionJson scoped;
+    if (!fusion_json_clone(options, &scoped)) return feb_oom(error);
+    FebRoomScope scope;
+    bool ok = (feb_put_int(&scoped, "width", 16) && feb_put_int(&scoped, "height", 16)) ||
+              feb_oom(error);
+    ok = ok && entity_scope(&scoped, &scope, error);
+    fusion_json_free(&scoped);
+    FusionJson document;
+    if (!ok || !read_saved(root, &scope, &document, error)) return false;
+    FusionJson records;
+    ok = event_validation(root, &document, &records, error);
+    if (ok) {
+        char invalid[FEB_MESSAGE_CAPACITY] = "[";
+        size_t used = 1, count = 0;
+        for (size_t index = 0; index < records.count; ++index) {
+            if (fusion_json_member(&records.items[index], "valid")->boolean) continue;
+            used += (size_t)snprintf(invalid + used, sizeof invalid - used, "%s%lld",
+                                     count++ ? ", " : "",
+                                     (long long)integer(&records.items[index], "id"));
+        }
+        snprintf(invalid + used, sizeof invalid - used, "]");
+        fusion_json_free(&records);
+        if (count)
+            ok = feb_fail(error, FEB_EXIT_OPERATION,
+                          "room-export unresolved event references: %s", invalid);
+    }
+    if (ok && fusion_json_member(&document, "transitions")->count) {
+        ok = transition_validation(root, repository, &document, &records, error);
+        for (size_t index = 0; ok && index < records.count; ++index)
+            if (!fusion_json_member(&records.items[index], "target_exists")->boolean ||
+                !strcmp(string(&records.items[index], "target_door_status"),
+                        "missing_target_project_door"))
+                ok = feb_fail(error, FEB_EXIT_OPERATION,
+                              "room-export has invalid transition destinations");
+        if (records.kind == FUSION_JSON_ARRAY) fusion_json_free(&records);
+    }
+    FusionJson world = fusion_json_null(), area = fusion_json_null(), room = fusion_json_null();
+    ok = ok && fusion_json_clone(fusion_json_member(&document, "world"), &world) &&
+         fusion_json_clone(fusion_json_member(&document, "area"), &area) &&
+         fusion_json_clone(fusion_json_member(&document, "room"), &room) &&
+         feb_room_validate(&document, &world, &area, &room,
+                           fusion_json_member(&document, "width_px"),
+                           fusion_json_member(&document, "height_px"), error);
+    fusion_json_free(&world);
+    fusion_json_free(&area);
+    fusion_json_free(&room);
+    char *full = NULL, *preview = NULL;
+    size_t full_size = 0, preview_size = 0;
+    if (ok) {
+        FusionJson payload = fusion_json_object(), copy, sorted;
+        ok = (fusion_json_clone(&document, &copy) &&
+              feb_put_string(&payload, "schema", "metroidvania.project-room-package") &&
+              feb_put_int(&payload, "version", 1) &&
+              feb_put_string(&payload, "engine_adapter", "unavailable") &&
+              feb_put_bool(&payload, "native_assets_included", false) &&
+              feb_put(&payload, "room", copy) && sorted_copy(&payload, &sorted)) ||
+             feb_oom(error);
+        fusion_json_free(&payload);
+        if (ok) {
+            ok = fusion_json_write(&sorted, FUSION_JSON_COMPACT, &full, &full_size) ||
+                 feb_oom(error);
+            fusion_json_free(&sorted);
+        }
+        char *line = ok ? realloc(full, full_size + 2) : NULL;
+        if (ok && !line) ok = feb_oom(error);
+        if (ok) {
+            full = line;
+            full[full_size++] = '\n';
+            full[full_size] = '\0';
+        }
+        ok = ok && (preview_text(&document, &preview, &preview_size) || feb_oom(error));
+    }
+    char digest[65] = "";
+    if (ok) {
+        uint8_t *joined = malloc(full_size + 1 + preview_size);
+        if (!joined) ok = feb_oom(error);
+        if (ok) {
+            memcpy(joined, full, full_size);
+            joined[full_size] = 0;
+            memcpy(joined + full_size + 1, preview, preview_size);
+            ok = fusion_sha256_hex(joined, full_size + 1 + preview_size, digest) || feb_oom(error);
+        }
+        free(joined);
+    }
+    const char *world_name = string(&document, "world"), *area_name = string(&document, "area");
+    int64_t room_number = integer(&document, "room");
+    char parent[FEB_PATH_CAPACITY], destination[FEB_PATH_CAPACITY + 160], lower[32];
+    snprintf(lower, sizeof lower, "%s", ok ? area_name : "");
+    for (char *c = lower; *c; ++c)
+        if (*c >= 'A' && *c <= 'Z') *c = (char)(*c - 'A' + 'a');
+    snprintf(parent, sizeof parent, "%s/assets/extracted/exports/%s", root, ok ? world_name : "");
+    snprintf(destination, sizeof destination, "%s/%s_%03lld_%s", parent, lower,
+             (long long)room_number, digest);
+    if (ok) {
+        char identity[96];
+        snprintf(identity, sizeof identity, "%s:%s:%lld", world_name, area_name,
+                 (long long)room_number);
+        FusionJson counts = fusion_json_object();
+        ok = (feb_put_string(data, "format", "metroidvania.project-room-package") &&
+              feb_put_int(data, "version", 1) && feb_put_string(data, "room", identity) &&
+              feb_put_string(data, "sha256", digest) &&
+              feb_put_string(data, "package_dir", destination) &&
+              feb_put_bool(data, "native_assets_included", false) &&
+              feb_put_string(data, "engine_adapter", "unavailable") &&
+              feb_put_int(&counts, "collision",
+                          (int64_t)fusion_json_member(fusion_json_member(&document, "collision"),
+                                                      "cells")->count) &&
+              feb_put_int(&counts, "doors", (int64_t)fusion_json_member(&document, "doors")->count) &&
+              feb_put_int(&counts, "entities",
+                          (int64_t)fusion_json_member(&document, "entities")->count) &&
+              feb_put_int(&counts, "events", (int64_t)fusion_json_member(&document, "events")->count) &&
+              feb_put_int(&counts, "transitions",
+                          (int64_t)fusion_json_member(&document, "transitions")->count) &&
+              feb_put(data, "counts", counts) && feb_put_bool(data, "persisted", !dry_run)) ||
+             feb_oom(error);
+    }
+    if (ok && !dry_run) {
+        /* Refuse symlink components before making the ignored export folders. */
+        char current[FEB_PATH_CAPACITY];
+        static const char *const parts[] = {"assets", "extracted", "exports"};
+        snprintf(current, sizeof current, "%s", root);
+        for (size_t part = 0; ok && part < 4; ++part) {
+            size_t used = strlen(current);
+            snprintf(current + used, sizeof current - used, "/%s",
+                     part < 3 ? parts[part] : world_name);
+            if (feb_is_symlink(current))
+                ok = feb_fail(error, FEB_EXIT_OPERATION, "room-export parent symlink refused");
+            else
+                mkdir(current, 0777);
+        }
+        char room_file[FEB_PATH_CAPACITY + 192], preview_file[FEB_PATH_CAPACITY + 192];
+        snprintf(room_file, sizeof room_file, "%s/room.json", destination);
+        snprintf(preview_file, sizeof preview_file, "%s/preview.tsv", destination);
+        struct stat status;
+        if (ok && (lstat(destination, &status) == 0)) {
+            if (!S_ISDIR(status.st_mode) || !same_file(room_file, full, full_size) ||
+                !same_file(preview_file, preview, preview_size))
+                ok = feb_fail(error, FEB_EXIT_OPERATION,
+                              "room-export content-addressed package collision");
+        } else if (ok) {
+            char temporary[FEB_PATH_CAPACITY + 32];
+            snprintf(temporary, sizeof temporary, "%s/.room-package-XXXXXX", parent);
+            if (!mkdtemp(temporary)) {
+                ok = feb_fail(error, FEB_EXIT_OPERATION, "cannot create the room package");
+            } else {
+                char temporary_room[FEB_PATH_CAPACITY + 64], temporary_preview[FEB_PATH_CAPACITY + 64];
+                snprintf(temporary_room, sizeof temporary_room, "%s/room.json", temporary);
+                snprintf(temporary_preview, sizeof temporary_preview, "%s/preview.tsv", temporary);
+                ok = (write_new(temporary_room, full, full_size) &&
+                      write_new(temporary_preview, preview, preview_size)) ||
+                     feb_fail(error, FEB_EXIT_OPERATION, "cannot write the room package");
+                if (ok && rename(temporary, destination) != 0 &&
+                    (!same_file(room_file, full, full_size) ||
+                     !same_file(preview_file, preview, preview_size)))
+                    ok = feb_fail(error, FEB_EXIT_OPERATION,
+                                  "room-export content-addressed package collision");
+                remove_tree(temporary);
+            }
+        }
+        FusionJson created = fusion_json_array();
+        ok = ok && ((fusion_json_push(&created, fusion_json_string(room_file)) &&
+                     fusion_json_push(&created, fusion_json_string(preview_file)) &&
+                     feb_put(data, "created_paths", created)) || feb_oom(error));
+    }
+    free(full);
+    free(preview);
+    fusion_json_free(&document);
+    return ok;
+}
+
 bool feb_room_command(const char *command, const FusionJson *options, const char *root,
                       const char *repository, bool dry_run, FusionJson *data, FebError *error) {
     if (!strcmp(command, "collision-capabilities")) {
@@ -1704,7 +2062,8 @@ bool feb_room_command(const char *command, const FusionJson *options, const char
         return door_target_list(root, repository, options, data, error);
     if (!strcmp(command, "story-validate") || !strcmp(command, "story-save"))
         return command_story(command, root, options, dry_run, data, error);
-    if (!strcmp(command, "project-validate")) return project_validation(root, data, error);
+    if (!strcmp(command, "project-validate")) return feb_project_validation(root, data, error);
+    if (!strcmp(command, "room-export")) return room_export(root, repository, options, dry_run, data, error);
     FebRoomScope scope;
     FusionJson document;
     if (!entity_scope(options, &scope, error) || !feb_room_load(root, &scope, &document, error))

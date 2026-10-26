@@ -4,6 +4,7 @@ Native workrooms live in the repository's private extracted assets, so the
 cases only read them or run as dry runs; nothing under assets/ is modified.
 """
 
+import json
 import os
 import subprocess
 import tempfile
@@ -61,6 +62,30 @@ CASES = [
 ]
 
 
+AUDITS = [
+    ["--command=room-audit", "--world=zero_mission", "--area=kraid", "--format=json"],
+    ["--command=room-audit", "--world=aria", "--area=3", "--format=json"],
+    ["--command=room-audit", "--world=zero_mission", "--area=Moon"],
+    ["--command=room-audit", "--world=zero_mission", "--area=9", "--report=Bad"],
+]
+
+
+def _without_durations(text):
+    """The audit timings differ between runs; everything else must not."""
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return text
+
+    def strip(item):
+        if isinstance(item, dict):
+            return {key: strip(entry) for key, entry in item.items() if key != "duration_ms"}
+        if isinstance(item, list):
+            return [strip(entry) for entry in item]
+        return item
+    return strip(value)
+
+
 @unittest.skipUnless(Path(C).is_file() and MZM.is_file() and ARIA.is_file(),
                      "needs the native build and the private extracted workrooms")
 class NativeWorkspaceParity(unittest.TestCase):
@@ -68,6 +93,14 @@ class NativeWorkspaceParity(unittest.TestCase):
         for arguments in CASES:
             with self.subTest(arguments=arguments):
                 self.assertEqual(_run(arguments, False), _run(arguments, True))
+
+    def test_audits_match_python(self):
+        for arguments in AUDITS:
+            with self.subTest(arguments=arguments):
+                native, python = _run(arguments, False), _run(arguments, True)
+                self.assertEqual(native[0], python[0])
+                self.assertEqual(native[2], python[2])
+                self.assertEqual(_without_durations(native[1]), _without_durations(python[1]))
 
     def test_other_roots_are_refused(self):
         with tempfile.TemporaryDirectory() as directory:

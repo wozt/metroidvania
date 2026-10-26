@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T00:38:19+00:00",
+ "generated_at": "2026-10-26T02:55:44+00:00",
  "git": {
-  "commit": "3e6e1e5",
+  "commit": "3c56647",
   "branch": "main",
   "dirty": true
  },
@@ -13157,30 +13157,46 @@
    "status": "functional",
    "fidelity": "n/a",
    "local_sources": [
+    "include/fusion/pipeline/rebuild.h",
+    "src/pipeline/tasks.c",
+    "src/pipeline/graph.c",
+    "src/tools/fusion_rebuild.c",
     "scripts/rebuild.py",
     "scripts/export_index.py"
    ],
    "tests": [
+    "tests/test_fusion_rebuild.c",
     "tests/test_native_parity.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Both ROM identity manifests, Aria world metadata, Soma, weapon and object libraries, the Zero Mission ROM bank and both games' runtime rooms use native C11 writers; room previews, audits, remaining sprite pipelines and editor caches are not all native or registered yet.",
+   "limitations": "The native C11 registry now covers all 15 current task names, versions, groups, explicit dependencies and local prerequisites; its deterministic graph detects cycles and unknown edges, and its list is compared with Python. Execution, fingerprints, output validation and cache updates remain authoritative in scripts/rebuild.py, while inventory, checklist and Zero Mission audio are explicitly marked as temporary Python-backed tasks.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
+     "tests/test_fusion_rebuild.c",
      "tests/test_native_parity.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-25",
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_fusion_rebuild.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_rebuild_graph"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_native_parity.py",
       "kind": "python",
@@ -14964,6 +14980,18 @@
     "outcome": "passed"
    },
    {
+    "name": "fusion_rebuild_graph",
+    "files": [
+     "tests/test_fusion_rebuild.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "fusion_rebuild_list",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
     "name": "editor_cli_headless",
     "files": [],
     "outcome": "passed"
@@ -15620,9 +15648,9 @@
    {
     "file": "tests/test_native_parity.py",
     "module": "tests.test_native_parity",
-    "test_count": 17,
+    "test_count": 18,
     "outcome": "passed",
-    "passed": 17
+    "passed": 18
    },
    {
     "file": "tests/test_native_rooms.py",
@@ -15822,12 +15850,18 @@
    }
   ],
   "summary": {
-   "passed": 393,
+   "passed": 396,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "3c56647",
+   "date": "2026-10-26",
+   "subject": "Run the first editor commands in a native backend",
+   "scope": "project"
+  },
   {
    "commit": "3e6e1e5",
    "date": "2026-10-26",
@@ -16300,12 +16334,6 @@
    "commit": "720819d",
    "date": "2026-10-22",
    "subject": "Port the Aria beam skeleton",
-   "scope": "project"
-  },
-  {
-   "commit": "6018568",
-   "date": "2026-10-22",
-   "subject": "Port Aria Skull Millione, Cagnazzo and Lubicant",
    "scope": "project"
   }
  ],

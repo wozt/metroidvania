@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0535 - Native rebuild registry and dependency graph
+
+- Added the `fusion_pipeline` C11 library and `fusion_rebuild` executable with
+  the complete registry of the 15 current reconstruction tasks: versions,
+  groups, explicit dependencies, local prerequisites and current execution
+  backend are represented natively.
+- Added deterministic transitive dependency ordering, duplicate selection
+  suppression, unknown-task and unknown-dependency diagnostics, and cycle
+  detection. `fusion_rebuild --list` exposes the real registry and identifies
+  `inventory`, `checklist` and `metroid_sound` as temporary Python-backed
+  tasks.
+- Added native graph tests and a Python-reference comparison proving that all
+  task names, groups and dependency edges match the existing orchestrator.
+- Task execution remains deliberately unavailable in `fusion_rebuild` until
+  fingerprints, state migration, output validation and atomic cache writes are
+  implemented. `scripts/rebuild.py` remains the authoritative runner, no
+  gameplay status changed, and no private assets were committed.
+- Next: implement the native state reader/writer, input and output
+  fingerprints, prerequisite/skipped propagation and a real incremental
+  `--dry-run`, preserving the v1 cache without discarding unknown entries.
+
 ## Patch 0534 - Native editor backend, first commands
 
 - Added `src/editor_backend/` (library `fusion_editor_backend`) and the shared

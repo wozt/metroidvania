@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """ROM-free tests for native source inventory and rebuild orchestration."""
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -384,6 +385,30 @@ class NativeParityTests(unittest.TestCase):
                 self.assertEqual(rebuild.rebuild({"sample"}, state_path=state),
                                  [("sample", "rebuilt")])
             self.assertEqual(output.read_text(encoding="utf-8"), "second")
+
+    def test_native_rebuild_registry_matches_python_graph(self):
+        executable = rebuild.ROOT / "build/fusion_rebuild"
+        if not executable.is_file():
+            self.skipTest("fusion_rebuild is not built")
+        result = subprocess.run(
+            [executable, "--list"], cwd=rebuild.ROOT, check=True,
+            capture_output=True, text=True)
+        rows = {}
+        for line in result.stdout.splitlines():
+            name, fields = line.split(": ", 1)
+            group = fields.split("group=", 1)[1].split(" ", 1)[0]
+            dependency_text = fields.split("dependencies=", 1)[1]
+            dependency_text = dependency_text.split(" requires=", 1)[0]
+            dependency_text = dependency_text.split(" backend=", 1)[0]
+            dependencies = () if dependency_text == "none" else tuple(
+                dependency_text.split(", "))
+            rows[name] = (group, dependencies)
+        self.assertEqual(list(rows), list(rebuild.TASKS))
+        self.assertEqual(
+            rows,
+            {name: (task.group, task.dependencies)
+             for name, task in rebuild.TASKS.items()},
+        )
 
     def test_rebuild_skips_tasks_without_required_files(self):
         cache_root = rebuild.ROOT / ".cache"

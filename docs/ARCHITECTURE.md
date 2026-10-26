@@ -169,6 +169,17 @@ missing output or an output edited by hand triggers the task again. A dry run
 reports a task whose dependency would be rebuilt as pending instead of
 reading inputs that do not exist yet.
 
+The native replacement now has its first bounded layer in
+`include/fusion/pipeline/rebuild.h`, `src/pipeline/tasks.c` and
+`src/pipeline/graph.c`. It registers the same 15 tasks, their versions,
+groups, explicit dependencies and local prerequisites, and resolves selected
+tasks with deterministic topological ordering, duplicate suppression, unknown
+dependency diagnostics and cycle detection. `fusion_rebuild --list` exposes
+that registry and marks `inventory`, `checklist` and `metroid_sound` as the
+three temporary Python-backed tasks. It does not execute tasks yet; cache
+loading, fingerprints, validation and actions remain authoritative in
+`scripts/rebuild.py` until the following migration lots prove parity.
+
 Routine categories record their evidence (`category_evidence`, schema v6):
 `path` when the source location decides it (all of Zero Mission's sorted
 tree), `name` when a native name rule does (`Enemy*Create/Update`,

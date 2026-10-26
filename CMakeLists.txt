@@ -131,6 +131,16 @@ add_executable(fusion_importer src/tools/fusion_importer.c)
 target_link_libraries(fusion_importer PRIVATE fusion_assets)
 fusion_enable_warnings(fusion_importer)
 
+add_executable(fusion_dashboard src/tools/fusion_dashboard.c)
+target_link_libraries(fusion_dashboard PRIVATE fusion_pipeline fusion_editor_backend)
+target_compile_definitions(fusion_dashboard PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+fusion_enable_warnings(fusion_dashboard)
+
+add_executable(fusion_check_generated src/tools/check_generated.c)
+target_compile_definitions(fusion_check_generated
+    PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}" FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
+fusion_enable_warnings(fusion_check_generated)
+
 add_executable(fusion_check_no_proprietary src/tools/check_no_proprietary.c)
 fusion_enable_warnings(fusion_check_no_proprietary)
 
@@ -340,6 +350,12 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_editor_cli_tests PRIVATE fusion_json)
     fusion_enable_warnings(fusion_editor_cli_tests)
     add_test(NAME editor_cli_contracts COMMAND fusion_editor_cli_tests)
+
+    add_executable(fusion_dashboard_tests tests/test_dashboard.c)
+    target_link_libraries(fusion_dashboard_tests PRIVATE fusion_pipeline fusion_editor_backend)
+    target_compile_definitions(fusion_dashboard_tests PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    fusion_enable_warnings(fusion_dashboard_tests)
+    add_test(NAME dashboard_generator COMMAND fusion_dashboard_tests)
     set_tests_properties(editor_cli_contracts PROPERTIES SKIP_RETURN_CODE 77)
 
     add_executable(fusion_native_map_tests tests/test_native_map.c)

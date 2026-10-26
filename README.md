@@ -167,12 +167,12 @@ Edge, or publish the `dashboard/` folder on GitHub Pages. Refresh its data
 with:
 
 ```sh
-python3 -m scripts.dashboard --run-tests   # also runs CTest (build/) and Python tests
-python3 -m scripts.dashboard               # registries and repository facts only
-python3 -m scripts.check_generated         # stale checklist or dashboard data? (no tests run)
+./build/fusion_dashboard --run-tests   # also runs CTest (build/) and the remaining Python tests
+./build/fusion_dashboard               # registries and repository facts only
+./build/fusion_check_generated         # stale checklist or dashboard data? (no tests run)
 ```
 
-`check_generated` writes nothing: it compares `docs/NATIVE_PARITY_CHECKLIST.md`
+`fusion_check_generated` writes nothing: it compares `docs/NATIVE_PARITY_CHECKLIST.md`
 with the parity annotations and the registry-derived part of the dashboard
 data (declared fields, missing sources, test registration, status counts)
 with both registries, ignoring the generation time, git state, history and

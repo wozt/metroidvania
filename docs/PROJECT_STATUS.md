@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0556 - Native dashboard and generated-document checks
+
+- `fusion_dashboard` (`src/tools/fusion_dashboard.c`) replaces
+  `scripts/dashboard.py`: registries, CMake test discovery, CTest and the
+  remaining Python suite, verification, indicators, git history, inventory
+  summary, bestiary (straight from the native object catalog) and rebuild
+  graph, `--run-tests` and `--check`. Its `data.json` is byte-identical to
+  the Python generator's at a fixed time, both without and with a full test
+  run (111 passed), and `--check` reports the same problems.
+- `fusion_check_generated` replaces `scripts/check_generated.py`, and the
+  end-of-cycle steps in AGENTS.md now run `./build/fusion_checklist`,
+  `./build/fusion_dashboard --run-tests` and `./build/fusion_check_generated`
+  (the checklist writer leaves the committed documents unchanged).
+- `tests/test_dashboard.c` (CTest `dashboard_generator`) replaces the Python
+  dashboard test, compiling the generator with injected test runners.
+- First-party Python files: 6 under `scripts/`, 3 under `tests/`.
+  No gameplay or native-parity status changed.
+- Next: the rebuild and inventory cluster (`rebuild.py`,
+  `native_inventory.py`, `native_parity.py`, `export_index.py`,
+  `sprite_library.py`, `asset_layout.py`) with their tests.
+
 ## Patch 0555 - Native editor CLI contract test
 
 - `tests/test_editor_cli.c` (CTest `editor_cli_contracts`) replaces the

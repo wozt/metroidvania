@@ -2972,7 +2972,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     for (size_t i = 0; i < sizeof ai_tables / sizeof ai_tables[0]; ++i)
         if (!found[i]) {
             all_found = false;
-            fprintf(stderr, "Zero Mission sprite tables: %s missing (python3 -m scripts.rebuild --task metroid_sprites)\n",
+            fprintf(stderr, "Zero Mission sprite tables: %s missing (./build/fusion_rebuild --task metroid_sprites)\n",
                     ai_tables[i].name);
         }
     return ok && random_count == 32 && falling_count == 16 && all_found;
@@ -3048,7 +3048,7 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
     }
     if (!sprites->banner_ok)
         fprintf(stderr, "Zero Mission message banner disabled until re-exported "
-                "(python3 -m scripts.rebuild --task metroid_sprites)\n");
+                "(./build/fusion_rebuild --task metroid_sprites)\n");
     /* Drops are required (every death may leave one); an enemy family with
      * a missing table is disabled alone, with the diagnostic above. */
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) {
@@ -3059,7 +3059,7 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
         if (!sprites->family_ok[f] && f == MZM_FAMILY_DROP) return false;
         if (!sprites->family_ok[f])
             fprintf(stderr, "Zero Mission %s sprites disabled until re-exported "
-                    "(python3 -m scripts.rebuild --task metroid_sprites)\n", family->library_sprites[0]);
+                    "(./build/fusion_rebuild --task metroid_sprites)\n", family->library_sprites[0]);
     }
     return true;
 }
@@ -3701,7 +3701,7 @@ static void runtime_bg_art_sync(RuntimeBgArt *art, SDL_Renderer *renderer, const
                  room->tileset);
         art->sheet = runtime_bg_texture(renderer, path);
         art->sheet_tileset = room->tileset;
-        if (!art->sheet) fprintf(stderr, "Missing tileset sheet %s (python3 -m scripts.rebuild --task metroid_rooms)\n", path);
+        if (!art->sheet) fprintf(stderr, "Missing tileset sheet %s (./build/fusion_rebuild --task metroid_rooms)\n", path);
     }
     for (int layer = 0; layer < 4; ++layer) {
         if (!room->text_present[layer]) continue;
@@ -4733,7 +4733,7 @@ int main(int argc, char **argv) {
     if (!room) return 1;
     if (!(native_format ? parse_native_room(room_path,room) : parse_room(room_path,room))) {
         if (native_format)
-            fprintf(stderr,"Export the rooms first: python3 -m scripts.rebuild "
+            fprintf(stderr,"Export the rooms first: ./build/fusion_rebuild "
                     "--task metroid_rooms\n");
         free(room); return 2;
     }
@@ -4937,16 +4937,16 @@ int main(int argc, char **argv) {
     }
     /* Sprites (src/assets/mzm/sprites.c); without them the rooms stay empty. */
     if (!mzm_power_bomb_load_windows(RUNTIME_POWER_BOMB_TABLE))
-        fprintf(stderr, "No power bomb window table: python3 -m scripts.rebuild --task metroid_rooms\n");
+        fprintf(stderr, "No power bomb window table: ./build/fusion_rebuild --task metroid_rooms\n");
     if (!runtime_block_tables_open(RUNTIME_BLOCK_TABLES))
-        fprintf(stderr, "No Zero Mission block tables: python3 -m scripts.rebuild --task metroid_rooms\n");
+        fprintf(stderr, "No Zero Mission block tables: ./build/fusion_rebuild --task metroid_rooms\n");
     sprites.tables_ok = runtime_sprite_tables_open(&sprites, RUNTIME_SPRITE_TABLES);
     sprites.kinds_ok = sprites.tables_ok &&
                        runtime_library_open(&sprite_library, RUNTIME_SPRITE_LIBRARY) &&
                        runtime_oam_bounds_open(&sprite_library, RUNTIME_SPRITE_OAM_BOUNDS) &&
                        runtime_sprite_kinds_open(&sprites, &sprite_library, &projectile_library);
     if (!sprites.kinds_ok)
-        fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.rebuild --task metroid_sprites\n");
+        fprintf(stderr, "No Zero Mission sprites: ./build/fusion_rebuild --task metroid_sprites\n");
     runtime_sprites_spawn(&sprites, room, -1);
     gba_input_init(&gamepad,&pad_map);
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,

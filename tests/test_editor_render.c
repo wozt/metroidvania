@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <zlib.h>
 
 #ifndef FUSION_SOURCE_DIR
@@ -272,6 +273,39 @@ static void test_synthetic_aria_room(void) {
     free(rom);
 }
 
+/* write_generated(): plain components only, never through a symlink. */
+static void test_generated_writer(void) {
+    char root[] = "/tmp/fusion-generated-XXXXXX", path[4096];
+    assert(mkdtemp(root));
+    snprintf(path, sizeof path, "%s/assets", root);
+    assert(!mkdir(path, 0777));
+    snprintf(path, sizeof path, "%s/assets/extracted", root);
+    assert(!mkdir(path, 0777));
+    char target[4096], link[4096];
+    snprintf(target, sizeof target, "%s/elsewhere", root);
+    snprintf(link, sizeof link, "%s/assets/extracted/metroid", root);
+    assert(!symlink(target, link));
+    FebError error = {0};
+    assert(!feb_write_generated(root, "metroid/raw/data/block.bin", (const uint8_t *)"secret", 6,
+                                NULL, &error));
+    assert(strstr(error.message, "symlink extraction destination refused"));
+    struct stat status;
+    assert(stat(target, &status) != 0);
+    static const char *const unsafe[] = {"../escape.bin", "/tmp/leak.bin", "folder/../x", "a\\b",
+                                         "bad name.bin"};
+    for (size_t index = 0; index < sizeof unsafe / sizeof *unsafe; ++index)
+        assert(!feb_generated_path(root, unsafe[index], path, &error));
+    assert(feb_generated_path(root, "room/data_123.bin", path, &error));
+    bool written = false;
+    assert(feb_write_generated(root, "room/data_123.bin", (const uint8_t *)"abc", 3, &written,
+                               &error) && written);
+    assert(feb_write_generated(root, "room/data_123.bin", (const uint8_t *)"abc", 3, &written,
+                               &error) && !written);
+    char command[4200];
+    snprintf(command, sizeof command, "rm -rf '%s'", root);
+    assert(system(command) == 0);
+}
+
 static void test_world_overview_arguments(void) {
     char *budget[] = {"fusion_world_overview", "--world", "mzm", "--budget", "40", NULL};
     assert(feb_world_overview_main(5, budget, "/nonexistent") == 2);
@@ -330,6 +364,7 @@ int main(void) {
     test_annotation_rows();
     test_metatile_rendering();
     test_synthetic_aria_room();
+    test_generated_writer();
     test_world_overview_arguments();
     test_real_rooms();
     puts("editor render contract: ok");

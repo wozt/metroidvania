@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T09:27:55+00:00",
+ "generated_at": "2026-10-26T09:34:40+00:00",
  "git": {
-  "commit": "77295af",
+  "commit": "fa191cd",
   "branch": "main",
   "dirty": true
  },
@@ -13003,7 +13003,7 @@
    ],
    "tests": [
     "tests/test_editor_backend.c",
-    "tests/test_editor_cli.py"
+    "tests/test_editor_cli.c"
    ],
    "dependencies": [],
    "native_routines": [],
@@ -13012,7 +13012,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_editor_backend.c",
-     "tests/test_editor_cli.py"
+     "tests/test_editor_cli.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13035,10 +13035,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_editor_cli.py",
-      "kind": "python",
+      "test": "tests/test_editor_cli.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "editor_cli_contracts"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -15068,7 +15072,7 @@
    "tests": [
     "tests/test_fusion_raw_import.c",
     "tests/test_native_golden.c",
-    "tests/test_asset_import.py"
+    "tests/test_editor_render.c"
    ],
    "dependencies": [
     "assets.rom_verification"
@@ -15080,7 +15084,7 @@
     "unit_tests": [
      "tests/test_fusion_raw_import.c",
      "tests/test_native_golden.c",
-     "tests/test_asset_import.py"
+     "tests/test_editor_render.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -15116,10 +15120,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_asset_import.py",
-      "kind": "python",
+      "test": "tests/test_editor_render.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "editor_render_native_contract"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "missing_sources",
@@ -15478,6 +15486,13 @@
     "outcome": "passed"
    },
    {
+    "name": "editor_cli_contracts",
+    "files": [
+     "tests/test_editor_cli.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "native_map_contract",
     "files": [
      "tests/test_native_map.c"
@@ -15791,13 +15806,6 @@
   ],
   "python": [
    {
-    "file": "tests/test_asset_import.py",
-    "module": "tests.test_asset_import",
-    "test_count": 2,
-    "outcome": "passed",
-    "passed": 2
-   },
-   {
     "file": "tests/test_asset_layout.py",
     "module": "tests.test_asset_layout",
     "test_count": 2,
@@ -15810,13 +15818,6 @@
     "test_count": 15,
     "outcome": "passed",
     "passed": 14
-   },
-   {
-    "file": "tests/test_editor_cli.py",
-    "module": "tests.test_editor_cli",
-    "test_count": 15,
-    "outcome": "passed",
-    "passed": 15
    },
    {
     "file": "tests/test_native_parity.py",
@@ -15834,12 +15835,18 @@
    }
   ],
   "summary": {
-   "passed": 127,
+   "passed": 111,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "fa191cd",
+   "date": "2026-10-26",
+   "subject": "Port the native importer golden tests to C",
+   "scope": "project"
+  },
   {
    "commit": "77295af",
    "date": "2026-10-26",
@@ -16312,12 +16319,6 @@
    "commit": "7ee74ce",
    "date": "2026-10-24",
    "subject": "Add Aria Bone Pillar and Buer components",
-   "scope": "project"
-  },
-  {
-   "commit": "38e91c0",
-   "date": "2026-10-23",
-   "subject": "Add Aria Peeping Eye target steering",
    "scope": "project"
   }
  ],

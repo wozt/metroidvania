@@ -98,7 +98,7 @@ existing tools are extended toward it as real needs appear.
   stable native room identifiers and per-room private override documents in the
   editor; static C/ASM inventories for both pinned decompilations; an
   incremental inventory/checklist task graph; and
-  `scripts/check_no_proprietary.py` guarding the repository.
+  `fusion_check_no_proprietary` guarding the repository.
 - Experimental: the Zero Mission runtime (Samus, weapons, collision, doors),
   the Aria runtime (Soma, weapons, doors, bats and zombies), and the editor's
   project room documents, which already store overrides

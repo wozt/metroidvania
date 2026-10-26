@@ -2,6 +2,29 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0555 - Native editor CLI contract test
+
+- `tests/test_editor_cli.c` (CTest `editor_cli_contracts`) replaces the
+  Python CLI test: exit codes and error types, the atomic dry-run batch,
+  draft placement round trips, project entities with confirmation, typed
+  Aria item fields, collision strokes, door links and transitions, the
+  collision capabilities of both worlds, event regions and their rejected
+  references in both worlds, story saving and traversal refusal, the
+  `room-open` dry run and the refusal of symlinked output and batch parents.
+  It also checks that the GTK editor sources run no Python module.
+- The C diagnostics that pointed to `python3 -m scripts.rebuild` now point
+  to `./build/fusion_rebuild`.
+- The leak check is the native `fusion_check_no_proprietary` (CTest
+  `no_proprietary_files`); `scripts/check_no_proprietary.py`, the unused
+  `scripts/import_game_assets.py` and its test are removed, the safe
+  generated-asset writer's symlink and path refusals now being tested in
+  `tests/test_editor_render.c`.
+- First-party Python files: 8 under `scripts/`, 4 under `tests/`.
+  No gameplay or native-parity status changed.
+- Next: the repository tools (`dashboard`, `native_parity`,
+  `check_generated`, `rebuild`, `native_inventory`) and the asset helpers
+  with their remaining tests.
+
 ## Patch 0554 - Native importer golden tests
 
 - `tests/test_native_golden.c` replaces both Python golden tests: CTest

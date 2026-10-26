@@ -1406,7 +1406,7 @@ int main(int argc, char **argv) {
 
     AriaRoom room = {0};
     if (!load_room(room_path, &room)) {
-        fprintf(stderr, "Export the rooms first: python3 -m scripts.rebuild "
+        fprintf(stderr, "Export the rooms first: ./build/fusion_rebuild "
                         "--task aria_rooms\n");
         return 1;
     }
@@ -1444,7 +1444,7 @@ int main(int argc, char **argv) {
     static AriaObjects objects;
     bool objects_ok = load_objects(DEFAULT_OBJECTS, &objects, renderer);
     bool enemies_ok = objects_ok && load_enemy_data(&objects);
-    if (!enemies_ok) fprintf(stderr, "No object library: python3 -m scripts.rebuild --task aria_objects\n");
+    if (!enemies_ok) fprintf(stderr, "No object library: ./build/fusion_rebuild --task aria_objects\n");
     int cam_x = 0, cam_y = 0;
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
@@ -1452,7 +1452,7 @@ int main(int argc, char **argv) {
     soma.hp = (int16_t)player_stats.hp;
     soma.max_hp = (int16_t)player_stats.max_hp;
     if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
-        fprintf(stderr, "Export the weapons first: python3 -m scripts.rebuild --task aria_weapons\n");
+        fprintf(stderr, "Export the weapons first: ./build/fusion_rebuild --task aria_weapons\n");
         goto cleanup;
     }
     /* Only the class 0, 2 and 3 entity (sub_080221CC) is ported. */

@@ -44,7 +44,7 @@ working and run it in full only once, before the commit.
      check runs there as the `no_proprietary_files` CTest test.
   4. `python3 -m scripts.check_generated`
 - Do not add a separate `python3 -m unittest discover`, `ctest` or
-  `scripts/check_no_proprietary.py` run to that cycle: step 3 already runs
+  `fusion_check_no_proprietary` run to that cycle: step 3 already runs
   them. Run plain `ctest` only when the dashboard is not being regenerated.
 - A failing test is fixed and its targeted test rerun; repeat the full run
   only if the fix touched code that other tests cover.

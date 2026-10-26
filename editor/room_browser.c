@@ -375,8 +375,8 @@ static void populate_rooms(RoomBrowser *browser)
     if (!g_file_get_contents(path, &contents, NULL, NULL)) {
         gtk_label_set_text(GTK_LABEL(browser->status),
             browser->world == ROOM_WORLD_ARIA ?
-            "Aria catalog missing. Run python3 -m scripts.rebuild --task aria_world." :
-            "Zero Mission catalog missing. Run python3 -m scripts.rebuild --task raw_import.");
+            "Aria catalog missing. Run ./build/fusion_rebuild --task aria_world." :
+            "Zero Mission catalog missing. Run ./build/fusion_rebuild --task raw_import.");
         return;
     }
     gchar **lines = g_strsplit(contents, "\n", -1);

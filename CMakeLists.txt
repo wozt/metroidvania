@@ -131,6 +131,9 @@ add_executable(fusion_importer src/tools/fusion_importer.c)
 target_link_libraries(fusion_importer PRIVATE fusion_assets)
 fusion_enable_warnings(fusion_importer)
 
+add_executable(fusion_check_no_proprietary src/tools/check_no_proprietary.c)
+fusion_enable_warnings(fusion_check_no_proprietary)
+
 add_executable(fusion_world_overview src/tools/world_overview.c)
 target_link_libraries(fusion_world_overview PRIVATE fusion_editor_backend)
 target_compile_definitions(fusion_world_overview PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -330,6 +333,14 @@ if(BUILD_TESTING)
     add_test(NAME native_golden_aos COMMAND fusion_native_golden_tests aos)
     add_test(NAME native_golden_mzm COMMAND fusion_native_golden_tests mzm)
     set_tests_properties(native_golden_aos native_golden_mzm PROPERTIES SKIP_RETURN_CODE 77)
+
+    add_executable(fusion_editor_cli_tests tests/test_editor_cli.c)
+    target_compile_definitions(fusion_editor_cli_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}" FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
+    target_link_libraries(fusion_editor_cli_tests PRIVATE fusion_json)
+    fusion_enable_warnings(fusion_editor_cli_tests)
+    add_test(NAME editor_cli_contracts COMMAND fusion_editor_cli_tests)
+    set_tests_properties(editor_cli_contracts PROPERTIES SKIP_RETURN_CODE 77)
 
     add_executable(fusion_native_map_tests tests/test_native_map.c)
     target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
@@ -640,6 +651,5 @@ if(BUILD_TESTING)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_test(NAME no_proprietary_files
-        COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/check_no_proprietary.py
-                ${CMAKE_SOURCE_DIR})
+        COMMAND fusion_check_no_proprietary ${CMAKE_SOURCE_DIR})
 endif()

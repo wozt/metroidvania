@@ -41,7 +41,7 @@ Tracked files may contain project code, schemas, symbolic identifiers, offsets,
 hashes and factual metadata. They may not contain ROM payload, extracted
 graphics/audio/maps, save data or generated working assets. All proprietary
 output stays under ignored local directories and is checked by
-`scripts/check_no_proprietary.py` before commits.
+`fusion_check_no_proprietary` (CTest `no_proprietary_files`) before commits.
 
 Historical evaluations and abandoned prototypes are not authoritative sources.
 When present locally, they live only under ignored `legacy/` storage.

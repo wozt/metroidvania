@@ -199,7 +199,7 @@ static bool aria_catalog(const char *repository, FusionJson *rooms, FebError *er
     if (!feb_join(path, repository, "assets/extracted/rooms/aria/world.json") ||
         !feb_load_json(path, 64 * 1024 * 1024, &world, detail, sizeof detail))
         return feb_fail(error, FEB_EXIT_OPERATION,
-                        "missing native Aria world catalog %s; run python3 -m scripts.rebuild "
+                        "missing native Aria world catalog %s; run ./build/fusion_rebuild "
                         "--task aria_world", path);
     const FusionJson *list = fusion_json_member(&world, "rooms");
     bool ok = list && list->kind == FUSION_JSON_ARRAY;

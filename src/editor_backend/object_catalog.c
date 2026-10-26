@@ -712,7 +712,7 @@ static bool build_aria(const char *repository, FusionJson *records, FebError *er
     if (!feb_join(path, repository, "assets/extracted/rooms/aria/world.json") ||
         !feb_load_json(path, 64 * 1024 * 1024, &world, detail, sizeof detail))
         return feb_fail(error, FEB_EXIT_OPERATION,
-                        "missing native Aria world catalog %s; run python3 -m scripts.rebuild "
+                        "missing native Aria world catalog %s; run ./build/fusion_rebuild "
                         "--task aria_world", path);
     static char enemies[ARIA_ENEMY_COUNT][96];
     bool ok = feb_aria_enemy_names(repository, enemies, error) &&

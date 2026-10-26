@@ -357,7 +357,9 @@ timings and frames, and the SDL-free ports `aos_collision.c`, `aos_soma.c`
 and `aos_anim.c`. Its simulation frames pass through the host-neutral native
 game-mode table in `aos_game_lifecycle.c`; explicit room/save launches enter
 IN_GAME directly while the incomplete boot/title path remains independently
-testable.
+testable. The same table now reaches the initial native three-file selector in
+`aos_main_menu.c`; its deeper file operations are still separate from the
+portable launcher.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

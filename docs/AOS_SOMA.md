@@ -50,6 +50,9 @@ title handler. That handler now reaches the native stage-9 destination after
 the title motion, input or quick-reveal paths, including MAIN_MENU and the
 idle INTRO_CUTSCENE override. The standalone title launcher remains separate
 until the native main-menu controller can replace its diagnostic navigation.
+The lifecycle now owns that controller's initial three-slot selector and its
+entry/return fades; native selected-file creation, loading, copying and
+deletion remain the next boundary.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with

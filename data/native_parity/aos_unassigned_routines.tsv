@@ -2639,7 +2639,6 @@ aos:c:src/code_08001194.c:sub_08002400	sub_08002400	unclassified				c_function	0
 aos:c:src/code_08001194.c:sub_08002428	sub_08002428	unclassified				c_function	0x08002428	src/code_08001194.c	1644	2	0
 aos:c:src/code_08002454.c:GameModeDebugExitUpdate	GameModeDebugExitUpdate	technical	name			c_function	0x08002588	src/code_08002454.c	281	1	10
 aos:c:src/code_08002454.c:GameModeDebugUpdate	GameModeDebugUpdate	technical	name			c_function	0x08002454	src/code_08002454.c	206	1	2
-aos:c:src/code_08002454.c:GameModeMainMenuUpdate_inline	GameModeMainMenuUpdate_inline	menus	name			c_function		src/code_08002454.c	2421	1	0
 aos:c:src/code_08002454.c:TitleScreenSetAffine_inline	TitleScreenSetAffine_inline	title	name			c_function		src/code_08002454.c	914	1	1
 aos:c:src/code_08002454.c:TitleScreen_sub_08002F44	TitleScreen_sub_08002F44	title	name			c_function	0x08002F44	src/code_08002454.c	747	1	2
 aos:c:src/code_08002454.c:TitleScreen_sub_08002FF8	TitleScreen_sub_08002FF8	title	name			c_function	0x08002FF8	src/code_08002454.c	856	1	2

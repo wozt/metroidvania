@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0563 - Start Aria's native main-menu controller
+
+- Added `aos_main_menu.c` with the front half of
+  `GameModeMainMenuUpdate`: stages 0-3, the exact three-slot wrapped input of
+  `sub_08004928`, confirm/cancel priority, the 0x28/0x2A/0x2B alpha
+  transition, the stage-6 selected-slot boundary and audio-gated stage-0x63
+  return to TITLE_SCREEN.
+- MAIN_MENU now has a real lifecycle handler, so the title's stage-9 result
+  enters this controller on the following frame. Graphics, audio and native
+  SRAM work remain typed requests or host-owned state; the existing portable
+  save schema is not misrepresented as the six-slot native SRAM layout.
+- Deterministic tests cover register state, slot wrapping, the empty-slot
+  behavior, confirm transition frame by frame and cancel cleanup. The three
+  stage-6 file sub-controllers and their create/load/copy/delete branches are
+  still missing, so the title/menu feature remains partial. Source-derived
+  and unit-tested, not emulator-compared. Zero Mission is unchanged.
+- Next: port the three selected-file sub-controllers and their final IN_GAME
+  or INTRO_CUTSCENE paths, then attach the standalone SDL launcher.
+
 ## Patch 0562 - Complete Aria's title destination handoff
 
 - The lifecycle TITLE_SCREEN handler now connects the already-ported native

@@ -125,9 +125,15 @@ static int32_t in_game_handler(AosGameMode *mode, void *context) {
     return AOS_MODE_SAME;
 }
 
+static int32_t main_menu_handler(AosGameMode *mode, void *context) {
+    AosGameLifecycle *state = context;
+    return aos_game_mode_main_menu_update(mode, &state->main_menu, &state->input);
+}
+
 static const AosGameModeHandler handlers[AOS_MODE_COUNT] = {
     [AOS_MODE_KONAMI_LOGO] = konami_handler,
     [AOS_MODE_TITLE_SCREEN] = title_handler,
+    [AOS_MODE_MAIN_MENU] = main_menu_handler,
     [AOS_MODE_IN_GAME] = in_game_handler,
     [AOS_MODE_LICENSED_BY_NINTENDO] = licensed_handler,
     [AOS_MODE_RESET] = reset_handler,
@@ -136,6 +142,7 @@ static const AosGameModeHandler handlers[AOS_MODE_COUNT] = {
 void aos_game_lifecycle_init(AosGameLifecycle *state, bool direct_gameplay) {
     *state = (AosGameLifecycle){0};
     state->reset.language = 1;
+    state->main_menu.language = 1;
     if (direct_gameplay)
         aos_game_mode_set(&state->game_mode, AOS_MODE_IN_GAME);
     else

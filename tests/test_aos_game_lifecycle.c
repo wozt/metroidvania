@@ -69,6 +69,9 @@ int main(void) {
     }
     aos_game_lifecycle_update(&state);
     assert(state.game_mode.mode == AOS_MODE_MAIN_MENU && state.title_cleanup_requested);
+    aos_game_lifecycle_update(&state);
+    assert(state.game_mode.mode == AOS_MODE_MAIN_MENU && state.game_mode.update_stage == 1 &&
+           state.main_menu.display_control == 0x1F00);
 
     /* The idle timeout has the native special destination: INTRO_CUTSCENE. */
     aos_game_mode_set(&state.game_mode, AOS_MODE_TITLE_SCREEN);

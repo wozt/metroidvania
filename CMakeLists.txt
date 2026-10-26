@@ -187,7 +187,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_so
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
-               src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c
+               src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_main_menu.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
                src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
                src/runtime/aos_save_room.c
@@ -584,12 +584,19 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_mode.c
+                   src/runtime/aos_main_menu.c
                    src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
                    src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
                    src/runtime/aos_input.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_lifecycle_tests)
     add_test(NAME aos_game_lifecycle COMMAND fusion_aos_game_lifecycle_tests)
+
+    add_executable(fusion_aos_main_menu_tests tests/test_aos_main_menu.c
+                   src/runtime/aos_main_menu.c)
+    target_include_directories(fusion_aos_main_menu_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_main_menu_tests)
+    add_test(NAME aos_main_menu COMMAND fusion_aos_main_menu_tests)
 
     add_executable(fusion_aos_input_tests tests/test_aos_input.c src/runtime/aos_input.c)
     target_include_directories(fusion_aos_input_tests PRIVATE src/runtime)

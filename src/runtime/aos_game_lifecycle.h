@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "aos_game_mode.h"
+#include "aos_main_menu.h"
 #include "aos_title_fade.h"
 #include "aos_title_input.h"
 #include "aos_title_motion.h"
@@ -18,6 +19,7 @@ typedef struct {
     AosGameMode game_mode;
     AosResetMode reset;
     AosStartupLogoMode startup_logo;
+    AosMainMenu main_menu;
     AosTitleFade title_fade;
     AosTitleMotion title_motion;
     AosTitleStages title_stages;

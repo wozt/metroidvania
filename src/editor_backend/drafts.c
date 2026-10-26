@@ -3,7 +3,11 @@
 #include "drafts.h"
 
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -437,4 +441,313 @@ bool feb_load_placements(const char *root, FusionJson *placements, FusionJson *r
     *list = fusion_json_null();
     fusion_json_free(&data);
     return true;
+}
+
+bool feb_new_draft(const char *world, int64_t area, const FusionJson *slug,
+                   const FusionJson *name, int64_t width, int64_t height, FusionJson *room,
+                   FebError *error) {
+    FusionJson world_value = fusion_json_string(world), area_value = fusion_json_int(area);
+    char id[256];
+    bool ok = world_value.string &&
+              identity(&world_value, &area_value, slug, id, sizeof id, error);
+    fusion_json_free(&world_value);
+    if (!ok) return false;
+    if (!name_valid(name))
+        return feb_fail(error, FEB_EXIT_OPERATION,
+                        "name must be 1..80 printable characters without separators");
+    FusionJson width_value = fusion_json_int(width), height_value = fusion_json_int(height);
+    if (!number(&width_value, 1, 8, "width_screens", error) ||
+        !number(&height_value, 1, 8, "height_screens", error))
+        return false;
+    size_t count = 0;
+    const char *const *areas = feb_areas(world, &count);
+    FusionJson descriptor = fusion_json_object(), geometry = fusion_json_object();
+    *room = fusion_json_object();
+    ok = feb_put_int(&descriptor, "index", area) && feb_put_string(&descriptor, "name", areas[area]) &&
+         feb_put_string(&geometry, "unit", "gba_screen") &&
+         feb_put_int(&geometry, "width_screens", width) &&
+         feb_put_int(&geometry, "height_screens", height) &&
+         feb_put_int(&geometry, "screen_width_px", 240) &&
+         feb_put_int(&geometry, "screen_height_px", 160) &&
+         feb_put_string(room, "schema", "metroidvania.authored-room") &&
+         feb_put_int(room, "version", 1) && feb_put_string(room, "id", id) &&
+         feb_put_string(room, "world", world) && feb_put(room, "area", descriptor) &&
+         feb_put_string(room, "name", name->string) && feb_put_string(room, "slug", slug->string) &&
+         feb_put_string(room, "origin", "project_authored") &&
+         feb_put_string(room, "status", "draft_not_playable") &&
+         feb_put(room, "geometry", geometry) && feb_put(room, "layers", fusion_json_array()) &&
+         feb_put(room, "collision", fusion_json_null()) &&
+         feb_put(room, "spawn", fusion_json_null()) && feb_put(room, "doors", fusion_json_array()) &&
+         feb_put(room, "transitions", fusion_json_array()) &&
+         feb_put(room, "entities", fusion_json_array()) &&
+         feb_put(room, "events", fusion_json_array()) &&
+         feb_put(room, "music", fusion_json_null()) &&
+         feb_put(room, "engine_adapter", fusion_json_null());
+    if (!ok) {
+        fusion_json_free(room);
+        return feb_oom(error);
+    }
+    if (!feb_validate_draft(room, error)) {
+        fusion_json_free(room);
+        return false;
+    }
+    return true;
+}
+
+/* _safe_parents(): the parents below the root, created, never symlinks. */
+static bool safe_parents(const char *root, const char *path, FebError *error) {
+    if (feb_is_symlink(root))
+        return feb_fail(error, FEB_EXIT_OPERATION, "project root may not be a symlink");
+    char current[FEB_PATH_CAPACITY];
+    snprintf(current, sizeof current, "%s", path);
+    for (char *slash = current + strlen(root) + 1; (slash = strchr(slash, '/')) != NULL; ++slash) {
+        *slash = '\0';
+        if (feb_is_symlink(current))
+            return feb_fail(error, FEB_EXIT_OPERATION, "symlink parent refused: %s", current);
+        struct stat info;
+        bool exists = stat(current, &info) == 0;
+        if (exists && !S_ISDIR(info.st_mode))
+            return feb_fail(error, FEB_EXIT_OPERATION, "not a directory: %s", current);
+        if (!exists && mkdir(current, 0777) != 0 && errno != EEXIST)
+            return feb_fail(error, FEB_EXIT_OPERATION, "[Errno %d] %s: '%s'", errno,
+                            strerror(errno), current);
+        *slash = '/';
+    }
+    return true;
+}
+
+bool feb_save_draft(const char *root, const FusionJson *room, char *path, FebError *error) {
+    if (!feb_validate_draft(room, error)) return false;
+    char base[FEB_PATH_CAPACITY];
+    if (!private_root(root, base)) return feb_fail(error, FEB_EXIT_OPERATION, "path too long");
+    char relative[256];
+    snprintf(relative, sizeof relative, "%s/%02lld/%s.json",
+             fusion_json_member(room, "world")->string,
+             (long long)fusion_json_member(fusion_json_member(room, "area"), "index")->integer,
+             fusion_json_member(room, "slug")->string);
+    if (!feb_join(path, base, relative)) return feb_fail(error, FEB_EXIT_OPERATION, "path too long");
+    if (!safe_parents(root, path, error)) return false;
+    char *text = NULL;
+    size_t size = 0;
+    if (!fusion_json_write(room, 2, &text, &size)) return feb_oom(error);
+    /* Exclusive creation also refuses an existing symlink at the destination. */
+    int descriptor = open(path, O_WRONLY | O_CREAT | O_EXCL, 0666);
+    if (descriptor < 0) {
+        int code = errno;
+        free(text);
+        return feb_fail(error, FEB_EXIT_OPERATION, "[Errno %d] %s: '%s'", code, strerror(code),
+                        path);
+    }
+    bool ok = write(descriptor, text, size) == (ssize_t)size && write(descriptor, "\n", 1) == 1;
+    ok = close(descriptor) == 0 && ok;
+    free(text);
+    if (!ok) return feb_fail(error, FEB_EXIT_OPERATION, "cannot write %s", path);
+    return true;
+}
+
+bool feb_placements_path(const char *root, char *path) {
+    char base[FEB_PATH_CAPACITY];
+    return private_root(root, base) && feb_join(path, base, "placements.json");
+}
+
+typedef struct {
+    int64_t area, x, y;
+} Cell;
+
+/* _occupancy(): the original minimap cells of a world. */
+static bool occupancy(const char *root, const char *world, Cell **cells, size_t *count,
+                      FebError *error) {
+    char source[FEB_PATH_CAPACITY];
+    snprintf(source, sizeof source, "%s/assets/extracted/world_overview/%s", root,
+             !strcmp(world, "aria") ? "aria.tsv" : "mzm.tsv");
+    long long size = 0;
+    char *text = NULL;
+    if (feb_is_symlink(source) || !feb_is_regular(source, &size) || size > 2000000 ||
+        !feb_read_text(source, 2000000, &text, NULL))
+        return feb_fail(error, FEB_EXIT_OPERATION, "generate verified native overview first: %s",
+                        source);
+    bool aria = !strcmp(world, "aria");
+    size_t areas = 0;
+    feb_areas(world, &areas);
+    int64_t width, height;
+    grid(world, &width, &height);
+    if (!aria) width = height = 128;
+    *cells = NULL;
+    *count = 0;
+    size_t capacity = 0, rows = 0;
+    bool ok = true;
+    for (char *line = text; ok && line && *line;) {
+        char *end = strchr(line, '\n');
+        if (end) *end = '\0';
+        if (line[0] && line[0] != '#') {
+            char *parts[9];
+            size_t fields = 0;
+            parts[fields++] = line;
+            for (char *c = line; *c; ++c)
+                if (*c == '|') {
+                    *c = '\0';
+                    if (fields < 9) parts[fields] = c + 1;
+                    ++fields;
+                }
+            if (fields < 6 || fields > 8) {
+                ok = feb_fail(error, FEB_EXIT_OPERATION, "invalid original map index row");
+                break;
+            }
+            int64_t values[6];
+            for (size_t index = 0; ok && index < 6; ++index) {
+                /* int(): Python accepts surrounding space and a sign. */
+                char *tail = NULL;
+                const char *text_value = parts[index];
+                while (*text_value == ' ' || *text_value == '\t') ++text_value;
+                values[index] = strtoll(text_value, &tail, 10);
+                while (tail && (*tail == ' ' || *tail == '\t')) ++tail;
+                if (!*text_value || !tail || *tail)
+                    ok = feb_fail(error, FEB_EXIT_OPERATION,
+                                  "invalid original map index coordinate");
+            }
+            if (!ok) break;
+            if (!(values[0] >= 0 && values[0] < (int64_t)areas && values[2] >= 0 &&
+                  values[2] < width && values[3] >= 0 && values[3] < height && values[1] >= 0 &&
+                  values[1] < 1000 && (values[4] == 0 || values[4] == 1) &&
+                  (values[5] == 0 || values[5] == 1))) {
+                ok = feb_fail(error, FEB_EXIT_OPERATION, "out-of-bounds or corrupt original map index");
+                break;
+            }
+            if (*count == capacity) {
+                size_t next = capacity ? capacity * 2 : 256;
+                Cell *grown = realloc(*cells, next * sizeof *grown);
+                if (!grown) {
+                    ok = feb_oom(error);
+                    break;
+                }
+                *cells = grown;
+                capacity = next;
+            }
+            (*cells)[(*count)++] = (Cell){aria ? 0 : values[0], values[2], values[3]};
+            if (++rows > 16384) {
+                ok = feb_fail(error, FEB_EXIT_OPERATION, "oversized original map index");
+                break;
+            }
+        }
+        line = end ? end + 1 : NULL;
+    }
+    free(text);
+    if (ok && !*count) ok = feb_fail(error, FEB_EXIT_OPERATION,
+                                    "empty original map index; placement refused");
+    if (!ok) {
+        free(*cells);
+        *cells = NULL;
+    }
+    return ok;
+}
+
+bool feb_plan_placement(const char *root, const char *id, int64_t x, int64_t y,
+                        FusionJson *placement, FusionJson *updated, FusionJson *rooms,
+                        FebError *error) {
+    FusionJson entries;
+    if (!feb_load_placements(root, &entries, rooms, error)) return false;
+    *placement = fusion_json_object();
+    bool ok = feb_put_string(placement, "id", id) && feb_put_int(placement, "x", x) &&
+              feb_put_int(placement, "y", y);
+    if (!ok) {
+        fusion_json_free(&entries);
+        fusion_json_free(rooms);
+        fusion_json_free(placement);
+        return feb_oom(error);
+    }
+    Rect rect;
+    Cell *cells = NULL;
+    size_t count = 0;
+    ok = placement_rect(placement, rooms, &rect, error) &&
+         occupancy(root, rect.world, &cells, &count, error);
+    bool aria = ok && !strcmp(rect.world, "aria");
+    for (int64_t px = rect.x; ok && px < rect.x + rect.width; ++px)
+        for (int64_t py = rect.y; ok && py < rect.y + rect.height; ++py)
+            for (size_t index = 0; ok && index < count; ++index)
+                if (cells[index].area == (aria ? 0 : rect.area) && cells[index].x == px &&
+                    cells[index].y == py)
+                    ok = feb_fail(error, FEB_EXIT_OPERATION,
+                                  "placement overlaps an original minimap tile at (%lld,%lld)",
+                                  (long long)px, (long long)py);
+    free(cells);
+    *updated = fusion_json_array();
+    for (size_t index = 0; ok && index < entries.count; ++index) {
+        if (!strcmp(fusion_json_member(&entries.items[index], "id")->string, id)) continue;
+        ok = fusion_json_push(updated, entries.items[index]) || feb_oom(error);
+        entries.items[index] = fusion_json_null();
+    }
+    FusionJson copy;
+    ok = ok && ((fusion_json_clone(placement, &copy) && fusion_json_push(updated, copy)) ||
+                feb_oom(error));
+    fusion_json_free(&entries);
+    if (ok) {
+        FusionJson data = fusion_json_object(), list;
+        ok = (feb_put_string(&data, "schema", "metroidvania.map-placements") &&
+              feb_put_int(&data, "version", 1) && fusion_json_clone(updated, &list) &&
+              feb_put(&data, "placements", list)) || feb_oom(error);
+        ok = ok && validate_placements(&data, rooms, error);
+        fusion_json_free(&data);
+    }
+    if (!ok) {
+        fusion_json_free(placement);
+        fusion_json_free(updated);
+        fusion_json_free(rooms);
+    }
+    return ok;
+}
+
+static int compare_placements(const void *left, const void *right) {
+    return strcmp(fusion_json_member(left, "id")->string, fusion_json_member(right, "id")->string);
+}
+
+bool feb_write_placements(const char *root, FusionJson *entries, const FusionJson *rooms,
+                          FebError *error) {
+    /* sorted() is stable; identities are unique. */
+    qsort(entries->items, entries->count, sizeof *entries->items, compare_placements);
+    FusionJson data = fusion_json_object(), list;
+    bool ok = (feb_put_string(&data, "schema", "metroidvania.map-placements") &&
+               feb_put_int(&data, "version", 1) && fusion_json_clone(entries, &list) &&
+               feb_put(&data, "placements", list)) || feb_oom(error);
+    ok = ok && validate_placements(&data, rooms, error);
+    char path[FEB_PATH_CAPACITY];
+    ok = ok && (feb_placements_path(root, path) ||
+                feb_fail(error, FEB_EXIT_OPERATION, "path too long"));
+    long long size = 0;
+    bool exists = ok && (feb_is_symlink(path) || feb_is_regular(path, &size) || feb_is_directory(path));
+    if (ok && (feb_is_symlink(path) || (exists && !feb_is_regular(path, &size))))
+        ok = feb_fail(error, FEB_EXIT_OPERATION, "unsafe placements path");
+    if (ok && exists && size > PLACEMENT_BYTES)
+        ok = feb_fail(error, FEB_EXIT_OPERATION, "oversized placements document");
+    ok = ok && safe_parents(root, path, error);
+    char *text = NULL;
+    size_t length = 0;
+    ok = ok && (fusion_json_write(&data, 2, &text, &length) || feb_oom(error));
+    fusion_json_free(&data);
+    if (!ok) {
+        free(text);
+        return false;
+    }
+    char temporary[FEB_PATH_CAPACITY + 32];
+    snprintf(temporary, sizeof temporary, "%s", path);
+    *strrchr(temporary, '/') = '\0';
+    size_t used = strlen(temporary);
+    snprintf(temporary + used, sizeof temporary - used, "/.placements-XXXXXX.tmp");
+    int descriptor = mkstemps(temporary, 4);
+    ok = descriptor >= 0;
+    if (ok) {
+        ok = write(descriptor, text, length) == (ssize_t)length && write(descriptor, "\n", 1) == 1 &&
+             fsync(descriptor) == 0;
+        ok = close(descriptor) == 0 && ok;
+        if (ok && feb_is_symlink(path)) {
+            unlink(temporary);
+            free(text);
+            return feb_fail(error, FEB_EXIT_OPERATION, "placements destination became symlink");
+        }
+        if (!ok || rename(temporary, path) != 0) {
+            unlink(temporary);
+            ok = false;
+        }
+    }
+    free(text);
+    return ok || feb_fail(error, FEB_EXIT_OPERATION, "cannot write %s", path);
 }

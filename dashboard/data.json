@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T04:31:48+00:00",
+ "generated_at": "2026-10-26T04:37:19+00:00",
  "git": {
-  "commit": "d2bf7a6",
+  "commit": "b3cd5c6",
   "branch": "main",
   "dirty": true
  },
@@ -15877,6 +15877,12 @@
  },
  "timeline": [
   {
+   "commit": "b3cd5c6",
+   "date": "2026-10-26",
+   "subject": "Run the editor project-room and story commands natively",
+   "scope": "project"
+  },
+  {
    "commit": "d2bf7a6",
    "date": "2026-10-26",
    "subject": "Export the Zero Mission sound data natively",
@@ -16348,12 +16354,6 @@
    "commit": "74ca309",
    "date": "2026-10-23",
    "subject": "Port Nemesis delayed effect history",
-   "scope": "project"
-  },
-  {
-   "commit": "dcf3e50",
-   "date": "2026-10-23",
-   "subject": "Match Nemesis effect child timing",
    "scope": "project"
   }
  ],

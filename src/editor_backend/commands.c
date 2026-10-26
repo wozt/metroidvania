@@ -256,7 +256,8 @@ static const char *const mutating_commands[] = {
 /* The commands implemented here; the others still run in Python. */
 static const char *const native_commands[] = {
     "capabilities", "project-info", "list-worlds", "list-areas", "list-rooms",
-    "room-list", "room-inspect", "room-validate", "placement-list",
+    "room-list", "room-inspect", "room-validate", "placement-list", "room-create",
+    "room-place", "room-move", "room-unplace",
 };
 
 bool feb_is_native(const char *command) {
@@ -565,6 +566,98 @@ static bool command_placement_list(const char *root, const FusionJson *options,
     return true;
 }
 
+static bool command_room_create(const char *root, const FusionJson *options, bool dry_run,
+                                FusionJson *data, FebError *error) {
+    const char *world = NULL;
+    if (!feb_world(feb_option(options, "world"), &world, error)) return false;
+    size_t count = 0;
+    feb_areas(world, &count);
+    FusionJson one = fusion_json_int(1);
+    const FusionJson *width_option = feb_option(options, "width_screens");
+    const FusionJson *height_option = feb_option(options, "height_screens");
+    int64_t area = 0, width = 0, height = 0;
+    FusionJson room;
+    if (!feb_integer(feb_option(options, "area"), "area", 0, (int64_t)count - 1, &area, error) ||
+        !feb_integer(width_option ? width_option : &one, "width_screens", 1, 8, &width, error) ||
+        !feb_integer(height_option ? height_option : &one, "height_screens", 1, 8, &height,
+                     error) ||
+        !feb_new_draft(world, area, feb_option(options, "slug"), feb_option(options, "name"),
+                       width, height, &room, error))
+        return false;
+    char path[FEB_PATH_CAPACITY];
+    if (!dry_run && !feb_save_draft(root, &room, path, error)) {
+        fusion_json_free(&room);
+        return false;
+    }
+    if (!feb_put(data, "room", room) || !feb_put_bool(data, "persisted", !dry_run) ||
+        (!dry_run && !feb_put_string(data, "path", path)))
+        return feb_oom(error);
+    return true;
+}
+
+static bool command_room_place(const char *root, const FusionJson *options, bool dry_run,
+                               FusionJson *data, FebError *error) {
+    const FusionJson *identity = feb_option(options, "room");
+    if (!identity || identity->kind != FUSION_JSON_STRING || !identity->string[0])
+        return feb_fail(error, FEB_EXIT_OPERATION, "room draft identity is required");
+    int64_t x = 0, y = 0;
+    if (!feb_integer(feb_option(options, "x"), "x", 0, 127, &x, error) ||
+        !feb_integer(feb_option(options, "y"), "y", 0, 127, &y, error))
+        return false;
+    FusionJson placement, updated, rooms;
+    if (!feb_plan_placement(root, identity->string, x, y, &placement, &updated, &rooms, error))
+        return false;
+    bool ok = true;
+    char path[FEB_PATH_CAPACITY];
+    if (!dry_run)
+        ok = feb_write_placements(root, &updated, &rooms, error) &&
+             (feb_placements_path(root, path) || feb_oom(error));
+    fusion_json_free(&updated);
+    fusion_json_free(&rooms);
+    if (!ok) {
+        fusion_json_free(&placement);
+        return false;
+    }
+    if (!feb_put(data, "placement", placement) || !feb_put_bool(data, "persisted", !dry_run) ||
+        (!dry_run && !feb_put_string(data, "path", path)))
+        return feb_oom(error);
+    return true;
+}
+
+static bool command_room_unplace(const char *root, const FusionJson *options, bool dry_run,
+                                 FusionJson *data, FebError *error) {
+    const FusionJson *identity = feb_option(options, "room");
+    const FusionJson *confirm = feb_option(options, "confirm");
+    if (!confirm || confirm->kind != FUSION_JSON_BOOL || !confirm->boolean)
+        return feb_fail(error, FEB_EXIT_OPERATION, "room-unplace requires --confirm=true");
+    FusionJson draft, entries, rooms;
+    if (!feb_draft_by_id(root, identity, &draft, error)) return false;
+    fusion_json_free(&draft);
+    if (!feb_load_placements(root, &entries, &rooms, error)) return false;
+    FusionJson kept = fusion_json_array();
+    bool found = false, ok = true;
+    for (size_t index = 0; ok && index < entries.count; ++index) {
+        if (!strcmp(fusion_json_member(&entries.items[index], "id")->string, identity->string)) {
+            found = true;
+            continue;
+        }
+        ok = fusion_json_push(&kept, entries.items[index]) || feb_oom(error);
+        entries.items[index] = fusion_json_null();
+    }
+    fusion_json_free(&entries);
+    char path[FEB_PATH_CAPACITY];
+    if (ok && !dry_run && found) ok = feb_write_placements(root, &kept, &rooms, error);
+    fusion_json_free(&kept);
+    fusion_json_free(&rooms);
+    if (!ok) return false;
+    if (!feb_put_string(data, "room", identity->string) ||
+        !feb_put_bool(data, dry_run ? "would_remove" : "removed", found) ||
+        !feb_put_bool(data, "persisted", !dry_run) ||
+        (!dry_run && (!feb_placements_path(root, path) || !feb_put_string(data, "path", path))))
+        return feb_oom(error);
+    return true;
+}
+
 bool feb_execute(const char *command, const FusionJson *options, const char *root_option,
                  const char *repository, bool dry_run, FusionJson *data, FebError *error) {
     *data = fusion_json_object();
@@ -594,6 +687,12 @@ bool feb_execute(const char *command, const FusionJson *options, const char *roo
         ok = command_room_validate(root, options, data, error);
     else if (!strcmp(command, "placement-list"))
         ok = command_placement_list(root, options, data, error);
+    else if (!strcmp(command, "room-create"))
+        ok = command_room_create(root, options, dry_run, data, error);
+    else if (!strcmp(command, "room-place") || !strcmp(command, "room-move"))
+        ok = command_room_place(root, options, dry_run, data, error);
+    else if (!strcmp(command, "room-unplace"))
+        ok = command_room_unplace(root, options, dry_run, data, error);
     else if (feb_is_room_command(command))
         ok = feb_room_command(command, options, root, repository, dry_run, data, error);
     else ok = feb_fail(error, FEB_EXIT_UNAVAILABLE, "%s is not ported to the native backend",

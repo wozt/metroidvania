@@ -44,6 +44,10 @@ def _fixture(base):
     (base / "bad.toml").write_text(
         'schema = "metroid-vania-cutscene"\nversion = 1\nid = "BAD"\n')
     (base / "broken.toml").write_text('schema = "unterminated\n')
+    overview = base / "assets/extracted/world_overview"
+    overview.mkdir(parents=True)
+    (overview / "mzm.tsv").write_text("# area|room|x|y|save|warp\n0|1|10|10|0|0|1\n0|2|11|10|1|0|3|4\n")
+    (overview / "aria.tsv").write_text("# cells\n2|5|30|20|0|1|2\n")
     entities = base / "assets/extracted/overrides/aria/entities"
     entities.mkdir(parents=True)
     (entities / "area_01_room_003.json").write_text(json.dumps({
@@ -186,6 +190,35 @@ SEQUENCE = [
     ["--command=story-save", "--kind=timeline", "--input=story_in.toml",
      "--target=data/story/other.toml"],
     ["--command=project-validate", "--format=json"],
+    ["--command=room-create", "--world=zero_mission", "--area=0", "--slug=hall", "--name=Hall",
+     "--width-screens=2", "--format=json"],
+    ["--command=room-create", "--world=zero_mission", "--area=0", "--slug=hall", "--name=Again"],
+    ["--command=room-create", "--world=aria", "--area=4", "--slug=tower-1", "--name=Tour Été",
+     "--height-screens=3"],
+    ["--command=room-create", "--world=aria", "--area=4", "--slug=dry", "--name=Dry",
+     "--dry-run=true"],
+    ["--command=room-create", "--world=aria", "--area=12", "--slug=x", "--name=X"],
+    ["--command=room-create", "--world=aria", "--area=1", "--slug=Bad", "--name=X"],
+    ["--command=room-create", "--world=aria", "--area=1", "--slug=ok", "--name= lead"],
+    ["--command=room-create", "--world=aria", "--area=1", "--slug=ok", "--name=X",
+     "--width-screens=9"],
+    ["--command=room-list", "--source=draft", "--format=tsv"],
+    ["--command=room-place", "--room=zero_mission:00:hall", "--x=9", "--y=10"],
+    ["--command=room-place", "--room=zero_mission:00:hall", "--x=31", "--y=0"],
+    ["--command=room-place", "--room=zero_mission:00:hall", "--x=2", "--y=3", "--dry-run=true"],
+    ["--command=room-place", "--room=zero_mission:00:hall", "--x=2", "--y=3", "--format=json"],
+    ["--command=room-place", "--room=aria:04:tower-1", "--x=30", "--y=18"],
+    ["--command=room-place", "--room=aria:04:tower-1", "--x=5", "--y=5"],
+    ["--command=room-place", "--room=missing", "--x=5", "--y=5"],
+    ["--command=room-place", "--x=5", "--y=5"],
+    ["--command=room-move", "--room=zero_mission:00:hall", "--x=4", "--y=3"],
+    ["--command=placement-list", "--format=tsv"],
+    ["--command=room-unplace", "--room=aria:04:tower-1"],
+    ["--command=room-unplace", "--room=aria:04:tower-1", "--confirm=true", "--dry-run=true"],
+    ["--command=room-unplace", "--room=aria:04:tower-1", "--confirm=true"],
+    ["--command=room-unplace", "--room=aria:04:tower-1", "--confirm=true"],
+    ["--command=room-unplace", "--room=nobody", "--confirm=true"],
+    ["--command=placement-list", "--format=json"],
 ]
 STAGED = [
     ["--command=collision-set", *Z, "--x=4", "--y=4", "--type=air"],

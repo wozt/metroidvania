@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0542 - Native editor draft and placement mutations
+
+- `fusion_editor_cli` now runs `room-create`, `room-place`, `room-move` and
+  `room-unplace` natively: create-only draft persistence through safe
+  parents, placement planning against the original minimap index
+  (`world_overview/*.tsv`) and the other drafts' footprints, and the sorted,
+  atomic `placements.json` writer.
+- The room parity test gained 26 draft and placement cases, including
+  duplicates, invalid slugs and names, original-tile and out-of-grid
+  overlaps and dry runs; outputs and final file trees remain identical to the
+  Python backend.
+- No gameplay status changed and no private assets were committed.
+- Next: the catalog-backed entity commands, then rendering, audits and the
+  world overview.
+
 ## Patch 0541 - Native editor project-room and story commands
 
 - Added a bounded TOML reader (`src/core/toml.c`, part of `fusion_json`)

@@ -19,4 +19,19 @@ bool feb_draft_by_id(const char *root, const FusionJson *identity, FusionJson *r
 bool feb_load_placements(const char *root, FusionJson *placements, FusionJson *rooms,
                          FebError *error);
 
+/* new_room(): a validated, unplayable draft. */
+bool feb_new_draft(const char *world, int64_t area, const FusionJson *slug,
+                   const FusionJson *name, int64_t width, int64_t height, FusionJson *room,
+                   FebError *error);
+/* save_room(): create-only persistence; ``path`` receives the file. */
+bool feb_save_draft(const char *root, const FusionJson *room, char *path, FebError *error);
+/* map_placements.plan_place(): the placement and the updated list. */
+bool feb_plan_placement(const char *root, const char *id, int64_t x, int64_t y,
+                        FusionJson *placement, FusionJson *updated, FusionJson *rooms,
+                        FebError *error);
+/* map_placements._write(): the sorted placements, atomically. */
+bool feb_write_placements(const char *root, FusionJson *entries, const FusionJson *rooms,
+                          FebError *error);
+bool feb_placements_path(const char *root, char *path);
+
 #endif /* FUSION_EDITOR_BACKEND_DRAFTS_H */

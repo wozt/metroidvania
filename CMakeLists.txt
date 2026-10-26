@@ -34,6 +34,9 @@ add_library(fusion_editor_backend STATIC
     src/editor_backend/drafts.c
     src/editor_backend/object_catalog.c
     src/editor_backend/workspace.c
+    src/editor_backend/generated.c
+    src/editor_backend/mzm_render.c
+    src/editor_backend/mzm_workspace.c
     src/core/native_map.c
 )
 find_package(ZLIB REQUIRED)

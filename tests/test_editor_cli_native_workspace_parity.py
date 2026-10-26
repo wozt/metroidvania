@@ -48,6 +48,16 @@ CASES = [
      "--dry-run"],
     ["--command=tile-fill", *A, "--layer=bg2", "--x=2", "--y=2", "--tile-id=1", "--dry-run"],
     ["--command=tile-fill", *A, "--layer=bg2", "--x=2", "--y=2", "--dry-run"],
+    ["--command=room-render", *Z, "--dry-run", "--format=json"],
+    ["--command=room-render", "--world=zero_mission", "--area=Brinstar", "--room=0",
+     "--dry-run"],
+    ["--command=room-render", "--world=zero_mission", "--area=Kraid", "--room=999",
+     "--dry-run"],
+    ["--command=room-render", "--world=zero_mission", "--room=4", "--dry-run"],
+    ["--command=room-open", *Z, "--dry-run"],
+    ["--command=room-open", *Z, "--dry-run", "--format=json"],
+    ["--command=room-open", "--world=zero_mission", "--area=Kraid", "--room=999",
+     "--dry-run"],
 ]
 
 
@@ -62,6 +72,10 @@ class NativeWorkspaceParity(unittest.TestCase):
     def test_other_roots_are_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             arguments = ["--command=layer-list", *Z]
+            native = _run(arguments, False, directory)
+            self.assertEqual(native, _run(arguments, True, directory))
+            self.assertIn("require the repository root", native[2])
+            arguments = ["--command=room-open", *Z]
             native = _run(arguments, False, directory)
             self.assertEqual(native, _run(arguments, True, directory))
             self.assertIn("require the repository root", native[2])

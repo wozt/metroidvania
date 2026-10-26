@@ -10,11 +10,14 @@
 #include "drafts.h"
 #include "object_catalog.h"
 #include "workspace.h"
+#include "mzm_render.h"
+#include "mzm_workspace.h"
 
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 /* CAPABILITIES of the former Python backend, in its order. */
@@ -260,6 +263,7 @@ static const char *const native_commands[] = {
     "capabilities", "project-info", "list-worlds", "list-areas", "list-rooms",
     "room-list", "room-inspect", "room-validate", "placement-list", "room-create",
     "room-place", "room-move", "room-unplace", "list-assets", "entity-catalog",
+    "room-render", "room-open",
 };
 
 bool feb_is_native(const char *command) {
@@ -703,6 +707,88 @@ static bool command_entity_catalog(const char *repository, const FusionJson *opt
     return true;
 }
 
+static bool command_room_render(const char *repository, const FusionJson *options, bool dry_run,
+                                FusionJson *data, FebError *error) {
+    const char *world = NULL;
+    int64_t id = 0;
+    if (!feb_world(feb_option(options, "world"), &world, error) ||
+        !feb_integer(feb_option(options, "room"), "room", 0, 999, &id, error))
+        return false;
+    if (strcmp(world, "zero_mission"))
+        return feb_fail(error, FEB_EXIT_UNAVAILABLE, "the Aria room renderer is not ported");
+    FusionJson rooms, result;
+    if (!feb_filter_native_rooms(repository, world, feb_option(options, "area"), &rooms, error))
+        return false;
+    const FusionJson *match = NULL;
+    size_t matches = 0;
+    for (size_t index = 0; index < rooms.count; ++index)
+        if (fusion_json_member(&rooms.items[index], "room")->integer == id) {
+            match = &rooms.items[index];
+            ++matches;
+        }
+    bool ok = matches == 1 ||
+              feb_fail(error, FEB_EXIT_OPERATION,
+                       "Zero Mission room identity is missing or ambiguous");
+    ok = ok && feb_mzm_decode_room(repository, fusion_json_member(match, "area")->string, id,
+                                   !dry_run, &result, error);
+    fusion_json_free(&rooms);
+    if (!ok) return false;
+    return (feb_put(data, "render", result) && feb_put_bool(data, "persisted", !dry_run)) ||
+           feb_oom(error);
+}
+
+static bool command_room_open(const char *root, const char *repository, const FusionJson *options,
+                              bool dry_run, FusionJson *data, FebError *error) {
+    const char *world = NULL;
+    int64_t id = 0;
+    if (!feb_world(feb_option(options, "world"), &world, error) ||
+        !feb_integer(feb_option(options, "room"), "room", 0, 999, &id, error))
+        return false;
+    FusionJson rooms, workspace;
+    if (!feb_filter_native_rooms(repository, world, feb_option(options, "area"), &rooms, error))
+        return false;
+    const FusionJson *match = NULL;
+    size_t matches = 0;
+    for (size_t index = 0; index < rooms.count; ++index)
+        if (fusion_json_member(&rooms.items[index], "room")->integer == id) {
+            match = &rooms.items[index];
+            ++matches;
+        }
+    bool ok = matches == 1 ||
+              feb_fail(error, FEB_EXIT_OPERATION, "native room identity is missing or ambiguous");
+    if (ok && dry_run) {
+        ok = (feb_put_string(data, "room", fusion_json_member(match, "native_id")->string) &&
+              feb_put_bool(data, "persisted", false) &&
+              feb_put_string(data, "status", "validated_native_workspace_import")) ||
+             feb_oom(error);
+        fusion_json_free(&rooms);
+        return ok;
+    }
+    ok = ok && feb_require_repository_root(root, repository, error);
+    if (ok && strcmp(world, "zero_mission"))
+        ok = feb_fail(error, FEB_EXIT_UNAVAILABLE, "the Aria workroom export is not ported");
+    ok = ok && feb_mzm_workspace_export(repository, fusion_json_member(match, "area")->string, id,
+                                        &workspace, error);
+    if (ok) {
+        FusionJson created = fusion_json_array();
+        static const char *const keys[] = {"atlas", "base", "workroom", "override", "collision",
+                                           "annotations"};
+        for (size_t key = 0; ok && key < sizeof keys / sizeof *keys; ++key) {
+            const FusionJson *value = fusion_json_member(&workspace, keys[key]);
+            struct stat status;
+            if (!value || value->kind != FUSION_JSON_STRING || !value->string[0] ||
+                stat(value->string, &status))
+                continue;
+            ok = fusion_json_push(&created, fusion_json_string(value->string));
+        }
+        ok = (ok && feb_put_string(data, "room", fusion_json_member(match, "native_id")->string) &&
+              feb_put(data, "workspace", workspace) && feb_put_bool(data, "persisted", true) &&
+              feb_put(data, "created_paths", created)) || feb_oom(error);
+    }
+    fusion_json_free(&rooms);
+    return ok;
+}
+
 bool feb_execute(const char *command, const FusionJson *options, const char *root_option,
                  const char *repository, bool dry_run, FusionJson *data, FebError *error) {
     *data = fusion_json_object();
@@ -738,6 +824,10 @@ bool feb_execute(const char *command, const FusionJson *options, const char *roo
         ok = command_room_place(root, options, dry_run, data, error);
     else if (!strcmp(command, "room-unplace"))
         ok = command_room_unplace(root, options, dry_run, data, error);
+    else if (!strcmp(command, "room-open"))
+        ok = command_room_open(root, repository, options, dry_run, data, error);
+    else if (!strcmp(command, "room-render"))
+        ok = command_room_render(repository, options, dry_run, data, error);
     else if (!strcmp(command, "list-assets"))
         ok = command_list_assets(repository, options, data, error);
     else if (!strcmp(command, "entity-catalog"))

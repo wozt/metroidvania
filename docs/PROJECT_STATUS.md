@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0544 - Native Zero Mission room render and workroom export
+
+- Ported the editor's Zero Mission room renderer (`mzm_room_render.py`) to
+  `src/editor_backend/mzm_render.c` and its workroom export
+  (`mzm_native_workspace.py`, with the BG3 preview, the native room
+  annotations, the hatch lock events and the common hatch previews) to
+  `src/editor_backend/mzm_workspace.c`; `generated.c` holds the safe atomic
+  writer of private generated assets and the BMP/PNG encoders.
+- `room-render` and `room-open` now run natively for Zero Mission; the Aria
+  renderer and workroom export still go to Python.
+- On all 331 Zero Mission rooms, every `room-render` and `room-open` output
+  (including 16 and 47 failure cases) and every written preview, workroom,
+  atlas, annotation and hatch file is byte-identical to the Python backend.
+  The workspace parity test gained read-only cases for both commands.
+- No gameplay status changed and no private assets were committed.
+- Next: the Aria renderer and workroom export (`aos_room_render.py`,
+  `aos_native_workspace.py`, `import_aos_world.py`), then the audits,
+  `room-export` and the world overview.
+
 ## Patch 0543 - Native editor catalog and workroom commands
 
 - Ported the native object catalog to C (`src/editor_backend/object_catalog.c`):

@@ -703,6 +703,11 @@ static bool json_result(const char *command, FusionJson *data, const FebError *f
     return ok;
 }
 
+static bool world_is(const Arguments *arguments, const char *world) {
+    const char *value = value_of(arguments, "world");
+    return value && !strcmp(value, world);
+}
+
 int feb_cli_main(int argc, char **argv, const char *repository, bool *handled) {
     *handled = true;
     FebError failure = {0};
@@ -726,7 +731,10 @@ int feb_cli_main(int argc, char **argv, const char *repository, bool *handled) {
         bool has_command = requested && requested[0], has_batch = batch && batch[0];
         if (has_command == has_batch) {
             ok = feb_fail(&failure, FEB_EXIT_USAGE, "provide exactly one of --command or --batch");
-        } else if (has_batch || !feb_is_native(requested)) {
+        } else if (has_batch || !feb_is_native(requested) ||
+                   ((!strcmp(requested, "room-render") || !strcmp(requested, "room-open")) &&
+                    !world_is(&arguments, "zero_mission"))) {
+            /* The Aria room renderer and workroom export still run in Python. */
             *handled = false;
             return 0;
         } else {

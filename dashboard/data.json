@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T04:56:48+00:00",
+ "generated_at": "2026-10-26T05:25:13+00:00",
  "git": {
-  "commit": "78bd0f9",
+  "commit": "17181fb",
   "branch": "main",
   "dirty": true
  },
@@ -13241,7 +13241,9 @@
    "local_sources": [
     "editor/room_browser.c",
     "src/core/native_map.c",
-    "src/editor_backend/workspace.c"
+    "src/editor_backend/workspace.c",
+    "src/editor_backend/mzm_render.c",
+    "src/editor_backend/mzm_workspace.c"
    ],
    "tests": [
     "tests/test_native_rooms.py",
@@ -15902,6 +15904,12 @@
  },
  "timeline": [
   {
+   "commit": "17181fb",
+   "date": "2026-10-26",
+   "subject": "Run the editor catalog and workroom commands natively",
+   "scope": "project"
+  },
+  {
    "commit": "78bd0f9",
    "date": "2026-10-26",
    "subject": "Run the editor draft and placement mutations natively",
@@ -16373,12 +16381,6 @@
    "commit": "2fde524",
    "date": "2026-10-23",
    "subject": "Port Harpy and Gorgon enemy families",
-   "scope": "project"
-  },
-  {
-   "commit": "e124fa9",
-   "date": "2026-10-23",
-   "subject": "Connect ten Aria enemy identities",
    "scope": "project"
   }
  ],

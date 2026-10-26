@@ -3,6 +3,7 @@
 #include "object_catalog.h"
 
 #include "fusion/assets/rom.h"
+#include "generated.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -10,7 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <zlib.h>
 
 #define COUNT(array) (sizeof (array) / sizeof (array)[0])
 
@@ -163,7 +163,7 @@ static bool zero_text(const char *value) {
 }
 
 /* mzm_sprite_kind(): the conservative native sprite taxonomy. */
-static const char *mzm_category(const char *symbol, const char *health, const char *damage) {
+static const char *mzm_role(const char *symbol, const char *health, const char *damage) {
     const char *name = symbol + strlen("PSPRITE_");
     const char *role = "OTHER";
     static const char *const objects[] = {
@@ -204,6 +204,15 @@ static const char *mzm_category(const char *symbol, const char *health, const ch
             }
         }
     }
+    return role;
+}
+
+const char *feb_mzm_sprite_kind(const char *symbol) {
+    return mzm_role(symbol, NULL, NULL);
+}
+
+static const char *mzm_category(const char *symbol, const char *health, const char *damage) {
+    const char *role = mzm_role(symbol, health, damage);
     if (!strcmp(role, "ENEMY")) return "Enemy / actor";
     if (!strcmp(role, "ITEM")) return "Item / pickup";
     if (!strcmp(role, "DOOR")) return "Door / gate sprite";
@@ -266,7 +275,7 @@ static void stat_line(Stats *stats, const char *line, size_t length) {
     }
 }
 
-static bool build_mzm(const char *repository, FusionJson *records, FebError *error) {
+bool feb_mzm_object_records(const char *repository, FusionJson *records, FebError *error) {
     char *header = read_source(repository, "third_party/mzm/include/constants/sprite.h", error);
     if (!header) return false;
     const char *start = strstr(header, "MAKE_ENUM(u8, PrimarySprite)");
@@ -410,7 +419,7 @@ typedef struct {
 } AsmSymbol;
 
 /* parse_aria_symbols() and decode_aria_enemy_names(). */
-static bool aria_enemy_names(const char *repository, char (*names)[96], FebError *error) {
+bool feb_aria_enemy_names(const char *repository, char (*names)[96], FebError *error) {
     FusionRom rom = {0};
     if (!open_aria(repository, &rom, error)) return false;
     char folder[FEB_PATH_CAPACITY];
@@ -547,8 +556,8 @@ static void lower_ascii(char *text) {
 }
 
 /* aria_entity_identity(): a truthful display name and category. */
-static void aria_identity(int64_t kind, int64_t id, char (*enemies)[96], char *name, size_t size,
-                          const char **category) {
+void feb_aria_entity_identity(int64_t kind, int64_t id, char (*enemies)[96], char *name,
+                              size_t size, const char **category) {
     if (kind == 1) {
         if (id >= 0 && id < ARIA_ENEMY_COUNT) snprintf(name, size, "%s", enemies[id]);
         else snprintf(name, size, "Unknown enemy 0x%02llX", (long long)id);
@@ -602,7 +611,7 @@ static bool build_aria(const char *repository, FusionJson *records, FebError *er
         return feb_fail(error, FEB_EXIT_OPERATION, "invalid Aria native world catalog");
     }
     static char enemies[ARIA_ENEMY_COUNT][96];
-    if (!aria_enemy_names(repository, enemies, error)) {
+    if (!feb_aria_enemy_names(repository, enemies, error)) {
         fusion_json_free(&world);
         return false;
     }
@@ -675,7 +684,7 @@ static bool build_aria(const char *repository, FusionJson *records, FebError *er
             }
         }
         const char *category = NULL;
-        aria_identity(group->kind, group->id, enemies, name, sizeof name, &category);
+        feb_aria_entity_identity(group->kind, group->id, enemies, name, sizeof name, &category);
         if (group->kind >= 0 && group->kind < (int64_t)COUNT(aria_kind_names))
             snprintf(kind_token, sizeof kind_token, "%s", aria_kind_names[group->kind]);
         else
@@ -757,7 +766,7 @@ bool feb_object_records(const char *repository, const char *world, FusionJson *r
                         FebError *error) {
     *records = fusion_json_array();
     bool ok = true;
-    if (!world || !strcmp(world, "zero_mission")) ok = build_mzm(repository, records, error);
+    if (!world || !strcmp(world, "zero_mission")) ok = feb_mzm_object_records(repository, records, error);
     if (ok && (!world || !strcmp(world, "aria"))) ok = build_aria(repository, records, error);
     if (!ok) {
         fusion_json_free(records);
@@ -845,7 +854,7 @@ bool feb_catalog_options(const char *repository, const char *world, const char *
         (strcmp(kind, "ENEMY") && strcmp(kind, "ITEM") && strcmp(kind, "OBJECT")))
         return feb_fail(error, FEB_EXIT_OPERATION, "unsupported native catalog scope");
     FusionJson records = fusion_json_array();
-    bool ok = aria ? build_aria(repository, &records, error) : build_mzm(repository, &records, error);
+    bool ok = aria ? build_aria(repository, &records, error) : feb_mzm_object_records(repository, &records, error);
     for (size_t index = 0; ok && index < records.count; ++index) {
         const FusionJson *record = &records.items[index];
         const char *token = text_of(record, "native_type");
@@ -1047,54 +1056,6 @@ static bool icon_page(const FusionRom *rom, uint32_t pointer, uint8_t *page) {
     return true;
 }
 
-static void put_be32(uint8_t *out, uint32_t value) {
-    out[0] = (uint8_t)(value >> 24);
-    out[1] = (uint8_t)(value >> 16);
-    out[2] = (uint8_t)(value >> 8);
-    out[3] = (uint8_t)value;
-}
-
-/* _png_rgba(): an RGBA PNG whose IDAT is zlib level 9, as zlib.compress(9). */
-static bool png_rgba(const uint8_t *pixels, uint8_t **png, size_t *size) {
-    uint8_t raw[16 * (1 + 16 * 4)];
-    for (int y = 0; y < 16; ++y) {
-        raw[y * 65] = 0;
-        memcpy(raw + y * 65 + 1, pixels + y * 64, 64);
-    }
-    uLongf compressed_size = compressBound(sizeof raw);
-    uint8_t *compressed = malloc(compressed_size);
-    if (!compressed || compress2(compressed, &compressed_size, raw, sizeof raw, 9) != Z_OK) {
-        free(compressed);
-        return false;
-    }
-    *size = 8 + (12 + 13) + (12 + compressed_size) + 12;
-    *png = malloc(*size);
-    if (!*png) {
-        free(compressed);
-        return false;
-    }
-    uint8_t *out = *png;
-    memcpy(out, "\x89PNG\r\n\x1a\n", 8);
-    size_t used = 8;
-    const struct {
-        const char *tag;
-        const uint8_t *body;
-        size_t length;
-    } chunks[3] = {{"IHDR", NULL, 13}, {"IDAT", compressed, compressed_size}, {"IEND", NULL, 0}};
-    uint8_t header[13] = {0, 0, 0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0};
-    for (int chunk = 0; chunk < 3; ++chunk) {
-        const uint8_t *body = chunk == 0 ? header : chunks[chunk].body;
-        put_be32(out + used, (uint32_t)chunks[chunk].length);
-        memcpy(out + used + 4, chunks[chunk].tag, 4);
-        if (chunks[chunk].length) memcpy(out + used + 8, body, chunks[chunk].length);
-        uLong crc = crc32(0, out + used + 4, (uInt)(4 + chunks[chunk].length));
-        put_be32(out + used + 8 + chunks[chunk].length, (uint32_t)crc);
-        used += 12 + chunks[chunk].length;
-    }
-    free(compressed);
-    return true;
-}
-
 static bool write_if_changed(const char *path, const uint8_t *data, size_t size, int *count) {
     char *current = NULL;
     size_t current_size = 0;
@@ -1165,7 +1126,7 @@ static bool item_thumbnails(const char *repository, const FusionRom *rom) {
             }
             uint8_t *png = NULL;
             size_t size = 0;
-            if (!png_rgba(pixels, &png, &size)) return false;
+            if (!feb_png_rgba(16, 16, pixels, &png, &size)) return false;
             char folder[FEB_PATH_CAPACITY + 16], path[FEB_PATH_CAPACITY + 64];
             snprintf(folder, sizeof folder, "%s/items", output);
             make_directory(folder);

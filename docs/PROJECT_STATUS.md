@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0564 - Port Aria's copy and delete menu controllers
+
+- Ported the native copy initialization/update pair (`sub_08007820` and
+  `sub_08007914`) and delete initialization/update pair (`sub_08008290` and
+  `sub_08007B8C`) into `aos_main_menu.c`. Their six-entry slot topology,
+  wrapped source/destination cursors, confirmation phases, occupied/empty
+  rules, companion-slot clearing and cancel results are deterministic typed
+  state; no native SRAM bytes are claimed or written.
+- `GameModeMainMenuUpdate` stage 6 now dispatches COPY and DELETE, while the
+  source-derived 0x46/0x48/0x49 alpha sequence returns either controller to
+  the operation selector. Tests cover copy, deletion, empty-slot rejection
+  and the complete cancel fade frame by frame.
+- The visible SDL launcher still owns its portable three-file operations, and
+  the native PLAY/CREATE controller is not ported, so both registry entries
+  remain partial. Source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+- Next: port `sub_0800744C`/`sub_080074C0` and the subsequent new/load result
+  stages through the final IN_GAME or INTRO_CUTSCENE fades, then adapt the
+  portable frontend to consume these typed lifecycle requests.
+
 ## Patch 0563 - Start Aria's native main-menu controller
 
 - Added `aos_main_menu.c` with the front half of

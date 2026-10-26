@@ -64,6 +64,68 @@ int main(void) {
     assert(aos_game_mode_main_menu_update(&mode, &menu, &input) == AOS_MODE_TITLE_SCREEN);
     assert(menu.cleanup_requested);
 
+    /* Native COPY uses the even entries as the three visible files and the
+     * adjacent odd entries as their companions. */
+    menu = (AosMainMenu){.slot_present_mask = (1u << 0) | (1u << 4)};
+    aos_main_menu_copy_init(&menu);
+    assert(menu.file_cursor == 0 && menu.source_slot == 0 &&
+           menu.destination_slot == 2);
+    input = (AosInput){.repeated_input = AOS_KEY_RIGHT};
+    aos_main_menu_copy_update(&menu, &input);
+    assert(menu.file_cursor == 4);
+    input.repeated_input = AOS_KEY_A;
+    aos_main_menu_copy_update(&menu, &input);
+    assert(menu.file_phase == 1 && menu.source_slot == 4 && menu.file_cursor == 2);
+    aos_main_menu_copy_update(&menu, &input);
+    assert(menu.file_phase == 2 && menu.destination_slot == 2 && menu.file_cursor == 1);
+    input.repeated_input = AOS_KEY_LEFT;
+    aos_main_menu_copy_update(&menu, &input);
+    assert(menu.file_cursor == 0);
+    input.repeated_input = AOS_KEY_A;
+    aos_main_menu_copy_update(&menu, &input);
+    assert(menu.file_phase == 0 && menu.copy_slots_requested &&
+           menu.source_slot == 4 && menu.destination_slot == 2 &&
+           (menu.slot_present_mask & (1u << 2)));
+
+    menu = (AosMainMenu){.slot_present_mask = (1u << 0) | (1u << 1) | (1u << 4)};
+    aos_main_menu_delete_init(&menu);
+    input = (AosInput){.repeated_input = AOS_KEY_A};
+    aos_main_menu_delete_update(&menu, &input);
+    assert(menu.file_phase == 1 && menu.source_slot == 0 && menu.file_cursor == 1);
+    input.repeated_input = AOS_KEY_LEFT;
+    aos_main_menu_delete_update(&menu, &input);
+    assert(menu.file_cursor == 0);
+    input.repeated_input = AOS_KEY_A;
+    aos_main_menu_delete_update(&menu, &input);
+    assert(menu.file_phase == 0 && menu.delete_slots_mask == 3 &&
+           !(menu.slot_present_mask & 3));
+    input.repeated_input = AOS_KEY_RIGHT;
+    aos_main_menu_delete_update(&menu, &input);
+    assert(menu.file_cursor == 2);
+    input.repeated_input = AOS_KEY_A;
+    aos_main_menu_delete_update(&menu, &input);
+    assert(menu.delete_rejected && menu.file_phase == 0);
+
+    /* Cancelling either file controller follows 0x46/0x48/0x49 back to the
+     * operation selector. */
+    menu = (AosMainMenu){.selected_slot = 2, .slot_present_mask = 1,
+                         .selected_slot_active = true};
+    aos_main_menu_delete_init(&menu);
+    mode = (AosGameMode){AOS_MODE_MAIN_MENU, 6, 0};
+    input = (AosInput){.repeated_input = AOS_KEY_B};
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 0x46);
+    input.repeated_input = 0;
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 0x48 && menu.alpha_blend == 0x0010);
+    for (unsigned frame = 0; frame < 9; ++frame)
+        aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 0x49 && menu.fade_counter == 16);
+    for (unsigned frame = 0; frame < 9; ++frame)
+        aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 3 && !menu.selected_slot_active &&
+           menu.alpha_blend == 0x0A06);
+
     puts("Aria native main-menu controller tests passed");
     return 0;
 }

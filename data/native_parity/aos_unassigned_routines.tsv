@@ -2686,14 +2686,10 @@ aos:c:src/code_08005894.c:sub_08007204	sub_08007204	menus	referrers			c_function
 aos:c:src/code_08005894.c:sub_0800737C	sub_0800737C	menus	referrers			c_function	0x0800737C	src/code_08005894.c	1139	2	2
 aos:c:src/code_08005894.c:sub_0800744C	sub_0800744C	menus	referrers			c_function	0x0800744C	src/code_08005894.c	1192	1	4
 aos:c:src/code_08005894.c:sub_080074C0	sub_080074C0	menus	referrers			c_function	0x080074C0	src/code_08005894.c	1216	1	11
-aos:c:src/code_08005894.c:sub_08007820	sub_08007820	menus	referrers			c_function	0x08007820	src/code_08005894.c	1440	1	4
-aos:c:src/code_08005894.c:sub_08007914	sub_08007914	menus	referrers			c_function	0x08007914	src/code_08005894.c	1497	1	11
-aos:c:src/code_08005894.c:sub_08007B8C	sub_08007B8C	menus	referrers			c_function	0x08007B8C	src/code_08005894.c	1653	1	11
 aos:c:src/code_08005894.c:sub_08007D84	sub_08007D84	unclassified				c_function	0x08007D84	src/code_08005894.c	1779	2	4
 aos:c:src/code_08005894.c:sub_08007EE0	sub_08007EE0	unclassified				c_function	0x08007EE0	src/code_08005894.c	1862	1	10
 aos:c:src/code_08005894.c:sub_08007FF0	sub_08007FF0	unclassified		technical	exclusive_callees	c_function	0x08007FF0	src/code_08005894.c	1905	1	7
 aos:c:src/code_08005894.c:sub_080081AC	sub_080081AC	unclassified				c_function	0x080081AC	src/code_08005894.c	1969	3	6
-aos:c:src/code_08005894.c:sub_08008290	sub_08008290	menus	referrers			c_function	0x08008290	src/code_08005894.c	2058	1	4
 aos:c:src/code_08005894.c:sub_08008300	sub_08008300	unclassified		technical	exclusive_callees	c_function	0x08008300	src/code_08005894.c	2083	3	2
 aos:c:src/code_08005894.c:sub_08008314	sub_08008314	unclassified				c_function	0x08008314	src/code_08005894.c	2094	2	2
 aos:c:src/code_08005894.c:sub_08008324	sub_08008324	menus	referrers			c_function	0x08008324	src/code_08005894.c	2105	1	2

@@ -103,7 +103,7 @@ enum {
 
 /* Equipped weapon as sub_08023368 returns it, with the body animations of
  * sub_080233BC (postures: stand, crouch, air, recover, crouch recover);
- * exported by scripts/aos_weapons.py. */
+ * exported by src/assets/aos/weapons.c. */
 typedef struct {
     uint8_t weapon_class;   /* record + 8; class 5 cannot attack */
     uint16_t flags;         /* record + 0x10: elements in bits 0-5; 0x2000 keeps air

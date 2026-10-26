@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0533 - Remove uncalled Python tools and stale script references
+
+- The user goal is now a project without Python. This batch removes the four
+  scripts nothing calls: `scripts/native_room_viewer_demo.py`,
+  `scripts/native_source_overlay.py` (the SDL viewers still accept a
+  `--native-source` overlay file, which no tool writes any more),
+  `scripts/native_enemy_sprite_cache.py` and
+  `scripts/audit_extracted_assets.py`, with their dedicated tests and the
+  matching cases of three shared test files.
+- Diagnostics that pointed to deleted scripts now name the rebuild task that
+  writes the missing data (`aria_world`, `raw_import`, `aria_objects`,
+  `aria_weapons`, `metroid_sprites`), and comments that cited removed Python
+  writers name the native sources.
+- No gameplay or fidelity status changed, no private assets were committed,
+  and audio remains untouched.
+- Next: port the GTK editor's backend (`scripts/editor_cli.py` and the
+  modules behind it) to C, then the repository tooling.
+
 ## Patch 0532 - Native raw import in production
 
 - Added `fusion_raw_import` and `fusion_importer --raw-import MZM_ROM AOS_ROM

@@ -395,10 +395,8 @@ facing and aim variants to exact catalogue keys. Runtime loading rejects an
 unknown key or duplicate selector. The runtime maps each controller pose to
 one action; the controller owns the native frame index and duration counter,
 so one-shot transitions end exactly when their native animation ends.
-`scripts/audit_extracted_assets.py` inventories the ignored tree, identifies
-exact duplicates by content hash, and records which historical top-level roots
-still have tracked consumers. Historical room/editor caches are migrated only
-with their consumers, never by an unverified bulk move.
+Historical room/editor caches are migrated only with their consumers, never
+by an unverified bulk move.
 
 `scripts/editor_backend.py` is the shared operation layer for headless commands
 and GTK subprocess actions. It owns draft rooms, global-map placements, project

@@ -398,7 +398,7 @@ bool fusion_mzm_render_metatile_sheet(
 void fusion_mzm_free_rendered_background(
     FusionMzmRenderedBackground *rendered);
 /* A top-down 32-bit BITMAPV4HEADER BMP with an alpha mask, as
- * scripts/mzm_bg_layers.py::bmp32 writes the sheets and text layers. */
+ * the export writes the tileset sheets and text layers. */
 bool fusion_mzm_serialize_bmp32(
     const FusionMzmRenderedBackground *rendered, FusionMzmBitmap *bitmap,
     char *error, size_t error_size);
@@ -414,8 +414,8 @@ bool fusion_mzm_select_bg12(
     FusionMzmCompositeBackground *composite,
     char *error, size_t error_size);
 /* The runtime export's background.bmp image
- * (scripts/mzm_runtime_room.py::produce): the older diagnostic renderer of
- * scripts/mzm_room_render.py. Only the tileset's own metatiles are drawn
+ * (fusion_mzm_export_runtime_rooms): the older diagnostic renderer the
+ * former Python export used. Only the tileset's own metatiles are drawn
  * (common blocks stay black), tiles come from the decompressed tileset
  * graphics at the character base inferred from BG1 (graphic_base: 192 or
  * 704), BG rows 3 to 15 use source palette rows 1 to 13 and color 0 is drawn
@@ -513,8 +513,7 @@ bool fusion_mzm_serialize_runtime_room_sprites(
     char *error, size_t error_size);
 /* blocks.tsv (metroidvania-mzm-blocks-v1): the block, tank and bomb-chain
  * tables of src/data/block_data.c read from bounded ELF objects, then each
- * raw Clipdata value's collision type and behavior, as
- * scripts/mzm_c_tables.py::block_table_lines writes them. */
+ * raw Clipdata value's collision type and behavior. */
 bool fusion_mzm_serialize_block_tables(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     const FusionMzmClipdataTables *tables, FusionMzmTextFile *file,
@@ -536,7 +535,7 @@ typedef struct {
     char skipped[FUSION_MZM_EXPORT_SKIP_CAPACITY][160];
 } FusionMzmExportSummary;
 
-/* Writes the runtime-room export of scripts/mzm_runtime_room.py --all into
+/* Writes the Zero Mission runtime-room export into
  * OUTPUT (the runtime rooms folder, created when missing): each exportable
  * room's <area>_<NNN>/ text layers, room.tsv and background.bmp, the used
  * tilesets/tileset_NN.bmp sheets, blocks.tsv and power_bomb.tsv on the first

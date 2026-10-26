@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T00:10:41+00:00",
+ "generated_at": "2026-10-26T00:18:11+00:00",
  "git": {
-  "commit": "29b854b",
+  "commit": "424da37",
   "branch": "main",
   "dirty": true
  },
@@ -15349,9 +15349,9 @@
    {
     "file": "tests/test_asset_layout.py",
     "module": "tests.test_asset_layout",
-    "test_count": 4,
+    "test_count": 2,
     "outcome": "passed",
-    "passed": 4
+    "passed": 2
    },
    {
     "file": "tests/test_authored_rooms.py",
@@ -15496,9 +15496,9 @@
    {
     "file": "tests/test_mzm_bg3_viewer_0127.py",
     "module": "tests.test_mzm_bg3_viewer_0127",
-    "test_count": 3,
+    "test_count": 2,
     "outcome": "passed",
-    "passed": 3
+    "passed": 2
    },
    {
     "file": "tests/test_mzm_c_tables.py",
@@ -15613,32 +15613,11 @@
     "passed": 17
    },
    {
-    "file": "tests/test_native_room_viewer_demo_0125c.py",
-    "module": "tests.test_native_room_viewer_demo_0125c",
-    "test_count": 1,
-    "outcome": "passed",
-    "passed": 1
-   },
-   {
-    "file": "tests/test_native_room_viewer_mode_0125d.py",
-    "module": "tests.test_native_room_viewer_mode_0125d",
-    "test_count": 2,
-    "outcome": "passed",
-    "passed": 2
-   },
-   {
     "file": "tests/test_native_rooms.py",
     "module": "tests.test_native_rooms",
     "test_count": 5,
     "outcome": "passed",
     "passed": 5
-   },
-   {
-    "file": "tests/test_native_source_overlay_0126b.py",
-    "module": "tests.test_native_source_overlay_0126b",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
    },
    {
     "file": "tests/test_native_workspace.py",
@@ -15748,9 +15727,9 @@
    {
     "file": "tests/test_room_sprite_overlays_0085.py",
     "module": "tests.test_room_sprite_overlays_0085",
-    "test_count": 4,
+    "test_count": 2,
     "outcome": "passed",
-    "passed": 4
+    "passed": 2
    },
    {
     "file": "tests/test_runtime_clipdata_id_0140.py",
@@ -15831,12 +15810,18 @@
    }
   ],
   "summary": {
-   "passed": 403,
+   "passed": 392,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "424da37",
+   "date": "2026-10-26",
+   "subject": "Import the raw ROM blocks natively",
+   "scope": "project"
+  },
   {
    "commit": "29b854b",
    "date": "2026-10-26",
@@ -16309,12 +16294,6 @@
    "commit": "c911697",
    "date": "2026-10-22",
    "subject": "Port the Aria dead crusader",
-   "scope": "project"
-  },
-  {
-   "commit": "4f22132",
-   "date": "2026-10-22",
-   "subject": "Port the Aria Mimic",
    "scope": "project"
   }
  ],

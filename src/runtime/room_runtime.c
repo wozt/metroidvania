@@ -867,10 +867,10 @@ static uint8_t runtime_area_index(const char *area) {
     return 0;
 }
 
-/* The native block tables (rooms/runtime/blocks.tsv, scripts/mzm_c_tables.py)
+/* The native block tables (rooms/runtime/blocks.tsv, src/assets/mzm/runtime_room.c)
  * and the collision type and behavior of every raw Clipdata value. */
 #define RUNTIME_BLOCK_TABLES "assets/extracted/metroid/rooms/runtime/blocks.tsv"
-/* sHaze_PowerBomb_WindowValuesPointers (scripts/mzm_c_tables.py). */
+/* sHaze_PowerBomb_WindowValuesPointers (src/assets/mzm/runtime_room.c). */
 #define RUNTIME_POWER_BOMB_TABLE "assets/extracted/metroid/rooms/runtime/power_bomb.tsv"
 static struct {
     bool ok;
@@ -1859,7 +1859,7 @@ static uint16_t runtime_suit_flash_color(const MzmRoomGfx *gfx) {
     return gfx->ppu.palette[9*16+index];
 }
 
-/* Shared content-addressed sprite libraries (scripts/sprite_library.py). */
+/* Shared content-addressed sprite libraries (src/assets/core/sprite_library.c). */
 #define RUNTIME_LIBRARY_MAX 32768
 #define RUNTIME_LIBRARY_FRAME_MAX 256
 #define RUNTIME_ANIMATION_MAP_MAX 2048
@@ -2972,7 +2972,7 @@ static bool runtime_sprite_tables_open(RuntimeSprites *sprites, const char *path
     for (size_t i = 0; i < sizeof ai_tables / sizeof ai_tables[0]; ++i)
         if (!found[i]) {
             all_found = false;
-            fprintf(stderr, "Zero Mission sprite tables: %s missing (python3 -m scripts.mzm_sprites)\n",
+            fprintf(stderr, "Zero Mission sprite tables: %s missing (python3 -m scripts.rebuild --task metroid_sprites)\n",
                     ai_tables[i].name);
         }
     return ok && random_count == 32 && falling_count == 16 && all_found;
@@ -3048,7 +3048,7 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
     }
     if (!sprites->banner_ok)
         fprintf(stderr, "Zero Mission message banner disabled until re-exported "
-                "(python3 -m scripts.mzm_sprites)\n");
+                "(python3 -m scripts.rebuild --task metroid_sprites)\n");
     /* Drops are required (every death may leave one); an enemy family with
      * a missing table is disabled alone, with the diagnostic above. */
     for (int f = 0; f < MZM_SPRITE_FAMILIES; ++f) {
@@ -3059,7 +3059,7 @@ static bool runtime_sprite_kinds_open(RuntimeSprites *sprites, RuntimeLibrary *l
         if (!sprites->family_ok[f] && f == MZM_FAMILY_DROP) return false;
         if (!sprites->family_ok[f])
             fprintf(stderr, "Zero Mission %s sprites disabled until re-exported "
-                    "(python3 -m scripts.mzm_sprites)\n", family->library_sprites[0]);
+                    "(python3 -m scripts.rebuild --task metroid_sprites)\n", family->library_sprites[0]);
     }
     return true;
 }
@@ -4946,7 +4946,7 @@ int main(int argc, char **argv) {
                        runtime_oam_bounds_open(&sprite_library, RUNTIME_SPRITE_OAM_BOUNDS) &&
                        runtime_sprite_kinds_open(&sprites, &sprite_library, &projectile_library);
     if (!sprites.kinds_ok)
-        fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.mzm_sprites\n");
+        fprintf(stderr, "No Zero Mission sprites: python3 -m scripts.rebuild --task metroid_sprites\n");
     runtime_sprites_spawn(&sprites, room, -1);
     gba_input_init(&gamepad,&pad_map);
     MzmCollision collision={room,runtime_collision_blocked,runtime_collision_slope,

@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from scripts import project_room_entities as pe
-from scripts import native_enemy_sprite_cache as sprites
 
 
 class SpriteOverlay0085(unittest.TestCase):
@@ -24,30 +23,6 @@ class SpriteOverlay0085(unittest.TestCase):
                 self.assertEqual(pe.main(args), 0)
         self.assertEqual(out.getvalue().splitlines(),
                          ['1\tENEMY\t16\t32\tOriginal enemy\tunassigned\t-1'])
-
-    def test_png_validation_and_safe_native_ids(self):
-        from scripts.native_sprite_thumbnails import _png_rgba
-        rgba = bytes([0, 0, 0, 0] * 16 * 16)
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            candidate = root / 'sprite.png'
-            candidate.write_bytes(_png_rgba(16, 16, rgba))
-            dest = sprites.install('aria', 'enemy:07', candidate, root / 'cache')
-            self.assertTrue(dest.is_file())
-            self.assertEqual(dest, sprites.install('aria', 'enemy:07', candidate, root / 'cache'))
-            for invalid in ('enemy:71', 'enemy:../../', 'enemy:GG', 'pickup:03'):
-                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
-                    sprites.destination('aria', invalid, root / 'cache')
-            candidate.write_bytes(b'not a png')
-            with self.assertRaises(ValueError):
-                sprites.install('aria', 'enemy:07', candidate, root / 'cache')
-            self.assertTrue(dest.is_file())
-
-    def test_original_assets_are_not_misclassified(self):
-        with self.assertRaises(ValueError):
-            sprites.destination('mzm', 'PSPRITE_MISSILE_TANK')
-        self.assertEqual(sprites.destination('mzm', 'PSPRITE_ZOOMER_RED', Path('test')),
-                         Path('test/mzm/PSPRITE_ZOOMER_RED.png'))
 
     def test_source_contract_overlay_and_legend(self):
         src = Path('editor/native_workspace.c').read_text()

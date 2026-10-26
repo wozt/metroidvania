@@ -620,7 +620,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
 static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
                        long frame_count, int cam_x, int cam_y);
 
-/* Object sequences of scripts/aos_object_sprites.py: WoodenDoor/style_N
+/* Object sequences of src/assets/aos/objects.c: WoodenDoor/style_N
  * (the door frame under each step of its palette cycle). */
 typedef struct {
     AriaFrame frames[DOOR_STYLES][MAX_FRAMES];
@@ -1205,7 +1205,7 @@ static uint16_t player_buttons(const GbaInput *gamepad) {
     return held;
 }
 
-/* weapons.tsv of scripts/aos_weapons.py: "none" is the unarmed record. */
+/* weapons.tsv of src/assets/aos/weapons.c: "none" is the unarmed record. */
 static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
     FILE *f = fopen(path, "rb");
     if (!f) { perror(path); return false; }
@@ -1444,7 +1444,7 @@ int main(int argc, char **argv) {
     static AriaObjects objects;
     bool objects_ok = load_objects(DEFAULT_OBJECTS, &objects, renderer);
     bool enemies_ok = objects_ok && load_enemy_data(&objects);
-    if (!enemies_ok) fprintf(stderr, "No object library: python3 -m scripts.aos_object_sprites\n");
+    if (!enemies_ok) fprintf(stderr, "No object library: python3 -m scripts.rebuild --task aria_objects\n");
     int cam_x = 0, cam_y = 0;
 
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
@@ -1452,7 +1452,7 @@ int main(int argc, char **argv) {
     soma.hp = (int16_t)player_stats.hp;
     soma.max_hp = (int16_t)player_stats.max_hp;
     if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
-        fprintf(stderr, "Export the weapons first: python3 -m scripts.aos_weapons\n");
+        fprintf(stderr, "Export the weapons first: python3 -m scripts.rebuild --task aria_weapons\n");
         goto cleanup;
     }
     /* Only the class 0, 2 and 3 entity (sub_080221CC) is ported. */

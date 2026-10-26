@@ -46,7 +46,6 @@ Import private assets and structural metadata in one incremental pass:
 ```sh
 python3 -m scripts.rebuild --assets          # or --all, with the native tasks
 python3 -m scripts.rebuild --list            # tasks, dependencies, required files
-python3 -m scripts.audit_extracted_assets --write
 ```
 
 `--assets` verifies each ROM and writes both private identity manifests in

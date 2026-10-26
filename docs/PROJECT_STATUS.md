@@ -2,6 +2,32 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0543 - Native editor catalog and workroom commands
+
+- Ported the native object catalog to C (`src/editor_backend/object_catalog.c`):
+  the Zero Mission sprite records from `sprite.h`/`sprite_data.c`, the Aria
+  records from the native world catalog with enemy names resolved through the
+  ROM constructor table and the pinned `cvaos` symbols, the per-role catalog
+  options, the ROM item names and the 16x16 item thumbnails (zlib level 9,
+  byte-identical PNGs).
+- `fusion_editor_cli` now runs `list-assets`, `entity-catalog`,
+  `entity-create`, `entity-update` and `entity-assign` natively, including the
+  Aria item settings and ROM item labels. `fusion_editor_backend` links
+  `fusion_assets` (verified ROM reading) and zlib.
+- Every `list-assets` and `entity-catalog` world/kind output is identical to
+  the Python backend on the real data, and the thumbnails are byte-identical;
+  the room parity test gained 32 catalog and entity mutation cases with
+  identical outputs and file trees.
+- `layer-list`, `tile-get`, `tile-set` and `tile-fill` also run natively
+  (`src/editor_backend/workspace.c`), calling the GTK editor's native-map core
+  directly instead of the `fusion_native_map_cli` subprocess; `native_map.c`
+  moved into `fusion_editor_backend`. A new read-only parity test
+  (`tests/test_editor_cli_native_workspace_parity.py`) covers them with dry
+  runs, and a real `tile-fill` override was checked byte-identical by hand.
+- No gameplay status changed and no private assets were committed.
+- Next: `room-open`, `room-render`, the audits, `room-export` and the world
+  overview, then the batch mode and the removal of the Python editor backend.
+
 ## Patch 0542 - Native editor draft and placement mutations
 
 - `fusion_editor_cli` now runs `room-create`, `room-place`, `room-move` and

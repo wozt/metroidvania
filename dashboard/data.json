@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T04:37:19+00:00",
+ "generated_at": "2026-10-26T04:56:48+00:00",
  "git": {
-  "commit": "b3cd5c6",
+  "commit": "78bd0f9",
   "branch": "main",
   "dirty": true
  },
@@ -13099,20 +13099,23 @@
    "fidelity": "n/a",
    "local_sources": [
     "editor/object_catalog.c",
+    "src/editor_backend/object_catalog.c",
     "scripts/object_catalog.py"
    ],
    "tests": [
     "tests/test_object_catalog.py",
-    "tests/test_object_catalog_ui.py"
+    "tests/test_object_catalog_ui.py",
+    "tests/test_editor_cli_native_room_parity.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "",
+   "limitations": "The Python catalog remains for the batch mode and the Python tests until they are ported.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_object_catalog.py",
-     "tests/test_object_catalog_ui.py"
+     "tests/test_object_catalog_ui.py",
+     "tests/test_editor_cli_native_room_parity.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13132,6 +13135,12 @@
      },
      {
       "test": "tests/test_object_catalog_ui.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_editor_cli_native_room_parity.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -13231,10 +13240,12 @@
    "fidelity": "n/a",
    "local_sources": [
     "editor/room_browser.c",
-    "src/core/native_map.c"
+    "src/core/native_map.c",
+    "src/editor_backend/workspace.c"
    ],
    "tests": [
-    "tests/test_native_rooms.py"
+    "tests/test_native_rooms.py",
+    "tests/test_editor_cli_native_workspace_parity.py"
    ],
    "dependencies": [],
    "native_routines": [],
@@ -13242,7 +13253,8 @@
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_native_rooms.py"
+     "tests/test_native_rooms.py",
+     "tests/test_editor_cli_native_workspace_parity.py"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13256,6 +13268,12 @@
     "tests": [
      {
       "test": "tests/test_native_rooms.py",
+      "kind": "python",
+      "registered": true,
+      "outcome": "passed"
+     },
+     {
+      "test": "tests/test_editor_cli_native_workspace_parity.py",
       "kind": "python",
       "registered": true,
       "outcome": "passed"
@@ -15498,6 +15516,13 @@
     "passed": 1
    },
    {
+    "file": "tests/test_editor_cli_native_workspace_parity.py",
+    "module": "tests.test_editor_cli_native_workspace_parity",
+    "test_count": 2,
+    "outcome": "passed",
+    "passed": 2
+   },
+   {
     "file": "tests/test_editor_tab_layers.py",
     "module": "tests.test_editor_tab_layers",
     "test_count": 4,
@@ -15870,12 +15895,18 @@
    }
   ],
   "summary": {
-   "passed": 393,
+   "passed": 395,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "78bd0f9",
+   "date": "2026-10-26",
+   "subject": "Run the editor draft and placement mutations natively",
+   "scope": "project"
+  },
   {
    "commit": "b3cd5c6",
    "date": "2026-10-26",
@@ -16348,12 +16379,6 @@
    "commit": "e124fa9",
    "date": "2026-10-23",
    "subject": "Connect ten Aria enemy identities",
-   "scope": "project"
-  },
-  {
-   "commit": "74ca309",
-   "date": "2026-10-23",
-   "subject": "Port Nemesis delayed effect history",
    "scope": "project"
   }
  ],

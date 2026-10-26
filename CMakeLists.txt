@@ -32,13 +32,16 @@ add_library(fusion_editor_backend STATIC
     src/editor_backend/story.c
     src/editor_backend/common.c
     src/editor_backend/drafts.c
+    src/editor_backend/object_catalog.c
+    src/editor_backend/workspace.c
+    src/core/native_map.c
 )
-target_link_libraries(fusion_editor_backend PUBLIC fusion_json)
+find_package(ZLIB REQUIRED)
+target_link_libraries(fusion_editor_backend PUBLIC fusion_json PRIVATE fusion_assets ZLIB::ZLIB)
 fusion_enable_warnings(fusion_editor_backend)
 
 add_library(fusion_native_editor_core STATIC
     src/core/editor_cli_launcher.c
-    src/core/native_map.c
     src/core/native_selection.c
 )
 target_include_directories(fusion_native_editor_core PUBLIC include)

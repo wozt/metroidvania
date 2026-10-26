@@ -8,6 +8,8 @@
 #include "commands_room.h"
 #include "common.h"
 #include "drafts.h"
+#include "object_catalog.h"
+#include "workspace.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -257,11 +259,12 @@ static const char *const mutating_commands[] = {
 static const char *const native_commands[] = {
     "capabilities", "project-info", "list-worlds", "list-areas", "list-rooms",
     "room-list", "room-inspect", "room-validate", "placement-list", "room-create",
-    "room-place", "room-move", "room-unplace",
+    "room-place", "room-move", "room-unplace", "list-assets", "entity-catalog",
 };
 
 bool feb_is_native(const char *command) {
-    if (command && feb_is_room_command(command)) return true;
+    if (command && (feb_is_room_command(command) || feb_is_workspace_command(command)))
+        return true;
     for (size_t index = 0; command && index < COUNT(native_commands); ++index)
         if (!strcmp(native_commands[index], command)) return true;
     return false;
@@ -658,6 +661,48 @@ static bool command_room_unplace(const char *root, const FusionJson *options, bo
     return true;
 }
 
+static bool option_copy(const FusionJson *options, const char *key, FusionJson *copy) {
+    const FusionJson *value = feb_option(options, key);
+    if (!value) {
+        *copy = fusion_json_null();
+        return true;
+    }
+    return fusion_json_clone(value, copy);
+}
+
+static bool command_list_assets(const char *repository, const FusionJson *options,
+                                FusionJson *data, FebError *error) {
+    const FusionJson *value = feb_option(options, "world");
+    const char *world = NULL;
+    if (value && value->kind != FUSION_JSON_NULL && !feb_world(value, &world, error)) return false;
+    FusionJson records, copy;
+    if (!feb_object_records(repository, world, &records, error)) return false;
+    int64_t count = (int64_t)records.count;
+    if (!option_copy(options, "world", &copy) || !feb_put(data, "world", copy) ||
+        !feb_put_string(data, "kind", "native_object_metadata") ||
+        !feb_put_int(data, "count", count) || !feb_put(data, "assets", records))
+        return feb_oom(error);
+    return true;
+}
+
+static bool command_entity_catalog(const char *repository, const FusionJson *options,
+                                   FusionJson *data, FebError *error) {
+    const char *world = NULL;
+    if (!feb_world(feb_option(options, "world"), &world, error)) return false;
+    const FusionJson *kind = feb_option(options, "kind");
+    FusionJson records, copy;
+    if (!feb_editor_catalog_options(repository, !strcmp(world, "zero_mission") ? "mzm" : "aria",
+                                    kind && kind->kind == FUSION_JSON_STRING ? kind->string : NULL,
+                                    &records, error))
+        return false;
+    int64_t count = (int64_t)records.count;
+    if (!feb_put_string(data, "world", world) || !option_copy(options, "kind", &copy) ||
+        !feb_put(data, "kind", copy) || !feb_put_int(data, "count", count) ||
+        !feb_put(data, "definitions", records))
+        return feb_oom(error);
+    return true;
+}
+
 bool feb_execute(const char *command, const FusionJson *options, const char *root_option,
                  const char *repository, bool dry_run, FusionJson *data, FebError *error) {
     *data = fusion_json_object();
@@ -693,6 +738,12 @@ bool feb_execute(const char *command, const FusionJson *options, const char *roo
         ok = command_room_place(root, options, dry_run, data, error);
     else if (!strcmp(command, "room-unplace"))
         ok = command_room_unplace(root, options, dry_run, data, error);
+    else if (!strcmp(command, "list-assets"))
+        ok = command_list_assets(repository, options, data, error);
+    else if (!strcmp(command, "entity-catalog"))
+        ok = command_entity_catalog(repository, options, data, error);
+    else if (feb_is_workspace_command(command))
+        ok = feb_workspace_command(command, root, repository, options, dry_run, data, error);
     else if (feb_is_room_command(command))
         ok = feb_room_command(command, options, root, repository, dry_run, data, error);
     else ok = feb_fail(error, FEB_EXIT_UNAVAILABLE, "%s is not ported to the native backend",

@@ -2,6 +2,8 @@
 #define _DEFAULT_SOURCE
 #include "project_room.h"
 
+#include "object_catalog.h"
+
 #include <dirent.h>
 #include <limits.h>
 #include <stdio.h>
@@ -1095,6 +1097,178 @@ bool feb_entity_move(FusionJson *document, int64_t id, int64_t x, int64_t y, Feb
         return feb_fail(error, FEB_EXIT_OPERATION, "unknown project entity id");
     }
     if (!feb_put_int(entity, "x", x) || !feb_put_int(entity, "y", y)) {
+        fusion_json_free(&candidate);
+        return feb_oom(error);
+    }
+    return commit(document, &candidate, error);
+}
+
+/* NATIVE_TYPE: [A-Za-z0-9_.:-]{1,64}. */
+static bool native_token(const FusionJson *value) {
+    if (!value || value->kind != FUSION_JSON_STRING) return false;
+    size_t length = strlen(value->string);
+    if (length < 1 || length > 64) return false;
+    for (const char *c = value->string; *c; ++c)
+        if (!((*c >= 'A' && *c <= 'Z') || (*c >= 'a' && *c <= 'z') || (*c >= '0' && *c <= '9') ||
+              strchr("_.:-", *c)))
+            return false;
+    return true;
+}
+
+bool feb_item_settings(const FusionJson *native_type, int64_t item_id, int64_t parameter_0,
+                       int64_t parameter_1, int64_t flags, FusionJson *settings,
+                       FebError *error) {
+    *settings = fusion_json_object();
+    if (!feb_put_int(settings, "item_id", item_id) ||
+        !feb_put_int(settings, "parameter_0", parameter_0) ||
+        !feb_put_int(settings, "parameter_1", parameter_1) || !feb_put_int(settings, "flags", flags)) {
+        fusion_json_free(settings);
+        return feb_oom(error);
+    }
+    if (!item_settings_valid(native_type, settings, error)) {
+        fusion_json_free(settings);
+        return false;
+    }
+    return true;
+}
+
+/* The catalog definition of ``token`` for a role; ``name`` receives it. */
+static bool catalog_entry(const char *repository, const char *world, const FusionJson *kind,
+                          const char *token, char *name, size_t size, bool *found,
+                          FebError *error) {
+    FusionJson options;
+    *found = false;
+    if (!feb_catalog_options(repository, world,
+                             kind && kind->kind == FUSION_JSON_STRING ? kind->string : NULL,
+                             &options, error))
+        return false;
+    for (size_t index = 0; index < options.count; ++index) {
+        const FusionJson *value = fusion_json_member(&options.items[index], "native_type");
+        if (strcmp(value->string, token)) continue;
+        snprintf(name, size, "%s", fusion_json_member(&options.items[index], "name")->string);
+        *found = true;
+        break;
+    }
+    fusion_json_free(&options);
+    return true;
+}
+
+bool feb_entity_create(FusionJson *document, const char *repository, const FusionJson *kind,
+                       int64_t x, int64_t y, const FusionJson *label,
+                       const FusionJson *native_type, FusionJson *settings, FusionJson *created,
+                       FebError *error) {
+    if (!validate_self(document, error)) return false;
+    if (!native_token(native_type))
+        return feb_fail(error, FEB_EXIT_OPERATION, "invalid native type token");
+    if (strcmp(native_type->string, "unassigned")) {
+        char name[256];
+        bool found = false;
+        if (!catalog_entry(repository, fusion_json_member(document, "world")->string, kind,
+                           native_type->string, name, sizeof name, &found, error))
+            return false;
+        if (!found)
+            return feb_fail(error, FEB_EXIT_OPERATION,
+                            "native constructor absent or incompatible with world/role");
+    }
+    if (fusion_json_member(document, "entities")->count >= FEB_MAX_ENTITIES)
+        return feb_fail(error, FEB_EXIT_OPERATION, "project entity limit reached");
+    FusionJson entry = fusion_json_object(), copy;
+    bool ok = fusion_json_clone(kind ? kind : &(FusionJson){.kind = FUSION_JSON_NULL}, &copy) &&
+              fusion_json_set(&entry, "kind", copy) && feb_put_int(&entry, "x", x) &&
+              feb_put_int(&entry, "y", y) &&
+              fusion_json_clone(label ? label : &(FusionJson){.kind = FUSION_JSON_NULL}, &copy) &&
+              fusion_json_set(&entry, "label", copy) &&
+              fusion_json_clone(native_type, &copy) && fusion_json_set(&entry, "native_type", copy);
+    if (ok && settings) {
+        ok = fusion_json_set(&entry, "settings", *settings);
+        *settings = fusion_json_null();
+    }
+    if (!ok) {
+        fusion_json_free(&entry);
+        return feb_oom(error);
+    }
+    return feb_room_append(document, "entities", "next_id", FEB_MAX_ENTITIES,
+                           "project entity limit reached", entry, created, error);
+}
+
+bool feb_entity_assign(FusionJson *document, const char *repository, int64_t id,
+                       const FusionJson *native_type, const FusionJson *settings,
+                       FebError *error) {
+    if (!validate_self(document, error)) return false;
+    const FusionJson *old = find_item(document, "entities", id);
+    if (!old) return feb_fail(error, FEB_EXIT_OPERATION, "unknown project entity id");
+    const char *world = fusion_json_member(document, "world")->string;
+    const FusionJson *kind = fusion_json_member(old, "kind");
+    char name[256] = "";
+    FusionJson label;
+    bool unassigned = native_type && native_type->kind == FUSION_JSON_STRING &&
+                      !strcmp(native_type->string, "unassigned");
+    if (unassigned) {
+        if (!fusion_json_clone(fusion_json_member(old, "label"), &label)) return feb_oom(error);
+    } else {
+        bool found = false;
+        if (!catalog_entry(repository, world, kind,
+                           native_type && native_type->kind == FUSION_JSON_STRING
+                               ? native_type->string : "",
+                           name, sizeof name, &found, error))
+            return false;
+        if (!found || !native_type || native_type->kind != FUSION_JSON_STRING)
+            return feb_fail(error, FEB_EXIT_OPERATION,
+                            "native type missing or category does not match this game");
+        if (!strcmp(world, "aria") && !strcmp(kind->string, "ITEM") && settings &&
+            settings->count) {
+            const char *colon = strrchr(native_type->string, ':');
+            char *end = NULL;
+            long subtype = colon ? strtol(colon + 1, &end, 16) : -1;
+            char item[256];
+            if (colon && colon[1] && !*end &&
+                feb_aria_item_name(repository, subtype,
+                                   fusion_json_member(settings, "item_id")->integer, item,
+                                   sizeof item))
+                snprintf(name, sizeof name, "%s", item);
+        }
+        label = fusion_json_string(name);
+        if (!label.string) return feb_oom(error);
+    }
+    FusionJson candidate;
+    if (!fusion_json_clone(document, &candidate)) {
+        fusion_json_free(&label);
+        return feb_oom(error);
+    }
+    FusionJson *entity = find_item(&candidate, "entities", id);
+    bool changed_type = !fusion_json_equal(fusion_json_member(entity, "native_type"), native_type);
+    FusionJson type_copy, settings_copy;
+    bool ok = fusion_json_clone(native_type, &type_copy) &&
+              fusion_json_set(entity, "native_type", type_copy) &&
+              fusion_json_set(entity, "label", label);
+    if (ok && settings)
+        ok = fusion_json_clone(settings, &settings_copy) &&
+             fusion_json_set(entity, "settings", settings_copy);
+    else if (ok && changed_type)
+        fusion_json_remove(entity, "settings");
+    if (!ok) {
+        fusion_json_free(&candidate);
+        return feb_oom(error);
+    }
+    return commit(document, &candidate, error);
+}
+
+bool feb_entity_update(FusionJson *document, const char *repository, int64_t id, int64_t x,
+                       int64_t y, const FusionJson *label, const FusionJson *native_type,
+                       const FusionJson *settings, FebError *error) {
+    if (!validate_self(document, error)) return false;
+    if (!find_item(document, "entities", id))
+        return feb_fail(error, FEB_EXIT_OPERATION, "unknown project entity id");
+    FusionJson candidate;
+    if (!fusion_json_clone(document, &candidate)) return feb_oom(error);
+    if (!feb_entity_assign(&candidate, repository, id, native_type, settings, error)) {
+        fusion_json_free(&candidate);
+        return false;
+    }
+    FusionJson *entity = find_item(&candidate, "entities", id), copy;
+    if (!feb_put_int(entity, "x", x) || !feb_put_int(entity, "y", y) ||
+        !fusion_json_clone(label ? label : &(FusionJson){.kind = FUSION_JSON_NULL}, &copy) ||
+        !fusion_json_set(entity, "label", copy)) {
         fusion_json_free(&candidate);
         return feb_oom(error);
     }

@@ -28,8 +28,8 @@ static const char *const room_commands[] = {
     "event-delete", "door-list", "door-target-list", "connection-list", "door-return-plan",
     "door-inspect", "door-create", "door-adopt", "door-update", "door-delete", "door-link",
     "transition-list", "transition-create", "transition-update", "transition-delete",
-    "transition-validate", "entity-list", "entity-inspect", "entity-move", "entity-delete",
-    "entity-item-settings", "story-validate", "story-save", "project-validate",
+    "transition-validate", "entity-list", "entity-inspect", "entity-create", "entity-move",
+    "entity-update", "entity-delete", "entity-assign", "entity-item-settings", "story-validate", "story-save", "project-validate",
 };
 
 bool feb_is_room_command(const char *command) {
@@ -1152,6 +1152,77 @@ static bool command_transition(const char *command, const char *root, const char
     return persisted(root, document, data, dry_run, true, error);
 }
 
+static const FusionJson *given(const FusionJson *options, const char *key) {
+    const FusionJson *value = feb_option(options, key);
+    return value && value->kind != FUSION_JSON_NULL ? value : NULL;
+}
+
+/* _entity_settings(): NULL settings when no item field is given. */
+static bool entity_settings(const FusionJson *options, const FusionJson *native_type,
+                            FusionJson *settings, bool *present, FebError *error) {
+    static const char *const keys[] = {"item_id", "parameter_0", "parameter_1", "flags"};
+    static const int64_t limits[] = {65535, 65535, 65535, 255};
+    size_t count = 0;
+    for (size_t index = 0; index < COUNT(keys); ++index)
+        if (given(options, keys[index])) ++count;
+    *present = count != 0;
+    if (!count) return true;
+    if (count != COUNT(keys))
+        return feb_fail(error, FEB_EXIT_OPERATION,
+                        "item settings require item_id, parameter_0, parameter_1 and flags");
+    int64_t values[4];
+    for (size_t index = 0; index < COUNT(keys); ++index)
+        if (!feb_integer(given(options, keys[index]), keys[index], 0, limits[index], &values[index],
+                         error))
+            return false;
+    return feb_item_settings(native_type, values[0], values[1], values[2], values[3], settings,
+                             error);
+}
+
+static const FusionJson *entity_by_id(const FusionJson *document, int64_t id) {
+    const FusionJson *list = fusion_json_member(document, "entities");
+    for (size_t index = 0; index < list->count; ++index)
+        if (integer(&list->items[index], "id") == id) return &list->items[index];
+    return NULL;
+}
+
+/* entity-create, entity-update and entity-assign. */
+static bool command_entity_catalog(const char *command, const char *root, const char *repository,
+                                   const FusionJson *options, FusionJson *document, bool dry_run,
+                                   FusionJson *data, FebError *error) {
+    bool create = !strcmp(command, "entity-create");
+    int64_t id = 0, x = 0, y = 0;
+    if (!create && !feb_integer(feb_option(options, "id"), "id", 1, 999999, &id, error))
+        return false;
+    FusionJson unassigned = fusion_json_string("unassigned");
+    const FusionJson *native_type = create ? feb_option(options, "native_type")
+                                           : given(options, "native_type");
+    if (create && !native_type) native_type = &unassigned;
+    FusionJson settings = fusion_json_null(), changed = fusion_json_null();
+    bool present = false, ok = entity_settings(options, native_type, &settings, &present, error);
+    if (ok && strcmp(command, "entity-assign"))
+        ok = feb_integer(feb_option(options, "x"), "x", 0, 16383, &x, error) &&
+             feb_integer(feb_option(options, "y"), "y", 0, 16383, &y, error);
+    if (ok && create) {
+        ok = feb_entity_create(document, repository, given(options, "kind"), x, y,
+                               given(options, "label"), native_type, present ? &settings : NULL,
+                               &changed, error);
+    } else if (ok) {
+        ok = !strcmp(command, "entity-update")
+            ? feb_entity_update(document, repository, id, x, y, given(options, "label"),
+                                native_type, present ? &settings : NULL, error)
+            : feb_entity_assign(document, repository, id, native_type, present ? &settings : NULL,
+                                error);
+        ok = ok && (fusion_json_clone(entity_by_id(document, id), &changed) || feb_oom(error));
+    }
+    fusion_json_free(&settings);
+    fusion_json_free(&unassigned);
+    if (!ok) return false;
+    if (!feb_put(data, "entity", changed) || !feb_put_bool(data, "persisted", false))
+        return feb_oom(error);
+    return persisted(root, document, data, dry_run, true, error);
+}
+
 static bool command_entity(const char *command, const char *root, const FusionJson *options,
                            FusionJson *document, const FebRoomScope *scope, bool dry_run,
                            FusionJson *data, FebError *error) {
@@ -1648,6 +1719,10 @@ bool feb_room_command(const char *command, const FusionJson *options, const char
     else if (!strncmp(command, "transition-", 11) || !strcmp(command, "door-link"))
         ok = command_transition(command, root, repository, options, &document, dry_run, data,
                                 error);
+    else if (!strcmp(command, "entity-create") || !strcmp(command, "entity-update") ||
+             !strcmp(command, "entity-assign"))
+        ok = command_entity_catalog(command, root, repository, options, &document, dry_run, data,
+                                    error);
     else
         ok = command_entity(command, root, options, &document, &scope, dry_run, data, error);
     fusion_json_free(&document);

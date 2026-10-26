@@ -58,6 +58,23 @@ bool feb_collision_capabilities(const char *world, FusionJson *result);
 
 /* The in-memory operations; each validates the document before and after. */
 bool feb_entity_move(FusionJson *document, int64_t id, int64_t x, int64_t y, FebError *error);
+/* item_settings(): the validated private Aria pickup fields. */
+bool feb_item_settings(const FusionJson *native_type, int64_t item_id, int64_t parameter_0,
+                       int64_t parameter_1, int64_t flags, FusionJson *settings,
+                       FebError *error);
+/* create(), assign() and update() against the native catalog of
+ * ``repository``; ``settings`` may be NULL. create() takes ownership of
+ * ``settings`` and returns the stored entity in ``created``. */
+bool feb_entity_create(FusionJson *document, const char *repository, const FusionJson *kind,
+                       int64_t x, int64_t y, const FusionJson *label,
+                       const FusionJson *native_type, FusionJson *settings, FusionJson *created,
+                       FebError *error);
+bool feb_entity_assign(FusionJson *document, const char *repository, int64_t id,
+                       const FusionJson *native_type, const FusionJson *settings,
+                       FebError *error);
+bool feb_entity_update(FusionJson *document, const char *repository, int64_t id, int64_t x,
+                       int64_t y, const FusionJson *label, const FusionJson *native_type,
+                       const FusionJson *settings, FebError *error);
 bool feb_entity_delete(FusionJson *document, int64_t id, FebError *error);
 bool feb_collision_get(const FusionJson *document, int64_t x, int64_t y, const char **type,
                        FebError *error);

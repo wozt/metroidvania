@@ -361,6 +361,40 @@ static bool tsv_end(Text *text, FebError *error) {
 /* The project-room TSV listings of _tsv_result(). */
 static bool tsv_room_result(const char *command, const FusionJson *data, Text *text,
                             FebError *error) {
+    if (!strcmp(command, "entity-catalog")) {
+        const FusionJson *items = fusion_json_member(data, "definitions");
+        FusionJson none = fusion_json_int(-1);
+        for (size_t index = 0; index < items->count; ++index) {
+            const FusionJson *item = &items->items[index];
+            const FusionJson *item_id = fusion_json_member(item, "item_id");
+            if (!tsv_field(text, fusion_json_member(item, "native_type"), true, error) ||
+                !tsv_field(text, fusion_json_member(item, "name"), false, error) ||
+                !tsv_field(text, fusion_json_member(item, "category"), false, error) ||
+                !tsv_field(text, item_id ? item_id : &none, false, error) || !tsv_end(text, error))
+                return false;
+        }
+        return true;
+    }
+    if (!strcmp(command, "list-assets")) {
+        static const char *const keys[] = {"world", "native_id", "native_type", "name",
+                                           "category", "summary"};
+        const FusionJson *items = fusion_json_member(data, "assets");
+        FusionJson dash = {.kind = FUSION_JSON_STRING, .string = (char *)"-"};
+        for (size_t index = 0; index < items->count; ++index) {
+            const FusionJson *item = &items->items[index];
+            for (size_t key = 0; key < COUNT(keys); ++key)
+                if (!tsv_field(text, fusion_json_member(item, keys[key]), key == 0, error))
+                    return false;
+            const FusionJson *placements = fusion_json_member(item, "placements");
+            const FusionJson *editable = fusion_json_member(item, "editable");
+            FusionJson flag = fusion_json_int(editable->boolean ? 1 : 0);
+            if (!tsv_field(text, placements->kind == FUSION_JSON_NULL ? &dash : placements, false,
+                           error) ||
+                !tsv_field(text, &flag, false, error) || !tsv_end(text, error))
+                return false;
+        }
+        return true;
+    }
     if (!strcmp(command, "collision-list")) {
         const FusionJson *cells = fusion_json_member(data, "cells");
         for (size_t index = 0; index < cells->count; ++index) {

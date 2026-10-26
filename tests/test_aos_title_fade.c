@@ -4,6 +4,20 @@
 #include <stdio.h>
 
 int main(void) {
+    uint16_t brightness = 16;
+    for (unsigned frame = 0; frame < 8; ++frame) {
+        assert(!aos_title_brightness_lower(&brightness, 2));
+        assert(brightness == 14 - frame * 2);
+    }
+    assert(aos_title_brightness_lower(&brightness, 2));
+    assert(brightness == 0);
+    for (unsigned frame = 0; frame < 8; ++frame) {
+        assert(!aos_title_brightness_raise(&brightness, 2));
+        assert(brightness == (frame + 1) * 2);
+    }
+    assert(aos_title_brightness_raise(&brightness, 2));
+    assert(brightness == 16);
+
     AosTitleFade state = {0};
     aos_title_fade_init(&state);
     assert(state.stage == 1 && state.brightness == 16);

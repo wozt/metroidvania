@@ -572,7 +572,9 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_title_input_tests)
     add_test(NAME aos_title_input COMMAND fusion_aos_title_input_tests)
 
-    add_executable(fusion_aos_game_mode_tests tests/test_aos_game_mode.c src/runtime/aos_game_mode.c)
+    add_executable(fusion_aos_game_mode_tests tests/test_aos_game_mode.c
+                   src/runtime/aos_game_mode.c src/runtime/aos_title_fade.c
+                   src/runtime/aos_input.c)
     target_include_directories(fusion_aos_game_mode_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)

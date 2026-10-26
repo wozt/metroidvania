@@ -2642,7 +2642,6 @@ aos:c:src/code_08002454.c:GameModeDebugUpdate	GameModeDebugUpdate	technical	name
 aos:c:src/code_08002454.c:GameModeKonamiLogoUpdate	GameModeKonamiLogoUpdate	title	name			c_function	0x08002990	src/code_08002454.c	444	1	12
 aos:c:src/code_08002454.c:GameModeLicensedByNintendoUpdate	GameModeLicensedByNintendoUpdate	title	name			c_function	0x08002B54	src/code_08002454.c	533	1	3
 aos:c:src/code_08002454.c:GameModeMainMenuUpdate_inline	GameModeMainMenuUpdate_inline	menus	name			c_function		src/code_08002454.c	2421	1	0
-aos:c:src/code_08002454.c:GameModeResetUpdate	GameModeResetUpdate	startup	referrers			c_function	0x08002C88	src/code_08002454.c	603	1	11
 aos:c:src/code_08002454.c:KonamiCodeCheck	KonamiCodeCheck	title	referrers			c_function	0x08002944	src/code_08002454.c	421	1	0
 aos:c:src/code_08002454.c:TitleScreenSetAffine_inline	TitleScreenSetAffine_inline	title	name			c_function		src/code_08002454.c	914	1	1
 aos:c:src/code_08002454.c:TitleScreen_sub_08002F44	TitleScreen_sub_08002F44	title	name			c_function	0x08002F44	src/code_08002454.c	747	1	2

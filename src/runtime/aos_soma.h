@@ -24,6 +24,7 @@
 #include "aos_anim.h"
 #include "aos_collision.h"
 #include "aos_combat.h"
+#include "aos_input.h"
 
 #define AOS_FIXED(value) ((int32_t)((value) * 65536.0))
 #define AOS_WALK_SPEED 0x18000          /* 1.5 */
@@ -80,16 +81,12 @@ typedef enum {
     AOS_LANDING_HARD        /* state 4, vy > 6.25 or flag 0x80 */
 } AosLanding;
 
-/* GBA buttons as stored in gEwramData + 0x1C (held) / + 0x1E (pressed). */
+/* Player-action aliases for the shared GBA input bits. */
 enum {
-    AOS_KEY_RIGHT = 0x10,
-    AOS_KEY_LEFT = 0x20,
-    AOS_KEY_UP = 0x40,
-    AOS_KEY_DOWN = 0x80,
-    AOS_KEY_JUMP = 0x01,              /* A: default of gEwramData + 0x1339A */
-    AOS_KEY_ATTACK = 0x02,            /* B: + 0x13398 */
-    AOS_KEY_GUARDIAN = 0x100,         /* R: + 0x1339E */
-    AOS_KEY_ABILITY = 0x200           /* L: + 0x1339C (backdash, high jump) */
+    AOS_KEY_JUMP = AOS_KEY_A,         /* default of gEwramData + 0x1339A */
+    AOS_KEY_ATTACK = AOS_KEY_B,       /* + 0x13398 */
+    AOS_KEY_GUARDIAN = AOS_KEY_R,     /* + 0x1339E */
+    AOS_KEY_ABILITY = AOS_KEY_L       /* + 0x1339C (backdash, high jump) */
 };
 
 /* Ability bits of gEwramData + 0x13396 tested with sub_08032AB8(bit). */

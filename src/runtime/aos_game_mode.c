@@ -1,5 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_game_mode.h"
+#include "aos_title_fade.h"
+
+enum {
+    AOS_DCNT_BG0 = 1u << 8,
+    AOS_BG0_LANGUAGE_MENU = (28u << 8) | 2u,
+    AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE = 0x3fu | (1u << 7),
+    AOS_BRIGHTNESS_MAX = 16,
+};
 
 /* SetGameMode, native src/main.c. */
 void aos_game_mode_set(AosGameMode *state, int32_t mode) {
@@ -42,6 +50,105 @@ int32_t aos_game_mode_reset_stage0(uint8_t *language, int *save_language) {
     *save_language = *language != 1;
     if (*save_language) *language = 1;
     return AOS_MODE_LICENSED_BY_NINTENDO;
+}
+
+static void reset_menu_draw(AosResetMode *reset, const AosResetMenuHooks *hooks) {
+    static const uint8_t panel_rows[3] = {5, 7, 9};
+    static const uint16_t panel_tiles[3] = {0xF020, 0xF040, 0xF060};
+    static const uint16_t text_ids[3] = {0xB4C, 0xB4D, 0xB4E};
+    if (hooks) {
+        for (unsigned index = 0; index < 3; ++index)
+            if (hooks->draw_panel)
+                hooks->draw_panel(hooks->context, 10, panel_rows[index], panel_tiles[index], 10);
+        if (hooks->prepare_menu) hooks->prepare_menu(hooks->context);
+        for (unsigned index = 0; index < 3; ++index) {
+            if (hooks->set_text_cursor)
+                hooks->set_text_cursor(hooks->context, 2, (uint8_t)(index + 1));
+            if (hooks->draw_text) hooks->draw_text(hooks->context, text_ids[index], 0);
+        }
+    }
+    if (reset->language < 1 || reset->language > 3) reset->language = 1;
+    if (hooks && hooks->set_text_cursor)
+        hooks->set_text_cursor(hooks->context, 0, reset->language);
+    if (hooks && hooks->write_cursor_tile) hooks->write_cursor_tile(hooks->context, 0x3E);
+    reset->menu_prepared = true;
+    reset->cursor_to = reset->language;
+}
+
+static void reset_menu_input(AosGameMode *mode, AosResetMode *reset, const AosInput *input,
+                             const AosResetMenuHooks *hooks) {
+    uint8_t previous = reset->language;
+    uint16_t pressed = input ? input->new_input : 0;
+    if (pressed & AOS_KEY_A) {
+        reset->blend_control = AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE;
+        reset->selection_confirmed = true;
+        mode->update_stage = 5;
+        mode->stage_timer = 0;
+    } else if (pressed & AOS_KEY_B) {
+        reset->language = 1;
+    } else if (pressed & AOS_KEY_UP) {
+        reset->language = reset->language == 1 ? 3 : (uint8_t)(reset->language - 1);
+    } else if (pressed & AOS_KEY_DOWN) {
+        reset->language = reset->language == 3 ? 1 : (uint8_t)(reset->language + 1);
+    }
+    if (previous == reset->language) return;
+    reset->cursor_changed = true;
+    reset->cursor_from = previous;
+    reset->cursor_to = reset->language;
+    if (hooks && hooks->set_text_cursor) hooks->set_text_cursor(hooks->context, 0, previous);
+    if (hooks && hooks->write_cursor_tile) {
+        hooks->write_cursor_tile(hooks->context, 0x20);
+        hooks->write_cursor_tile(hooks->context, 0x20);
+    }
+    if (hooks && hooks->set_text_cursor)
+        hooks->set_text_cursor(hooks->context, 0, reset->language);
+    if (hooks && hooks->write_cursor_tile) hooks->write_cursor_tile(hooks->context, 0x3E);
+}
+
+int32_t aos_game_mode_reset_update(AosGameMode *mode, AosResetMode *reset,
+                                   const AosInput *input, const AosResetMenuHooks *hooks,
+                                   int *save_language) {
+    reset->cursor_changed = false;
+    reset->selection_confirmed = false;
+    if (save_language) *save_language = 0;
+    switch (mode->update_stage) {
+        case 0:
+            return aos_game_mode_reset_stage0(&reset->language, save_language);
+        case 1:
+            reset->display_control = AOS_DCNT_BG0;
+            reset->bg0_control = AOS_BG0_LANGUAGE_MENU;
+            reset->blend_control = AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE;
+            reset->brightness = AOS_BRIGHTNESS_MAX;
+            reset->bg_map_clear_requested = true;
+            reset->bg_tiles_clear_requested = true;
+            ++mode->update_stage;
+            mode->stage_timer = 0;
+            break;
+        case 2:
+            reset_menu_draw(reset, hooks);
+            ++mode->update_stage;
+            mode->stage_timer = 0;
+            break;
+        case 3:
+            if (aos_title_brightness_lower(&reset->brightness, 2)) {
+                reset->duration_timer = 2 * 60;
+                ++mode->update_stage;
+                mode->stage_timer = 0;
+            }
+            break;
+        case 4:
+            reset_menu_input(mode, reset, input, hooks);
+            break;
+        case 5:
+            if (aos_title_brightness_raise(&reset->brightness, 2)) {
+                if (save_language) *save_language = 1;
+                return AOS_MODE_LICENSED_BY_NINTENDO;
+            }
+            break;
+        default:
+            break;
+    }
+    return AOS_MODE_SAME;
 }
 
 /* sTitleScreenNextGameMode, src/code_08002454.c, order:

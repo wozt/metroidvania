@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0559 - Complete Aria's reset-mode controller
+
+- `aos_game_mode_reset_update` now ports all six stages of
+  `GameModeResetUpdate`: the existing forced-English path, BG0/register and
+  VRAM-clear requests, the three language panels and native text IDs, the BLDY
+  fade-in, wrapped A/B/Up/Down selection, cursor erase/redraw, fade-out and
+  the final language-save request before `LICENSED_BY_NINTENDO`.
+- The language renderer is injected through explicit hooks matching the call
+  order and arguments of `sub_08046DD4`, `sub_08040898`, `sub_08041338` and
+  `sub_08040C60`; no unimplemented graphics are presented as rendered.
+  Shared GBA key bits now live in `aos_input.h`, and the reusable BLDY steps
+  live in `aos_title_fade.c`.
+- `tests/test_aos_game_mode.c` follows the controller frame by frame,
+  including every panel/text/cursor call and every input branch. The feature
+  remains partial because the Licensed by Nintendo and Konami logo handlers
+  are absent and `aria_runtime.c` does not yet run the native dispatcher.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission is
+  unchanged.
+- Next: port `GameModeLicensedByNintendoUpdate` and
+  `GameModeKonamiLogoUpdate`, including their timers and fades into the title
+  screen.
+
 ## Patch 0558 - Aria GameModeUpdate dispatcher
 
 - `aos_game_mode_update` (`src/runtime/aos_game_mode.c`) ports Aria's

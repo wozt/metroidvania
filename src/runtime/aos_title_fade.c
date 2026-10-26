@@ -1,6 +1,28 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_title_fade.h"
 
+enum { AOS_BRIGHTNESS_MAX = 16 };
+
+int aos_title_brightness_lower(uint16_t *brightness, uint16_t step) {
+    if (!step) return *brightness == 0;
+    if (*brightness >= step) {
+        *brightness = (uint16_t)(*brightness - step);
+        return 0;
+    }
+    *brightness = 0;
+    return 1;
+}
+
+int aos_title_brightness_raise(uint16_t *brightness, uint16_t step) {
+    if (!step) return *brightness >= AOS_BRIGHTNESS_MAX;
+    if (*brightness < AOS_BRIGHTNESS_MAX) {
+        unsigned next = (unsigned)*brightness + step;
+        *brightness = (uint16_t)(next > AOS_BRIGHTNESS_MAX ? AOS_BRIGHTNESS_MAX : next);
+        return 0;
+    }
+    return 1;
+}
+
 /* GameModeTitleScreenUpdate stage 0 in code_08002454.c.
  * Native BLDCNT selects brightness decrease and BLDY starts at 16. */
 void aos_title_fade_init(AosTitleFade *state) {

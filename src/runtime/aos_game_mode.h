@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #ifndef AOS_GAME_MODE_H
 #define AOS_GAME_MODE_H
+#include <stdbool.h>
 #include <stdint.h>
+#include "aos_input.h"
 
 /* Pure mode dispatch state from main.c, without graphics or host lifecycle. */
 typedef struct {
@@ -29,6 +31,34 @@ enum {
  * AOS_MODE_NEXT. A NULL entry behaves as GAME_MODE_UNK_F's empty case. */
 typedef int32_t (*AosGameModeHandler)(AosGameMode *state, void *context);
 
+/* Rendering calls made by GameModeResetUpdate's language menu. They mirror
+ * sub_08046DD4, sub_08040898, sub_08041338 and sub_08040C60 without binding
+ * the source-derived controller to a particular renderer. */
+typedef struct {
+    void *context;
+    void (*draw_panel)(void *context, uint8_t x, uint8_t y, uint16_t tile, uint8_t width);
+    void (*prepare_menu)(void *context);
+    void (*set_text_cursor)(void *context, uint8_t x, uint8_t y);
+    void (*draw_text)(void *context, uint16_t text_id, uint8_t style);
+    void (*write_cursor_tile)(void *context, uint16_t tile);
+} AosResetMenuHooks;
+
+typedef struct {
+    uint8_t language;
+    uint16_t display_control;
+    uint16_t bg0_control;
+    uint16_t blend_control;
+    uint16_t brightness;
+    int32_t duration_timer;
+    bool bg_map_clear_requested;
+    bool bg_tiles_clear_requested;
+    bool menu_prepared;
+    bool cursor_changed;
+    bool selection_confirmed;
+    uint8_t cursor_from;
+    uint8_t cursor_to;
+} AosResetMode;
+
 void aos_game_mode_set(AosGameMode *state, int32_t mode);
 void aos_game_mode_increment(AosGameMode *state);
 void aos_game_mode_accept(AosGameMode *state, int32_t update_result);
@@ -45,6 +75,13 @@ void aos_game_mode_boot(AosGameMode *state);
  * the "Licensed by Nintendo" mode. Returns that mode; *save_language tells
  * whether the language must be written. */
 int32_t aos_game_mode_reset_stage0(uint8_t *language, int *save_language);
+/* GameModeResetUpdate stages 0-5. Stages 1-3 initialize BG0, issue the
+ * language-menu draw sequence and fade it in; stage 4 handles A/B/Up/Down
+ * through the native AosInput edge state; stage 5 fades out and requests the
+ * native language save before returning LICENSED_BY_NINTENDO. */
+int32_t aos_game_mode_reset_update(AosGameMode *mode, AosResetMode *reset,
+                                   const AosInput *input, const AosResetMenuHooks *hooks,
+                                   int *save_language);
 
 /* Original title destination table: index is selected by the title handler.
  * Modes are supplied by the caller to avoid guessing version-specific enum

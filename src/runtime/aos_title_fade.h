@@ -16,4 +16,8 @@ typedef struct {
 void aos_title_fade_init(AosTitleFade *state);
 void aos_title_fade_begin(AosTitleFade *state);
 void aos_title_fade_tick(AosTitleFade *state);
+/* Shared BLDY stepping used by the title-adjacent startup modes. The return
+ * becomes true on the native frame after the endpoint was first written. */
+int aos_title_brightness_lower(uint16_t *brightness, uint16_t step);
+int aos_title_brightness_raise(uint16_t *brightness, uint16_t step);
 #endif

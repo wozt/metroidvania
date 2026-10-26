@@ -1,35 +1,29 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Semantic entity regression. Local ROM assets are not required."""
 import unittest
-from scripts.object_catalog import mzm_sprite_kind
 from scripts.room_annotations import build_aria, serialize
 
 
 class EntityCategories(unittest.TestCase):
-    def test_mzm_item_door_world_enemy_unknown(self):
-        self.assertEqual(mzm_sprite_kind('PSPRITE_MISSILE_TANK'), 'ITEM')
-        self.assertEqual(mzm_sprite_kind('PSPRITE_POWER_GRIP'), 'ITEM')
-        self.assertEqual(mzm_sprite_kind('PSPRITE_MISSILE_DOOR'), 'DOOR')
-        self.assertEqual(mzm_sprite_kind('PSPRITE_CHOZO_STATUE'), 'OBJECT')
-        self.assertEqual(mzm_sprite_kind('PSPRITE_ZOOMER_RED'), 'ENEMY')
-        self.assertEqual(mzm_sprite_kind('PSPRITE_SOMETHING_UNKNOWN'), 'OTHER')
-
-    def test_mzm_stats_help_identify_other_enemies(self):
-        self.assertEqual(mzm_sprite_kind('PSPRITE_NEW_HOSTILE', {
-            'SPRITE_STATS_HEALTH': '20', 'SPRITE_STATS_DAMAGE': '3',
-        }), 'ENEMY')
-        self.assertEqual(mzm_sprite_kind('PSPRITE_UNKNOWN_ACTOR', {
-            'SPRITE_STATS_HEALTH': '0', 'SPRITE_STATS_DAMAGE': '0',
-        }), 'OTHER')
-        with self.assertRaises(ValueError):
-            mzm_sprite_kind('../PSPRITE_INVALID')
-
     def test_aria_kinds_are_distinct(self):
         base = {'entry_pointer': '0x08000100', 'x': 32, 'y': 16,
                 'persistent_index': 1, 'flags': 0, 'parameters': []}
         entities = [dict(base, kind=k, entity_id=ident) for k, ident in
                     ((1, 7), (4, 3), (2, 0), (2, 0x1C), (3, 0), (0, 0))]
-        rows = build_aria({'entities': entities, 'transitions': []}, {7: 'Bat'})
+        catalog = [
+            {'native_type': 'enemy:07', 'name': 'Bat', 'category': 'Enemy'},
+            {'native_type': 'pickup:03', 'name': 'Weapon pickup',
+             'category': 'Item / soul pickup'},
+            {'native_type': 'special-object:00', 'name': 'Wooden door',
+             'category': 'World object / event'},
+            {'native_type': 'special-object:1C', 'name': 'Save point',
+             'category': 'World object / event'},
+            {'native_type': 'generic-candle:00', 'name': 'Generic candle',
+             'category': 'Candle / breakable'},
+            {'native_type': 'nothing:00', 'name': 'Nothing',
+             'category': 'Unknown native type'},
+        ]
+        rows = build_aria({'entities': entities, 'transitions': []}, catalog)
         self.assertEqual([row[0] for row in rows],
                          ['ENEMY', 'ITEM', 'DOOR', 'OBJECT', 'OBJECT', 'OTHER'])
         self.assertEqual(rows[0][7], 'kind-01:id-07')
@@ -38,9 +32,15 @@ class EntityCategories(unittest.TestCase):
     def test_conditional_aria_enemy_and_pickup_are_not_events(self):
         base = {'entry_pointer': '0x08000100', 'x': 32, 'y': 16,
                 'persistent_index': 1, 'flags': 0, 'parameters': []}
+        catalog = [
+            {'native_type': 'special-object:0B', 'name': 'Event-conditional enemy',
+             'category': 'World object / event'},
+            {'native_type': 'hard-mode-pickup:02', 'name': 'Hard-mode consumable pickup',
+             'category': 'Conditional pickup'},
+        ]
         rows = build_aria({'entities': [dict(base, kind=2, entity_id=0x0B),
                                         dict(base, kind=5, entity_id=2)],
-                           'transitions': []})
+                           'transitions': []}, catalog)
         self.assertEqual([row[0] for row in rows], ['ENEMY', 'ITEM'])
 
     def test_mzm_event_variants_keep_entity_kind(self):
@@ -79,7 +79,17 @@ class EntityCategories(unittest.TestCase):
                 {'native_type': 'PSPRITE_MISSILE_TANK', 'category': 'Item / pickup'},
                 {'native_type': 'PSPRITE_SAVE_PLATFORM', 'category': 'World object'},
             ]
-            with patch.object(ann, 'ROOMS_ROOT', root),                  patch.object(ann, 'ROOM_SOURCE', header),                  patch.object(ann, 'SPRITESET_SOURCE', source),                  patch.object(ann, 'decode_room_descriptors', return_value=descriptors),                  patch.object(ann, 'parse_mzm_placements', return_value=placements),                  patch.object(ann, 'parse_mzm_spritesets', return_value=spritesets),                  patch.object(ann, 'build_mzm_catalog', return_value=records),                  patch.object(ann, '_mzm_door_entries', return_value=[]):
+            with patch.object(ann, 'ROOMS_ROOT', root), \
+                    patch.object(ann, 'ROOM_SOURCE', header), \
+                    patch.object(ann, 'SPRITESET_SOURCE', source), \
+                    patch.object(ann, 'decode_room_descriptors',
+                                 return_value=descriptors), \
+                    patch.object(ann, 'parse_mzm_placements',
+                                 return_value=placements), \
+                    patch.object(ann, 'parse_mzm_spritesets',
+                                 return_value=spritesets), \
+                    patch.object(ann, '_native_assets', return_value=records), \
+                    patch.object(ann, '_mzm_door_entries', return_value=[]):
                 rows = ann.build_mzm('Brinstar', 7)
             self.assertEqual([row[0] for row in rows], ['ENEMY', 'ITEM', 'OBJECT'])
             self.assertEqual([row[6] for row in rows], ['default', 'event-1', 'event-2'])
@@ -91,7 +101,7 @@ class EntityCategories(unittest.TestCase):
         from pathlib import Path
         source = Path('scripts/room_annotations.py').read_text(encoding='utf-8')
         self.assertNotIn("'ENTITY' if variant_name == 'default' else 'EVENT'", source)
-        self.assertIn('category_to_kind.get(category, mzm_sprite_kind(sprite_name))', source)
+        self.assertIn("category_to_kind.get(category, 'OTHER')", source)
         self.assertIn('event={event}', source)
 
     def test_gtk_distinct_filters_for_both_games(self):

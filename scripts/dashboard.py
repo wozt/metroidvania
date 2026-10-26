@@ -450,19 +450,34 @@ def _row_evidence(feature: dict | None) -> dict:
             "played_through": feature.get("played_through") == "yes"}
 
 
+def _native_object_records(world: str) -> list[dict]:
+    """Read the source-derived catalog through the authoritative C backend."""
+    command = ROOT / "build/fusion_editor_cli"
+    completed = subprocess.run(
+        [str(command), "--command=list-assets", f"--world={world}", "--format=json"],
+        cwd=ROOT, capture_output=True, text=True, check=False)
+    if completed.returncode:
+        raise ValueError(completed.stderr.strip() or
+                         f"native object catalog failed with {completed.returncode}")
+    payload = json.loads(completed.stdout)
+    records = payload.get("data", {}).get("assets")
+    if payload.get("success") is not True or not isinstance(records, list):
+        raise ValueError("native object catalog returned an invalid response")
+    return records
+
+
 def bestiary() -> dict:
     """Monsters and items of both games, done or not, from tracked sources.
 
     A row's status is its parity annotation's status (partial: a ported AI;
     functional: also unit-tested and checked in game; validated: compared
     with an emulator). Sprites without a ported AI are not started. Zero
-    Mission rows reuse the object catalog's parsing of the pinned enum and
+    Mission rows reuse the native object catalog's parsing of the pinned enum and
     stats and the mzm_sprite_family switch; Aria enemy names need the ROM
     constructor table, so only the ported enemies (named in
     src/runtime/aos_enemy.h) get a name. No ROM or private extracted data is
     read here.
     """
-    from scripts import object_catalog
     annotations = native_parity._load(native_parity.ANNOTATIONS)
     features = {feature["id"]: feature
                 for game in annotations["games"].values()
@@ -483,7 +498,9 @@ def bestiary() -> dict:
         return result
 
     monsters, items = [], []
-    for record in object_catalog.build_mzm():
+    # list-assets is display-sorted; the bestiary keeps the native enum order.
+    for record in sorted(_native_object_records("zero_mission"),
+                         key=lambda item: item["native_id"]):
         symbol = record["native_type"].removeprefix("PSPRITE_")
         is_drop = symbol in MZM_DROP_SPRITES
         if record["category"] == "Enemy / actor" or symbol in MZM_MONSTER_EXCEPTIONS:

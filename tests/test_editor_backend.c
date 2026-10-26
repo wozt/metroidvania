@@ -400,8 +400,61 @@ static void test_catalog_and_item_contract(void) {
     assert(!strcmp(feb_catalog_role("aria", "special-object:00", "native"), "DOOR"));
     assert(!strcmp(feb_catalog_role("aria", "generic-candle:00", "native"), "OBJECT"));
 
-    FusionJson options = fusion_json_array();
+    FusionJson records = fusion_json_array();
     FebError error = {0};
+    assert(feb_mzm_object_records(FUSION_SOURCE_DIR, &records, &error));
+    assert(records.count >= 200);
+    const FusionJson *kraid = NULL;
+    for (size_t index = 0; index < records.count; ++index)
+        if (!strcmp(member(&records.items[index], "native_type", FUSION_JSON_STRING)->string,
+                    "PSPRITE_KRAID"))
+            kraid = &records.items[index];
+    assert(kraid != NULL);
+    assert(strstr(member(kraid, "summary", FUSION_JSON_STRING)->string, "health=300"));
+    assert(!member(kraid, "editable", FUSION_JSON_BOOL)->boolean);
+    fusion_json_free(&records);
+
+    char enemies[0x71][96] = {{0}}, name[128];
+    strcpy(enemies[7], "Killer Fish");
+    const char *category = NULL;
+    feb_aria_entity_identity(2, 0x1C, enemies, name, sizeof name, &category);
+    assert(!strcmp(name, "Save point"));
+    assert(!strcmp(category, "World object / event"));
+    feb_aria_entity_identity(4, 5, enemies, name, sizeof name, &category);
+    assert(!strcmp(name, "Red soul candle"));
+
+    FusionJson world = fusion_json_object(), rooms = fusion_json_array();
+    put_string(&world, "format", "MV_AOS_WORLD_2");
+    FusionJson room = fusion_json_object(), entities = fusion_json_array();
+    for (int index = 0; index < 2; ++index) {
+        FusionJson entity = fusion_json_object();
+        assert(fusion_json_set(&entity, "kind", fusion_json_int(1)));
+        assert(fusion_json_set(&entity, "entity_id", fusion_json_int(7)));
+        put_string(&entity, "boss_id", "boss-a");
+        assert(fusion_json_set(&entity, "native_health", fusion_json_int(120)));
+        assert(fusion_json_push(&entities, entity));
+    }
+    FusionJson object = fusion_json_object();
+    assert(fusion_json_set(&object, "kind", fusion_json_int(2)));
+    assert(fusion_json_set(&object, "entity_id", fusion_json_int(3)));
+    assert(fusion_json_push(&entities, object));
+    assert(fusion_json_set(&room, "entities", entities));
+    assert(fusion_json_push(&rooms, room));
+    assert(fusion_json_set(&world, "rooms", rooms));
+    records = fusion_json_array();
+    assert(feb_aria_object_records_from_world(&world, enemies, &records, &error));
+    assert(records.count == 2);
+    assert(member(&records.items[0], "placements", FUSION_JSON_NUMBER)->integer == 2);
+    assert(!strcmp(member(&records.items[0], "name", FUSION_JSON_STRING)->string,
+                   "Killer Fish"));
+    assert(strstr(member(&records.items[0], "summary", FUSION_JSON_STRING)->string,
+                  "health=120"));
+    assert(strstr(member(&records.items[0], "summary", FUSION_JSON_STRING)->string,
+                  "boss references=boss-a"));
+    fusion_json_free(&records);
+    fusion_json_free(&world);
+
+    FusionJson options = fusion_json_array();
     assert(feb_aria_item_family_options(&options, &error));
     assert(options.count == 27);
     for (int subtype = 1; subtype <= 8; ++subtype) {

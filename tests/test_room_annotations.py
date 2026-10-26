@@ -70,7 +70,9 @@ class RoomAnnotationTests(unittest.TestCase):
             'source_screen_y': 1, 'target_engine_area': 3, 'target_room': 7,
             'load_x': 12, 'load_y': 20,
         }]}
-        rows = build_aria(room, {9: 'Blue Crow'})
+        rows = build_aria(room, [{
+            'native_type': 'enemy:09', 'name': 'Blue Crow', 'category': 'Enemy',
+        }])
         self.assertEqual(rows[0][0:6], ('ENEMY', 0, 32, 48, 16, 16))
         self.assertEqual(rows[1][0:6], ('DOOR', 0, 496, 376, 16, 16))
         self.assertIn(b'Blue Crow', serialize(rows))
@@ -81,7 +83,11 @@ class RoomAnnotationTests(unittest.TestCase):
             'persistent_index': 0, 'kind': 2, 'entity_id': 3,
             'flags': 0, 'parameters': [],
         }], 'transitions': []}
-        self.assertEqual(build_aria(room)[0][2:4], (0, 0))
+        catalog = [{
+            'native_type': 'special-object:03', 'name': 'Boss Rush boss door',
+            'category': 'World object / event',
+        }]
+        self.assertEqual(build_aria(room, catalog)[0][2:4], (0, 0))
 
     def test_reject_untrusted_row(self):
         with self.assertRaises(ValueError):

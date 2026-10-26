@@ -48,5 +48,8 @@ bool feb_aria_enemy_names(const char *repository, char (*names)[96], FebError *e
 /* aria_entity_identity(): the display name and category of a native entity. */
 void feb_aria_entity_identity(int64_t kind, int64_t id, char (*enemies)[96], char *name,
                               size_t size, const char **category);
+/* Append grouped Aria definitions from an already decoded world catalog. */
+bool feb_aria_object_records_from_world(const FusionJson *world, char (*enemies)[96],
+                                        FusionJson *records, FebError *error);
 
 #endif /* FUSION_EDITOR_BACKEND_OBJECT_CATALOG_H */

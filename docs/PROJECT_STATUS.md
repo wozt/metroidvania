@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0551 - Remove the duplicate Python object catalog
+
+- Removed `scripts/object_catalog.py` and its focused Python suite. The
+  Zero Mission definition/stat parser, Aria constructor identities, semantic
+  categories, placement grouping and editor records now have a single C11
+  implementation in `src/editor_backend/object_catalog.c`.
+- Added a buffer-level Aria world-catalog grouping API and native synthetic
+  coverage for repeated placements, boss references, health, semantic names
+  and categories. The same C test reads the pinned Zero Mission enum/stat
+  sources and verifies the full catalog and Kraid's decoded health.
+- Changed the remaining Python room-annotation and dashboard reporting paths
+  to consume `fusion_editor_cli --command=list-assets`; they no longer parse
+  or duplicate object definitions. Their focused ROM-free fixtures inject
+  native-shaped records directly.
+- Maintained first-party Python files fell from 86 to 84 (27 under `scripts/`,
+  57 under `tests/`). The object-catalog feature remains partial because
+  creating or editing native object definitions is still unavailable; no
+  gameplay or native-parity status changed.
+- Next: remove the superseded Python room-annotation exporter and migrate its
+  remaining parser/geometry suites to `mzm_workspace.c` and `aria_render.c`.
+
 ## Patch 0550 - Remove the Python Aria item decoders
 
 - Removed `scripts/aria_item_details.py`,

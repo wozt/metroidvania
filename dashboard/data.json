@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T08:46:19+00:00",
+ "generated_at": "2026-10-26T09:04:14+00:00",
  "git": {
-  "commit": "869c219",
+  "commit": "a012de7",
   "branch": "main",
   "dirty": true
  },
@@ -13115,22 +13115,19 @@
    "local_sources": [
     "editor/object_catalog.c",
     "src/editor_backend/object_catalog.c",
-    "src/editor_backend/object_catalog.h",
-    "scripts/object_catalog.py"
+    "src/editor_backend/object_catalog.h"
    ],
    "tests": [
     "tests/test_editor_backend.c",
-    "tests/test_object_catalog.py",
     "tests/test_object_catalog_ui.py"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The production catalog, named Aria item decoding, raw/LZ10 icon decoding and private PNG thumbnails are native and covered by ROM-free C fixtures. The Python catalog remains only for room-annotation and dashboard reporting plus focused tests that have not yet been ported.",
+   "limitations": "The single C11 catalog owns Zero Mission definitions and stats, Aria constructor identities and placement groups, named items, raw/LZ10 icon decoding and private PNG thumbnails. Legacy Python reporting consumes its list-assets command instead of duplicating the parser. Native object-definition creation and editing remain unavailable.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_editor_backend.c",
-     "tests/test_object_catalog.py",
      "tests/test_object_catalog_ui.py"
     ],
     "in_game_check": [],
@@ -13152,12 +13149,6 @@
       ],
       "outcome": "passed",
       "exists": true
-     },
-     {
-      "test": "tests/test_object_catalog.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
      },
      {
       "test": "tests/test_object_catalog_ui.py",
@@ -15666,13 +15657,6 @@
     "passed": 3
    },
    {
-    "file": "tests/test_object_catalog.py",
-    "module": "tests.test_object_catalog",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_object_catalog_ui.py",
     "module": "tests.test_object_catalog_ui",
     "test_count": 5,
@@ -15738,9 +15722,9 @@
    {
     "file": "tests/test_semantic_room_entities.py",
     "module": "tests.test_semantic_room_entities",
-    "test_count": 7,
+    "test_count": 5,
     "outcome": "passed",
-    "passed": 7
+    "passed": 5
    },
    {
     "file": "tests/test_shared_history_0112.py",
@@ -15800,12 +15784,18 @@
    }
   ],
   "summary": {
-   "passed": 323,
+   "passed": 316,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "a012de7",
+   "date": "2026-10-26",
+   "subject": "Remove Python Aria item decoders",
+   "scope": "project"
+  },
   {
    "commit": "869c219",
    "date": "2026-10-26",
@@ -16278,12 +16268,6 @@
    "commit": "eb79a58",
    "date": "2026-10-23",
    "subject": "Connect Aria White Dragon affine slot",
-   "scope": "project"
-  },
-  {
-   "commit": "e921b7c",
-   "date": "2026-10-23",
-   "subject": "Advance Aria polar and articulated enemy motion",
    "scope": "project"
   }
  ],

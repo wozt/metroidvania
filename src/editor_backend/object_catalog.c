@@ -597,28 +597,16 @@ void feb_aria_entity_identity(int64_t kind, int64_t id, char (*enemies)[96], cha
     }
 }
 
-static bool build_aria(const char *repository, FusionJson *records, FebError *error) {
-    char path[FEB_PATH_CAPACITY], detail[256];
-    FusionJson world;
-    if (!feb_join(path, repository, "assets/extracted/rooms/aria/world.json") ||
-        !feb_load_json(path, 64 * 1024 * 1024, &world, detail, sizeof detail))
-        return feb_fail(error, FEB_EXIT_OPERATION,
-                        "missing native Aria world catalog %s; run python3 -m scripts.rebuild "
-                        "--task aria_world", path);
-    const FusionJson *format = fusion_json_member(&world, "format");
-    if (!format || format->kind != FUSION_JSON_STRING || strcmp(format->string, "MV_AOS_WORLD_2")) {
-        fusion_json_free(&world);
+bool feb_aria_object_records_from_world(const FusionJson *world, char (*enemies)[96],
+                                        FusionJson *records, FebError *error) {
+    const FusionJson *format = fusion_json_member(world, "format");
+    const FusionJson *rooms = fusion_json_member(world, "rooms");
+    if (!format || format->kind != FUSION_JSON_STRING || strcmp(format->string, "MV_AOS_WORLD_2") ||
+        !rooms || rooms->kind != FUSION_JSON_ARRAY)
         return feb_fail(error, FEB_EXIT_OPERATION, "invalid Aria native world catalog");
-    }
-    static char enemies[ARIA_ENEMY_COUNT][96];
-    if (!feb_aria_enemy_names(repository, enemies, error)) {
-        fusion_json_free(&world);
-        return false;
-    }
     Group *groups = NULL;
     size_t group_count = 0;
     bool ok = true;
-    const FusionJson *rooms = fusion_json_member(&world, "rooms");
     for (size_t room = 0; ok && room < rooms->count; ++room) {
         const FusionJson *entities = fusion_json_member(&rooms->items[room], "entities");
         for (size_t index = 0; ok && entities && index < entities->count; ++index) {
@@ -715,6 +703,20 @@ static bool build_aria(const char *repository, FusionJson *records, FebError *er
         free(groups[index].health);
     }
     free(groups);
+    return ok;
+}
+
+static bool build_aria(const char *repository, FusionJson *records, FebError *error) {
+    char path[FEB_PATH_CAPACITY], detail[256];
+    FusionJson world;
+    if (!feb_join(path, repository, "assets/extracted/rooms/aria/world.json") ||
+        !feb_load_json(path, 64 * 1024 * 1024, &world, detail, sizeof detail))
+        return feb_fail(error, FEB_EXIT_OPERATION,
+                        "missing native Aria world catalog %s; run python3 -m scripts.rebuild "
+                        "--task aria_world", path);
+    static char enemies[ARIA_ENEMY_COUNT][96];
+    bool ok = feb_aria_enemy_names(repository, enemies, error) &&
+              feb_aria_object_records_from_world(&world, enemies, records, error);
     fusion_json_free(&world);
     return ok;
 }

@@ -8,17 +8,15 @@ encoders are implemented.
 """
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 from pathlib import Path
 
 from scripts.import_game_assets import OUTPUT, ROOT, write_generated
 from scripts.import_mzm_rooms import ROOM_SOURCE, decode_room_descriptors
 from scripts.mzm_hatch_events import load_hatch_lock_events
 from scripts.mzm_world_atlas import AREAS, DOOR_RE, FIELD_RE, ITEM_RE, REQUIRED
-from scripts.object_catalog import (
-    aria_entity_identity, build_mzm as build_mzm_catalog,
-    load_aria_enemy_names, mzm_sprite_kind,
-)
 
 SPRITESET_SOURCE = ROOT / 'third_party/mzm/src/data/spriteset.c'
 ROOMS_ROOT = ROOT / 'third_party/mzm/src/data/rooms'
@@ -29,6 +27,37 @@ PLACEMENT_RE = re.compile(
     re.S,
 )
 PLACEMENT_ITEM_RE = re.compile(r'(\d+)\s*,\s*(\d+)\s*,\s*SPRITESET_IDX\((\d+)\)')
+
+
+def _native_assets(world: str) -> list[dict]:
+    """Read catalog records from the C backend during the legacy export path."""
+    completed = subprocess.run(
+        [str(ROOT / 'build/fusion_editor_cli'), '--command=list-assets',
+         f'--world={world}', '--format=json'],
+        cwd=ROOT, capture_output=True, text=True, check=False)
+    if completed.returncode:
+        raise ValueError(completed.stderr.strip() or
+                         f'native object catalog failed with {completed.returncode}')
+    payload = json.loads(completed.stdout)
+    records = payload.get('data', {}).get('assets')
+    if payload.get('success') is not True or not isinstance(records, list):
+        raise ValueError('native object catalog returned an invalid response')
+    return records
+
+
+ARIA_KIND_TOKENS = {
+    0: 'nothing', 1: 'enemy', 2: 'special-object', 3: 'generic-candle',
+    4: 'pickup', 5: 'hard-mode-pickup', 6: 'all-souls-reward',
+}
+
+
+def _aria_identity(kind: int, entity_id: int,
+                   records: list[dict]) -> tuple[str, str]:
+    token = f'{ARIA_KIND_TOKENS.get(kind, f"unknown-kind-{kind}")}:{entity_id:02X}'
+    record = next((item for item in records if item.get('native_type') == token), None)
+    if record is None:
+        return f'Unknown native entity {kind:02X}/{entity_id:02X}', 'Unknown native type'
+    return str(record['name']), str(record['category'])
 
 
 def _safe(text: object) -> str:
@@ -126,7 +155,7 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
     # Resolve each native sprite against the pinned enum and its actual stats.
     # The source variant indicates the trigger CONDITION, not the entity kind.
     known_roles = {entry['native_type']: entry['category']
-                   for entry in build_mzm_catalog()}
+                   for entry in _native_assets('zero_mission')}
     fields = room['fields']
     variants = [
         ('default', 0, fields['pDefaultSpriteData'], fields['defaultSpriteset']),
@@ -171,7 +200,7 @@ def build_mzm(area: str, room_number: int) -> list[tuple]:
                 'World object': 'OBJECT',
                 'Unclassified native sprite': 'OTHER',
             }
-            kind = category_to_kind.get(category, mzm_sprite_kind(sprite_name))
+            kind = category_to_kind.get(category, 'OTHER')
             details = (f'native={sprite_name}; spriteset={spriteset_text}; '
                        f'graphics_slot={graphics_slot}; variant={variant_name}; event={event}')
             rows.append((kind, source_index, x * 16, y * 16, 16, 16,
@@ -274,12 +303,14 @@ def aria_transition_geometry(room: dict, transition: dict) -> tuple[int, int, st
     return max(0, sx * 256 + 120), max(0, sy * 256 + 120), side
 
 
-def build_aria(room: dict, enemy_names: dict[int, str] | None = None) -> list[tuple]:
+def build_aria(room: dict, catalog: list[dict] | None = None) -> list[tuple]:
+    records = catalog if catalog is not None else (
+        _native_assets('aria') if room['entities'] else [])
     rows = []
     for index, entity in enumerate(room['entities']):
         kind = int(entity['kind'])
         entity_id = int(entity['entity_id'])
-        label, category = aria_entity_identity(kind, entity_id, enemy_names)
+        label, category = _aria_identity(kind, entity_id, records)
         native = f'kind-{kind:02X}:id-{entity_id:02X}'
         details = (f"pointer={entity['entry_pointer']}; persistent={entity['persistent_index']}; "
                    f"flags=0x{entity['flags']:02x}; parameters={entity['parameters']}; "
@@ -344,5 +375,5 @@ def export_mzm(area: str, room: int) -> str:
 
 def export_aria(room: dict) -> str:
     path = f"rooms/aria/annotations/area_{room['engine_area']:02}_room_{room['room']:03}.tsv"
-    write_generated(path, serialize(build_aria(room, load_aria_enemy_names())))
+    write_generated(path, serialize(build_aria(room)))
     return path

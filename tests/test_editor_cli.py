@@ -334,8 +334,7 @@ class EditorCliTests(unittest.TestCase):
         self.assertIn("fusion_editor_cli_program()", combined)
         for legacy in (
                 '"scripts.authored_rooms"', '"scripts.map_placements"',
-                '"scripts.project_room_entities"', '"scripts.object_catalog"',
-                '"scripts.validate_story_assets"'):
+                '"scripts.project_room_entities"', '"scripts.validate_story_assets"'):
             self.assertNotIn(legacy, combined)
 
     def test_output_refuses_symlink_parent(self):

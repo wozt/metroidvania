@@ -360,8 +360,9 @@ IN_GAME directly while the incomplete boot/title path remains independently
 testable. The same table now reaches the native main-menu operation selector
 in `aos_main_menu.c`, including PLAY/CREATE/LOAD, COPY and DELETE, their
 confirmation controllers, special completed-file positions and final direct
-load/intro fades. Their typed slot-operation requests and the still-missing
-native name editor remain separate from the portable launcher.
+load/intro fades. The same state owns the native eight-character name editor
+and its return/intro results. Its typed slot-operation requests and diagnostic
+rendering remain separate from the portable launcher.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

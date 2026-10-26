@@ -2690,7 +2690,6 @@ aos:c:src/code_08005894.c:sub_08007FF0	sub_08007FF0	unclassified		technical	excl
 aos:c:src/code_08005894.c:sub_080081AC	sub_080081AC	unclassified				c_function	0x080081AC	src/code_08005894.c	1969	3	6
 aos:c:src/code_08005894.c:sub_08008300	sub_08008300	unclassified		technical	exclusive_callees	c_function	0x08008300	src/code_08005894.c	2083	3	2
 aos:c:src/code_08005894.c:sub_08008314	sub_08008314	unclassified				c_function	0x08008314	src/code_08005894.c	2094	2	2
-aos:c:src/code_08005894.c:sub_08008324	sub_08008324	menus	referrers			c_function	0x08008324	src/code_08005894.c	2105	1	2
 aos:c:src/code_08005894.c:sub_08008720	sub_08008720	unclassified				c_function	0x08008720	src/code_08005894.c	2457	0	0
 aos:c:src/code_08008750.c:GameModeBossRushMenuUpdate	GameModeBossRushMenuUpdate	menus	name			c_function	0x08008750	src/code_08008750.c	45	1	21
 aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate	GameModeIntroCutsceneUpdate	cutscenes	name			c_function	0x080089D8	src/code_08008750.c	169	1	29

@@ -30,6 +30,13 @@ typedef struct {
     uint8_t requested_slot;
     uint8_t confirm_choice;
     uint8_t prompt_timer;
+    uint8_t name_cursor;
+    uint8_t name_position;
+    uint8_t name_buffer[8];
+    uint8_t committed_name[8];
+    uint8_t current_character;
+    uint8_t name_code;
+    uint32_t name_unlock_flags;
     bool assets_requested;
     bool selection_changed;
     bool selection_confirmed;
@@ -49,6 +56,11 @@ typedef struct {
     bool room_setup_requested;
     bool name_entry_init_requested;
     bool name_entry_active;
+    bool name_codes_enabled;
+    bool name_changed;
+    bool name_defaulted;
+    bool name_committed;
+    bool save_slot_requested;
     bool copy_slots_requested;
     bool delete_rejected;
     uint8_t delete_slots_mask;
@@ -60,6 +72,9 @@ int32_t aos_main_menu_input(AosMainMenu *menu, const AosInput *input);
 /* sub_0800744C/sub_080074C0: initialize and update PLAY/CREATE/LOAD. */
 void aos_main_menu_play_init(AosMainMenu *menu);
 int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input);
+/* sub_08008324/sub_080083C8: initialize and update native name entry. */
+void aos_main_menu_name_init(AosMainMenu *menu);
+int32_t aos_main_menu_name_update(AosMainMenu *menu, const AosInput *input);
 /* sub_08007820/sub_08007914: initialize and update the copy controller. */
 void aos_main_menu_copy_init(AosMainMenu *menu);
 int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input);

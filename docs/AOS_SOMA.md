@@ -55,8 +55,10 @@ fades and all three selected-operation controllers. PLAY preserves the native
 three file/quicksave pairs, completed-file special positions, optional mode
 choice and direct load/intro results; COPY and DELETE preserve their native
 confirmation paths. They expose typed requests over that topology, but the
-portable save adapter does not consume them yet. Native name entry remains
-the next boundary for a newly created regular file.
+portable save adapter does not consume them yet. Newly created regular files
+now pass through the native eight-character name controller, including its
+grid navigation, edit operations, default SOMA name and the JULIUS, NOUSE and
+NOSOUL codes. Its graphics are still frontend-owned.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with

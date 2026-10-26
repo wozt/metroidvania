@@ -1,6 +1,27 @@
 # Project status
 
-Last updated: **2026-10-26**.
+Last updated: **2026-10-27**.
+
+## Patch 0566 - Port Aria's native name editor
+
+- Ported the controller behavior of `sub_08008324`/`sub_080083C8`: the 4x9
+  wrapped symbol grid, eight-character insertion position, L/R position
+  selection, A insertion, B/backspace deletion, START/end validation and
+  empty-name fallback to the native encoded `SOMA` value.
+- The cleared-file name codes are retained exactly: `JULIUS` selects the
+  alternate character, while `NOUSE` and `NOSOUL` expose their original
+  progression flags. The selected encoded name is emitted as typed committed
+  state rather than written into native SRAM.
+- Main-menu stage 9 now consumes the name result. B on an empty name follows
+  stages 0xA/0x29 back toward the selected PLAY controller; validation enters
+  the existing stage-0x1E introduction fade. Tests cover editing, deletion,
+  defaulting, a character code, cancellation and confirmation.
+- Native name-screen graphics and portable file-operation consumption remain
+  absent, so the feature stays partial. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+- Next: connect the main-menu typed create/load/copy/delete/name requests to
+  the portable save frontend and make the SDL launcher consume the native
+  lifecycle without breaking direct room/debug launches.
 
 ## Patch 0565 - Port Aria's play/create/load controller
 

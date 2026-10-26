@@ -121,6 +121,39 @@ int main(void) {
     assert(menu.requested_slot == 0 && menu.room_setup_requested &&
            menu.intro_requested);
 
+    menu = (AosMainMenu){0};
+    aos_main_menu_name_init(&menu);
+    assert(menu.display_control == 0x7A00 && menu.blend_control == 0x3F52 &&
+           menu.name_cursor == 0 && menu.name_position == 0);
+    input = (AosInput){.repeated_input = AOS_KEY_A};
+    assert(aos_main_menu_name_update(&menu, &input) == 0);
+    assert(menu.name_buffer[0] == 2 && menu.name_position == 1 && menu.name_changed);
+    input.repeated_input = AOS_KEY_RIGHT;
+    aos_main_menu_name_update(&menu, &input);
+    assert(menu.name_cursor == 1);
+    input.repeated_input = AOS_KEY_A;
+    aos_main_menu_name_update(&menu, &input);
+    assert(menu.name_buffer[1] == 3 && menu.name_position == 2);
+    input.repeated_input = AOS_KEY_B;
+    aos_main_menu_name_update(&menu, &input);
+    assert(menu.name_buffer[0] == 2 && menu.name_buffer[1] == 0 &&
+           menu.name_position == 1);
+    input.repeated_input = AOS_KEY_START;
+    assert(aos_main_menu_name_update(&menu, &input) == 1);
+    assert(menu.name_committed && menu.committed_name[0] == 2);
+
+    menu = (AosMainMenu){0};
+    input.repeated_input = AOS_KEY_START;
+    assert(aos_main_menu_name_update(&menu, &input) == 1);
+    assert(menu.name_defaulted && menu.committed_name[0] == 0x14 &&
+           menu.committed_name[3] == 2);
+
+    menu = (AosMainMenu){.selected_slot = 0, .name_codes_enabled = true,
+                         .name_buffer = {0x0B, 0x16, 0x0D, 0x0A,
+                                         0x16, 0x14, 0, 0}};
+    assert(aos_main_menu_name_update(&menu, &input) == 1);
+    assert(menu.name_code == 1 && menu.current_character == 1);
+
     /* Native COPY uses the even entries as the three visible files and the
      * adjacent odd entries as their companions. */
     menu = (AosMainMenu){.slot_present_mask = (1u << 0) | (1u << 4)};
@@ -224,6 +257,21 @@ int main(void) {
     for (unsigned frame = 0; frame < 9; ++frame)
         aos_game_mode_main_menu_update(&mode, &menu, &input);
     assert(mode.update_stage == 9 && menu.name_entry_active);
+    input.repeated_input = AOS_KEY_B;
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 0x0A && !menu.name_entry_active);
+    input.repeated_input = 0;
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 0x29 && menu.fade_counter == 10 &&
+           menu.display_control == 0x1E00);
+
+    menu = (AosMainMenu){.selected_slot = 0, .name_entry_active = true,
+                         .name_buffer = {2}};
+    mode = (AosGameMode){AOS_MODE_MAIN_MENU, 9, 0};
+    input.repeated_input = AOS_KEY_START;
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(mode.update_stage == 0x1E && menu.name_committed &&
+           menu.room_setup_requested && menu.intro_requested);
 
     puts("Aria native main-menu controller tests passed");
     return 0;

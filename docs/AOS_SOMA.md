@@ -42,6 +42,13 @@ input into New Game or Continue, a three-file selection screen and the real
 directory; `--save-dir DIR` and `--runtime FILE` provide explicit development
 paths. New files start at the native new-game location, area 0 room 0.
 
+The room runtime now routes every simulation frame through the native
+`aos_game_mode_update` lifecycle and its IN_GAME handler. Its explicit
+room/save command-line entry deliberately starts at IN_GAME, while a tested
+host-neutral boot path crosses Reset and both startup logos into the partial
+title handler. The standalone title launcher remains separate until the
+native main-menu controller can replace its diagnostic navigation.
+
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with
 the original six 0x47C-byte SRAM records. The runtime accepts `--save FILE`

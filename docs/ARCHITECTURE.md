@@ -354,7 +354,10 @@ selection operations and display-independent CLI launcher:
 `fusion_aria_runtime` (`src/runtime/aria_runtime.c`) is the experimental
 SDL3 Aria runtime: one exported room, Soma's sprite library as animation
 timings and frames, and the SDL-free ports `aos_collision.c`, `aos_soma.c`
-and `aos_anim.c`.
+and `aos_anim.c`. Its simulation frames pass through the host-neutral native
+game-mode table in `aos_game_lifecycle.c`; explicit room/save launches enter
+IN_GAME directly while the incomplete boot/title path remains independently
+testable.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

@@ -11,6 +11,7 @@
  * separate reconstruction work. */
 #include "aos_door.h"
 #include "aos_enemy.h"
+#include "aos_game_lifecycle.h"
 #include "aos_room.h"
 #include "aos_save.h"
 #include "aos_save_room.h"
@@ -1476,6 +1477,11 @@ int main(int argc, char **argv) {
     bool announced_death = false;
     long step = 0;
     AosInput aria_input = {0};
+    AosGameLifecycle lifecycle;
+    /* This executable still requires a room folder, --area/--room or --save,
+     * so its established development entry starts directly in IN_GAME. The
+     * separate title launcher remains unchanged until MAIN_MENU is native. */
+    aos_game_lifecycle_init(&lifecycle, true);
     Uint64 last = SDL_GetTicksNS(), accumulator = 0;
     const Uint64 frame_ns = 1000000000ull / 60;
     bool running = true;
@@ -1598,6 +1604,9 @@ int main(int argc, char **argv) {
             if (forced.active) held = forced.held;
             forced.active = false;
             aos_input_update(&aria_input, held);
+            lifecycle.input = aria_input;
+            aos_game_lifecycle_update(&lifecycle);
+            if (!lifecycle.in_game_frame_requested) continue;
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);
             ++step;

@@ -421,6 +421,10 @@ with:
 Soma uses the movement, collision, jump, crouch, landing, ability-move and
 animation rules ported from the cvaos assembly (`docs/AOS_SOMA.md`); soul
 inventory and progression and the complete game-over flow are not implemented.
+Each simulation frame is now admitted by Aria's native game-mode dispatcher
+through its IN_GAME handler. Explicit room/save invocations remain direct
+development launches; native boot and title/menu presentation are still a
+partial, separately tested lifecycle.
 Aria save rooms are detected from the native map flag or legacy Object1C room
 record; holding Up in the native activation rectangle heals Soma and writes
 the selected portable checkpoint file. The native healing animation and

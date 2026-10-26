@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0561 - Connect Aria's native lifecycle dispatcher
+
+- Added `aos_game_lifecycle.c`, whose native handler table connects RESET,
+  LICENSED_BY_NINTENDO, KONAMI_LOGO, TITLE_SCREEN and IN_GAME through
+  `aos_game_mode_update`. The title handler reuses the existing fade and
+  stages 4-7 instead of duplicating them.
+- `fusion_aria_runtime` now runs its existing gameplay update only after the
+  IN_GAME handler requests the frame. Its required room/save development
+  entry still selects IN_GAME directly, preserving the room, capture and
+  debug arguments; the separate `fusion_aria_title_preview` launcher remains
+  unchanged.
+- The new deterministic lifecycle test follows native boot through both
+  logos into TITLE_SCREEN, checks the existing title helper connection and
+  checks direct IN_GAME dispatch. Native boot is not yet selected by an SDL
+  frontend, title stage 3 and native stage-8 selection are still missing, and
+  startup graphics remain requests, so the feature stays partial.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission is
+  unchanged.
+- Next: port the missing title stage 3 and native stage-8 destination
+  handoff, then reconstruct `GameModeMainMenuUpdate` and connect the
+  standalone launcher to this lifecycle.
+
 ## Patch 0560 - Port Aria's startup logo controllers
 
 - `aos_game_mode_licensed_by_nintendo_update` ports all five stages of

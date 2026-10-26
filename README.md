@@ -72,8 +72,10 @@ rebuilds; `--verbose` also prints the computed digests. A successful action is
 rehashed, validated and recorded atomically before the next dependent action,
 so a failed pass resumes without losing completed work. Unknown cache fields
 are preserved and unsafe state/output paths are rejected. The twelve migrated
-asset actions run the C11 importer; `inventory`, `checklist`, and
-`metroid_sound` remain explicitly marked as temporary Python-backed actions.
+asset actions run the C11 importer. `checklist` is generated directly in C11
+by `fusion_checklist`, with byte-identical Markdown and Aria backlog output.
+Only `inventory` and `metroid_sound` remain explicitly marked as temporary
+Python-backed actions.
 
 The native Aria world importer records metadata only. The general asset
 importer may write proprietary decoded output, so everything it produces
@@ -95,6 +97,7 @@ without reading either ROM:
 ```sh
 build/fusion_rebuild --all
 build/fusion_rebuild --all --dry-run
+build/fusion_checklist --check
 ```
 
 The command currently registers the inventory and checklist tasks. It hashes

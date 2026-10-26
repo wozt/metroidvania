@@ -4,7 +4,7 @@
 
 Runs, without writing anything or running any test:
 
-* ``scripts/native_parity.py --check``: ``docs/NATIVE_PARITY_CHECKLIST.md``
+* ``build/fusion_checklist --check``: ``docs/NATIVE_PARITY_CHECKLIST.md``
   against ``data/native_parity/annotations.tsv`` and the native inventory;
 * ``scripts/dashboard.py --check``: the registry-derived part of
   ``dashboard/data.json`` and ``dashboard/data.js`` against both registries
@@ -13,7 +13,7 @@ Runs, without writing anything or running any test:
   against the pinned decompilation's ``Sound`` enum.
 
 Use it after editing a registry or its documentation; regenerate with
-``python3 -m scripts.native_parity`` and
+``build/fusion_rebuild --checklist`` and
 ``python3 -m scripts.dashboard --run-tests``.
 """
 from __future__ import annotations
@@ -21,13 +21,14 @@ from __future__ import annotations
 import contextlib
 import io
 from pathlib import Path
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import dashboard, mzm_sound_ids, native_parity  # noqa: E402
+from scripts import dashboard, mzm_sound_ids  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,14 +36,20 @@ def main(argv: list[str] | None = None) -> int:
         print("usage: check_generated.py (no arguments)", file=sys.stderr)
         return 2
     failures = 0
-    errors = io.StringIO()
     try:
-        with contextlib.redirect_stderr(errors):
-            native_parity.main(["--check"])
-    except SystemExit as exit_:
-        if exit_.code:
+        checklist = subprocess.run(
+            [ROOT / "build/fusion_checklist", "--check"], cwd=ROOT,
+            check=False, capture_output=True, text=True)
+    except OSError as exc:
+        failures += 1
+        print(f"cannot run native checklist check: {exc}", file=sys.stderr)
+    else:
+        if checklist.returncode:
             failures += 1
-            print(errors.getvalue().strip().splitlines()[-1], file=sys.stderr)
+            message = checklist.stderr.strip() or checklist.stdout.strip()
+            print(message or "native checklist check failed", file=sys.stderr)
+        else:
+            print(checklist.stdout, end="")
     failures += 1 if dashboard.main(["--check"]) else 0
     if (mzm_sound_ids.DECOMP / "include/constants/audio.h").is_file():
         with contextlib.redirect_stdout(io.StringIO()) as output:

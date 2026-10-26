@@ -34,7 +34,7 @@ static const char *const sound_inputs[] = {
 };
 static const char *const inventory_inputs[] = {"scripts/native_inventory.py"};
 static const char *const checklist_inputs[] = {
-    "scripts/native_parity.py", "data/native_parity/annotations.tsv",
+    "build/fusion_checklist", "data/native_parity/annotations.tsv",
 };
 
 static const char *const aria_requirements[] = {
@@ -56,6 +56,7 @@ static const char *const raw_requirements[] = {
 static const char *const sound_requirements[] = {
     "roms/Metroid - Zero Mission (USA).gba", "third_party/mzm/mzm_us.map",
 };
+static const char *const checklist_requirements[] = {"build/fusion_checklist"};
 
 static const char *const inventory_outputs[] = {"data/native_parity/inventory.json"};
 static const char *const checklist_outputs[] = {
@@ -122,8 +123,8 @@ static const FusionRebuildTask tasks[] = {
      .backend = FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
      PATHS(inventory_inputs, inventory_outputs),
      .path_kind = FUSION_REBUILD_PATHS_INVENTORY},
-    {.name = "checklist", .version = 4, .group = FUSION_REBUILD_GROUP_NATIVE,
-     .backend = FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
+    {.name = "checklist", .version = 5, .group = FUSION_REBUILD_GROUP_NATIVE,
+     .backend = FUSION_REBUILD_BACKEND_C, REQUIRES(checklist_requirements),
      DEPENDS(checklist_dependencies), PATHS(checklist_inputs, checklist_outputs),
      .path_kind = FUSION_REBUILD_PATHS_CHECKLIST},
     {.name = "aria_rom", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,

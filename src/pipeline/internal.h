@@ -23,4 +23,12 @@ bool fusion_rebuild_run_registered_action(const char *root,
                                           void *user,
                                           char *error, size_t error_size);
 
+bool fusion_native_checklist(const char *root,
+                             const char *inventory_path,
+                             const char *annotations_path,
+                             const char *checklist_path,
+                             const char *unassigned_path,
+                             bool check_only,
+                             char *error, size_t error_size);
+
 #endif /* FUSION_PIPELINE_INTERNAL_H */

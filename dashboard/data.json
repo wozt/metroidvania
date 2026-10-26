@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T03:23:48+00:00",
+ "generated_at": "2026-10-26T03:46:12+00:00",
  "git": {
-  "commit": "1b945b9",
+  "commit": "899934f",
   "branch": "main",
   "dirty": true
  },
@@ -13062,6 +13062,8 @@
    "local_sources": [
     "scripts/native_inventory.py",
     "scripts/native_parity.py",
+    "src/pipeline/checklist.c",
+    "src/tools/fusion_checklist.c",
     "data/native_parity/aos_unassigned_routines.tsv"
    ],
    "tests": [
@@ -13069,7 +13071,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Lexical analysis: dynamic dispatch and runtime evidence are not indexed. The generated Aria backlog lists every routine not yet attached to a reviewed parity feature and keeps call-graph category suggestions separate from proven categories.",
+   "limitations": "Source discovery and classification still run in Python, and lexical analysis cannot prove dynamic dispatch or runtime evidence. Checklist validation and rendering are native C11: every inventory shard is checksum-validated, and both the Markdown view and the complete Aria backlog with separate call-graph suggestions are byte-identical to the reference.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13079,7 +13081,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-20",
+   "last_validated": "2026-10-26",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -13163,7 +13165,9 @@
     "src/pipeline/cache.c",
     "src/pipeline/plan.c",
     "src/pipeline/actions.c",
+    "src/pipeline/checklist.c",
     "src/tools/fusion_rebuild.c",
+    "src/tools/fusion_checklist.c",
     "scripts/rebuild.py",
     "scripts/export_index.py"
    ],
@@ -13173,7 +13177,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The native C11 orchestrator owns the complete 15-task registry and graph, v1 state parsing and atomic serialization, exact input, dependency, decompilation and output fingerprints, export and sprite-index validation, prerequisite propagation, force, incremental planning and real action execution. It rehashes, validates and records every successful action before its dependents, preserves unknown cache fields, rejects unsafe state/output paths and resumes after failures. The twelve migrated asset actions dispatch to the C11 importer; inventory, checklist and Zero Mission audio remain the three explicitly temporary Python-backed actions.",
+   "limitations": "The native C11 orchestrator owns the complete 15-task registry and graph, v1 state, exact fingerprints, output validation, incremental planning and real action execution. It records every successful action before its dependents, preserves unknown cache fields, rejects unsafe paths and resumes after failures. The twelve migrated asset actions dispatch to the C11 importer. The checklist action now validates every inventory fragment and the annotation TSV and writes byte-identical Markdown and Aria backlog outputs directly in C11; only inventory generation and Zero Mission audio remain temporary Python-backed actions.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14995,6 +14999,11 @@
     "outcome": "passed"
    },
    {
+    "name": "fusion_checklist_current",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
     "name": "editor_cli_headless",
     "files": [],
     "outcome": "passed"
@@ -15651,9 +15660,9 @@
    {
     "file": "tests/test_native_parity.py",
     "module": "tests.test_native_parity",
-    "test_count": 19,
+    "test_count": 21,
     "outcome": "passed",
-    "passed": 19
+    "passed": 21
    },
    {
     "file": "tests/test_native_rooms.py",
@@ -15853,12 +15862,18 @@
    }
   ],
   "summary": {
-   "passed": 397,
+   "passed": 400,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "899934f",
+   "date": "2026-10-26",
+   "subject": "Execute the native rebuild graph",
+   "scope": "project"
+  },
   {
    "commit": "1b945b9",
    "date": "2026-10-26",
@@ -16331,12 +16346,6 @@
    "commit": "1bbce5a",
    "date": "2026-10-23",
    "subject": "Port the Aria Nemesis enemy",
-   "scope": "project"
-  },
-  {
-   "commit": "1660b5a",
-   "date": "2026-10-22",
-   "subject": "Port the Aria Killer Doll",
    "scope": "project"
   }
  ],
@@ -20385,7 +20394,9 @@
    "dependencies": [
     "inventory"
    ],
-   "requires": []
+   "requires": [
+    "build/fusion_checklist"
+   ]
   },
   {
    "name": "aria_rom",

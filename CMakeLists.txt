@@ -86,6 +86,7 @@ add_library(fusion_pipeline STATIC
     src/pipeline/cache.c
     src/pipeline/plan.c
     src/pipeline/actions.c
+    src/pipeline/checklist.c
 )
 target_include_directories(fusion_pipeline PUBLIC include)
 target_include_directories(fusion_pipeline PRIVATE src/pipeline src/assets/core)
@@ -96,6 +97,12 @@ add_executable(fusion_rebuild src/tools/fusion_rebuild.c)
 target_link_libraries(fusion_rebuild PRIVATE fusion_pipeline)
 target_compile_definitions(fusion_rebuild PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 fusion_enable_warnings(fusion_rebuild)
+
+add_executable(fusion_checklist src/tools/fusion_checklist.c)
+target_link_libraries(fusion_checklist PRIVATE fusion_pipeline)
+target_include_directories(fusion_checklist PRIVATE src/pipeline)
+target_compile_definitions(fusion_checklist PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+fusion_enable_warnings(fusion_checklist)
 
 add_executable(fusion_importer src/tools/fusion_importer.c)
 target_link_libraries(fusion_importer PRIVATE fusion_assets)
@@ -229,6 +236,7 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_rebuild_tests)
     add_test(NAME fusion_rebuild_graph COMMAND fusion_rebuild_tests)
     add_test(NAME fusion_rebuild_list COMMAND fusion_rebuild --list)
+    add_test(NAME fusion_checklist_current COMMAND fusion_checklist --check)
 
     add_test(NAME editor_cli_headless
         COMMAND ${CMAKE_COMMAND} -E env --unset=DISPLAY --unset=WAYLAND_DISPLAY

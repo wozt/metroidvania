@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """ROM-free tests for native source inventory and rebuild orchestration."""
 from pathlib import Path
+import json
 import subprocess
 import tempfile
 import unittest
@@ -409,6 +410,48 @@ class NativeParityTests(unittest.TestCase):
             {name: (task.group, task.dependencies)
              for name, task in rebuild.TASKS.items()},
         )
+        checklist_line = next(
+            line for line in result.stdout.splitlines()
+            if line.startswith("checklist: "))
+        self.assertNotIn("backend=python-temporary", checklist_line)
+
+    def test_native_checklist_is_byte_identical(self):
+        executable = rebuild.ROOT / "build/fusion_checklist"
+        if not executable.is_file():
+            self.skipTest("fusion_checklist is not built")
+        with tempfile.TemporaryDirectory() as directory:
+            checklist = Path(directory) / "checklist.md"
+            unassigned = Path(directory) / "unassigned.tsv"
+            subprocess.run(
+                [executable, "--output", checklist,
+                 "--aos-unassigned-output", unassigned],
+                cwd=rebuild.ROOT, check=True, capture_output=True, text=True)
+            self.assertEqual(checklist.read_bytes(),
+                             native_parity.CHECKLIST.read_bytes())
+            self.assertEqual(unassigned.read_bytes(),
+                             native_parity.AOS_UNASSIGNED_ROUTINES.read_bytes())
+
+    def test_native_checklist_rejects_corrupt_inventory_shard(self):
+        executable = rebuild.ROOT / "build/fusion_checklist"
+        if not executable.is_file():
+            self.skipTest("fusion_checklist is not built")
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            manifest = json.loads(native_parity.INVENTORY.read_text(encoding="utf-8"))
+            descriptor = manifest["games"]["mzm"]["record_files"][0]
+            descriptor["sha256"] = "0" * 64
+            inventory = temporary / "inventory.json"
+            inventory.write_text(json.dumps(manifest), encoding="utf-8")
+            source_shard = native_parity.INVENTORY.parent / descriptor["path"]
+            (temporary / descriptor["path"]).write_bytes(source_shard.read_bytes())
+            result = subprocess.run(
+                [executable, "--inventory", inventory,
+                 "--annotations", native_parity.ANNOTATIONS,
+                 "--output", temporary / "checklist.md",
+                 "--aos-unassigned-output", temporary / "unassigned.tsv"],
+                cwd=rebuild.ROOT, check=False, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("checksum mismatch", result.stderr)
 
     def test_native_rebuild_dry_run_matches_python(self):
         executable = rebuild.ROOT / "build/fusion_rebuild"

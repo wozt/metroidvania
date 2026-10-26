@@ -170,8 +170,12 @@ bool fusion_rebuild_run_registered_action(const char *root,
         return run_python(root, "scripts.native_inventory", "native inventory", error,
                           error_size);
     if (!strcmp(task->name, "checklist"))
-        return run_python(root, "scripts.native_parity", "native checklist", error,
-                          error_size);
+        return fusion_native_checklist(
+            root, "data/native_parity/inventory.json",
+            "data/native_parity/annotations.tsv",
+            "docs/NATIVE_PARITY_CHECKLIST.md",
+            "data/native_parity/aos_unassigned_routines.tsv", false,
+            error, error_size);
     if (!strcmp(task->name, "metroid_sound"))
         return run_python(root, "scripts.mzm_audio", "Zero Mission audio export", error,
                           error_size);

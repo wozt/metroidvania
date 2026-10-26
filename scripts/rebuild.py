@@ -22,7 +22,7 @@ import subprocess
 import sys
 from typing import Callable
 
-from scripts import export_index, native_inventory, native_parity
+from scripts import export_index, native_inventory
 from scripts.asset_layout import (
     ARIA_METADATA, ARIA_ROOMS, ARIA_SOMA_RUNTIME, ARIA_SPRITES, IMPORT_CATALOG,
     METROID_METADATA, METROID_PROJECTILES_RUNTIME, METROID_ROOMS, METROID_SAMUS_RUNTIME,
@@ -32,6 +32,12 @@ from scripts.asset_layout import (
 ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = ROOT / ".cache/rebuild/state.json"
 STATE_SCHEMA = "metroidvania-rebuild-state-v1"
+INVENTORY = ROOT / "data/native_parity/inventory.json"
+ANNOTATIONS = ROOT / "data/native_parity/annotations.tsv"
+CHECKLIST = ROOT / "docs/NATIVE_PARITY_CHECKLIST.md"
+AOS_UNASSIGNED_ROUTINES = ROOT / "data/native_parity/aos_unassigned_routines.tsv"
+NATIVE_CHECKLIST = ROOT / "build" / ("fusion_checklist.exe" if sys.platform == "win32"
+                                     else "fusion_checklist")
 
 
 @dataclass(frozen=True)
@@ -65,9 +71,9 @@ def _source_inputs() -> list[Path]:
 
 def _checklist_inputs() -> list[Path]:
     return sorted({
-        Path(native_parity.__file__).resolve(),
-        native_parity.ANNOTATIONS,
-        *native_inventory.inventory_output_paths(native_parity.INVENTORY),
+        NATIVE_CHECKLIST,
+        ANNOTATIONS,
+        *native_inventory.inventory_output_paths(INVENTORY),
     })
 
 
@@ -77,14 +83,9 @@ def _write_inventory() -> None:
 
 
 def _write_checklist() -> None:
-    inventory = native_parity._load(native_parity.INVENTORY)
-    annotations = native_parity._load(native_parity.ANNOTATIONS)
-    native_parity.validate(inventory, annotations, ROOT)
-    native_parity.write_checklist(
-        native_parity.render(inventory, annotations), native_parity.CHECKLIST)
-    native_parity.write_checklist(
-        native_parity.render_unassigned_routines(inventory, annotations),
-        native_parity.AOS_UNASSIGNED_ROUTINES)
+    result = subprocess.run([str(NATIVE_CHECKLIST)], cwd=ROOT, check=False)
+    if result.returncode:
+        raise ValueError(f"fusion_checklist failed with exit code {result.returncode}")
 
 
 TASKS = {
@@ -99,11 +100,12 @@ TASKS = {
     ),
     "checklist": Task(
         name="checklist",
-        version=4,
+        version=5,
         dependencies=("inventory",),
         inputs=_checklist_inputs,
-        outputs=(native_parity.CHECKLIST, native_parity.AOS_UNASSIGNED_ROUTINES),
+        outputs=(CHECKLIST, AOS_UNASSIGNED_ROUTINES),
         action=_write_checklist,
+        requires=(NATIVE_CHECKLIST,),
     ),
 }
 

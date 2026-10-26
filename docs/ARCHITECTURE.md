@@ -176,8 +176,8 @@ other files in `src/pipeline/`. It registers the same 15 tasks, their versions,
 groups, explicit dependencies and local prerequisites, and resolves selected
 tasks with deterministic topological ordering, duplicate suppression, unknown
 dependency diagnostics and cycle detection. `fusion_rebuild --list` exposes
-that registry and marks `inventory`, `checklist` and `metroid_sound` as the
-three temporary Python-backed tasks. Cache loading and deterministic atomic
+that registry and marks `inventory` and `metroid_sound` as the two temporary
+Python-backed tasks. Cache loading and deterministic atomic
 writing, exact input/dependency/decompilation
 stamps, output fingerprints, room-export and content-addressed sprite-index
 validation, prerequisite propagation, forced invalidation and incremental
@@ -187,8 +187,12 @@ leave the last successful state resumable. The C planner reads the existing v1
 cache without rewriting it, preserves unknown records and fields, rejects
 unsafe state/output paths and produces the same complete dry-run output as
 Python. The twelve migrated asset tasks dispatch to `fusion_importer` without a
-shell. Inventory, checklist and audio are still explicit Python actions; the
-first two must be ported before the legacy orchestrator can be removed.
+shell. `fusion_checklist` validates every checksummed inventory fragment and
+the annotation TSV, then generates the Markdown checklist and Aria backlog
+byte-identically in C11; the native orchestrator calls its library directly
+and the legacy runner delegates to its CLI. Inventory generation and audio are
+the two remaining Python actions; the inventory must be ported before the
+legacy orchestrator can be removed.
 
 Routine categories record their evidence (`category_evidence`, schema v6):
 `path` when the source location decides it (all of Zero Mission's sorted

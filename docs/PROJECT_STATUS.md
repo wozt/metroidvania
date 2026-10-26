@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0538 - Native parity-checklist generation
+
+- Added `fusion_checklist` and the reusable C11 checklist renderer. It loads
+  the v6 inventory manifest, verifies every fragment's SHA-256, schema,
+  identity and record count, parses and validates the canonical annotation
+  TSV, and writes both the Markdown checklist and the Aria unassigned-routine
+  report atomically.
+- The native renderer reproduces the complete category boundaries, evidence
+  counts, feature links, status evidence and fixed-point Aria category
+  suggestions. Both tracked outputs are byte-identical to the Python
+  reference, including all 3,145 currently unassigned Aria routines.
+- The `checklist` rebuild action now calls the C library directly and is no
+  longer marked Python-backed. The legacy Python orchestrator delegates that
+  action to `fusion_checklist`, so both orchestrators retain the same task
+  version, inputs, prerequisite, fingerprints and dry-run decisions.
+- Focused CTest coverage checks the tracked outputs, Python integration tests
+  compare fresh native outputs byte for byte, and a forced native
+  `inventory -> checklist` execution completed successfully.
+- Registered Python-backed tasks fell from 3 of 15 to 2 of 15: only inventory
+  generation and Zero Mission audio remain. The fourth orchestrator milestone
+  remains open until inventory discovery itself is native.
+- Next: port the v6 source inventory scanner, classifier, sharding and stale-
+  fragment cleanup to C11, then remove the legacy Python rebuild runner.
+
 ## Patch 0537 - Native rebuild execution
 
 - `fusion_rebuild` now executes the complete 15-task dependency graph instead

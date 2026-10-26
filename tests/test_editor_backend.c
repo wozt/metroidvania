@@ -2,6 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "audit.h"
 #include "backend.h"
+#include "object_catalog.h"
 #include "project_room.h"
 
 #include <assert.h>
@@ -136,6 +137,27 @@ static void write_text(const char *path, const char *text) {
     assert(!fclose(file));
 }
 
+static void write_json(const char *path, const FusionJson *value) {
+    char *text = NULL;
+    size_t size = 0;
+    assert(fusion_json_write(value, 2, &text, &size));
+    FILE *file = fopen(path, "wb");
+    assert(file != NULL);
+    assert(fwrite(text, 1, size, file) == size);
+    assert(fwrite("\n", 1, 1, file) == 1);
+    assert(!fclose(file));
+    free(text);
+}
+
+static bool option_has_token(const FusionJson *options, const char *token) {
+    for (size_t index = 0; index < options->count; ++index) {
+        const FusionJson *value = fusion_json_member(&options->items[index], "native_type");
+        if (value && value->kind == FUSION_JSON_STRING && !strcmp(value->string, token))
+            return true;
+    }
+    return false;
+}
+
 static void remove_tree(const char *path) {
     DIR *directory = opendir(path);
     if (!directory) {
@@ -211,6 +233,578 @@ static void test_audit_contract(void) {
     fusion_json_free(&record);
 }
 
+static void test_catalog_and_item_contract(void) {
+    assert(!strcmp(feb_catalog_role("mzm", "PSPRITE_ZOOMER_RED", "Enemy / actor"),
+                   "ENEMY"));
+    assert(!strcmp(feb_catalog_role("mzm", "PSPRITE_MISSILE_TANK", "Item / pickup"),
+                   "ITEM"));
+    assert(!strcmp(feb_catalog_role("mzm", "PSPRITE_POWER_GRIP", "Upgrade / ability"),
+                   "ITEM"));
+    assert(!strcmp(feb_catalog_role("mzm", "PSPRITE_SAVE_PLATFORM", "World object"),
+                   "OBJECT"));
+    assert(feb_catalog_role("mzm", "../../ROM", "Enemy / actor") == NULL);
+    assert(!strcmp(feb_catalog_role("aria", "enemy:07", "native"), "ENEMY"));
+    assert(!strcmp(feb_catalog_role("aria", "special-object:0A", "native"), "ENEMY"));
+    assert(!strcmp(feb_catalog_role("aria", "pickup:03", "native"), "ITEM"));
+    assert(!strcmp(feb_catalog_role("aria", "special-object:00", "native"), "DOOR"));
+    assert(!strcmp(feb_catalog_role("aria", "generic-candle:00", "native"), "OBJECT"));
+
+    FusionJson options = fusion_json_array();
+    FebError error = {0};
+    assert(feb_aria_item_family_options(&options, &error));
+    assert(options.count == 27);
+    for (int subtype = 1; subtype <= 8; ++subtype) {
+        char token[64];
+        snprintf(token, sizeof token, "pickup:%02X", subtype);
+        assert(option_has_token(&options, token));
+        snprintf(token, sizeof token, "hard-mode-pickup:%02X", subtype);
+        assert(option_has_token(&options, token));
+        snprintf(token, sizeof token, "all-souls-reward:%02X", subtype);
+        assert(option_has_token(&options, token));
+    }
+    assert(feb_aria_item_family_options(&options, &error));
+    assert(options.count == 27);
+    fusion_json_free(&options);
+
+    FusionJson type = fusion_json_string("pickup:03"), settings;
+    assert(feb_item_settings(&type, 58, 513, 999, 255, &settings, &error));
+    assert(member(&settings, "item_id", FUSION_JSON_NUMBER)->integer == 58);
+    fusion_json_free(&settings);
+    fusion_json_free(&type);
+    static const struct {
+        const char *type;
+        int64_t item, parameter;
+    } invalid[] = {{"pickup:03", 59, 0}, {"pickup:08", 6, 0},
+                   {"enemy:02", 1, 0}, {"pickup:04", 0, 65536}};
+    for (size_t index = 0; index < sizeof invalid / sizeof invalid[0]; ++index) {
+        error = (FebError){0};
+        type = fusion_json_string(invalid[index].type);
+        assert(!feb_item_settings(&type, invalid[index].item, invalid[index].parameter, 0, 0,
+                                  &settings, &error));
+        assert(error.message[0]);
+        fusion_json_free(&type);
+    }
+}
+
+static void create_unassigned_entity(FusionJson *document, const char *kind_text,
+                                     int64_t x, int64_t y, const char *label_text) {
+    FusionJson kind = fusion_json_string(kind_text), label = fusion_json_string(label_text);
+    FusionJson type = fusion_json_string("unassigned"), created;
+    FebError error = {0};
+    assert(feb_entity_create(document, FUSION_SOURCE_DIR, &kind, x, y, &label, &type, NULL,
+                             &created, &error));
+    fusion_json_free(&created);
+    fusion_json_free(&kind);
+    fusion_json_free(&label);
+    fusion_json_free(&type);
+}
+
+static void test_project_room_storage_and_migrations(void) {
+    char root_template[] = "/tmp/fusion-editor-rooms-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    static const struct {
+        const char *world, *area;
+    } worlds[] = {{"mzm", "Brinstar"}, {"aria", "0"}};
+    for (size_t world = 0; world < 2; ++world) {
+        FebRoomScope scope = {.world = worlds[world].world, .room = 23,
+                              .width = 480, .height = 320};
+        strcpy(scope.area, worlds[world].area);
+        FusionJson document;
+        FebError error = {0};
+        assert(feb_room_load(root, &scope, &document, &error));
+        create_unassigned_entity(&document, "ENEMY", 0, 16, "Custom enemy");
+        create_unassigned_entity(&document, "ITEM", world ? 8 : 16, 16, "Custom item");
+        create_unassigned_entity(&document, "OBJECT", world ? 16 : 32, 16, "Custom object");
+        char path[4096];
+        assert(feb_room_save(root, &document, path, &error));
+        assert(strstr(path, "assets/extracted/overrides/") != NULL);
+        fusion_json_free(&document);
+        assert(feb_room_load(root, &scope, &document, &error));
+        assert(member(&document, "entities", FUSION_JSON_ARRAY)->count == 3);
+        assert(feb_entity_move(&document, 1, world ? 48 : 48, world ? 96 : 96, &error));
+        assert(feb_entity_delete(&document, 2, &error));
+        assert(feb_room_save(root, &document, path, &error));
+        fusion_json_free(&document);
+        assert(feb_room_load(root, &scope, &document, &error));
+        const FusionJson *entities = member(&document, "entities", FUSION_JSON_ARRAY);
+        assert(entities->count == 2);
+        assert(member(&entities->items[0], "id", FUSION_JSON_NUMBER)->integer == 1);
+        assert(member(&entities->items[0], "x", FUSION_JSON_NUMBER)->integer == 48);
+        assert(member(&entities->items[1], "id", FUSION_JSON_NUMBER)->integer == 3);
+        fusion_json_free(&document);
+    }
+
+    FebRoomScope legacy_scope = {.world = "mzm", .room = 2, .width = 64, .height = 32};
+    strcpy(legacy_scope.area, "Brinstar");
+    char legacy_path[4096], parent[4096];
+    FebError error = {0};
+    assert(feb_room_path(root, &legacy_scope, legacy_path, &error));
+    strcpy(parent, legacy_path);
+    *strrchr(parent, '/') = '\0';
+    make_directory(parent);
+    write_text(legacy_path,
+               "{\"schema\":\"metroidvania.project-room-entities\",\"version\":1,"
+               "\"world\":\"mzm\",\"area\":\"Brinstar\",\"room\":2,"
+               "\"width_px\":64,\"height_px\":32,\"next_id\":1,\"entities\":[]}");
+    FusionJson document;
+    assert(feb_room_load(root, &legacy_scope, &document, &error));
+    assert(!strcmp(member(&document, "schema", FUSION_JSON_STRING)->string,
+                   "metroidvania.project-room-data"));
+    assert(member(&document, "version", FUSION_JSON_NUMBER)->integer == 4);
+    assert(member(&document, "doors", FUSION_JSON_ARRAY)->count == 0);
+    char *legacy_source = read_text(legacy_path);
+    assert(strstr(legacy_source, "metroidvania.project-room-entities") != NULL);
+    free(legacy_source);
+    fusion_json_free(&document);
+
+    FebRoomScope v2_scope = {.world = "aria", .room = 4, .width = 64, .height = 32};
+    strcpy(v2_scope.area, "2");
+    assert(feb_room_load(root, &v2_scope, &document, &error));
+    assert(fusion_json_set(&document, "version", fusion_json_int(2)));
+    fusion_json_remove(&document, "next_event_id");
+    fusion_json_remove(&document, "events");
+    char path[4096];
+    assert(feb_room_path(root, &v2_scope, path, &error));
+    strcpy(parent, path);
+    *strrchr(parent, '/') = '\0';
+    make_directory(parent);
+    write_json(path, &document);
+    fusion_json_free(&document);
+    assert(feb_room_load(root, &v2_scope, &document, &error));
+    assert(member(&document, "version", FUSION_JSON_NUMBER)->integer == 4);
+    assert(member(&document, "next_event_id", FUSION_JSON_NUMBER)->integer == 1);
+    assert(member(&document, "events", FUSION_JSON_ARRAY)->count == 0);
+    char *source = read_text(path);
+    assert(strstr(source, "\"version\": 2") != NULL);
+    free(source);
+    fusion_json_free(&document);
+
+    FebRoomScope v3_scope = {.world = "mzm", .room = 4, .width = 64, .height = 32};
+    strcpy(v3_scope.area, "Brinstar");
+    FusionJson create = scoped_room("4", "64", "32");
+    put_string(&create, "event_kind", "EVENT");
+    put_string(&create, "x", "0");
+    put_string(&create, "y", "0");
+    put_string(&create, "region_width", "16");
+    put_string(&create, "region_height", "16");
+    put_string(&create, "label", "Legacy event");
+    put_string(&create, "trigger_type", "enter");
+    put_string(&create, "action_type", "checkpoint");
+    put_string(&create, "action_ref", "checkpoint:legacy");
+    put_bool(&create, "once", false);
+    FusionJson result = execute_ok("event-create", create, root, false);
+    fusion_json_free(&result);
+    assert(feb_room_load(root, &v3_scope, &document, &error));
+    assert(fusion_json_set(&document, "version", fusion_json_int(3)));
+    FusionJson *event = &fusion_json_member_mut(&document, "events")->items[0];
+    fusion_json_remove(event, "condition_mode");
+    fusion_json_remove(event, "conditions");
+    assert(feb_room_path(root, &v3_scope, path, &error));
+    write_json(path, &document);
+    fusion_json_free(&document);
+    assert(feb_room_load(root, &v3_scope, &document, &error));
+    event = &fusion_json_member_mut(&document, "events")->items[0];
+    assert(!strcmp(member(event, "condition_mode", FUSION_JSON_STRING)->string, "all"));
+    assert(member(event, "conditions", FUSION_JSON_ARRAY)->count == 0);
+    source = read_text(path);
+    assert(strstr(source, "\"version\": 3") != NULL);
+    free(source);
+    fusion_json_free(&document);
+    remove_tree(root);
+}
+
+static bool try_entity_create(FusionJson *document, const char *kind_text, int64_t x, int64_t y,
+                              const char *label_text, const char *type_text, FebError *error) {
+    FusionJson kind = fusion_json_string(kind_text), label = fusion_json_string(label_text);
+    FusionJson type = fusion_json_string(type_text), created = fusion_json_null();
+    bool ok = feb_entity_create(document, FUSION_SOURCE_DIR, &kind, x, y, &label, &type, NULL,
+                                &created, error);
+    fusion_json_free(&created);
+    fusion_json_free(&kind);
+    fusion_json_free(&label);
+    fusion_json_free(&type);
+    return ok;
+}
+
+static void test_entity_validation_items_and_staging(void) {
+    char root_template[] = "/tmp/fusion-editor-entities-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    FebRoomScope scope = {.world = "mzm", .room = 0, .width = 240, .height = 160};
+    strcpy(scope.area, "Brinstar");
+    FusionJson document;
+    FebError error = {0};
+    assert(feb_room_load(root, &scope, &document, &error));
+    static const struct {
+        const char *kind, *label, *type;
+        int64_t x;
+    } invalid[] = {{"DOOR", "No", "unassigned", 0},
+                   {"ENEMY", "No", "unassigned", 1},
+                   {"ITEM", "No", "unassigned", 240},
+                   {"OBJECT", "bad\nline", "unassigned", 0},
+                   {"OBJECT", "Name", "../../rom", 0}};
+    for (size_t index = 0; index < sizeof invalid / sizeof invalid[0]; ++index) {
+        error = (FebError){0};
+        assert(!try_entity_create(&document, invalid[index].kind, invalid[index].x, 0,
+                                  invalid[index].label, invalid[index].type, &error));
+        assert(member(&document, "entities", FUSION_JSON_ARRAY)->count == 0);
+    }
+    assert(try_entity_create(&document, "ENEMY", 0, 0, "Enemy", "unassigned", &error));
+    char path[4096];
+    assert(feb_room_save(root, &document, path, &error));
+    FusionJson before;
+    assert(fusion_json_clone(&document, &before));
+    FusionJson wrong = fusion_json_string("PSPRITE_MISSILE_TANK");
+    error = (FebError){0};
+    assert(!feb_entity_assign(&document, FUSION_SOURCE_DIR, 1, &wrong, NULL, &error));
+    assert(fusion_json_equal(&document, &before));
+    fusion_json_free(&wrong);
+    FusionJson zoomer = fusion_json_string("PSPRITE_ZOOMER_RED");
+    error = (FebError){0};
+    assert(feb_entity_assign(&document, FUSION_SOURCE_DIR, 1, &zoomer, NULL, &error));
+    const FusionJson *entity = &member(&document, "entities", FUSION_JSON_ARRAY)->items[0];
+    assert(!strcmp(member(entity, "native_type", FUSION_JSON_STRING)->string,
+                   "PSPRITE_ZOOMER_RED"));
+    FusionJson label = fusion_json_string("Patrol Zoomer");
+    assert(feb_entity_update(&document, FUSION_SOURCE_DIR, 1, 32, 48, &label, &zoomer, NULL,
+                             &error));
+    fusion_json_free(&before);
+    assert(fusion_json_clone(&document, &before));
+    error = (FebError){0};
+    assert(!feb_entity_update(&document, FUSION_SOURCE_DIR, 1, 17, 48, &label, &zoomer, NULL,
+                              &error));
+    assert(fusion_json_equal(&document, &before));
+    fusion_json_free(&before);
+    fusion_json_free(&label);
+    fusion_json_free(&zoomer);
+    fusion_json_free(&document);
+
+    FebRoomScope wrong_geometry = scope;
+    wrong_geometry.width = 320;
+    error = (FebError){0};
+    assert(!feb_room_load(root, &wrong_geometry, &document, &error));
+
+    char *saved_text = read_text(path), detail[256];
+    FusionJson tampered;
+    assert(fusion_json_parse(saved_text, strlen(saved_text), &tampered, detail, sizeof detail));
+    free(saved_text);
+    FusionJson *saved_entity = &fusion_json_member_mut(&tampered, "entities")->items[0];
+    assert(fusion_json_set(saved_entity, "id", fusion_json_int(9)));
+    write_json(path, &tampered);
+    fusion_json_free(&tampered);
+    error = (FebError){0};
+    assert(!feb_room_load(root, &scope, &document, &error));
+
+    FebRoomScope symlink_scope = {.world = "mzm", .room = 9, .width = 64, .height = 64};
+    strcpy(symlink_scope.area, "Brinstar");
+    assert(feb_room_path(root, &symlink_scope, path, &error));
+    char symlink_parent[4096];
+    strcpy(symlink_parent, path);
+    *strrchr(symlink_parent, '/') = '\0';
+    make_directory(symlink_parent);
+    assert(!symlink("/tmp/fusion-editor-nonexistent-room.json", path));
+    error = (FebError){0};
+    assert(!feb_room_load(root, &symlink_scope, &document, &error));
+    assert(strstr(error.message, "symlink") != NULL);
+
+    FebRoomScope aria = {.world = "aria", .room = 7, .width = 512, .height = 512};
+    strcpy(aria.area, "3");
+    assert(feb_room_load(root, &aria, &document, &error));
+    create_unassigned_entity(&document, "ENEMY", 8, 16, "Saved");
+    assert(feb_room_save(root, &document, path, &error));
+    char live_path[4096];
+    strcpy(live_path, path);
+    char *live_before = read_text(live_path);
+    fusion_json_free(&document);
+    assert(!setenv("MV_EDITOR_ROOM_STAGE", "00000000-0000-4000-8000-000000000109", 1));
+    assert(feb_room_load(root, &aria, &document, &error));
+    assert(feb_entity_move(&document, 1, 24, 32, &error));
+    assert(feb_room_save(root, &document, path, &error));
+    assert(strstr(path, ".editor_staging") != NULL);
+    fusion_json_free(&document);
+    assert(feb_room_load(root, &aria, &document, &error));
+    assert(member(&member(&document, "entities", FUSION_JSON_ARRAY)->items[0], "x",
+                  FUSION_JSON_NUMBER)->integer == 24);
+    fusion_json_free(&document);
+    char *live_after = read_text(live_path);
+    assert(!strcmp(live_before, live_after));
+    free(live_before);
+    free(live_after);
+    assert(!unsetenv("MV_EDITOR_ROOM_STAGE"));
+    assert(feb_room_load(root, &aria, &document, &error));
+    assert(member(&member(&document, "entities", FUSION_JSON_ARRAY)->items[0], "x",
+                  FUSION_JSON_NUMBER)->integer == 8);
+    fusion_json_free(&document);
+    assert(!setenv("MV_EDITOR_ROOM_STAGE", "../outside", 1));
+    error = (FebError){0};
+    assert(!feb_room_load(root, &aria, &document, &error));
+    assert(strstr(error.message, "stage token") != NULL);
+    assert(!unsetenv("MV_EDITOR_ROOM_STAGE"));
+
+    FebRoomScope item_scope = {.world = "aria", .room = 2, .width = 320, .height = 160};
+    strcpy(item_scope.area, "0");
+    assert(feb_room_load(root, &item_scope, &document, &error));
+    create_unassigned_entity(&document, "ITEM", 16, 32, "Gold");
+    FusionJson item_type = fusion_json_string("pickup:03"), settings;
+    assert(feb_item_settings(&item_type, 58, 513, 999, 255, &settings, &error));
+    FusionJson *item = &fusion_json_member_mut(&document, "entities")->items[0];
+    assert(fusion_json_set(item, "native_type", item_type));
+    assert(fusion_json_set(item, "settings", settings));
+    assert(feb_room_validate_scope(&document, &item_scope, &error));
+    assert(feb_room_save(root, &document, path, &error));
+    fusion_json_free(&document);
+    assert(feb_room_load(root, &item_scope, &document, &error));
+    item = &fusion_json_member_mut(&document, "entities")->items[0];
+    assert(member(member(item, "settings", FUSION_JSON_OBJECT), "item_id",
+                  FUSION_JSON_NUMBER)->integer == 58);
+    fusion_json_free(&document);
+
+    FebRoomScope mzm_item = {.world = "mzm", .room = 11, .width = 320, .height = 160};
+    strcpy(mzm_item.area, "Brinstar");
+    assert(feb_room_load(root, &mzm_item, &document, &error));
+    create_unassigned_entity(&document, "ITEM", 0, 0, "Invalid typed item");
+    item = &fusion_json_member_mut(&document, "entities")->items[0];
+    assert(fusion_json_set(item, "settings", fusion_json_object()));
+    FusionJson *invalid_settings = fusion_json_member_mut(item, "settings");
+    assert(fusion_json_set(invalid_settings, "item_id", fusion_json_int(0)));
+    assert(fusion_json_set(invalid_settings, "parameter_0", fusion_json_int(0)));
+    assert(fusion_json_set(invalid_settings, "parameter_1", fusion_json_int(0)));
+    assert(fusion_json_set(invalid_settings, "flags", fusion_json_int(0)));
+    error = (FebError){0};
+    assert(!feb_room_validate_scope(&document, &mzm_item, &error));
+    fusion_json_free(&document);
+    remove_tree(root);
+}
+
+static void test_collision_model_contract(void) {
+    char root_template[] = "/tmp/fusion-editor-collision-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    static const struct {
+        const char *world, *area;
+        int64_t resolution;
+    } worlds[] = {{"mzm", "Brinstar", 16}, {"aria", "3", 8}};
+    for (size_t world = 0; world < 2; ++world) {
+        FebRoomScope scope = {.world = worlds[world].world, .room = 5,
+                              .width = 256, .height = 256};
+        strcpy(scope.area, worlds[world].area);
+        FusionJson document;
+        FebError error = {0};
+        assert(feb_room_load(root, &scope, &document, &error));
+        assert(member(member(&document, "collision", FUSION_JSON_OBJECT), "resolution_px",
+                      FUSION_JSON_NUMBER)->integer == worlds[world].resolution);
+        for (size_t index = 0; index < 7; ++index) {
+            FusionJson type = fusion_json_string(feb_collision_types[index]);
+            int64_t changed = 0;
+            assert(feb_collision_fill(&document, (int64_t)index, 1, 1, 1, &type, &changed,
+                                      &error));
+            assert(changed == 1);
+            const char *stored = NULL;
+            assert(feb_collision_get(&document, (int64_t)index, 1, &stored, &error));
+            assert(!strcmp(stored, feb_collision_types[index]));
+            fusion_json_free(&type);
+        }
+        int64_t changed = 0;
+        assert(feb_collision_clear(&document, 6, 1, 1, 1, &changed, &error));
+        assert(changed == 1);
+        const char *stored = NULL;
+        assert(feb_collision_get(&document, 6, 1, &stored, &error));
+        assert(!strcmp(stored, "empty"));
+        FusionJson capabilities;
+        assert(feb_collision_capabilities(worlds[world].world, &capabilities));
+        assert(member(&capabilities, "resolution_px", FUSION_JSON_NUMBER)->integer ==
+               worlds[world].resolution);
+        assert(member(&capabilities, "types", FUSION_JSON_ARRAY)->count == 7);
+        fusion_json_free(&capabilities);
+        fusion_json_free(&document);
+    }
+
+    FebRoomScope scope = {.world = "mzm", .room = 6, .width = 256, .height = 256};
+    strcpy(scope.area, "Brinstar");
+    FusionJson document;
+    FebError error = {0};
+    assert(feb_room_load(root, &scope, &document, &error));
+    FusionJson solid = fusion_json_string("solid"), water = fusion_json_string("water");
+    FusionJson air = fusion_json_string("air"), platform = fusion_json_string("one_way");
+    int64_t changed = 0;
+    assert(feb_collision_fill(&document, 1, 1, 3, 2, &solid, &changed, &error));
+    const int64_t points[][2] = {{1, 1}, {2, 1}, {2, 2}, {2, 2}};
+    assert(feb_collision_stroke(&document, points, 4, &water, &changed, &error));
+    assert(changed == 3);
+    const char *stored = NULL;
+    assert(feb_collision_get(&document, 3, 2, &stored, &error));
+    assert(!strcmp(stored, "solid"));
+    assert(feb_collision_stroke(&document, points, 4, &air, &changed, &error));
+    assert(changed == 3);
+    const int64_t last[][2] = {{3, 2}};
+    assert(feb_collision_stroke(&document, last, 1, &platform, &changed, &error));
+    assert(changed == 1);
+    FusionJson before;
+    assert(fusion_json_clone(&document, &before));
+    FusionJson invented = fusion_json_string("invented");
+    error = (FebError){0};
+    assert(!feb_collision_fill(&document, 0, 0, 1, 1, &invented, &changed, &error));
+    assert(fusion_json_equal(&document, &before));
+    fusion_json_free(&before);
+    fusion_json_free(&invented);
+    fusion_json_free(&solid);
+    fusion_json_free(&water);
+    fusion_json_free(&air);
+    fusion_json_free(&platform);
+    fusion_json_free(&document);
+    remove_tree(root);
+}
+
+static FusionJson event_options(const char *room, const char *kind, const char *x,
+                                const char *y, const char *label, const char *action_ref) {
+    FusionJson options = scoped_room(room, "64", "64");
+    put_string(&options, "event_kind", kind);
+    put_string(&options, "x", x);
+    put_string(&options, "y", y);
+    put_string(&options, "region_width", "16");
+    put_string(&options, "region_height", "16");
+    put_string(&options, "label", label);
+    put_string(&options, "trigger_type", !strcmp(kind, "EVENT") ? "enter" : "interact");
+    put_string(&options, "action_type", "checkpoint");
+    put_string(&options, "action_ref", action_ref);
+    put_bool(&options, "once", !strcmp(kind, "TRIGGER"));
+    return options;
+}
+
+static void test_event_and_dependency_contract(void) {
+    char root_template[] = "/tmp/fusion-editor-events-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    FusionJson options = scoped_room("6", "64", "64");
+    put_string(&options, "kind", "ENEMY");
+    put_string(&options, "x", "0");
+    put_string(&options, "y", "0");
+    put_string(&options, "label", "Condition entity");
+    put_string(&options, "native_type", "unassigned");
+    FusionJson result = execute_ok("entity-create", options, root, false);
+    fusion_json_free(&result);
+
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "x", "0");
+    put_string(&options, "y", "0");
+    put_string(&options, "door_width", "16");
+    put_string(&options, "door_height", "16");
+    put_string(&options, "label", "Condition door");
+    put_string(&options, "door_type", "normal");
+    put_string(&options, "facing", "left");
+    result = execute_ok("door-create", options, root, false);
+    fusion_json_free(&result);
+
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "source_door_id", "1");
+    put_string(&options, "target_world", "aria");
+    put_string(&options, "target_area", "0");
+    put_string(&options, "target_room", "1");
+    put_string(&options, "spawn_x", "0");
+    put_string(&options, "spawn_y", "0");
+    result = execute_ok("door-link", options, root, false);
+    fusion_json_free(&result);
+
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "id", "1");
+    put_string(&options, "source_door_id", "1");
+    put_string(&options, "target_world", "aria");
+    put_string(&options, "target_area", "0");
+    put_string(&options, "target_room", "1");
+    put_string(&options, "spawn_x", "24");
+    put_string(&options, "spawn_y", "0");
+    result = execute_ok("transition-update", options, root, false);
+    assert(member(member(&result, "transition", FUSION_JSON_OBJECT), "spawn_x",
+                  FUSION_JSON_NUMBER)->integer == 24);
+    fusion_json_free(&result);
+
+    result = execute_ok("event-create",
+                        event_options("6", "EVENT", "0", "0", "Prerequisite",
+                                      "checkpoint:prerequisite"),
+                        root, false);
+    fusion_json_free(&result);
+    options = event_options("6", "TRIGGER", "16", "16", "Guarded",
+                            "checkpoint:guarded");
+    put_string(&options, "condition_mode", "any");
+    put_string(&options, "conditions",
+               "[{\"type\":\"entity_present\",\"ref\":\"entity:1\","
+               "\"negated\":false},{\"type\":\"event_complete\","
+               "\"ref\":\"event:1\",\"negated\":true},{\"type\":"
+               "\"transition_ready\",\"ref\":\"transition:1\","
+               "\"negated\":false}]");
+    result = execute_ok("event-create", options, root, false);
+    const FusionJson *guarded = member(&result, "event", FUSION_JSON_OBJECT);
+    assert(!strcmp(member(guarded, "condition_mode", FUSION_JSON_STRING)->string, "any"));
+    assert(member(guarded, "conditions", FUSION_JSON_ARRAY)->count == 3);
+    fusion_json_free(&result);
+
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "id", "1");
+    put_bool(&options, "confirm", true);
+    execute_error("entity-delete", options, root, "event condition");
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "id", "1");
+    put_bool(&options, "confirm", true);
+    execute_error("transition-delete", options, root, "event condition");
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "id", "1");
+    put_bool(&options, "confirm", true);
+    execute_error("event-delete", options, root, "event condition");
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "id", "1");
+    put_bool(&options, "confirm", true);
+    execute_error("door-delete", options, root, "linked transition");
+
+    options = scoped_room("6", "64", "64");
+    put_string(&options, "id", "2");
+    put_string(&options, "x", "16");
+    put_string(&options, "y", "16");
+    put_string(&options, "region_width", "16");
+    put_string(&options, "region_height", "16");
+    put_string(&options, "label", "Guarded");
+    put_string(&options, "trigger_type", "interact");
+    put_string(&options, "action_type", "checkpoint");
+    put_string(&options, "action_ref", "checkpoint:guarded");
+    put_bool(&options, "once", true);
+    put_string(&options, "condition_mode", "none");
+    execute_error("event-update", options, root, "condition mode");
+
+    options = scoped_room("6", "64", "64");
+    result = execute_ok("event-list", options, root, false);
+    assert(member(&result, "events", FUSION_JSON_ARRAY)->count == 2);
+    fusion_json_free(&result);
+
+    options = fusion_json_object();
+    put_string(&options, "world", "aria");
+    put_string(&options, "area", "3");
+    put_string(&options, "room", "9");
+    put_string(&options, "width", "64");
+    put_string(&options, "height", "64");
+    put_string(&options, "event_kind", "EVENT");
+    put_string(&options, "x", "8");
+    put_string(&options, "y", "8");
+    put_string(&options, "region_width", "16");
+    put_string(&options, "region_height", "8");
+    put_string(&options, "label", "Aria encounter");
+    put_string(&options, "trigger_type", "enter");
+    put_string(&options, "action_type", "checkpoint");
+    put_string(&options, "action_ref", "checkpoint:aria9");
+    put_bool(&options, "once", true);
+    result = execute_ok("event-create", options, root, false);
+    fusion_json_free(&result);
+    options = fusion_json_object();
+    put_string(&options, "world", "aria");
+    put_string(&options, "area", "3");
+    put_string(&options, "room", "9");
+    put_string(&options, "width", "64");
+    put_string(&options, "height", "64");
+    result = execute_ok("event-list", options, root, false);
+    assert(member(&result, "events", FUSION_JSON_ARRAY)->count == 1);
+    fusion_json_free(&result);
+    remove_tree(root);
+}
+
 static void test_workspace_source_contract(void) {
     char path[4096];
     assert(snprintf(path, sizeof path, "%s/editor/native_workspace.c", FUSION_SOURCE_DIR) > 0);
@@ -222,9 +816,41 @@ static void test_workspace_source_contract(void) {
         "--command=door-return-plan", "pending_reverse_0115",
         "project_reverse_apply_0115(doc);", "project_command(doc, \"door-link\", opts, NULL)",
         "First save the forward link with the source room diskette.",
+        "item->project_owned", "Project entity", "fusion_editor_cli_program()",
+        "\"entity-create\"", "\"collision-set\"", "\"door-create\"",
+        "draw_project_collision", "doc->tool_id == TOOL_SELECT",
+        "PATCH_0085_ROOM_SPRITE_OVERLAYS", "item->native_overridden) continue;",
+        "room_draw_sprite(doc, cr, item, x, y, width, height);",
+        "gtk_box_append(GTK_BOX(page), room_color_legend());",
+        "\"Enemies\", \"Items\", \"Objects\", \"Doors\", \"Events\"",
+        "g_hash_table_destroy(doc->entity_sprite_cache);",
+        "PATCH_0110_OPTIONAL_ROOM_STAGING", "if (!has_json && !has_ini)",
+        "room_stage_commit_0109(doc)", "MV_EDITOR_ROOM_STAGE",
+        "room_stage_path_0109(doc, \"ini\")", "room_history_push_0112(doc->undo",
+        "if (success && mutation)", "doc->unsaved ? \" *\" : \"\"",
+        "hand-symbolic", "TOOL_GRAB", "case GDK_KEY_m:", "grab_hit_0107(",
+        "native_positions_apply_0107(doc);", "native_position_save_0107(doc, item, x, y)",
+        "G_KEY_FILE_NONE", "doc->project_aria ? 8 : 16",
+        "TOOL_WALL, TOOL_PLATFORM, TOOL_HAZARD, TOOL_SLOPE_UP",
+        "gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2)", "collision_icon_toggle_0113(",
+        "collision_commit_0113(", "collision_stroke_line_0117(",
+        "project_command(doc, \"collision-stroke\", args, NULL)",
+        "doc->collision_dragging = FALSE;", "case GDK_KEY_u: doc->tool_id = TOOL_WATER;",
+        "case GDK_KEY_p: doc->tool_id = TOOL_PLATFORM;",
+        "case GDK_KEY_d: doc->tool_id = TOOL_HAZARD;",
+        "case GDK_KEY_r: doc->tool_id = TOOL_SLOPE_UP;",
+        "case GDK_KEY_t: doc->tool_id = TOOL_SLOPE_DOWN;",
+        "doc->tool_id == TOOL_PLATFORM ? \"one_way\"",
+        "doc->tool_id == TOOL_HAZARD ? \"hazard\"",
+        "doc->tool_id == TOOL_SLOPE_UP ? \"slope_up\"",
+        "doc->tool_id == TOOL_SLOPE_DOWN ? \"slope_down\"",
+        "\"mv-room-tool-name\"", "if (!strcmp(name, \"water\")) return 6;",
+        "if (!strcmp(name, \"air\")) return 7;", "if (cell->type == 7) continue;",
     };
     for (size_t index = 0; index < sizeof terms / sizeof terms[0]; ++index)
         assert(strstr(source, terms[index]) != NULL);
+    assert(strstr(source, "\"input-mouse-symbolic\"") == NULL);
+    assert(strstr(source, "GtkWidget *tools = gtk_flow_box_new();") == NULL);
     free(source);
     assert(snprintf(path, sizeof path, "%s/src/editor_backend/commands.c", FUSION_SOURCE_DIR) > 0);
     source = read_text(path);
@@ -343,6 +969,8 @@ static void test_target_and_reciprocal_links(void) {
     result = execute_ok("door-link", link_options("7", "1", "8", "1", "48", "64"), root,
                         false);
     fusion_json_free(&result);
+    execute_error("door-link", link_options("7", "1", "8", "1", "48", "64"), root,
+                  "already linked");
 
     options = scoped_room("7", "128", "128");
     put_string(&options, "source_door_id", "3");
@@ -656,6 +1284,11 @@ int main(void) {
     assert(root != NULL);
     test_command_registry();
     test_audit_contract();
+    test_catalog_and_item_contract();
+    test_project_room_storage_and_migrations();
+    test_entity_validation_items_and_staging();
+    test_collision_model_contract();
+    test_event_and_dependency_contract();
     test_workspace_source_contract();
     test_native_door_adoption();
     test_target_and_reciprocal_links();

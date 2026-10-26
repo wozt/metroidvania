@@ -13,7 +13,7 @@ unit tests and an engine/editor integration check.
 | ROM extraction writers running in C11 | 10 / 11 | Zero Mission audio is the sole Python extractor |
 | Native orchestrator milestones | 3 / 4 (75%) | registry/graph, cache/planner, action execution and checklist generation are validated; routine discovery is audited natively, while complete inventory generation remains |
 | Registered tasks still backed by Python | 2 / 15 | `inventory`, `metroid_sound` |
-| Maintained Python files | 99 | 31 under `scripts/`, 68 under `tests/`; third-party submodule tools excluded |
+| Maintained Python files | 91 | 30 under `scripts/`, 61 under `tests/`; third-party submodule tools excluded |
 
 These migration measures are independent of both games' reconstruction and
 fidelity percentages.

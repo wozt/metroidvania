@@ -15,6 +15,12 @@ bool feb_object_records(const char *repository, const char *world, FusionJson *r
  * internal world (mzm, aria). */
 bool feb_catalog_options(const char *repository, const char *world, const char *kind,
                          FusionJson *options, FebError *error);
+/* Pure catalog classification used before a record becomes an editor option;
+ * NULL means that the record is intentionally excluded. */
+const char *feb_catalog_role(const char *world, const char *native_type,
+                             const char *category);
+/* Append the 27 documented Aria pickup-family choices to an option array. */
+bool feb_aria_item_family_options(FusionJson *options, FebError *error);
 /* editor_catalog_options(): Aria items come from the ROM's named items (and
  * refresh the private item thumbnails); otherwise catalog_options(). */
 bool feb_editor_catalog_options(const char *repository, const char *world, const char *kind,

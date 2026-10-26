@@ -846,6 +846,60 @@ static bool has_option(const FusionJson *options, const char *token) {
     return false;
 }
 
+const char *feb_catalog_role(const char *world, const char *token, const char *category) {
+    if (!world || !token || !category || !token_valid(token)) return NULL;
+    if (!strcmp(world, "mzm")) {
+        if (!strcmp(category, "Enemy / actor")) return "ENEMY";
+        if (!strcmp(category, "Item / pickup") || !strcmp(category, "Upgrade / ability"))
+            return "ITEM";
+        if (!strcmp(category, "World object")) return "OBJECT";
+        return NULL;
+    }
+    if (strcmp(world, "aria")) return NULL;
+    const char *colon = strchr(token, ':');
+    if (!colon) return NULL;
+    char group[64];
+    snprintf(group, sizeof group, "%.*s", (int)(colon - token), token);
+    char *tail = NULL;
+    long id = strtol(colon + 1, &tail, 16);
+    if (!colon[1] || *tail) return NULL;
+    if (!strcmp(group, "enemy") || (!strcmp(group, "special-object") && (id == 10 || id == 11)))
+        return "ENEMY";
+    if (!strcmp(group, "pickup") || !strcmp(group, "hard-mode-pickup") ||
+        !strcmp(group, "all-souls-reward"))
+        return "ITEM";
+    if (!strcmp(group, "special-object") &&
+        (id == 0 || id == 2 || id == 3 || id == 4 || id == 5 || id == 6))
+        return "DOOR";
+    if (!strcmp(group, "special-object") || !strcmp(group, "generic-candle")) return "OBJECT";
+    return NULL;
+}
+
+bool feb_aria_item_family_options(FusionJson *options, FebError *error) {
+    if (!options || options->kind != FUSION_JSON_ARRAY)
+        return feb_fail(error, FEB_EXIT_OPERATION, "Aria item options must be an array");
+    static const char *const families[][2] = {
+        {"Pickup", "pickup"}, {"Hard Mode", "hard-mode-pickup"},
+        {"All Souls", "all-souls-reward"}};
+    bool ok = true;
+    for (size_t family = 0; ok && family < 3; ++family) {
+        for (int subtype = 0; ok && subtype < 9; ++subtype) {
+            char token[64], name[160], category[160];
+            snprintf(token, sizeof token, "%s:%02X", families[family][1], subtype);
+            if (has_option(options, token)) continue;
+            snprintf(name, sizeof name, "%s / %s", families[family][0], aria_pickups[subtype]);
+            snprintf(category, sizeof category, "Aria %s / subtype %02X", families[family][0],
+                     subtype);
+            FusionJson option = fusion_json_object();
+            ok = (feb_put_string(&option, "native_type", token) &&
+                  feb_put_string(&option, "name", name) &&
+                  feb_put_string(&option, "category", category) &&
+                  fusion_json_push(options, option)) || feb_oom(error);
+        }
+    }
+    return ok;
+}
+
 bool feb_catalog_options(const char *repository, const char *world, const char *kind,
                          FusionJson *options, FebError *error) {
     *options = fusion_json_array();
@@ -860,31 +914,7 @@ bool feb_catalog_options(const char *repository, const char *world, const char *
         const char *token = text_of(record, "native_type");
         const char *category = text_of(record, "category");
         if (!token_valid(token)) continue;
-        const char *role = NULL;
-        if (!aria) {
-            if (!strcmp(category, "Enemy / actor")) role = "ENEMY";
-            else if (!strcmp(category, "Item / pickup") || !strcmp(category, "Upgrade / ability"))
-                role = "ITEM";
-            else if (!strcmp(category, "World object")) role = "OBJECT";
-        } else {
-            const char *colon = strchr(token, ':');
-            if (!colon) continue;
-            char group[64];
-            snprintf(group, sizeof group, "%.*s", (int)(colon - token), token);
-            char *tail = NULL;
-            long id = strtol(colon + 1, &tail, 16);
-            if (!colon[1] || *tail) continue;
-            if (!strcmp(group, "enemy") || (!strcmp(group, "special-object") && (id == 10 || id == 11)))
-                role = "ENEMY";
-            else if (!strcmp(group, "pickup") || !strcmp(group, "hard-mode-pickup") ||
-                     !strcmp(group, "all-souls-reward"))
-                role = "ITEM";
-            else if (!strcmp(group, "special-object") &&
-                     (id == 0 || id == 2 || id == 3 || id == 4 || id == 5 || id == 6))
-                role = "DOOR";
-            else if (!strcmp(group, "special-object") || !strcmp(group, "generic-candle"))
-                role = "OBJECT";
-        }
+        const char *role = feb_catalog_role(world, token, category);
         if (!role || strcmp(role, kind) || has_option(options, token)) continue;
         char name[512], category_text[1024];
         if (!display_text(text_of(record, "name"), 80, name, sizeof name) ||
@@ -898,24 +928,7 @@ bool feb_catalog_options(const char *repository, const char *world, const char *
     fusion_json_free(&records);
     if (ok && aria && !strcmp(kind, "ITEM")) {
         /* The documented subtype families, even if never placed originally. */
-        static const char *const families[][2] = {
-            {"Pickup", "pickup"}, {"Hard Mode", "hard-mode-pickup"},
-            {"All Souls", "all-souls-reward"}};
-        for (size_t family = 0; ok && family < 3; ++family) {
-            for (int subtype = 0; ok && subtype < 9; ++subtype) {
-                char token[64], name[160], category[160];
-                snprintf(token, sizeof token, "%s:%02X", families[family][1], subtype);
-                if (has_option(options, token)) continue;
-                snprintf(name, sizeof name, "%s / %s", families[family][0], aria_pickups[subtype]);
-                snprintf(category, sizeof category, "Aria %s / subtype %02X", families[family][0],
-                         subtype);
-                FusionJson option = fusion_json_object();
-                ok = (feb_put_string(&option, "native_type", token) &&
-                      feb_put_string(&option, "name", name) &&
-                      feb_put_string(&option, "category", category) &&
-                      fusion_json_push(options, option)) || feb_oom(error);
-            }
-        }
+        ok = feb_aria_item_family_options(options, error);
     }
     if (!ok) {
         fusion_json_free(options);

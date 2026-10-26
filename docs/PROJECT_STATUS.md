@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0549 - Remove the Python project-room model
+
+- Removed the 1,090-line `scripts/project_room_entities.py` implementation and
+  its seven remaining Python suites. The unified private room model now has a
+  single implementation in `src/editor_backend/project_room.c`.
+- Expanded `tests/test_editor_backend.c` with ROM-free native coverage for
+  entity CRUD and persistence in both worlds, strict/atomic validation,
+  symlink refusal, v1/v2/v3 in-memory migrations, Aria's 8-pixel and Zero
+  Mission's 16-pixel grids, deferred staging, all collision brushes and
+  strokes, typed Aria item settings, doors/transitions, two-world event
+  regions and event-condition dependency protection.
+- Extracted pure C catalog-role and documented Aria pickup-family helpers from
+  the production catalog path. Synthetic classification and all 27 family
+  choices can now be tested without a ROM; the production option builder uses
+  those same helpers.
+- Consolidated the GTK overlay, grab tool, collision toolbar, deferred-save
+  and project-marker source contracts into the native editor test. The removed
+  item PNG smoke case was already superseded by the more complete native Aria
+  decoder fixture.
+- Maintained first-party Python files fell from 99 to 91 (30 under `scripts/`,
+  61 under `tests/`). No gameplay or native-parity status changed.
+- Next: port the focused tests for `scripts/object_catalog.py` and its Python
+  thumbnail/name helpers, then remove that redundant catalog stack.
+
 ## Patch 0548 - Remove Python room packages and connection graphs
 
 - Removed `scripts/project_room_package.py` and

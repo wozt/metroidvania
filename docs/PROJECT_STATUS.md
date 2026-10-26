@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0550 - Remove the Python Aria item decoders
+
+- Removed `scripts/aria_item_details.py`,
+  `scripts/native_sprite_thumbnails.py` and their three Python suites. Aria
+  item names, named editor options, raw/LZ10 icon pages and private PNG
+  thumbnails now have only the production C11 implementation in
+  `src/editor_backend/object_catalog.c`.
+- Exposed the buffer-level native decoders so ROM-free tests exercise the same
+  functions used by the editor. The synthetic C fixture checks item-family
+  bounds, text controls and invalid pointers, all 771 named menu options, raw
+  and compressed graphics wrappers, deterministic PNG output and idempotent
+  private thumbnail writes.
+- Maintained first-party Python files fell from 91 to 86 (28 under `scripts/`,
+  58 under `tests/`). No gameplay or native-parity status changed.
+- Next: move the remaining semantic catalog and room-annotation tests to C,
+  replace the two reporting consumers of `scripts/object_catalog.py`, then
+  remove that final duplicate catalog module.
+
 ## Patch 0549 - Remove the Python project-room model
 
 - Removed the 1,090-line `scripts/project_room_entities.py` implementation and

@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The read-only catalog of decoded native object definitions (formerly
- * scripts/object_catalog.py, scripts/aria_item_details.py and
- * scripts/native_sprite_thumbnails.py). */
+/* The read-only catalog of decoded native object definitions and private
+ * Aria item previews. */
 #ifndef FUSION_EDITOR_BACKEND_OBJECT_CATALOG_H
 #define FUSION_EDITOR_BACKEND_OBJECT_CATALOG_H
 
 #include "common.h"
+#include "fusion/assets/rom.h"
 
 /* _object_records(): the native object records of one world (public name)
  * or of both, sorted as the editor lists them. */
@@ -28,6 +28,14 @@ bool feb_editor_catalog_options(const char *repository, const char *world, const
 /* item_name(): the ROM name of an Aria item; false when it has none. */
 bool feb_aria_item_name(const char *repository, int64_t subtype, int64_t item_id, char *name,
                         size_t size);
+/* Buffer-level Aria decoders used by the editor and ROM-free native tests. */
+bool feb_aria_item_name_from_rom(const FusionRom *rom, int64_t subtype, int64_t item_id,
+                                 char *name, size_t size);
+bool feb_aria_named_item_options_from_rom(const FusionRom *rom, FusionJson *options,
+                                          FebError *error);
+bool feb_aria_icon_page(const FusionRom *rom, uint32_t pointer, uint8_t page[0x2000]);
+bool feb_aria_item_thumbnails_from_rom(const char *repository, const FusionRom *rom,
+                                       int *written);
 
 /* build_mzm(): the Zero Mission sprite records, appended to ``records``. */
 bool feb_mzm_object_records(const char *repository, FusionJson *records, FebError *error);

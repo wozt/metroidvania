@@ -990,8 +990,8 @@ static bool read_name(const FusionRom *rom, int text_id, char *name, size_t size
     return false;
 }
 
-static bool item_name_from(const FusionRom *rom, int64_t subtype, int64_t item_id, char *name,
-                           size_t size) {
+bool feb_aria_item_name_from_rom(const FusionRom *rom, int64_t subtype, int64_t item_id,
+                                 char *name, size_t size) {
     for (size_t index = 0; index < COUNT(item_ranges); ++index) {
         if (item_ranges[index].subtype != subtype) continue;
         if (item_id < item_ranges[index].start ||
@@ -1008,7 +1008,7 @@ bool feb_aria_item_name(const char *repository, int64_t subtype, int64_t item_id
     FusionRom rom = {0};
     FebError ignored;
     if (!open_aria(repository, &rom, &ignored)) return false;
-    bool ok = item_name_from(&rom, subtype, item_id, name, size);
+    bool ok = feb_aria_item_name_from_rom(&rom, subtype, item_id, name, size);
     fusion_rom_close(&rom);
     return ok;
 }
@@ -1043,7 +1043,7 @@ static bool lz10(const FusionRom *rom, uint32_t address, uint8_t *out, size_t *s
 }
 
 /* _page(): one GfxWrapper icon page of 0x2000 bytes. */
-static bool icon_page(const FusionRom *rom, uint32_t pointer, uint8_t *page) {
+bool feb_aria_icon_page(const FusionRom *rom, uint32_t pointer, uint8_t page[0x2000]) {
     size_t offset = 0;
     if (!rom_slice(rom, pointer, 4, &offset)) return false;
     uint8_t kind = rom->data[offset], bpp = rom->data[offset + 1], chunks = rom->data[offset + 3];
@@ -1098,10 +1098,11 @@ static void make_directory(const char *path) {
 }
 
 /* generate_aria_item_thumbnails(): the 16x16 ROM item icons. */
-static bool item_thumbnails(const char *repository, const FusionRom *rom) {
+bool feb_aria_item_thumbnails_from_rom(const char *repository, const FusionRom *rom,
+                                       int *written) {
     static uint8_t pages[3][0x2000];
     for (size_t page = 0; page < 3; ++page)
-        if (!icon_page(rom, icon_banks[page], pages[page])) return false;
+        if (!feb_aria_icon_page(rom, icon_banks[page], pages[page])) return false;
     size_t palette_offset = 0;
     if (!rom_slice(rom, ARIA_ICON_PALETTE, 4, &palette_offset)) return false;
     const uint8_t *wrapper = rom->data + palette_offset;
@@ -1157,10 +1158,12 @@ static bool item_thumbnails(const char *repository, const FusionRom *rom) {
             if (!ok) return false;
         }
     }
+    if (written) *written = count;
     return true;
 }
 
-static bool named_options(const FusionRom *rom, FusionJson *options, FebError *error) {
+bool feb_aria_named_item_options_from_rom(const FusionRom *rom, FusionJson *options,
+                                          FebError *error) {
     *options = fusion_json_array();
     bool ok = true;
     for (size_t mode = 0; ok && mode < COUNT(modes); ++mode) {
@@ -1177,7 +1180,7 @@ static bool named_options(const FusionRom *rom, FusionJson *options, FebError *e
             for (int item = item_ranges[range].start;
                  ok && item < item_ranges[range].start + item_ranges[range].count; ++item) {
                 char name[256];
-                if (!item_name_from(rom, subtype, item, name, sizeof name))
+                if (!feb_aria_item_name_from_rom(rom, subtype, item, name, sizeof name))
                     snprintf(name, sizeof name, "[Name not decoded: %02X/%02X]", subtype, item);
                 snprintf(token, sizeof token, "%s:%02X", modes[mode][0], subtype);
                 snprintf(category, sizeof category, "%s / %s", modes[mode][1], family_names[subtype]);
@@ -1202,8 +1205,8 @@ bool feb_editor_catalog_options(const char *repository, const char *world, const
         FusionRom rom = {0};
         FebError ignored;
         if (open_aria(repository, &rom, &ignored)) {
-            bool ok = named_options(&rom, options, error);
-            if (ok) item_thumbnails(repository, &rom);
+            bool ok = feb_aria_named_item_options_from_rom(&rom, options, error);
+            if (ok) feb_aria_item_thumbnails_from_rom(repository, &rom, NULL);
             fusion_rom_close(&rom);
             if (ok) return true;
         }

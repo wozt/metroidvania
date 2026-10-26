@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T08:09:10+00:00",
+ "generated_at": "2026-10-26T08:46:19+00:00",
  "git": {
-  "commit": "7dcb6e8",
+  "commit": "869c219",
   "branch": "main",
   "dirty": true
  },
@@ -13115,6 +13115,7 @@
    "local_sources": [
     "editor/object_catalog.c",
     "src/editor_backend/object_catalog.c",
+    "src/editor_backend/object_catalog.h",
     "scripts/object_catalog.py"
    ],
    "tests": [
@@ -13124,7 +13125,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The production catalog and batch command are native; the Python catalog remains only for focused tests that have not yet been ported.",
+   "limitations": "The production catalog, named Aria item decoding, raw/LZ10 icon decoding and private PNG thumbnails are native and covered by ROM-free C fixtures. The Python catalog remains only for room-annotation and dashboard reporting plus focused tests that have not yet been ported.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15427,27 +15428,6 @@
     "passed": 2
    },
    {
-    "file": "tests/test_aria_gtk_lifetimes_0084.py",
-    "module": "tests.test_aria_gtk_lifetimes_0084",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
-    "file": "tests/test_aria_named_item_catalog.py",
-    "module": "tests.test_aria_named_item_catalog",
-    "test_count": 4,
-    "outcome": "passed",
-    "passed": 4
-   },
-   {
-    "file": "tests/test_aria_native_decoders_0083.py",
-    "module": "tests.test_aria_native_decoders_0083",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_aria_transition_geometry_0101.py",
     "module": "tests.test_aria_transition_geometry_0101",
     "test_count": 4,
@@ -15820,12 +15800,18 @@
    }
   ],
   "summary": {
-   "passed": 335,
+   "passed": 323,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "869c219",
+   "date": "2026-10-26",
+   "subject": "Remove the Python project room model",
+   "scope": "project"
+  },
   {
    "commit": "7dcb6e8",
    "date": "2026-10-26",
@@ -16298,12 +16284,6 @@
    "commit": "e921b7c",
    "date": "2026-10-23",
    "subject": "Advance Aria polar and articulated enemy motion",
-   "scope": "project"
-  },
-  {
-   "commit": "0cd80bc",
-   "date": "2026-10-23",
-   "subject": "Wire Aria early enemy motion controllers",
    "scope": "project"
   }
  ],

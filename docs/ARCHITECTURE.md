@@ -444,9 +444,11 @@ Tracked outputs contain metadata only:
 - `data/story/world_inventory.toml`: boss and savepoint inventory.
 
 Decoded graphics, raw blocks, room work files, room annotation tables and user
-overrides are ignored. `scripts/room_annotations.py` reconstructs bounded
-per-room native records, while `scripts/object_catalog.py` joins definition and
-placement metadata for the shared editor. No tool writes back to either ROM.
+overrides are ignored. The native editor catalog decodes definitions, Aria
+item names and private icon thumbnails in `src/editor_backend/object_catalog.c`.
+The remaining Python reporting path uses `scripts/room_annotations.py` for
+bounded per-room records and `scripts/object_catalog.py` to join definition and
+placement metadata. No tool writes back to either ROM.
 Canvas and Room-data context menus share the same bounded in-memory annotation
 records; typed editor windows retain their document lifetime safely and cannot
 write native data without an encoder.

@@ -179,6 +179,157 @@ static void remove_tree(const char *path) {
     assert(!rmdir(path));
 }
 
+enum {
+    TEST_GBA_BASE = 0x08000000,
+    TEST_ARIA_TEXT_POINTERS = 0x08506B38,
+    TEST_ARIA_PALETTE = 0x082099FC,
+};
+
+static void put_u16(uint8_t *data, size_t offset, uint16_t value) {
+    data[offset] = (uint8_t)value;
+    data[offset + 1] = (uint8_t)(value >> 8);
+}
+
+static void put_u32(uint8_t *data, size_t offset, uint32_t value) {
+    data[offset] = (uint8_t)value;
+    data[offset + 1] = (uint8_t)(value >> 8);
+    data[offset + 2] = (uint8_t)(value >> 16);
+    data[offset + 3] = (uint8_t)(value >> 24);
+}
+
+static uint32_t get_u32(const uint8_t *data, size_t offset) {
+    return (uint32_t)data[offset] | ((uint32_t)data[offset + 1] << 8) |
+           ((uint32_t)data[offset + 2] << 16) | ((uint32_t)data[offset + 3] << 24);
+}
+
+static FusionRom synthetic_aria_catalog_rom(void) {
+    static const uint32_t graphics[] = {0x081C5E00, 0x081C7E04, 0x081C9E08};
+    static const struct {
+        uint32_t pointer;
+        int count, stride;
+    } tables[] = {{0x08505B3C, 32, 16}, {0x08505D3C, 59, 28}, {0x085063B0, 45, 20}};
+    static const struct {
+        int first, count, start;
+    } ranges[] = {{0x5B, 32, 0}, {0x7B, 59, 0}, {0xB6, 45, 0}, {0xE3, 55, 1},
+                  {0x11B, 24, 1}, {0x133, 35, 1}, {0x156, 6, 0}};
+    FusionRom rom = {.size = 0x518000, .game = FUSION_ASSET_GAME_ARIA};
+    rom.data = calloc(1, rom.size);
+    assert(rom.data != NULL);
+    for (size_t index = 0; index < sizeof graphics / sizeof graphics[0]; ++index) {
+        size_t offset = graphics[index] - TEST_GBA_BASE;
+        memcpy(rom.data + offset, "\x00\x04\x00\x10", 4);
+        memset(rom.data + offset + 4, 0x11, 0x2000);
+    }
+    size_t palette = TEST_ARIA_PALETTE - TEST_GBA_BASE;
+    memcpy(rom.data + palette, "\x00\x00\x05\x00", 4);
+    put_u16(rom.data, palette + 6, 0x001F);
+    for (size_t table = 0; table < sizeof tables / sizeof tables[0]; ++table)
+        for (int item = 0; item < tables[table].count; ++item)
+            put_u16(rom.data, tables[table].pointer - TEST_GBA_BASE +
+                                    (size_t)item * (size_t)tables[table].stride + 2,
+                    0x0401);
+
+    size_t pointer_table = TEST_ARIA_TEXT_POINTERS - TEST_GBA_BASE;
+    size_t text = pointer_table + 4 * 0xB50;
+    for (size_t range = 0; range < sizeof ranges / sizeof ranges[0]; ++range) {
+        for (int item = ranges[range].start;
+             item < ranges[range].start + ranges[range].count; ++item) {
+            int text_id = ranges[range].first + item - ranges[range].start;
+            put_u32(rom.data, pointer_table + (size_t)text_id * 4,
+                    TEST_GBA_BASE + (uint32_t)text);
+            rom.data[text++] = 1;
+            rom.data[text++] = 0;
+            int length = snprintf((char *)rom.data + text, rom.size - text,
+                                  "Name %03X", text_id);
+            assert(length > 0);
+            text += (size_t)length;
+            rom.data[text++] = 0x0A;
+        }
+    }
+    return rom;
+}
+
+static void test_native_aria_item_decoders(void) {
+    FusionRom rom = synthetic_aria_catalog_rom();
+    char name[96];
+    assert(feb_aria_item_name_from_rom(&rom, 2, 0, name, sizeof name));
+    assert(!strcmp(name, "Name 05B"));
+    assert(feb_aria_item_name_from_rom(&rom, 3, 58, name, sizeof name));
+    assert(!strcmp(name, "Name 0B5"));
+    assert(feb_aria_item_name_from_rom(&rom, 8, 5, name, sizeof name));
+    assert(!strcmp(name, "Name 15B"));
+    assert(!feb_aria_item_name_from_rom(&rom, 3, 59, name, sizeof name));
+    assert(!feb_aria_item_name_from_rom(&rom, 5, 0, name, sizeof name));
+    size_t pointer_table = TEST_ARIA_TEXT_POINTERS - TEST_GBA_BASE;
+    size_t first_name = get_u32(rom.data, pointer_table + 0x5B * 4) - TEST_GBA_BASE;
+    static const uint8_t controlled_name[] = {
+        1, 0, 8, 2, 4, 'P', 'o', 't', 'i', 'o', 'n', ' ', 0xE9, 0x0A};
+    memcpy(rom.data + first_name, controlled_name, sizeof controlled_name);
+    assert(feb_aria_item_name_from_rom(&rom, 2, 0, name, sizeof name));
+    assert(!strcmp(name, "Potion é"));
+    put_u32(rom.data, pointer_table + 0x5B * 4, 0x0A000000);
+    assert(!feb_aria_item_name_from_rom(&rom, 2, 0, name, sizeof name));
+    put_u32(rom.data, pointer_table + 0x5B * 4, TEST_GBA_BASE + (uint32_t)first_name);
+
+    FusionJson options = {0};
+    FebError error = {0};
+    assert(feb_aria_named_item_options_from_rom(&rom, &options, &error));
+    assert(options.count == 771);
+    assert(!strcmp(member(&options.items[1], "name", FUSION_JSON_STRING)->string,
+                   "Potion é"));
+    assert(option_has_token(&options, "hard-mode-pickup:07"));
+    fusion_json_free(&options);
+
+    uint8_t page[0x2000];
+    assert(feb_aria_icon_page(&rom, 0x081C5E00, page));
+    assert(page[0] == 0x11 && page[0x1FFF] == 0x11);
+    rom.data[0x1C5E00] = 4;
+    assert(!feb_aria_icon_page(&rom, 0x081C5E00, page));
+    size_t wrapper = 0x1C5E00;
+    size_t packed_at = rom.size - 2048;
+    memcpy(rom.data + wrapper, "\x01\x04\x00\x00", 4);
+    put_u32(rom.data, wrapper + 4, TEST_GBA_BASE + (uint32_t)packed_at);
+    size_t cursor = packed_at;
+    memcpy(rom.data + cursor, "\x10\x00\x20\x00", 4);
+    cursor += 4;
+    int token = 0;
+    while (token < 457) {
+        size_t flag_at = cursor++;
+        uint8_t flags = 0;
+        for (int bit = 7; bit >= 0 && token < 457; --bit, ++token) {
+            if (token < 2) {
+                rom.data[cursor++] = 0;
+            } else {
+                flags |= (uint8_t)(1 << bit);
+                rom.data[cursor++] = 0xF0;
+                rom.data[cursor++] = 0;
+            }
+        }
+        rom.data[flag_at] = flags;
+    }
+    assert(cursor < rom.size);
+    assert(feb_aria_icon_page(&rom, 0x081C5E00, page));
+    for (size_t index = 0; index < sizeof page; ++index) assert(page[index] == 0);
+    memcpy(rom.data + wrapper, "\x00\x04\x00\x10", 4);
+    memset(rom.data + wrapper + 4, 0x11, 0x2000);
+
+    char root[] = "/tmp/fusion-aria-icons-XXXXXX";
+    assert(mkdtemp(root) != NULL);
+    int written = 0;
+    assert(feb_aria_item_thumbnails_from_rom(root, &rom, &written));
+    assert(written > 130);
+    char path[4096];
+    assert(snprintf(path, sizeof path,
+                    "%s/assets/extracted/sprite_previews/aria/items/03_000.png", root) > 0);
+    char *png = read_text(path);
+    assert(!memcmp(png, "\x89PNG\r\n\x1a\n", 8));
+    free(png);
+    assert(feb_aria_item_thumbnails_from_rom(root, &rom, &written));
+    assert(written == 0);
+    remove_tree(root);
+    free(rom.data);
+}
+
 static void test_command_registry(void) {
     static const char *const native[] = {
         "capabilities", "project-info", "room-create", "room-export",
@@ -1285,6 +1436,7 @@ int main(void) {
     test_command_registry();
     test_audit_contract();
     test_catalog_and_item_contract();
+    test_native_aria_item_decoders();
     test_project_room_storage_and_migrations();
     test_entity_validation_items_and_staging();
     test_collision_model_contract();

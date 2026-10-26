@@ -302,6 +302,26 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_editor_render_tests)
     add_test(NAME editor_render_native_contract COMMAND fusion_editor_render_tests)
 
+    add_executable(fusion_source_contract_tests tests/test_source_contracts.c)
+    target_compile_definitions(fusion_source_contract_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_link_libraries(fusion_source_contract_tests PRIVATE fusion_json)
+    fusion_enable_warnings(fusion_source_contract_tests)
+    add_test(NAME source_contracts COMMAND fusion_source_contract_tests)
+
+    add_executable(fusion_world_inventory_tests tests/test_world_inventory.c)
+    target_compile_definitions(fusion_world_inventory_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_link_libraries(fusion_world_inventory_tests PRIVATE fusion_json)
+    fusion_enable_warnings(fusion_world_inventory_tests)
+    add_test(NAME world_inventory_data COMMAND fusion_world_inventory_tests)
+
+    add_executable(fusion_tool_contract_tests tests/test_tool_contracts.c)
+    target_compile_definitions(fusion_tool_contract_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}" FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
+    fusion_enable_warnings(fusion_tool_contract_tests)
+    add_test(NAME tool_contracts COMMAND fusion_tool_contract_tests)
+
     add_executable(fusion_native_map_tests tests/test_native_map.c)
     target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
     fusion_enable_warnings(fusion_native_map_tests)

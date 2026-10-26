@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0553 - Native source, data and tool contract tests
+
+- Ported 22 Python tests to three C tests, removing the Python files:
+  `tests/test_source_contracts.c` (CTest `source_contracts`) holds the GTK
+  editor, runtime and decompilation source contracts of patches 0086-0169
+  (docks, vertical navigation, the world atlas pan, grouping and room picker,
+  the door form, shared history, popover anchors, the room-record editors,
+  the Clipdata and Samus pose guarantees, Zero Mission's display modes) and
+  the story timeline checks through the native TOML reader;
+  `tests/test_world_inventory.c` (`world_inventory_data`) the exact boss
+  rosters, Aria native identities and savepoint sets;
+  `tests/test_tool_contracts.c` (`tool_contracts`) the GBA header extractor
+  on a ROM-free fixture and the room package viewer's BG1/BG2/BG3 checks.
+- Every assertion of the former tests is kept; a list-valued boss
+  `classification` is accepted as Python's truthiness did.
+- First-party Python files: 10 under `scripts/`, 8 under `tests/`.
+  No gameplay or native-parity status changed.
+- Next: the golden asset tests, the editor CLI test and the remaining
+  repository tools.
+
 ## Patch 0552 - Remove the Python room editor modules
 
 - Removed the 16 Python modules whose behaviour the native editor already

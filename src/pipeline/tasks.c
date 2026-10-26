@@ -10,71 +10,179 @@ static const char *const aria_asset_dependencies[] = {"aria_rom"};
 static const char *const metroid_asset_dependencies[] = {"metroid_rom"};
 static const char *const raw_dependencies[] = {"aria_rom", "metroid_rom"};
 
-static const char *const aria_rom_requirements[] = {
-    "roms/Castlevania - Aria of Sorrow (USA).gba",
+static const char *const aria_native_inputs[] = {
+    "roms/Castlevania - Aria of Sorrow (USA).gba", "build/fusion_importer",
 };
-static const char *const metroid_rom_requirements[] = {
+static const char *const metroid_native_inputs[] = {
+    "roms/Metroid - Zero Mission (USA).gba", "build/fusion_importer",
+};
+static const char *const metroid_elf_inputs[] = {
+    "roms/Metroid - Zero Mission (USA).gba", "third_party/mzm/mzm_us.elf",
+    "build/fusion_importer",
+};
+static const char *const raw_inputs[] = {
     "roms/Metroid - Zero Mission (USA).gba",
+    "roms/Castlevania - Aria of Sorrow (USA).gba",
+    "third_party/mzm/mzm_us.elf", "third_party/mzm/database.json",
+    "third_party/cvaos/database.json", "build/fusion_importer",
+};
+static const char *const sound_inputs[] = {
+    "roms/Metroid - Zero Mission (USA).gba",
+    "scripts/asset_layout.py", "scripts/mzm_audio.py", "scripts/mzm_c_tables.py",
+    "scripts/mzm_samus_frame.py", "scripts/sprite_library.py",
+    "third_party/mzm/mzm_us.map",
+};
+static const char *const inventory_inputs[] = {"scripts/native_inventory.py"};
+static const char *const checklist_inputs[] = {
+    "scripts/native_parity.py", "data/native_parity/annotations.tsv",
+};
+
+static const char *const aria_requirements[] = {
+    "roms/Castlevania - Aria of Sorrow (USA).gba", "build/fusion_importer",
+};
+static const char *const metroid_requirements[] = {
+    "roms/Metroid - Zero Mission (USA).gba", "build/fusion_importer",
 };
 static const char *const metroid_elf_requirements[] = {
-    "roms/Metroid - Zero Mission (USA).gba",
-    "third_party/mzm/mzm_us.elf",
+    "roms/Metroid - Zero Mission (USA).gba", "third_party/mzm/mzm_us.elf",
+    "build/fusion_importer",
 };
 static const char *const raw_requirements[] = {
     "roms/Metroid - Zero Mission (USA).gba",
     "roms/Castlevania - Aria of Sorrow (USA).gba",
-    "third_party/mzm/mzm_us.elf",
-    "third_party/mzm/database.json",
-    "third_party/cvaos/database.json",
+    "third_party/mzm/mzm_us.elf", "third_party/mzm/database.json",
+    "third_party/cvaos/database.json", "build/fusion_importer",
 };
 static const char *const sound_requirements[] = {
-    "roms/Metroid - Zero Mission (USA).gba",
-    "third_party/mzm/mzm_us.map",
+    "roms/Metroid - Zero Mission (USA).gba", "third_party/mzm/mzm_us.map",
 };
 
+static const char *const inventory_outputs[] = {"data/native_parity/inventory.json"};
+static const char *const checklist_outputs[] = {
+    "docs/NATIVE_PARITY_CHECKLIST.md", "data/native_parity/aos_unassigned_routines.tsv",
+};
+static const char *const aria_rom_outputs[] = {
+    "assets/extracted/shared/manifests/rom_aria.json",
+};
+static const char *const metroid_rom_outputs[] = {
+    "assets/extracted/shared/manifests/rom_metroid.json",
+};
+static const char *const raw_outputs[] = {
+    "assets/extracted/shared/manifests/import_catalog.json",
+    "assets/extracted/rooms/metroid/rooms.tsv",
+};
+static const char *const aria_world_outputs[] = {
+    "assets/extracted/rooms/aria/world.json", "assets/extracted/rooms/aria/rooms.tsv",
+};
+static const char *const aria_room_outputs[] = {
+    "assets/extracted/aria/rooms/runtime/export_index.tsv",
+};
+static const char *const aria_soma_outputs[] = {
+    "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv",
+};
+static const char *const aria_object_outputs[] = {
+    "assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv",
+    "assets/extracted/aria/metadata/enemy_frames.tsv",
+    "assets/extracted/aria/metadata/enemies.tsv",
+};
+static const char *const aria_weapon_outputs[] = {
+    "assets/extracted/aria/sprites/weapons/runtime/runtime_index.tsv",
+    "assets/extracted/aria/metadata/weapons.tsv",
+    "assets/extracted/aria/metadata/weapon_frames.tsv",
+};
+static const char *const metroid_samus_outputs[] = {
+    "assets/extracted/metroid/sprites/samus/runtime/runtime_index.tsv",
+    "assets/extracted/metroid/sprites/projectiles/runtime/runtime_index.tsv",
+    "assets/extracted/metroid/sprites/samus/runtime/animation_map.tsv",
+};
+static const char *const metroid_sprite_outputs[] = {
+    "assets/extracted/metroid/sprites/enemies/runtime/runtime_index.tsv",
+    "assets/extracted/metroid/metadata/sprites.tsv",
+};
+static const char *const metroid_room_outputs[] = {
+    "assets/extracted/metroid/rooms/runtime/export_index.tsv",
+};
+static const char *const sound_outputs[] = {
+    "assets/extracted/metroid/sound/runtime/sound_bank.bin",
+    "assets/extracted/metroid/sound/runtime/sound_tables.tsv",
+};
+static const char *const rom_bank_outputs[] = {
+    "assets/extracted/metroid/rom/rom_bank.bin",
+    "assets/extracted/metroid/rom/rom_symbols.tsv",
+};
+
+#define PATHS(input_array, output_array) \
+    .inputs = input_array, .input_count = COUNT(input_array), \
+    .outputs = output_array, .output_count = COUNT(output_array)
+#define REQUIRES(array) .requirements = array, .requirement_count = COUNT(array)
+#define DEPENDS(array) .dependencies = array, .dependency_count = COUNT(array)
+
 static const FusionRebuildTask tasks[] = {
-    {"inventory", 2, FUSION_REBUILD_GROUP_NATIVE,
-     FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY, NULL, 0, NULL, 0},
-    {"checklist", 4, FUSION_REBUILD_GROUP_NATIVE,
-     FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
-     checklist_dependencies, COUNT(checklist_dependencies), NULL, 0},
-    {"aria_rom", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     NULL, 0, aria_rom_requirements, COUNT(aria_rom_requirements)},
-    {"metroid_rom", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     NULL, 0, metroid_rom_requirements, COUNT(metroid_rom_requirements)},
-    {"raw_import", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     raw_dependencies, COUNT(raw_dependencies), raw_requirements, COUNT(raw_requirements)},
-    {"aria_world", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     aria_asset_dependencies, COUNT(aria_asset_dependencies),
-     aria_rom_requirements, COUNT(aria_rom_requirements)},
-    {"aria_rooms", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     aria_asset_dependencies, COUNT(aria_asset_dependencies),
-     aria_rom_requirements, COUNT(aria_rom_requirements)},
-    {"aria_soma", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     aria_asset_dependencies, COUNT(aria_asset_dependencies),
-     aria_rom_requirements, COUNT(aria_rom_requirements)},
-    {"aria_objects", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     aria_asset_dependencies, COUNT(aria_asset_dependencies),
-     aria_rom_requirements, COUNT(aria_rom_requirements)},
-    {"aria_weapons", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     aria_asset_dependencies, COUNT(aria_asset_dependencies),
-     aria_rom_requirements, COUNT(aria_rom_requirements)},
-    {"metroid_samus", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     metroid_asset_dependencies, COUNT(metroid_asset_dependencies),
-     metroid_elf_requirements, COUNT(metroid_elf_requirements)},
-    {"metroid_sprites", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     metroid_asset_dependencies, COUNT(metroid_asset_dependencies),
-     metroid_elf_requirements, COUNT(metroid_elf_requirements)},
-    {"metroid_rooms", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     metroid_asset_dependencies, COUNT(metroid_asset_dependencies),
-     metroid_elf_requirements, COUNT(metroid_elf_requirements)},
-    {"metroid_sound", 1, FUSION_REBUILD_GROUP_ASSETS,
-     FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
-     metroid_asset_dependencies, COUNT(metroid_asset_dependencies),
-     sound_requirements, COUNT(sound_requirements)},
-    {"metroid_rom_bank", 2, FUSION_REBUILD_GROUP_ASSETS, FUSION_REBUILD_BACKEND_C,
-     metroid_asset_dependencies, COUNT(metroid_asset_dependencies),
-     metroid_elf_requirements, COUNT(metroid_elf_requirements)},
+    {.name = "inventory", .version = 2, .group = FUSION_REBUILD_GROUP_NATIVE,
+     .backend = FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
+     PATHS(inventory_inputs, inventory_outputs),
+     .path_kind = FUSION_REBUILD_PATHS_INVENTORY},
+    {.name = "checklist", .version = 4, .group = FUSION_REBUILD_GROUP_NATIVE,
+     .backend = FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
+     DEPENDS(checklist_dependencies), PATHS(checklist_inputs, checklist_outputs),
+     .path_kind = FUSION_REBUILD_PATHS_CHECKLIST},
+    {.name = "aria_rom", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C,
+     REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_rom_outputs)},
+    {.name = "metroid_rom", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C,
+     REQUIRES(metroid_requirements), PATHS(metroid_native_inputs, metroid_rom_outputs)},
+    {.name = "raw_import", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(raw_dependencies),
+     REQUIRES(raw_requirements), PATHS(raw_inputs, raw_outputs),
+     .stamp_games = FUSION_REBUILD_STAMP_METROID | FUSION_REBUILD_STAMP_ARIA},
+    {.name = "aria_world", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(aria_asset_dependencies),
+     REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_world_outputs),
+     .stamp_games = FUSION_REBUILD_STAMP_ARIA},
+    {.name = "aria_rooms", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(aria_asset_dependencies),
+     REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_room_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_EXPORT_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_ARIA},
+    {.name = "aria_soma", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(aria_asset_dependencies),
+     REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_soma_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_ARIA},
+    {.name = "aria_objects", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(aria_asset_dependencies),
+     REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_object_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_ARIA},
+    {.name = "aria_weapons", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(aria_asset_dependencies),
+     REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_weapon_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_ARIA},
+    {.name = "metroid_samus", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(metroid_asset_dependencies),
+     REQUIRES(metroid_elf_requirements), PATHS(metroid_elf_inputs, metroid_samus_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_METROID},
+    {.name = "metroid_sprites", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(metroid_asset_dependencies),
+     REQUIRES(metroid_elf_requirements), PATHS(metroid_elf_inputs, metroid_sprite_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_METROID},
+    {.name = "metroid_rooms", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(metroid_asset_dependencies),
+     REQUIRES(metroid_elf_requirements), PATHS(metroid_elf_inputs, metroid_room_outputs),
+     .validation = FUSION_REBUILD_VALIDATE_EXPORT_INDEX,
+     .stamp_games = FUSION_REBUILD_STAMP_METROID},
+    {.name = "metroid_sound", .version = 1, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
+     DEPENDS(metroid_asset_dependencies), REQUIRES(sound_requirements),
+     PATHS(sound_inputs, sound_outputs), .stamp_games = FUSION_REBUILD_STAMP_METROID},
+    {.name = "metroid_rom_bank", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C, DEPENDS(metroid_asset_dependencies),
+     REQUIRES(metroid_elf_requirements), PATHS(metroid_elf_inputs, rom_bank_outputs),
+     .stamp_games = FUSION_REBUILD_STAMP_METROID},
 };
 
 const FusionRebuildTask *fusion_rebuild_tasks(size_t *count) {

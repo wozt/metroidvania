@@ -83,12 +83,17 @@ fusion_enable_warnings(fusion_assets)
 add_library(fusion_pipeline STATIC
     src/pipeline/tasks.c
     src/pipeline/graph.c
+    src/pipeline/cache.c
+    src/pipeline/plan.c
 )
 target_include_directories(fusion_pipeline PUBLIC include)
+target_include_directories(fusion_pipeline PRIVATE src/pipeline src/assets/core)
+target_link_libraries(fusion_pipeline PUBLIC fusion_assets fusion_json)
 fusion_enable_warnings(fusion_pipeline)
 
 add_executable(fusion_rebuild src/tools/fusion_rebuild.c)
-target_link_libraries(fusion_rebuild PRIVATE fusion_pipeline fusion_assets)
+target_link_libraries(fusion_rebuild PRIVATE fusion_pipeline)
+target_compile_definitions(fusion_rebuild PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 fusion_enable_warnings(fusion_rebuild)
 
 add_executable(fusion_importer src/tools/fusion_importer.c)
@@ -218,6 +223,7 @@ if(BUILD_TESTING)
     add_test(NAME fusion_importer_list COMMAND fusion_importer --list)
     add_test(NAME fusion_importer_dry_run COMMAND fusion_importer --dry-run --force)
     add_executable(fusion_rebuild_tests tests/test_fusion_rebuild.c)
+    target_include_directories(fusion_rebuild_tests PRIVATE src/pipeline)
     target_link_libraries(fusion_rebuild_tests PRIVATE fusion_pipeline)
     fusion_enable_warnings(fusion_rebuild_tests)
     add_test(NAME fusion_rebuild_graph COMMAND fusion_rebuild_tests)

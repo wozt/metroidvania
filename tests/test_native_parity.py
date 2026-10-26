@@ -410,6 +410,27 @@ class NativeParityTests(unittest.TestCase):
              for name, task in rebuild.TASKS.items()},
         )
 
+    def test_native_rebuild_dry_run_matches_python(self):
+        executable = rebuild.ROOT / "build/fusion_rebuild"
+        if not executable.is_file():
+            self.skipTest("fusion_rebuild is not built")
+        cases = (
+            ["--dry-run"],
+            ["--native", "--dry-run"],
+            ["--task", "aria_rooms", "--task", "metroid_rooms",
+             "--dry-run", "--force"],
+        )
+        for arguments in cases:
+            with self.subTest(arguments=arguments):
+                native = subprocess.run(
+                    [executable, *arguments], cwd=rebuild.ROOT, check=True,
+                    capture_output=True, text=True)
+                python = subprocess.run(
+                    ["python3", "-m", "scripts.rebuild", *arguments],
+                    cwd=rebuild.ROOT, check=True, capture_output=True, text=True)
+                self.assertEqual(native.stdout, python.stdout)
+                self.assertEqual(native.stderr, python.stderr)
+
     def test_rebuild_skips_tasks_without_required_files(self):
         cache_root = rebuild.ROOT / ".cache"
         cache_root.mkdir(exist_ok=True)

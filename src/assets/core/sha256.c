@@ -74,22 +74,62 @@ static void transform(uint32_t state[8], const uint8_t block[64]) {
     state[7] += h;
 }
 
-void fusion_sha256_digest(const uint8_t *data, size_t size, uint8_t digest[32]) {
-    uint32_t state[8] = {
+void fusion_sha256_init(FusionSha256 *context) {
+    const uint32_t initial[8] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     };
-    size_t offset = 0;
-    for (; size - offset >= 64; offset += 64) transform(state, data + offset);
-    uint8_t block[128] = {0};
-    size_t rest = size - offset;
-    if (rest) memcpy(block, data + offset, rest);
-    block[rest] = 0x80;
-    size_t length = rest < 56 ? 64 : 128;
-    uint64_t bits = (uint64_t)size * 8;
+    memset(context, 0, sizeof *context);
+    memcpy(context->state, initial, sizeof initial);
+}
+
+void fusion_sha256_update(FusionSha256 *context, const uint8_t *data, size_t size) {
+    if (!size) return;
+    context->byte_count += size;
+    if (context->block_size) {
+        size_t available = sizeof context->block - context->block_size;
+        size_t take = size < available ? size : available;
+        memcpy(context->block + context->block_size, data, take);
+        context->block_size += take;
+        data += take;
+        size -= take;
+        if (context->block_size == sizeof context->block) {
+            transform(context->state, context->block);
+            context->block_size = 0;
+        }
+    }
+    while (size >= sizeof context->block) {
+        transform(context->state, data);
+        data += sizeof context->block;
+        size -= sizeof context->block;
+    }
+    if (size) {
+        memcpy(context->block, data, size);
+        context->block_size = size;
+    }
+}
+
+void fusion_sha256_final(FusionSha256 *context, uint8_t digest[32]) {
+    uint64_t bits = context->byte_count * 8;
+    context->block[context->block_size++] = 0x80;
+    if (context->block_size > 56) {
+        memset(context->block + context->block_size, 0,
+               sizeof context->block - context->block_size);
+        transform(context->state, context->block);
+        context->block_size = 0;
+    }
+    memset(context->block + context->block_size, 0, 56 - context->block_size);
     for (size_t i = 0; i < 8; ++i)
-        block[length - 1 - i] = (uint8_t)(bits >> (8 * i));
-    transform(state, block);
-    if (length == 128) transform(state, block + 64);
-    for (size_t i = 0; i < 8; ++i) store_be32(digest + i * 4, state[i]);
+        context->block[63 - i] = (uint8_t)(bits >> (8 * i));
+    transform(context->state, context->block);
+    for (size_t i = 0; i < 8; ++i)
+        store_be32(digest + i * 4, context->state[i]);
+    memset(context, 0, sizeof *context);
+}
+
+void fusion_sha256_digest(const uint8_t *data, size_t size, uint8_t digest[32]) {
+    FusionSha256 context;
+    fusion_sha256_init(&context);
+    fusion_sha256_update(&context, data, size);
+    fusion_sha256_final(&context, digest);
 }

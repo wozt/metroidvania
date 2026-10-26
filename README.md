@@ -47,6 +47,7 @@ Import private assets and structural metadata in one incremental pass:
 python3 -m scripts.rebuild --assets          # or --all, with the native tasks
 python3 -m scripts.rebuild --list            # tasks, dependencies, required files
 build/fusion_rebuild --list                  # same graph from the new C11 registry
+build/fusion_rebuild --dry-run               # native incremental plan, no writes
 ```
 
 `--assets` verifies each ROM and writes both private identity manifests in
@@ -64,12 +65,15 @@ exports carry an `export_index.tsv` of per-file SHA-256, sprite libraries are
 content-addressed). Tasks whose ROM is absent are reported as skipped. Each
 extractor can still be run directly, as described below.
 
-The native `fusion_rebuild` migration has started with the complete task
-registry and its dependency graph. Its `--list` output identifies the three
-temporary Python-backed tasks (`inventory`, `checklist`, and `metroid_sound`).
-Task execution, fingerprints and state-cache updates still belong to
-`scripts/rebuild.py`; the native command deliberately rejects execution until
-those contracts are implemented instead of presenting a simulated rebuild.
+The native `fusion_rebuild` now owns the complete task registry, dependency
+graph, v1 state reader/writer, input and output fingerprints, export-index
+validation and incremental dry-run planner. Its `--dry-run` output is checked
+against Python for all tasks, native-only selection, repeated task selection
+and forced rebuilds; `--verbose` also prints the computed digests. It preserves
+unknown cache entries and rejects a symlinked state file. The command still
+rejects execution: actions and state updates remain in `scripts/rebuild.py`
+until the native action dispatch is connected. `inventory`, `checklist`, and
+`metroid_sound` remain explicitly marked as temporary Python-backed tasks.
 
 The native Aria world importer records metadata only. The general asset
 importer may write proprietary decoded output, so everything it produces

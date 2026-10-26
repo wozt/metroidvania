@@ -177,8 +177,14 @@ tasks with deterministic topological ordering, duplicate suppression, unknown
 dependency diagnostics and cycle detection. `fusion_rebuild --list` exposes
 that registry and marks `inventory`, `checklist` and `metroid_sound` as the
 three temporary Python-backed tasks. It does not execute tasks yet; cache
-loading, fingerprints, validation and actions remain authoritative in
-`scripts/rebuild.py` until the following migration lots prove parity.
+loading and deterministic atomic writing, exact input/dependency/decompilation
+stamps, output fingerprints, room-export and content-addressed sprite-index
+validation, prerequisite propagation, forced invalidation and incremental
+dry-run planning are now native. The C planner reads the existing v1 cache
+without rewriting it, preserves unknown records when its writer is exercised,
+rejects a symlinked state file and produces the same complete dry-run output
+as Python. Task actions and live state updates remain authoritative in
+`scripts/rebuild.py` until the next migration lot proves them.
 
 Routine categories record their evidence (`category_evidence`, schema v6):
 `path` when the source location decides it (all of Zero Mission's sorted

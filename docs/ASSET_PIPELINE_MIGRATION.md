@@ -6,6 +6,18 @@ The migration is deliberately incremental: the existing Python extractors are
 the reference implementation until a C replacement has a comparison fixture,
 unit tests and an engine/editor integration check.
 
+## Migration accounting
+
+| Measure | Current value | Boundary |
+|---|---:|---|
+| ROM extraction writers running in C11 | 10 / 11 | Zero Mission audio is the sole Python extractor |
+| Native orchestrator milestones | 2 / 4 (50%) | registry/graph and cache/planner are validated; action dispatch and the native inventory/checklist generators remain |
+| Registered tasks still backed by Python | 3 / 15 | `inventory`, `checklist`, `metroid_sound` |
+| Maintained Python files | 118 | 40 under `scripts/`, 78 under `tests/`; third-party submodule tools excluded |
+
+These migration measures are independent of both games' reconstruction and
+fidelity percentages.
+
 ## Current foundation
 
 `libfusion_assets` is the first native layer. Its public headers are
@@ -97,7 +109,7 @@ Python-authoritative; they do not claim that an extractor has been migrated.
 | removed writer: `scripts/aos_weapons.py` | `src/assets/aos/weapons.c`, `src/assets/core/sprite_library.c` | complete native weapon library and rebuild cutover; the Python writer is removed | all 59 records plus the unarmed record, 60 sequences, 416 indexed frames, 255 unique BMPs, both metadata files and all 258 output files byte-identical; recorded digests guard the command and complete library |
 | removed writer: `scripts/aos_object_sprites.py` | `src/assets/aos/objects.c`, `src/assets/core/sprite_library.c` | complete native traced-object library and rebuild cutover; the Python writer and its duplicate tests are removed | 348 door/enemy/effect sequences, 1,344 indexed frames, 825 unique BMPs, all 113 enemy stat records, frame boxes, anchors, probes and volleys, and all 828 output files byte-identical; recorded digests guard the command and complete library |
 | removed: the extraction of `scripts/import_game_assets.py` and the writers of `scripts/import_mzm_rooms.py`; retained: their safe-writer and descriptor-decoder helpers for the Python editor tools | `src/assets/core/raw_import.c`, `src/assets/core/json.c`, `src/assets/mzm/rooms.c`, `src/assets/mzm/music_names.c` | complete native raw import and `raw_import` rebuild cutover; the unread `catalog.json` and `world_atlas.json` are no longer written | JSON, path-safety, bounds-before-write, duplicate, symlink and manifest unit tests; all 3,888 raw blocks and `rooms/metroid/rooms.tsv` byte-identical, the manifest's entries and summary equal; recorded digests guard the console, manifest, descriptors and every block |
-| `scripts/rebuild.py` | `include/fusion/pipeline/rebuild.h`, `src/pipeline/tasks.c`, `src/pipeline/graph.c`, `fusion_rebuild` | migration started: the complete 15-task registry, explicit dependency graph, deterministic topological order, unknown-task/dependency errors and cycle detection are native; execution, cache, fingerprints, output validation and the three temporary Python-backed tasks remain authoritative in Python | C graph unit tests plus an automated registry comparison against every Python task name, group and dependency; next gate is state/cache and dry-run parity |
+| `scripts/rebuild.py` | `include/fusion/pipeline/rebuild.h`, `src/pipeline/tasks.c`, `src/pipeline/graph.c`, `src/pipeline/cache.c`, `src/pipeline/plan.c`, `fusion_rebuild` | migration in progress: registry, graph, v1 state parsing/atomic serialization, exact input/dependency/decompilation and output fingerprints, index validation, skipped propagation, force and incremental dry-run are native; task actions and live state updates remain in Python | native synthetic tests cover cold/current/changed-input/changed-output/missing-prerequisite/corrupt-cache/force/pending-dependency/index-corruption and symlink refusal; complete, native-only and repeated-task dry runs are byte-identical to Python; next gate is native action dispatch and post-action cache updates |
 
 The matrix tracks technical migration only. It must not change the gameplay
 parity percentages for either original reconstruction.

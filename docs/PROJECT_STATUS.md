@@ -2,6 +2,32 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0536 - Native incremental rebuild planning
+
+- Added native v1 rebuild-state loading and deterministic atomic writing. The
+  writer preserves unknown top-level fields, task records and task fields;
+  malformed schemas and symlinked state files are rejected instead of reset.
+- Added streaming SHA-256 and reproduced the Python task fingerprints: task
+  versions, transitive dependency digests, exact ordered input bytes, pinned
+  decompilation revisions and tracked dirty state, plus declared output bytes.
+- `fusion_rebuild --dry-run` now performs real incremental planning for
+  individual/repeated tasks and the `--all`, `--assets`, `--native`,
+  `--inventory` and `--checklist` selections. It handles `--force`, missing
+  prerequisites, skipped dependencies, missing or modified outputs, complete
+  room export indexes and content-addressed sprite indexes. `--verbose` prints
+  the calculated input/output counts and digests.
+- Native tests cover cold and current state, changed inputs and outputs,
+  forced rebuilds, dependency propagation, missing prerequisites, malformed
+  cache data, unknown-field preservation, index corruption and state symlink
+  refusal. Three representative CLI plans, including the complete graph, are
+  byte-identical to `scripts/rebuild.py`.
+- Orchestrator migration is now 2 of 4 explicit milestones (50%); ROM
+  extraction remains 10 of 11 native, with 3 of 15 registered tasks still
+  Python-backed. No task action or private asset was run by the native command.
+- Next: connect the twelve existing C task actions directly to
+  `libfusion_assets`, validate their post-run outputs, atomically update the v1
+  state, and keep Python only for inventory, checklist and audio temporarily.
+
 ## Patch 0535 - Native rebuild registry and dependency graph
 
 - Added the `fusion_pipeline` C11 library and `fusion_rebuild` executable with

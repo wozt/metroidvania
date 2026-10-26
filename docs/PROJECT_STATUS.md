@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0547 - Remove the Python editor operation layer
+
+- Removed `scripts/editor_backend.py` and `scripts/room_audit.py`. The editor
+  command dispatcher, project-room operations, immutable room packages and
+  structured render audit now have no Python execution or fallback path.
+- Replaced the five remaining Python backend suites with ROM-free native
+  contracts in `tests/test_editor_backend.c`: original-door annotation
+  adoption and deduplication, saved target-door selection, rejected missing
+  targets, read-only reciprocal-link planning, staged-versus-saved isolation,
+  deterministic room-package export, audit diagnostic classification and the
+  GTK picker/reciprocal handoff markers are all checked against the C11 code.
+- Strengthened package coverage to prove that dry runs write nothing, staged
+  collision edits never enter an export, repeated exports keep the same
+  digest and path, preview records cover authored collision/door/entity/event
+  data, and exporting does not mutate the saved room.
+- Maintained first-party Python files fell from 109 to 102 (33 under
+  `scripts/`, 69 under `tests/`). No gameplay or native-parity status changed.
+- Next: replace the remaining tests of the Python project-room/entity support
+  modules with native contracts, then delete each support module once its last
+  consumer is gone.
+
 ## Patch 0546 - Remove the Python editor CLI
 
 - Removed `scripts/editor_cli.py` and the `FUSION_EDITOR_PYTHON_BACKEND`

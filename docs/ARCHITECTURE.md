@@ -434,8 +434,9 @@ project entities, story validation/storage, native workspace orchestration,
 render audits and room-package export. GTK's interactive tile canvas and the
 headless tile commands share the same C native-map core rather than duplicating
 its file or editing rules. The superseded Python CLI has been removed;
-`scripts/editor_backend.py` remains test-only until its last focused contracts
-are replaced by native tests. Neither editor path replaces a gameplay engine.
+the Python operation layer and room-render audit have also been removed after
+their remaining focused contracts moved to `tests/test_editor_backend.c`.
+Neither editor path replaces a gameplay engine.
 
 Tracked outputs contain metadata only:
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T06:22:08+00:00",
+ "generated_at": "2026-10-26T07:11:54+00:00",
  "git": {
-  "commit": "419a7a8",
+  "commit": "06e87ad",
   "branch": "main",
   "dirty": true
  },
@@ -12741,7 +12741,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "All commands, batches, help, formatting and safe outputs run directly in C11; the former Python CLI and its three transitional C/Python parity suites are removed.",
+   "limitations": "All commands, batches, help, formatting and safe outputs run directly in C11; the former Python CLI, operation layer, render audit and transitional Python parity suites are removed.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13272,7 +13272,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The production workspace and headless commands are native, and edits remain private overrides that the runtimes do not apply yet.",
+   "limitations": "The production workspace, project-room operations, render audits and headless commands are native; the former Python backend is removed, while private edits are still not applied by the runtimes.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15698,13 +15698,6 @@
     "passed": 3
    },
    {
-    "file": "tests/test_native_door_overrides_0104.py",
-    "module": "tests.test_native_door_overrides_0104",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
     "file": "tests/test_native_parity.py",
     "module": "tests.test_native_parity",
     "test_count": 21,
@@ -15768,13 +15761,6 @@
     "passed": 11
    },
    {
-    "file": "tests/test_reciprocal_link_0115.py",
-    "module": "tests.test_reciprocal_link_0115",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
     "file": "tests/test_responsive_splitters.py",
     "module": "tests.test_responsive_splitters",
     "test_count": 3,
@@ -15789,13 +15775,6 @@
     "passed": 6
    },
    {
-    "file": "tests/test_room_audit.py",
-    "module": "tests.test_room_audit",
-    "test_count": 5,
-    "outcome": "passed",
-    "passed": 5
-   },
-   {
     "file": "tests/test_room_background_0125.py",
     "module": "tests.test_room_background_0125",
     "test_count": 2,
@@ -15808,13 +15787,6 @@
     "test_count": 2,
     "outcome": "passed",
     "passed": 2
-   },
-   {
-    "file": "tests/test_room_export_0124.py",
-    "module": "tests.test_room_export_0124",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
    },
    {
     "file": "tests/test_room_picker_link_0106b.py",
@@ -15866,13 +15838,6 @@
     "passed": 5
    },
    {
-    "file": "tests/test_target_door_picker_0114.py",
-    "module": "tests.test_target_door_picker_0114",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
     "file": "tests/test_unified_workspace.py",
     "module": "tests.test_unified_workspace",
     "test_count": 7,
@@ -15909,12 +15874,18 @@
    }
   ],
   "summary": {
-   "passed": 390,
+   "passed": 373,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "06e87ad",
+   "date": "2026-10-26",
+   "subject": "Remove the Python editor CLI",
+   "scope": "project"
+  },
   {
    "commit": "419a7a8",
    "date": "2026-10-26",
@@ -16387,12 +16358,6 @@
    "commit": "0f98464",
    "date": "2026-10-23",
    "subject": "Port Aria constructor-table enemy batch",
-   "scope": "project"
-  },
-  {
-   "commit": "e398717",
-   "date": "2026-10-23",
-   "subject": "Port Aria Merman and Ripper state machines",
    "scope": "project"
   }
  ],

@@ -27,7 +27,7 @@ static double now_ms(void) {
 }
 
 /* _diagnostic_status(). */
-static const char *diagnostic_status(const char *message) {
+const char *feb_audit_diagnostic_status(const char *message) {
     char lower[FEB_MESSAGE_CAPACITY];
     size_t length = strlen(message);
     if (length >= sizeof lower) length = sizeof lower - 1;
@@ -143,7 +143,7 @@ static bool finish_record(FusionJson *record, double started, const FusionJson *
     if (!ok) return false;
     if (failure) {
         FusionJson error = fusion_json_object();
-        return feb_put_string(record, "status", diagnostic_status(failure->message)) &&
+        return feb_put_string(record, "status", feb_audit_diagnostic_status(failure->message)) &&
                feb_put_string(&error, "type", "ValueError") &&
                feb_put_string(&error, "message", failure->message) && feb_put(record, "error", error);
     }
@@ -208,6 +208,17 @@ static bool finish_record(FusionJson *record, double started, const FusionJson *
         }
     }
     return ok;
+}
+
+bool feb_audit_finish_record(FusionJson *record, const FusionJson *result,
+                             const char *failure_message) {
+    FebError failure = {0};
+    const FebError *pointer = NULL;
+    if (failure_message) {
+        snprintf(failure.message, sizeof failure.message, "%s", failure_message);
+        pointer = &failure;
+    }
+    return finish_record(record, now_ms(), result, pointer);
 }
 
 static bool is_decimal(const FusionJson *value, int64_t *number) {

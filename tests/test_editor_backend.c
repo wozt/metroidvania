@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #define _POSIX_C_SOURCE 200809L
+#include "audit.h"
 #include "backend.h"
+#include "project_room.h"
 
 #include <assert.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +44,16 @@ static FusionJson room_scope(void) {
     return options;
 }
 
+static FusionJson scoped_room(const char *room, const char *width, const char *height) {
+    FusionJson options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", room);
+    put_string(&options, "width", width);
+    put_string(&options, "height", height);
+    return options;
+}
+
 static FusionJson execute_ok(const char *command, FusionJson options,
                              const char *root, bool dry_run) {
     FusionJson result = {0};
@@ -52,6 +65,57 @@ static FusionJson execute_ok(const char *command, FusionJson options,
     assert(error.message[0] == '\0');
     fusion_json_free(&options);
     return result;
+}
+
+static FusionJson create_door(const char *root, const char *room, const char *x,
+                              const char *y, const char *facing) {
+    FusionJson options = scoped_room(room, "128", "128");
+    put_string(&options, "x", x);
+    put_string(&options, "y", y);
+    put_string(&options, "door_width", "16");
+    put_string(&options, "door_height", "32");
+    put_string(&options, "label", !strcmp(room, "7") ? "A" : "B");
+    put_string(&options, "door_type", "normal");
+    put_string(&options, "facing", facing);
+    return execute_ok("door-create", options, root, false);
+}
+
+static void execute_error(const char *command, FusionJson options, const char *root,
+                          const char *message) {
+    FusionJson result = {0};
+    FebError error = {0};
+    assert(!feb_execute(command, &options, root, FUSION_SOURCE_DIR, false, &result, &error));
+    assert(strstr(error.message, message) != NULL);
+    fusion_json_free(&result);
+    fusion_json_free(&options);
+}
+
+static char *read_text(const char *path) {
+    FILE *file = fopen(path, "rb");
+    assert(file != NULL);
+    assert(!fseek(file, 0, SEEK_END));
+    long size = ftell(file);
+    assert(size >= 0);
+    assert(!fseek(file, 0, SEEK_SET));
+    char *text = malloc((size_t)size + 1);
+    assert(text != NULL);
+    assert(fread(text, 1, (size_t)size, file) == (size_t)size);
+    text[size] = '\0';
+    assert(!fclose(file));
+    return text;
+}
+
+static void make_directory(const char *path) {
+    char copy[4096];
+    assert(strlen(path) < sizeof copy);
+    strcpy(copy, path);
+    for (char *part = copy + 1; *part; ++part) {
+        if (*part != '/') continue;
+        *part = '\0';
+        assert(!mkdir(copy, 0777) || errno == EEXIST);
+        *part = '/';
+    }
+    assert(!mkdir(copy, 0777) || errno == EEXIST);
 }
 
 static void write_text(const char *path, const char *text) {
@@ -98,6 +162,190 @@ static void test_command_registry(void) {
     assert(feb_capability("audio-list") != NULL);
     assert(!strcmp(feb_capability("audio-list"),
                    "unavailable_native_inventory_pending"));
+}
+
+static void test_audit_contract(void) {
+    assert(!strcmp(feb_audit_diagnostic_status("unsupported affine"), "unsupported"));
+    assert(!strcmp(feb_audit_diagnostic_status("truncated resource"), "error"));
+
+    FusionJson result = fusion_json_object();
+    put_string(&result, "status", "PARTIAL_NATIVE_BG_RENDER");
+    assert(fusion_json_set(&result, "width", fusion_json_int(320)));
+    assert(fusion_json_set(&result, "height", fusion_json_int(160)));
+    FusionJson limitations = fusion_json_array();
+    assert(fusion_json_push(&limitations, fusion_json_string("diagnostic only")));
+    assert(fusion_json_set(&result, "limitations", limitations));
+    FusionJson layer = fusion_json_object(), layers = fusion_json_object();
+    assert(fusion_json_set(&layer, "width_blocks", fusion_json_int(20)));
+    assert(fusion_json_set(&layer, "height_blocks", fusion_json_int(10)));
+    assert(fusion_json_set(&layer, "unresolved_pixels_or_cells", fusion_json_int(7)));
+    assert(fusion_json_set(&layers, "Bg1", layer));
+    assert(fusion_json_set(&result, "layers", layers));
+    FusionJson record = fusion_json_object();
+    assert(feb_audit_finish_record(&record, &result, NULL));
+    assert(!strcmp(member(&record, "status", FUSION_JSON_STRING)->string, "partial"));
+    const FusionJson *expected = member(&record, "expected_render", FUSION_JSON_OBJECT);
+    assert(member(expected, "width_px", FUSION_JSON_NUMBER)->integer == 320);
+    assert(member(expected, "height_px", FUSION_JSON_NUMBER)->integer == 160);
+    const FusionJson *invalid = member(&record, "invalid_graphics_references",
+                                       FUSION_JSON_ARRAY);
+    assert(invalid->count == 1);
+    assert(member(&invalid->items[0], "unresolved_count", FUSION_JSON_NUMBER)->integer == 7);
+    fusion_json_free(&record);
+    fusion_json_free(&result);
+
+    record = fusion_json_object();
+    assert(feb_audit_finish_record(&record, NULL, "unsupported affine"));
+    assert(!strcmp(member(&record, "status", FUSION_JSON_STRING)->string, "unsupported"));
+    fusion_json_free(&record);
+}
+
+static void test_workspace_source_contract(void) {
+    char path[4096];
+    assert(snprintf(path, sizeof path, "%s/editor/native_workspace.c", FUSION_SOURCE_DIR) > 0);
+    char *source = read_text(path);
+    static const char *const terms[] = {
+        "project_door_list_targets_0114(", "project_door_target_chosen_0114(",
+        "List saved target doors", "--command=door-target-list", "project_door_link_0102(",
+        "form->target_choice_ids", "PATCH_0115_RECIPROCAL_GTK", "Prepare return link",
+        "--command=door-return-plan", "pending_reverse_0115",
+        "project_reverse_apply_0115(doc);", "project_command(doc, \"door-link\", opts, NULL)",
+        "First save the forward link with the source room diskette.",
+    };
+    for (size_t index = 0; index < sizeof terms / sizeof terms[0]; ++index)
+        assert(strstr(source, terms[index]) != NULL);
+    free(source);
+    assert(snprintf(path, sizeof path, "%s/src/editor_backend/commands.c", FUSION_SOURCE_DIR) > 0);
+    source = read_text(path);
+    assert(strstr(source, "{\"door-target-list\",") != NULL);
+    assert(strstr(source, "static const char *const worlds[] = {\"zero_mission\", \"aria\"}") !=
+           NULL);
+    assert(strstr(source, "feb_audit_write_report(repository, &report, file, path, error)") !=
+           NULL);
+    assert(strstr(source, "report must be a lowercase safe identifier") != NULL);
+    free(source);
+}
+
+static FusionJson adoption_options(const char *index) {
+    FusionJson options = scoped_room("10", "640", "480");
+    put_string(&options, "native_index", index);
+    put_string(&options, "native_variant", "native");
+    put_string(&options, "native_type", index);
+    return options;
+}
+
+static void test_native_door_adoption(void) {
+    char root_template[] = "/tmp/fusion-editor-adopt-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    execute_error("door-adopt", adoption_options("26"), root, "import original room annotations");
+    char directory[4096], annotation[4096];
+    assert(snprintf(directory, sizeof directory,
+                    "%s/assets/extracted/rooms/metroid/annotations", root) > 0);
+    make_directory(directory);
+    assert(snprintf(annotation, sizeof annotation, "%s/brinstar_010.tsv", directory) > 0);
+    write_text(annotation, "# private annotation\n"
+                           "DOOR|26|32|80|16|64|native|26|Door 26|native original\n");
+    FusionJson result = execute_ok("door-adopt", adoption_options("26"), root, false);
+    const FusionJson *door = member(&result, "door", FUSION_JSON_OBJECT);
+    assert(member(member(door, "native_source", FUSION_JSON_OBJECT), "index",
+                  FUSION_JSON_NUMBER)->integer == 26);
+    int64_t id = member(door, "id", FUSION_JSON_NUMBER)->integer;
+    fusion_json_free(&result);
+    result = execute_ok("door-adopt", adoption_options("26"), root, false);
+    assert(member(member(&result, "door", FUSION_JSON_OBJECT), "id",
+                  FUSION_JSON_NUMBER)->integer == id);
+    fusion_json_free(&result);
+    FusionJson options = scoped_room("10", "640", "480");
+    result = execute_ok("door-list", options, root, false);
+    assert(member(&result, "doors", FUSION_JSON_ARRAY)->count == 1);
+    fusion_json_free(&result);
+    execute_error("door-adopt", adoption_options("28"), root,
+                  "source door missing or ambiguous");
+    remove_tree(root);
+}
+
+static FusionJson link_options(const char *room, const char *source_door,
+                               const char *target_room, const char *target_door,
+                               const char *spawn_x, const char *spawn_y) {
+    FusionJson options = scoped_room(room, "128", "128");
+    put_string(&options, "source_door_id", source_door);
+    put_string(&options, "target_world", "zero_mission");
+    put_string(&options, "target_area", "Brinstar");
+    put_string(&options, "target_room", target_room);
+    put_string(&options, "target_door_id", target_door);
+    put_string(&options, "spawn_x", spawn_x);
+    put_string(&options, "spawn_y", spawn_y);
+    return options;
+}
+
+static void test_target_and_reciprocal_links(void) {
+    char root_template[] = "/tmp/fusion-editor-links-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    FusionJson result = create_door(root, "7", "16", "32", "right");
+    fusion_json_free(&result);
+    result = create_door(root, "8", "48", "64", "left");
+    fusion_json_free(&result);
+
+    FusionJson options = fusion_json_object();
+    put_string(&options, "target_world", "zero_mission");
+    put_string(&options, "target_area", "Brinstar");
+    put_string(&options, "target_room", "8");
+    result = execute_ok("door-target-list", options, root, false);
+    const FusionJson *doors = member(&result, "doors", FUSION_JSON_ARRAY);
+    assert(doors->count == 1);
+    assert(!strcmp(member(&doors->items[0], "label", FUSION_JSON_STRING)->string, "B"));
+    fusion_json_free(&result);
+
+    execute_error("door-link", link_options("7", "1", "8", "99", "48", "64"), root,
+                  "not present");
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    put_string(&options, "source_door_id", "1");
+    execute_error("door-return-plan", options, root, "forward destination");
+
+    result = execute_ok("door-link", link_options("7", "1", "8", "1", "48", "64"), root,
+                        false);
+    fusion_json_free(&result);
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    put_string(&options, "source_door_id", "1");
+    result = execute_ok("door-return-plan", options, root, false);
+    assert(member(&result, "source_room", FUSION_JSON_NUMBER)->integer == 8);
+    assert(member(&result, "source_door_id", FUSION_JSON_NUMBER)->integer == 1);
+    assert(member(&result, "target_room", FUSION_JSON_NUMBER)->integer == 7);
+    assert(member(&result, "target_door_id", FUSION_JSON_NUMBER)->integer == 1);
+    assert(member(&result, "spawn_x", FUSION_JSON_NUMBER)->integer == 16);
+    assert(member(&result, "spawn_y", FUSION_JSON_NUMBER)->integer == 32);
+    fusion_json_free(&result);
+
+    assert(!setenv("MV_EDITOR_ROOM_STAGE", "00000000-0000-4000-8000-000000000115", 1));
+    result = execute_ok("door-link", link_options("8", "1", "7", "1", "16", "32"), root,
+                        false);
+    assert(member(member(&result, "transition", FUSION_JSON_OBJECT), "target_door_id",
+                  FUSION_JSON_NUMBER)->integer == 1);
+    fusion_json_free(&result);
+    assert(!unsetenv("MV_EDITOR_ROOM_STAGE"));
+    options = scoped_room("8", "128", "128");
+    result = execute_ok("transition-list", options, root, false);
+    assert(member(&result, "transitions", FUSION_JSON_ARRAY)->count == 0);
+    fusion_json_free(&result);
+
+    result = execute_ok("door-link", link_options("8", "1", "7", "1", "16", "32"), root,
+                        false);
+    fusion_json_free(&result);
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    put_string(&options, "source_door_id", "1");
+    execute_error("door-return-plan", options, root, "already has a transition");
+    remove_tree(root);
 }
 
 static void test_backend_operations(const char *root) {
@@ -175,16 +423,81 @@ static void test_backend_operations(const char *root) {
     assert(member(&events->items[0], "valid", FUSION_JSON_BOOL)->boolean);
     fusion_json_free(&result);
 
+    FebRoomScope source_scope = {.world = "mzm", .room = 7, .width = 128, .height = 64};
+    strcpy(source_scope.area, "Brinstar");
+    char source_path[4096];
+    struct stat status;
+    FebError path_error = {0};
+    assert(feb_room_path(root, &source_scope, source_path, &path_error));
+    char *source_before = read_text(source_path);
+
+    assert(!setenv("MV_EDITOR_ROOM_STAGE", "00000000-0000-4000-8000-000000000124", 1));
+    options = room_scope();
+    put_string(&options, "x", "2");
+    put_string(&options, "y", "2");
+    put_string(&options, "fill_width", "1");
+    put_string(&options, "fill_height", "1");
+    put_string(&options, "collision_type", "hazard");
+    result = execute_ok("collision-fill", options, root, false);
+    fusion_json_free(&result);
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    result = execute_ok("room-export", options, root, true);
+    assert(!member(&result, "persisted", FUSION_JSON_BOOL)->boolean);
+    fusion_json_free(&result);
+    char export_root[4096];
+    assert(snprintf(export_root, sizeof export_root, "%s/assets/extracted/exports", root) > 0);
+    assert(stat(export_root, &status) != 0);
+
     options = fusion_json_object();
     put_string(&options, "world", "zero_mission");
     put_string(&options, "area", "Brinstar");
     put_string(&options, "room", "7");
     result = execute_ok("room-export", options, root, false);
+    assert(member(member(&result, "counts", FUSION_JSON_OBJECT), "collision",
+                  FUSION_JSON_NUMBER)->integer == 2);
     const char *package = member(&result, "package_dir", FUSION_JSON_STRING)->string;
-    struct stat status;
     assert(!stat(package, &status) && S_ISDIR(status.st_mode));
-    assert(strlen(member(&result, "sha256", FUSION_JSON_STRING)->string) == 64);
+    const char *digest_value = member(&result, "sha256", FUSION_JSON_STRING)->string;
+    assert(strlen(digest_value) == 64);
+    char digest[65], package_path[4096], preview_path[4096];
+    strcpy(digest, digest_value);
+    assert(strlen(package) < sizeof package_path);
+    strcpy(package_path, package);
+    assert(snprintf(preview_path, sizeof preview_path, "%s/preview.tsv", package) > 0);
+    char *preview = read_text(preview_path);
+    assert(strstr(preview, "MVROOM-PREVIEW\t1\tmzm\tBrinstar\t7\t128\t64\t16\n"));
+    assert(strstr(preview, "C\t0\t0\t16\t16\t1\n"));
+    assert(strstr(preview, "C\t16\t0\t16\t16\t1\n"));
+    assert(strstr(preview, "C\t32\t32\t16\t16\t3\n") == NULL);
+    assert(strstr(preview, "D\t0\t0\t16\t32\t0\n"));
+    assert(strstr(preview, "E\t16\t16\t16\t16\t0\n"));
+    assert(strstr(preview, "V\t16\t16\t16\t16\t0\n"));
+    assert(strlen(preview) >= 4 && !strcmp(preview + strlen(preview) - 4, "END\n"));
+    free(preview);
     fusion_json_free(&result);
+    assert(!unsetenv("MV_EDITOR_ROOM_STAGE"));
+
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    result = execute_ok("room-export", options, root, false);
+    assert(!strcmp(member(&result, "sha256", FUSION_JSON_STRING)->string, digest));
+    assert(!strcmp(member(&result, "package_dir", FUSION_JSON_STRING)->string, package_path));
+    fusion_json_free(&result);
+    char *source_after = read_text(source_path);
+    assert(!strcmp(source_before, source_after));
+    free(source_before);
+    free(source_after);
+
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "9");
+    execute_error("room-export", options, root, "saved project room");
 }
 
 static int run_cli(int argc, char **argv, char *output, size_t capacity) {
@@ -252,6 +565,10 @@ int main(void) {
     char *root = mkdtemp(root_template);
     assert(root != NULL);
     test_command_registry();
+    test_audit_contract();
+    test_workspace_source_contract();
+    test_native_door_adoption();
+    test_target_and_reciprocal_links();
     test_backend_operations(root);
 
     char cli_template[] = "/tmp/fusion-editor-cli-XXXXXX";

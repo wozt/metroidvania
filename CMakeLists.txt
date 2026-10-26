@@ -188,7 +188,8 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_so
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_stages.c
+               src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
+               src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
@@ -583,7 +584,8 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_mode.c
-                   src/runtime/aos_title_fade.c src/runtime/aos_title_stages.c
+                   src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
+                   src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
                    src/runtime/aos_input.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_lifecycle_tests)

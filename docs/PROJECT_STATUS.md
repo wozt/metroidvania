@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0562 - Complete Aria's title destination handoff
+
+- The lifecycle TITLE_SCREEN handler now connects the already-ported native
+  stage-3 motion and stages 4-7. Stage 1 seeds the source-derived motion
+  values from `sub_08004160`, and their state is handed forward without a
+  duplicate controller.
+- The native Start/A quick reveal from stages 2-7 now enters stage 8.
+  `aos_title_input` drives its repeat-sensitive ten-second timer, submenu,
+  back and blocked-exit rules; stage 9 reproduces the duplicated-level BLDY
+  ramp before returning the five-entry destination table. Idle timeout
+  overrides that destination with INTRO_CUTSCENE.
+- Deterministic tests cover the stage-3 threshold, quick reveal, MAIN_MENU
+  handoff, exact stage-9 frames and idle intro destination. The SDL launcher
+  still uses diagnostic presentation and is not attached to this boot path;
+  native title entity rendering and `GameModeMainMenuUpdate` remain absent,
+  so both affected features stay partial. Source-derived and unit-tested,
+  not emulator-compared. Zero Mission is unchanged.
+- Next: reconstruct `GameModeMainMenuUpdate`, then connect the standalone
+  title/save launcher to the native lifecycle while retaining direct room,
+  save, capture and debug launches.
+
 ## Patch 0561 - Connect Aria's native lifecycle dispatcher
 
 - Added `aos_game_lifecycle.c`, whose native handler table connects RESET,

@@ -46,8 +46,10 @@ The room runtime now routes every simulation frame through the native
 `aos_game_mode_update` lifecycle and its IN_GAME handler. Its explicit
 room/save command-line entry deliberately starts at IN_GAME, while a tested
 host-neutral boot path crosses Reset and both startup logos into the partial
-title handler. The standalone title launcher remains separate until the
-native main-menu controller can replace its diagnostic navigation.
+title handler. That handler now reaches the native stage-9 destination after
+the title motion, input or quick-reveal paths, including MAIN_MENU and the
+idle INTRO_CUTSCENE override. The standalone title launcher remains separate
+until the native main-menu controller can replace its diagnostic navigation.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with

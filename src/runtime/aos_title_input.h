@@ -6,6 +6,8 @@
 
 typedef struct {
     int32_t idle_timer;
+    uint16_t exit_counter;
+    uint16_t brightness;
     bool timed_out;
     bool leaving;
 } AosTitleInput;
@@ -25,4 +27,7 @@ void aos_title_input_enter(AosTitleInput *state);
 AosTitleAction aos_title_input_tick(AosTitleInput *state, uint16_t new_input,
                                     uint16_t repeat_input, bool logo_selected,
                                     bool submenu_open, bool exit_blocked);
+/* GameModeTitleScreenUpdate stage 9. Returns true on the native frame where
+ * BLDY first reads 16; earlier calls expose the 0,0,1,1,...,15,15 ramp. */
+bool aos_title_exit_tick(AosTitleInput *state);
 #endif

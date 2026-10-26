@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+static const int32_t title_destinations[5] = {
+    AOS_MODE_MAIN_MENU, AOS_MODE_SOUL_TRADE_MENU, AOS_MODE_KONAMI_LOGO,
+    AOS_MODE_BOSS_RUSH_MENU, AOS_MODE_SOUND_TEST_MENU};
+
 static int32_t reset_handler(AosGameMode *mode, void *context) {
     AosGameLifecycle *state = context;
     return aos_game_mode_reset_update(mode, &state->reset, &state->input, NULL,
@@ -45,6 +49,8 @@ static int32_t title_handler(AosGameMode *mode, void *context) {
             break;
         case 1:
             aos_title_fade_begin(&state->title_fade);
+            state->title_motion = (AosTitleMotion){
+                .motion = 0x200000, .x = 0x980000, .y = 0x700000};
             mode->update_stage = state->title_fade.stage;
             mode->stage_timer = state->title_fade.stage_timer;
             break;
@@ -53,15 +59,61 @@ static int32_t title_handler(AosGameMode *mode, void *context) {
             mode->update_stage = state->title_fade.stage;
             mode->stage_timer = state->title_fade.stage_timer;
             break;
+        case 3:
+            aos_title_motion_stage3(&state->title_motion);
+            if (state->title_motion.stage_four) {
+                state->title_stages.motion = state->title_motion.motion;
+                state->title_stages.x = state->title_motion.x;
+                state->title_stages.y = state->title_motion.y;
+                state->title_stages.flags = state->title_motion.flags;
+                state->title_stages.affine_scale = state->title_motion.affine_scale;
+                mode->update_stage = 4;
+                mode->stage_timer = 0;
+            }
+            break;
         case 4:
         case 5:
         case 6:
         case 7:
             sync_title_stage(mode, &state->title_stages);
+            if (mode->update_stage == 8) aos_title_input_enter(&state->title_input);
+            break;
+        case 8: {
+            bool logo_selected = aos_title_destination(state->title_destination_index,
+                                                       title_destinations) == AOS_MODE_KONAMI_LOGO;
+            AosTitleAction action = aos_title_input_tick(
+                &state->title_input, state->input.new_input, state->input.repeated_input,
+                logo_selected, state->title_submenu_open, state->title_exit_blocked);
+            state->title_submenu_requested = action == AOS_TITLE_SUBMENU;
+            state->title_back_requested = action == AOS_TITLE_BACK;
+            if (action == AOS_TITLE_EXIT) {
+                mode->update_stage = 9;
+                mode->stage_timer = 0;
+            }
+            break;
+        }
+        case 9:
+            if (aos_title_exit_tick(&state->title_input)) {
+                state->title_cleanup_requested = true;
+                if (state->title_input.timed_out) return AOS_MODE_INTRO_CUTSCENE;
+                return aos_title_destination(state->title_destination_index,
+                                             title_destinations);
+            }
             break;
         default:
-            /* Native title stage 3 and stage 8 selection are still partial. */
             break;
+    }
+    /* Native Start/A shortcut from animation stages 2-7. */
+    if (mode->update_stage >= 2 && mode->update_stage <= 7 &&
+        (state->input.new_input & (AOS_KEY_START | AOS_KEY_A))) {
+        state->title_motion.motion = 0;
+        state->title_stages.motion = 0;
+        state->title_stages.progress = 0x40;
+        state->title_stages.alpha = 0;
+        state->title_stages.show_bg0 = true;
+        aos_title_input_enter(&state->title_input);
+        mode->update_stage = 8;
+        mode->stage_timer = 0;
     }
     return AOS_MODE_SAME;
 }
@@ -93,6 +145,9 @@ void aos_game_lifecycle_init(AosGameLifecycle *state, bool direct_gameplay) {
 void aos_game_lifecycle_update(AosGameLifecycle *state) {
     state->title_frame_requested = false;
     state->in_game_frame_requested = false;
+    state->title_submenu_requested = false;
+    state->title_back_requested = false;
+    state->title_cleanup_requested = false;
     state->save_language_requested = 0;
     aos_game_mode_update(&state->game_mode, handlers, state);
 }

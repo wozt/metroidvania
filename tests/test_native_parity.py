@@ -527,10 +527,9 @@ class NativeParityTests(unittest.TestCase):
             self.assertEqual(room.read_text(encoding="utf-8"), "room")
 
     def test_asset_tasks_hash_their_extractor_modules(self):
-        sources = rebuild._module_sources("aos_room_render")
+        sources = rebuild._module_sources("sprite_library")
         names = {path.name for path in sources}
-        self.assertLessEqual({"aos_room_render.py", "import_aos_world.py",
-                              "import_game_assets.py", "asset_layout.py"}, names)
+        self.assertLessEqual({"sprite_library.py", "asset_layout.py"}, names)
         for name in ("aria_rom", "metroid_rom", "aria_world", "aria_rooms", "aria_soma",
                      "aria_weapons", "aria_objects", "metroid_rooms",
                      "metroid_rom_bank"):

@@ -67,14 +67,14 @@ Existing ROM rooms remain separate; no original room geometry is inferred.
 Create a private draft without supplying a ROM:
 
 ```sh
-python3 -m scripts.authored_rooms create --world zero_mission --area 0 \
-  --slug custom_hall --name "Custom Hall" --width-screens 2 --height-screens 1
-python3 -m scripts.authored_rooms create --world aria --area 0 \
-  --slug custom_hall --name "Custom Hall" --width-screens 2 --height-screens 1
-python3 -m scripts.authored_rooms list --world aria
+./build/fusion_editor_cli --command=room-create --world=zero_mission --area=0 \
+  --slug=custom_hall --name="Custom Hall" --width-screens=2 --height-screens=1
+./build/fusion_editor_cli --command=room-create --world=aria --area=0 \
+  --slug=custom_hall --name="Custom Hall" --width-screens=2 --height-screens=1
+./build/fusion_editor_cli --command=room-list --source=draft --world=aria
 ```
 
-Files are saved in ignored `assets/extracted/authored_rooms/`. `validate` checks
+Files are saved in ignored `assets/extracted/authored_rooms/`. `room-validate` checks
 schema/provenance/identity, **not** collision, spawning, source assets or
 engine compatibility. These are next milestones, not completed features.
 GTK Create room stays disabled until the editor can open authored drafts and
@@ -85,9 +85,9 @@ both game adapters can validate/export them to a consuming native runtime.
 - In either original-room browser, right-click the room list (or use the menu
   button) and choose **Create room...**.
 - Choose area, slug, name and dimensions (1..8 source-screen units each).
-- The draft is saved using `scripts.authored_rooms create` under the private,
+- The draft is saved using `fusion_editor_cli --command=room-create` under the private,
   ignored `assets/extracted/authored_rooms` directory. Existing drafts are never
-  overwritten. Reuse `python3 -m scripts.authored_rooms list` to inspect them.
+  overwritten. Reuse `fusion_editor_cli --command=room-list --source=draft` to inspect them.
 - The GTK form is an authoring entry point only, **not** a tile/collision editor
   or a working game-room loader; neither original ROM content nor gameplay is
   fabricated. Adding saved drafts to the room browser and actual native editor

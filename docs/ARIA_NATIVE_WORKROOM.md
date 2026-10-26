@@ -15,7 +15,7 @@ atlas; no owned source assets are published.
 Test with:
 
 ```sh
-python3 -m scripts.aos_native_workspace --area 0 --room 10
+./build/fusion_editor_cli --command=room-open --world=aria --area=0 --room=10
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j"$(nproc)"
 ctest --test-dir build --output-on-failure

@@ -114,7 +114,7 @@ BG1 collision readers (cvaos `src/code_08001194.c`, decompiled C):
   metadata pointer otherwise, clamps the cell to the layer (30 x 26 cells for a
   one-screen dimension), and for slope bytes toggles bit 2 when the block is
   X-flipped and bit 1 when it is Y-flipped.
-- `sub_08001800` computes the table index exactly as `scripts/aos_room_render.py`
+- `sub_08001800` computes the table index exactly as `src/editor_backend/aria_render.c`
   does: block map entry at metadata `+0xC` (`& 0x3FFF`, minus one), `* 16`,
   plus the local 4x4 cell with the 0x4000/0x8000 flips. The importer's
   collision decoding is therefore verified.

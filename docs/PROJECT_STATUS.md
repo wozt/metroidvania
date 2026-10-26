@@ -2,6 +2,32 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0552 - Remove the Python room editor modules
+
+- Removed the 16 Python modules whose behaviour the native editor already
+  reproduces byte for byte: the Zero Mission and Aria room renderers and
+  workroom exporters, the BG3 and hatch previews, the hatch lock events, the
+  room annotations, the world overview and atlas, the draft and placement
+  stores, the story validator, the Aria world decoder, the room descriptor
+  decoder and the GBA tile helpers, with their 26 Python test files.
+- Added `tests/test_editor_render.c` (CTest `editor_render_native_contract`):
+  LZ77 and room RLE with their failure messages, BMP and PNG encoding,
+  annotation-row sanitising, metatile rendering with flips and unresolved
+  palette rows, a synthetic Aria room through the real loader (raw and LZ77
+  resources, the final-row palette header, collision, the composite without
+  BG1, 8 bpp and dimension refusals), the world overview arguments and, when
+  the private extraction is present, real Zero Mission/Aria renders and an
+  audit.
+- The registries and the workroom, render, global-map, gameplay-systems, Soma
+  and migration documents now name the native commands and sources. The
+  world overview ownership rules keep only their real-data proof: their
+  synthetic Python cases were not ported.
+- First-party Python files: 10 under `scripts/`, 30 under `tests/`.
+  No gameplay or native-parity status changed.
+- Next: the remaining Python tests of native code, then the repository tools
+  (`dashboard`, `native_parity`, `check_generated`, `rebuild`,
+  `native_inventory`) and the remaining asset helpers.
+
 ## Patch 0551 - Remove the duplicate Python object catalog
 
 - Removed `scripts/object_catalog.py` and its focused Python suite. The

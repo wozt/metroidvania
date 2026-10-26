@@ -31,7 +31,7 @@ connections.
 Import from the **user's local** decomp/ROM extraction:
 
 ```sh
-python3 -m scripts.mzm_world_atlas
+./build/fusion_world_overview --world mzm --area 0 --budget 0
 ./build/fusion_map_editor
 ```
 
@@ -41,7 +41,7 @@ catalog, global-map TSV, ownership report, previews and editor workrooms.
 Optional experimental MZM BG3 preview:
 
 ```sh
-python3 -m scripts.mzm_bg3_preview --area Brinstar --room 33
+./build/fusion_editor_cli --command=room-open --world=zero_mission --area=Brinstar --room=33
 ```
 
 When opening a room, the importer also produces a native Clipdata diagnostic.

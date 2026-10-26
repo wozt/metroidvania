@@ -218,6 +218,99 @@ int main(void) {
     assert(aos_game_mode_reset_update(&game, &reset, &input, NULL, &save) ==
            AOS_MODE_LICENSED_BY_NINTENDO);
     assert(reset.language == 1 && save == 1);
+
+    /* Licensed by Nintendo: register setup, asset request, 16-to-0 fade,
+     * exact two-second hold, 0-to-16 fade and Konami destination. */
+    AosStartupLogoMode logo = {0};
+    game = (AosGameMode){AOS_MODE_LICENSED_BY_NINTENDO, 0, 9};
+    assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+    assert(game.update_stage == 1 && game.stage_timer == 0);
+    assert(logo.display_control == 0x0100 && logo.bg0_control == 0x1C02);
+    assert(logo.blend_control == 0x00BF && logo.brightness == 16);
+    assert(logo.asset_request == AOS_STARTUP_ASSETS_NONE);
+    assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+    assert(game.update_stage == 2 &&
+           logo.asset_request == AOS_STARTUP_ASSETS_LICENSED_BY_NINTENDO);
+    for (unsigned frame = 0; frame < 8; ++frame) {
+        assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+        assert(logo.brightness == 14 - frame * 2 && game.update_stage == 2);
+    }
+    assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+    assert(game.update_stage == 3 && logo.duration_timer == 120);
+    for (unsigned frame = 0; frame < 119; ++frame)
+        assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+    assert(game.update_stage == 3 && logo.duration_timer == 1);
+    assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+    assert(game.update_stage == 4 && logo.duration_timer == 0);
+    for (unsigned frame = 0; frame < 8; ++frame) {
+        assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) == AOS_MODE_SAME);
+        assert(logo.brightness == (frame + 1) * 2);
+    }
+    assert(aos_game_mode_licensed_by_nintendo_update(&game, &logo) ==
+           AOS_MODE_KONAMI_LOGO);
+
+    /* Konami logo: native cleanup/assets, one-level fade, exact input code,
+     * Start/A exit and the title-screen transition after the black fade. */
+    logo = (AosStartupLogoMode){0};
+    input = (AosInput){0};
+    game = (AosGameMode){AOS_MODE_KONAMI_LOGO, 0, 8};
+    assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
+    assert(game.update_stage == 1 && game.stage_timer == 0);
+    assert(logo.display_control == 0x0100 && logo.bg0_control == 0x1C00);
+    assert(logo.blend_control == 0x00BF && logo.brightness == 16);
+    assert(logo.cleanup_requested && logo.konami_code_counter == 1);
+    assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
+    assert(game.update_stage == 2 && logo.asset_request == AOS_STARTUP_ASSETS_KONAMI_LOGO);
+    for (unsigned frame = 0; frame < 16; ++frame) {
+        assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
+        assert(logo.brightness == 15 - frame && game.update_stage == 2);
+    }
+    assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
+    assert(game.update_stage == 3 && logo.duration_timer == 240);
+
+    static const uint16_t konami_code[] = {
+        AOS_KEY_UP, AOS_KEY_UP, AOS_KEY_DOWN, AOS_KEY_DOWN, AOS_KEY_LEFT,
+        AOS_KEY_RIGHT, AOS_KEY_LEFT, AOS_KEY_RIGHT, AOS_KEY_B, AOS_KEY_A,
+    };
+    for (unsigned index = 0; index < sizeof konami_code / sizeof konami_code[0]; ++index) {
+        input.new_input = konami_code[index];
+        assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) ==
+               AOS_MODE_SAME);
+        assert(logo.konami_code_counter == index + 2);
+    }
+    assert(game.update_stage == 4 && logo.blend_control == 0x00FF);
+    for (unsigned frame = 0; frame < 16; ++frame) {
+        assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) ==
+               AOS_MODE_SAME);
+        assert(logo.brightness == frame + 1);
+    }
+    assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) ==
+           AOS_MODE_TITLE_SCREEN);
+    assert(logo.konami_code_counter == UINT8_MAX && logo.konami_code_sound_requested);
+
+    logo = (AosStartupLogoMode){.konami_code_counter = 1};
+    input = (AosInput){.new_input = AOS_KEY_DOWN};
+    aos_konami_code_check(&logo, &input);
+    assert(logo.konami_code_counter == 0);
+
+    logo = (AosStartupLogoMode){.duration_timer = 240, .konami_code_counter = 1};
+    input = (AosInput){.new_input = AOS_KEY_START};
+    game = (AosGameMode){AOS_MODE_KONAMI_LOGO, 3, 4};
+    aos_game_mode_konami_logo_update(&game, &logo, &input, 1);
+    assert(game.update_stage == 4 && game.stage_timer == 0 &&
+           logo.konami_code_counter == 0 && logo.blend_control == 0x00FF);
+
+    logo.konami_code_counter = UINT8_MAX;
+    game = (AosGameMode){AOS_MODE_KONAMI_LOGO, 0, 0};
+    aos_game_mode_konami_logo_update(&game, &logo, &input, 0x3F);
+    assert(logo.konami_code_counter == 0 && !logo.konami_code_sound_requested);
+
+    logo = (AosStartupLogoMode){.duration_timer = 1};
+    input = (AosInput){0};
+    game = (AosGameMode){AOS_MODE_KONAMI_LOGO, 3, 4};
+    aos_game_mode_konami_logo_update(&game, &logo, &input, 0);
+    assert(game.update_stage == 4 && game.stage_timer == 0 &&
+           logo.blend_control == 0x00FF);
     puts("Aria native game mode dispatch tests passed");
     return 0;
 }

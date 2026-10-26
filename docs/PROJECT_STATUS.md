@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0560 - Port Aria's startup logo controllers
+
+- `aos_game_mode_licensed_by_nintendo_update` ports all five stages of
+  `GameModeLicensedByNintendoUpdate`: BG0 and blend setup, the graphics-load
+  request, two-level fade-in, the exact 120-frame hold, fade-out and the
+  transition to `KONAMI_LOGO`.
+- `aos_game_mode_konami_logo_update` ports the corresponding cleanup and
+  graphics requests, one-level fades, exact 240-frame hold, Start/A skip and
+  transition to `TITLE_SCREEN`. `aos_konami_code_check` preserves the native
+  progress gate, exact ten-key sequence, wrong-input reset and completion
+  sound request without changing the existing audio path.
+- Deterministic tests follow both controllers frame by frame, including timer
+  and input exits. Graphics loading remains an explicit typed request until a
+  frontend consumes it, and `aria_runtime.c` still does not run the native
+  dispatcher, so `aos.startup.mode_dispatch` remains partial. Source-derived
+  and unit-tested, not emulator-compared. Zero Mission is unchanged.
+- Next: integrate `aos_game_mode_update` into `aria_runtime.c` with handlers
+  for these startup modes, the existing title stages and the gameplay loop,
+  while retaining the launcher and debug arguments.
+
 ## Patch 0559 - Complete Aria's reset-mode controller
 
 - `aos_game_mode_reset_update` now ports all six stages of

@@ -4,8 +4,10 @@
 
 enum {
     AOS_DCNT_BG0 = 1u << 8,
+    AOS_BG0_HIGH_PRIORITY = 28u << 8,
     AOS_BG0_LANGUAGE_MENU = (28u << 8) | 2u,
     AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE = 0x3fu | (1u << 7),
+    AOS_BLEND_SCREEN_BRIGHTNESS_DECREASE = 0x3fu | (3u << 6),
     AOS_BRIGHTNESS_MAX = 16,
 };
 
@@ -143,6 +145,116 @@ int32_t aos_game_mode_reset_update(AosGameMode *mode, AosResetMode *reset,
             if (aos_title_brightness_raise(&reset->brightness, 2)) {
                 if (save_language) *save_language = 1;
                 return AOS_MODE_LICENSED_BY_NINTENDO;
+            }
+            break;
+        default:
+            break;
+    }
+    return AOS_MODE_SAME;
+}
+
+int32_t aos_game_mode_licensed_by_nintendo_update(AosGameMode *mode,
+                                                   AosStartupLogoMode *logo) {
+    switch (mode->update_stage) {
+        case 0:
+            logo->display_control = AOS_DCNT_BG0;
+            logo->bg0_control = AOS_BG0_LANGUAGE_MENU;
+            logo->blend_control = AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE;
+            logo->brightness = AOS_BRIGHTNESS_MAX;
+            logo->asset_request = AOS_STARTUP_ASSETS_NONE;
+            ++mode->update_stage;
+            mode->stage_timer = 0;
+            break;
+        case 1:
+            logo->asset_request = AOS_STARTUP_ASSETS_LICENSED_BY_NINTENDO;
+            ++mode->update_stage;
+            mode->stage_timer = 0;
+            break;
+        case 2:
+            if (aos_title_brightness_lower(&logo->brightness, 2)) {
+                logo->duration_timer = 2 * 60;
+                ++mode->update_stage;
+                mode->stage_timer = 0;
+            }
+            break;
+        case 3:
+            if (--logo->duration_timer == 0) {
+                logo->blend_control = AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE;
+                ++mode->update_stage;
+                mode->stage_timer = 0;
+            }
+            break;
+        case 4:
+            if (aos_title_brightness_raise(&logo->brightness, 2))
+                return AOS_MODE_KONAMI_LOGO;
+            break;
+        default:
+            break;
+    }
+    return AOS_MODE_SAME;
+}
+
+void aos_konami_code_check(AosStartupLogoMode *logo, const AosInput *input) {
+    static const uint16_t sequence[] = {
+        AOS_KEY_UP, AOS_KEY_UP, AOS_KEY_DOWN, AOS_KEY_DOWN, AOS_KEY_LEFT,
+        AOS_KEY_RIGHT, AOS_KEY_LEFT, AOS_KEY_RIGHT, AOS_KEY_B, AOS_KEY_A,
+    };
+    uint16_t pressed = input ? input->new_input : 0;
+    if (logo->konami_code_counter < 1 ||
+        logo->konami_code_counter > sizeof sequence / sizeof sequence[0])
+        return;
+    if (pressed == sequence[logo->konami_code_counter - 1])
+        ++logo->konami_code_counter;
+    else if (pressed)
+        logo->konami_code_counter = 0;
+}
+
+int32_t aos_game_mode_konami_logo_update(AosGameMode *mode, AosStartupLogoMode *logo,
+                                         const AosInput *input, uint32_t progress_flags) {
+    switch (mode->update_stage) {
+        case 0:
+            logo->display_control = AOS_DCNT_BG0;
+            logo->bg0_control = AOS_BG0_HIGH_PRIORITY;
+            logo->blend_control = AOS_BLEND_SCREEN_BRIGHTNESS_INCREASE;
+            logo->brightness = AOS_BRIGHTNESS_MAX;
+            logo->asset_request = AOS_STARTUP_ASSETS_NONE;
+            logo->cleanup_requested = true;
+            logo->konami_code_sound_requested = false;
+            if ((progress_flags & 0x3fu) && logo->konami_code_counter != UINT8_MAX)
+                logo->konami_code_counter = 1;
+            else
+                logo->konami_code_counter = 0;
+            ++mode->update_stage;
+            mode->stage_timer = 0;
+            break;
+        case 1:
+            logo->asset_request = AOS_STARTUP_ASSETS_KONAMI_LOGO;
+            ++mode->update_stage;
+            mode->stage_timer = 0;
+            break;
+        case 2:
+            if (aos_title_brightness_lower(&logo->brightness, 1)) {
+                logo->duration_timer = 4 * 60;
+                ++mode->update_stage;
+                mode->stage_timer = 0;
+            }
+            break;
+        case 3:
+            aos_konami_code_check(logo, input);
+            if (--logo->duration_timer == 0 ||
+                (input && (input->new_input & (AOS_KEY_START | AOS_KEY_A)))) {
+                logo->blend_control = AOS_BLEND_SCREEN_BRIGHTNESS_DECREASE;
+                ++mode->update_stage;
+                mode->stage_timer = 0;
+            }
+            break;
+        case 4:
+            if (aos_title_brightness_raise(&logo->brightness, 1)) {
+                if (logo->konami_code_counter == 11) {
+                    logo->konami_code_sound_requested = true;
+                    logo->konami_code_counter = UINT8_MAX;
+                }
+                return AOS_MODE_TITLE_SCREEN;
             }
             break;
         default:

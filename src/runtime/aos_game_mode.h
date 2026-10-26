@@ -59,6 +59,27 @@ typedef struct {
     uint8_t cursor_to;
 } AosResetMode;
 
+typedef enum {
+    AOS_STARTUP_ASSETS_NONE,
+    AOS_STARTUP_ASSETS_LICENSED_BY_NINTENDO,
+    AOS_STARTUP_ASSETS_KONAMI_LOGO
+} AosStartupAssetRequest;
+
+/* Register, timer and request state shared by the two startup-logo modes.
+ * Asset and cleanup operations stay explicit requests until a renderer owns
+ * the corresponding native graphics resources. */
+typedef struct {
+    uint16_t display_control;
+    uint16_t bg0_control;
+    uint16_t blend_control;
+    uint16_t brightness;
+    int32_t duration_timer;
+    AosStartupAssetRequest asset_request;
+    bool cleanup_requested;
+    uint8_t konami_code_counter;
+    bool konami_code_sound_requested;
+} AosStartupLogoMode;
+
 void aos_game_mode_set(AosGameMode *state, int32_t mode);
 void aos_game_mode_increment(AosGameMode *state);
 void aos_game_mode_accept(AosGameMode *state, int32_t update_result);
@@ -82,6 +103,14 @@ int32_t aos_game_mode_reset_stage0(uint8_t *language, int *save_language);
 int32_t aos_game_mode_reset_update(AosGameMode *mode, AosResetMode *reset,
                                    const AosInput *input, const AosResetMenuHooks *hooks,
                                    int *save_language);
+/* GameModeLicensedByNintendoUpdate and GameModeKonamiLogoUpdate. Graphics
+ * loads and the Konami-mode subsystem cleanup are reported as requests;
+ * controller timing, input, fades and destinations match the native modes. */
+int32_t aos_game_mode_licensed_by_nintendo_update(AosGameMode *mode,
+                                                   AosStartupLogoMode *logo);
+void aos_konami_code_check(AosStartupLogoMode *logo, const AosInput *input);
+int32_t aos_game_mode_konami_logo_update(AosGameMode *mode, AosStartupLogoMode *logo,
+                                         const AosInput *input, uint32_t progress_flags);
 
 /* Original title destination table: index is selected by the title handler.
  * Modes are supplied by the caller to avoid guessing version-specific enum

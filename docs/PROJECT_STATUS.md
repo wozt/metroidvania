@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0554 - Native importer golden tests
+
+- `tests/test_native_golden.c` replaces both Python golden tests: CTest
+  `native_golden_aos` and `native_golden_mzm` rerun every importer
+  inspection command and writer on the local ROMs, digest every console and
+  written file (content-addressed sprite objects checked against their
+  names, one digest over all raw-import blocks) and compare them with the
+  unchanged recorded fixtures; the room export's symlink and regular-file
+  refusals are kept. `AOS_GOLDEN_UPDATE`/`MZM_GOLDEN_UPDATE` still rewrite
+  the fixtures, and the tests skip (exit 77) without the private inputs.
+- Checked: both pass on the recorded fixtures (32 s and 92 s), and an altered
+  fixture digest is reported as a failure.
+- First-party Python files: 10 under `scripts/`, 6 under `tests/`.
+  No gameplay or native-parity status changed.
+- Next: the editor CLI test, then the repository tools and the remaining
+  asset helpers with their tests.
+
 ## Patch 0553 - Native source, data and tool contract tests
 
 - Ported 22 Python tests to three C tests, removing the Python files:

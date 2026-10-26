@@ -227,7 +227,7 @@ Evidence: in game: `chozodia_042`.
 
 Native evidence: `mzm:c:src/samus.c:SamusUpdateAnimation`, `mzm:c:src/samus.c:SamusUpdateGraphicsOam`, `mzm:c:src/samus.c:SamusUpdatePalette`.  
 Local implementation: [`src/assets/mzm/samus.c`](../src/assets/mzm/samus.c), [`src/runtime/mzm_samus.c`](../src/runtime/mzm_samus.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/assets/mzm/samus_tables.c`](../src/assets/mzm/samus_tables.c).  
-Tests: [`tests/test_fusion_mzm_samus_assets.c`](../tests/test_fusion_mzm_samus_assets.c), [`tests/test_fusion_assets_mzm_golden.py`](../tests/test_fusion_assets_mzm_golden.py), [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
+Tests: [`tests/test_fusion_mzm_samus_assets.c`](../tests/test_fusion_mzm_samus_assets.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c), [`tests/test_mzm_samus.c`](../tests/test_mzm_samus.c).
 Known divergences: Not compared frame by frame with an emulator.  
 Next action: Compare representative animation and palette sequences frame by frame with an emulator.
 Evidence: in game: `brinstar_000`, `chozodia_000`, `chozodia_042`.
@@ -414,7 +414,7 @@ Evidence: in game: `brinstar_012`, `brinstar_019`.
 
 Native evidence: `mzm:c:src/sprite_util.c:SpriteUtilCheckSamusNearSpriteLeftRight`, `mzm:c:src/sprite_util.c:SpriteUtilMakeSpriteFaceSamusDirection`, `mzm:c:src/sprites_ai/dessgeega.c:Dessgeega`, `mzm:c:src/sprites_ai/dessgeega.c:DessgeegaDeath`, `mzm:c:src/sprites_ai/dessgeega.c:DessgeegaLongBeamDetectSamus`, `mzm:c:src/sprites_ai/dessgeega.c:DessgeegaLongBeamSpawning`.  
 Local implementation: [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/assets/mzm/sprites.c`](../src/assets/mzm/sprites.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c).  
-Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_fusion_mzm_sprites_assets.c`](../tests/test_fusion_mzm_sprites_assets.c), [`tests/test_fusion_assets_mzm_golden.py`](../tests/test_fusion_assets_mzm_golden.py), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_fusion_mzm_sprites_assets.c`](../tests/test_fusion_mzm_sprites_assets.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
 Dependencies: `mzm.enemies.sidehopper`, `mzm.items.enemy_drops`, `mzm.animation.particles`.  
 Known divergences: The encounter has not been compared frame by frame with an emulator.  
 Next action: Compare the complete encounter with an emulator.
@@ -712,7 +712,7 @@ Evidence: in game: `norfair_003`.
 
 Native evidence: `mzm:c:src/clipdata.c:ClipdataUpdateCurrentAffecting`, `mzm:c:src/sprite.c:SpriteLoadAllData`, `mzm:c:src/sprite.c:SpriteSpawnPrimary`, `mzm:c:src/sprite_util.c:SpriteUtilCheckCrouchingOrMorphed`, `mzm:c:src/sprite_util.c:SpriteUtilMoveHorizontallyForwardOnSlopeDirection`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirate`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateChargingLaser`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateChargingLaserInit`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateCheckStartActing`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateCollidingWithLaser`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateDeath`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateHitByLaser`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateHitByLaserInit`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateInit`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateJumping`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateProjectileCollision`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateShooting`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateShootingInit`, `mzm:c:src/sprites_ai/black_space_pirate.c:BlackSpacePirateWalkingAlerted`, `mzm:c:src/sprites_ai/escape_ship_pirate.c:EscapeShipSpacePirate`, `mzm:c:src/sprites_ai/escape_ship_pirate.c:EscapeShipSpacePirateDelayBeforeJumping`, `mzm:c:src/sprites_ai/escape_ship_pirate.c:EscapeShipSpacePirateInit`, `mzm:c:src/sprites_ai/escape_ship_pirate.c:EscapeShipSpacePirateSpawn`, `mzm:c:src/sprites_ai/space_pirate.c:DecrementChozodiaAlarm`, `mzm:c:src/sprites_ai/space_pirate.c:DisableChozodiaAlarm`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirate`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithLaser`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithPirateWhenClimbing`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckCollidingWithPirateWhenWalking`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateCheckSamusInShootingRange`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateClimbingCheckWallJumpOrFire`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateLaser`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateLaserExplodingInit`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateLaserInit`, `mzm:c:src/sprites_ai/space_pirate.c:SpacePirateSamusDetection`, `mzm:c:src/sprites_ai/space_pirate.c:SpawnWaitingPirates`.  
 Local implementation: [`src/runtime/mzm_space_pirate.c`](../src/runtime/mzm_space_pirate.c), [`src/runtime/mzm_sprite_ai.h`](../src/runtime/mzm_sprite_ai.h), [`src/runtime/mzm_sprites.c`](../src/runtime/mzm_sprites.c), [`src/assets/mzm/sprites.c`](../src/assets/mzm/sprites.c), [`src/assets/mzm/export.c`](../src/assets/mzm/export.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_sfx.c`](../src/runtime/mzm_sfx.c), [`src/runtime/mzm_audio.c`](../src/runtime/mzm_audio.c).  
-Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_fusion_assets_mzm_golden.py`](../tests/test_fusion_assets_mzm_golden.py), [`tests/test_mzm_audio.c`](../tests/test_mzm_audio.c).
+Tests: [`tests/test_mzm_sprites.c`](../tests/test_mzm_sprites.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c), [`tests/test_mzm_audio.c`](../tests/test_mzm_audio.c).
 Dependencies: `mzm.enemies.zoomer`, `mzm.collision.clipdata`, `mzm.transitions.doors_and_hatches`, `mzm.animation.particles`.  
 Known divergences: SpawnWaitingPirates runs on door transitions, not on the debug teleport; Not compared with an emulator.  
 Next action: Compare the alarm and its music with an emulator.
@@ -908,7 +908,7 @@ Evidence: in game: `brinstar_033`.
 
 Native evidence: `mzm:c:src/animated_graphics.c:AnimatedGraphicsLoad`, `mzm:c:src/animated_graphics.c:AnimatedGraphicsTanksAnimationReset`, `mzm:c:src/animated_graphics.c:AnimatedGraphicsTanksAnimationUpdate`, `mzm:c:src/animated_graphics.c:AnimatedGraphicsTransfer`, `mzm:c:src/animated_graphics.c:AnimatedGraphicsUpdate`, `mzm:c:src/animated_graphics.c:AnimatedPaletteCheckDisableOnTransition`, `mzm:c:src/animated_graphics.c:AnimatedPaletteUpdate`, `mzm:c:src/animated_graphics.c:BackgroundEffectProcess`, `mzm:c:src/animated_graphics.c:BackgroundEffectStart`, `mzm:c:src/animated_graphics.c:BackgroundEffectUpdate`, `mzm:c:src/in_game_cutscene.c:MakeBackgroundFlash`, `mzm:c:src/room.c:RoomLoadBackgrounds`, `mzm:c:src/room.c:RoomLoadTileset`, `mzm:c:src/room.c:RoomSetInitialTilemap`, `mzm:c:src/room.c:RoomUpdateAnimatedGraphicsAndPalettes`, `mzm:c:src/room.c:RoomUpdateBackgroundsPosition`, `mzm:c:src/room.c:RoomUpdateHatchFlashingAnimation`, `mzm:c:src/room.c:RoomUpdateHorizontalTilemap`, `mzm:c:src/room.c:RoomUpdateVerticalTilemap`, `mzm:c:src/screen_shake.c:ScreenShakeStartHorizontal`, `mzm:c:src/screen_shake.c:ScreenShakeStartVertical`, `mzm:c:src/screen_shake.c:ScreenShakeUpdateHorizontal`, `mzm:c:src/screen_shake.c:ScreenShakeUpdateVertical`, `mzm:c:src/scroll.c:ScrollBg2`, `mzm:c:src/scroll.c:ScrollBg3`, `mzm:c:src/scroll.c:ScrollGetBg3Scroll`, `mzm:c:src/scroll.c:ScrollUpdateEffectAndHazePosition`, `mzm:c:src/transparency.c:TransparencyGetBgSizeFlag`, `mzm:c:src/transparency.c:TransparencySetRoomEffectsTransparency`.  
 Local implementation: [`src/runtime/mzm_room_gfx.c`](../src/runtime/mzm_room_gfx.c), [`src/runtime/mzm_background_effect.c`](../src/runtime/mzm_background_effect.c), [`src/assets/mzm/runtime_room.c`](../src/assets/mzm/runtime_room.c), [`src/assets/mzm/export.c`](../src/assets/mzm/export.c), [`src/runtime/room_runtime.c`](../src/runtime/room_runtime.c), [`src/runtime/mzm_screen_shake.c`](../src/runtime/mzm_screen_shake.c).  
-Tests: [`tests/test_mzm_room_gfx.c`](../tests/test_mzm_room_gfx.c), [`tests/test_fusion_assets_mzm_golden.py`](../tests/test_fusion_assets_mzm_golden.py), [`tests/test_mzm_background_effect.c`](../tests/test_mzm_background_effect.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
+Tests: [`tests/test_mzm_room_gfx.c`](../tests/test_mzm_room_gfx.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c), [`tests/test_mzm_background_effect.c`](../tests/test_mzm_background_effect.c), [`tests/test_runtime_steep_slopes.c`](../tests/test_runtime_steep_slopes.c).
 Dependencies: `mzm.collision.clipdata`, `mzm.technical.ppu_and_rom_bank`.  
 Known divergences: Each background is rendered alone by the PPU and the runtime composes them with its sprites by priority, so the BG0 blend is approximated by SDL blending (additive at EVA/16, alpha at 16 - EVB) instead of the GBA's per-pixel targets; the block layers are redrawn around the view every frame instead of the native row and column streaming (the same tiles); the mother ship common tiles (gUseMotherShipDoors, set by door types) are not tracked; the lightning background effect, BG0 and BG3 movement (clouds, snow), the 0x43/0x44/dark-room BG0 positions, haze, gradients, windows and screen fades are not reproduced; without the ROM bank the exported metatile sheets are drawn instead (static). The camera is the runtime's 320x224 follow view.  
 Next action: Port the lightning background effect, BG movement and haze, then compose the layers with the sprites per pixel.
@@ -1066,7 +1066,7 @@ Evidence: in game: `runtime capture`.
 
 Native evidence: `mzm:c:src/syscall_wrappers.c:CallLZ77UncompVram`, `mzm:c:src/syscall_wrappers.c:CallLZ77UncompWram`.  
 Local implementation: [`include/fusion/assets/mzm.h`](../include/fusion/assets/mzm.h), [`src/assets/mzm/rom_bank.c`](../src/assets/mzm/rom_bank.c), [`src/runtime/gba_ppu.c`](../src/runtime/gba_ppu.c), [`src/runtime/mzm_rom.c`](../src/runtime/mzm_rom.c), [`scripts/rebuild.py`](../scripts/rebuild.py), [`src/runtime/mzm_screen.c`](../src/runtime/mzm_screen.c).  
-Tests: [`tests/test_fusion_assets_mzm.c`](../tests/test_fusion_assets_mzm.c), [`tests/test_fusion_assets_mzm_golden.py`](../tests/test_fusion_assets_mzm_golden.py), [`tests/test_mzm_hud.c`](../tests/test_mzm_hud.c), [`tests/test_mzm_screens.c`](../tests/test_mzm_screens.c), [`tests/test_source_contracts.c`](../tests/test_source_contracts.c).
+Tests: [`tests/test_fusion_assets_mzm.c`](../tests/test_fusion_assets_mzm.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c), [`tests/test_mzm_hud.c`](../tests/test_mzm_hud.c), [`tests/test_mzm_screens.c`](../tests/test_mzm_screens.c), [`tests/test_source_contracts.c`](../tests/test_source_contracts.c).
 Known divergences: The bitmap modes 3 to 5 are not rendered, but a source audit proves the pinned MZM program never selects them. Registers are sampled by the host renderer rather than hardware dots; the Chozodia escape's only required H-blank rewrite is represented by its per-line WIN0H table. Affine reference latching, the object cycle limit and affine-object mosaic are not hardware-cycle emulated. The ROM bank contains the whole verified ROM privately and is never committed.  
 Next action: Compare representative affine and blended scenes with an emulator.
 Evidence: in game: `brinstar_000`, `tourian_000`, `chozodia_092`.
@@ -1176,7 +1176,7 @@ Next action: Port the remaining native Soma states.
 
 Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_08031EA4`, `aos:asm:asm/code/code_08040A38.s:sub_08042884`, `aos:c:src/code/code_080211F0.c:sub_080221CC`, `aos:c:src/code/code_080211F0.c:sub_080224BC`, `aos:c:src/code/code_080211F0.c:sub_080228F8`, `aos:c:src/code/code_080211F0.c:sub_08022A54`, `aos:c:src/code/code_080211F0.c:sub_08022DEC`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
 Local implementation: [`src/runtime/aos_weapon.c`](../src/runtime/aos_weapon.c), [`src/runtime/aos_effect.c`](../src/runtime/aos_effect.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/weapons.c`](../src/assets/aos/weapons.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_weapon.c`](../tests/test_aos_weapon.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_weapon.c`](../tests/test_aos_weapon.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only.  
 Next action: Port sub_08033F58's player copy if its data source is traced; play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 0, 40 and 50 (classes 0, 2, 3) at frames 6 and 10, weapon 18 (class 1) sweeping at frames 3, 7, 11 and 16, weapon 55 (class 4) firing at frames 4, 6, 9 and 14`.
@@ -1197,7 +1197,7 @@ Evidence: in game: `aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 
 
 Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045C9C`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0D5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0F1C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1030`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B11DC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B13BC`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sounds (0x6E, 0x6F, 0x86), the palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1207,7 +1207,7 @@ Evidence: in game: `aria area_00_room_015: knife kill at frame 63 (--spawn 300 4
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD364`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD44C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD5B8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD6AC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Sound 0x72, the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced.  
 Next action: Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245`.
@@ -1216,7 +1216,7 @@ Evidence: in game: `aria area_00_room_005: knife kill at frame ~200 (--spawn 210
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BBC4`, `aos:asm:asm/code/code_08060B98.s:sub_0806BD64`, `aos:asm:asm/code/code_08060B98.s:sub_0806C1B0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBeamSkeletonCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBeamSkeletonUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA770`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA884`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA9E0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CAA2C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CAC34`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CAE74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB0D0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB144`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB1B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB4C0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB4F0`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.skull_archer`.  
 Known divergences: Sounds 0x6B and the 0x66 beam loop, the palette bits and sub_080683BC are not ported; the beam only has the attack box of sub_08042884 (slot + 0, read as the attacker's box by sub_08041864; + 0x72 bit 2 marks a box given by value) and no hurtbox; the affine slot is drawn as a vertical scale about the sprite's centre (double-size placement not modelled); the RandomNumberGenerator draw for + 0x1E, which nothing reads, is kept.  
 Next action: Compare against an emulator.
@@ -1226,7 +1226,7 @@ Evidence: in game: `aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrol
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080694B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806B5DC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_08060B98.s:sub_0806E664`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBlueCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9AF4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9D68`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9E2C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9ED4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9FFC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA030`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not checked against the BIOS itself. Sounds 0x72 and 0x8B, the palette bits of + 0x5A (death, hit flash and the feathers' end), the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop, the tracking list of sub_08021924, sub_080683BC and the unentered glide step are not ported. Blood splashes are drawn behind all enemies (OBJ priority 3 against the backgrounds is not modelled).  
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
@@ -1236,7 +1236,7 @@ Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The per-segment collision, variant collision and damage callbacks are not ported.  
 Next action: Port per-segment collision and hit callbacks.
 Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
@@ -1245,7 +1245,7 @@ Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CBA30`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC3F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC4E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC514`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The linked fire collision, native bounce timing, sounds and palette callbacks are not ported.  
 Next action: Port fire collision and the bounce state machine.
 Evidence: in game: `aria area_00_room_012: Buer record at x 128, y 504`.
@@ -1254,7 +1254,7 @@ Evidence: in game: `aria area_00_room_012: Buer record at x 128, y 504`.
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyCagnazzoUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7BC8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.lubicant`.  
 Known divergences: As the Lubicant.  
 Next action: Follow the Lubicant's open items.
@@ -1264,7 +1264,7 @@ Evidence: in game: `aria area_07_room_054 (--spawn 250 191 --hp 9999): the two C
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.gorgon`.  
 Known divergences: The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled.  
 Next action: Refine the shared gait and collision probes when direct frame-by-frame comparison is available.
@@ -1274,7 +1274,7 @@ Evidence: in game: `aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepa
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AC5C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1A0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D188`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyCreate`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093218`, `aos:asm:asm/code/code_08090914.s:sub_08093460`, `aos:asm:asm/code/code_08090914.s:sub_08093540`, `aos:asm:asm/code/code_08090914.s:sub_080935E8`, `aos:asm:asm/code/code_08090914.s:sub_08093674`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are not ported; the special draw routine sub_0806CCE8 used in area 4 rooms 12 and 13 is not ported (the generic draw is used).  
 Next action: Trace the area 4 draw routine sub_0806CCE8.
@@ -1284,7 +1284,7 @@ Evidence: in game: `aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly wal
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808F364`, `aos:asm:asm/code/code_080809C0.s:sub_0808F6E8`, `aos:asm:asm/code/code_080809C0.s:sub_0808F848`, `aos:asm:asm/code/code_080809C0.s:sub_0808F8EC`, `aos:c:src/code/code_080211F0.c:sub_080212C8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.skeleton_knight`.  
 Known divergences: Sounds 0x69, 0x72 and 0x85, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the hit stun of sub_0806D4C0 needs the global pause 0x4BE, taken as 0.  
 Next action: Check a kill in game (the capture input cannot stop attacking, which keeps it guarding); compare against an emulator.
@@ -1294,7 +1294,7 @@ Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits 
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDeadWarriorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDeadWarriorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B72F8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B747C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7644`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_effect.c`](../src/runtime/aos_effect.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.axe_armor`.  
 Known divergences: Sounds 0x6E, 0x7D and 0x127, the death's palette flash, sub_080683BC and the dust's + 0x0F are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1304,7 +1304,7 @@ Evidence: in game: `aria area_05_room_003 (--spawn 180 440 --hp 9999): the mount
 
 Native evidence: `aos:asm:asm/code/code_08090914.s:EnemyDurgaCreate`, `aos:asm:asm/code/code_08090914.s:EnemyDurgaUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.curly`.  
 Known divergences: As Curly: sounds, palette bits and sub_080683BC are not ported.  
 Next action: Follow Curly's open items.
@@ -1314,7 +1314,7 @@ Evidence: in game: `aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durg
 
 Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyErinysCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyErinysUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.valkyrie`.  
 Known divergences: As the Valkyrie.  
 Next action: Follow the Valkyrie's open items.
@@ -1324,7 +1324,7 @@ Evidence: in game: `aria area_09_room_009 (--spawn 300 160 --hp 9999): the red E
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C1E88`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C1FBC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2388`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C242C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2458`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.bat`.  
 Known divergences: Sound 0x72, the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback.  
 Next action: Find what releases a carried Fleaman (step 1).
@@ -1334,7 +1334,7 @@ Evidence: in game: `aria area_03_room_003 (--spawn 200 190 --hp 9999): the four 
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806CD38`, `aos:asm:asm/code/code_08060B98.s:sub_0806CD78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08086534`, `aos:asm:asm/code/code_080809C0.s:sub_08086878`, `aos:asm:asm/code/code_080809C0.s:sub_08086900`, `aos:asm:asm/code/code_080809C0.s:sub_08086964`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: Sounds 0x6E and 0x87, the palette bits and sub_080683BC are not ported; palette bank 1, used when another enemy id shares sub_08086900, is not exported.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1344,7 +1344,7 @@ Evidence: in game: `aria area_08_room_012: both gargoyles leave their perches (f
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGhostCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGhostUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808A030`, `aos:asm:asm/code/code_080809C0.s:sub_0808A0C8`, `aos:asm:asm/code/code_080809C0.s:sub_0808A1AC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The native fade, palette transitions, room spawner behavior and sounds are not ported.  
 Next action: Port the fade and attack state machine.
 Evidence: in game: `aria area_00_room_018: Ghost producer record at x 0, y 0`.
@@ -1353,7 +1353,7 @@ Evidence: in game: `aria area_00_room_018: Ghost producer record at x 0, y 0`.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BD64`, `aos:asm:asm/code/code_080C0A1C.s:EnemyGhostDancerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyGhostDancerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2E74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C3190`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C327C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C32EC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C336C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C339C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.medusa_head`.  
 Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); sound 0x6D, the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read.  
 Next action: Trace the room blend coefficients for semi-transparent sprites.
@@ -1363,7 +1363,7 @@ Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers o
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The three linked visual children, palette script, fade and attack states are not ported.  
 Next action: Port the three children and palette/fade behavior.
 Evidence: in game: `aria area_01_room_008: Giant Ghost record at x 160, y 224`.
@@ -1372,7 +1372,7 @@ Evidence: in game: `aria area_01_room_008: Giant Ghost record at x 160, y 224`.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGorgonCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGorgonUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_080890E8`, `aos:asm:asm/code/code_080809C0.s:sub_08089560`, `aos:asm:asm/code/code_080809C0.s:sub_080896D8`, `aos:asm:asm/code/code_080809C0.s:sub_0808975C`, `aos:asm:asm/code/code_080809C0.s:sub_0808982C`, `aos:asm:asm/code/code_080809C0.s:sub_0808990C`, `aos:asm:asm/code/code_080809C0.s:sub_080899FC`, `aos:asm:asm/code/code_080809C0.s:sub_08089A50`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The native custom gait table is represented by exported animation sequences. Exact slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled.  
 Next action: Refine the gait and collision probes when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP`.
@@ -1381,7 +1381,7 @@ Evidence: in game: `aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon re
 
 Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.gargoyle`.  
 Known divergences: As the gargoyle.  
 Next action: Follow the gargoyle's open items.
@@ -1391,7 +1391,7 @@ Evidence: in game: `aria area_06_room_014 (--spawn 100 150 --hp 9999): the Greml
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyHarpyCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyHarpyUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080756FC`, `aos:asm:asm/code/code_080709D8.s:sub_0807594C`, `aos:asm:asm/code/code_080709D8.s:sub_08075BD8`, `aos:asm:asm/code/code_080709D8.s:sub_08075CAC`, `aos:asm:asm/code/code_080709D8.s:sub_08075D90`, `aos:asm:asm/code/code_080709D8.s:sub_08075E40`, `aos:asm:asm/code/code_080709D8.s:sub_08075EDC`, `aos:asm:asm/code/code_080709D8.s:sub_08076244`, `aos:asm:asm/code/code_080709D8.s:sub_0807628C`, `aos:asm:asm/code/code_080709D8.s:sub_08076320`, `aos:asm:asm/code/code_080709D8.s:sub_08076390`, `aos:asm:asm/code/code_080709D8.s:sub_080763DC`, `aos:asm:asm/code/code_080709D8.s:sub_0807642C`, `aos:asm:asm/code/code_080709D8.s:sub_08076464`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds 0x87/0x89/0x8B/0x1C3, palette callbacks and rewards are not modelled.  
 Next action: Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP`.
@@ -1400,7 +1400,7 @@ Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy ren
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyImpCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyImpUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4768`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C48B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4B88`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4D34`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4ED4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4F8C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5010`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C50EC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5200`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5220`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5250`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C52A4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C52CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Exact randomized acceleration rounding, native entity-slot ordering, helper OAM flags, sounds 0x72, palette callbacks and rewards are not modelled.  
 Next action: Refine acceleration and helper OAM flags when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage`.
@@ -1409,7 +1409,7 @@ Evidence: in game: `aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BAC8`, `aos:asm:asm/code/code_08060B98.s:sub_0806BF78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyKillerDollUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7C04`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7C94`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7CE4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C81AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8244`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C82F4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C86A0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C88B4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8914`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C893C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8968`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Sounds 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; child effects and pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Compare against an emulator.
 Evidence: in game: `aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames`.
@@ -1418,7 +1418,7 @@ Evidence: in game: `aria area_00_room_002 (--spawn 120 207 --hp 9999): both Kill
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08070168`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.merman`.  
 Known divergences: The water-height probe, multi-fish producer, attack phases and sounds are not ported.  
 Next action: Port the water probe and linked fish producer.
@@ -1428,7 +1428,7 @@ Evidence: in game: `aria area_00_room_016: Killer Fish record at x 384, y 184`.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BAC8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyLightningDollCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyLightningDollUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8A18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8B3C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C8FBC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9058`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9108`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9198`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9284`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9630`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9788`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9938`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C99E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C9A24`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_effect.c`](../src/runtime/aos_effect.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Sounds 0x75, 0x6E and 0x153, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the doubled native draw during animation 5 is drawn once; child effects and pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Compare against an emulator.
 Evidence: in game: `aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120`.
@@ -1437,7 +1437,7 @@ Evidence: in game: `aria area_06_room_020 (--spawn 112 159 --hp 9999): both doll
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyLubicantCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyLubicantUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7780`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7988`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7A34`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7AEC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7BC8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7D90`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7E80`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B7F40`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B8004`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Sounds 0x87, 0x1BA and 0x1BC, the palette bits, sub_080683BC, the tracking list of sub_08021924 and the routine sub_08021654 of the draw callback sub_080B76E4 are not ported; the stun of sub_0806AD24 takes the global pause 0x4BE as 0; the fin's affine double-size placement is not modelled and it is made on the first update rather than at creation.  
 Next action: Trace sub_08021654; compare against an emulator.
 Evidence: in game: `aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)`.
@@ -1446,7 +1446,7 @@ Evidence: in game: `aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubic
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3AC`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093A3C`, `aos:asm:asm/code/code_08090914.s:sub_08093AE0`, `aos:asm:asm/code/code_08090914.s:sub_08093B68`, `aos:asm:asm/code/code_08090914.s:sub_08093BCC`, `aos:asm:asm/code/code_08090914.s:sub_08093BF0`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: The petrification of gold heads (contact element 0x100), sound 0x72, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced).  
 Next action: Port the petrification of gold heads with Soma's status effects.
@@ -1456,7 +1456,7 @@ Evidence: in game: `aria area_06_room_013: gold heads arrive from the right edge
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyMermanCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyMermanUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080709D8`, `aos:asm:asm/code/code_080709D8.s:sub_08070A08`, `aos:asm:asm/code/code_080709D8.s:sub_08070A30`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`, `aos:asm:asm/code/code_080709D8.s:sub_08070E68`, `aos:asm:asm/code/code_080709D8.s:sub_080714A4`, `aos:asm:asm/code/code_080709D8.s:sub_080715B4`, `aos:asm:asm/code/code_080709D8.s:sub_08071648`, `aos:asm:asm/code/code_080709D8.s:sub_08071764`, `aos:asm:asm/code/code_080709D8.s:sub_08071830`, `aos:asm:asm/code/code_080709D8.s:sub_08071870`, `aos:asm:asm/code/code_080709D8.s:sub_0807188C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The collision export has no independent room-water height, so surface crossings use the native timed phases around the record Y; sounds, palette callbacks and rewards are not ported.  
 Next action: Compare the water-surface crossing height and spawner screen coordinates against an emulator.
 Evidence: in game: `aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts`.
@@ -1465,7 +1465,7 @@ Evidence: in game: `aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080698A8`, `aos:asm:asm/code/code_08090914.s:EnemyMimicCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMimicUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080990D8`, `aos:asm:asm/code/code_08090914.s:sub_0809922C`, `aos:asm:asm/code/code_08090914.s:sub_080992C8`, `aos:asm:asm/code/code_08090914.s:sub_0809937C`, `aos:asm:asm/code/code_08090914.s:sub_080993EC`, `aos:asm:asm/code/code_08090914.s:sub_08099430`, `aos:asm:asm/code/code_08090914.s:sub_08099480`, `aos:asm:asm/code/code_08090914.s:sub_080994B0`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: Sound 0x72 and the palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer.  
 Next action: Trace sub_08046100 to draw the trigger; compare against an emulator.
@@ -1475,7 +1475,7 @@ Evidence: in game: `aria area_03_room_016 (--spawn 160 191 --hp 9999): the close
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyNeedlesCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNeedlesUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB5E0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB6BC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB7C8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB894`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB8FC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB930`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: Sound 0x70, the palette bits and sub_080683BC are not ported; pieces are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the sound once the Aria sound path exists.
@@ -1485,7 +1485,7 @@ Evidence: in game: `aria area_06_room_033: crouched knife from (130, 159) (--atk
 
 Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08045748`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNemesisUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6714`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C68AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6AA8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6D0C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6F64`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C70F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C722C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C73F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C750C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7604`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C76D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7784`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7A3C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7AB8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C7B54`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemy.h`](../src/runtime/aos_enemy.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The four direct OAM records and collision boxes are ported; the linked helper follows its parent with static frames and native offsets, and the three sub_080C7B54 visual slots follow the owner as translucent non-combat children. Their state-0 to state-2 activation, per-child timer and 24-record integer-position/frame/mirror history now match sub_08045748; palette callbacks and native sounds remain outside the body slot.  
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
@@ -1494,7 +1494,7 @@ Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis b
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported.  
 Next action: Trace the state-3 visual variant selection and ceiling probe.
@@ -1504,7 +1504,7 @@ Evidence: in game: `aria area_00_room_018: Peeping Eye record at x 568, y 176`.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRedCrowCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRedCrowUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA0D4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA308`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA3CC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA474`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA59C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CA5D0`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.blue_crow`.  
 Known divergences: As the blue crow: sounds 0x72 and 0x8B, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported.  
 Next action: Follow the blue crow's open items.
@@ -1514,7 +1514,7 @@ Evidence: in game: `aria area_05_room_002 (--spawn 200 200 --hp 9999): the red c
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C25F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2A18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2ABC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2B74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D20`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D70`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2DC4`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.fleaman`.  
 Known divergences: Animation-marker timing is represented by the exported animation frame/cycle state; sounds, palette callbacks and rewards are not ported.  
 Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator.
@@ -1524,7 +1524,7 @@ Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F10`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The native armor hit reactions, walk probes, debris and sounds are not ported.  
 Next action: Port the probe walker and armor attack/reaction states.
 Evidence: in game: `aria area_00_room_024: Rock Armor record at x 576, y 184`.
@@ -1533,7 +1533,7 @@ Evidence: in game: `aria area_00_room_024: Rock Armor record at x 576, y 184`.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemySirenCreate`, `aos:asm:asm/code/code_080709D8.s:EnemySirenUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.harpy`.  
 Known divergences: As Harpy, exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds, palette callbacks and rewards are not modelled.  
 Next action: Refine the shared acceleration and activity-region clamping when direct frame-by-frame comparison is available.
@@ -1543,7 +1543,7 @@ Evidence: in game: `aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren ren
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_080C0A1C.s:EnemySkeletonCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemySkeletonUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4148`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4624`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: The native bone children, throws, sounds and reward callback are not ported.  
 Next action: Port the bone children and attack timing.
@@ -1553,7 +1553,7 @@ Evidence: in game: `aria area_00_room_006: skeleton record at x 128, y 176`.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806B120`, `aos:asm:asm/code/code_080809C0.s:EnemySkeletonKnightCreate`, `aos:asm:asm/code/code_080809C0.s:EnemySkeletonKnightUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808ECF8`, `aos:asm:asm/code/code_080809C0.s:sub_0808EFD8`, `aos:asm:asm/code/code_080809C0.s:sub_0808F0A4`, `aos:asm:asm/code/code_080809C0.s:sub_0808F120`, `aos:asm:asm/code/code_080809C0.s:sub_0808F16C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: Sounds 0x72 and 0x85, the palette bits and sub_080683BC are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1563,7 +1563,7 @@ Evidence: in game: `aria area_00_room_015 (--spawn 180 280 --hp 9999): the skele
 
 Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806C48C`, `aos:asm:asm/code/code_08060B98.s:sub_0806C5AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkullArcherUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF78C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF7EC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF8D0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AF934`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFA9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFB9C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD3C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFD8C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.axe_armor`.  
 Known divergences: The pieces' attacker position is Soma's, standing for the weapon entity. The arrow's + 0x0F change, the dust's + 0x0F, the global pause 0x4BE and the sounds are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1573,7 +1573,7 @@ Evidence: in game: `aria area_00_room_024: kill at frame 159 (--spawn 200 176 --
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemySkullMillioneCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemySkullMillioneUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.lubicant`.  
 Known divergences: As the Lubicant.  
 Next action: Follow the Lubicant's open items.
@@ -1583,7 +1583,7 @@ Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Mil
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyTinyDevilUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C542C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C56F0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C580C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5898`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5A44`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5B18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5B40`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5B5C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5BA4`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Exact randomized acceleration rounding, the orb's affine angle and scale, native entity-slot ordering, sound 0x89, palette callbacks and rewards are not modelled.  
 Next action: Refine acceleration and the orb affine transform when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input`.
@@ -1592,7 +1592,7 @@ Evidence: in game: `aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyValkyrieCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyValkyrieUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_080689F8`, `aos:asm:asm/code/code_08060B98.s:sub_080696B0`, `aos:asm:asm/code/code_08060B98.s:sub_0806CEF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E7A8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E8AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806EA8C`, `aos:asm:asm/code/code_08060B98.s:sub_0806EB34`, `aos:asm:asm/code/code_08060B98.s:sub_0806EBDC`, `aos:asm:asm/code/code_08060B98.s:sub_0806ECA8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.curly`.  
 Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of sub_08021924, sub_080683BC and the area 4 rooms 12-13 draw routine sub_0806CCE8 are not ported; a zero distance in sub_080696B0 (a division by zero natively) leaves it still.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1602,7 +1602,7 @@ Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valky
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080773AC`, `aos:asm:asm/code/code_080709D8.s:sub_08077458`, `aos:asm:asm/code/code_080709D8.s:sub_08077C40`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The native affine scale/matrix choreography beyond the shared unit slot, articulated hit callbacks, palette callbacks and sounds are not ported.  
 Next action: Trace the remaining affine scale/matrix sequence, damage callbacks and attack state machine.
 Evidence: in game: `aria area_00_room_013: White Dragon record at x 208, y 104`.
@@ -1611,7 +1611,7 @@ Evidence: in game: `aria area_00_room_013: White Dragon record at x 208, y 104`.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080751B4`, `aos:asm:asm/code/code_080709D8.s:sub_080754E0`, `aos:asm:asm/code/code_080709D8.s:sub_0807552C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The native wing probes, dive attack, producer behavior and sounds are not ported.  
 Next action: Port the wing probes and dive attack.
 Evidence: in game: `aria area_00_room_002: Winged Skeleton producer record at x 0, y 0`.
@@ -1620,7 +1620,7 @@ Evidence: in game: `aria area_00_room_002: Winged Skeleton producer record at x 
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080709D8.s:EnemyZombieCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyZombieUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807AD28`, `aos:asm:asm/code/code_080709D8.s:sub_0807B034`, `aos:asm:asm/code/code_080709D8.s:sub_0807B0DC`, `aos:asm:asm/code/code_080709D8.s:sub_0807B1CC`, `aos:asm:asm/code/code_080709D8.s:sub_0807B258`, `aos:asm:asm/code/code_080709D8.s:sub_0807B310`, `aos:asm:asm/code/code_080709D8.s:sub_0807B33C`, `aos:asm:asm/code/code_080709D8.s:sub_0807B3C8`, `aos:asm:asm/code/code_080709D8.s:sub_0807B3E4`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: Sounds (0x70), palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the zombie's sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189`.
@@ -1629,7 +1629,7 @@ Evidence: in game: `aria area_00_room_003: zombies walking with drips and puddle
 
 Native evidence: `aos:asm:asm/code/code_08090914.s:EnemyZombieOfficerCreate`, `aos:asm:asm/code/code_08090914.s:EnemyZombieOfficerUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080923E4`, `aos:asm:asm/code/code_08090914.s:sub_080924AC`, `aos:asm:asm/code/code_08090914.s:sub_0809252C`, `aos:asm:asm/code/code_08090914.s:sub_080925B4`, `aos:asm:asm/code/code_08090914.s:sub_08092660`, `aos:asm:asm/code/code_08090914.s:sub_08092680`, `aos:asm:asm/code/code_08090914.s:sub_080926CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie_soldier`.  
 Known divergences: Sounds 0x70 and 0x85, the palette bits and sub_080683BC are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
@@ -1639,7 +1639,7 @@ Evidence: in game: `aria area_03_room_004: the officer at x 464 walks in and sla
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08068F78`, `aos:asm:asm/code/code_08060B98.s:sub_08069770`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806D644`, `aos:asm:asm/code/code_08060B98.s:sub_0806D894`, `aos:asm:asm/code/code_08060B98.s:sub_0806D930`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierCreate`, `aos:asm:asm/code/code_08090914.s:EnemyZombieSoldierUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080928FC`, `aos:asm:asm/code/code_08090914.s:sub_08092A28`, `aos:asm:asm/code/code_08090914.s:sub_08092B38`, `aos:asm:asm/code/code_08090914.s:sub_08092BC0`, `aos:asm:asm/code/code_08090914.s:sub_08092CCC`, `aos:asm:asm/code/code_08090914.s:sub_08092FCC`, `aos:asm:asm/code/code_08090914.s:sub_08093078`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: Sounds (0x70, 0x76, 0x11B) are not played; the dark smoke of sub_0806D930 (OBJ row 5) is drawn opaque, OBJ blending is not modelled; particles are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the soldier's sounds once the Aria sound path exists.
@@ -1661,7 +1661,7 @@ Evidence: in game: `aria area_00_room_015: knife kill at frame 241 (--spawn 250 
 
 Native evidence: `aos:asm:asm/code/code_08040A38.s:Object00Create`, `aos:asm:asm/code/code_08040A38.s:Object00Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804D8F0`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_0800B700.c:sub_0800C5A8`.  
 Local implementation: [`src/runtime/aos_door.c`](../src/runtime/aos_door.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_door.c`](../tests/test_aos_door.c), [`tests/test_fusion_assets_aos_golden.py`](../tests/test_fusion_assets_aos_golden.py).
+Tests: [`tests/test_aos_door.c`](../tests/test_aos_door.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Known divergences: The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) and the readers of gEwramData + 0x42C bits 0x101 and + 0xA074 bit 1 (exposed as `holding`) are not modelled; sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry.  
 Next action: Trace the setter of + 0x59 bit 2 to model the cleanup state 0x63.
 Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)`.

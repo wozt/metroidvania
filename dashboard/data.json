@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T09:21:23+00:00",
+ "generated_at": "2026-10-26T09:27:55+00:00",
  "git": {
-  "commit": "dc19fa1",
+  "commit": "77295af",
   "branch": "main",
   "dirty": true
  },
@@ -786,7 +786,7 @@
    ],
    "tests": [
     "tests/test_fusion_mzm_samus_assets.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_mzm_samus.c"
    ],
    "dependencies": [],
@@ -800,7 +800,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_mzm_samus_assets.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_mzm_samus.c"
     ],
     "in_game_check": [
@@ -828,10 +828,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_mzm_samus.c",
@@ -2203,7 +2208,7 @@
    "tests": [
     "tests/test_mzm_sprites.c",
     "tests/test_fusion_mzm_sprites_assets.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_runtime_steep_slopes.c"
    ],
    "dependencies": [
@@ -2225,7 +2230,7 @@
     "unit_tests": [
      "tests/test_mzm_sprites.c",
      "tests/test_fusion_mzm_sprites_assets.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_runtime_steep_slopes.c"
     ],
     "in_game_check": [
@@ -2261,10 +2266,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_runtime_steep_slopes.c",
@@ -4520,7 +4530,7 @@
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_mzm_audio.c"
    ],
    "dependencies": [
@@ -4573,7 +4583,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_sprites.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_mzm_audio.c"
     ],
     "in_game_check": [
@@ -4599,10 +4609,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_mzm_audio.c",
@@ -7183,7 +7198,7 @@
    ],
    "tests": [
     "tests/test_mzm_room_gfx.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_mzm_background_effect.c",
     "tests/test_runtime_steep_slopes.c"
    ],
@@ -7227,7 +7242,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_room_gfx.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_mzm_background_effect.c",
      "tests/test_runtime_steep_slopes.c"
     ],
@@ -7254,10 +7269,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_mzm_background_effect.c",
@@ -7361,7 +7381,7 @@
    ],
    "tests": [
     "tests/test_fusion_assets_mzm.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_mzm_hud.c",
     "tests/test_mzm_screens.c",
     "tests/test_source_contracts.c"
@@ -7376,7 +7396,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_mzm.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_mzm_hud.c",
      "tests/test_mzm_screens.c",
      "tests/test_source_contracts.c"
@@ -7406,10 +7426,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_mzm_hud.c",
@@ -8525,7 +8550,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -8552,7 +8577,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)"
@@ -8577,10 +8602,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8602,7 +8632,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -8620,7 +8650,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245"
@@ -8645,10 +8675,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8670,7 +8705,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.skull_archer"
@@ -8698,7 +8733,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)"
@@ -8723,10 +8758,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8748,7 +8788,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -8775,7 +8815,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits"
@@ -8800,10 +8840,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8825,7 +8870,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -8839,7 +8884,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_01_room_003: Bone Pillar record at x 352, y 767"
@@ -8864,10 +8909,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8889,7 +8939,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -8905,7 +8955,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_012: Buer record at x 128, y 504"
@@ -8930,10 +8980,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -8955,7 +9010,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.lubicant"
@@ -8970,7 +9025,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)"
@@ -8995,10 +9050,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9020,7 +9080,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.gorgon"
@@ -9034,7 +9094,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
@@ -9059,10 +9119,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9084,7 +9149,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -9107,7 +9172,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113"
@@ -9132,10 +9197,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9157,7 +9227,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.skeleton_knight"
@@ -9176,7 +9246,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits (frame 30), walks to Soma and strikes him (frames 20 and 60 walking right); attacking with --repeat 2 it raises its shield (frames 80 and 140) and two blows deal 0 damage over 300 frames"
@@ -9201,10 +9271,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9227,7 +9302,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.axe_armor"
@@ -9246,7 +9321,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
@@ -9271,10 +9346,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9296,7 +9376,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.curly"
@@ -9310,7 +9390,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durgas pace toward Soma and attack in reach at frames 30 and 120"
@@ -9335,10 +9415,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9360,7 +9445,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.valkyrie"
@@ -9374,7 +9459,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)"
@@ -9399,10 +9484,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9424,7 +9514,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.bat"
@@ -9445,7 +9535,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)"
@@ -9470,10 +9560,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9495,7 +9590,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -9516,7 +9611,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)"
@@ -9541,10 +9636,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9566,7 +9666,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9581,7 +9681,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_018: Ghost producer record at x 0, y 0"
@@ -9606,10 +9706,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9631,7 +9736,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.medusa_head"
@@ -9652,7 +9757,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330"
@@ -9677,10 +9782,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9702,7 +9812,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9718,7 +9828,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_01_room_008: Giant Ghost record at x 160, y 224"
@@ -9743,10 +9853,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9768,7 +9883,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9788,7 +9903,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP"
@@ -9813,10 +9928,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9838,7 +9958,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.gargoyle"
@@ -9852,7 +9972,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)"
@@ -9877,10 +9997,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9902,7 +10027,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -9928,7 +10053,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP"
@@ -9953,10 +10078,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -9978,7 +10108,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10003,7 +10133,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage"
@@ -10028,10 +10158,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10053,7 +10188,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10079,7 +10214,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames"
@@ -10104,10 +10239,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10129,7 +10269,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.merman"
@@ -10146,7 +10286,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_016: Killer Fish record at x 384, y 184"
@@ -10171,10 +10311,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10197,7 +10342,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10223,7 +10368,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120"
@@ -10248,10 +10393,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10273,7 +10423,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10294,7 +10444,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)"
@@ -10319,10 +10469,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10344,7 +10499,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10366,7 +10521,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP"
@@ -10391,10 +10546,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10416,7 +10576,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10441,7 +10601,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts"
@@ -10466,10 +10626,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10491,7 +10656,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10514,7 +10679,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)"
@@ -10539,10 +10704,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10564,7 +10734,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10584,7 +10754,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21"
@@ -10609,10 +10779,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10635,7 +10810,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10663,7 +10838,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180"
@@ -10688,10 +10863,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10713,7 +10893,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -10730,7 +10910,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_018: Peeping Eye record at x 568, y 176"
@@ -10755,10 +10935,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10780,7 +10965,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.blue_crow"
@@ -10800,7 +10985,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)"
@@ -10825,10 +11010,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10850,7 +11040,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.fleaman"
@@ -10871,7 +11061,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts"
@@ -10896,10 +11086,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10921,7 +11116,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -10936,7 +11131,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_024: Rock Armor record at x 576, y 184"
@@ -10961,10 +11156,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -10986,7 +11186,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.harpy"
@@ -11000,7 +11200,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP"
@@ -11025,10 +11225,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11050,7 +11255,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -11067,7 +11272,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_006: skeleton record at x 128, y 176"
@@ -11092,10 +11297,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11117,7 +11327,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -11137,7 +11347,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)"
@@ -11162,10 +11372,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11187,7 +11402,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.axe_armor"
@@ -11213,7 +11428,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_024: kill at frame 159 (--spawn 200 176 --atk 80 --repeat 2, buttons 0x12), the pieces and their dust captured at frames 199 and 213"
@@ -11238,10 +11453,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11263,7 +11483,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.lubicant"
@@ -11277,7 +11497,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)"
@@ -11302,10 +11522,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11327,7 +11552,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11348,7 +11573,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input"
@@ -11373,10 +11598,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11398,7 +11628,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.curly"
@@ -11421,7 +11651,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)"
@@ -11446,10 +11676,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11471,7 +11706,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11486,7 +11721,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_013: White Dragon record at x 208, y 104"
@@ -11511,10 +11746,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11536,7 +11776,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11551,7 +11791,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_002: Winged Skeleton producer record at x 0, y 0"
@@ -11576,10 +11816,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11601,7 +11846,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11626,7 +11871,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
@@ -11651,10 +11896,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11676,7 +11926,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie_soldier"
@@ -11697,7 +11947,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_03_room_004: the officer at x 464 walks in and slashes (frame 47); a knife kill (--spawn 420 191 --atk 200 --repeat 2, buttons 0x12) at frame 59 shows flames and gibs at frames 63 and 73"
@@ -11722,10 +11972,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11747,7 +12002,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.enemies.zombie"
@@ -11775,7 +12030,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_015: knife kill at frame 241 (--spawn 250 430 --atk 80 --repeat 2) with gibs at frames 243, 249 and 257; a grenade bursting on Soma at frames 232, 238 and 246 (--spawn 170 430, effects 3 then 12)"
@@ -11800,10 +12055,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -11824,7 +12084,7 @@
    ],
    "tests": [
     "tests/test_aos_door.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -11839,7 +12099,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_door.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)"
@@ -11864,10 +12124,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -12235,7 +12500,7 @@
    ],
    "tests": [
     "tests/test_aos_weapon.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -12253,7 +12518,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_weapon.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [
      "aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 0, 40 and 50 (classes 0, 2, 3) at frames 6 and 10, weapon 18 (class 1) sweeping at frames 3, 7, 11 and 16, weapon 55 (class 4) firing at frames 4, 6, 9 and 14"
@@ -12278,10 +12543,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -12920,13 +13190,12 @@
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
-    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_fusion_assets_gba.c",
     "tests/test_fusion_assets_gba_header.c",
     "tests/test_fusion_assets_mzm.c",
     "tests/test_fusion_assets_rom.c",
     "tests/test_tool_contracts.c",
-    "tests/test_fusion_assets_mzm_golden.py",
     "tests/test_fusion_sprite_library.c"
    ],
    "dependencies": [
@@ -12938,13 +13207,12 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_aos.c",
-     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_fusion_assets_gba.c",
      "tests/test_fusion_assets_gba_header.c",
      "tests/test_fusion_assets_mzm.c",
      "tests/test_fusion_assets_rom.c",
      "tests/test_tool_contracts.c",
-     "tests/test_fusion_assets_mzm_golden.py",
      "tests/test_fusion_sprite_library.c"
     ],
     "in_game_check": [],
@@ -12968,10 +13236,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_fusion_assets_gba.c",
@@ -13022,12 +13295,6 @@
       ],
       "outcome": "passed",
       "exists": true
-     },
-     {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
      },
      {
       "test": "tests/test_fusion_sprite_library.c",
@@ -13491,7 +13758,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.aria_objects"
@@ -13502,7 +13769,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13525,10 +13792,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -13663,7 +13935,7 @@
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.aria_enemy_batch_0469"
@@ -13674,7 +13946,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13697,10 +13969,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -13722,7 +13999,7 @@
     "scripts/rebuild.py"
    ],
    "tests": [
-    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_fusion_sprite_library.c"
    ],
    "dependencies": [
@@ -13733,7 +14010,7 @@
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_fusion_sprite_library.c"
     ],
     "in_game_check": [],
@@ -13747,10 +14024,15 @@
     "missing_sources": [],
     "tests": [
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_fusion_sprite_library.c",
@@ -13982,7 +14264,7 @@
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
-    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_editor_render.c"
    ],
    "dependencies": [
@@ -13994,7 +14276,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_aos.c",
-     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_editor_render.c"
     ],
     "in_game_check": [],
@@ -14018,10 +14300,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_editor_render.c",
@@ -14054,7 +14341,7 @@
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
-    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_aos_save_room.c"
    ],
    "dependencies": [
@@ -14066,7 +14353,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_aos.c",
-     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_aos_save_room.c"
     ],
     "in_game_check": [],
@@ -14090,10 +14377,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_aos_save_room.c",
@@ -14126,7 +14418,7 @@
    ],
    "tests": [
     "tests/test_fusion_sprite_library.c",
-    "tests/test_fusion_assets_aos_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.rom_verification"
@@ -14137,7 +14429,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_sprite_library.c",
-     "tests/test_fusion_assets_aos_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14160,10 +14452,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -14187,7 +14484,7 @@
    ],
    "tests": [
     "tests/test_aos_weapon.c",
-    "tests/test_fusion_assets_aos_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_fusion_sprite_library.c"
    ],
    "dependencies": [
@@ -14199,7 +14496,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_aos_weapon.c",
-     "tests/test_fusion_assets_aos_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_fusion_sprite_library.c"
     ],
     "in_game_check": [],
@@ -14223,10 +14520,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_aos_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_fusion_sprite_library.c",
@@ -14377,7 +14679,7 @@
    "tests": [
     "tests/test_fusion_mzm_sprites_assets.c",
     "tests/test_fusion_sprite_library.c",
-    "tests/test_fusion_assets_mzm_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.rom_verification"
@@ -14389,7 +14691,7 @@
     "unit_tests": [
      "tests/test_fusion_mzm_sprites_assets.c",
      "tests/test_fusion_sprite_library.c",
-     "tests/test_fusion_assets_mzm_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14422,10 +14724,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -14447,7 +14754,7 @@
    ],
    "tests": [
     "tests/test_fusion_mzm_samus_assets.c",
-    "tests/test_fusion_assets_mzm_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.rom_verification"
@@ -14458,7 +14765,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_mzm_samus_assets.c",
-     "tests/test_fusion_assets_mzm_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14481,10 +14788,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -14507,7 +14819,7 @@
    ],
    "tests": [
     "tests/test_fusion_assets_mzm.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_mzm_hud.c"
    ],
    "dependencies": [
@@ -14519,7 +14831,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_mzm.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_mzm_hud.c"
     ],
     "in_game_check": [],
@@ -14543,10 +14855,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_mzm_hud.c",
@@ -14582,7 +14899,7 @@
    "tests": [
     "tests/test_fusion_assets_mzm.c",
     "tests/test_editor_render.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_source_contracts.c"
    ],
    "dependencies": [
@@ -14595,7 +14912,7 @@
     "unit_tests": [
      "tests/test_fusion_assets_mzm.c",
      "tests/test_editor_render.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_source_contracts.c"
     ],
     "in_game_check": [],
@@ -14629,10 +14946,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_source_contracts.c",
@@ -14667,7 +14989,7 @@
    "tests": [
     "tests/test_fusion_mzm_samus_assets.c",
     "tests/test_fusion_sprite_library.c",
-    "tests/test_fusion_assets_mzm_golden.py"
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.rom_verification"
@@ -14679,7 +15001,7 @@
     "unit_tests": [
      "tests/test_fusion_mzm_samus_assets.c",
      "tests/test_fusion_sprite_library.c",
-     "tests/test_fusion_assets_mzm_golden.py"
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14712,10 +15034,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -14740,7 +15067,7 @@
    ],
    "tests": [
     "tests/test_fusion_raw_import.c",
-    "tests/test_fusion_assets_mzm_golden.py",
+    "tests/test_native_golden.c",
     "tests/test_asset_import.py"
    ],
    "dependencies": [
@@ -14752,7 +15079,7 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_raw_import.c",
-     "tests/test_fusion_assets_mzm_golden.py",
+     "tests/test_native_golden.c",
      "tests/test_asset_import.py"
     ],
     "in_game_check": [],
@@ -14778,10 +15105,15 @@
       "exists": true
      },
      {
-      "test": "tests/test_fusion_assets_mzm_golden.py",
-      "kind": "python",
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
      },
      {
       "test": "tests/test_asset_import.py",
@@ -15132,6 +15464,20 @@
     "outcome": "passed"
    },
    {
+    "name": "native_golden_aos",
+    "files": [
+     "tests/test_native_golden.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "native_golden_mzm",
+    "files": [
+     "tests/test_native_golden.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "native_map_contract",
     "files": [
      "tests/test_native_map.c"
@@ -15473,20 +15819,6 @@
     "passed": 15
    },
    {
-    "file": "tests/test_fusion_assets_aos_golden.py",
-    "module": "tests.test_fusion_assets_aos_golden",
-    "test_count": 1,
-    "outcome": "passed",
-    "passed": 1
-   },
-   {
-    "file": "tests/test_fusion_assets_mzm_golden.py",
-    "module": "tests.test_fusion_assets_mzm_golden",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
     "file": "tests/test_native_parity.py",
     "module": "tests.test_native_parity",
     "test_count": 21,
@@ -15502,12 +15834,18 @@
    }
   ],
   "summary": {
-   "passed": 129,
+   "passed": 127,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "77295af",
+   "date": "2026-10-26",
+   "subject": "Port the source, data and tool contract tests to C",
+   "scope": "project"
+  },
   {
    "commit": "dc19fa1",
    "date": "2026-10-26",
@@ -15980,12 +16318,6 @@
    "commit": "38e91c0",
    "date": "2026-10-23",
    "subject": "Add Aria Peeping Eye target steering",
-   "scope": "project"
-  },
-  {
-   "commit": "ac13cd4",
-   "date": "2026-10-23",
-   "subject": "Trace Aria Peeping Eye timed entry",
    "scope": "project"
   }
  ],
@@ -16460,7 +16792,7 @@
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_fusion_mzm_sprites_assets.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_runtime_steep_slopes.c"
        ],
        "in_game_check": [
@@ -16480,7 +16812,7 @@
        "unit_tests": [
         "tests/test_mzm_sprites.c",
         "tests/test_fusion_mzm_sprites_assets.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_runtime_steep_slopes.c"
        ],
        "in_game_check": [
@@ -16590,7 +16922,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16609,7 +16941,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16628,7 +16960,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16647,7 +16979,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -16666,7 +16998,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -17637,7 +17969,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -17656,7 +17988,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_mzm_sprites.c",
-        "tests/test_fusion_assets_mzm_golden.py",
+        "tests/test_native_golden.c",
         "tests/test_mzm_audio.c"
        ],
        "in_game_check": [
@@ -18277,7 +18609,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245"
@@ -18295,7 +18627,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
@@ -18313,7 +18645,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_006: skeleton record at x 128, y 176"
@@ -18331,7 +18663,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts"
@@ -18349,7 +18681,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)"
@@ -18367,7 +18699,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_024: kill at frame 159 (--spawn 200 176 --atk 80 --repeat 2, buttons 0x12), the pieces and their dust captured at frames 199 and 213"
@@ -18385,7 +18717,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_018: Peeping Eye record at x 568, y 176"
@@ -18403,7 +18735,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_016: Killer Fish record at x 384, y 184"
@@ -18421,7 +18753,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_01_room_003: Bone Pillar record at x 352, y 767"
@@ -18439,7 +18771,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits"
@@ -18457,7 +18789,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_012: Buer record at x 128, y 504"
@@ -18475,7 +18807,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_013: White Dragon record at x 208, y 104"
@@ -18493,7 +18825,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_015: knife kill at frame 241 (--spawn 250 430 --atk 80 --repeat 2) with gibs at frames 243, 249 and 257; a grenade bursting on Soma at frames 232, 238 and 246 (--spawn 170 430, effects 3 then 12)"
@@ -18511,7 +18843,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)"
@@ -18529,7 +18861,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_018: Ghost producer record at x 0, y 0"
@@ -18547,7 +18879,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP"
@@ -18565,7 +18897,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input"
@@ -18583,7 +18915,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durgas pace toward Soma and attack in reach at frames 30 and 120"
@@ -18601,7 +18933,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_024: Rock Armor record at x 576, y 184"
@@ -18619,7 +18951,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_01_room_008: Giant Ghost record at x 160, y 224"
@@ -18637,7 +18969,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_002: Winged Skeleton producer record at x 0, y 0"
@@ -18691,7 +19023,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)"
@@ -18745,7 +19077,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
@@ -18763,7 +19095,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330"
@@ -18793,7 +19125,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames"
@@ -18811,7 +19143,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_03_room_004: the officer at x 464 walks in and slashes (frame 47); a knife kill (--spawn 420 191 --atk 200 --repeat 2, buttons 0x12) at frame 59 shows flames and gibs at frames 63 and 73"
@@ -18889,7 +19221,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180"
@@ -18931,7 +19263,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)"
@@ -18961,7 +19293,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113"
@@ -18991,7 +19323,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)"
@@ -19021,7 +19353,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
@@ -19051,7 +19383,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage"
@@ -19081,7 +19413,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP"
@@ -19135,7 +19467,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)"
@@ -19153,7 +19485,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP"
@@ -19171,7 +19503,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP"
@@ -19201,7 +19533,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_06_room_020 (--spawn 112 159 --hp 9999): both dolls wake, fly and attack Soma for 60 damage by frame 240; with --atk 999 --weapon 0 --repeat 2 and right + B, one shatters into five burning pieces by frame 120"
@@ -19255,7 +19587,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_06_room_033: crouched knife from (130, 159) (--atk 50 --repeat 2, buttons 0x82) kills the Needles at x 152 on frame 5; its pieces fly at frames 7, 13 and 21"
@@ -19381,7 +19713,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)"
@@ -19399,7 +19731,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts"
@@ -19501,7 +19833,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits (frame 30), walks to Soma and strikes him (frames 20 and 60 walking right); attacking with --repeat 2 it raises its shield (frames 80 and 140) and two blows deal 0 damage over 300 frames"
@@ -19567,7 +19899,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)"
@@ -19597,7 +19929,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)"
@@ -19627,7 +19959,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)"
@@ -19693,7 +20025,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)"
@@ -19723,7 +20055,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)"
@@ -19741,7 +20073,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_fusion_assets_aos_golden.py"
+        "tests/test_native_golden.c"
        ],
        "in_game_check": [
         "aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)"

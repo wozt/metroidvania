@@ -322,6 +322,15 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_tool_contract_tests)
     add_test(NAME tool_contracts COMMAND fusion_tool_contract_tests)
 
+    add_executable(fusion_native_golden_tests tests/test_native_golden.c)
+    target_compile_definitions(fusion_native_golden_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}" FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
+    target_link_libraries(fusion_native_golden_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_native_golden_tests)
+    add_test(NAME native_golden_aos COMMAND fusion_native_golden_tests aos)
+    add_test(NAME native_golden_mzm COMMAND fusion_native_golden_tests mzm)
+    set_tests_properties(native_golden_aos native_golden_mzm PROPERTIES SKIP_RETURN_CODE 77)
+
     add_executable(fusion_native_map_tests tests/test_native_map.c)
     target_link_libraries(fusion_native_map_tests PRIVATE fusion_native_editor_core)
     fusion_enable_warnings(fusion_native_map_tests)

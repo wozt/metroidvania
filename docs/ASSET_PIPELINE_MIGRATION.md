@@ -126,16 +126,17 @@ its index atomically, file for file as the former Python exporter. The
 --mzm-export-rooms` (skipped like a missing ROM until the importer is built),
 `scripts/mzm_runtime_room.py` and `scripts/mzm_bg_layers.py` were removed with
 their tests and the room-only helpers of `mzm_sprites` / `mzm_c_tables`, and
-`tests/test_fusion_assets_mzm_golden.py` checks recorded SHA-256 digests of
+`tests/test_native_golden.c` (CTest `native_golden_mzm` and
+`native_golden_aos`) checks recorded SHA-256 digests of
 every native command output and export file instead of the Python
 reference. Aria's composite image, `AOSROOM-NATIVE` v4 serialization and
 complete 685-file private export are now native too. The `aria_rooms` rebuild
 task calls `build/fusion_importer --aria-export-rooms`, the former Python room
 exporter and its tests are removed, and a recorded digest fixture replaces the
-temporary Python equivalence test. The retained Python renderer still serves
-editor previews and sprite tooling. The Aria world catalog is also registered
-in the native task graph through `fusion_importer --aria-catalog`; only its
-Python decoding library remains for editor and sprite consumers. The Zero
+temporary Python equivalence test. The editor previews use the native
+renderer of `src/editor_backend/aria_render.c`. The Aria world catalog is also registered
+in the native task graph through `fusion_importer --aria-catalog`; its
+Python decoding library is removed. The Zero
 Mission ROM bank is registered too through `fusion_importer --mzm-rom-bank`,
 and its former Python writer is removed. Both verified-ROM manifests are
 registered through `fusion_importer --rom-manifest`; their Python output path

@@ -34,7 +34,7 @@ Supported fingerprints and filenames are documented in
 On Debian 13:
 
 ```sh
-sudo apt install build-essential cmake libsdl3-dev libgtk-4-dev python3 git
+sudo apt install build-essential cmake libsdl3-dev libgtk-4-dev git
 git submodule update --init
 cmake -S . -B build
 cmake --build build -j8
@@ -55,8 +55,8 @@ both ROMs' decompilation-database blocks with the Zero Mission room
 descriptors (`fusion_importer --raw-import`), the Aria world metadata and
 runtime rooms, Soma, object/enemy sprites and weapons, and the Zero Mission
 Samus/projectile libraries, enemy sprites and runtime rooms (they also need the
-reference ELF `third_party/mzm/mzm_us.elf`). Only the Zero Mission sound
-extraction (`metroid_sound`) is still Python. A full pass takes about four
+reference ELF `third_party/mzm/mzm_us.elf`), and the Zero Mission sound bank.
+A full pass takes about four
 minutes; afterwards unchanged tasks are skipped in about two seconds. A task
 reruns when its ROM, extractor modules or pinned decompilation revision
 change, or when one of its private outputs is missing or was modified (room
@@ -66,20 +66,18 @@ extractor can still be run directly, as described below.
 
 The native `fusion_rebuild` owns the complete task registry, dependency graph,
 v1 state reader/writer, input and output fingerprints, export-index validation,
-incremental planning and execution. Its `--dry-run` output is checked against
-Python for all tasks, native-only selection, repeated task selection and forced
-rebuilds; `--verbose` also prints the computed digests. A successful action is
+incremental planning and execution. Its `--dry-run` output was checked against
+the former Python orchestrator for all tasks, native-only selection, repeated
+task selection and forced rebuilds; `--verbose` also prints the computed digests. A successful action is
 rehashed, validated and recorded atomically before the next dependent action,
 so a failed pass resumes without losing completed work. Unknown cache fields
 are preserved and unsafe state/output paths are rejected. The twelve migrated
 asset actions run the C11 importer. `checklist` is generated directly in C11
 by `fusion_checklist`, with byte-identical Markdown and Aria backlog output.
-Only `inventory` and `metroid_sound` remain explicitly marked as temporary
-Python-backed actions. The first inventory migration slice is available as
-`fusion_inventory --audit-routines`: its C11 scanner reproduces all 6,543
-tracked C/assembly routine records and their direct-call resolution across
-both pinned source trees, but the production writer stays on Python until the
-remaining record collections, classification and sharding are equivalent.
+`inventory` runs `fusion_inventory --write`, which rebuilds the tracked
+`data/native_parity` inventory (routines, declarations, data symbols, call
+edges, classification and shards) byte for byte as the former Python writer.
+No task runs Python.
 
 The native Aria world importer records metadata only. The general asset
 importer may write proprietary decoded output, so everything it produces
@@ -167,7 +165,7 @@ Edge, or publish the `dashboard/` folder on GitHub Pages. Refresh its data
 with:
 
 ```sh
-./build/fusion_dashboard --run-tests   # also runs CTest (build/) and the remaining Python tests
+./build/fusion_dashboard --run-tests   # also runs CTest (build/)
 ./build/fusion_dashboard               # registries and repository facts only
 ./build/fusion_check_generated         # stale checklist or dashboard data? (no tests run)
 ```
@@ -186,8 +184,7 @@ limitations, last declared validation; `@all-tests` in the tests column means
 the whole suite of the generating host). Statuses are not started, in
 progress, partially functional, functional, faithful, validated, blocked and
 unknown. Each feature shows its declared status apart from what the run
-verified: sources found, tests registered in CTest or present as Python
-modules, and their results. Percentages are shares of registered features
+verified: sources found, tests registered in CTest, and their results. Percentages are shares of registered features
 ("functional or better", "with passing tests") with their denominators;
 unregistered work is not counted, and the git timeline is shown as history,
 not as evidence. `data.js` holds the same data as `data.json` so the page
@@ -253,7 +250,7 @@ options are not ported, so the runtime then returns to the intro. The demos and 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 
 ```sh
-python3 -m scripts.rebuild --task metroid_rooms   # runs build/fusion_importer --mzm-export-rooms
+./build/fusion_rebuild --task metroid_rooms   # runs build/fusion_importer --mzm-export-rooms
 ./build/fusion_room_runtime --room brinstar_033
 ./build/fusion_room_runtime --check-animations \
   --samus-assets assets/extracted/metroid/sprites/samus/runtime
@@ -332,7 +329,7 @@ Rooms show their native Zoomers, Zeelas, Rippers, Skrees, Wavers,
 Sidehoppers, Dessgeegas, Violas, Sovas, Zebs, Geegas, Zebbos, Reos, Mellas, Holtzes,
 Multiviolas, Rinkas, Gerutas, Ripper IIs, Squeepts, Gamets, Skulteras, Dragons and Space Pirates (with their lasers and the Chozodia alarm,
 rung by the searchlights, security lasers and searchlight eyes)
-(`python3 -m scripts.rebuild --task metroid_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
+(`./build/fusion_rebuild --task metroid_sprites`, see [`docs/MZM_SPRITES.md`](docs/MZM_SPRITES.md)):
 they move with their native AIs, hurt Samus on contact, take beam and missile
 hits (flashing their stun colours), freeze under the Ice Beam, explode into particles and debris and leave the native enemy drops.
 Other enemies and bosses are not ported yet. `--spawn X Y` places Samus's feet at
@@ -345,7 +342,7 @@ suitless charge bar and the 3x3 minimap that marks the screens Samus
 explores. They are drawn by a GBA picture processing unit emulation
 (`src/runtime/gba_ppu.c`: text and affine backgrounds, objects, windows,
 blending, mosaic) from a private ROM data bank exported by
-`python3 -m scripts.rebuild --task metroid_rom_bank` through the native C11
+`./build/fusion_rebuild --task metroid_rom_bank` through the native C11
 importer, whose
 symbol table comes from the decompilation's reference ELF. The view is wider
 than the GBA screen, so the minimap sits at the view's right edge. Tanks are
@@ -381,7 +378,7 @@ Rooms play their native music through the ported Zero Mission sound engine
 the current track over 30 frames and starts the destination room's track.
 Samus, her weapons, hatches, blocks, enemies and drops request their sound
 effects at the game's own `SoundPlay` points (`src/runtime/mzm_sfx.c`, with
-identifiers generated by `python3 -m scripts.mzm_sound_ids`). Message
+identifiers generated by `./build/fusion_sound_ids`). Message
 banners play the tank jingle, or insert the item jingle in front of the
 room's music, which resumes when the jingle ends
 (`InsertMusicAndQueueCurrent`). As on the GBA, the sound runs on its own
@@ -414,10 +411,10 @@ Run the experimental SDL3 Aria of Sorrow runtime (Soma in one native room)
 with:
 
 ```sh
-python3 -m scripts.rebuild --task aria_soma    # runs build/fusion_importer --aria-export-soma
-python3 -m scripts.rebuild --task aria_rooms   # runs build/fusion_importer --aria-export-rooms
-python3 -m scripts.rebuild --task aria_weapons # runs build/fusion_importer --aria-export-weapons
-python3 -m scripts.rebuild --task aria_objects # runs build/fusion_importer --aria-export-objects
+./build/fusion_rebuild --task aria_soma    # runs build/fusion_importer --aria-export-soma
+./build/fusion_rebuild --task aria_rooms   # runs build/fusion_importer --aria-export-rooms
+./build/fusion_rebuild --task aria_weapons # runs build/fusion_importer --aria-export-weapons
+./build/fusion_rebuild --task aria_objects # runs build/fusion_importer --aria-export-objects
 ./build/fusion_aria_runtime --area 0 --room 6
 ```
 
@@ -433,13 +430,13 @@ including Nemesis and its linked helper, the Killer and Lightning Dolls and thei
 is knocked back, or dies at 0 HP) and dies to his weapon with native rules
 (`--atk/--def/--hp` set diagnostic stats, the new-game stats are not traced);
 wooden doors open natively with
-their native sprite and palette cycle (`python3 -m scripts.rebuild --task aria_objects`).
+their native sprite and palette cycle (`./build/fusion_rebuild --task aria_objects`).
 Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn
 point is a test placement (a floor near the room centre, or `--spawn X Y`).
 Arrows (or a gamepad, see "Gamepads") move, Down crouches, X/F attacks (B; `--weapon none|INDEX` after
-`python3 -m scripts.rebuild --task aria_weapons`, unarmed by default; blades of weapon
+`./build/fusion_rebuild --task aria_weapons`, unarmed by default; blades of weapon
 classes 0 to 4 are drawn (class 1 swings with its affine rotation, class 4 fires), `--hitboxes` outlines their hitbox),
 Space/Z jumps (A), Down + jump drops through
 one-way platforms or slides, Q/Left Shift is L (backdash; Up + L high jump),

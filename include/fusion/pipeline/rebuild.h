@@ -12,11 +12,6 @@ typedef enum {
 } FusionRebuildGroup;
 
 typedef enum {
-    FUSION_REBUILD_BACKEND_C,
-    FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY
-} FusionRebuildBackend;
-
-typedef enum {
     FUSION_REBUILD_PATHS_FIXED,
     FUSION_REBUILD_PATHS_INVENTORY,
     FUSION_REBUILD_PATHS_CHECKLIST
@@ -37,7 +32,6 @@ typedef struct {
     const char *name;
     unsigned version;
     FusionRebuildGroup group;
-    FusionRebuildBackend backend;
     const char *const *dependencies;
     size_t dependency_count;
     const char *const *requirements;

@@ -46,10 +46,8 @@ static void test_unknown_and_cycle(void) {
     const char *b_dependencies[] = {"a"};
     const FusionRebuildTask cyclic[] = {
         {.name = "a", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .dependencies = a_dependencies, .dependency_count = 1},
         {.name = "b", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .dependencies = b_dependencies, .dependency_count = 1},
     };
     const char *a[] = {"a"};
@@ -63,7 +61,6 @@ static void test_unknown_dependency(void) {
     const char *dependencies[] = {"absent"};
     const FusionRebuildTask tasks[] = {
         {.name = "task", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .dependencies = dependencies, .dependency_count = 1},
     };
     const char *selected[] = {"task"};
@@ -128,12 +125,10 @@ static void test_incremental_plan_and_v1_state(void) {
     const char *second_outputs[] = {"final.txt"};
     const FusionRebuildTask tasks[] = {
         {.name = "first", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .requirements = first_requirements, .requirement_count = 1,
          .inputs = first_inputs, .input_count = 1,
          .outputs = first_outputs, .output_count = 1},
         {.name = "second", .version = 3, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .dependencies = second_dependencies, .dependency_count = 1,
          .inputs = second_inputs, .input_count = 1,
          .outputs = second_outputs, .output_count = 1},
@@ -262,7 +257,6 @@ static void test_export_index_validation(void) {
     const char *outputs[] = {"export/export_index.tsv"};
     const FusionRebuildTask task = {
         .name = "export", .version = 1, .group = FUSION_REBUILD_GROUP_ASSETS,
-        .backend = FUSION_REBUILD_BACKEND_C,
         .outputs = outputs, .output_count = 1,
         .validation = FUSION_REBUILD_VALIDATE_EXPORT_INDEX,
     };
@@ -335,12 +329,10 @@ static void test_execution_and_failure(void) {
     const char *second_outputs[] = {"second.txt"};
     const FusionRebuildTask tasks[] = {
         {.name = "first", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .requirements = requirements, .requirement_count = 1,
          .inputs = inputs, .input_count = 1,
          .outputs = first_outputs, .output_count = 1},
         {.name = "second", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
-         .backend = FUSION_REBUILD_BACKEND_C,
          .dependencies = dependencies, .dependency_count = 1,
          .inputs = second_inputs, .input_count = 1,
          .outputs = second_outputs, .output_count = 1},

@@ -3158,7 +3158,6 @@ int main(int argc, char **argv) {
             mzm_composite_rom_path, mzm_composite_elf_path);
     if (dry_run || assets) {
         printf("planned: verify metroid and aria ROM fingerprints\n");
-        printf("planned: native extraction tasks remain Python-authoritative\n");
         if (force) printf("planned: force invalidation of native asset task cache\n");
         if (dry_run) return 0;
         if (!verify) return 3;

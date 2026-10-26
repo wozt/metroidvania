@@ -66,6 +66,10 @@ int main(void) {
     assert(fusion_sprite_library_add(&library, "Soma/animation_000", 1, 2,
                                      left, top, bmp, bmp_size,
                                      error, sizeof error));
+    /* A frame lasts at least one tick. */
+    assert(!fusion_sprite_library_add(&library, "Soma/animation_001", 0, 0,
+                                      left, top, bmp, bmp_size,
+                                      error, sizeof error));
     FusionSpriteLibrarySummary summary;
     assert(fusion_sprite_library_finish(&library, &summary,
                                         error, sizeof error));

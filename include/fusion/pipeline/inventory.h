@@ -40,4 +40,14 @@ bool fusion_inventory_audit_routines(const char *root, const char *manifest_path
                                      size_t counts[2],
                                      char *error, size_t error_size);
 
+typedef struct {
+    size_t routines, declarations, data_symbols, call_edges;
+} FusionInventorySummary;
+
+/* The complete v6 inventory of both pinned trees below ``root``
+ * (formerly scripts/native_inventory.py); with ``write`` it is written to
+ * ``output`` and its sibling record shards. */
+bool fusion_inventory_build(const char *root, const char *output, bool write,
+                            FusionInventorySummary summary[2], char *error, size_t error_size);
+
 #endif /* FUSION_PIPELINE_INVENTORY_H */

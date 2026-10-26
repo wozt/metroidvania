@@ -101,6 +101,7 @@ add_library(fusion_pipeline STATIC
     src/pipeline/actions.c
     src/pipeline/checklist.c
     src/pipeline/inventory.c
+    src/pipeline/inventory_writer.c
 )
 target_include_directories(fusion_pipeline PUBLIC include)
 target_include_directories(fusion_pipeline PRIVATE src/pipeline src/assets/core)
@@ -283,6 +284,13 @@ if(BUILD_TESTING)
     add_test(NAME fusion_rebuild_graph COMMAND fusion_rebuild_tests)
     add_test(NAME fusion_rebuild_list COMMAND fusion_rebuild --list)
     add_test(NAME fusion_checklist_current COMMAND fusion_checklist --check)
+
+    add_executable(fusion_inventory_writer_tests tests/test_inventory_writer.c)
+    target_link_libraries(fusion_inventory_writer_tests PRIVATE fusion_pipeline)
+    target_compile_definitions(fusion_inventory_writer_tests
+        PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}" FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
+    fusion_enable_warnings(fusion_inventory_writer_tests)
+    add_test(NAME native_inventory_writer COMMAND fusion_inventory_writer_tests)
     add_test(NAME fusion_inventory_routines_current
              COMMAND fusion_inventory --audit-routines)
 
@@ -659,12 +667,6 @@ if(BUILD_TESTING)
     add_test(NAME room_package_loader
         COMMAND $<TARGET_FILE:fusion_room_package_viewer> --check
                 ${CMAKE_SOURCE_DIR}/tests/fixtures/project_room_0124.preview.tsv)
-
-    add_test(NAME python_tooling_and_data
-        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-                python3 -m unittest discover -s tests -v)
-    set_tests_properties(python_tooling_and_data PROPERTIES
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_test(NAME no_proprietary_files
         COMMAND fusion_check_no_proprietary ${CMAKE_SOURCE_DIR})

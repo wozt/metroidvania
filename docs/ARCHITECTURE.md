@@ -163,21 +163,20 @@ address does not prove the routine runs, nor which stored callback a dynamic
 dispatch selects. Computed addresses and runtime-observed calls stay
 unresolved.
 
-`scripts/rebuild.py` records, per task, a digest of its inputs (including its
+`fusion_rebuild` records, per task, a digest of its inputs (including its
 dependencies' digests) and of its declared outputs: a changed input, a
 missing output or an output edited by hand triggers the task again. A dry run
 reports a task whose dependency would be rebuilt as pending instead of
 reading inputs that do not exist yet.
 
-The native replacement is implemented in
+The orchestrator is implemented in
 `include/fusion/pipeline/rebuild.h`, `src/pipeline/tasks.c` and
 `src/pipeline/graph.c`, with cache, planning and execution split across the
 other files in `src/pipeline/`. It registers the same 15 tasks, their versions,
 groups, explicit dependencies and local prerequisites, and resolves selected
 tasks with deterministic topological ordering, duplicate suppression, unknown
 dependency diagnostics and cycle detection. `fusion_rebuild --list` exposes
-that registry and marks `inventory` and `metroid_sound` as the two temporary
-Python-backed tasks. Cache loading and deterministic atomic
+that registry; every task runs native code. Cache loading and deterministic atomic
 writing, exact input/dependency/decompilation
 stamps, output fingerprints, room-export and content-addressed sprite-index
 validation, prerequisite propagation, forced invalidation and incremental
@@ -185,19 +184,18 @@ dry-run planning and real execution are native. Each successful action is
 rehashed, validated and atomically recorded before its dependents run; failures
 leave the last successful state resumable. The C planner reads the existing v1
 cache without rewriting it, preserves unknown records and fields, rejects
-unsafe state/output paths and produces the same complete dry-run output as
-Python. The twelve migrated asset tasks dispatch to `fusion_importer` without a
-shell. `fusion_checklist` validates every checksummed inventory fragment and
+unsafe state/output paths and produced the same complete dry-run output as
+the former Python orchestrator. The asset tasks dispatch to `fusion_importer`
+without a shell. `fusion_checklist` validates every checksummed inventory fragment and
 the annotation TSV, then generates the Markdown checklist and Aria backlog
-byte-identically in C11; the native orchestrator calls its library directly
-and the legacy runner delegates to its CLI. Inventory generation and audio are
-the two remaining Python actions. `fusion_inventory --audit-routines` now
-ports the lexical C/assembly function scanner, stable C-over-assembly
+byte-identically in C11; the orchestrator calls its library directly.
+`fusion_inventory --write` (`src/pipeline/inventory_writer.c`) regenerates the
+complete tracked inventory byte for byte as the former Python writer:
+`fusion_inventory --audit-routines` ports the lexical C/assembly function scanner, stable C-over-assembly
 deduplication and direct/ambiguous call resolution: all 2,970 Zero Mission and
 3,573 Aria routine identities and source metadata match the tracked v6
-fragments. Declarations, data, types, constants, callback/address relations,
-classification and deterministic fragment writing still have to move before
-the inventory action and legacy orchestrator can be cut over.
+fragments, and the writer adds declarations, data, types, constants,
+callback/address relations, classification and deterministic sharding.
 
 Routine categories record their evidence (`category_evidence`, schema v6):
 `path` when the source location decides it (all of Zero Mission's sorted
@@ -210,12 +208,11 @@ unclassified; bosses are not split from Aria's enemies until a boss marker
 is traced. The checklist prints this breakdown per category. Remaining gaps
 are emitted in the generated checklist rather than silently excluded.
 
-Asset tasks join the same graph through either a migrated `fusion_importer`
-command or a retained `scripts.<module>` subprocess. Their digests cover the
-ROMs and executables or Python module dependency closure they need, plus the
+Asset tasks join the same graph through a `fusion_importer` command. Their
+digests cover the ROMs and executables they need, plus the
 pinned revision and tracked-file state of the matching decompilation when
 applicable. Their declared outputs are index files or small manifests;
-`scripts/export_index.py` validates them (per-file SHA-256 for room exports,
+`src/assets/core/export.c` validates them (per-file SHA-256 for room exports,
 content-addressed objects for sprite libraries), so a deleted or edited
 private file reruns the task. A task whose required file (ROM, reference ELF)
 is missing is skipped together with its dependents, which keeps `--all`
@@ -240,9 +237,9 @@ metadata/checksum parsing. `fusion_importer`
 (`src/tools/fusion_importer.c`) exposes `--list`,
 `--verify` reports the parsed identity after ROM fingerprint validation,
 `--rom-manifest` writes one verified private manifest, and
-an explicit dry-run plan remains available for future extraction tasks. The
-Python extractors remain authoritative until each replacement passes the
-equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`.
+an explicit dry-run plan remains available for future extraction tasks. Every
+extractor passed the equivalence gates in `docs/ASSET_PIPELINE_MIGRATION.md`
+before its Python predecessor was removed.
 
 The first game-specific reader is `fusion/assets/aos.h`. It decodes Aria's
 12-entry area directory from a verified ROM, validates the GBA table pointers
@@ -258,8 +255,7 @@ against the Python reference. A native aggregate reader also checks all world
 summary totals. The same library now serializes the complete world JSON and its
 derived room-browser index deterministically through atomic replacement. The
 `aria_world` rebuild task writes both through `fusion_importer --aria-catalog`;
-the Python writer and index generator are gone, while the bounded Python
-decoder remains a library for editor and sprite tools. Its
+the Python writer, index generator and decoder are gone. Its
 runtime-room layer also expands every compressed BG1 block/collision table and
 produces the final flipped per-cell collision map. It also resolves direct and
 LZ77 graphics resources and applies every native graphics/palette load entry to
@@ -277,8 +273,7 @@ transitions, entities and save/warp map flags. `fusion_aos_export_runtime_rooms`
 and their SHA-256 export index atomically, and the `aria_rooms` rebuild task
 runs it through `build/fusion_importer`; the Python room exporter is gone.
 Parallax, affine/8-bpp layers and hardware blending remain unsupported. The
-Python renderer remains in use by editor previews and sprite extraction, not
-by the production room export.
+editor previews use the native renderer in `src/editor_backend/aria_render.c`.
 
 The Zero Mission side now has a bounded native reader for the pinned reference
 ELF's sized data objects. It applies the ROM-range, ordering and duplicate-name
@@ -297,7 +292,7 @@ The native reader also resolves all 79 tileset records and reproduces the
 standard `RoomLoadTileset` 64-KiB VRAM and 512-byte BG-palette snapshots,
 including both LZ77 graphics placements, common tiles/palettes and the final
 VRAM clear. Animated tiles and palettes, the Mother Ship common-tile variant,
-and dynamic effects remain Python-owned. The native path reconstructs each
+and dynamic effects are not reproduced by this snapshot. The native path reconstructs each
 tileset's effective metatile table as well: up to 1,024 four-cell tileset blocks
 are copied within their exact ELF object bounds and zero-filled, then the 208
 four-cell common blocks are appended. It renders RLE block layers from those
@@ -307,7 +302,7 @@ pairs are composed natively using the intentionally diagnostic BG1-over-BG2
 order; rooms without BG2 retain their supported BG1. Both paths serialize to
 the byte-identical private 24-bit BMP and a separate raw visibility mask that
 distinguishes native black from unresolved transparent pixels. Hardware
-priority/blending and private output writes remain Python-owned. The native
+priority/blending is not reproduced by this diagnostic renderer. The native
 room-package path now reads the main/tilemap collision, behavior and movement
 tables from bounded ELF objects and serializes the byte-identical
 `MVROOM-NATIVE` v1 header plus its `C`, `B` and `M` Clipdata core. It also
@@ -332,14 +327,12 @@ reproduced exactly by `fusion_mzm_render_export_background`.
 `fusion_mzm_export_runtime_rooms` (`src/assets/mzm/export.c`) writes the
 complete private export and its SHA-256 `export_index.tsv` atomically, and
 the `metroid_rooms` rebuild task runs it through `build/fusion_importer`;
-the Python room exporter is gone. The other native extractors are not yet
-registered in the rebuild task graph. The shared native sprite-library writer
+the Python room exporter is gone. The shared native sprite-library writer
 now owns cropped BITMAPV4 frames, SHA-256 object deduplication, deterministic
 runtime indexes and stale-object pruning. `fusion_aos_export_soma` uses it to
 write all 83 Soma animations and the supported knife animation; `aria_soma`
 runs this through `fusion_importer --aria-export-soma`, and the former Python
-production writer is gone. The Python Soma decoder remains for preview and
-the still-Python raw importer. `fusion_aos_export_weapons` uses the same
+production writer and Python Soma decoder are gone. `fusion_aos_export_weapons` uses the same
 writer for all 59 weapon records, 60 sprite sequences and their frame hitbox
 metadata; `aria_weapons` now runs entirely through the native importer too.
 `fusion_aos_export_objects` likewise writes the traced door, enemy and shared
@@ -392,7 +385,7 @@ BMPs. It is a research utility, not the future game runtime.
 
 ## Local data pipeline
 
-Python tools validate exact USA ROM fingerprints before reading them. They use
+The native tools validate exact USA ROM fingerprints before reading them. They use
 pinned decompilation symbols and audited ROM offsets to produce private output
 under `assets/extracted/`.
 
@@ -402,13 +395,13 @@ New private generators use three stable roots:
 - `aria/` for Aria raw data, rooms, maps and native sprites;
 - `shared/` for manifests and diagnostics that describe both worlds.
 
-`scripts/asset_layout.py` is the path contract. The raw import
+`src/pipeline/tasks.c` declares these paths. The raw import
 (`fusion_importer --raw-import`, `src/assets/core/raw_import.c`) copies the
 blocks the pinned decompilation databases identify below each world's `raw/`
 root, writes its manifest below `shared/manifests/` and the Zero Mission room
-descriptors to `rooms/metroid/rooms.tsv`; the Python editor tools write
-`rooms/metroid/world_atlas.tsv` from the decompilation source when they need
-it. `fusion_importer --mzm-export-samus`
+descriptors to `rooms/metroid/rooms.tsv`; the native world overview
+(`src/editor_backend/world_overview.c`) writes `rooms/metroid/world_atlas.tsv`
+from the decompilation source when it needs it. `fusion_importer --mzm-export-samus`
 (`src/assets/mzm/samus.c`) writes the canonical content-addressed Samus
 runtime library below
 `metroid/sprites/samus/runtime/`; repeated pixels are stored once by SHA-256.
@@ -446,9 +439,8 @@ Tracked outputs contain metadata only:
 Decoded graphics, raw blocks, room work files, room annotation tables and user
 overrides are ignored. The native editor catalog decodes definitions, Aria
 item names and private icon thumbnails in `src/editor_backend/object_catalog.c`.
-The remaining Python room-annotation and dashboard reporting paths query that
-catalog through `fusion_editor_cli`; they do not maintain another definition
-parser. No tool writes back to either ROM.
+The room-annotation and reporting paths query that catalog through
+`fusion_editor_cli`; they do not maintain another definition parser. No tool writes back to either ROM.
 Canvas and Room-data context menus share the same bounded in-memory annotation
 records; typed editor windows retain their document lifetime safely and cannot
 write native data without an encoder.

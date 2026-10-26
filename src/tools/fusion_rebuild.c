@@ -45,8 +45,6 @@ static int list_tasks(void) {
             for (size_t requirement = 0; requirement < task->requirement_count; ++requirement)
                 printf("%s%s", requirement ? ", " : "", task->requirements[requirement]);
         }
-        if (task->backend == FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY)
-            printf(" backend=python-temporary");
         putchar('\n');
     }
     return 0;

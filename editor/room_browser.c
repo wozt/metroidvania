@@ -577,7 +577,7 @@ static void room_drafts_loaded(GObject *object, GAsyncResult *result, gpointer u
         } else {
             const char *reason = error ? error->message : diagnostic;
             gchar *message = g_strdup_printf("Draft list unavailable: %.400s",
-                reason && *reason ? reason : "Python listing failed");
+                reason && *reason ? reason : "Room listing failed");
             gtk_label_set_text(GTK_LABEL(browser->status), message);
             g_free(message);
         }
@@ -658,7 +658,7 @@ static void room_draft_done(GObject *object, GAsyncResult *result, gpointer user
         } else if (form) {
             const char *reason = error ? error->message : diagnostic;
             gchar *message = g_strdup_printf("Create failed: %.650s",
-                reason && *reason ? reason : "Unknown Python error");
+                reason && *reason ? reason : "Unknown editor backend error");
             gtk_label_set_text(GTK_LABEL(form->feedback), message);
             g_free(message);
             gtk_widget_set_sensitive(form->submit, TRUE);
@@ -716,7 +716,7 @@ static void room_draft_submit(GtkButton *button, gpointer userdata)
     snprintf(height_buf, sizeof(height_buf), "%d",
              gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(form->height)));
     GError *error = NULL;
-    /* Argument vector; no shell, no ROM file paths, create-only Python CLI. */
+    /* Argument vector; no shell, no ROM file paths, create-only editor CLI. */
     GSubprocess *process = g_subprocess_new(
         G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
         &error, (gchar *)fusion_editor_cli_program(), "--command=room-create",
@@ -725,7 +725,7 @@ static void room_draft_submit(GtkButton *button, gpointer userdata)
         "--height-screens", height_buf, "--format=text", NULL);
     if (!process) {
         gtk_label_set_text(GTK_LABEL(form->feedback),
-            error ? error->message : "Failed to launch Python.");
+            error ? error->message : "Failed to launch the editor backend.");
         g_clear_error(&error);
         return;
     }

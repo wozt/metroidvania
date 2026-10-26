@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T09:50:56+00:00",
+ "generated_at": "2026-10-26T10:14:12+00:00",
  "git": {
-  "commit": "abb18c0",
+  "commit": "1e97195",
   "branch": "main",
   "dirty": true
  },
@@ -927,7 +927,7 @@
     "unk_38d8",
     "UpdateMusicAfterAlarmDisable"
    ],
-   "limitations": "Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO that keeps the held sample across GBA frames (the port once reset it to zero at each frame's start, a 60 Hz buzz) and PSG steps that carry their fractional cycles; the sound device pulls the output (SDL's stream callback): each pull runs UpdateAudio and renders one GBA frame (280896 cycles) at a time at the 65.536 kHz PWM rate that MZM selects in SOUNDBIAS, and SDL's band-limited resampler converts it for the device; the game only changes the engine's state under the stream's lock, so a slow game frame can no longer starve the device (the earlier push from the game steps ran the queue dry and crackled), and the music keeps the hardware's 59.73 Hz frame clock independently of the game's speed; REG_VCOUNT reads as 160 during UpdateAudio. The room's track is chosen when the destination room is loaded (natively when the door is touched) and starts when the door fade ends; the Norfair and cutscene music cases (the gMusicTrackInfo.unk checks) are not ported. The 7-entry channel backups drop what would overflow them instead of writing past the array. A zero divisor in unk_1ccc is taken as a zero quotient. The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; the gameplay modules request their sound effects through mzm_sfx (identifiers generated from the decompilation's Sound enum by scripts/mzm_sound_ids.py), which the runtime forwards to the engine. InsertMusicAndQueueCurrent saves the channels of players 1, 3, 6 and 8 (unk_34ac), stops the others and plays the inserted music on player 0; its 0xB6 end runs ReplayQueuedMusic, which restores them (unk_35d0) and restarts the current music. BackupTrackData2SoundChannels / RetrieveTrackData2SoundChannels release and restore the channels of player 2; mzm_sfx carries PlayMusic, UpdateMusicPriority, FadeMusic, the insertion and the backup requests. With the extracted bank the item jingle plays 355 frames before Brinstar resumes (an engine-only check: captures have no sound). The pause lowers the music (DecreaseMusicVolume: the pause sound, the other players' channels saved, unk_3058 with gUnk_Audio0x50 on players 0 and 1, kept by ReplayQueuedMusic) and ResetMusicVolume restores it when the pause screen closes. DecreaseMusicVolume (the pause) plays SOUND_63 (0x63); the port once queued sound 63 (MUSIC_IMAGO_COCOON_BATTLE), which replaced the room's music after the pause. Rendering the extracted Brinstar music offline confirmed the fix: the per-frame spike of the output's second difference fell from about ten times its mean to the level of the FIFO's own steps; what remains (the envelopes applied once a frame) is already in the mixer's output. Under the stealth and alarm priorities, CheckSetNewMusicTrack (unk_378c) keeps the stealth or detected music for the stealth area tracks and only remembers them under the alarm, CheckPlayTransitionMusicTrack (unk_38d8) starts nothing under the alarm, and UpdateMusicAfterAlarmDisable fades back to the remembered stealth track or to the detected music; the audio test checks that the alarm priority holds the current track through a room change. Every entry of sSoundDataEntries plays through the engine with the extracted bank (a bank-backed test): 612 of the 708 are audible within four seconds, and the 95 silent ones are silent in the ROM itself (the empty song shared by the unused entries, songs whose tracks set VOL 0 such as SOUND_ATOMIC_CHARGE_SILENT, and MUSIC_33, 38 and 47 at VOL 6 or 7 with velocity 12, below the 8-bit mixer's resolution). Promoted to functional on the user's review of the in-game playback (captures carry no sound).",
+   "limitations": "Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO that keeps the held sample across GBA frames (the port once reset it to zero at each frame's start, a 60 Hz buzz) and PSG steps that carry their fractional cycles; the sound device pulls the output (SDL's stream callback): each pull runs UpdateAudio and renders one GBA frame (280896 cycles) at a time at the 65.536 kHz PWM rate that MZM selects in SOUNDBIAS, and SDL's band-limited resampler converts it for the device; the game only changes the engine's state under the stream's lock, so a slow game frame can no longer starve the device (the earlier push from the game steps ran the queue dry and crackled), and the music keeps the hardware's 59.73 Hz frame clock independently of the game's speed; REG_VCOUNT reads as 160 during UpdateAudio. The room's track is chosen when the destination room is loaded (natively when the door is touched) and starts when the door fade ends; the Norfair and cutscene music cases (the gMusicTrackInfo.unk checks) are not ported. The 7-entry channel backups drop what would overflow them instead of writing past the array. A zero divisor in unk_1ccc is taken as a zero quotient. The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; the gameplay modules request their sound effects through mzm_sfx (identifiers generated from the decompilation's Sound enum by fusion_sound_ids, src/tools/sound_ids.c), which the runtime forwards to the engine. InsertMusicAndQueueCurrent saves the channels of players 1, 3, 6 and 8 (unk_34ac), stops the others and plays the inserted music on player 0; its 0xB6 end runs ReplayQueuedMusic, which restores them (unk_35d0) and restarts the current music. BackupTrackData2SoundChannels / RetrieveTrackData2SoundChannels release and restore the channels of player 2; mzm_sfx carries PlayMusic, UpdateMusicPriority, FadeMusic, the insertion and the backup requests. With the extracted bank the item jingle plays 355 frames before Brinstar resumes (an engine-only check: captures have no sound). The pause lowers the music (DecreaseMusicVolume: the pause sound, the other players' channels saved, unk_3058 with gUnk_Audio0x50 on players 0 and 1, kept by ReplayQueuedMusic) and ResetMusicVolume restores it when the pause screen closes. DecreaseMusicVolume (the pause) plays SOUND_63 (0x63); the port once queued sound 63 (MUSIC_IMAGO_COCOON_BATTLE), which replaced the room's music after the pause. Rendering the extracted Brinstar music offline confirmed the fix: the per-frame spike of the output's second difference fell from about ten times its mean to the level of the FIFO's own steps; what remains (the envelopes applied once a frame) is already in the mixer's output. Under the stealth and alarm priorities, CheckSetNewMusicTrack (unk_378c) keeps the stealth or detected music for the stealth area tracks and only remembers them under the alarm, CheckPlayTransitionMusicTrack (unk_38d8) starts nothing under the alarm, and UpdateMusicAfterAlarmDisable fades back to the remembered stealth track or to the detected music; the audio test checks that the alarm priority holds the current track through a room change. Every entry of sSoundDataEntries plays through the engine with the extracted bank (a bank-backed test): 612 of the 708 are audible within four seconds, and the 95 silent ones are silent in the ROM itself (the empty song shared by the unused entries, songs whose tracks set VOL 0 such as SOUND_ATOMIC_CHARGE_SILENT, and MUSIC_33, 38 and 47 at VOL 6 or 7 with velocity 12, below the 8-bit mixer's resolution). Promoted to functional on the user's review of the in-game playback (captures carry no sound).",
    "next_action": "Trigger the sounds of the systems still to port as they arrive; compare a rendered track with an emulator capture.",
    "evidence": {
     "unit_tests": [
@@ -5246,7 +5246,7 @@
     "BgClipCheckWalkingOnCrumbleBlock",
     "BlockUpdateMakeSolidBlocks"
    ],
-   "limitations": "grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout. Every beam, missile, super missile, bomb explosion point, power bomb explosion edge and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through scripts/mzm_c_tables.py. Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames. CAA_MAKE_SOLID_GRIPPABLE, CAA_MAKE_STOP_ENEMY and CAA_MAKE_NON_POWER_GRIP make an air block solid through gMakeSolidBlocks (whose loops visit every other entry, as natively), and CAA_REMOVE_SOLID keeps the BG1 block of a block made solid that way.",
+   "limitations": "grabbing crumble blocks, the make-solid blocks and the tank pickups (items) are not reproduced; never-reform blocks are remembered by room alias for the session, without the save layout. Every beam, missile, super missile, bomb explosion point, power bomb explosion edge and pirate laser impact runs BlockApplyCcaa on the block it reaches (hatches first): shot, missile and super missile blocks break by weakness, 2x2 blocks break together, never-reform blocks are remembered and removed when the room reloads, reforming blocks play the native stages (255-frame wait, held while Samus stands in them) with the BG1 breaking frames, hidden tanks are revealed, bomb chains run both ways with their sub-chains; the screw attack and the speed booster break blocks on contact and crumble blocks break under Samus's feet. The tables come from src/data/block_data.c through fusion_mzm_serialize_block_tables (src/assets/mzm/export.c). Checked in brinstar_022: crumble blocks give way under Samus and a shot block breaks through its frames. CAA_MAKE_SOLID_GRIPPABLE, CAA_MAKE_STOP_ENEMY and CAA_MAKE_NON_POWER_GRIP make an air block solid through gMakeSolidBlocks (whose loops visit every other entry, as natively), and CAA_REMOVE_SOLID keeps the BG1 block of a block made solid that way.",
    "next_action": "Port the crumble grab and tank pickups.",
    "evidence": {
     "unit_tests": [
@@ -7381,7 +7381,7 @@
     "src/assets/mzm/rom_bank.c",
     "src/runtime/gba_ppu.c",
     "src/runtime/mzm_rom.c",
-    "scripts/rebuild.py",
+    "src/tools/fusion_rebuild.c",
     "src/runtime/mzm_screen.c"
    ],
    "tests": [
@@ -13215,7 +13215,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The C11 library verifies both ROMs and writes their exact private identity manifests atomically; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, writes the complete 685-file private room export, and writes all 155 Soma/knife, 258 weapon and 828 traced-object library files atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both identity manifests, the Aria world catalog, Soma, weapon and object libraries, the Zero Mission ROM bank and both room exports run natively in the rebuild task graph; Python remains authoritative for other private outputs, shared reference decoders, caches and the global rebuild graph.",
+   "limitations": "The C11 library verifies both ROMs and writes their exact private identity manifests atomically; reproduces Aria's structural catalog, BG1 collision, complete room VRAM/palettes, 901 background tilemaps, exact 4-bpp RGBA renders, 342 static-origin room composites, exact BMP serialization and 342 exact AOSROOM-NATIVE v4 payloads, writes the complete 685-file private room export, and writes all 155 Soma/knife, 258 weapon and 828 traced-object library files atomically; reproduces Zero Mission's ROM bank and symbol manifest; and decodes all 331 Zero Mission room descriptors, Clipdata maps, every BG0-BG3 payload, all 79 standard tileset VRAM/palette snapshots, complete metatile tables, 1115 exact RGBA room layers, 330 exact background selections with byte-identical BMP/mask serialization, 330 exact complete MVROOM-NATIVE payloads through the U/L/E/G/R/T metadata and P/S/F/J/N sprite records, the exact BMP32 tileset sheets and text layers of the room export, its exact blocks.tsv and power_bomb.tsv tables and background.bmp images, and writes that complete export with its SHA-256 index atomically. The outputs pass complete semantic or byte equivalence as appropriate. Both identity manifests, the Aria world catalog, Soma, weapon and object libraries, the Zero Mission ROM bank and both room exports run natively in the rebuild task graph, as do the Zero Mission sound bank, sprites and raw import; no Python extractor remains.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13334,26 +13334,27 @@
    "fidelity": "n/a",
    "local_sources": [
     "include/fusion/pipeline/inventory.h",
-    "scripts/native_inventory.py",
-    "scripts/native_parity.py",
-    "src/pipeline/inventory.c",
-    "src/pipeline/checklist.c",
+    "src/pipeline/inventory_writer.c",
     "src/tools/fusion_inventory.c",
+    "src/pipeline/checklist.c",
+    "src/pipeline/inventory.c",
     "src/tools/fusion_checklist.c",
     "data/native_parity/aos_unassigned_routines.tsv"
    ],
    "tests": [
     "tests/test_fusion_inventory.c",
-    "tests/test_native_parity.py"
+    "tests/test_inventory_writer.c",
+    "tests/test_fusion_rebuild.c"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The C11 scanner and audit reproduce all 6,543 tracked C/assembly routine identities, source metadata, stable assembly folding and direct/ambiguous lexical calls across both pinned trees. Checklist validation and rendering are also native and byte-identical. The production inventory action remains Python-backed until declarations, data, types, constants, callback/address relations, category propagation and deterministic sharding are ported; lexical analysis still cannot prove dynamic dispatch or runtime evidence.",
+   "limitations": "The C11 scanner and audit reproduce all 6,543 tracked C/assembly routine identities, source metadata, stable assembly folding and direct/ambiguous lexical calls across both pinned trees. Checklist validation and rendering are also native and byte-identical. fusion_inventory --write now produces the complete tracked inventory (declarations, data, types, constants, callback/address relations, category propagation and deterministic sharding), byte-identical to the removed Python writer on all twelve files, and the inventory rebuild task runs it; lexical analysis still cannot prove dynamic dispatch or runtime evidence.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_inventory.c",
-     "tests/test_native_parity.py"
+     "tests/test_inventory_writer.c",
+     "tests/test_fusion_rebuild.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13376,10 +13377,24 @@
       "exists": true
      },
      {
-      "test": "tests/test_native_parity.py",
-      "kind": "python",
+      "test": "tests/test_inventory_writer.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_inventory_writer"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_rebuild.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_rebuild_graph"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -13405,7 +13420,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The single C11 catalog owns Zero Mission definitions and stats, Aria constructor identities and placement groups, named items, raw/LZ10 icon decoding and private PNG thumbnails. Legacy Python reporting consumes its list-assets command instead of duplicating the parser. Native object-definition creation and editing remain unavailable.",
+   "limitations": "The single C11 catalog owns Zero Mission definitions and stats, Aria constructor identities and placement groups, named items, raw/LZ10 icon decoding and private PNG thumbnails. The dashboard bestiary reads it directly instead of duplicating the parser. Native object-definition creation and editing remain unavailable.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -13468,23 +13483,23 @@
     "src/tools/fusion_rebuild.c",
     "src/tools/fusion_checklist.c",
     "src/tools/fusion_inventory.c",
-    "scripts/rebuild.py",
-    "scripts/export_index.py"
+    "src/pipeline/inventory_writer.c",
+    "src/assets/core/export.c"
    ],
    "tests": [
     "tests/test_fusion_rebuild.c",
     "tests/test_fusion_inventory.c",
-    "tests/test_native_parity.py"
+    "tests/test_inventory_writer.c"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The native C11 orchestrator owns the complete 15-task registry and graph, v1 state, exact fingerprints, output validation, incremental planning and real action execution. It records every successful action before its dependents, preserves unknown cache fields, rejects unsafe paths and resumes after failures. The twelve migrated asset actions dispatch to the C11 importer, and checklist generation is native and byte-identical. The first inventory slice now audits all routine records and direct calls natively, but inventory generation and Zero Mission audio remain the two temporary Python-backed actions until the other inventory collections and writer are ported.",
+   "limitations": "The native C11 orchestrator owns the complete 15-task registry and graph, v1 state, exact fingerprints, output validation, incremental planning and real action execution. It records every successful action before its dependents, preserves unknown cache fields, rejects unsafe paths and resumes after failures. Every asset action dispatches to the C11 importer, checklist generation is native and byte-identical, and the inventory action runs fusion_inventory --write; no task runs Python and the Python orchestrator is removed.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_rebuild.c",
      "tests/test_fusion_inventory.c",
-     "tests/test_native_parity.py"
+     "tests/test_inventory_writer.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -13517,10 +13532,14 @@
       "exists": true
      },
      {
-      "test": "tests/test_native_parity.py",
-      "kind": "python",
+      "test": "tests/test_inventory_writer.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_inventory_writer"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -14009,7 +14028,7 @@
     "include/fusion/assets/aos.h",
     "src/assets/aos/objects.c",
     "src/assets/core/sprite_library.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_native_golden.c",
@@ -14427,7 +14446,7 @@
     "include/fusion/assets/aos.h",
     "src/assets/aos/soma.c",
     "src/assets/core/sprite_library.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_sprite_library.c",
@@ -14493,7 +14512,7 @@
     "src/assets/aos/weapons.c",
     "src/assets/core/sprite_library.c",
     "src/runtime/aos_weapon.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_aos_weapon.c",
@@ -14687,7 +14706,7 @@
     "src/assets/mzm/sprite_tables.c",
     "src/assets/mzm/message_text.c",
     "src/assets/core/sprite_library.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_mzm_sprites_assets.c",
@@ -14763,7 +14782,7 @@
    "local_sources": [
     "src/assets/mzm/samus.c",
     "src/assets/core/sprite_library.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_mzm_samus_assets.c",
@@ -14828,7 +14847,7 @@
     "include/fusion/assets/mzm.h",
     "src/assets/mzm/rom_bank.c",
     "src/runtime/mzm_rom.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_assets_mzm.c",
@@ -14997,7 +15016,7 @@
     "src/assets/mzm/samus.c",
     "src/assets/mzm/samus_tables.c",
     "src/assets/core/sprite_library.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_mzm_samus_assets.c",
@@ -15076,7 +15095,7 @@
     "src/assets/core/json.c",
     "src/assets/mzm/rooms.c",
     "src/assets/mzm/music_names.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_raw_import.c",
@@ -15087,7 +15106,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Raw blocks are copied, not decoded. The native C11 raw_import task writes the 3,885 Zero Mission and 3 Aria blocks byte-identically to the former Python importer, an MV_ASSET_IMPORT_2 manifest that keeps the same entries and summary but drops the unread source-file listing, and rooms/metroid/rooms.tsv rebuilt from the ROM and ELF, byte-identical to the former source-derived file. The unread catalog.json and world_atlas.json are no longer written; the Python editor tools still regenerate world_atlas.tsv from the decompilation source.",
+   "limitations": "Raw blocks are copied, not decoded. The native C11 raw_import task writes the 3,885 Zero Mission and 3 Aria blocks byte-identically to the former Python importer, an MV_ASSET_IMPORT_2 manifest that keeps the same entries and summary but drops the unread source-file listing, and rooms/metroid/rooms.tsv rebuilt from the ROM and ELF, byte-identical to the former source-derived file. The unread catalog.json and world_atlas.json are no longer written; the native world overview regenerates world_atlas.tsv from the decompilation source.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15158,11 +15177,12 @@
     "include/fusion/assets/rom.h",
     "src/assets/core/rom.c",
     "src/tools/fusion_importer.c",
-    "scripts/rebuild.py"
+    "src/tools/fusion_rebuild.c"
    ],
    "tests": [
     "tests/test_fusion_assets_rom.c",
-    "tests/test_native_parity.py"
+    "tests/test_inventory_writer.c",
+    "tests/test_fusion_rebuild.c"
    ],
    "dependencies": [],
    "native_routines": [],
@@ -15171,7 +15191,8 @@
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_rom.c",
-     "tests/test_native_parity.py"
+     "tests/test_inventory_writer.c",
+     "tests/test_fusion_rebuild.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -15194,10 +15215,24 @@
       "exists": true
      },
      {
-      "test": "tests/test_native_parity.py",
-      "kind": "python",
+      "test": "tests/test_inventory_writer.c",
+      "kind": "ctest",
       "registered": true,
-      "outcome": "passed"
+      "ctest": [
+       "native_inventory_writer"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_fusion_rebuild.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "fusion_rebuild_graph"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
@@ -15430,6 +15465,13 @@
    {
     "name": "fusion_checklist_current",
     "files": [],
+    "outcome": "passed"
+   },
+   {
+    "name": "native_inventory_writer",
+    "files": [
+     "tests/test_inventory_writer.c"
+    ],
     "outcome": "passed"
    },
    {
@@ -15814,46 +15856,24 @@
     "outcome": "passed"
    },
    {
-    "name": "python_tooling_and_data",
-    "files": [],
-    "outcome": "passed"
-   },
-   {
     "name": "no_proprietary_files",
     "files": [],
     "outcome": "passed"
    }
   ],
-  "python": [
-   {
-    "file": "tests/test_asset_layout.py",
-    "module": "tests.test_asset_layout",
-    "test_count": 2,
-    "outcome": "passed",
-    "passed": 2
-   },
-   {
-    "file": "tests/test_native_parity.py",
-    "module": "tests.test_native_parity",
-    "test_count": 21,
-    "outcome": "passed",
-    "passed": 21
-   },
-   {
-    "file": "tests/test_sprite_library.py",
-    "module": "tests.test_sprite_library",
-    "test_count": 2,
-    "outcome": "passed",
-    "passed": 2
-   }
-  ],
   "summary": {
-   "passed": 98,
+   "passed": 73,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "1e97195",
+   "date": "2026-10-26",
+   "subject": "Generate the dashboard and check generated documents natively",
+   "scope": "project"
+  },
   {
    "commit": "abb18c0",
    "date": "2026-10-26",
@@ -16326,12 +16346,6 @@
    "commit": "3972807",
    "date": "2026-10-24",
    "subject": "Connect Aria save rooms to portable checkpoints",
-   "scope": "project"
-  },
-  {
-   "commit": "8d1bfdd",
-   "date": "2026-10-24",
-   "subject": "Connect Aria file selection to the runtime",
    "scope": "project"
   }
  ],
@@ -20372,7 +20386,9 @@
    "name": "inventory",
    "group": "native",
    "dependencies": [],
-   "requires": []
+   "requires": [
+    "build/fusion_inventory"
+   ]
   },
   {
    "name": "checklist",

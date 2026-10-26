@@ -99,7 +99,7 @@ static gboolean reload_rows(WorldGrid *w)
     }
     g_strfreev(split);g_free(contents);
     /* Project-authored placements are independent of original ROM occupancy.
-     * Listing is bounded and validated by the versioned Python placement API. */
+     * Listing is bounded and validated by the versioned placement API. */
     gchar *out = NULL, *err = NULL;
     GError *spawn_error = NULL;
     gint exit_status = -1;

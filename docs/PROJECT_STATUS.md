@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0557 - Native inventory writer; the last Python is removed
+
+- `fusion_inventory --write` (`src/pipeline/inventory_writer.c`) replaces
+  `scripts/native_inventory.py`: routines, declarations, data symbols, types,
+  constants, call and address relations, classification and deterministic
+  sharding. It rebuilt the twelve tracked `data/native_parity` files byte for
+  byte as the Python writer (7.7 s instead of 24 s). The `inventory` rebuild
+  task (version 3) now runs it, so no task runs Python and the temporary
+  Python backend of the task registry is removed.
+- `tests/test_inventory_writer.c` (CTest `native_inventory_writer`) checks
+  synthetic git trees, rebuilds the tracked inventory byte for byte and checks
+  the checklist's refusals; it replaces `tests/test_native_parity.py`.
+- Removed with their tests: `scripts/rebuild.py`, `native_parity.py`,
+  `native_inventory.py`, `export_index.py`, `sprite_library.py`,
+  `asset_layout.py` (their C11 replacements already owned production).
+- The `python_tooling_and_data` CTest is gone, and `fusion_dashboard` no
+  longer runs or lists a Python suite (the Python column of the test page is
+  removed).
+- First-party Python files: 0. README, AGENTS.md and the architecture,
+  migration and editor documents now name the native tools. No gameplay or
+  native-parity status changed.
+
 ## Patch 0556 - Native dashboard and generated-document checks
 
 - `fusion_dashboard` (`src/tools/fusion_dashboard.c`) replaces

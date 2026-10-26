@@ -3,7 +3,7 @@
 Run the verified ROM importer first:
 
 ```sh
-python3 -m scripts.rebuild --task raw_import
+./build/fusion_rebuild --task raw_import
 ./build/fusion_editor_cli --command=room-render --world=zero_mission --area=Brinstar --room=33
 ./build/fusion_mzm_room_viewer assets/extracted/rooms/metroid/previews/brinstar_033_bg1.bmp
 ./build/fusion_map_editor

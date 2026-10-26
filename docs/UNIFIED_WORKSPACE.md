@@ -20,7 +20,7 @@ It shows original *minimap cases*, not invented world-room geometry:
   available. Preview images are diagnostic 2D composites, not exact minimap
   pixel graphics. Until generated, a case shows its original room number.
 - Opening the tab, changing world/area, or pressing **Generate more original
-  previews** runs a bounded batch in a background Python process. Unsupported
+  previews** runs a bounded batch in a background `fusion_world_overview` process. Unsupported
   source formats are recorded under ignored `assets/extracted/world_overview/`
   so they do not stall future batches. The GTK UI remains responsive.
 - Double-click a case to open/focus its room document in the common editor.

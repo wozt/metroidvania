@@ -234,7 +234,7 @@ and `message`. Diagnostics are also written to standard error.
 | 2 | CLI usage or option contract error |
 | 3 | Known capability is unavailable |
 | 4 | Valid request failed during the operation |
-| 127 | Native launcher could not start Python |
+| 127 | Native launcher could not start the editor backend |
 
 The backend interface is versioned independently from authored data schemas.
 Scripts should inspect `backend_version` and `capabilities` instead of assuming

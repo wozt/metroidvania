@@ -33,7 +33,7 @@ unverified unless the project inventory states otherwise.
 - SDL3 is used by the native room viewer and remains the target presentation
   library for the future game.
 - GTK4 is used by the project editor.
-- Python importers and tests use only the standard library.
+- The repository has no Python code; importers, tools and tests are C11.
 
 ## Provenance policy
 

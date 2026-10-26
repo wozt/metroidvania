@@ -164,7 +164,7 @@
     if (!t.summary) {
       return `<div class="card"><header><h3>Automated tests</h3></header>
         <p class="muted">Tests were not run when this data was generated (use <code>--run-tests</code>).
-        ${t.ctest.length} CTest tests and ${t.python.length} Python modules are registered.</p></div>`;
+        ${t.ctest.length} CTest tests are registered.</p></div>`;
     }
     const total = t.summary.passed + t.summary.failed + t.summary.other;
     const share = total ? Math.round((1000 * t.summary.passed) / total) / 10 : null;
@@ -172,7 +172,7 @@
       <div class="big">${t.summary.passed}<span class="muted" style="font-size:1rem"> / ${total} passed</span></div>
       ${metric("Passing", share, t.summary.passed, total, "tested")}
       <p class="muted" style="margin:6px 0 0">${t.summary.failed} failed, ${t.summary.other} skipped or not run.
-      ${t.ctest.length} CTest tests, ${t.python.length} Python modules.</p></div>`;
+      ${t.ctest.length} CTest tests.</p></div>`;
   }
 
   function inventoryPanel() {
@@ -222,15 +222,10 @@
     const t = data.tests;
     const q = state.query;
     const ctest = t.ctest.filter((x) => !q || (x.name + " " + x.files.join(" ")).toLowerCase().includes(q));
-    const python = t.python.filter((x) => !q || x.file.toLowerCase().includes(q));
     return `<div class="grid">${testsIndicator()}</div>
       <h2>CTest (${ctest.length})</h2>
       <div class="table-wrap"><table><thead><tr><th>Test</th><th>Sources</th><th>Result</th></tr></thead><tbody>
       ${ctest.map((x) => `<tr><td><code>${esc(x.name)}</code></td><td>${x.files.map((f) => fileLink(f)).join("<br>") || '<span class="muted">command</span>'}</td><td>${outcomeBadge(x.outcome)}</td></tr>`).join("")}
-      </tbody></table></div>
-      <h2>Python modules (${python.length})</h2>
-      <div class="table-wrap"><table><thead><tr><th>Module</th><th>Tests</th><th>Result</th></tr></thead><tbody>
-      ${python.map((x) => `<tr><td>${fileLink(x.file)}</td><td>${x.passed == null ? x.test_count : `${x.passed}/${x.test_count}`}</td><td>${outcomeBadge(x.outcome)}</td></tr>`).join("")}
       </tbody></table></div>`;
   }
 

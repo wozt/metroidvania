@@ -5642,7 +5642,7 @@ static void start_import(NativeWorkspace *doc, const char *area, unsigned number
         &error, (gchar *)fusion_editor_cli_program(), "--command=room-open",
         world, "--area", area, "--room", room_text, "--format=text", NULL);
     if (!proc) {
-        message(doc, error ? error->message : "Python importer unavailable");
+        message(doc, error ? error->message : "Importer unavailable");
         if (error) g_error_free(error);
         return;
     }

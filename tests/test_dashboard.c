@@ -162,30 +162,29 @@ static FusionJson parse(const char *text) {
 
 static void test_verification(void) {
     FusionJson ctest = parse("{\"sample\": {\"name\": \"sample\", \"files\": [\"tests/test_debug_menu.c\"]}}");
-    FusionJson python = fusion_json_object();
     FusionJson validated = parse("{\"status\": \"validated\", \"local_sources\": "
                                  "[\"src/tools/fusion_dashboard.c\"], \"tests\": "
                                  "[\"tests/test_debug_menu.c\"]}");
-    FusionJson result = verify(&validated, &ctest, &python, NULL, NULL);
+    FusionJson result = verify(&validated, &ctest, NULL);
     EXPECT(!strcmp(text_of(&result, "verdict"), "tests_not_run"), "not run verdict");
     EXPECT(fusion_json_member(&result, "warnings")->count > 0, "not run warning");
     fusion_json_free(&result);
     FusionJson passed = parse("{\"sample\": \"passed\"}"), failed = parse("{\"sample\": \"failed\"}");
-    result = verify(&validated, &ctest, &python, &passed, NULL);
+    result = verify(&validated, &ctest, &passed);
     EXPECT(!strcmp(text_of(&result, "verdict"), "passing") &&
            fusion_json_member(&result, "warnings")->count == 0, "passing verdict");
     fusion_json_free(&result);
-    result = verify(&validated, &ctest, &python, &failed, NULL);
+    result = verify(&validated, &ctest, &failed);
     EXPECT(!strcmp(text_of(&result, "verdict"), "failing"), "failing verdict");
     fusion_json_free(&result);
     FusionJson missing = parse("{\"status\": \"functional\", \"local_sources\": "
                                "[\"does/not/exist.c\"], \"tests\": []}");
-    result = verify(&missing, &ctest, &python, NULL, NULL);
+    result = verify(&missing, &ctest, NULL);
     EXPECT(!strcmp(text_of(&result, "verdict"), "missing_sources"), "missing sources");
     fusion_json_free(&result);
     FusionJson orphan = parse("{\"status\": \"partial\", \"local_sources\": [], \"tests\": "
                               "[\"tests/orphan.c\"]}");
-    result = verify(&orphan, &ctest, &python, NULL, NULL);
+    result = verify(&orphan, &ctest, NULL);
     EXPECT(!strcmp(text_of(&result, "verdict"), "unregistered_tests"), "unregistered tests");
     fusion_json_free(&result);
     fusion_json_free(&orphan);
@@ -193,7 +192,6 @@ static void test_verification(void) {
     fusion_json_free(&passed);
     fusion_json_free(&failed);
     fusion_json_free(&validated);
-    fusion_json_free(&python);
     fusion_json_free(&ctest);
     FusionJson tests = cmake_tests();
     const FusionJson *aos = fusion_json_member(&tests, "aos_enemy");
@@ -452,22 +450,14 @@ static void test_static_page(void) {
     free(css);
 }
 
-static int ctest_calls = 0, python_calls = 0;
-static bool python_fails = false;
+static int ctest_calls = 0;
+static bool ctest_fails = false;
 
 static FusionJson fake_ctest(const char *build) {
     (void)build;
     ++ctest_calls;
-    return fusion_json_object();
-}
-
-static FusionJson fake_python(void) {
-    ++python_calls;
-    FusionJson results = fusion_json_object(), module = fusion_json_object();
-    put_string(&module, "test_x", python_fails ? "failed" : "passed");
-    FusionJson modules = python_test_modules();
-    put(&results, modules.count ? text_of(&modules.items[0], "module") : "tests.none", module);
-    fusion_json_free(&modules);
+    FusionJson results = fusion_json_object();
+    put_string(&results, "debug_menu", ctest_fails ? "failed" : "passed");
     return results;
 }
 
@@ -481,8 +471,7 @@ static bool has_problem(const FusionJson *problems, const char *text) {
 
 static void test_check(void) {
     run_ctest = fake_ctest;
-    run_python_tests = fake_python;
-    ctest_calls = python_calls = 0;
+    ctest_calls = 0;
     FusionJson data;
     EXPECT(build(false, "", 1767312000, &data), "build: %s", failure);
     char *directory = temporary_directory();
@@ -521,7 +510,7 @@ static void test_check(void) {
     EXPECT(check_problems(directory, &problems) &&
            has_problem(&problems, "data.js does not carry data.json"), "data.js mismatch");
     fusion_json_free(&problems);
-    EXPECT(!ctest_calls && !python_calls, "tests run without being asked");
+    EXPECT(!ctest_calls, "tests run without being asked");
     fusion_json_free(&volatile_data);
     fusion_json_free(&data);
     remove_directory(directory);
@@ -532,16 +521,13 @@ static void test_run_tests(void) {
     snprintf(path, sizeof path, "%s/CTestTestfile.cmake", directory);
     write_file(path, "");
     for (int fails = 0; fails < 2; ++fails) {
-        python_fails = fails;
-        ctest_calls = python_calls = 0;
+        ctest_fails = fails;
+        ctest_calls = 0;
         FusionJson data;
         EXPECT(build(true, directory, time(NULL), &data), "build: %s", failure);
-        EXPECT(ctest_calls == 1 && python_calls == 1, "each suite runs once");
-        const FusionJson *ctest = fusion_json_member(fusion_json_member(&data, "tests"), "ctest");
-        for (size_t index = 0; index < ctest->count; ++index)
-            if (!strcmp(text_of(&ctest->items[index], "name"), python_suite_ctest))
-                EXPECT(!strcmp(text_of(&ctest->items[index], "outcome"), fails ? "failed" : "passed"),
-                       "Python suite outcome");
+        EXPECT(ctest_calls == 1, "the suite runs once");
+        const FusionJson *summary = fusion_json_member(fusion_json_member(&data, "tests"), "summary");
+        EXPECT(summary && fusion_json_member(summary, "failed")->integer == fails, "failed outcome counted");
         fusion_json_free(&data);
     }
     remove_directory(directory);
@@ -552,7 +538,6 @@ int main(void) {
     test_indicators();
     test_verification();
     run_ctest = fake_ctest;
-    run_python_tests = fake_python;
     FusionJson data;
     if (!build(false, "", 1791590400, &data)) {
         fprintf(stderr, "FAIL: build: %s\n", failure);

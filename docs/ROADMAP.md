@@ -16,7 +16,7 @@ credits.
   headers, data tables, structures, pointer tables and indirect call edges;
 - keep automatic discoveries separate from reviewed associations and test
   results;
-- migrate existing extractors into `python3 -m scripts.rebuild --all` with
+- migrate existing extractors into `./build/fusion_rebuild --all` with
   declared inputs, outputs, schema versions and deterministic invalidation;
 - generate coverage statistics without treating function count as fidelity;
 - add ROM-backed local fixtures and deterministic traces where redistribution

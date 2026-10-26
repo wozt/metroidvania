@@ -3,8 +3,8 @@
  * scripts/dashboard.py. The dashboard observes the project; it never drives
  * it. The generator reads the native parity annotations, the project feature
  * registry, CMakeLists.txt, the tracked native inventory, the rebuild graph
- * and the git history; with --run-tests it also runs CTest and the remaining
- * Python suite and records their results.
+ * and the git history; with --run-tests it also runs CTest and records its
+ * results.
  *
  * Every feature carries declared facts (status, fidelity, limitations, from a
  * registry) and verified facts (its sources exist, its tests are registered
@@ -41,7 +41,6 @@
 
 static const char root[] = FUSION_SOURCE_DIR;
 static const char schema[] = "metroidvania-dashboard-v1";
-static const char python_suite_ctest[] = "python_tooling_and_data";
 static const char all_tests[] = "@all-tests";
 static const char *const registry_header[] = {
     "area", "id", "category", "status", "fidelity", "title", "local_sources", "tests",
@@ -583,63 +582,10 @@ static FusionJson cmake_tests(void) {
     return tests;
 }
 
-/* The number of "^\s+def test_\w+" matches of a Python test module. */
-static int64_t python_test_count(const char *text) {
-    int64_t count = 0;
-    for (const char *c = strstr(text, "def test_"); c; c = strstr(c + 1, "def test_")) {
-        if (!word(c[9])) continue;
-        const char *start = c;
-        while (start > text && isspace((unsigned char)start[-1])) --start;
-        bool line_start = false;
-        for (const char *q = start; q < c && !line_start; ++q)
-            line_start = q == text || q[-1] == '\n';
-        if (line_start) ++count;
-    }
-    return count;
-}
-
-/* python_test_modules(): tests/test_*.py, sorted. */
-static FusionJson python_test_modules(void) {
-    char directory[8192];
-    snprintf(directory, sizeof directory, "%s/tests", root);
-    DIR *handle = opendir(directory);
-    char **names = NULL;
-    size_t count = 0;
-    struct dirent *entry;
-    while (handle && (entry = readdir(handle)) != NULL) {
-        size_t length = strlen(entry->d_name);
-        if (strncmp(entry->d_name, "test_", 5) || length < 8 ||
-            strcmp(entry->d_name + length - 3, ".py"))
-            continue;
-        names = realloc(names, (count + 1) * sizeof *names);
-        if (!names) oom();
-        names[count++] = strdup(entry->d_name);
-    }
-    if (handle) closedir(handle);
-    if (count) qsort(names, count, sizeof *names, compare_strings);
-    FusionJson modules = fusion_json_object();
-    for (size_t index = 0; index < count; ++index) {
-        char relative[512], module[512];
-        snprintf(relative, sizeof relative, "tests/%s", names[index]);
-        snprintf(module, sizeof module, "tests.%.*s", (int)(strlen(names[index]) - 3), names[index]);
-        char *text = read_file(relative, NULL);
-        FusionJson item = fusion_json_object();
-        put_string(&item, "file", relative);
-        put_string(&item, "module", module);
-        put_int(&item, "test_count", text ? python_test_count(text) : 0);
-        put(&modules, relative, item);
-        free(text);
-        free(names[index]);
-    }
-    free(names);
-    return modules;
-}
-
-/* run_ctest(): every CTest test except the Python suite. */
+/* run_ctest(): every CTest test. */
 static FusionJson default_run_ctest(const char *build) {
     char command[8192];
-    snprintf(command, sizeof command, "ctest --test-dir '%s' -E '^%s$' 2>/dev/null", build,
-             python_suite_ctest);
+    snprintf(command, sizeof command, "ctest --test-dir '%s' 2>/dev/null", build);
     char *output = capture(command, NULL);
     FusionJson outcomes = fusion_json_object();
     /* Test\s+#\d+:\s+([\w-]+)\s+\.+\s*(\*{0,3}\s*\w[^\n]*?)\s+[\d.]+ sec */
@@ -685,59 +631,12 @@ static FusionJson default_run_ctest(const char *build) {
     return outcomes;
 }
 
-/* run_python_tests(): {module: {test: state}} of the remaining Python suite. */
-static FusionJson default_run_python_tests(void) {
-    char *output = capture("python3 -m unittest discover -s tests -t . -v 2>&1 1>/dev/null", NULL);
-    FusionJson outcomes = fusion_json_object();
-    for (char *line = output, *next; line && *line; line = next) {
-        next = strchr(line, '\n');
-        if (next) *next++ = '\0';
-        if (strncmp(line, "test", 4)) continue;
-        char *open = strstr(line, " (tests.");
-        char *dots = strstr(line, " ... ");
-        if (!open || !dots || dots < open) continue;
-        for (char *c = line; c < open; ++c)
-            if (!word(*c)) goto next_line;
-        char *close = strchr(open, ')');
-        if (!close || close > dots) continue;
-        char inner[512];
-        snprintf(inner, sizeof inner, "%.*s", (int)(close - open - 2), open + 2);
-        char *first = strchr(inner, '.'), *second = first ? strchr(first + 1, '.') : NULL;
-        if (!second) continue;
-        *second = '\0';
-        const char *state = dots + 5;
-        const char *result = !strncmp(state, "ok", 2) || !strncmp(state, "expected failure", 16)
-            ? "passed" : !strncmp(state, "skipped", 7) ? "skipped"
-            : !strncmp(state, "FAIL", 4) || !strncmp(state, "ERROR", 5) ? "failed" : NULL;
-        if (!result) continue;
-        char name[256];
-        snprintf(name, sizeof name, "%.*s", (int)(open - line), line);
-        FusionJson *module = fusion_json_member_mut(&outcomes, inner);
-        if (!module) {
-            put(&outcomes, inner, fusion_json_object());
-            module = fusion_json_member_mut(&outcomes, inner);
-        }
-        put_string(module, name, result);
-    next_line:;
-    }
-    free(output);
-    return outcomes;
-}
-
 /* The test runners, replaceable by the tests of this generator. */
 static FusionJson (*run_ctest)(const char *build) = default_run_ctest;
-static FusionJson (*run_python_tests)(void) = default_run_python_tests;
-
-static bool any_state(const FusionJson *states, const char *state) {
-    for (size_t index = 0; states && index < states->count; ++index)
-        if (!strcmp(states->items[index].string, state)) return true;
-    return false;
-}
 
 /* _verify(): what this run checked about one feature. */
 static FusionJson verify(const FusionJson *feature, const FusionJson *ctest,
-                         const FusionJson *python, const FusionJson *ctest_results,
-                         const FusionJson *python_results) {
+                         const FusionJson *ctest_results) {
     FusionJson missing = fusion_json_array(), runs = fusion_json_array(), warnings = fusion_json_array();
     const FusionJson *sources = fusion_json_member(feature, "local_sources");
     for (size_t index = 0; index < sources->count; ++index)
@@ -750,33 +649,14 @@ static FusionJson verify(const FusionJson *feature, const FusionJson *ctest,
             bool failed = false;
             for (size_t other = 0; ctest_results && other < ctest_results->count; ++other)
                 failed |= !strcmp(ctest_results->items[other].string, "failed");
-            for (size_t module = 0; python_results && module < python_results->count; ++module)
-                failed |= any_state(&python_results->items[module], "failed");
             char name[64];
             snprintf(name, sizeof name, "%s on linux", all_tests);
             put_string(&run, "test", name);
             put_string(&run, "kind", "suite");
             put_bool(&run, "registered", true);
-            put(&run, "outcome", ctest_results && python_results
+            put(&run, "outcome", ctest_results
                                      ? fusion_json_string(failed ? "failed" : "passed")
                                      : fusion_json_null());
-            push(&runs, run);
-            continue;
-        }
-        const FusionJson *module = fusion_json_member(python, path);
-        if (module) {
-            FusionJson outcome = fusion_json_null();
-            if (python_results) {
-                const FusionJson *states =
-                    fusion_json_member(python_results, text_of(module, "module"));
-                outcome = fusion_json_string(any_state(states, "failed") ? "failed"
-                                             : any_state(states, "passed") ? "passed"
-                                                                           : "not run");
-            }
-            put_string(&run, "test", path);
-            put_string(&run, "kind", "python");
-            put_bool(&run, "registered", true);
-            put(&run, "outcome", outcome);
             push(&runs, run);
             continue;
         }
@@ -1402,9 +1282,9 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
             return false;
         }
     }
-    FusionJson ctest = cmake_tests(), python = python_test_modules();
-    FusionJson ctest_results = fusion_json_null(), python_results = fusion_json_null();
-    bool have_ctest = false, have_python = false;
+    FusionJson ctest = cmake_tests();
+    FusionJson ctest_results = fusion_json_null();
+    bool have_ctest = false;
     if (run_tests) {
         char testfile[8192];
         struct stat status;
@@ -1412,14 +1292,6 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
         if (!stat(testfile, &status)) {
             ctest_results = run_ctest(build_dir);
             have_ctest = true;
-        }
-        python_results = run_python_tests();
-        have_python = true;
-        if (have_ctest && fusion_json_member(&ctest, python_suite_ctest)) {
-            bool failed = false;
-            for (size_t module = 0; module < python_results.count; ++module)
-                failed |= any_state(&python_results.items[module], "failed");
-            put_string(&ctest_results, python_suite_ctest, failed ? "failed" : "passed");
         }
     }
     struct tm utc;
@@ -1429,8 +1301,7 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
     strftime(stamp, sizeof stamp, "%Y-%m-%dT%H:%M:%S+00:00", &utc);
     for (size_t index = 0; index < features.count; ++index) {
         FusionJson *feature = &features.items[index];
-        FusionJson verification = verify(feature, &ctest, &python, have_ctest ? &ctest_results : NULL,
-                                         have_python ? &python_results : NULL);
+        FusionJson verification = verify(feature, &ctest, have_ctest ? &ctest_results : NULL);
         bool passing = !strcmp(text_of(&verification, "verdict"), "passing");
         put(&verification, "verified_on", passing ? fusion_json_string(date) : fusion_json_null());
         put(feature, "verification", verification);
@@ -1466,8 +1337,7 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
         put(&entry, "features", ids);
         push(&indicator_list, entry);
     }
-    FusionJson tests = fusion_json_object(), ctest_list = fusion_json_array(),
-               python_list = fusion_json_array();
+    FusionJson tests = fusion_json_object(), ctest_list = fusion_json_array();
     put_bool(&tests, "ran", run_tests);
     put_string(&tests, "host", "linux");
     int64_t passed = 0, failed = 0, other_count = 0;
@@ -1485,35 +1355,8 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
         put(&item, "outcome", outcome);
         push(&ctest_list, item);
     }
-    for (size_t index = 0; index < python.count; ++index) {
-        FusionJson item = copy_of(&python.items[index]);
-        const FusionJson *states =
-            have_python ? fusion_json_member(&python_results, text_of(&item, "module")) : NULL;
-        if (!have_python) {
-            put(&item, "outcome", fusion_json_null());
-            put(&item, "passed", fusion_json_null());
-        } else {
-            int64_t module_passed = 0;
-            for (size_t test = 0; states && test < states->count; ++test)
-                module_passed += !strcmp(states->items[test].string, "passed");
-            put_string(&item, "outcome", any_state(states, "failed") ? "failed"
-                                         : states && states->count ? "passed" : "not run");
-            put_int(&item, "passed", module_passed);
-        }
-        push(&python_list, item);
-    }
-    for (size_t module = 0; have_python && module < python_results.count; ++module) {
-        const FusionJson *states = &python_results.items[module];
-        for (size_t test = 0; test < states->count; ++test) {
-            const char *value = states->items[test].string;
-            if (!strcmp(value, "passed")) ++passed;
-            else if (!strcmp(value, "failed")) ++failed;
-            else ++other_count;
-        }
-    }
     put(&tests, "ctest", ctest_list);
-    put(&tests, "python", python_list);
-    if (have_ctest || have_python) {
+    if (have_ctest) {
         FusionJson summary = fusion_json_object();
         put_int(&summary, "passed", passed);
         put_int(&summary, "failed", failed);
@@ -1527,9 +1370,7 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
         fusion_json_free(&indicator_list);
         fusion_json_free(&tests);
         fusion_json_free(&ctest);
-        fusion_json_free(&python);
         fusion_json_free(&ctest_results);
-        fusion_json_free(&python_results);
         return false;
     }
     *data = fusion_json_object();
@@ -1575,9 +1416,7 @@ static bool build(bool run_tests, const char *build_dir, time_t now, FusionJson 
     put(data, "rebuild_tasks", rebuild_tasks());
     fusion_json_free(&annotations);
     fusion_json_free(&ctest);
-    fusion_json_free(&python);
     fusion_json_free(&ctest_results);
-    fusion_json_free(&python_results);
     return true;
 }
 
@@ -1898,12 +1737,6 @@ int main(int argc, char **argv) {
         for (size_t index = 0; index < ctest->count; ++index)
             if (!strcmp(text_of(&ctest->items[index], "outcome"), "failed")) {
                 fprintf(stderr, "Failed test: %s\n", text_of(&ctest->items[index], "name"));
-                result = 1;
-            }
-        const FusionJson *python = fusion_json_member(tests, "python");
-        for (size_t index = 0; index < python->count; ++index)
-            if (!strcmp(text_of(&python->items[index], "outcome"), "failed")) {
-                fprintf(stderr, "Failed test: %s\n", text_of(&python->items[index], "module"));
                 result = 1;
             }
     }

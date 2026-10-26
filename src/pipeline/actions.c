@@ -151,11 +151,6 @@ static bool run_process(const char *root, char *const arguments[],
                      label, WTERMSIG(status));
 }
 
-static bool run_python(const char *root, const char *module, const char *label,
-                       char *error, size_t error_size) {
-    char *arguments[] = {"python3", "-m", (char *)module, NULL};
-    return run_process(root, arguments, label, error, error_size);
-}
 
 bool fusion_rebuild_run_registered_action(const char *root,
                                           const FusionRebuildTask *task,
@@ -166,9 +161,13 @@ bool fusion_rebuild_run_registered_action(const char *root,
         return set_error(error, error_size, "invalid rebuild action request");
     if (!prepare_outputs(root, task, error, error_size)) return false;
 
-    if (!strcmp(task->name, "inventory"))
-        return run_python(root, "scripts.native_inventory", "native inventory", error,
-                          error_size);
+    if (!strcmp(task->name, "inventory")) {
+        char program[4096];
+        if (!root_path(program, sizeof program, root, "build/fusion_inventory", error, error_size))
+            return false;
+        char *arguments[] = {program, "--write", "--root", (char *)root, NULL};
+        return run_process(root, arguments, "fusion_inventory", error, error_size);
+    }
     if (!strcmp(task->name, "checklist"))
         return fusion_native_checklist(
             root, "data/native_parity/inventory.json",

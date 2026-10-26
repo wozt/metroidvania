@@ -7,7 +7,7 @@ under ignored `assets/extracted/`; never commit ROM bytes or extracted images.
 ## Canonical Soma library
 
 ```sh
-python3 -m scripts.rebuild --task aria_soma
+./build/fusion_rebuild --task aria_soma
 ./build/fusion_room_runtime --check-library \
   assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv
 ```
@@ -141,7 +141,7 @@ cells, mostly with air above), bit 2 outside slopes (`0x04`) and the rare
 `0x14`, `0x27`, `0x37` values; `gEwramData->unk_A074_6` with the bitmap at
 `unk_F0C0` overrides some cells to `0x03`.
 
-Ported so far: `python3 -m scripts.rebuild --task aria_rooms` runs the native
+Ported so far: `./build/fusion_rebuild --task aria_rooms` runs the native
 C11 exporter for every room, writing each background composite and its BG1
 collision bytes as `sub_08001A00` returns them (342 of 343 rooms; the
 remaining one has no text BG1). `src/runtime/aos_collision.c` ports the cell

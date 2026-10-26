@@ -3,6 +3,7 @@
 #define FUSION_PIPELINE_INTERNAL_H
 
 #include "core/json.h"
+#include "fusion/pipeline/rebuild.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -16,5 +17,10 @@ bool fusion_rebuild_state_load(const char *path, FusionRebuildState *state,
 bool fusion_rebuild_state_save(const char *path, const FusionRebuildState *state,
                                char *error, size_t error_size);
 void fusion_rebuild_state_free(FusionRebuildState *state);
+
+bool fusion_rebuild_run_registered_action(const char *root,
+                                          const FusionRebuildTask *task,
+                                          void *user,
+                                          char *error, size_t error_size);
 
 #endif /* FUSION_PIPELINE_INTERNAL_H */

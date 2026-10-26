@@ -85,6 +85,7 @@ add_library(fusion_pipeline STATIC
     src/pipeline/graph.c
     src/pipeline/cache.c
     src/pipeline/plan.c
+    src/pipeline/actions.c
 )
 target_include_directories(fusion_pipeline PUBLIC include)
 target_include_directories(fusion_pipeline PRIVATE src/pipeline src/assets/core)

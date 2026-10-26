@@ -754,10 +754,222 @@ bool fusion_rebuild_plan(const char *root, const char *state_path,
                                      plan, error, error_size);
 }
 
+static bool resolve_state_path(const char *root, const char *state_path,
+                               char absolute[4096], char *error, size_t error_size) {
+    if (state_path[0] == '/') {
+        int length = snprintf(absolute, 4096, "%s", state_path);
+        return length >= 0 && length < 4096
+                   ? true : set_error(error, error_size, "state path is too long");
+    }
+    return join_path(absolute, 4096, root, state_path)
+               ? true : set_error(error, error_size, "state path is too long");
+}
+
+static bool update_state_record(FusionRebuildState *state,
+                                const FusionRebuildTask *task,
+                                const char *input_hash, const char *output_hash,
+                                const PathList *outputs,
+                                char *error, size_t error_size) {
+    FusionJson *tasks = fusion_json_member_mut(&state->document, "tasks");
+    const FusionJson *existing = fusion_json_member(tasks, task->name);
+    FusionJson record;
+    if (existing && existing->kind == FUSION_JSON_OBJECT) {
+        if (!fusion_json_clone(existing, &record))
+            return set_error(error, error_size, "out of memory");
+    } else record = fusion_json_object();
+    FusionJson output_list = fusion_json_array();
+    for (size_t index = 0; index < outputs->count; ++index) {
+        FusionJson path = fusion_json_string(outputs->items[index]);
+        if (!path.string || !fusion_json_push(&output_list, path)) {
+            fusion_json_free(&output_list);
+            fusion_json_free(&record);
+            return set_error(error, error_size, "out of memory");
+        }
+    }
+    if (!fusion_json_set(&record, "digest", fusion_json_string(input_hash)) ||
+        !fusion_json_set(&record, "output_digest", fusion_json_string(output_hash))) {
+        fusion_json_free(&output_list);
+        fusion_json_free(&record);
+        return set_error(error, error_size, "out of memory");
+    }
+    if (!fusion_json_set(&record, "outputs", output_list) ||
+        !fusion_json_set(&record, "version", fusion_json_int(task->version))) {
+        fusion_json_free(&record);
+        return set_error(error, error_size, "out of memory");
+    }
+    if (!fusion_json_set(tasks, task->name, record))
+        return set_error(error, error_size, "out of memory");
+    return true;
+}
+
+bool fusion_rebuild_execute_tasks(const char *root, const char *state_path,
+                                  const FusionRebuildTask *tasks, size_t task_count,
+                                  const char *const *selected, size_t selected_count,
+                                  bool force, FusionRebuildActionRunner runner,
+                                  void *runner_user, FusionRebuildPlan *result,
+                                  char *error, size_t error_size) {
+    if (result) *result = (FusionRebuildPlan){0};
+    if (!root || !state_path || !tasks || !runner || !result)
+        return set_error(error, error_size, "invalid rebuild execution arguments");
+    FusionRebuildOrder order;
+    if (!fusion_rebuild_order_tasks(tasks, task_count, selected, selected_count,
+                                    &order, error, error_size)) return false;
+    char state_absolute[4096];
+    if (!resolve_state_path(root, state_path, state_absolute, error, error_size)) {
+        fusion_rebuild_order_free(&order);
+        return false;
+    }
+    FusionRebuildState state;
+    if (!fusion_rebuild_state_load(state_absolute, &state, error, error_size)) {
+        fusion_rebuild_order_free(&order);
+        return false;
+    }
+    bool *skipped = calloc(task_count, sizeof *skipped);
+    char (*digests)[65] = calloc(task_count, sizeof *digests);
+    FusionRebuildPlanEntry *entries = calloc(order.count, sizeof *entries);
+    if (!skipped || !digests || !entries) {
+        free(skipped); free(digests); free(entries);
+        fusion_rebuild_state_free(&state);
+        fusion_rebuild_order_free(&order);
+        return set_error(error, error_size, "out of memory");
+    }
+    bool ok = true;
+    for (size_t position = 0; position < order.count && ok; ++position) {
+        const FusionRebuildTask *task = order.items[position];
+        ptrdiff_t index_value = task_index(tasks, task_count, task->name);
+        size_t index = (size_t)index_value;
+        FusionRebuildPlanEntry *entry = &entries[position];
+        entry->task = task;
+        const char *missing = NULL;
+        for (size_t item = 0; item < task->requirement_count; ++item) {
+            char absolute[4096];
+            if (!join_path(absolute, sizeof absolute, root, task->requirements[item]) ||
+                !is_regular(absolute)) {
+                missing = task->requirements[item];
+                break;
+            }
+        }
+        bool dependency_skipped = false;
+        const char *dependency_digests[16] = {0};
+        for (size_t item = 0; item < task->dependency_count; ++item) {
+            ptrdiff_t dependency = task_index(tasks, task_count, task->dependencies[item]);
+            if (dependency < 0) {
+                ok = set_error(error, error_size, "%s: unknown dependency", task->name);
+                break;
+            }
+            dependency_digests[item] = digests[dependency];
+            dependency_skipped |= skipped[dependency];
+        }
+        if (!ok) break;
+        if (missing) {
+            skipped[index] = true;
+            entry->status = FUSION_REBUILD_SKIPPED_MISSING;
+            snprintf(entry->detail, sizeof entry->detail, "missing %s", missing);
+            continue;
+        }
+        if (dependency_skipped) {
+            skipped[index] = true;
+            entry->status = FUSION_REBUILD_SKIPPED_DEPENDENCY;
+            snprintf(entry->detail, sizeof entry->detail, "dependency skipped");
+            continue;
+        }
+        if (!input_digest(root, task, dependency_digests, digests[index],
+                          &entry->input_count, error, error_size)) {
+            ok = false;
+            break;
+        }
+        snprintf(entry->input_digest, sizeof entry->input_digest, "%s", digests[index]);
+        char current_output[65] = "";
+        bool outputs_exist = false, outputs_valid = true;
+        if (!output_digest(root, task, current_output, &outputs_exist,
+                           &entry->output_count, error, error_size) ||
+            !validate_outputs(root, task, &outputs_valid, error, error_size)) {
+            ok = false;
+            break;
+        }
+        const FusionJson *state_tasks = fusion_json_member(&state.document, "tasks");
+        const FusionJson *record = fusion_json_member(state_tasks, task->name);
+        const FusionJson *recorded_digest = fusion_json_member(record, "digest");
+        const FusionJson *recorded_output = fusion_json_member(record, "output_digest");
+        bool rebuild = force || !recorded_digest ||
+                       recorded_digest->kind != FUSION_JSON_STRING ||
+                       strcmp(recorded_digest->string, digests[index]) ||
+                       !outputs_exist || !recorded_output ||
+                       recorded_output->kind != FUSION_JSON_STRING ||
+                       strcmp(recorded_output->string, current_output) || !outputs_valid;
+        if (!rebuild) {
+            entry->status = FUSION_REBUILD_UP_TO_DATE;
+            snprintf(entry->output_digest, sizeof entry->output_digest, "%s",
+                     current_output);
+            continue;
+        }
+        if (!runner(root, task, runner_user, error, error_size)) {
+            if (error && error_size && !error[0])
+                snprintf(error, error_size, "%s: rebuild action failed", task->name);
+            ok = false;
+            break;
+        }
+        outputs_exist = false;
+        outputs_valid = true;
+        if (!output_digest(root, task, current_output, &outputs_exist,
+                           &entry->output_count, error, error_size) ||
+            !validate_outputs(root, task, &outputs_valid, error, error_size)) {
+            ok = false;
+            break;
+        }
+        if (!outputs_exist) {
+            ok = set_error(error, error_size,
+                           "%s: task completed without all declared outputs", task->name);
+            break;
+        }
+        if (!outputs_valid) {
+            ok = set_error(error, error_size, "%s: invalid outputs after the run",
+                           task->name);
+            break;
+        }
+        PathList outputs = {0};
+        if (!task_outputs(root, task, &outputs, error, error_size)) {
+            paths_free(&outputs);
+            ok = false;
+            break;
+        }
+        paths_sort_unique(&outputs);
+        ok = update_state_record(&state, task, digests[index], current_output,
+                                 &outputs, error, error_size) &&
+             fusion_rebuild_state_save(state_absolute, &state, error, error_size);
+        paths_free(&outputs);
+        if (!ok) break;
+        entry->status = FUSION_REBUILD_REBUILT;
+        snprintf(entry->output_digest, sizeof entry->output_digest, "%s", current_output);
+    }
+    if (ok) {
+        result->entries = entries;
+        result->count = order.count;
+    } else free(entries);
+    free(skipped);
+    free(digests);
+    fusion_rebuild_state_free(&state);
+    fusion_rebuild_order_free(&order);
+    return ok;
+}
+
+bool fusion_rebuild_execute(const char *root, const char *state_path,
+                            const char *const *selected, size_t selected_count,
+                            bool force, FusionRebuildPlan *result,
+                            char *error, size_t error_size) {
+    size_t task_count = 0;
+    const FusionRebuildTask *tasks = fusion_rebuild_tasks(&task_count);
+    return fusion_rebuild_execute_tasks(root, state_path, tasks, task_count,
+                                        selected, selected_count, force,
+                                        fusion_rebuild_run_registered_action, NULL,
+                                        result, error, error_size);
+}
+
 const char *fusion_rebuild_plan_status_name(FusionRebuildPlanStatus status) {
     switch (status) {
         case FUSION_REBUILD_UP_TO_DATE: return "up to date";
         case FUSION_REBUILD_WOULD_REBUILD: return "would rebuild";
+        case FUSION_REBUILD_REBUILT: return "rebuilt";
         case FUSION_REBUILD_SKIPPED_MISSING: return "skipped";
         case FUSION_REBUILD_SKIPPED_DEPENDENCY: return "skipped";
     }

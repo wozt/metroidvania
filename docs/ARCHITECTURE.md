@@ -110,7 +110,7 @@ existing tools are extended toward it as real needs appear.
 
 ## Native inventory and rebuild orchestration
 
-`python3 -m scripts.rebuild --all` is the initial dependency-aware entry point.
+`build/fusion_rebuild --all` is the dependency-aware reconstruction entry point.
 Its current graph has two deterministic, ROM-free tasks:
 
 1. `inventory` scans both pinned source trees for C definitions, assembly
@@ -169,22 +169,26 @@ missing output or an output edited by hand triggers the task again. A dry run
 reports a task whose dependency would be rebuilt as pending instead of
 reading inputs that do not exist yet.
 
-The native replacement now has its first bounded layer in
+The native replacement is implemented in
 `include/fusion/pipeline/rebuild.h`, `src/pipeline/tasks.c` and
-`src/pipeline/graph.c`. It registers the same 15 tasks, their versions,
+`src/pipeline/graph.c`, with cache, planning and execution split across the
+other files in `src/pipeline/`. It registers the same 15 tasks, their versions,
 groups, explicit dependencies and local prerequisites, and resolves selected
 tasks with deterministic topological ordering, duplicate suppression, unknown
 dependency diagnostics and cycle detection. `fusion_rebuild --list` exposes
 that registry and marks `inventory`, `checklist` and `metroid_sound` as the
-three temporary Python-backed tasks. It does not execute tasks yet; cache
-loading and deterministic atomic writing, exact input/dependency/decompilation
+three temporary Python-backed tasks. Cache loading and deterministic atomic
+writing, exact input/dependency/decompilation
 stamps, output fingerprints, room-export and content-addressed sprite-index
 validation, prerequisite propagation, forced invalidation and incremental
-dry-run planning are now native. The C planner reads the existing v1 cache
-without rewriting it, preserves unknown records when its writer is exercised,
-rejects a symlinked state file and produces the same complete dry-run output
-as Python. Task actions and live state updates remain authoritative in
-`scripts/rebuild.py` until the next migration lot proves them.
+dry-run planning and real execution are native. Each successful action is
+rehashed, validated and atomically recorded before its dependents run; failures
+leave the last successful state resumable. The C planner reads the existing v1
+cache without rewriting it, preserves unknown records and fields, rejects
+unsafe state/output paths and produces the same complete dry-run output as
+Python. The twelve migrated asset tasks dispatch to `fusion_importer` without a
+shell. Inventory, checklist and audio are still explicit Python actions; the
+first two must be ported before the legacy orchestrator can be removed.
 
 Routine categories record their evidence (`category_evidence`, schema v6):
 `path` when the source location decides it (all of Zero Mission's sorted

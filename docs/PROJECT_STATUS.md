@@ -2,6 +2,32 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0537 - Native rebuild execution
+
+- `fusion_rebuild` now executes the complete 15-task dependency graph instead
+  of stopping after planning. The twelve migrated asset actions call the C11
+  importer, while inventory, checklist and Zero Mission audio remain visibly
+  marked temporary Python actions rather than being misreported as native.
+- Successful tasks are immediately rehashed, their export or sprite indexes
+  are validated, and their v1 cache record is atomically persisted. Unknown
+  cache fields survive a rebuilt record, failed actions are not recorded, and
+  a later invocation resumes from the last successful dependency.
+- Output and cache directories are created component by component while
+  rejecting unsafe relative paths, symlinked components and non-directories.
+  Child tools are launched without a shell, with their exit codes and signals
+  converted into bounded task diagnostics.
+- Native tests now cover cold execution, an entirely current second pass,
+  changed-input propagation, an action failure and recovery. A real forced
+  `inventory -> checklist` pass completed through `fusion_rebuild`, all twelve
+  migrated asset actions completed in one forced pass through the native
+  dispatcher, and the complete dry-run remains byte-identical to
+  `scripts/rebuild.py`. The audio action was deliberately excluded.
+- Orchestrator migration is now 3 of 4 explicit milestones (75%). ROM
+  extraction remains 10 of 11 native, and 3 of 15 registered tasks remain
+  Python-backed; no gameplay or fidelity status changed.
+- Next: port the inventory and checklist generators themselves to C11 and
+  prove byte-identical tracked outputs, leaving audio as the sole Python task.
+
 ## Patch 0536 - Native incremental rebuild planning
 
 - Added native v1 rebuild-state loading and deterministic atomic writing. The

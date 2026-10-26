@@ -147,12 +147,94 @@ static bool write_body(FILE *file, const void *opaque) {
            fputc('\n', file) != EOF;
 }
 
+static bool ensure_parent_directory(const char *path, char *error,
+                                    size_t error_size) {
+    char *copy = strdup(path);
+    if (!copy) {
+        set_error(error, error_size, "out of memory");
+        return false;
+    }
+    char *last = strrchr(copy, '/');
+    if (!last) {
+        free(copy);
+        return true;
+    }
+    if (last == copy) {
+        free(copy);
+        return true;
+    }
+    *last = '\0';
+    char *cursor = copy + (copy[0] == '/');
+    for (;;) {
+        char *slash = strchr(cursor, '/');
+        if (slash) *slash = '\0';
+        struct stat status;
+        if (lstat(copy, &status)) {
+            if (errno != ENOENT || mkdir(copy, 0755)) {
+                free(copy);
+                set_error(error, error_size, "cannot create rebuild state directory");
+                return false;
+            }
+        } else if (S_ISLNK(status.st_mode) || !S_ISDIR(status.st_mode)) {
+            free(copy);
+            set_error(error, error_size,
+                      "rebuild state parent must not contain a symlink");
+            return false;
+        }
+        if (!slash) break;
+        *slash = '/';
+        cursor = slash + 1;
+    }
+    free(copy);
+    return true;
+}
+
+static bool reject_symlink_output(const char *path, char *error,
+                                  size_t error_size) {
+    struct stat status;
+    if (!lstat(path, &status)) {
+        if (S_ISLNK(status.st_mode)) {
+            set_error(error, error_size, "rebuild state output must not be a symlink");
+            return false;
+        }
+    } else if (errno != ENOENT) {
+        set_error(error, error_size, "cannot inspect rebuild state output");
+        return false;
+    }
+    size_t length = strlen(path);
+    char *temporary = malloc(length + 5);
+    if (!temporary) {
+        set_error(error, error_size, "out of memory");
+        return false;
+    }
+    snprintf(temporary, length + 5, "%s.tmp", path);
+    bool safe = lstat(temporary, &status) != 0;
+    if (!safe && S_ISLNK(status.st_mode))
+        set_error(error, error_size,
+                  "rebuild temporary state output must not be a symlink");
+    else if (!safe && !S_ISREG(status.st_mode))
+        set_error(error, error_size,
+                  "rebuild temporary state output must be a regular file");
+    else if (safe && errno != ENOENT) {
+        safe = false;
+        set_error(error, error_size, "cannot inspect rebuild temporary state output");
+    } else safe = true;
+    free(temporary);
+    return safe;
+}
+
 bool fusion_rebuild_state_save(const char *path, const FusionRebuildState *state,
                                char *error, size_t error_size) {
     FusionJson sorted = {0};
     char *text = NULL;
     size_t size = 0;
-    if (!path || !state || !sorted_clone(&state->document, &sorted) ||
+    if (!path || !state) {
+        set_error(error, error_size, "invalid rebuild state output");
+        return false;
+    }
+    if (!ensure_parent_directory(path, error, error_size) ||
+        !reject_symlink_output(path, error, error_size)) return false;
+    if (!sorted_clone(&state->document, &sorted) ||
         !fusion_json_write(&sorted, 2, &text, &size)) {
         fusion_json_free(&sorted);
         free(text);

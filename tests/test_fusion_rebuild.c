@@ -228,6 +228,14 @@ static void test_incremental_plan_and_v1_state(void) {
                                       &plan, error, sizeof error));
     assert(strstr(error, "not a symlink") != NULL);
     assert(!unlink(state_path));
+    assert(fusion_rebuild_state_load(state_path, &state, error, sizeof error));
+    char temporary_state[520];
+    snprintf(temporary_state, sizeof temporary_state, "%s.tmp", state_path);
+    assert(!symlink(middle, temporary_state));
+    assert(!fusion_rebuild_state_save(state_path, &state, error, sizeof error));
+    assert(strstr(error, "temporary state output") != NULL);
+    fusion_rebuild_state_free(&state);
+    assert(!unlink(temporary_state));
     assert(!unlink(middle));
     assert(!unlink(final));
     assert(!rmdir(cache));
@@ -288,6 +296,99 @@ static void test_export_index_validation(void) {
     assert(!rmdir(root));
 }
 
+typedef struct {
+    size_t calls;
+    const char *fail_name;
+} TestRunner;
+
+static bool test_action_runner(const char *root, const FusionRebuildTask *task,
+                               void *opaque, char *error, size_t error_size) {
+    TestRunner *runner = opaque;
+    ++runner->calls;
+    if (runner->fail_name && !strcmp(runner->fail_name, task->name)) {
+        snprintf(error, error_size, "%s failed deliberately", task->name);
+        return false;
+    }
+    char path[512];
+    snprintf(path, sizeof path, "%s/%s", root, task->outputs[0]);
+    char contents[128];
+    snprintf(contents, sizeof contents, "%s output %zu", task->name, runner->calls);
+    write_text(path, contents);
+    return true;
+}
+
+static void test_execution_and_failure(void) {
+    char root_template[] = "/tmp/fusion-rebuild-execute-XXXXXX";
+    char *root = mkdtemp(root_template);
+    assert(root != NULL);
+    char input[512], first_output[512], second_output[512], state_path[512];
+    snprintf(input, sizeof input, "%s/input.txt", root);
+    snprintf(first_output, sizeof first_output, "%s/first.txt", root);
+    snprintf(second_output, sizeof second_output, "%s/second.txt", root);
+    snprintf(state_path, sizeof state_path, "%s/cache/state.json", root);
+    write_text(input, "source");
+    const char *requirements[] = {"input.txt"};
+    const char *inputs[] = {"input.txt"};
+    const char *first_outputs[] = {"first.txt"};
+    const char *dependencies[] = {"first"};
+    const char *second_inputs[] = {"first.txt"};
+    const char *second_outputs[] = {"second.txt"};
+    const FusionRebuildTask tasks[] = {
+        {.name = "first", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
+         .backend = FUSION_REBUILD_BACKEND_C,
+         .requirements = requirements, .requirement_count = 1,
+         .inputs = inputs, .input_count = 1,
+         .outputs = first_outputs, .output_count = 1},
+        {.name = "second", .version = 1, .group = FUSION_REBUILD_GROUP_NATIVE,
+         .backend = FUSION_REBUILD_BACKEND_C,
+         .dependencies = dependencies, .dependency_count = 1,
+         .inputs = second_inputs, .input_count = 1,
+         .outputs = second_outputs, .output_count = 1},
+    };
+    const char *selected[] = {"second"};
+    char error[512] = "";
+    FusionRebuildPlan result;
+    TestRunner runner = {0};
+    assert(fusion_rebuild_execute_tasks(root, state_path, tasks, 2, selected, 1,
+                                        false, test_action_runner, &runner,
+                                        &result, error, sizeof error));
+    assert(runner.calls == 2 && result.count == 2);
+    assert(result.entries[0].status == FUSION_REBUILD_REBUILT);
+    assert(result.entries[1].status == FUSION_REBUILD_REBUILT);
+    fusion_rebuild_plan_free(&result);
+    assert(fusion_rebuild_execute_tasks(root, state_path, tasks, 2, selected, 1,
+                                        false, test_action_runner, &runner,
+                                        &result, error, sizeof error));
+    assert(runner.calls == 2);
+    assert(result.entries[0].status == FUSION_REBUILD_UP_TO_DATE);
+    assert(result.entries[1].status == FUSION_REBUILD_UP_TO_DATE);
+    fusion_rebuild_plan_free(&result);
+
+    write_text(input, "changed");
+    runner.fail_name = "second";
+    assert(!fusion_rebuild_execute_tasks(root, state_path, tasks, 2, selected, 1,
+                                         false, test_action_runner, &runner,
+                                         &result, error, sizeof error));
+    assert(strstr(error, "failed deliberately") != NULL);
+    assert(runner.calls == 4);
+    runner.fail_name = NULL;
+    assert(fusion_rebuild_execute_tasks(root, state_path, tasks, 2, selected, 1,
+                                        false, test_action_runner, &runner,
+                                        &result, error, sizeof error));
+    assert(result.entries[0].status == FUSION_REBUILD_UP_TO_DATE);
+    assert(result.entries[1].status == FUSION_REBUILD_REBUILT);
+    fusion_rebuild_plan_free(&result);
+
+    assert(!unlink(state_path));
+    char cache[512];
+    snprintf(cache, sizeof cache, "%s/cache", root);
+    assert(!unlink(second_output));
+    assert(!unlink(first_output));
+    assert(!unlink(input));
+    assert(!rmdir(cache));
+    assert(!rmdir(root));
+}
+
 int main(void) {
     test_registered_graph();
     test_unknown_and_cycle();
@@ -295,6 +396,7 @@ int main(void) {
     test_duplicate_selection_is_stable();
     test_incremental_plan_and_v1_state();
     test_export_index_validation();
+    test_execution_and_failure();
     puts("fusion rebuild graph and cache tests passed");
     return 0;
 }

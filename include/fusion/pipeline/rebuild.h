@@ -59,6 +59,7 @@ typedef struct {
 typedef enum {
     FUSION_REBUILD_UP_TO_DATE,
     FUSION_REBUILD_WOULD_REBUILD,
+    FUSION_REBUILD_REBUILT,
     FUSION_REBUILD_SKIPPED_MISSING,
     FUSION_REBUILD_SKIPPED_DEPENDENCY
 } FusionRebuildPlanStatus;
@@ -77,6 +78,11 @@ typedef struct {
     FusionRebuildPlanEntry *entries;
     size_t count;
 } FusionRebuildPlan;
+
+typedef bool (*FusionRebuildActionRunner)(const char *root,
+                                          const FusionRebuildTask *task,
+                                          void *user,
+                                          char *error, size_t error_size);
 
 const FusionRebuildTask *fusion_rebuild_tasks(size_t *count);
 const FusionRebuildTask *fusion_rebuild_find_task(const char *name);
@@ -109,6 +115,19 @@ bool fusion_rebuild_plan_tasks(const char *root, const char *state_path,
                                const char *const *selected, size_t selected_count,
                                bool force, FusionRebuildPlan *plan,
                                char *error, size_t error_size);
+/* Executes selected tasks in dependency order and persists each successful
+ * result atomically. The injectable runner is intended for tests and native
+ * front ends; fusion_rebuild_execute() uses the registered actions. */
+bool fusion_rebuild_execute_tasks(const char *root, const char *state_path,
+                                  const FusionRebuildTask *tasks, size_t task_count,
+                                  const char *const *selected, size_t selected_count,
+                                  bool force, FusionRebuildActionRunner runner,
+                                  void *runner_user, FusionRebuildPlan *result,
+                                  char *error, size_t error_size);
+bool fusion_rebuild_execute(const char *root, const char *state_path,
+                            const char *const *selected, size_t selected_count,
+                            bool force, FusionRebuildPlan *result,
+                            char *error, size_t error_size);
 const char *fusion_rebuild_plan_status_name(FusionRebuildPlanStatus status);
 void fusion_rebuild_plan_free(FusionRebuildPlan *plan);
 

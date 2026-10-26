@@ -99,11 +99,6 @@ int main(int argc, char **argv) {
         }
     }
     if (list) return list_tasks();
-    if (!dry_run) {
-        usage(stderr, argv[0]);
-        fprintf(stderr, "fusion_rebuild: task execution is not implemented yet; use --dry-run\n");
-        return 3;
-    }
     size_t task_count = 0;
     const FusionRebuildTask *tasks = fusion_rebuild_tasks(&task_count);
     const char **selected = calloc(task_count, sizeof *selected);
@@ -131,9 +126,13 @@ int main(int argc, char **argv) {
     }
     char error[512] = "";
     FusionRebuildPlan plan;
-    bool ok = fusion_rebuild_plan(FUSION_SOURCE_DIR, state_path,
-                                  selected, selected_count, force,
-                                  &plan, error, sizeof error);
+    bool ok = dry_run
+                  ? fusion_rebuild_plan(FUSION_SOURCE_DIR, state_path,
+                                        selected, selected_count, force,
+                                        &plan, error, sizeof error)
+                  : fusion_rebuild_execute(FUSION_SOURCE_DIR, state_path,
+                                           selected, selected_count, force,
+                                           &plan, error, sizeof error);
     free(selected);
     if (!ok) {
         fprintf(stderr, "fusion_rebuild: %s\n", error);

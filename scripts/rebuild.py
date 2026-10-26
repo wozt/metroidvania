@@ -114,6 +114,8 @@ ROMS = {
 }
 DECOMPS = {"aria": ROOT / "third_party/cvaos", "metroid": ROOT / "third_party/mzm"}
 MZM_ELF = ROOT / "third_party/mzm/mzm_us.elf"
+MZM_DATABASE = ROOT / "third_party/mzm/database.json"
+AOS_DATABASE = ROOT / "third_party/cvaos/database.json"
 
 
 def _module_sources(module: str) -> list[Path]:
@@ -287,9 +289,19 @@ ASSET_TASKS = {
         action=_run_native_manifest(
             "metroid", ROOT / SHARED_MANIFESTS / "rom_metroid.json"),
         requires=(ROMS["metroid"], NATIVE_IMPORTER), group="assets"),
-    "raw_import": _asset_task(
-        "raw_import", "both", "import_game_assets", ("--scope", "all"),
-        (ROOT / IMPORT_CATALOG,), ("aria_rom", "metroid_rom")),
+    # The decomp databases' raw blocks of both ROMs, the import manifest and
+    # the Zero Mission room descriptors, written by the native importer.
+    "raw_import": Task(
+        name="raw_import", version=2, dependencies=("aria_rom", "metroid_rom"),
+        inputs=lambda: [ROMS["metroid"], ROMS["aria"], MZM_ELF, MZM_DATABASE,
+                        AOS_DATABASE, NATIVE_IMPORTER],
+        outputs=(ROOT / IMPORT_CATALOG, ROOT / "assets/extracted/rooms/metroid/rooms.tsv"),
+        action=_run_native("--raw-import", ROMS["metroid"], ROMS["aria"], MZM_ELF,
+                           MZM_DATABASE, AOS_DATABASE, ROOT / "assets/extracted"),
+        requires=(ROMS["metroid"], ROMS["aria"], MZM_ELF, MZM_DATABASE, AOS_DATABASE,
+                  NATIVE_IMPORTER),
+        stamps=lambda: [*_decomp_stamp("metroid"), *_decomp_stamp("aria")],
+        group="assets"),
     # The Python rebuild graph still creates the private parent safely; the
     # catalog bytes themselves come exclusively from the native importer.
     "aria_world": Task(

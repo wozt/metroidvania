@@ -54,6 +54,9 @@ add_library(fusion_assets STATIC
     src/assets/mzm/message_text.c
     src/assets/mzm/sprites.c
     src/assets/mzm/sprite_tables.c
+    src/assets/mzm/music_names.c
+    src/assets/core/json.c
+    src/assets/core/raw_import.c
 )
 target_include_directories(fusion_assets PUBLIC include)
 target_include_directories(fusion_assets PRIVATE src/assets/core)
@@ -174,6 +177,11 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_mzm_sprites_assets_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_mzm_sprites_assets_tests)
     add_test(NAME fusion_mzm_sprites_assets COMMAND fusion_mzm_sprites_assets_tests)
+    add_executable(fusion_raw_import_tests tests/test_fusion_raw_import.c)
+    target_include_directories(fusion_raw_import_tests PRIVATE src/assets/core)
+    target_link_libraries(fusion_raw_import_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_raw_import_tests)
+    add_test(NAME fusion_raw_import COMMAND fusion_raw_import_tests)
     add_executable(fusion_assets_mzm_tests tests/test_fusion_assets_mzm.c)
     target_link_libraries(fusion_assets_mzm_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_mzm_tests)

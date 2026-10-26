@@ -2,6 +2,7 @@
 #include "fusion/assets/mzm.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 enum { GBA_ROM_BASE = 0x08000000 };
@@ -146,5 +147,83 @@ bool fusion_mzm_read_room_entry(const FusionRom *rom,
         }
     }
     if (error && error_size > 0) error[0] = '\0';
+    return true;
+}
+
+/* The first sized symbol at an address (the table is address sorted). */
+static const char *symbol_name_at(const FusionMzmRomSymbolTable *symbols,
+                                  uint32_t address) {
+    size_t low = 0, high = symbols->count;
+    while (low < high) {
+        size_t middle = low + (high - low) / 2;
+        if (symbols->entries[middle].address < address) low = middle + 1;
+        else high = middle;
+    }
+    for (; low < symbols->count && symbols->entries[low].address == address; ++low)
+        if (symbols->entries[low].size) return symbols->entries[low].name;
+    return NULL;
+}
+
+bool fusion_mzm_serialize_room_descriptors(const FusionRom *rom,
+                                           const FusionMzmRomSymbolTable *symbols,
+                                           FusionMzmTextFile *file, size_t *room_count,
+                                           char *error, size_t error_size) {
+    if (file) *file = (FusionMzmTextFile){0};
+    if (!rom || !symbols || !file || !room_count) {
+        set_error(error, error_size, "invalid room descriptor request");
+        return false;
+    }
+    *room_count = 0;
+    FusionMzmRoomDirectory directory;
+    if (!fusion_mzm_read_room_directory(rom, symbols, &directory, error, error_size))
+        return false;
+    static const char header[] =
+        "# MZM native descriptor metadata; NOT rendered/decoded room maps\n"
+        "# area|index|tileset|music|bg1|bg2|clip|spriteset|mapX|mapY\n";
+    size_t capacity = sizeof header + directory.total_rooms * 160;
+    char *text = malloc(capacity);
+    if (!text) {
+        set_error(error, error_size, "cannot allocate the room descriptors");
+        return false;
+    }
+    size_t used = (size_t)snprintf(text, capacity, "%s", header);
+    for (size_t area = 0; area < FUSION_MZM_ROOM_AREA_COUNT; ++area) {
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            FusionMzmRoomEntry entry;
+            if (!fusion_mzm_read_room_entry(rom, &directory, area, room, &entry, error,
+                                            error_size)) {
+                free(text);
+                return false;
+            }
+            const char *music = fusion_mzm_music_name(entry.music_track);
+            const char *bg1 = symbol_name_at(symbols, entry.bg1_pointer);
+            const char *bg2 = symbol_name_at(symbols, entry.bg2_pointer);
+            const char *clip = symbol_name_at(symbols, entry.clip_pointer);
+            if (!music || !bg1 || !bg2 || !clip) {
+                free(text);
+                set_error(error, error_size, "room descriptor without a native name");
+                return false;
+            }
+            /* The test areas' rooms name their spriteset UCHAR_MAX. */
+            char spriteset[16];
+            if (entry.default_spriteset == 0xFF)
+                snprintf(spriteset, sizeof spriteset, "UCHAR_MAX");
+            else
+                snprintf(spriteset, sizeof spriteset, "%u", entry.default_spriteset);
+            int written = snprintf(text + used, capacity - used,
+                                   "%s|%zu|%u|%s|%s|%s|%s|%s|%u|%u\n",
+                                   area_specs[area].id, room, entry.tileset, music, bg1,
+                                   bg2, clip, spriteset, entry.map_x, entry.map_y);
+            if (written < 0 || (size_t)written >= capacity - used) {
+                free(text);
+                set_error(error, error_size, "room descriptor line too long");
+                return false;
+            }
+            used += (size_t)written;
+            ++*room_count;
+        }
+    }
+    file->data = (uint8_t *)text;
+    file->size = used;
     return true;
 }

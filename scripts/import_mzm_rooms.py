@@ -3,11 +3,11 @@
 """Decode original Zero Mission room DESCRIPTORS from pinned decomp source.
 
 This does not decode compressed room graphics, collision maps, or enemies.
-It creates private metadata only, referenced by GTK and the asset catalog.
+The editor tools read the descriptors; the private rooms/metroid/rooms.tsv is
+written by the native importer (``fusion_importer --raw-import``).
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import re
 import sys
@@ -54,37 +54,3 @@ def decode_room_descriptors(source: str) -> list[dict]:
     if not areas:
         raise ValueError("no original Zero Mission RoomEntryRom tables found")
     return rooms
-
-
-def emit_catalog(rooms: list[dict]) -> dict:
-    from scripts.import_game_assets import write_generated
-    output = {"format": "MV_MZM_ROOM_DESCRIPTORS_1",
-              "source": "pinned metroidret/mzm, RoomEntryRom declarations",
-              "warning": "Original room graphics, tilemaps, enemy instances and collision data remain UNDECODED",
-              "count": len(rooms), "rooms": rooms}
-    rows = ["# MZM native descriptor metadata; NOT rendered/decoded room maps",
-            "# area|index|tileset|music|bg1|bg2|clip|spriteset|mapX|mapY"]
-    for room in rooms:
-        f = room["fields"]
-        rows.append("|".join((room["area"], str(room["index"]),
-                              f["tileset"], f["musicTrack"], f["pBg1Data"],
-                              f["pBg2Data"], f["pClipData"],
-                              f["defaultSpriteset"], f["mapX"], f["mapY"])))
-    write_generated("rooms/metroid/catalog.json", (json.dumps(output, indent=2) + "\n").encode())
-    write_generated("rooms/metroid/rooms.tsv", ("\n".join(rows) + "\n").encode())
-    return output
-
-
-def run() -> dict:
-    if not ROOM_SOURCE.is_file():
-        raise ValueError("missing pinned Zero Mission source; run git submodule update --init")
-    room_data = ROOM_SOURCE.read_text(encoding="utf-8")
-    return emit_catalog(decode_room_descriptors(room_data))
-
-
-if __name__ == "__main__":
-    try:
-        catalog = run()
-    except (ValueError, OSError) as exc:
-        raise SystemExit(f"MZM room import failed: {exc}") from exc
-    print(f"Zero Mission original room descriptors indexed: {catalog['count']} (metadata only)")

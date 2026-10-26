@@ -480,6 +480,15 @@ bool fusion_mzm_serialize_runtime_room_metadata(
 /* The PrimarySprite enumerator name without its PSPRITE_ prefix, NULL
  * outside the enum. */
 const char *fusion_mzm_primary_sprite_name(size_t id);
+/* The MUSIC_* enumerator of a music track, or NULL. */
+const char *fusion_mzm_music_name(unsigned value);
+/* rooms/metroid/rooms.tsv: each room's area, index, tileset, music, BG1,
+ * BG2 and Clipdata symbols, default spriteset and map position, named as the
+ * decompilation's RoomEntryRom declarations name them. */
+bool fusion_mzm_serialize_room_descriptors(const FusionRom *rom,
+                                           const FusionMzmRomSymbolTable *symbols,
+                                           FusionMzmTextFile *file, size_t *room_count,
+                                           char *error, size_t error_size);
 bool fusion_mzm_read_spritesets(
     const FusionRom *rom, const FusionMzmRomSymbolTable *symbols,
     FusionMzmSpritesetTable *table,

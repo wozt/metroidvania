@@ -372,9 +372,13 @@ New private generators use three stable roots:
 - `aria/` for Aria raw data, rooms, maps and native sprites;
 - `shared/` for manifests and diagnostics that describe both worlds.
 
-`scripts/asset_layout.py` is the path contract. The general importer writes raw
-blocks and basic character previews below their world root and writes its
-manifest below `shared/manifests/`. `fusion_importer --mzm-export-samus`
+`scripts/asset_layout.py` is the path contract. The raw import
+(`fusion_importer --raw-import`, `src/assets/core/raw_import.c`) copies the
+blocks the pinned decompilation databases identify below each world's `raw/`
+root, writes its manifest below `shared/manifests/` and the Zero Mission room
+descriptors to `rooms/metroid/rooms.tsv`; the Python editor tools write
+`rooms/metroid/world_atlas.tsv` from the decompilation source when they need
+it. `fusion_importer --mzm-export-samus`
 (`src/assets/mzm/samus.c`) writes the canonical content-addressed Samus
 runtime library below
 `metroid/sprites/samus/runtime/`; repeated pixels are stored once by SHA-256.

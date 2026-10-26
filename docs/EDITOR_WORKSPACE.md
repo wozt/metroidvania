@@ -3,7 +3,7 @@
 Build and open the GTK4 editor:
 
 ```sh
-python3 scripts/import_game_assets.py --scope all
+python3 -m scripts.rebuild --task raw_import
 cmake -S . -B build
 cmake --build build -j"$(nproc)"
 ./build/fusion_map_editor

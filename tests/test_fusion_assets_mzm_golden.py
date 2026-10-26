@@ -28,6 +28,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BINARY = ROOT / "build/fusion_importer"
 ROM = ROOT / "roms/Metroid - Zero Mission (USA).gba"
 ELF = ROOT / "third_party/mzm/mzm_us.elf"
+ARIA_ROM = ROOT / "roms/Castlevania - Aria of Sorrow (USA).gba"
+DATABASES = (ROOT / "third_party/mzm/database.json", ROOT / "third_party/cvaos/database.json")
 FIXTURE = ROOT / "tests/fixtures/mzm_native_golden.tsv"
 SCHEMA = "metroidvania-mzm-native-golden-v1"
 COMMANDS = (
@@ -106,20 +108,66 @@ def _current() -> list[str]:
     return lines
 
 
+def _raw_current() -> list[str]:
+    """The raw import of both ROMs: console, manifest, room descriptors and
+    one digest over every raw block's path and bytes."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        console = _run("--raw-import", str(ROM), str(ARIA_ROM), str(ELF),
+                       *map(str, DATABASES), str(root))
+        lines = [f"raw-console\tstdout\t{hashlib.sha256(console).hexdigest()}"]
+        for relative in ("shared/manifests/import_catalog.json", "rooms/metroid/rooms.tsv"):
+            lines.append(f"raw-file\t{relative}\t"
+                         f"{hashlib.sha256((root / relative).read_bytes()).hexdigest()}")
+        blocks = hashlib.sha256()
+        files = sorted(path for world in ("metroid", "aria")
+                       for path in (root / world / "raw").rglob("*") if path.is_file())
+        for path in files:
+            blocks.update(path.relative_to(root).as_posix().encode() + b"\0")
+            blocks.update(hashlib.sha256(path.read_bytes()).digest())
+        lines.append(f"raw-blocks\t{len(files)}\t{blocks.hexdigest()}")
+    return lines
+
+
+def _compare(test: unittest.TestCase, current: list[str], expected: list[str]) -> None:
+    recorded = {tuple(line.split("\t")[:2]): line for line in expected}
+    produced = {tuple(line.split("\t")[:2]): line for line in current}
+    test.assertEqual(sorted(produced), sorted(recorded))
+    for key, line in produced.items():
+        test.assertEqual(line, recorded[key], key)
+
+
+def _fixture(raw: bool) -> list[str]:
+    lines = FIXTURE.read_text(encoding="utf-8").splitlines()
+    return [lines[0]] + [line for line in lines[1:] if line.startswith("raw-") == raw]
+
+
+def _update(lines: list[str], raw: bool) -> None:
+    kept = _fixture(not raw)[1:] if FIXTURE.exists() else []
+    header = [f"schema\t{SCHEMA}"]
+    body = (lines if raw else lines[1:]) + kept
+    FIXTURE.write_text("\n".join(header + sorted(body, key=lambda line: line.startswith(
+        "raw-"))) + "\n", encoding="utf-8")
+
+
 @unittest.skipUnless(BINARY.exists() and ROM.exists() and ELF.exists(),
                      "native importer, local Zero Mission ROM or ELF is unavailable")
 class NativeGoldenTests(unittest.TestCase):
     def test_native_outputs_match_the_recorded_digests(self):
         current = _current()
         if os.environ.get("MZM_GOLDEN_UPDATE"):
-            FIXTURE.write_text("\n".join(current) + "\n", encoding="utf-8")
-        expected = FIXTURE.read_text(encoding="utf-8").splitlines()
+            _update(current, raw=False)
+        expected = _fixture(raw=False)
         self.assertEqual(current[0], expected[0])
-        recorded = {tuple(line.split("\t")[:2]): line for line in expected[1:]}
-        produced = {tuple(line.split("\t")[:2]): line for line in current[1:]}
-        self.assertEqual(sorted(produced), sorted(recorded))
-        for key, line in produced.items():
-            self.assertEqual(line, recorded[key], key)
+        _compare(self, current[1:], expected[1:])
+
+    @unittest.skipUnless(ARIA_ROM.exists() and all(path.exists() for path in DATABASES),
+                         "local Aria ROM or decompilation databases unavailable")
+    def test_raw_import_matches_the_recorded_digests(self):
+        current = _raw_current()
+        if os.environ.get("MZM_GOLDEN_UPDATE"):
+            _update(current, raw=True)
+        _compare(self, current, _fixture(raw=True)[1:])
 
     @unittest.skipIf(sys.platform == "win32", "POSIX symlinks")
     def test_room_export_refuses_symlinks_and_files(self):

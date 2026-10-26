@@ -3,6 +3,7 @@
  * only after an equivalence fixture and integration test. */
 #include "fusion/assets/aos.h"
 #include "fusion/assets/mzm.h"
+#include "fusion/assets/raw_import.h"
 #include "fusion/assets/rom.h"
 #include "fusion/assets/gba.h"
 
@@ -52,6 +53,7 @@ static void usage(const char *name) {
             "       %s --mzm-export-rooms ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-export-samus ROM ELF SAMUS_DIR PROJECTILE_DIR\n"
             "       %s --mzm-export-sprites ROM ELF RUNTIME_DIR METADATA_DIR\n"
+            "       %s --raw-import MZM_ROM AOS_ROM MZM_ELF MZM_DATABASE AOS_DATABASE OUTPUT_ROOT\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -65,7 +67,7 @@ static void usage(const char *name) {
             name,
             name, name, name, name,
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name);
+            name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -2273,6 +2275,51 @@ static int export_mzm_sprites(const char *rom_path, const char *elf_path,
     return 0;
 }
 
+/* The raw decompilation-database blocks of both ROMs, the import manifest
+ * and rooms/metroid/rooms.tsv, below the private assets root. */
+static int raw_import(char *const *arguments) {
+    FusionRom metroid = {0}, aria = {0};
+    uint8_t *elf = NULL, *metroid_database = NULL, *aria_database = NULL;
+    size_t elf_size = 0, metroid_size = 0, aria_size = 0, room_count = 0;
+    char error[512] = "";
+    FusionRawImportSummary summary;
+    FusionMzmRomSymbolTable symbols = {0};
+    FusionMzmTextFile rooms = {0};
+    const char *output = arguments[5];
+    bool ok = fusion_rom_open(FUSION_ASSET_GAME_METROID, arguments[0], &metroid,
+                              error, sizeof error) &&
+              fusion_rom_open(FUSION_ASSET_GAME_ARIA, arguments[1], &aria,
+                              error, sizeof error) &&
+              read_file(arguments[2], &elf, &elf_size, error, sizeof error) &&
+              read_file(arguments[3], &metroid_database, &metroid_size, error, sizeof error) &&
+              read_file(arguments[4], &aria_database, &aria_size, error, sizeof error) &&
+              fusion_raw_import(&metroid, &aria, (const char *)metroid_database, metroid_size,
+                                (const char *)aria_database, aria_size, output, &summary,
+                                error, sizeof error) &&
+              fusion_mzm_read_rom_symbols(&metroid, elf, elf_size, &symbols,
+                                          error, sizeof error) &&
+              fusion_mzm_serialize_room_descriptors(&metroid, &symbols, &rooms, &room_count,
+                                                    error, sizeof error) &&
+              fusion_write_private_file(output, "rooms/metroid/rooms.tsv", rooms.data,
+                                        rooms.size, error, sizeof error);
+    if (ok) {
+        printf("Raw decomp-identified blocks: %zu Zero Mission and %zu Aria "
+               "(%zu bytes, format NOT decoded)\n",
+               summary.metroid_blocks, summary.aria_blocks, summary.bytes);
+        printf("Original Zero Mission room descriptors: %zu\n", room_count);
+    } else {
+        fprintf(stderr, "raw-import: %s\n", error);
+    }
+    fusion_mzm_free_text_file(&rooms);
+    fusion_mzm_free_symbols(&symbols);
+    fusion_rom_close(&metroid);
+    fusion_rom_close(&aria);
+    free(elf);
+    free(metroid_database);
+    free(aria_database);
+    return ok ? 0 : 1;
+}
+
 static int inspect_mzm_metatiles(const char *rom_path, const char *elf_path) {
     FusionRom rom = {0};
     uint8_t *elf = NULL;
@@ -2913,6 +2960,9 @@ int main(int argc, char **argv) {
                  i + 2 < argc) {
             mzm_runtime_sprite_rom_path = argv[++i];
             mzm_runtime_sprite_elf_path = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--raw-import") && i + 6 < argc) {
+            return raw_import(argv + i + 1);
         }
         else if (!strcmp(argv[i], "--mzm-export-sprites") && i + 4 < argc) {
             mzm_sprite_rom_path = argv[++i];

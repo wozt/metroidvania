@@ -2,6 +2,40 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0532 - Native raw import in production
+
+- Added `fusion_raw_import` and `fusion_importer --raw-import MZM_ROM AOS_ROM
+  MZM_ELF MZM_DATABASE AOS_DATABASE OUTPUT_ROOT`. A bounded JSON reader
+  (`src/assets/core/json.c`) reads the pinned decompilation databases; every
+  block of a world is validated against its ROM before any of its bytes are
+  written, paths are restricted to plain components and symlinks are refused.
+- `fusion_mzm_serialize_room_descriptors` rebuilds `rooms/metroid/rooms.tsv`,
+  which the GTK room browser reads, from the ROM's room entries: the BG1, BG2
+  and Clipdata pointers each resolve to exactly one ELF symbol, the music to
+  its generated `MUSIC_*` name, and the test areas' spriteset 255 to the
+  source's `UCHAR_MAX`. It is byte-identical to the former source-derived
+  file.
+- Proved the output against the former Python importer: all 3,885 Zero
+  Mission and 3 Aria raw blocks (6,545,753 bytes) byte-identical, in 0.4
+  seconds. The manifest is now `MV_ASSET_IMPORT_2`: the same entries and
+  summary, without the stale preview list, the unread source-file listing and
+  the outdated "not yet decoded" claims. The unread `catalog.json` and
+  `world_atlas.json` are no longer written; `scripts/world_overview.py` still
+  regenerates `world_atlas.tsv` from the decompilation source when missing.
+  The `raw_import` task now runs the native writer; a forced production
+  rebuild matched and the next run was up to date. The Zero Mission golden
+  test records the raw import when the Aria ROM is present.
+- `scripts/import_game_assets.py` keeps only the verified-ROM reader and the
+  safe writer the Python tools import, and `scripts/import_mzm_rooms.py` only
+  its descriptor decoder; their extraction tests moved to
+  `tests/test_fusion_raw_import.c`.
+- Every ROM asset task except the out-of-scope `metroid_sound` now runs the
+  native importer. No gameplay or fidelity status changed, no private assets
+  were committed, and audio remains untouched.
+- Next: port the Python editor-side tools that still read the raw blocks
+  (`mzm_room_render.py` previews, `world_overview.py`), or the rebuild
+  orchestrator itself.
+
 ## Patch 0531 - Native Zero Mission enemy sprites in production
 
 - Added `fusion_mzm_export_sprites` and `fusion_importer --mzm-export-sprites

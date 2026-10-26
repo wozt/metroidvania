@@ -50,12 +50,13 @@ python3 -m scripts.audit_extracted_assets --write
 ```
 
 `--assets` verifies each ROM and writes both private identity manifests in
-C11, then runs the native and remaining Python
-extractors in dependency order: the raw import (`import_game_assets.py`, both
-ROMs), the native Aria world metadata and runtime rooms, Soma, object/enemy
-sprites and weapons, and
-the Zero Mission Samus/projectile libraries (they also need the reference ELF
-`third_party/mzm/mzm_us.elf`) and runtime rooms. A full pass takes about four
+C11, then runs the native extractors in dependency order: the raw import of
+both ROMs' decompilation-database blocks with the Zero Mission room
+descriptors (`fusion_importer --raw-import`), the Aria world metadata and
+runtime rooms, Soma, object/enemy sprites and weapons, and the Zero Mission
+Samus/projectile libraries, enemy sprites and runtime rooms (they also need the
+reference ELF `third_party/mzm/mzm_us.elf`). Only the Zero Mission sound
+extraction (`metroid_sound`) is still Python. A full pass takes about four
 minutes; afterwards unchanged tasks are skipped in about two seconds. A task
 reruns when its ROM, extractor modules or pinned decompilation revision
 change, or when one of its private outputs is missing or was modified (room

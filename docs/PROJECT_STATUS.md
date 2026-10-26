@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0558 - Aria GameModeUpdate dispatcher
+
+- `aos_game_mode_update` (`src/runtime/aos_game_mode.c`) ports Aria's
+  `GameModeUpdate`: the native 21-entry `enum GameMode`, one handler per mode,
+  the empty `GAME_MODE_UNK_F` case, out-of-range modes kept and the
+  stage/timer reset on a new mode. `aos_game_mode_boot` reproduces the mode
+  tail of `sub_080006CC` (Konami logo, then reset), and
+  `aos_game_mode_reset_stage0` stage 0 of `GameModeResetUpdate` (forced
+  English, saved only on change, then "Licensed by Nintendo").
+- `tests/test_aos_game_mode.c` covers each path. Source-derived, not
+  emulator-compared. No handler is ported yet and the SDL runtime does not
+  run this dispatcher, so `aos.startup.mode_dispatch` stays partial.
+- Focus moves to Aria of Sorrow; Zero Mission is unchanged.
+
 ## Patch 0557 - Native inventory writer; the last Python is removed
 
 - `fusion_inventory --write` (`src/pipeline/inventory_writer.c`) replaces

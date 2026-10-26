@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 428 | 3145 |
+| Castlevania: Aria of Sorrow | 429 | 3144 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1104,13 +1104,13 @@ Dependencies: `aos.startup.mode_dispatch`.
 Known divergences: The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files, room, optional spawn, HP, movement mask and play time are represented; inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent.  
 Next action: Port the native save-room animation/question and remaining SRAM progression fields before reconstructing native serialization.
 
-[~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** Native mode set, increment and GameModeUpdate result handling; the title destination ordering is catalogued but its screen handler is not ported.
+[~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** Native mode set, increment and the whole GameModeUpdate: the 21-entry enum GameMode, one handler per mode, GAME_MODE_UNK_F empty case, out-of-range modes kept, NEXT/explicit results resetting the stage and its timer. aos_game_mode_boot reproduces the boot tail (KONAMI_LOGO then RESET); aos_game_mode_reset_stage0 forces the US language to English, saving only a change, and leaves for LICENSED_BY_NINTENDO. Source-derived and unit-tested, not emulator-compared. The title destination ordering is catalogued but its screen handler is not ported.
 
-Native evidence: `aos:c:src/main.c:IncrementGameMode`, `aos:c:src/main.c:SetGameMode`.  
+Native evidence: `aos:c:src/main.c:GameModeUpdate`, `aos:c:src/main.c:IncrementGameMode`, `aos:c:src/main.c:SetGameMode`.  
 Local implementation: [`src/runtime/aos_game_mode.c`](../src/runtime/aos_game_mode.c).  
 Tests: [`tests/test_aos_game_mode.c`](../tests/test_aos_game_mode.c).
-Known divergences: Only state/result transitions ported; graphical modes and boot missing.  
-Next action: Port original title screen stages, graphics and selection and wire into boot.
+Known divergences: The dispatcher is ported, but no mode handler is yet: the caller supplies them, and the runtime does not run this dispatcher (the SDL host still boots straight into its own launcher). Only stage 0 of GameModeResetUpdate is ported; sub_080006CC contributes only its two final SetGameMode calls.  
+Next action: Port GameModeResetUpdate stages 1-3 and GameModeLicensedByNintendoUpdate / GameModeKonamiLogoUpdate with their timers and fades, then run aos_game_mode_update from aria_runtime.c behind the existing launcher.
 
 ### Title screen
 

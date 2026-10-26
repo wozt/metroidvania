@@ -73,6 +73,7 @@ add_library(fusion_assets STATIC
     src/assets/mzm/sprites.c
     src/assets/mzm/sprite_tables.c
     src/assets/mzm/music_names.c
+    src/assets/mzm/sound.c
     src/assets/core/raw_import.c
 )
 target_include_directories(fusion_assets PUBLIC include)
@@ -109,6 +110,10 @@ add_executable(fusion_inventory src/tools/fusion_inventory.c)
 target_link_libraries(fusion_inventory PRIVATE fusion_pipeline)
 target_compile_definitions(fusion_inventory PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 fusion_enable_warnings(fusion_inventory)
+
+add_executable(fusion_sound_ids src/tools/sound_ids.c)
+target_compile_definitions(fusion_sound_ids PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+fusion_enable_warnings(fusion_sound_ids)
 
 add_executable(fusion_importer src/tools/fusion_importer.c)
 target_link_libraries(fusion_importer PRIVATE fusion_assets)
@@ -234,6 +239,11 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_assets_mzm_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_mzm_tests)
     add_test(NAME fusion_assets_mzm COMMAND fusion_assets_mzm_tests)
+    add_test(NAME mzm_sound_ids_fresh COMMAND fusion_sound_ids --check)
+    add_executable(fusion_mzm_sound_tests tests/test_fusion_mzm_sound.c)
+    target_link_libraries(fusion_mzm_sound_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_mzm_sound_tests)
+    add_test(NAME fusion_mzm_sound COMMAND fusion_mzm_sound_tests)
     add_test(NAME fusion_importer_list COMMAND fusion_importer --list)
     add_test(NAME fusion_importer_dry_run COMMAND fusion_importer --dry-run --force)
     add_executable(fusion_rebuild_tests tests/test_fusion_rebuild.c)

@@ -232,15 +232,6 @@ The runtime library exports every palette row and its native effects; see
 
 ## Active diagnostic workflow
 
-Stage a source-verified record into a local OBJ VRAM dump:
-
-```sh
-python3 scripts/mzm_samus_frame.py \
-  --rom "roms/Metroid - Zero Mission (USA).gba" \
-  --frame-pointer 0xVERIFIED \
-  --output assets/extracted/mzm/samus_frame_vram.bin
-```
-
 Every active diagnostic validates pointers, bounds and slot capacities. The
 authoritative format reference is
 `third_party/mzm/docs/samus/graphics.md` plus the pinned implementation.

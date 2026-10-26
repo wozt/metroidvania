@@ -54,6 +54,7 @@ static void usage(const char *name) {
             "       %s --mzm-export-samus ROM ELF SAMUS_DIR PROJECTILE_DIR\n"
             "       %s --mzm-export-sprites ROM ELF RUNTIME_DIR METADATA_DIR\n"
             "       %s --raw-import MZM_ROM AOS_ROM MZM_ELF MZM_DATABASE AOS_DATABASE OUTPUT_ROOT\n"
+            "       %s --mzm-export-sound ROM LINK_MAP OUTPUT_DIR\n"
             "       %s --mzm-backgrounds ROM ELF\n"
             "       %s --mzm-tilesets ROM ELF\n"
             "       %s --mzm-metatiles ROM ELF\n"
@@ -67,7 +68,7 @@ static void usage(const char *name) {
             name,
             name, name, name, name,
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name);
+            name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -2320,6 +2321,26 @@ static int raw_import(char *const *arguments) {
     return ok ? 0 : 1;
 }
 
+static int export_mzm_sound(char *const *arguments) {
+    FusionRom rom = {0};
+    uint8_t *map = NULL;
+    size_t map_size = 0;
+    char error[512] = "";
+    FusionMzmSoundExportSummary summary;
+    bool ok = fusion_rom_open(FUSION_ASSET_GAME_METROID, arguments[0], &rom, error, sizeof error) &&
+              read_file(arguments[1], &map, &map_size, error, sizeof error) &&
+              fusion_mzm_export_sound(&rom, (const char *)map, map_size, arguments[2], &summary,
+                                      error, sizeof error);
+    if (ok)
+        printf("Zero Mission sound bank: 0x%08x, %zu bytes, %zu sound entries\n",
+               (unsigned)summary.start, summary.size, summary.entries);
+    else
+        fprintf(stderr, "mzm-export-sound: %s\n", error);
+    fusion_rom_close(&rom);
+    free(map);
+    return ok ? 0 : 1;
+}
+
 static int inspect_mzm_metatiles(const char *rom_path, const char *elf_path) {
     FusionRom rom = {0};
     uint8_t *elf = NULL;
@@ -2960,6 +2981,9 @@ int main(int argc, char **argv) {
                  i + 2 < argc) {
             mzm_runtime_sprite_rom_path = argv[++i];
             mzm_runtime_sprite_elf_path = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--mzm-export-sound") && i + 3 < argc) {
+            return export_mzm_sound(argv + i + 1);
         }
         else if (!strcmp(argv[i], "--raw-import") && i + 6 < argc) {
             return raw_import(argv + i + 1);

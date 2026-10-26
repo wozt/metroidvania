@@ -377,7 +377,7 @@ Rooms play their native music through the ported Zero Mission sound engine
 (`src/runtime/mzm_audio.c`: the sequencer, the DirectSound mixer of
 `asm/soundcode.s` and the four PSG channels, emulated in
 `src/runtime/gba_psg.c`), from a private sound bank exported by
-`python3 -m scripts.mzm_audio` (rebuild task `metroid_sound`). A door fades
+`fusion_importer --mzm-export-sound` (rebuild task `metroid_sound`). A door fades
 the current track over 30 frames and starts the destination room's track.
 Samus, her weapons, hatches, blocks, enemies and drops request their sound
 effects at the game's own `SoundPlay` points (`src/runtime/mzm_sfx.c`, with

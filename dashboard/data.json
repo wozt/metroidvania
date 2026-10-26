@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T03:57:36+00:00",
+ "generated_at": "2026-10-26T04:09:04+00:00",
  "git": {
-  "commit": "6995327",
+  "commit": "312a5a0",
   "branch": "main",
   "dirty": true
  },
@@ -859,15 +859,14 @@
    "local_sources": [
     "src/runtime/mzm_audio.c",
     "src/runtime/gba_psg.c",
-    "scripts/mzm_audio.py",
+    "src/assets/mzm/sound.c",
     "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_sfx.c",
-    "scripts/mzm_sound_ids.py"
+    "src/tools/sound_ids.c"
    ],
    "tests": [
     "tests/test_mzm_audio.c",
-    "tests/test_mzm_audio.py",
     "tests/test_mzm_items.c",
     "tests/test_runtime_steep_slopes.c"
    ],
@@ -928,7 +927,6 @@
    "evidence": {
     "unit_tests": [
      "tests/test_mzm_audio.c",
-     "tests/test_mzm_audio.py",
      "tests/test_mzm_items.c",
      "tests/test_runtime_steep_slopes.c"
     ],
@@ -953,12 +951,6 @@
       ],
       "outcome": "passed",
       "exists": true
-     },
-     {
-      "test": "tests/test_mzm_audio.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
      },
      {
       "test": "tests/test_mzm_items.c",
@@ -3028,7 +3020,7 @@
     "src/runtime/mzm_audio.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
-    "scripts/mzm_c_tables.py"
+    "src/assets/mzm/runtime_room.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -5205,13 +5197,12 @@
    "local_sources": [
     "src/runtime/mzm_blocks.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_c_tables.py",
+    "src/assets/mzm/runtime_room.c",
     "src/assets/mzm/export.c",
     "src/runtime/mzm_sfx.c"
    ],
    "tests": [
-    "tests/test_mzm_blocks.c",
-    "tests/test_mzm_c_tables.py"
+    "tests/test_mzm_blocks.c"
    ],
    "dependencies": [
     "mzm.rooms.backgrounds",
@@ -5245,8 +5236,7 @@
    "next_action": "Port the crumble grab and tank pickups.",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_blocks.c",
-     "tests/test_mzm_c_tables.py"
+     "tests/test_mzm_blocks.c"
     ],
     "in_game_check": [
      "brinstar_022"
@@ -5269,12 +5259,6 @@
       ],
       "outcome": "passed",
       "exists": true
-     },
-     {
-      "test": "tests/test_mzm_c_tables.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -6149,7 +6133,7 @@
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
-    "scripts/mzm_c_tables.py",
+    "src/assets/mzm/runtime_room.c",
     "scripts/dashboard.py"
    ],
    "tests": [
@@ -6435,7 +6419,7 @@
    "local_sources": [
     "src/runtime/mzm_items.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_c_tables.py"
+    "src/assets/mzm/runtime_room.c"
    ],
    "tests": [
     "tests/test_mzm_items.c",
@@ -8301,14 +8285,13 @@
     "src/runtime/mzm_projectiles.c",
     "src/runtime/mzm_sprites.c",
     "src/runtime/room_runtime.c",
-    "scripts/mzm_c_tables.py",
+    "src/assets/mzm/runtime_room.c",
     "src/assets/mzm/export.c"
    ],
    "tests": [
     "tests/test_mzm_power_bomb.c",
     "tests/test_mzm_samus.c",
-    "tests/test_mzm_sprites.c",
-    "tests/test_mzm_c_tables.py"
+    "tests/test_mzm_sprites.c"
    ],
    "dependencies": [
     "mzm.weapons.bombs",
@@ -8332,8 +8315,7 @@
     "unit_tests": [
      "tests/test_mzm_power_bomb.c",
      "tests/test_mzm_samus.c",
-     "tests/test_mzm_sprites.c",
-     "tests/test_mzm_c_tables.py"
+     "tests/test_mzm_sprites.c"
     ],
     "in_game_check": [
      "brinstar_000"
@@ -8376,12 +8358,6 @@
       ],
       "outcome": "passed",
       "exists": true
-     },
-     {
-      "test": "tests/test_mzm_c_tables.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
      }
     ],
     "verdict": "passing",
@@ -14268,14 +14244,13 @@
    "status": "partial",
    "fidelity": "unknown",
    "local_sources": [
-    "scripts/mzm_audio.py",
+    "src/assets/mzm/sound.c",
     "src/runtime/mzm_audio.c",
     "src/runtime/gba_psg.c",
     "src/runtime/mzm_sfx.c",
-    "scripts/mzm_sound_ids.py"
+    "src/tools/sound_ids.c"
    ],
    "tests": [
-    "tests/test_mzm_audio.py",
     "tests/test_mzm_audio.c",
     "tests/test_mzm_items.c"
    ],
@@ -14287,7 +14262,6 @@
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_mzm_audio.py",
      "tests/test_mzm_audio.c",
      "tests/test_mzm_items.c"
     ],
@@ -14301,12 +14275,6 @@
     "sources_found": true,
     "missing_sources": [],
     "tests": [
-     {
-      "test": "tests/test_mzm_audio.py",
-      "kind": "python",
-      "registered": true,
-      "outcome": "passed"
-     },
      {
       "test": "tests/test_mzm_audio.c",
       "kind": "ctest",
@@ -15007,6 +14975,18 @@
     "outcome": "passed"
    },
    {
+    "name": "mzm_sound_ids_fresh",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
+    "name": "fusion_mzm_sound",
+    "files": [
+     "tests/test_fusion_mzm_sound.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "fusion_importer_list",
     "files": [],
     "outcome": "passed"
@@ -15574,13 +15554,6 @@
     "passed": 6
    },
    {
-    "file": "tests/test_mzm_audio.py",
-    "module": "tests.test_mzm_audio",
-    "test_count": 8,
-    "outcome": "passed",
-    "passed": 8
-   },
-   {
     "file": "tests/test_mzm_bg3_preview.py",
     "module": "tests.test_mzm_bg3_preview",
     "test_count": 9,
@@ -15593,13 +15566,6 @@
     "test_count": 2,
     "outcome": "passed",
     "passed": 2
-   },
-   {
-    "file": "tests/test_mzm_c_tables.py",
-    "module": "tests.test_mzm_c_tables",
-    "test_count": 1,
-    "outcome": "passed",
-    "passed": 1
    },
    {
     "file": "tests/test_mzm_composite_0126.py",
@@ -15670,13 +15636,6 @@
     "test_count": 1,
     "outcome": "passed",
     "passed": 1
-   },
-   {
-    "file": "tests/test_mzm_samus_frame.py",
-    "module": "tests.test_mzm_samus_frame",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
    },
    {
     "file": "tests/test_mzm_technical_audit.py",
@@ -15904,12 +15863,18 @@
    }
   ],
   "summary": {
-   "passed": 402,
+   "passed": 392,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "312a5a0",
+   "date": "2026-10-26",
+   "subject": "Audit native inventory routines in C11",
+   "scope": "project"
+  },
   {
    "commit": "6995327",
    "date": "2026-10-26",
@@ -16382,12 +16347,6 @@
    "commit": "50bd4db",
    "date": "2026-10-23",
    "subject": "Port Nemesis technical effect slots",
-   "scope": "project"
-  },
-  {
-   "commit": "bfdb517",
-   "date": "2026-10-23",
-   "subject": "Port the Aria Nemesis linked helper",
    "scope": "project"
   }
  ],
@@ -20573,7 +20532,8 @@
    ],
    "requires": [
     "roms/Metroid - Zero Mission (USA).gba",
-    "third_party/mzm/mzm_us.map"
+    "third_party/mzm/mzm_us.map",
+    "build/fusion_importer"
    ]
   },
   {

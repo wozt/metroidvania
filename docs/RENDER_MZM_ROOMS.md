@@ -55,4 +55,4 @@ the game (`BgClipSetBg1BlockValue`, `BgClipSetClipdataBlockValue`):
 `src/runtime/mzm_blocks.c` the block routines of `src/block.c`. The block,
 tank and bomb chain tables and the collision and behavior of every raw
 Clipdata value are exported privately as `rooms/runtime/blocks.tsv`
-(`scripts/mzm_c_tables.py` evaluates the decompilation's initializers).
+(`src/assets/mzm/runtime_room.c` reads them from bounded ELF objects).

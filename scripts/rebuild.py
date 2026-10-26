@@ -117,6 +117,7 @@ ROMS = {
 DECOMPS = {"aria": ROOT / "third_party/cvaos", "metroid": ROOT / "third_party/mzm"}
 MZM_ELF = ROOT / "third_party/mzm/mzm_us.elf"
 MZM_DATABASE = ROOT / "third_party/mzm/database.json"
+MZM_MAP = ROOT / "third_party/mzm/mzm_us.map"
 AOS_DATABASE = ROOT / "third_party/cvaos/database.json"
 
 
@@ -377,11 +378,15 @@ ASSET_TASKS = {
         requires=(ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER),
         stamps=lambda: _decomp_stamp("metroid"),
         validate=_export_validator(MZM_ROOM_INDEX), group="assets"),
-    "metroid_sound": _asset_task(
-        "metroid_sound", "metroid", "mzm_audio", (),
-        (ROOT / "assets/extracted/metroid/sound/runtime/sound_bank.bin",
-         ROOT / "assets/extracted/metroid/sound/runtime/sound_tables.tsv"),
-        ("metroid_rom",), requires=(ROOT / "third_party/mzm/mzm_us.map",)),
+    "metroid_sound": Task(
+        name="metroid_sound", version=2, dependencies=("metroid_rom",),
+        inputs=lambda: [ROMS["metroid"], MZM_MAP, NATIVE_IMPORTER],
+        outputs=(ROOT / "assets/extracted/metroid/sound/runtime/sound_bank.bin",
+                 ROOT / "assets/extracted/metroid/sound/runtime/sound_tables.tsv"),
+        action=_run_native("--mzm-export-sound", ROMS["metroid"], MZM_MAP,
+                           ROOT / "assets/extracted/metroid/sound/runtime"),
+        requires=(ROMS["metroid"], MZM_MAP, NATIVE_IMPORTER),
+        stamps=lambda: _decomp_stamp("metroid"), group="assets"),
     "metroid_rom_bank": Task(
         name="metroid_rom_bank", version=2, dependencies=("metroid_rom",),
         inputs=lambda: [ROMS["metroid"], MZM_ELF, NATIVE_IMPORTER],

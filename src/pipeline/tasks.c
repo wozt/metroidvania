@@ -27,10 +27,8 @@ static const char *const raw_inputs[] = {
     "third_party/cvaos/database.json", "build/fusion_importer",
 };
 static const char *const sound_inputs[] = {
-    "roms/Metroid - Zero Mission (USA).gba",
-    "scripts/asset_layout.py", "scripts/mzm_audio.py", "scripts/mzm_c_tables.py",
-    "scripts/mzm_samus_frame.py", "scripts/sprite_library.py",
-    "third_party/mzm/mzm_us.map",
+    "roms/Metroid - Zero Mission (USA).gba", "third_party/mzm/mzm_us.map",
+    "build/fusion_importer",
 };
 static const char *const inventory_inputs[] = {"scripts/native_inventory.py"};
 static const char *const checklist_inputs[] = {
@@ -55,6 +53,7 @@ static const char *const raw_requirements[] = {
 };
 static const char *const sound_requirements[] = {
     "roms/Metroid - Zero Mission (USA).gba", "third_party/mzm/mzm_us.map",
+    "build/fusion_importer",
 };
 static const char *const checklist_requirements[] = {"build/fusion_checklist"};
 
@@ -176,8 +175,8 @@ static const FusionRebuildTask tasks[] = {
      REQUIRES(metroid_elf_requirements), PATHS(metroid_elf_inputs, metroid_room_outputs),
      .validation = FUSION_REBUILD_VALIDATE_EXPORT_INDEX,
      .stamp_games = FUSION_REBUILD_STAMP_METROID},
-    {.name = "metroid_sound", .version = 1, .group = FUSION_REBUILD_GROUP_ASSETS,
-     .backend = FUSION_REBUILD_BACKEND_PYTHON_TEMPORARY,
+    {.name = "metroid_sound", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,
+     .backend = FUSION_REBUILD_BACKEND_C,
      DEPENDS(metroid_asset_dependencies), REQUIRES(sound_requirements),
      PATHS(sound_inputs, sound_outputs), .stamp_games = FUSION_REBUILD_STAMP_METROID},
     {.name = "metroid_rom_bank", .version = 2, .group = FUSION_REBUILD_GROUP_ASSETS,

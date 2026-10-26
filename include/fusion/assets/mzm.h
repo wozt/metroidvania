@@ -581,6 +581,18 @@ bool fusion_mzm_export_sprites(const FusionRom *rom, const uint8_t *elf, size_t 
                                const char *runtime_output, const char *metadata_output,
                                FusionMzmSpriteExportSummary *summary,
                                char *error, size_t error_size);
+typedef struct {
+    uint32_t start;
+    size_t size;
+    size_t entries;
+} FusionMzmSoundExportSummary;
+
+/* Writes OUTPUT/sound_bank.bin (the ROM range of the sound/ .rodata
+ * sections of LINK_MAP) and OUTPUT/sound_tables.tsv (the engine tables, the
+ * LFO window and the music aliases). */
+bool fusion_mzm_export_sound(const FusionRom *rom, const char *link_map, size_t map_size,
+                             const char *output, FusionMzmSoundExportSummary *summary,
+                             char *error, size_t error_size);
 void fusion_mzm_free_runtime_room_payload(
     FusionMzmRuntimeRoomPayload *payload);
 

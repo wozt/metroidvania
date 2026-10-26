@@ -176,9 +176,6 @@ bool fusion_rebuild_run_registered_action(const char *root,
             "docs/NATIVE_PARITY_CHECKLIST.md",
             "data/native_parity/aos_unassigned_routines.tsv", false,
             error, error_size);
-    if (!strcmp(task->name, "metroid_sound"))
-        return run_python(root, "scripts.mzm_audio", "Zero Mission audio export", error,
-                          error_size);
 
     char importer[4096], aria_rom[4096], metroid_rom[4096], mzm_elf[4096];
     char mzm_database[4096], aria_database[4096];
@@ -208,6 +205,15 @@ bool fusion_rebuild_run_registered_action(const char *root,
         if (!OUTPUT(output_a, "assets/extracted/shared/manifests/rom_metroid.json")) return false;
         char *arguments[] = {importer, "--rom-manifest", "metroid", metroid_rom,
                              output_a, NULL};
+        return RUN(arguments);
+    }
+    if (!strcmp(task->name, "metroid_sound")) {
+        char link_map[4096];
+        if (!OUTPUT(output_a, "assets/extracted/metroid/sound/runtime") ||
+            !root_path(link_map, sizeof link_map, root, "third_party/mzm/mzm_us.map", error,
+                       error_size)) return false;
+        char *arguments[] = {importer, "--mzm-export-sound", metroid_rom, link_map, output_a,
+                             NULL};
         return RUN(arguments);
     }
     if (!strcmp(task->name, "raw_import")) {

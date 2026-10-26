@@ -2437,7 +2437,7 @@ static void debug_draw(SDL_Renderer *renderer,const DebugMenu *menu,bool paused,
 /* Zero Mission sprites: the ROM tables and OAM frame durations of the
  * native sprite exporter (src/assets/mzm/sprites.c), the sprite library, and
  * the room's live sprites. */
-/* The Zero Mission sound engine's data (scripts/mzm_audio.py). */
+/* The Zero Mission sound engine's data (src/assets/mzm/sound.c). */
 #define RUNTIME_SOUND_BANK "assets/extracted/metroid/sound/runtime/sound_bank.bin"
 #define RUNTIME_SOUND_TABLES "assets/extracted/metroid/sound/runtime/sound_tables.tsv"
 

@@ -6,7 +6,7 @@
  * UploadSampleToWaveRam, the PSG register writes) and asm/soundcode.s (the
  * DirectSound mixer SoundCodeA/B/C, GetNoteFrequency, the DMA 2 interrupt).
  * ROM data (songs, voice groups, samples) is read through GBA addresses from
- * the sound bank of scripts/mzm_audio.py; the engine tables come from its
+ * the sound bank of src/assets/mzm/sound.c; the engine tables come from its
  * sound_tables.tsv. The GBA sound hardware (DMA to the FIFOs at the timer 0
  * rate, the PSG channels, the output mixer) is emulated by mzm_audio_render
  * and gba_psg. MidiKey2Freq (a BIOS call) uses the usual high-level

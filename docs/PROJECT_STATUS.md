@@ -2,6 +2,32 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0540 - Native Zero Mission sound export
+
+- Audio is now in scope for the migration. Added `fusion_mzm_export_sound`
+  and `fusion_importer --mzm-export-sound ROM LINK_MAP OUTPUT_DIR`: it copies
+  the ROM range of the `sound/` `.rodata` sections of the reference link map
+  as `sound_bank.bin` and reads the engine tables of `src/data/audio.c`, the
+  `sUnk_808cc4d` LFO window and the `DetermineNewMusicTrack` aliases from the
+  ROM into `sound_tables.tsv`. Both files are byte-identical to the former
+  Python writer (1,724,760 bank bytes, 708 sound entries).
+- `metroid_sound` now runs the native importer in both `fusion_rebuild` and
+  `scripts/rebuild.py` (version 2, inputs ROM, link map and importer); after
+  a forced native rebuild both orchestrators report it up to date, and the
+  production files match the reference. No Python-backed asset task remains;
+  only `inventory` is still a temporary Python action.
+- `fusion_sound_ids --check/--write` replaces `scripts/mzm_sound_ids.py` for
+  `src/runtime/mzm_sound_ids.h` (identical but for its generator line); a
+  CTest and `scripts/check_generated.py` run the check.
+- Removed `scripts/mzm_audio.py`, `scripts/mzm_sound_ids.py`,
+  `scripts/mzm_c_tables.py`, `scripts/mzm_samus_frame.py` and their tests;
+  `tests/test_fusion_mzm_sound.c` covers the export on a synthetic ROM and
+  map. The audio engine itself is unchanged.
+- No gameplay or fidelity status changed and no private assets were
+  committed.
+- Next: continue the editor backend port (`scripts/editor_cli.py`), then the
+  remaining repository tooling and Python tests.
+
 ## Patch 0539 - Native routine inventory discovery
 
 - Added the reusable C11 inventory scanner and `fusion_inventory

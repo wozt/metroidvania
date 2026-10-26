@@ -2318,7 +2318,7 @@ bool mzm_audio_open(const char *bank_path, const char *tables_path) {
     }
     if (f) fclose(f);
     if (!ok || tables != 11 || !g_entry_count) {
-        fprintf(stderr, "Zero Mission sound data missing or invalid (python3 -m scripts.mzm_audio)\n");
+        fprintf(stderr, "Zero Mission sound data missing or invalid (python3 -m scripts.rebuild --task metroid_sound)\n");
         mzm_audio_close();
         return false;
     }

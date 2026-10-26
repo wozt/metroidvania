@@ -1687,8 +1687,8 @@ bool feb_project_validation(const char *root, FusionJson *data, FebError *error)
     return ok;
 }
 
-/* project_room_package.read_saved(): only saved data, never the editor's
- * unsaved staging file. */
+/* Read only saved data, never the editor's unsaved staging file (formerly
+ * project_room_package.read_saved()). */
 static bool read_saved(const char *root, const FebRoomScope *scope, FusionJson *document,
                        FebError *error) {
     char path[FEB_PATH_CAPACITY];

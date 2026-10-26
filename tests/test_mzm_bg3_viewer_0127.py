@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VIEWER = ROOT / 'src/tools/room_package_viewer.c'
 BINARY = ROOT / 'build/fusion_room_package_viewer'
 FIXTURE = ROOT / 'tests/fixtures/project_room_0124.preview.tsv'
+EXPORTER = ROOT / 'src/editor_backend/commands_room.c'
 
 
 def bmp24(width: int, height: int) -> bytes:
@@ -36,8 +37,8 @@ class StandaloneBg3Tests0127(unittest.TestCase):
                        'BG3 diagnostic dimensions invalid',
                        'SDL_DestroyTexture(textures[3]);'):
             self.assertIn(symbol, text)
-        self.assertIn('"native_assets_included": False',
-                      (ROOT / 'scripts/project_room_package.py').read_text())
+        self.assertIn('feb_put_bool(&payload, "native_assets_included", false)',
+                      EXPORTER.read_text(encoding='utf-8'))
 
     def test_independent_bmp_geometry_and_rejection_without_video(self):
         if not BINARY.is_file():

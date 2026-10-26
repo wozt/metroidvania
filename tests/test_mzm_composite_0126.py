@@ -11,6 +11,7 @@ from scripts import mzm_room_render as renderer
 ROOT = Path(__file__).resolve().parents[1]
 BINARY = ROOT / "build/fusion_room_package_viewer"
 FIXTURE = ROOT / "tests/fixtures/project_room_0124.preview.tsv"
+EXPORTER = ROOT / "src/editor_backend/commands_room.c"
 
 
 def bmp24(width, height):
@@ -62,8 +63,8 @@ class NativePartialComposite0126(unittest.TestCase):
                       'SDL_DestroyTexture(textures[2]);',
                       'partial BG1-over-BG2 (order not verified)'):
             self.assertIn(token, source)
-        self.assertIn('"native_assets_included": False',
-            (ROOT / 'scripts/project_room_package.py').read_text())
+        self.assertIn('feb_put_bool(&payload, "native_assets_included", false)',
+                      EXPORTER.read_text(encoding='utf-8'))
         if not BINARY.is_file():
             self.skipTest('SDL viewer has not been built yet')
         with tempfile.TemporaryDirectory() as tmp:

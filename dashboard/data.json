@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T07:11:54+00:00",
+ "generated_at": "2026-10-26T07:18:55+00:00",
  "git": {
-  "commit": "06e87ad",
+  "commit": "14f8046",
   "branch": "main",
   "dirty": true
  },
@@ -13260,6 +13260,8 @@
    "local_sources": [
     "editor/room_browser.c",
     "src/core/native_map.c",
+    "src/editor_backend/project_room.c",
+    "src/editor_backend/commands_room.c",
     "src/editor_backend/workspace.c",
     "src/editor_backend/mzm_render.c",
     "src/editor_backend/mzm_workspace.c",
@@ -13272,7 +13274,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The production workspace, project-room operations, render audits and headless commands are native; the former Python backend is removed, while private edits are still not applied by the runtimes.",
+   "limitations": "The production workspace, saved connection graph, immutable room packages, project-room operations, render audits and headless commands are native; their Python backend implementations are removed, while private edits are still not applied by the runtimes.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15509,13 +15511,6 @@
     "passed": 5
    },
    {
-    "file": "tests/test_connection_graph_0116.py",
-    "module": "tests.test_connection_graph_0116",
-    "test_count": 3,
-    "outcome": "passed",
-    "passed": 3
-   },
-   {
     "file": "tests/test_dashboard.py",
     "module": "tests.test_dashboard",
     "test_count": 15,
@@ -15874,12 +15869,18 @@
    }
   ],
   "summary": {
-   "passed": 373,
+   "passed": 370,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "14f8046",
+   "date": "2026-10-26",
+   "subject": "Remove the Python editor operation layer",
+   "scope": "project"
+  },
   {
    "commit": "06e87ad",
    "date": "2026-10-26",
@@ -16352,12 +16353,6 @@
    "commit": "27530a4",
    "date": "2026-10-23",
    "subject": "Connect Aria linked enemy children",
-   "scope": "project"
-  },
-  {
-   "commit": "0f98464",
-   "date": "2026-10-23",
-   "subject": "Port Aria constructor-table enemy batch",
    "scope": "project"
   }
  ],

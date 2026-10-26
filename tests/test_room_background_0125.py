@@ -7,6 +7,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 VIEWER = ROOT / "src/tools/room_package_viewer.c"
+EXPORTER = ROOT / "src/editor_backend/commands_room.c"
 BINARY = ROOT / "build/fusion_room_package_viewer"
 FIXTURE = ROOT / "tests/fixtures/project_room_0124.preview.tsv"
 
@@ -31,8 +32,8 @@ class LocalBackground0125(unittest.TestCase):
                      "SDLK_C", "SDLK_M", "SDLK_1", "SDLK_2", "--no-auto-bg"):
             self.assertIn(term, source)
         self.assertNotIn('SDL_RenderTexture(renderer, textures[0], NULL, &image);', source)
-        exporter = (ROOT / "scripts/project_room_package.py").read_text()
-        self.assertIn('"native_assets_included": False', exporter)
+        exporter = EXPORTER.read_text(encoding="utf-8")
+        self.assertIn('feb_put_bool(&payload, "native_assets_included", false)', exporter)
 
     def test_explicit_local_bmp_dimension_contract_headless(self):
         if not BINARY.is_file():

@@ -34,6 +34,17 @@ static const FusionJson *member(const FusionJson *object, const char *key,
     return value;
 }
 
+static const FusionJson *item_with_id(const FusionJson *array, const char *key, int64_t id) {
+    assert(array->kind == FUSION_JSON_ARRAY);
+    for (size_t index = 0; index < array->count; ++index) {
+        const FusionJson *value = fusion_json_member(&array->items[index], key);
+        if (value && value->kind == FUSION_JSON_NUMBER && value->integer == id)
+            return &array->items[index];
+    }
+    assert(false);
+    return NULL;
+}
+
 static FusionJson room_scope(void) {
     FusionJson options = fusion_json_object();
     put_string(&options, "world", "zero_mission");
@@ -224,6 +235,19 @@ static void test_workspace_source_contract(void) {
            NULL);
     assert(strstr(source, "report must be a lowercase safe identifier") != NULL);
     free(source);
+
+    assert(snprintf(path, sizeof path, "%s/editor/world_atlas.c", FUSION_SOURCE_DIR) > 0);
+    source = read_text(path);
+    static const char *const connection_terms[] = {
+        "PATCH_0116_CONNECTION_VISUALIZATION",
+        "gtk_overlay_add_overlay(GTK_OVERLAY(map_overlay), grid);",
+        "gtk_widget_set_can_target(w->connection_canvas, FALSE);",
+        "connection_draw_0116(", "connections_refresh_0116(",
+        "All links in current map", "Show connections",
+    };
+    for (size_t index = 0; index < sizeof connection_terms / sizeof connection_terms[0]; ++index)
+        assert(strstr(source, connection_terms[index]) != NULL);
+    free(source);
 }
 
 static FusionJson adoption_options(const char *index) {
@@ -298,6 +322,15 @@ static void test_target_and_reciprocal_links(void) {
     assert(!strcmp(member(&doors->items[0], "label", FUSION_JSON_STRING)->string, "B"));
     fusion_json_free(&result);
 
+    result = create_door(root, "7", "64", "0", "left");
+    fusion_json_free(&result);
+    result = create_door(root, "7", "80", "0", "left");
+    fusion_json_free(&result);
+    result = create_door(root, "7", "96", "0", "left");
+    fusion_json_free(&result);
+    result = create_door(root, "8", "80", "0", "right");
+    fusion_json_free(&result);
+
     execute_error("door-link", link_options("7", "1", "8", "99", "48", "64"), root,
                   "not present");
     options = fusion_json_object();
@@ -310,6 +343,53 @@ static void test_target_and_reciprocal_links(void) {
     result = execute_ok("door-link", link_options("7", "1", "8", "1", "48", "64"), root,
                         false);
     fusion_json_free(&result);
+
+    options = scoped_room("7", "128", "128");
+    put_string(&options, "source_door_id", "3");
+    put_string(&options, "target_world", "aria");
+    put_string(&options, "target_area", "3");
+    put_string(&options, "target_room", "5");
+    put_string(&options, "spawn_x", "0");
+    put_string(&options, "spawn_y", "0");
+    result = execute_ok("door-link", options, root, false);
+    fusion_json_free(&result);
+
+    result = execute_ok("door-link", link_options("7", "4", "8", "2", "80", "0"), root,
+                        false);
+    fusion_json_free(&result);
+    options = scoped_room("8", "128", "128");
+    put_string(&options, "id", "2");
+    put_bool(&options, "confirm", true);
+    result = execute_ok("door-delete", options, root, false);
+    fusion_json_free(&result);
+
+    FebRoomScope source_scope = {.world = "mzm", .room = 7, .width = 128, .height = 128};
+    strcpy(source_scope.area, "Brinstar");
+    char source_path[4096];
+    FebError path_error = {0};
+    assert(feb_room_path(root, &source_scope, source_path, &path_error));
+    char *source_before = read_text(source_path);
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    result = execute_ok("connection-list", options, root, false);
+    const FusionJson *connections = member(&result, "connections", FUSION_JSON_ARRAY);
+    assert(connections->count == 4);
+    assert(!strcmp(member(item_with_id(connections, "door_id", 1), "state",
+                          FUSION_JSON_STRING)->string, "simple"));
+    assert(!strcmp(member(item_with_id(connections, "door_id", 2), "state",
+                          FUSION_JSON_STRING)->string, "missing"));
+    assert(!strcmp(member(item_with_id(connections, "door_id", 3), "state",
+                          FUSION_JSON_STRING)->string, "interworld"));
+    assert(!strcmp(member(item_with_id(connections, "door_id", 4), "state",
+                          FUSION_JSON_STRING)->string, "invalid"));
+    fusion_json_free(&result);
+    char *source_after = read_text(source_path);
+    assert(!strcmp(source_before, source_after));
+    free(source_before);
+    free(source_after);
+
     options = fusion_json_object();
     put_string(&options, "world", "zero_mission");
     put_string(&options, "area", "Brinstar");
@@ -338,6 +418,16 @@ static void test_target_and_reciprocal_links(void) {
 
     result = execute_ok("door-link", link_options("8", "1", "7", "1", "16", "32"), root,
                         false);
+    fusion_json_free(&result);
+    options = fusion_json_object();
+    put_string(&options, "world", "zero_mission");
+    put_string(&options, "area", "Brinstar");
+    put_string(&options, "room", "7");
+    result = execute_ok("connection-list", options, root, false);
+    connections = member(&result, "connections", FUSION_JSON_ARRAY);
+    const FusionJson *reciprocal = item_with_id(connections, "door_id", 1);
+    assert(!strcmp(member(reciprocal, "state", FUSION_JSON_STRING)->string, "reciprocal"));
+    assert(member(reciprocal, "reciprocal", FUSION_JSON_BOOL)->boolean);
     fusion_json_free(&result);
     options = fusion_json_object();
     put_string(&options, "world", "zero_mission");

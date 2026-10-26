@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0548 - Remove Python room packages and connection graphs
+
+- Removed `scripts/project_room_package.py` and
+  `scripts/project_connection_graph.py`. Immutable room-package generation
+  and saved-room connection analysis now have only their C11 implementations
+  in `commands_room.c` and `project_room.c`.
+- Moved the remaining ROM-free graph coverage into
+  `tests/test_editor_backend.c`. It checks sorted saved connections, missing
+  links, simple links, reciprocal links, inter-world links, invalid deleted
+  targets, staging isolation and read-only source behavior, while retaining
+  the GTK world-atlas visualization source contract.
+- Updated the BG1/BG2/composite/BG3 viewer tests to verify the C room exporter
+  directly: local diagnostic images remain excluded from immutable packages.
+  The obsolete Python graph suite was removed.
+- Maintained first-party Python files fell from 102 to 99 (31 under `scripts/`,
+  68 under `tests/`). No gameplay or native-parity status changed.
+- Next: port the focused entity, collision, deferred-save and item-authoring
+  tests that still import `project_room_entities.py`, then remove that module.
+
 ## Patch 0547 - Remove the Python editor operation layer
 
 - Removed `scripts/editor_backend.py` and `scripts/room_audit.py`. The editor

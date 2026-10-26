@@ -50,11 +50,13 @@ title handler. That handler now reaches the native stage-9 destination after
 the title motion, input or quick-reveal paths, including MAIN_MENU and the
 idle INTRO_CUTSCENE override. The standalone title launcher remains separate
 until the native main-menu controller can replace its diagnostic navigation.
-The lifecycle now owns that controller's initial operation selector, its
-entry/return fades and the complete native copy/delete decision controllers.
-Those controllers expose typed copy/delete requests over the original six-bit
-slot topology; the portable save adapter does not consume them yet. Native
-play/create/load selection remains the next boundary.
+The lifecycle now owns that controller's operation selector, entry/return
+fades and all three selected-operation controllers. PLAY preserves the native
+three file/quicksave pairs, completed-file special positions, optional mode
+choice and direct load/intro results; COPY and DELETE preserve their native
+confirmation paths. They expose typed requests over that topology, but the
+portable save adapter does not consume them yet. Native name entry remains
+the next boundary for a newly created regular file.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v1` text schema instead of claiming compatibility with

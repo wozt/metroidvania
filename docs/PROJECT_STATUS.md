@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-26**.
 
+## Patch 0565 - Port Aria's play/create/load controller
+
+- Ported `sub_0800744C` and `sub_080074C0` into the host-neutral main-menu
+  state. The controller retains the native three file/quicksave pairs,
+  quicksave-first initialization, horizontal pair wrapping, vertical
+  main/quicksave/special navigation, invalid-target filtering, optional mode
+  confirmation and the 128-frame empty-file prompt alternation.
+- PLAY now emits typed load/clear/new-game/room-setup requests. Existing files
+  follow the native `-2` result and stage-0x14 brightness ramp into IN_GAME;
+  eligible completed-file modes follow `-3` and stage 0x1E into
+  INTRO_CUTSCENE. Blank regular files traverse stages 7 and 8 into the native
+  stage-9 name-entry boundary.
+- Tests cover quicksave preference and filtering, a direct file load, blank
+  file creation, alternate-mode confirmation, special intro selection, both
+  sixteen-frame destination fades and the name-entry handoff. Native name
+  editing and portable file request consumption remain absent, so the
+  features stay partial. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+- Next: port `sub_08008324`/`sub_080083C8` for the eight-character native name
+  editor and its stage-9 result branches, then connect the typed file requests
+  to the portable frontend.
+
 ## Patch 0564 - Port Aria's copy and delete menu controllers
 
 - Ported the native copy initialization/update pair (`sub_08007820` and

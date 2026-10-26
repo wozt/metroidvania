@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T13:09:12+00:00",
+ "generated_at": "2026-10-26T13:38:45+00:00",
  "git": {
-  "commit": "3c9dda5",
+  "commit": "72bc06f",
   "branch": "main",
   "dirty": true
  },
@@ -12369,8 +12369,8 @@
     "GameModeKonamiLogoUpdate",
     "KonamiCodeCheck"
    ],
-   "limitations": "The SDL room runtime uses the native dispatcher but starts at IN_GAME because it still requires a room, save or development launch argument; the separate title launcher is unchanged. No frontend selects the host-neutral boot path or consumes its startup/title/menu graphics, entity-animation, cleanup, slot-operation or audio requests. The main-menu PLAY/CREATE sub-controller and its result stages remain absent. The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU and IN_GAME. The main-menu path now reaches the operation selector, dispatches the complete COPY and DELETE decision controllers and returns through the native alpha-fade stages. fusion_aria_runtime dispatches every simulation frame through IN_GAME while preserving all room, save, capture and debug entry arguments. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the PLAY/CREATE sub-controller and its new/load branches through the final IN_GAME or INTRO_CUTSCENE fades, then attach the standalone launcher to the typed requests.",
+   "limitations": "The SDL room runtime uses the native dispatcher but starts at IN_GAME because it still requires a room, save or development launch argument; the separate title launcher is unchanged. No frontend selects the host-neutral boot path or consumes its startup/title/menu graphics, entity-animation, cleanup, slot-operation or audio requests. Native name entry and portable request consumption remain absent. The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU and IN_GAME. The main-menu path dispatches PLAY/CREATE/LOAD, COPY and DELETE; direct load and completed-file results now finish through the native IN_GAME and INTRO_CUTSCENE brightness ramps. fusion_aria_runtime dispatches every simulation frame through IN_GAME while preserving all room, save, capture and debug entry arguments. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the native name editor and its stage-9 result branches, then attach the standalone launcher to the typed slot requests.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_mode.c",
@@ -12514,13 +12514,15 @@
     "GameModeMainMenuUpdate",
     "GameModeMainMenuUpdate_inline",
     "sub_08004928",
+    "sub_0800744C",
+    "sub_080074C0",
     "sub_08007820",
     "sub_08007914",
     "sub_08007B8C",
     "sub_08008290"
    ],
-   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu graphics and remains separate from the lifecycle. Title entity callbacks are not connected. The PLAY/CREATE controller, name-entry/result stages and actual portable save operations are not attached. The lifecycle connects title stages 0-9 to the native main-menu operation selector. Initial register requests, wrapped operation input, entry fades, the source-derived six-entry COPY and DELETE cursor/confirmation controllers, their typed operation requests, the 0x46/0x48/0x49 cancel fade and the audio-gated return to TITLE_SCREEN are deterministic and tested. The separate visible SDL launcher still reaches New Game or Continue, three portable slots, overwrite confirmation, options and the room runtime. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port sub_0800744C/sub_080074C0 and the subsequent new/load stages through the final IN_GAME or INTRO_CUTSCENE fades, then make the SDL launcher consume the lifecycle requests.",
+   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu graphics and remains separate from the lifecycle. Title entity callbacks, the native name editor and actual portable save-operation consumption are not attached. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains the six file/quicksave entries, completed-file special positions, optional mode confirmation, prompt alternation and typed create/load/clear/intro results. COPY and DELETE retain their six-entry cursors and confirmations. Direct load and special intro results finish through the native brightness ramps; blank files stop at the stage-9 name-entry boundary. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port sub_08008324/sub_080083C8 and the stage-9 name result branches, then make the SDL launcher consume the lifecycle requests.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_lifecycle.c",
@@ -16011,6 +16013,12 @@
  },
  "timeline": [
   {
+   "commit": "72bc06f",
+   "date": "2026-10-26",
+   "subject": "Port Aria copy and delete menu controllers",
+   "scope": "project"
+  },
+  {
    "commit": "3c9dda5",
    "date": "2026-10-26",
    "subject": "Port Aria main menu entry controller",
@@ -16483,12 +16491,6 @@
    "date": "2026-10-24",
    "subject": "Port Aria room descriptor headers to C11",
    "scope": "project"
-  },
-  {
-   "commit": "82e89be",
-   "date": "2026-10-24",
-   "subject": "Port Aria global map metadata to C11",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -16549,9 +16551,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 438,
-    "routines_attached_to_features": 438,
-    "unassigned_routines": 3135,
+    "routines_cited_by_features": 440,
+    "routines_attached_to_features": 440,
+    "unassigned_routines": 3133,
     "call_edges": 14228
    }
   },

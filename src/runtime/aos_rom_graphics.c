@@ -108,3 +108,29 @@ bool aos_rom_load_palette_resource(const FusionRom *rom, uint32_t pointer,
     if (error && error_size) error[0] = '\0';
     return true;
 }
+
+bool aos_rom_load_palette_range(const FusionRom *rom, uint32_t pointer,
+                                unsigned source_row, unsigned count,
+                                unsigned destination_row, uint8_t palette[0x200],
+                                char *error, size_t error_size) {
+    const uint8_t *resource = slice(rom, pointer, 4);
+    if (!resource || !palette || destination_row > AOS_PALETTE_ROWS) {
+        set_error(error, error_size, "invalid Aria palette resource");
+        return false;
+    }
+    unsigned rows = count > AOS_PALETTE_ROWS ? AOS_PALETTE_ROWS : count;
+    if (destination_row + rows > AOS_PALETTE_ROWS)
+        rows = AOS_PALETTE_ROWS - destination_row;
+    if (source_row + rows > resource[2])
+        rows = source_row < resource[2] ? resource[2] - source_row : 0;
+    if (rows) {
+        const uint8_t *source = slice(rom, pointer + 4 + source_row * 0x20, rows * 0x20);
+        if (!source) {
+            set_error(error, error_size, "truncated Aria palette resource");
+            return false;
+        }
+        memcpy(palette + destination_row * 0x20, source, rows * 0x20);
+    }
+    if (error && error_size) error[0] = '\0';
+    return true;
+}

@@ -14,6 +14,7 @@
 #include "aos_intro_resources.h"
 #include "aos_main_menu_graphics.h"
 #include "aos_text_window.h"
+#include "aos_menu_bg0.h"
 #include "aos_menu_save_bridge.h"
 #include "aos_save.h"
 
@@ -157,23 +158,24 @@ static bool render_menu_texts(AosIntroResources *resources,
     return target.valid;
 }
 
-/* The main menu's BG0 map (screen base 28) receives 128 consecutive entries
- * from map cell 15 * 32 + 2 on, naming text tiles 0x20-0x9F with palette 12,
- * so the text canvas shows linearly from screen tile (2, 15). */
-static void render_menu_text(SDL_Renderer *renderer,
-                             const AosIntroTextTiles *tiles, const uint8_t rgb[3]) {
-    SDL_SetRenderDrawColor(renderer, rgb[0], rgb[1], rgb[2], 255);
-    for (unsigned entry = 0; entry < 0x80; ++entry) {
-        unsigned tile = 0x20 + entry, cell = 15 * 32 + 2 + entry;
-        unsigned source_x = (tile % 32) * 8, source_y = (tile / 32) * 8;
-        unsigned screen_x = (cell % 32) * 8, screen_y = (cell / 32) * 8;
-        if (screen_x >= GBA_W || screen_y >= GBA_H) continue;
-        for (unsigned y = 0; y < 8; ++y)
-            for (unsigned x = 0; x < 8; ++x)
-                if (aos_intro_text_tiles_pixel(tiles, source_x + x, source_y + y))
-                    SDL_RenderPoint(renderer, (float)(screen_x + x),
-                                    (float)(screen_y + y));
-    }
+/* Uploads the native menu BG0 (text tiles, language bank, palettes 12 and
+ * 13, map) as an RGBA layer; transparent pixels stay transparent. */
+static void upload_menu_bg0(SDL_Texture *texture, const AosMenuBg0 *bg0) {
+    static uint8_t pixels[GBA_W * GBA_H * 4];
+    for (unsigned y = 0; y < GBA_H; ++y)
+        for (unsigned x = 0; x < GBA_W; ++x) {
+            uint8_t *out = pixels + (y * GBA_W + x) * 4;
+            uint16_t color;
+            if (!aos_menu_bg0_pixel(bg0, x, y, &color)) {
+                memset(out, 0, 4);
+                continue;
+            }
+            out[0] = (uint8_t)(((color & 31) * 255) / 31);
+            out[1] = (uint8_t)((((color >> 5) & 31) * 255) / 31);
+            out[2] = (uint8_t)((((color >> 10) & 31) * 255) / 31);
+            out[3] = 255;
+        }
+    SDL_UpdateTexture(texture, NULL, pixels, GBA_W * 4);
 }
 
 static bool create_intro_textures(
@@ -404,6 +406,14 @@ int main(int argc, char **argv) {
     AosIntroFont intro_font = {0};
     AosIntroTextTiles intro_tiles = {0};
     AosIntroTextTiles menu_prompt_tiles = {0};
+    static AosMenuBg0 menu_bg0;
+    bool have_menu_bg0 = false;
+    SDL_Texture *menu_bg0_texture = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
+    if (menu_bg0_texture) {
+        SDL_SetTextureBlendMode(menu_bg0_texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(menu_bg0_texture, SDL_SCALEMODE_NEAREST);
+    }
     AosMainMenuText menu_texts[AOS_MAIN_MENU_TEXT_MAX];
     size_t menu_text_count = 0;
     uint8_t menu_prompt_language = 0;
@@ -487,6 +497,11 @@ int main(int argc, char **argv) {
             if (!have_main_menu_graphics && !launch_error[0])
                 snprintf(launch_error, sizeof launch_error,
                          "MAIN MENU TEXTURE ERROR: %.80s", SDL_GetError());
+            have_menu_bg0 = menu_bg0_texture &&
+                aos_menu_bg0_init(&menu_bg0, &intro_rom, lifecycle.main_menu.language,
+                                  launch_error, sizeof launch_error);
+            if (have_menu_bg0) aos_menu_bg0_map_text(&menu_bg0);
+            have_menu_prompt = false;
         }
         if (have_intro_resources &&
             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
@@ -523,6 +538,10 @@ int main(int argc, char **argv) {
                     lifecycle.main_menu.language, texts, count, launch_error,
                     sizeof launch_error);
                 memcpy(menu_texts, texts, count * sizeof texts[0]);
+                if (have_menu_bg0 && have_menu_prompt) {
+                    aos_menu_bg0_set_text(&menu_bg0, &menu_prompt_tiles);
+                    upload_menu_bg0(menu_bg0_texture, &menu_bg0);
+                }
                 menu_text_count = count;
                 menu_prompt_language = lifecycle.main_menu.language;
             }
@@ -586,10 +605,11 @@ int main(int argc, char **argv) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             AosMainMenu *native_menu = &lifecycle.main_menu;
-            bool native_prompt = have_menu_prompt && menu_text_count > 0;
-            if (native_prompt)
-                render_menu_text(renderer, &menu_prompt_tiles,
-                                 intro_graphics.text_rgb);
+            bool native_prompt = have_menu_bg0 && have_menu_prompt && menu_text_count > 0;
+            if (have_menu_bg0) {
+                SDL_FRect whole_screen = {0, 0, GBA_W, GBA_H};
+                SDL_RenderTexture(renderer, menu_bg0_texture, NULL, &whole_screen);
+            }
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             if (native_menu->name_entry_active || lifecycle.game_mode.update_stage == 9) {
                 char name[9];
@@ -716,6 +736,7 @@ int main(int argc, char **argv) {
     }
     destroy_main_menu_textures(main_menu_textures);
     aos_main_menu_graphics_free(&main_menu_graphics);
+    if (menu_bg0_texture) SDL_DestroyTexture(menu_bg0_texture);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);

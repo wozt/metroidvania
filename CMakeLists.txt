@@ -202,6 +202,7 @@ add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_intro_font.c src/runtime/aos_intro_graphics.c
                src/runtime/aos_rom_graphics.c src/runtime/aos_main_menu_graphics.c
                src/runtime/aos_input.c src/runtime/aos_text_window.c
+               src/runtime/aos_menu_bg0.c
                src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets m)
@@ -574,6 +575,13 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_title_stages_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_title_stages_tests)
     add_test(NAME aos_title_stages COMMAND fusion_aos_title_stages_tests)
+
+    add_executable(fusion_aos_menu_bg0_tests tests/test_aos_menu_bg0.c
+                   src/runtime/aos_menu_bg0.c src/runtime/aos_rom_graphics.c)
+    target_include_directories(fusion_aos_menu_bg0_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_menu_bg0_tests PRIVATE fusion_assets m)
+    fusion_enable_warnings(fusion_aos_menu_bg0_tests)
+    add_test(NAME aos_menu_bg0 COMMAND fusion_aos_menu_bg0_tests)
 
     add_executable(fusion_aos_text_window_tests tests/test_aos_text_window.c
                    src/runtime/aos_text_window.c src/runtime/aos_intro_resources.c

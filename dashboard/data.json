@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T06:39:22+00:00",
+ "generated_at": "2026-10-27T06:46:12+00:00",
  "git": {
-  "commit": "c26b846",
+  "commit": "b5eb7a1",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 198,
+   "total": 199,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 42,
+    "partial": 43,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 73.2,
-   "with_passing_tests": 185,
-   "with_passing_tests_percent": 93.4,
+   "functional_or_better_percent": 72.9,
+   "with_passing_tests": 186,
+   "with_passing_tests_percent": 93.5,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -251,6 +251,7 @@
     "aos.enemies.zombie_soldier",
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
+    "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
     "aos.saves.portable_slots",
@@ -432,11 +433,11 @@
    "areas": [
     "aos"
    ],
-   "total": 57,
+   "total": 58,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 18,
+    "partial": 19,
     "functional": 39,
     "faithful": 0,
     "validated": 0,
@@ -444,8 +445,8 @@
     "unknown": 0
    },
    "functional_or_better": 39,
-   "functional_or_better_percent": 68.4,
-   "with_passing_tests": 57,
+   "functional_or_better_percent": 67.2,
+   "with_passing_tests": 58,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -499,6 +500,7 @@
     "aos.enemies.zombie_soldier",
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
+    "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
     "aos.saves.portable_slots",
@@ -12215,6 +12217,76 @@
    }
   },
   {
+   "id": "aos.menus.menu_bg0",
+   "area": "aos",
+   "category": "menus",
+   "title": "Aria main-menu BG0 layer and map writers",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_menu_bg0.c",
+    "src/runtime/aos_rom_graphics.c",
+    "src/runtime/aos_title_preview.c"
+   ],
+   "tests": [
+    "tests/test_aos_menu_bg0.c",
+    "tests/test_aos_main_menu_graphics.c"
+   ],
+   "dependencies": [
+    "aos.menus.text_window",
+    "aos.title.input_stage8"
+   ],
+   "native_routines": [
+    "sub_0803C8B0",
+    "sub_0803C918",
+    "sub_0803FD9C",
+    "sub_08046DD4",
+    "sub_08046E5C"
+   ],
+   "limitations": "The palette loaders write the destination rows directly; the EWRAM palette buffer and its transfer flags (unk_123DC, unk_123E1) are not modelled, and an out-of-range source row copies nothing instead of a negative DMA. Only the main menu's BG0 is modelled (unscrolled, map writes outside the 32x32 map dropped). The file panel (sub_08006D9C) that uses the number writer is not ported, because the portable saves lack its level, item, gold and area records. BG0 of GameModeMainMenuUpdate's setup: character base 2 with the text engine's tiles 0x000-0x0FF and the English, French or German bank (0x0827B200, 0x08277984, 0x0826C848) from tile 0x100 through sub_0803FD9C, palette 12 from 0x081183F4 and palette 13 from row 3 of 0x080E5C20 through sub_0803C918, and the setup loop mapping text tiles 0x20-0x9F from map cell (2, 15). sub_08046DD4 writes consecutive entries and sub_08046E5C right-aligned digits with blank leading zeros (base + 0xD), padding, overflow and the negative case. The frontend now shows the menu prompt and YES/NO through this BG0 with the native palette. With the verified ROM the three banks hold opaque digit tiles 0x100-0x109 and an offscreen render of the copy confirmation shows the native prompt, Yes and No at their cells (local checks). Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Extend the portable save with the file panel's records, then port sub_08006D9C and sub_08007204 onto this BG0.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_menu_bg0.c",
+     "tests/test_aos_main_menu_graphics.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_menu_bg0.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_menu_bg0"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_main_menu_graphics.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_main_menu_graphics"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-27"
+   }
+  },
+  {
    "id": "aos.menus.text_window",
    "area": "aos",
    "category": "menus",
@@ -16271,6 +16343,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_menu_bg0",
+    "files": [
+     "tests/test_aos_menu_bg0.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_text_window",
     "files": [
      "tests/test_aos_text_window.c"
@@ -16482,12 +16561,18 @@
    }
   ],
   "summary": {
-   "passed": 83,
+   "passed": 84,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "b5eb7a1",
+   "date": "2026-10-27",
+   "subject": "Port Aria's native text cursors and windows",
+   "scope": "project"
+  },
   {
    "commit": "c26b846",
    "date": "2026-10-27",
@@ -16961,12 +17046,6 @@
    "date": "2026-10-24",
    "subject": "Decode Zero Mission Clipdata natively",
    "scope": "project"
-  },
-  {
-   "commit": "43d797e",
-   "date": "2026-10-24",
-   "subject": "Decode Aria collision maps natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -17027,9 +17106,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 472,
-    "routines_attached_to_features": 472,
-    "unassigned_routines": 3101,
+    "routines_cited_by_features": 477,
+    "routines_attached_to_features": 477,
+    "unassigned_routines": 3096,
     "call_edges": 14228
    }
   },

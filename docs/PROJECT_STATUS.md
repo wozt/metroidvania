@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0577 - Aria's native main-menu BG0
+
+- `src/runtime/aos_menu_bg0.c` models the main menu's BG0 as the native
+  setup leaves it: the text engine's tiles, the language bank from tile
+  0x100 (sub_0803FD9C), palettes 12 and 13 (sub_0803C918, new
+  `aos_rom_load_palette_range`) and the map loop that shows text tiles
+  0x20-0x9F from map cell (2, 15). `sub_08046DD4` (consecutive entries) and
+  `sub_08046E5C` (right-aligned digits with blank leading zeros) are ported.
+- The frontend renders the menu prompt and YES/NO through this layer with
+  the native palette instead of the introduction's text colour.
+- Tests: `tests/test_aos_menu_bg0.c` (CTest `aos_menu_bg0`) covers the map
+  writers, the setup loop, tile decoding with flips and palettes; its
+  optional ROM run checks the digit tiles of the three banks. An offscreen
+  render from the verified ROM showed "Copy this data." with Yes and No at
+  their native cells and native digits (local review, not committed).
+- Not ported: the file panel (sub_08006D9C), which needs level, item, gold
+  and area records that portable saves lack; the palette transfer flags.
+  Source-derived, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0576 - Aria's native text cursors and windows
 
 - `src/runtime/aos_text_window.c` ports Aria's two text cursors from the

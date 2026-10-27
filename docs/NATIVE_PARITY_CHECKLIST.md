@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 57 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 58 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 472 | 3101 |
+| Castlevania: Aria of Sorrow | 477 | 3096 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1128,6 +1128,15 @@ Next action: Render file names, statistics and cursor OAM natively, connect nati
 ### Menus and options
 
 [?] **`aos.menus.inventory-boundary` — source coverage.** The current classifier assigns 33 discovered routine(s) to this category (10 by native name, 23 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.menus.menu_bg0` — Aria main-menu BG0 layer and map writers.** BG0 of GameModeMainMenuUpdate's setup: character base 2 with the text engine's tiles 0x000-0x0FF and the English, French or German bank (0x0827B200, 0x08277984, 0x0826C848) from tile 0x100 through sub_0803FD9C, palette 12 from 0x081183F4 and palette 13 from row 3 of 0x080E5C20 through sub_0803C918, and the setup loop mapping text tiles 0x20-0x9F from map cell (2, 15). sub_08046DD4 writes consecutive entries and sub_08046E5C right-aligned digits with blank leading zeros (base + 0xD), padding, overflow and the negative case. The frontend now shows the menu prompt and YES/NO through this BG0 with the native palette. With the verified ROM the three banks hold opaque digit tiles 0x100-0x109 and an offscreen render of the copy confirmation shows the native prompt, Yes and No at their cells (local checks). Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08046DD4`, `aos:asm:asm/code/code_08040A38.s:sub_08046E5C`, `aos:c:src/code/code_08039340.c:sub_0803C8B0`, `aos:c:src/code/code_08039340.c:sub_0803C918`, `aos:c:src/code/code_08039340.c:sub_0803FD9C`.  
+Local implementation: [`src/runtime/aos_menu_bg0.c`](../src/runtime/aos_menu_bg0.c), [`src/runtime/aos_rom_graphics.c`](../src/runtime/aos_rom_graphics.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c).  
+Tests: [`tests/test_aos_menu_bg0.c`](../tests/test_aos_menu_bg0.c), [`tests/test_aos_main_menu_graphics.c`](../tests/test_aos_main_menu_graphics.c).
+Dependencies: `aos.menus.text_window`, `aos.title.input_stage8`.  
+Known divergences: The palette loaders write the destination rows directly; the EWRAM palette buffer and its transfer flags (unk_123DC, unk_123E1) are not modelled, and an out-of-range source row copies nothing instead of a negative DMA. Only the main menu's BG0 is modelled (unscrolled, map writes outside the 32x32 map dropped). The file panel (sub_08006D9C) that uses the number writer is not ported, because the portable saves lack its level, item, gold and area records.  
+Next action: Extend the portable save with the file panel's records, then port sub_08006D9C and sub_08007204 onto this BG0.
 
 [~] **`aos.menus.text_window` — Aria text cursors and windows.** Both text cursors of gEwramData + 0x115A0 (context A, 12-pixel rows up to 20) and + 0x115B2 (context B, 8-pixel rows up to 31) are ported from the assembly: cell and pixel cursors (with the native 12-pixel row of sub_0804090C in context B), windows (right edge x + w - 2, bottom y + h - 1, clamped after the store), newline and glyph advance with the single 6-pixel carry, right-edge and bottom wrapping, positioned puts, window clears (left column to one past the right) and the print loops that stop at the first control. The main menu prints its prompt at (0, 1) of window (0, 1, 0x25, 3) and the copy/delete YES/NO entries at (9, 2) and (0x14, 2) for COPY or (0xA, 2) and (0x15, 2) for DELETE; the frontend shows text tiles 0x20-0x9F through the native BG0 map from screen tile (2, 15). With the verified ROM all ten menu texts fit their row in the three languages (optional local test). Source-derived and unit-tested, not emulator-compared.
 

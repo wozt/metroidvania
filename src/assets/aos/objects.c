@@ -17,6 +17,7 @@ enum {
     MONEY_TABLE = 0x085250E4,
     WEAPON_STATS = 0x08505D3C,
     ARMOR_STATS = 0x085063B0,
+    RED_SOULS = 0x080E1598,
     ENEMY_COUNT = 0x71,
     DEATH_BLINK = 0x08118CE0,
     SCREEN_MARGINS = 0x08118D08,
@@ -166,6 +167,9 @@ static const EntitySpec entities[] = {
            2, 3, 4, 5),
     STATIC("zombie_soldier", 0x081CC024, 0x0820AA48, 0, 0x082215C4, 3,
            18, 19, 20),
+    /* SkillBatUse: entry 3 of the skill resources 0x080E13BC (tiles,
+     * palette row 0, frames), exported with its per-frame attack boxes. */
+    ENTITY("skill_bat", 0x081CD8D0, 0x0820B0B0, 0, 0x082311F8),
 };
 
 static const EffectSpec effects[] = {
@@ -784,11 +788,13 @@ static bool append_enemy_stats(const FusionRom *rom, Text *stats,
 }
 
 /* The money pickup table of sub_08043F70 (0x085250E4, seven 12-byte
- * records): value, message, sprite sequence, palette and lift flag. */
+ * records): value, message, the bytes at + 0x8 (attribute bits of
+ * sub_0803B924) and + 0x9 (a sequence or frame number, not traced) and the
+ * lift flag. */
 static bool append_money(const FusionRom *rom, Text *money, char *error, size_t error_size) {
     if (!text_append(money,
             "schema\tmetroidvania-aos-money-v1\n"
-            "# variant\tvalue\ttext\tanim\tpalette\tlifted\n")) return false;
+            "# variant\tvalue\ttext\tfield_8\tfield_9\tlifted\n")) return false;
     for (uint32_t variant = 0; variant < 7; ++variant) {
         const uint8_t *record = slice(rom, MONEY_TABLE + variant * 12, 12, "money record",
                                       error, error_size);
@@ -823,6 +829,27 @@ static bool append_equipment(const FusionRom *rom, Text *equipment, char *error,
                                         table ? read_u16(record + 0x10) : 0))
                 return false;
         }
+    return true;
+}
+
+/* Soma's red soul records (0x080E1598, 29 x 16 bytes; record 0 is none):
+ * whether a skill entity exists (+ 0x0), the cast pose (+ 0x4), the MP cost
+ * (+ 0x6), the most active at once (+ 0x8), + 0xA and the parameter
+ * (+ 0xE) given to the skill entity. */
+static bool append_red_souls(const FusionRom *rom, Text *souls, char *error,
+                             size_t error_size) {
+    if (!text_append(souls,
+            "schema\tmetroidvania-aos-red-souls-v1\n"
+            "# soul\tskill\tpose\tmp\tmaximum\tfield_a\tparameter\n")) return false;
+    for (uint32_t soul = 0; soul < 29; ++soul) {
+        const uint8_t *record = slice(rom, RED_SOULS + soul * 16, 16, "red soul record",
+                                      error, error_size);
+        if (!record || !text_append(souls, "%u\t0x%08x\t%u\t%d\t%u\t%u\t%u\n", soul,
+                                    read_u32(record), read_u16(record + 4),
+                                    (int16_t)read_u16(record + 6), record[8],
+                                    read_u16(record + 0xA), read_u16(record + 0xE)))
+            return false;
+    }
     return true;
 }
 
@@ -864,7 +891,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0}, equipment = {0};
+    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
                                                    error_size) &&
@@ -895,7 +922,10 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                                            &money, error, error_size) &&
                            append_equipment(rom, &equipment, error, error_size) &&
                            write_text_file(metadata_output, "equipment.tsv",
-                                           &equipment, error, error_size);
+                                           &equipment, error, error_size) &&
+                           append_red_souls(rom, &red_souls, error, error_size) &&
+                           write_text_file(metadata_output, "red_souls.tsv",
+                                           &red_souls, error, error_size);
     FusionSpriteLibrarySummary library_summary = {0};
     if (success) success = fusion_sprite_library_finish(
         &library, &library_summary, error, error_size);
@@ -912,5 +942,6 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(stats.data);
     free(money.data);
     free(equipment.data);
+    free(red_souls.data);
     return success;
 }

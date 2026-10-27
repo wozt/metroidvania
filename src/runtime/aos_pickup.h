@@ -13,8 +13,9 @@
 typedef struct {
     uint32_t value;     /* + 0x0: gold */
     uint32_t text;      /* + 0x4: message of sub_0800EF98 */
-    uint8_t anim;       /* + 0x8: sprite sequence of sub_0803B924 */
-    uint8_t palette;    /* + 0x9 */
+    uint8_t field_8;    /* + 0x8: sub_0803B924's attribute bits (unk_53E_3) */
+    uint8_t field_9;    /* + 0x9: sub_0803F2C8's sequence (lifted), else
+                         * unk_549; its meaning is not traced */
     uint16_t lifted;    /* + 0xA: non-zero lifts the sprite 8 pixels */
 } AosMoneyKind;
 

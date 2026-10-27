@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v6"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v7"
+#define AOS_SAVE_SCHEMA_V6 "metroidvania-aos-save-v6"
 #define AOS_SAVE_SCHEMA_V5 "metroidvania-aos-save-v5"
 #define AOS_SAVE_SCHEMA_V4 "metroidvania-aos-save-v4"
 #define AOS_SAVE_SCHEMA_V3 "metroidvania-aos-save-v3"
@@ -48,6 +49,11 @@ typedef struct {
      * totalNbrSoulsCollected; older files hold no souls. */
     uint8_t souls[AOS_SAVE_SOUL_BYTES];
     uint16_t souls_collected;
+    /* Schema v7: the equipped red, blue and yellow souls (index + 1, 0 none)
+     * and currentMP; older files have none equipped and MP at -1, which
+     * means full (sub_08014548 starts at the maximum). */
+    uint8_t red_soul, blue_soul, yellow_soul;
+    int16_t mp;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

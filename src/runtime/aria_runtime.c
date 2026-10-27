@@ -16,6 +16,7 @@
 #include "aos_save.h"
 #include "aos_stats.h"
 #include "aos_pickup.h"
+#include "aos_soul.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
@@ -44,6 +45,7 @@
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DEFAULT_MONEY "assets/extracted/aria/metadata/money.tsv"
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
+#define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
 #define DOOR_STYLES 2
 #define ENEMY_KINDS 100
@@ -497,6 +499,76 @@ typedef struct {
     bool derive_atk, derive_def;                 /* false under --atk / --def */
 } AriaCombat;
 
+/* A red soul skill entity (EntityCreateInRange(2, 0x10)); only the bat's
+ * routine, SkillBatUse, is ported. */
+typedef struct {
+    bool alive, started;
+    int slot;
+    uint8_t soul;           /* + 0x1C: the soul it was cast with */
+    int32_t x, y;           /* room pixels */
+    bool facing_left;
+    AosAnimState anim;
+} AriaSkill;
+
+#define MAX_SKILLS AOS_RED_SOUL_SLOTS
+
+/* What a cast needs: the soul state and where its entity goes. */
+typedef struct {
+    AosStats *stats;
+    AosRedSoulCaster caster;
+    const AosRedSoulRecord *records;
+    AriaSkill skills[MAX_SKILLS];
+    const AosSoma *soma;
+    bool bat_loaded;
+} AriaSouls;
+
+/* Soma's cast hook: sub_08019478's guards and bookkeeping, then the skill
+ * entity; only SkillBatUse (soul 2's routine 0x08026C55) has one, so other
+ * souls are refused rather than spending MP on nothing. */
+static int cast_red_soul(void *context) {
+    AriaSouls *souls = context;
+    if (!souls->records || !souls->bat_loaded ||
+        souls->stats->red_soul >= AOS_RED_SOUL_RECORDS ||
+        souls->records[souls->stats->red_soul].skill != 0x08026C55u)
+        return -1;
+    int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
+    if (slot < 0) return -1;
+    /* sub_08031EA4(entity, Soma, 0, -0x1A): Soma's facing and position. */
+    souls->skills[slot] = (AriaSkill){.alive = true, .slot = slot,
+                                      .soul = souls->stats->red_soul,
+                                      .x = souls->soma->x >> 16,
+                                      .y = (souls->soma->y >> 16) - 0x1A,
+                                      .facing_left = souls->soma->facing_left};
+    printf("Red soul %u cast (MP %d)\n", souls->stats->red_soul, souls->stats->mp);
+    return souls->records[souls->stats->red_soul].pose;
+}
+
+/* SkillBatUse: on its first update it counts itself (0x131BE) and starts
+ * sequence 0 (sound 0xE2 and sub_08042A54(1, 0xF) are not played); it
+ * stays where it was created and ends with its animation. */
+static void update_skills(AriaSouls *souls, const AosAnimSet *bat) {
+    for (int i = 0; i < MAX_SKILLS; ++i) {
+        AriaSkill *skill = &souls->skills[i];
+        if (!skill->alive) continue;
+        if (!skill->started) {
+            skill->started = true;
+            souls->caster.active++;
+            aos_anim_start(&skill->anim, bat, 0, false);
+        }
+        /* sub_0803F17C steps the animation and reports its end (3). */
+        if (aos_anim_step(&skill->anim, bat) == 3) {
+            aos_red_soul_release(&souls->caster, skill->slot);
+            skill->alive = false;
+        }
+    }
+}
+
+/* A room change deletes the skill entities with the room's. */
+static void clear_skills(AriaSouls *souls) {
+    for (int i = 0; i < MAX_SKILLS; ++i) souls->skills[i].alive = false;
+    souls->caster = (AosRedSoulCaster){.last_used = souls->caster.last_used};
+}
+
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; the wooden door, the bat, the zombie, the
  * blue crow and the zombie soldier (with its grenades) are ported. */
@@ -764,7 +836,7 @@ typedef struct {
         int static_ids[ENEMY_STATIC_FRAMES];
         AriaFrame statics[ENEMY_STATIC_FRAMES];
         int static_count;
-    } enemies[ENEMY_KINDS], variants[VARIANT_ARTS];
+    } enemies[ENEMY_KINDS], variants[VARIANT_ARTS], skill_bat;   /* Enemy/skill_bat */
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -875,9 +947,15 @@ static bool load_enemy_data(AriaObjects *objects) {
                    &a[3]) != 14 ||
             anim < 0 || anim >= AOS_ENEMY_MAX_ANIMS || index < 0 || index >= AOS_ENEMY_MAX_FRAMES)
             continue;
-        for (int id = 0; id < ENEMY_KINDS; ++id) {
-            if (!enemy_names[id] || strcmp(name, enemy_names[id])) continue;
-            AosEnemyKind *kind = &objects->enemies[id].kind;
+        for (int id = 0; id <= ENEMY_KINDS; ++id) {
+            AosEnemyKind *kind;
+            if (id == ENEMY_KINDS) {
+                if (strcmp(name, "skill_bat")) continue;
+                kind = &objects->skill_bat.kind;
+            } else {
+                if (!enemy_names[id] || strcmp(name, enemy_names[id])) continue;
+                kind = &objects->enemies[id].kind;
+            }
             kind->modes[anim][index] = (uint8_t)mode;
             kind->sprites[anim][index] = (uint8_t)frame;
             kind->hurt[anim][index] = (AosBox){(int8_t)h[0], (int8_t)h[1], (uint8_t)h[2], (uint8_t)h[3]};
@@ -925,11 +1003,11 @@ static bool load_enemy_data(AriaObjects *objects) {
     if (f) {
         unsigned loaded = 0;
         while (fgets(line, sizeof line, f)) {
-            unsigned variant, value, text, anim, palette, lifted;
-            if (sscanf(line, "%u\t%u\t%u\t%u\t%u\t%u", &variant, &value, &text, &anim,
-                       &palette, &lifted) == 6 && variant < AOS_MONEY_KINDS) {
-                objects->money[variant] = (AosMoneyKind){value, text, (uint8_t)anim,
-                                                         (uint8_t)palette, (uint16_t)lifted};
+            unsigned variant, value, text, field_8, field_9, lifted;
+            if (sscanf(line, "%u\t%u\t%u\t%u\t%u\t%u", &variant, &value, &text, &field_8,
+                       &field_9, &lifted) == 6 && variant < AOS_MONEY_KINDS) {
+                objects->money[variant] = (AosMoneyKind){value, text, (uint8_t)field_8,
+                                                         (uint8_t)field_9, (uint16_t)lifted};
                 loaded |= 1u << variant;
             }
         }
@@ -937,6 +1015,26 @@ static bool load_enemy_data(AriaObjects *objects) {
         objects->money_loaded = loaded == (1u << AOS_MONEY_KINDS) - 1;
     }
     return true;
+}
+
+/* metadata/red_souls.tsv: Soma's red soul records. */
+static bool load_red_souls(const char *path, AosRedSoulRecord records[AOS_RED_SOUL_RECORDS]) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[256];
+    unsigned loaded = 0;
+    while (fgets(line, sizeof line, f)) {
+        unsigned soul, skill, pose, maximum, field_a, parameter;
+        int mp;
+        if (sscanf(line, "%u\t%x\t%u\t%d\t%u\t%u\t%u", &soul, &skill, &pose, &mp, &maximum,
+                   &field_a, &parameter) != 7 || soul >= AOS_RED_SOUL_RECORDS)
+            continue;
+        records[soul] = (AosRedSoulRecord){skill, (uint16_t)pose, (int16_t)mp,
+                                           (uint8_t)maximum, (uint16_t)parameter};
+        loaded++;
+    }
+    fclose(f);
+    return loaded == AOS_RED_SOUL_RECORDS;
 }
 
 /* metadata/equipment.tsv: the weapon and armor/accessory records. */
@@ -1060,9 +1158,12 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         }
         if (sscanf(line, "Enemy/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
-            for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS; ++id) {
+            for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS + 1; ++id) {
                 __typeof__(objects->enemies[0]) *art;
-                if (id < ENEMY_KINDS) {
+                if (id == ENEMY_KINDS + VARIANT_ARTS) {
+                    if (strcmp(enemy_name, "skill_bat")) continue;
+                    art = &objects->skill_bat;
+                } else if (id < ENEMY_KINDS) {
                     if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
                     art = &objects->enemies[id];
                 } else {
@@ -1110,6 +1211,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     fclose(f);
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
     for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
+    objects->skill_bat.set.anims = objects->skill_bat.defs;
     return ok;
 }
 
@@ -1522,7 +1624,7 @@ static void usage(const char *name) {
     fprintf(stderr,
             "Usage: %s [--check] [--save slot.sav] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
-            "       [--weapon none|INDEX] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
+            "       [--weapon none|INDEX] [--red-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
@@ -1542,6 +1644,7 @@ int main(int argc, char **argv) {
     bool check = false, show_hitboxes = false, debug_at_start = false;
     bool hp_override = false, moves_override = false, spawn_override = false;
     bool atk_override = false, def_override = false, weapon_override = false;
+    long red_soul_override = -1;   /* --red-soul: equippedRedSoul (no soul menu yet) */
     const char *debug_input = NULL;
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
@@ -1562,6 +1665,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) {
             weapon_name = argv[++i];
             weapon_override = true;
+        } else if (!strcmp(argv[i], "--red-soul") && i + 1 < argc) {
+            red_soul_override = strtol(argv[++i], &end, 10);
         }
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
         else if (!strcmp(argv[i], "--debug-menu")) debug_at_start = true;
@@ -1700,6 +1805,9 @@ int main(int argc, char **argv) {
         memcpy(progress.armor_counts, active_save.inventory + AOS_SAVE_ARMOR,
                sizeof progress.armor_counts);
         souls_from_save(&progress, &active_save);
+        progress.red_soul = active_save.red_soul;
+        progress.blue_soul = active_save.blue_soul;
+        progress.yellow_soul = active_save.yellow_soul;
     }
     static char save_weapon_name[8];
     if (weapon_override)
@@ -1734,8 +1842,21 @@ int main(int argc, char **argv) {
         player_stats.max_hp = progress.max_hp;
         if (player_stats.hp > player_stats.max_hp) player_stats.hp = player_stats.max_hp;
     }
+    if (red_soul_override >= 0 && red_soul_override < AOS_RED_SOUL_RECORDS)
+        progress.red_soul = (uint8_t)red_soul_override;
+    /* currentMP: the file's, full for a new or older file (sub_08014548). */
+    progress.mp = has_active_save && active_save.mp >= 0 ? active_save.mp
+                                                         : (int16_t)progress.max_mp;
+    if (progress.mp > (int16_t)progress.max_mp) progress.mp = (int16_t)progress.max_mp;
+    static AosRedSoulRecord red_souls[AOS_RED_SOUL_RECORDS];
+    bool have_red_souls = load_red_souls(DEFAULT_RED_SOULS, red_souls);
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
+    static AriaSouls souls;
+    souls = (AriaSouls){.stats = &progress, .records = have_red_souls ? red_souls : NULL,
+                        .soma = &soma};
+    soma.cast = cast_red_soul;
+    soma.cast_context = &souls;
     soma.hp = (int16_t)player_stats.hp;
     soma.max_hp = (int16_t)player_stats.max_hp;
     if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
@@ -1899,6 +2020,10 @@ int main(int argc, char **argv) {
             if (!lifecycle.in_game_frame_requested) continue;
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);
+            /* sub_08021994 runs inside the update, before + 0x22 advances. */
+            aos_stats_mp_regen(&progress, (uint16_t)(soma.ticks - 1));
+            souls.bat_loaded = objects_ok && objects.skill_bat.loaded;
+            if (souls.bat_loaded) update_skills(&souls, &objects.skill_bat.set);
             ++step;
             if (has_active_save) active_save.play_frames++;
             if (soma.state == 16 && !announced_death) {
@@ -1909,6 +2034,7 @@ int main(int argc, char **argv) {
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
+                clear_skills(&souls);
                 layer = room_layer(&room);
                 save_room = (AosSaveRoom){0};
             }
@@ -1929,6 +2055,10 @@ int main(int argc, char **argv) {
                     active_save.weapon = progress.weapon;
                     active_save.armor = progress.armor;
                     active_save.accessory = progress.accessory;
+                    active_save.red_soul = progress.red_soul;
+                    active_save.blue_soul = progress.blue_soul;
+                    active_save.yellow_soul = progress.yellow_soul;
+                    active_save.mp = progress.mp;
                     memcpy(active_save.inventory, progress.item_counts,
                            sizeof progress.item_counts);
                     memcpy(active_save.inventory + AOS_SAVE_WEAPONS, progress.weapon_counts,
@@ -1975,6 +2105,18 @@ int main(int argc, char **argv) {
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
+        for (int k = 0; objects_ok && k < MAX_SKILLS; ++k) {
+            const AriaSkill *skill = &souls.skills[k];
+            if (!skill->alive || !skill->started || skill->anim.frame >= MAX_FRAMES) continue;
+            const AriaFrame *art = &objects.skill_bat.frames[0][skill->anim.frame];
+            if (!art->texture) continue;
+            float x = skill->facing_left ? (float)(skill->x - art->offset_x) - art->w
+                                         : (float)(skill->x + art->offset_x);
+            SDL_FRect rect = {x - (float)cam_x, (float)(skill->y + art->offset_y - cam_y), art->w,
+                              art->h};
+            SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                     skill->facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+        }
         if (show_hitboxes) {
             /* The pickups' sprites are not exported: their boxes only. */
             SDL_SetRenderDrawColor(renderer, 240, 210, 60, 255);

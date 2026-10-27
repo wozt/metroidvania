@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0584 - Aria red soul casting, MP and the bat's sonic ring
+
+- `src/runtime/aos_soul.c` ports the guards and bookkeeping of Soma's red
+  soul use `sub_08019478` (records 0x080E1598, exported as
+  `metadata/red_souls.tsv`; last used soul, MP cost, per-record maximum and
+  eight slots) and the MP regeneration of `sub_08021994` (one MP every 64
+  ticks of Soma's new + 0x22 counter, accessories 0x29 and 0x2C).
+- `aos_soma` gains the cast hook of `_0801C298` (Up and a new attack
+  press), the cast poses (animations of `sub_0802D1D8`, hop, lunge, recoil
+  byte) and state 2, which ends with the cast animation.
+- The runtime runs `SkillBatUse` for soul 2 (the bat): its entity takes
+  Soma's facing at (0, -26), plays its exported sequence (`Enemy/skill_bat`,
+  an expanding ring with per-frame attack boxes) and frees its slot at the
+  end. Other red souls are refused. Portable saves keep the equipped souls
+  and MP (schema v7); `--red-soul N` equips one until a soul menu exists.
+  A local run cast the bat soul (MP 80 to 75) and drew the ring.
+- The money table's + 0x8 and + 0x9 bytes were misnamed (sequence and
+  palette); they are now neutral `field_8` / `field_9` with their traced
+  roles.
+- Not ported: the ring's damage (type 5 collision and soul damage formula),
+  the other skills, the soul menu, sounds and the curse states.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0583 - Aria soul inventory and soul pickups
 
 - `aos_stats` ports the soul inventory routines (`SoulInventory_*`,

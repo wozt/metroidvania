@@ -2,6 +2,7 @@
 /* Aria of Sorrow Soma motion rules; comments name the cvaos routine and
  * the code path each function reproduces. */
 #include "aos_soma.h"
+#include "aos_soul.h"
 
 const AosBox aos_soma_stand_box = {-6, -32, 12, 28};
 const AosBox aos_soma_low_box = {-5, -16, 12, 14};
@@ -493,6 +494,49 @@ static void slow_on_slope(AosSoma *soma, const int32_t divisors[3]) {
         soma->vx = soma->vx / divisors[soma->slope_step - 1] * 16;
 }
 
+/* sub_08019478 with its second argument 0, after a successful cast: the
+ * cast animation of sub_0802D1D8 (ground stand box, air low box), the pose's
+ * motion, flag 0x100 and state 2. The per-animation palette (0x080E126C) and
+ * the 0x131B8 & 0x800 gate are not modelled. */
+static void cast_pose(AosSoma *soma, unsigned pose) {
+    soma->recoil = 0;
+    if (!(soma->flags & AOS_FLAG_AIRBORNE)) {
+        play(soma, aos_red_soul_cast_animation((uint16_t)pose, false), false, STAND);
+        switch (pose) {
+        case 1:     /* a hop */
+            soma->cast_1e = 0x10;
+            soma->flags = (soma->flags | 0xAu) & 0xFFEFFBFFu;
+            soma->vy = (int32_t)0xFFFC8000;
+            soma->gravity_mod = (int32_t)0xFFFFF000;
+            break;
+        case 2:     /* a lunge */
+            soma->cast_1e = 0x10;
+            soma->vx = soma->facing_left ? (int32_t)0xFFFD0000 : 0x30000;
+            break;
+        case 3:
+            soma->cast_1e = 0x32;
+            soma->recoil = 1;
+            break;
+        default: break;
+        }
+    } else {
+        play(soma, aos_red_soul_cast_animation((uint16_t)pose, true), false, LOW);
+        if (pose == 3) soma->cast_1e = 0x14;
+    }
+    soma->flags = (soma->flags & 0xFFDFFF9Fu) | 0x100u;
+    soma->state = 2;
+}
+
+/* _0801C298: Up held, the attack button pressed and no crouch, 0x100 or
+ * air attack flag. */
+static void soul_start(AosSoma *soma, uint16_t held, uint16_t pressed) {
+    if (!soma->cast || !(held & AOS_KEY_UP) || !(pressed & AOS_KEY_ATTACK) ||
+        (soma->flags & 0x540u))
+        return;
+    int pose = soma->cast(soma->cast_context);
+    if (pose >= 0) cast_pose(soma, (unsigned)pose);
+}
+
 /* sub_080197B4: attack start (the auto-attack flag 0x1325C & 2, the
  * 0x131B8 & 0x80 lock and the weapon entity of sub_080230A8 are not
  * modelled; the entity exists while weapon_active). */
@@ -612,6 +656,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         soma->frame_counter++;
         if (!(soma->flags & 0x1000001Eu)) ground_animation(soma, held, start_speed);
     }
+    soul_start(soma, held, pressed);
     attack_start(soma, pressed);
     if ((soma->moves & AOS_MOVE_SLIDE) && !(soma->flags & 0x1122u) &&
         (held & AOS_KEY_DOWN) && (pressed & AOS_KEY_JUMP)) {
@@ -690,6 +735,29 @@ static void attack_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         soma->flags = (soma->flags & 0xFFDFFF9Fu) | AOS_FLAG_BACKDASH;
         soma->frame_counter = 0;
         soma->vx = soma->facing_left ? 0x3C000 : (int32_t)0xFFFC4000;
+        soma->state = 0;
+    }
+    aos_soma_air(soma, layer, held);
+}
+
+/* Case 2 (_0801C6D8): a red soul cast. Steering in the air, friction on the
+ * ground, back to state 0 when the cast animation ends. The pose-3 recoil
+ * (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled. */
+static void cast_state(AosSoma *soma, const AosCollision *layer, uint16_t held) {
+    int32_t speed = (soma->abilities & AOS_ABILITY_FAST_WALK) ? AOS_FAST_WALK_SPEED
+                                                              : AOS_WALK_SPEED;
+    if ((soma->flags & AOS_FLAG_AIRBORNE) && (held & AOS_KEY_LEFT)) {
+        soma->vx = -speed;
+        soma->friction = 0;
+    } else if ((soma->flags & AOS_FLAG_AIRBORNE) && (held & AOS_KEY_RIGHT)) {
+        soma->vx = speed;
+        soma->friction = 0;
+    } else {
+        soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
+    }
+    apply_friction(soma);
+    if (soma->flags & AOS_FLAG_ANIM_DONE) {
+        soma->flags &= 0xFFDFFEFFu;
         soma->state = 0;
     }
     aos_soma_air(soma, layer, held);
@@ -910,6 +978,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     switch (soma->state) {
     case 0: normal_state(soma, layer, held, pressed); break;
     case 1: attack_state(soma, layer, held, pressed); break;
+    case 2: cast_state(soma, layer, held); break;
     case 3: slide_state(soma, layer); break;
     case 4: hard_landing_state(soma); break;
     case 5: high_jump_state(soma, layer, held); break;
@@ -939,5 +1008,6 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     soma->air_anim_locked = false;
     /* The weapon entity deletes itself once the attack flag is clear. */
     if (!(soma->flags & AOS_FLAG_ATTACKING)) soma->weapon_active = false;
+    soma->ticks++;
     return landing;
 }

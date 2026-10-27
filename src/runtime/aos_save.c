@@ -32,7 +32,9 @@ static bool valid(const AosSaveData *save) {
         return false;
     for (unsigned i = 0; i < AOS_SAVE_INVENTORY; ++i)
         if (save->inventory[i] > 9) return false;
-    if (save->souls_collected > 999) return false;
+    if (save->souls_collected > 999 || save->red_soul > 28 || save->blue_soul > 13 ||
+        save->yellow_soul > 18 || save->mp < -1 || save->mp > 9999)
+        return false;
     for (unsigned i = 0; i < 8; ++i)
         if (save->name[i] > 0x22) return false;
     return true;
@@ -102,15 +104,24 @@ static int payload_v5(char *out, size_t size, const AosSaveData *save) {
     return used;
 }
 
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v6(char *out, size_t size, const AosSaveData *save) {
     int used = payload_v5(out, size, save);
     if (used < 0 || (size_t)used + 2 * AOS_SAVE_SOUL_BYTES + 32 >= size) return -1;
-    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    memcpy(out, AOS_SAVE_SCHEMA_V6, sizeof AOS_SAVE_SCHEMA_V6 - 1);
     used += snprintf(out + used, size - (size_t)used, "souls=");
     for (unsigned i = 0; i < AOS_SAVE_SOUL_BYTES; ++i)
         used += snprintf(out + used, size - (size_t)used, "%02x", save->souls[i]);
     used += snprintf(out + used, size - (size_t)used, "\nsouls_collected=%u\n",
                      save->souls_collected);
+    return used;
+}
+
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    int used = payload_v6(out, size, save);
+    if (used < 0 || (size_t)used + 64 >= size) return -1;
+    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    used += snprintf(out + used, size - (size_t)used, "souls_equipped=%u,%u,%u\nmp=%d\n",
+                     save->red_soul, save->blue_soul, save->yellow_soul, save->mp);
     return used;
 }
 
@@ -130,6 +141,7 @@ void aos_save_init_new(AosSaveData *save, unsigned slot) {
         .weapon = 0,
         .armor = 0,
         .accessory = 0xFF,
+        .mp = -1,
     };
     save->inventory[AOS_SAVE_WEAPONS] = 1;
     save->inventory[AOS_SAVE_ARMOR] = 1;
@@ -167,6 +179,9 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
     bool v3 = strncmp(text, AOS_SAVE_SCHEMA_V3 "\n", sizeof(AOS_SAVE_SCHEMA_V3)) == 0;
     bool v4 = strncmp(text, AOS_SAVE_SCHEMA_V4 "\n", sizeof(AOS_SAVE_SCHEMA_V4)) == 0;
     bool v5 = strncmp(text, AOS_SAVE_SCHEMA_V5 "\n", sizeof(AOS_SAVE_SCHEMA_V5)) == 0;
+    bool v6 = strncmp(text, AOS_SAVE_SCHEMA_V6 "\n", sizeof(AOS_SAVE_SCHEMA_V6)) == 0;
+    unsigned red = 0, blue = 0, yellow = 0;
+    int mp = -1;
     char souls[2 * AOS_SAVE_SOUL_BYTES + 1] = {0};
     unsigned souls_collected = 0;
     char inventory[AOS_SAVE_INVENTORY + 1] = {0};
@@ -219,7 +234,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &experience, &gold, &weapon, &armor, &accessory,
                          &expected, &consumed);
-    } else if (v5 || strncmp(text, AOS_SAVE_SCHEMA "\n", sizeof(AOS_SAVE_SCHEMA)) == 0) {
+    } else if (v5 || v6 || strncmp(text, AOS_SAVE_SCHEMA "\n", sizeof(AOS_SAVE_SCHEMA)) == 0) {
         /* v5 and v6 share the fields up to the inventory. */
         matched = sscanf(text,
                          "%*[^\n]\n"
@@ -237,13 +252,18 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &challenge_flags, &experience, &gold, &weapon, &armor, &accessory,
                          inventory, &consumed);
         /* The v5 checksum line, or the v6 soul lines and then it. */
-        int tail = 0, read = consumed > 0 && !v5
+        int tail = 0, read = consumed > 0 && v6
             ? sscanf(text + consumed, "souls=%246[0-9a-f]\nsouls_collected=%u"
                                       "\nchecksum=%" SCNx32 "\n%n",
                      souls, &souls_collected, &expected, &tail)
+            : consumed > 0 && !v5
+            ? sscanf(text + consumed, "souls=%246[0-9a-f]\nsouls_collected=%u"
+                                      "\nsouls_equipped=%u,%u,%u\nmp=%d"
+                                      "\nchecksum=%" SCNx32 "\n%n",
+                     souls, &souls_collected, &red, &blue, &yellow, &mp, &expected, &tail)
             : consumed > 0 ? sscanf(text + consumed, "checksum=%" SCNx32 "\n%n", &expected, &tail)
                            : 0;
-        if (read == (v5 ? 1 : 3) && tail > 0) {
+        if (read == (v5 ? 1 : v6 ? 3 : 7) && tail > 0) {
             matched += read;
             consumed += tail;
         } else {
@@ -252,7 +272,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
     } else {
         matched = 0;
     }
-    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : v4 ? 25 : v5 ? 26 : 28;
+    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : v4 ? 25 : v5 ? 26 : v6 ? 28 : 32;
     if (expected_matches >= 26 && matched == expected_matches &&
         (strlen(inventory) != AOS_SAVE_INVENTORY ||
          (!v5 && strlen(souls) != 2 * AOS_SAVE_SOUL_BYTES))) {
@@ -317,6 +337,16 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
             }
             parsed.souls_collected = (uint16_t)souls_collected;
         }
+        if (!v2 && !v3 && !v4 && !v5 && !v6) {
+            if (red > 0xFF || blue > 0xFF || yellow > 0xFF || mp < -1 || mp > 9999) {
+                set_error(error, error_size, "save contents are out of range");
+                return false;
+            }
+            parsed.red_soul = (uint8_t)red;
+            parsed.blue_soul = (uint8_t)blue;
+            parsed.yellow_soul = (uint8_t)yellow;
+            parsed.mp = (int16_t)mp;
+        }
     }
     char canonical[AOS_SAVE_TEXT_MAX];
     int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
@@ -324,6 +354,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          : v3   ? payload_v3(canonical, sizeof canonical, &parsed)
                          : v4   ? payload_v4(canonical, sizeof canonical, &parsed)
                          : v5   ? payload_v5(canonical, sizeof canonical, &parsed)
+                         : v6   ? payload_v6(canonical, sizeof canonical, &parsed)
                                 : payload(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||
         checksum(canonical, (size_t)canonical_size) != expected) {

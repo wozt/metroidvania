@@ -55,6 +55,10 @@ typedef struct {
     uint8_t ability_souls[3];
     uint8_t abilities[2];        /* unk_13396: enabled ability bits */
     uint16_t souls_collected;    /* totalNbrSoulsCollected */
+    /* equippedRedSoul, equippedBlueSoul, equippedYellowSoul: soul index + 1,
+     * 0 for none (0x13269-0x1326B). */
+    uint8_t red_soul, blue_soul, yellow_soul;
+    int16_t mp;                  /* currentMP (0x1327C) */
 } AosStats;
 
 enum {

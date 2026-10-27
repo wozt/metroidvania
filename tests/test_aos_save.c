@@ -49,6 +49,9 @@ int main(void) {
     source.souls[0] = 0x21;
     source.souls[AOS_SAVE_SOUL_BYTES - 1] = 0xFF;
     source.souls_collected = 42;
+    source.red_soul = 2;
+    source.yellow_soul = 18;
+    source.mp = 37;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};

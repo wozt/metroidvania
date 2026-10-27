@@ -183,7 +183,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                src/runtime/aos_stats.c src/runtime/aos_pickup.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
@@ -579,12 +579,17 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_pickup.c
                    src/runtime/aos_stats.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_collision.c
+                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
                    src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_pickup_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_pickup_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_pickup_tests)
     add_test(NAME aos_pickup COMMAND fusion_aos_pickup_tests)
+
+    add_executable(fusion_aos_soul_tests tests/test_aos_soul.c src/runtime/aos_soul.c)
+    target_include_directories(fusion_aos_soul_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_soul_tests)
+    add_test(NAME aos_soul COMMAND fusion_aos_soul_tests)
 
     add_executable(fusion_aos_stats_tests tests/test_aos_stats.c src/runtime/aos_stats.c)
     target_include_directories(fusion_aos_stats_tests PRIVATE src/runtime)
@@ -723,7 +728,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_collision COMMAND fusion_aos_collision_tests)
 
     add_executable(fusion_aos_soma_tests tests/test_aos_soma.c
-                   src/runtime/aos_soma.c src/runtime/aos_collision.c src/runtime/aos_combat.c
+                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
                    src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_soma_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soma_tests)
@@ -736,20 +741,20 @@ if(BUILD_TESTING)
     add_test(NAME aos_room COMMAND fusion_aos_room_tests)
 
     add_executable(fusion_aos_door_tests tests/test_aos_door.c src/runtime/aos_door.c
-                   src/runtime/aos_soma.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
+                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_door_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)
 
     add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
+                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_weapon_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_weapon_tests)
     add_test(NAME aos_weapon COMMAND fusion_aos_weapon_tests)
 
     add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c src/runtime/aos_enemy.c
                    src/runtime/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
+                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_enemy_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_enemy_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_enemy_tests)

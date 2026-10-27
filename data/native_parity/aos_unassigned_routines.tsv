@@ -10,7 +10,6 @@ aos:asm:asm/code/code_08014548.s:sub_08018B98	sub_08018B98	unclassified				asm_f
 aos:asm:asm/code/code_08014548.s:sub_080190E0	sub_080190E0	unclassified		audio	exclusive_callees	asm_function	0x080190E0	asm/code/code_08014548.s	9642	1	2
 aos:asm:asm/code/code_08014548.s:sub_08019180	sub_08019180	unclassified				asm_function	0x08019180	asm/code/code_08014548.s	9724	1	5
 aos:asm:asm/code/code_08014548.s:sub_0801938C	sub_0801938C	unclassified				asm_function	0x0801938C	asm/code/code_08014548.s	9978	1	1
-aos:asm:asm/code/code_08014548.s:sub_08019478	sub_08019478	unclassified		technical	exclusive_callees	asm_function	0x08019478	asm/code/code_08014548.s	10095	2	9
 aos:asm:asm/code/code_08014548.s:sub_080197B4	sub_080197B4	unclassified		technical	exclusive_callees	asm_function	0x080197B4	asm/code/code_08014548.s	10493	1	6
 aos:asm:asm/code/code_08014548.s:sub_080199A0	sub_080199A0	unclassified				asm_function	0x080199A0	asm/code/code_08014548.s	10730	1	6
 aos:asm:asm/code/code_08014548.s:sub_08019A94	sub_08019A94	unclassified		technical	exclusive_callees	asm_function	0x08019A94	asm/code/code_08014548.s	10852	1	8
@@ -42,7 +41,6 @@ aos:asm:asm/code/code_080211F0.s:SkillAluraUneUse	SkillAluraUneUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillArachneUse	SkillArachneUse	abilities	name			asm_function		asm/code/code_080211F0.s	15671	0	15
 aos:asm:asm/code/code_080211F0.s:SkillBaloreUse	SkillBaloreUse	abilities	name			asm_function		asm/code/code_080211F0.s	22070	0	12
 aos:asm:asm/code/code_080211F0.s:SkillBasiliskUse	SkillBasiliskUse	abilities	name			asm_function		asm/code/code_080211F0.s	33951	0	0
-aos:asm:asm/code/code_080211F0.s:SkillBatUse	SkillBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	11430	0	11
 aos:asm:asm/code/code_080211F0.s:SkillBeamSkeletonUse	SkillBeamSkeletonUse	abilities	name			asm_function		asm/code/code_080211F0.s	15050	0	13
 aos:asm:asm/code/code_080211F0.s:SkillBigGolemUse	SkillBigGolemUse	abilities	name			asm_function		asm/code/code_080211F0.s	33111	0	13
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
@@ -130,11 +128,7 @@ aos:asm:asm/code/code_080211F0.s:sub_0802C9E8	sub_0802C9E8	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_0802CAC0	sub_0802CAC0	abilities	referrers			asm_function	0x0802CAC0	asm/code/code_080211F0.s	23055	0	13
 aos:asm:asm/code/code_080211F0.s:sub_0802CD6C	sub_0802CD6C	abilities	referrers			asm_function	0x0802CD6C	asm/code/code_080211F0.s	23388	0	3
 aos:asm:asm/code/code_080211F0.s:sub_0802CE20	sub_0802CE20	abilities	referrers			asm_function	0x0802CE20	asm/code/code_080211F0.s	23484	1	7
-aos:asm:asm/code/code_080211F0.s:sub_0802D1D8	sub_0802D1D8	unclassified				asm_function	0x0802D1D8	asm/code/code_080211F0.s	23954	1	1
-aos:asm:asm/code/code_080211F0.s:sub_0802D208	sub_0802D208	unclassified				asm_function	0x0802D208	asm/code/code_080211F0.s	23978	3	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D244	sub_0802D244	unclassified				asm_function	0x0802D244	asm/code/code_080211F0.s	24012	2	0
-aos:asm:asm/code/code_080211F0.s:sub_0802D284	sub_0802D284	unclassified				asm_function	0x0802D284	asm/code/code_080211F0.s	24046	4	0
-aos:asm:asm/code/code_080211F0.s:sub_0802D2BC	sub_0802D2BC	unclassified				asm_function	0x0802D2BC	asm/code/code_080211F0.s	24075	3	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D300	sub_0802D300	unclassified				asm_function	0x0802D300	asm/code/code_080211F0.s	24110	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D314	sub_0802D314	unclassified		technical	exclusive_callees	asm_function	0x0802D314	asm/code/code_080211F0.s	24122	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D390	sub_0802D390	unclassified				asm_function	0x0802D390	asm/code/code_080211F0.s	24192	0	0
@@ -2253,7 +2247,6 @@ aos:c:src/code/code_080211F0.c:sub_08021530	sub_08021530	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_08021654	sub_08021654	unclassified		technical	exclusive_callees	c_function	0x08021654	src/code/code_080211F0.c	353	141	13
 aos:c:src/code/code_080211F0.c:sub_08021654_inline_0	sub_08021654_inline_0	unclassified				c_function		src/code/code_080211F0.c	348	1	0
 aos:c:src/code/code_080211F0.c:sub_08021924	sub_08021924	unclassified				c_function	0x08021924	src/code/code_080211F0.c	478	58	0
-aos:c:src/code/code_080211F0.c:sub_08021994	sub_08021994	unclassified		technical	exclusive_callees	c_function	0x08021994	src/code/code_080211F0.c	516	1	7
 aos:c:src/code/code_080211F0.c:sub_08021CA8	sub_08021CA8	unclassified		technical	exclusive_callees	c_function	0x08021CA8	src/code/code_080211F0.c	647	0	4
 aos:c:src/code/code_080211F0.c:sub_08021DB0	sub_08021DB0	unclassified				c_function	0x08021DB0	src/code/code_080211F0.c	704	0	0
 aos:c:src/code/code_080211F0.c:sub_08021DC4	sub_08021DC4	unclassified				c_function	0x08021DC4	src/code/code_080211F0.c	713	2	0
@@ -2267,7 +2260,6 @@ aos:c:src/code/code_080211F0.c:sub_08021EB4	sub_08021EB4	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_08021F18	sub_08021F18	unclassified				c_function	0x08021F18	src/code/code_080211F0.c	837	1	0
 aos:c:src/code/code_080211F0.c:sub_08021F44	sub_08021F44	unclassified				c_function	0x08021F44	src/code/code_080211F0.c	858	0	0
 aos:c:src/code/code_080211F0.c:sub_08021FEC	sub_08021FEC	unclassified		technical	exclusive_callees	c_function	0x08021FEC	src/code/code_080211F0.c	915	5	1
-aos:c:src/code/code_080211F0.c:sub_08022028	sub_08022028	unclassified				c_function	0x08022028	src/code/code_080211F0.c	931	3	0
 aos:c:src/code/code_080211F0.c:sub_08022060	sub_08022060	unclassified				c_function	0x08022060	src/code/code_080211F0.c	950	2	0
 aos:c:src/code/code_080211F0.c:sub_08022088	sub_08022088	unclassified				c_function	0x08022088	src/code/code_080211F0.c	966	7	0
 aos:c:src/code/code_080211F0.c:sub_080220B4	sub_080220B4	unclassified				c_function	0x080220B4	src/code/code_080211F0.c	981	7	0

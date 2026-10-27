@@ -144,6 +144,14 @@ typedef struct {
     int32_t pending_source_x;   /* + 0x131D8 */
     AosAnimState anim;
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
+    uint16_t ticks;         /* + 0x22: advanced at the end of every update */
+    uint8_t recoil;         /* + 0x0B: set by cast pose 3 */
+    uint8_t cast_1e;        /* + 0x1E: written by the cast poses; its reader is not
+                             * traced */
+    /* The red soul use of sub_08019478: returns the record's cast pose (0-3)
+     * when a soul was cast (MP spent, slot taken), else -1. NULL: no souls. */
+    int (*cast)(void *context);
+    void *cast_context;
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF

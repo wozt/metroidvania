@@ -43,11 +43,13 @@ static AosLanding frame(AosSoma *soma, uint16_t held, uint16_t pressed) {
 static const uint8_t one_step[] = {4};
 static const uint8_t landing_steps[] = {2, 2, 2, 21};
 static const uint8_t walk_start_steps[] = {3, 3};
-static AosAnimDef anim_defs[0x40];
+static AosAnimDef anim_defs[0x60];
 static const AosAnimSet anim_set = {anim_defs, 0x40};
+/* The cast animations reach 0x50. */
+static const AosAnimSet cast_set = {anim_defs, 0x60};
 
 static void init_anims(void) {
-    for (int i = 0; i < 0x40; ++i) anim_defs[i] = (AosAnimDef){1, one_step};
+    for (int i = 0; i < 0x60; ++i) anim_defs[i] = (AosAnimDef){1, one_step};
     anim_defs[AOS_SOMA_ANIM_HARD_LANDING] = (AosAnimDef){4, landing_steps};
     anim_defs[AOS_SOMA_ANIM_WALK_START] = (AosAnimDef){2, walk_start_steps};
 }
@@ -558,8 +560,86 @@ static void hit_tests(void) {
     memset(cells, 0, sizeof(cells));
 }
 
+/* A scripted red soul cast: the pose it returns, and the calls made. */
+static int cast_pose_result, cast_calls;
+static int scripted_cast(void *context) {
+    (void)context;
+    ++cast_calls;
+    return cast_pose_result;
+}
+
+static AosSoma caster(int x, int y, uint32_t flags) {
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(x), AOS_FIXED(y), &cast_set);
+    soma.flags = flags;
+    return soma;
+}
+
+static void soul_tests(void) {
+    fill(0, 0, W - 1, 19, 0x00);
+    fill(0, 20, W - 1, H - 1, 0x03);
+    /* _0801C298: Up and a new attack press ask for a cast; without Up the
+     * weapon attacks instead. */
+    AosSoma soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    cast_pose_result = 0;
+    cast_calls = 0;
+    frame(&soma, 0, AOS_KEY_ATTACK);
+    assert(cast_calls == 0 && soma.state == 1);
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    uint16_t ticks = soma.ticks;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    /* Pose 0 on the ground: animation 22, flag 0x100, state 2; the weapon
+     * attack is refused by the 0x100 flag. */
+    assert(cast_calls == 1 && soma.state == 2 && (soma.flags & 0x100) &&
+           soma.anim.id == 22 && !soma.weapon_active && soma.ticks == ticks + 1);
+    /* The cast state ends with its animation (4 frames here). */
+    for (int i = 0; i < 8 && soma.state == 2; ++i) frame(&soma, 0, 0);
+    assert(soma.state == 0 && !(soma.flags & 0x100));
+    /* A refused cast (-1) leaves the weapon attack. */
+    cast_pose_result = -1;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(soma.state == 1);
+    /* Crouching (0x400) blocks the cast before the record is read. */
+    cast_calls = 0;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED | AOS_FLAG_CROUCH);
+    soma.cast = scripted_cast;
+    frame(&soma, AOS_KEY_UP | AOS_KEY_DOWN, AOS_KEY_ATTACK);
+    assert(cast_calls == 0);
+    /* Pose 2 lunges at 3 pixels per frame in the facing direction (79). */
+    cast_pose_result = 2;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    soma.facing_left = true;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(soma.state == 2 && soma.anim.id == 79 && soma.cast_1e == 0x10 &&
+           soma.vx == (int32_t)0xFFFD0000);
+    /* Pose 1 hops: airborne, 3.5 up, lighter gravity. */
+    cast_pose_result = 1;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(soma.state == 2 && soma.anim.id == 78 && (soma.flags & AOS_FLAG_AIRBORNE) &&
+           soma.gravity_mod == (int32_t)0xFFFFF000);
+    /* Pose 3 sets the recoil byte; in the air every pose uses its air
+     * animation (pose 0: 49). */
+    cast_pose_result = 3;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(soma.recoil == 1 && soma.cast_1e == 0x32 && soma.anim.id == 80);
+    cast_pose_result = 0;
+    soma = caster(100, 100, AOS_FLAG_AIRBORNE);
+    soma.cast = scripted_cast;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(soma.state == 2 && soma.anim.id == 49);
+}
+
 int main(void) {
     init_anims();
+    soul_tests();
     hit_tests();
     attack_tests();
     ability_tests();

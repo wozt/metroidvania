@@ -75,11 +75,12 @@ Current progress: the experimental runtime covers bounded Soma movement and
 combat states, several weapon classes, room transitions, wooden doors and a
 growing enemy set. The SDL title host now runs the native boot/title/main-menu
 controllers, maps their regular-file create/load/copy/delete/name requests to
-three portable files and launches the room runtime after the destination fade.
+three portable files, runs the native opening controller for new files and
+launches the room runtime from its IN_GAME handoff.
 Native save-room detection restores HP and writes the selected portable slot.
 That host bridge is not native graphics or SRAM parity: its renderer remains
-diagnostic, the introduction and quicksave paths are absent, and
-pause/inventory/map flows plus full progression remain open.
+diagnostic, introduction graphics/entities/audio and quicksaves are absent,
+and pause/inventory/map flows plus full progression remain open.
 
 Exit criterion: Aria is normally completable through every native final branch
 from its menu to its credits without debug controls or emulation, with residual

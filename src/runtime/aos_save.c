@@ -69,8 +69,9 @@ void aos_save_init_new(AosSaveData *save, unsigned slot) {
         .slot = (uint8_t)slot,
         .area = 0,
         .room = 0,
-        .spawn_x = -1,
-        .spawn_y = -1,
+        /* sub_08008ED0(0), called when the introduction reaches IN_GAME. */
+        .spawn_x = 0x78,
+        .spawn_y = 0x8D,
         .hp = 320,
         .max_hp = 320,
         .moves = 0x1F,

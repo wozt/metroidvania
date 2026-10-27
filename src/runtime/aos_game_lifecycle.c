@@ -95,7 +95,10 @@ static int32_t title_handler(AosGameMode *mode, void *context) {
         case 9:
             if (aos_title_exit_tick(&state->title_input)) {
                 state->title_cleanup_requested = true;
-                if (state->title_input.timed_out) return AOS_MODE_INTRO_CUTSCENE;
+                if (state->title_input.timed_out) {
+                    aos_intro_cutscene_prepare(&state->intro_cutscene, true);
+                    return AOS_MODE_INTRO_CUTSCENE;
+                }
                 return aos_title_destination(state->title_destination_index,
                                              title_destinations);
             }
@@ -127,7 +130,18 @@ static int32_t in_game_handler(AosGameMode *mode, void *context) {
 
 static int32_t main_menu_handler(AosGameMode *mode, void *context) {
     AosGameLifecycle *state = context;
-    return aos_game_mode_main_menu_update(mode, &state->main_menu, &state->input);
+    int32_t result = aos_game_mode_main_menu_update(mode, &state->main_menu,
+                                                     &state->input);
+    if (result == AOS_MODE_INTRO_CUTSCENE)
+        aos_intro_cutscene_prepare(&state->intro_cutscene, false);
+    return result;
+}
+
+static int32_t intro_handler(AosGameMode *mode, void *context) {
+    AosGameLifecycle *state = context;
+    state->intro_frame_requested = true;
+    return aos_game_mode_intro_cutscene_update(mode, &state->intro_cutscene,
+                                                &state->input);
 }
 
 static const AosGameModeHandler handlers[AOS_MODE_COUNT] = {
@@ -135,6 +149,7 @@ static const AosGameModeHandler handlers[AOS_MODE_COUNT] = {
     [AOS_MODE_TITLE_SCREEN] = title_handler,
     [AOS_MODE_MAIN_MENU] = main_menu_handler,
     [AOS_MODE_IN_GAME] = in_game_handler,
+    [AOS_MODE_INTRO_CUTSCENE] = intro_handler,
     [AOS_MODE_LICENSED_BY_NINTENDO] = licensed_handler,
     [AOS_MODE_RESET] = reset_handler,
 };
@@ -151,6 +166,7 @@ void aos_game_lifecycle_init(AosGameLifecycle *state, bool direct_gameplay) {
 
 void aos_game_lifecycle_update(AosGameLifecycle *state) {
     state->title_frame_requested = false;
+    state->intro_frame_requested = false;
     state->in_game_frame_requested = false;
     state->title_submenu_requested = false;
     state->title_back_requested = false;

@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "aos_game_mode.h"
+#include "aos_intro_cutscene.h"
 #include "aos_main_menu.h"
 #include "aos_title_fade.h"
 #include "aos_title_input.h"
@@ -19,6 +20,7 @@ typedef struct {
     AosGameMode game_mode;
     AosResetMode reset;
     AosStartupLogoMode startup_logo;
+    AosIntroCutscene intro_cutscene;
     AosMainMenu main_menu;
     AosTitleFade title_fade;
     AosTitleMotion title_motion;
@@ -29,6 +31,7 @@ typedef struct {
     uint8_t title_destination_index;
     int save_language_requested;
     bool title_frame_requested;
+    bool intro_frame_requested;
     bool in_game_frame_requested;
     bool title_submenu_open;
     bool title_exit_blocked;

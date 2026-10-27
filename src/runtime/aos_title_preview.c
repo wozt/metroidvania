@@ -213,11 +213,10 @@ int main(int argc, char **argv) {
                 pending_start = save_bridge.start;
             }
         }
-        bool destination_ready =
-            (pending_start == AOS_PORTABLE_START_GAME &&
-             lifecycle.game_mode.mode == AOS_MODE_IN_GAME) ||
-            (pending_start == AOS_PORTABLE_START_INTRO &&
-             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE);
+        /* Loads reach IN_GAME directly. New files remain in this process for
+         * the native introduction controller and launch only at its handoff. */
+        bool destination_ready = pending_start != AOS_PORTABLE_START_NONE &&
+                                 lifecycle.game_mode.mode == AOS_MODE_IN_GAME;
         if (destination_ready && pending_launch_slot >= 0 &&
             launch_runtime(runtime_path, slots[pending_launch_slot].path,
                            launch_error, sizeof launch_error)) {
@@ -227,7 +226,7 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawColor(renderer, 18, 14, 28, 255);
         SDL_RenderClear(renderer);
         bool in_main_menu = lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU;
-        if (art && !in_main_menu) {
+        if (art && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
             SDL_FRect dst = {0, 0, GBA_W, GBA_H};
             SDL_RenderTexture(renderer, art, NULL, &dst);
         } else {
@@ -307,7 +306,20 @@ int main(int argc, char **argv) {
             if (launch_error[0]) SDL_RenderDebugText(renderer, 18, 135, launch_error);
         } else {
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
-            if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
+            if (lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE) {
+                char stage[48];
+                char scroll[64];
+                SDL_RenderDebugText(renderer, 58, 42, "ARIA INTRODUCTION");
+                snprintf(stage, sizeof stage, "NATIVE CONTROLLER  STAGE %d",
+                         lifecycle.game_mode.update_stage);
+                SDL_RenderDebugText(renderer, 42, 66, stage);
+                snprintf(scroll, sizeof scroll, "SCROLL %ld / %ld / %ld",
+                         (long)(lifecycle.intro_cutscene.bg_y[1] >> 16),
+                         (long)(lifecycle.intro_cutscene.bg_y[2] >> 16),
+                         (long)(lifecycle.intro_cutscene.bg_y[3] >> 16));
+                SDL_RenderDebugText(renderer, 38, 82, scroll);
+                SDL_RenderDebugText(renderer, 62, 110, "A OR START: SKIP");
+            } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
                 SDL_RenderDebugText(renderer, 72, 122, "PRESS START");
             } else if (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO) {
                 SDL_RenderDebugText(renderer, 48, 76, "LICENSED BY NINTENDO");
@@ -316,6 +328,8 @@ int main(int argc, char **argv) {
             }
         }
         uint16_t brightness = in_main_menu ? lifecycle.main_menu.brightness :
+            lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE ?
+                lifecycle.intro_cutscene.brightness :
             lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN ?
                 lifecycle.title_fade.brightness : lifecycle.startup_logo.brightness;
         uint8_t darkness = brightness > 16 ? 16 : (uint8_t)brightness;

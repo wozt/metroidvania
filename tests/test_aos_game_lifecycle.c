@@ -83,6 +83,28 @@ int main(void) {
     for (unsigned frame = 0; frame < 33; ++frame) aos_game_lifecycle_update(&state);
     assert(state.game_mode.mode == AOS_MODE_INTRO_CUTSCENE && state.title_cleanup_requested);
 
+    /* The idle introduction is marked as a preview and its early skip goes
+     * straight back to the title. */
+    state.input.new_input = AOS_KEY_START;
+    aos_game_lifecycle_update(&state);
+    assert(state.intro_frame_requested && state.game_mode.mode == AOS_MODE_TITLE_SCREEN &&
+           state.intro_cutscene.preview_only &&
+           !state.intro_cutscene.gameplay_setup_requested);
+
+    /* The same native introduction entered by a new file instead prepares
+     * the first room and reaches IN_GAME. */
+    aos_intro_cutscene_prepare(&state.intro_cutscene, false);
+    aos_game_mode_set(&state.game_mode, AOS_MODE_INTRO_CUTSCENE);
+    state.input.new_input = AOS_KEY_A;
+    aos_game_lifecycle_update(&state);
+    assert(state.game_mode.mode == AOS_MODE_IN_GAME && state.intro_frame_requested &&
+           state.intro_cutscene.gameplay_setup_requested &&
+           state.intro_cutscene.start_player_x == 0x78 &&
+           state.intro_cutscene.start_player_y == 0x8D);
+    state.input.new_input = 0;
+    aos_game_lifecycle_update(&state);
+    assert(state.in_game_frame_requested && !state.intro_frame_requested);
+
     puts("Aria native game lifecycle tests passed");
     return 0;
 }

@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0568 - Port Aria's opening introduction controller
+
+- Ported all seven controller stages of `GameModeIntroCutsceneUpdate`: the
+  129-frame brightness fade, three exact fixed-point background scrolls and
+  their 3,220-frame completion gate, 88-frame blend, 120-frame flicker and
+  120-frame palette fade. Deterministic tests cover every duration and final
+  destination.
+- Preserved the native A/START branches. An early skip from a new game enters
+  IN_GAME, an early idle-preview skip returns to TITLE_SCREEN, and stage 5
+  first completes the palette fade; a naturally completed preview returns
+  through KONAMI_LOGO.
+- Connected INTRO_CUTSCENE to the host-neutral lifecycle. The SDL frontend now
+  keeps a newly named file in the introduction and starts the room runtime
+  only at its IN_GAME handoff. `sub_08008ED0(0)` supplies the native area 0,
+  room 0, camera `(32, 512)` and Soma `(120, 141)` start; new portable saves
+  now retain the player position instead of invoking the diagnostic floor
+  search.
+- Background/entity/palette operations and songs remain typed requests, so
+  the frontend shows diagnostic stage and scroll values rather than claiming
+  native presentation. The feature stays partial. Source-derived and
+  unit-tested, not emulator-compared. Zero Mission is unchanged.
+- Next: port the introduction entity group beginning with `sub_080094AC` and
+  connect its backgrounds, palettes and rendering to replace the diagnostic
+  presentation.
+
 ## Patch 0567 - Connect Aria's native menu to portable saves
 
 - Replaced the standalone title launcher's custom navigation with the native

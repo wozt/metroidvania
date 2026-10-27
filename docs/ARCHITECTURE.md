@@ -364,9 +364,12 @@ confirmation controllers, special completed-file positions and final direct
 load/intro fades. The same state owns the native eight-character name editor
 and its return/intro results. `aos_menu_save_bridge.c` consumes the typed
 regular-file operations and persists them through portable save schema v2;
-the host waits for the native destination fade before starting the separate
-room-runtime process. Rendering remains diagnostic, and quicksaves,
-completed-file metadata and the native introduction are not connected yet.
+the host waits for the native destination fade and, for a new file, runs the
+seven-stage `GameModeIntroCutsceneUpdate` controller in
+`aos_intro_cutscene.c` before starting the separate room-runtime process at
+the native first-room position. Rendering remains diagnostic; the
+introduction's graphics, entities and songs are explicit unconsumed requests,
+and quicksaves plus completed-file metadata are not connected yet.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

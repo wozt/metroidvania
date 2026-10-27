@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 55 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 56 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 441 | 3132 |
+| Castlevania: Aria of Sorrow | 444 | 3129 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1095,35 +1095,35 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 [?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (2 by native name, 3 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. The selected file launches the room runtime at its recorded area and room; save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.
 
 Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1CCreate`, `aos:asm:asm/code/code_08050A3C.s:Object1CUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_08012744.c:SaveData_ClearSlotInSram`, `aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram`, `aos:c:src/code_08012744.c:SaveData_SaveSlotToSram`, `aos:c:src/code_08012744.c:sub_080127F0`.  
 Local implementation: [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_save_room.c`](../src/runtime/aos_save_room.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
 Tests: [`tests/test_aos_save.c`](../tests/test_aos_save.c), [`tests/test_aos_save_room.c`](../tests/test_aos_save_room.c), [`tests/test_aos_menu_save_bridge.c`](../tests/test_aos_menu_save_bridge.c).
 Dependencies: `aos.startup.mode_dispatch`.  
-Known divergences: The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, optional spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent.  
+Known divergences: The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent.  
 Next action: Add the remaining progression and completed-file fields, then reconstruct quicksave and native SRAM serialization behavior.
 
-[~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU and IN_GAME. The SDL title host now runs that lifecycle, persists regular-file menu operations and waits for the native IN_GAME or INTRO_CUTSCENE destination fade before launching the gameplay process. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU, INTRO_CUTSCENE and IN_GAME. The SDL title host persists regular-file menu operations, runs the introduction for new files and launches gameplay only after its native IN_GAME handoff. Source-derived and unit-tested, not emulator-compared.
 
 Native evidence: `aos:c:src/code_08002454.c:GameModeKonamiLogoUpdate`, `aos:c:src/code_08002454.c:GameModeLicensedByNintendoUpdate`, `aos:c:src/code_08002454.c:GameModeResetUpdate`, `aos:c:src/code_08002454.c:KonamiCodeCheck`, `aos:c:src/main.c:GameModeUpdate`, `aos:c:src/main.c:IncrementGameMode`, `aos:c:src/main.c:SetGameMode`.  
-Local implementation: [`src/runtime/aos_game_mode.c`](../src/runtime/aos_game_mode.c), [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_main_menu.c`](../src/runtime/aos_main_menu.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_input.c`](../src/runtime/aos_input.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
-Tests: [`tests/test_aos_game_mode.c`](../tests/test_aos_game_mode.c), [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_main_menu.c`](../tests/test_aos_main_menu.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c), [`tests/test_aos_input.c`](../tests/test_aos_input.c), [`tests/test_aos_menu_save_bridge.c`](../tests/test_aos_menu_save_bridge.c).
-Known divergences: The standalone SDL frontend now selects the host-neutral boot path and consumes typed slot/name requests, but its graphics and entity animation remain diagnostic and its audio requests are not connected. INTRO_CUTSCENE still launches the separate room-runtime process directly, while explicit room, save, capture and debug launches intentionally start at IN_GAME.  
-Next action: Connect native title/menu graphics and the introduction handler while preserving direct room, save, capture and debug launches.
+Local implementation: [`src/runtime/aos_game_mode.c`](../src/runtime/aos_game_mode.c), [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_main_menu.c`](../src/runtime/aos_main_menu.c), [`src/runtime/aos_intro_cutscene.c`](../src/runtime/aos_intro_cutscene.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_input.c`](../src/runtime/aos_input.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_game_mode.c`](../tests/test_aos_game_mode.c), [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_main_menu.c`](../tests/test_aos_main_menu.c), [`tests/test_aos_intro_cutscene.c`](../tests/test_aos_intro_cutscene.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c), [`tests/test_aos_input.c`](../tests/test_aos_input.c), [`tests/test_aos_menu_save_bridge.c`](../tests/test_aos_menu_save_bridge.c).
+Known divergences: The standalone SDL frontend selects the host-neutral boot path and consumes typed slot/name requests, but startup, title, menu and introduction graphics remain diagnostic or request-only and audio requests are not connected. Gameplay still launches as a separate process; explicit room, save, capture and debug launches intentionally start at IN_GAME.  
+Next action: Connect the requested native graphics and entities for the title, menus and introduction while preserving direct development launches.
 
 ### Title screen
 
 [?] **`aos.title.inventory-boundary` — source coverage.** The current classifier assigns 28 discovered routine(s) to this category (7 by native name, 21 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.input_stage8` — Aria title and main-menu controllers.** The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The SDL launcher now consumes the typed regular-file requests and waits for the native destination fade. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.title.input_stage8` — Aria title and main-menu controllers.** The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The SDL launcher consumes typed regular-file requests, runs the opening controller for new files and waits for its IN_GAME handoff. Source-derived and unit-tested, not emulator-compared.
 
 Native evidence: `aos:c:src/code_08002454.c:GameModeMainMenuUpdate`, `aos:c:src/code_08002454.c:GameModeMainMenuUpdate_inline`, `aos:c:src/code_08002454.c:GameModeTitleScreenUpdate`, `aos:c:src/code_08002454.c:sub_08004928`, `aos:c:src/code_08005894.c:sub_0800744C`, `aos:c:src/code_08005894.c:sub_080074C0`, `aos:c:src/code_08005894.c:sub_08007820`, `aos:c:src/code_08005894.c:sub_08007914`, `aos:c:src/code_08005894.c:sub_08007B8C`, `aos:c:src/code_08005894.c:sub_08008290`, `aos:c:src/code_08005894.c:sub_08008324`.  
 Local implementation: [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_main_menu.c`](../src/runtime/aos_main_menu.c), [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
 Tests: [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_main_menu.c`](../tests/test_aos_main_menu.c), [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c), [`tests/test_aos_menu_save_bridge.c`](../tests/test_aos_menu_save_bridge.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`, `aos.saves.portable_slots`.  
-Known divergences: The SDL frontend uses diagnostic rendering rather than original title/menu/name graphics and still launches gameplay as a separate process. INTRO_CUTSCENE has no native presentation handler. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol.  
-Next action: Connect native rendering and the introduction handler; then extend the adapter only as new portable completion and quicksave metadata become available.
+Known divergences: The SDL frontend uses diagnostic rendering rather than original title/menu/name graphics and still launches gameplay as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol.  
+Next action: Connect native title/menu/name rendering, then extend the adapter only as new portable completion and quicksave metadata become available.
 
 ### Menus and options
 
@@ -1685,6 +1685,15 @@ Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the do
 ### Cutscenes
 
 [?] **`aos.cutscenes.inventory-boundary` — source coverage.** The current classifier assigns 10 discovered routine(s) to this category (2 by native name, 8 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.title.intro_cutscene` — Aria opening introduction controller.** The seven-stage controller retains the 129-frame fade-in, exact three-layer fixed-point scroll through its 3,220-frame gate, 88-frame blend, 120-frame flicker, 120-frame palette fade, stage-sensitive A/START skips, idle-preview return destinations and sub_08008ED0 first-room handoff. New files remain in the frontend through the introduction and launch gameplay at Soma's native (120, 141) position. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate`, `aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate_inline`, `aos:c:src/code_08008750.c:sub_08008ED0`.  
+Local implementation: [`src/runtime/aos_intro_cutscene.c`](../src/runtime/aos_intro_cutscene.c), [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
+Tests: [`tests/test_aos_intro_cutscene.c`](../tests/test_aos_intro_cutscene.c), [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Dependencies: `aos.startup.mode_dispatch`, `aos.title.input_stage8`, `aos.saves.portable_slots`.  
+Known divergences: The background, entity and palette resources loaded by the native mode are not exported or rendered, the songs are request-only, and the native RNG seed is not traced. The SDL host shows diagnostic stage and scroll values and starts gameplay as a separate process, so there is no visual or emulator comparison.  
+Next action: Port the introduction entities beginning with sub_080094AC and connect its native backgrounds, palettes and renderer before validating the presentation.
 
 ### Music and sound effects
 

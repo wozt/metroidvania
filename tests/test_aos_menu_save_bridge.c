@@ -36,7 +36,11 @@ int main(void) {
     assert(bridge.present[1] && bridge.changed_mask == (1u << 1) &&
            bridge.slots[1].name[0] == 0x0B && bridge.slots[1].character == 1 &&
            bridge.slots[1].challenge_flags == 0x100000 &&
+           bridge.slots[1].spawn_x == 0x78 && bridge.slots[1].spawn_y == 0x8D &&
            bridge.start == AOS_PORTABLE_START_INTRO && bridge.launch_slot == 1);
+    assert(!menu.name_committed && !menu.intro_requested);
+    assert(aos_menu_save_bridge_consume(&bridge, &menu));
+    assert(bridge.changed_mask == 0 && bridge.start == AOS_PORTABLE_START_NONE);
 
     menu = (AosMainMenu){.load_slot_requested = true, .load_game_requested = true,
                          .requested_slot = 0};

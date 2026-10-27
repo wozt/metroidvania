@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T00:07:50+00:00",
+ "generated_at": "2026-10-27T01:06:14+00:00",
  "git": {
-  "commit": "bd10d70",
+  "commit": "d08cc9e",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 196,
+   "total": 197,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 40,
+    "partial": 41,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 74.0,
-   "with_passing_tests": 183,
+   "functional_or_better_percent": 73.6,
+   "with_passing_tests": 184,
    "with_passing_tests_percent": 93.4,
    "unknown_or_blocked": 1,
    "features": [
@@ -255,6 +255,7 @@
     "aos.saves.portable_slots",
     "aos.startup.mode_dispatch",
     "aos.title.input_stage8",
+    "aos.title.intro_cutscene",
     "aos.weapons.weapon_entity",
     "mv.character_state",
     "mv.character_switch",
@@ -430,11 +431,11 @@
    "areas": [
     "aos"
    ],
-   "total": 55,
+   "total": 56,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 16,
+    "partial": 17,
     "functional": 39,
     "faithful": 0,
     "validated": 0,
@@ -442,8 +443,8 @@
     "unknown": 0
    },
    "functional_or_better": 39,
-   "functional_or_better_percent": 70.9,
-   "with_passing_tests": 55,
+   "functional_or_better_percent": 69.6,
+   "with_passing_tests": 56,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -501,6 +502,7 @@
     "aos.saves.portable_slots",
     "aos.startup.mode_dispatch",
     "aos.title.input_stage8",
+    "aos.title.intro_cutscene",
     "aos.weapons.weapon_entity"
    ]
   },
@@ -12290,7 +12292,7 @@
     "Object1CUpdate",
     "sub_08068AD4"
    ],
-   "limitations": "The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, optional spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. The selected file launches the room runtime at its recorded area and room; save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Add the remaining progression and completed-file fields, then reconstruct quicksave and native SRAM serialization behavior.",
    "evidence": {
     "unit_tests": [
@@ -12355,6 +12357,7 @@
     "src/runtime/aos_game_mode.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos_main_menu.c",
+    "src/runtime/aos_intro_cutscene.c",
     "src/runtime/aos_title_fade.c",
     "src/runtime/aos_title_input.c",
     "src/runtime/aos_title_motion.c",
@@ -12368,6 +12371,7 @@
     "tests/test_aos_game_mode.c",
     "tests/test_aos_game_lifecycle.c",
     "tests/test_aos_main_menu.c",
+    "tests/test_aos_intro_cutscene.c",
     "tests/test_aos_title_fade.c",
     "tests/test_aos_title_input.c",
     "tests/test_aos_title_motion.c",
@@ -12385,13 +12389,14 @@
     "GameModeKonamiLogoUpdate",
     "KonamiCodeCheck"
    ],
-   "limitations": "The standalone SDL frontend now selects the host-neutral boot path and consumes typed slot/name requests, but its graphics and entity animation remain diagnostic and its audio requests are not connected. INTRO_CUTSCENE still launches the separate room-runtime process directly, while explicit room, save, capture and debug launches intentionally start at IN_GAME. The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU and IN_GAME. The SDL title host now runs that lifecycle, persists regular-file menu operations and waits for the native IN_GAME or INTRO_CUTSCENE destination fade before launching the gameplay process. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Connect native title/menu graphics and the introduction handler while preserving direct room, save, capture and debug launches.",
+   "limitations": "The standalone SDL frontend selects the host-neutral boot path and consumes typed slot/name requests, but startup, title, menu and introduction graphics remain diagnostic or request-only and audio requests are not connected. Gameplay still launches as a separate process; explicit room, save, capture and debug launches intentionally start at IN_GAME. The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU, INTRO_CUTSCENE and IN_GAME. The SDL title host persists regular-file menu operations, runs the introduction for new files and launches gameplay only after its native IN_GAME handoff. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Connect the requested native graphics and entities for the title, menus and introduction while preserving direct development launches.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_mode.c",
      "tests/test_aos_game_lifecycle.c",
      "tests/test_aos_main_menu.c",
+     "tests/test_aos_intro_cutscene.c",
      "tests/test_aos_title_fade.c",
      "tests/test_aos_title_input.c",
      "tests/test_aos_title_motion.c",
@@ -12435,6 +12440,16 @@
       "registered": true,
       "ctest": [
        "aos_main_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_intro_cutscene.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_intro_cutscene"
       ],
       "outcome": "passed",
       "exists": true
@@ -12551,8 +12566,8 @@
     "sub_08008290",
     "sub_08008324"
    ],
-   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu/name graphics and still launches gameplay as a separate process. INTRO_CUTSCENE has no native presentation handler. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The SDL launcher now consumes the typed regular-file requests and waits for the native destination fade. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Connect native rendering and the introduction handler; then extend the adapter only as new portable completion and quicksave metadata become available.",
+   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu/name graphics and still launches gameplay as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The SDL launcher consumes typed regular-file requests, runs the opening controller for new files and waits for its IN_GAME handoff. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Connect native title/menu/name rendering, then extend the adapter only as new portable completion and quicksave metadata become available.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_lifecycle.c",
@@ -12640,6 +12655,88 @@
       "registered": true,
       "ctest": [
        "aos_menu_save_bridge"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-27"
+   }
+  },
+  {
+   "id": "aos.title.intro_cutscene",
+   "area": "aos",
+   "category": "cutscenes",
+   "title": "Aria opening introduction controller",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_intro_cutscene.c",
+    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos_save.c"
+   ],
+   "tests": [
+    "tests/test_aos_intro_cutscene.c",
+    "tests/test_aos_game_lifecycle.c",
+    "tests/test_aos_save.c"
+   ],
+   "dependencies": [
+    "aos.startup.mode_dispatch",
+    "aos.title.input_stage8",
+    "aos.saves.portable_slots"
+   ],
+   "native_routines": [
+    "GameModeIntroCutsceneUpdate",
+    "GameModeIntroCutsceneUpdate_inline",
+    "sub_08008ED0"
+   ],
+   "limitations": "The background, entity and palette resources loaded by the native mode are not exported or rendered, the songs are request-only, and the native RNG seed is not traced. The SDL host shows diagnostic stage and scroll values and starts gameplay as a separate process, so there is no visual or emulator comparison. The seven-stage controller retains the 129-frame fade-in, exact three-layer fixed-point scroll through its 3,220-frame gate, 88-frame blend, 120-frame flicker, 120-frame palette fade, stage-sensitive A/START skips, idle-preview return destinations and sub_08008ED0 first-room handoff. New files remain in the frontend through the introduction and launch gameplay at Soma's native (120, 141) position. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the introduction entities beginning with sub_080094AC and connect its native backgrounds, palettes and renderer before validating the presentation.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_intro_cutscene.c",
+     "tests/test_aos_game_lifecycle.c",
+     "tests/test_aos_save.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_intro_cutscene.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_intro_cutscene"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_game_lifecycle.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_game_lifecycle"
       ],
       "outcome": "passed",
       "exists": true
@@ -14073,26 +14170,29 @@
     "src/runtime/aos_save.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos_main_menu.c",
+    "src/runtime/aos_intro_cutscene.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
     "tests/test_aos_menu_save_bridge.c",
     "tests/test_aos_save.c",
     "tests/test_aos_game_lifecycle.c",
-    "tests/test_aos_main_menu.c"
+    "tests/test_aos_main_menu.c",
+    "tests/test_aos_intro_cutscene.c"
    ],
    "dependencies": [
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title and main-menu lifecycle, maps its typed create, load, copy, delete and name requests onto three checksummed portable files, and launches the room runtime after the native destination fade. Portable schema v2 stores the encoded name, selected character and challenge flags while reading v1 files. Rendering remains diagnostic, INTRO launches the room runtime directly, and portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state remain absent.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed create, load, copy, delete and name requests onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. Portable schema v2 stores the encoded name, selected character and challenge flags while reading v1 files; new files retain the native area 0 room 0 player position. Rendering remains diagnostic, introduction graphics/entities/audio are request-only, and portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state remain absent.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_menu_save_bridge.c",
      "tests/test_aos_save.c",
      "tests/test_aos_game_lifecycle.c",
-     "tests/test_aos_main_menu.c"
+     "tests/test_aos_main_menu.c",
+     "tests/test_aos_intro_cutscene.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14140,6 +14240,16 @@
       "registered": true,
       "ctest": [
        "aos_main_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_intro_cutscene.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_intro_cutscene"
       ],
       "outcome": "passed",
       "exists": true
@@ -15953,6 +16063,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_intro_cutscene",
+    "files": [
+     "tests/test_aos_intro_cutscene.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_main_menu",
     "files": [
      "tests/test_aos_main_menu.c"
@@ -16080,12 +16197,18 @@
    }
   ],
   "summary": {
-   "passed": 76,
+   "passed": 77,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d08cc9e",
+   "date": "2026-10-27",
+   "subject": "Connect Aria native menu to portable saves",
+   "scope": "project"
+  },
   {
    "commit": "bd10d70",
    "date": "2026-10-27",
@@ -16559,12 +16682,6 @@
    "date": "2026-10-24",
    "subject": "Port Aria resource loading lists to C11",
    "scope": "project"
-  },
-  {
-   "commit": "c2a6ce7",
-   "date": "2026-10-24",
-   "subject": "Port Aria background descriptors to C11",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -16625,9 +16742,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 441,
-    "routines_attached_to_features": 441,
-    "unassigned_routines": 3132,
+    "routines_cited_by_features": 444,
+    "routines_attached_to_features": 444,
+    "unassigned_routines": 3129,
     "call_edges": 14228
    }
   },

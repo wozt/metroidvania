@@ -44,7 +44,7 @@ save files, then launches the real `fusion_aria_runtime` process only after
 the native destination fade completes. By default it stores files in SDL's
 user data directory; `--save-dir DIR` and `--runtime FILE` provide explicit
 development paths. New files start at the native new-game location, area 0
-room 0.
+room 0, with Soma at `(120, 141)` as selected by `sub_08008ED0(0)`.
 
 The room runtime now routes every simulation frame through the native
 `aos_game_mode_update` lifecycle and its IN_GAME handler. Its explicit
@@ -61,8 +61,15 @@ only the three even, regular-file positions because its schema has no
 quicksave or completed-file metadata. Newly created regular files pass through
 the native eight-character name controller, including its grid navigation,
 edit operations, default SOMA name and the JULIUS, NOUSE and NOSOUL codes.
-Rendering is still diagnostic, and the INTRO_CUTSCENE result currently starts
-the room runtime directly rather than presenting the native introduction.
+The lifecycle now also runs `GameModeIntroCutsceneUpdate` before starting a
+new file. Its seven controller stages retain the 129-frame fade-in, three
+fixed-point background scrolls (the slowest reaches zero after 3,220 frames),
+88-frame blend, 120-frame flicker and 120-frame palette fade. A/START keeps
+the native stage-sensitive skip behavior; a new game reaches IN_GAME and the
+title's idle preview returns either directly to the title or through the
+Konami logo. The frontend does not yet own the native background, entity,
+palette or song resources, so it displays diagnostic stage/scroll values
+instead of claiming the original presentation.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v2` text schema instead of claiming compatibility with
@@ -70,7 +77,9 @@ the original six 0x47C-byte SRAM records. It still reads v1 files, while v2
 adds the encoded player name, selected character and challenge flags. The
 runtime accepts `--save FILE` and restores the room, optional spawn, HP and the
 currently exposed movement mask. The native room exporter emits schema
-version 4's global-map save and warp bits. Runtime compatibility also
+version 4's global-map save and warp bits. New v2 files record the native
+first-room player position rather than using the earlier diagnostic floor
+search. Runtime compatibility also
 recognizes the native room object `0x1C` in older exports. Holding Up inside
 Object1C's verified rectangle (`x=104..136`, `y=128..183`) restores HP and
 atomically updates the selected portable file with the current room, spawn and

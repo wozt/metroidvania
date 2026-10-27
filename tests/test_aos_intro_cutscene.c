@@ -19,6 +19,11 @@ int main(void) {
            intro.entities_init_requested && intro.entities_frame_requested);
     assert(intro.brightness == 16 && intro.bg_y[1] == 0x1600000 &&
            intro.bg_y[2] == 0x2600000 && intro.bg_y[3] == 0x0C90000);
+    assert(intro.entities.entities[AOS_INTRO_ENTITY_MAIN].alive &&
+           intro.entities.entities[AOS_INTRO_ENTITY_MAIN].x == 0x780000);
+    assert(intro.entities.entities[AOS_INTRO_ENTITY_PANEL_LEFT].x ==
+           0xF7F000);
+    assert(intro.alpha_blend == 0x060A);
 
     unsigned frames = 0;
     while (mode.update_stage == 1) {
@@ -72,6 +77,9 @@ int main(void) {
     aos_intro_cutscene_prepare(&intro, false);
     assert(tick(&mode, &intro, AOS_KEY_START) == AOS_MODE_IN_GAME);
     assert(intro.gameplay_setup_requested);
+    assert(intro.entities.graphics_release_requested);
+    for (unsigned index = 0; index < AOS_INTRO_ENTITY_COUNT; ++index)
+        assert(!intro.entities.entities[index].alive);
 
     mode = (AosGameMode){.mode = AOS_MODE_INTRO_CUTSCENE, .update_stage = 3};
     aos_intro_cutscene_prepare(&intro, true);

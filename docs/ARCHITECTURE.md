@@ -367,9 +367,12 @@ regular-file operations and persists them through portable save schema v2;
 the host waits for the native destination fade and, for a new file, runs the
 seven-stage `GameModeIntroCutsceneUpdate` controller in
 `aos_intro_cutscene.c` before starting the separate room-runtime process at
-the native first-room position. Rendering remains diagnostic; the
-introduction's graphics, entities and songs are explicit unconsumed requests,
-and quicksaves plus completed-file metadata are not connected yet.
+the native first-room position. `aos_intro_entities.c` advances the six native
+introduction actors, their fixed-point motion, thresholds, lifetimes, alpha
+overrides and cleanup. Rendering remains diagnostic: backgrounds, palettes,
+OAM, animation resources, the text tile script and songs are explicit
+unconsumed requests, and quicksaves plus completed-file metadata are not
+connected yet.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

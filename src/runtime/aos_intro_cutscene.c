@@ -49,6 +49,7 @@ static int32_t finish(AosIntroCutscene *intro, bool immediate_skip) {
     intro->music_mute_requested = true;
     intro->restore_backgrounds_requested = true;
     intro->entities_frame_requested = true;
+    aos_intro_entities_clear(&intro->entities);
     if (intro->preview_only)
         return immediate_skip ? AOS_MODE_TITLE_SCREEN : AOS_MODE_KONAMI_LOGO;
 
@@ -85,6 +86,7 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
             intro->bg_y_velocity[2] = 0;
             intro->bg_y_velocity[3] = 0;
             intro->timer = 0;
+            aos_intro_entities_init(&intro->entities);
             mode->update_stage = 1;
             mode->stage_timer = 0;
             break;
@@ -166,6 +168,11 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
         return finish(intro, true);
 
     /* sub_08000B64 runs after every native intro controller frame. */
+    aos_intro_entities_update(&intro->entities, mode->update_stage,
+                              intro->bg_y[1], intro->bg_y_velocity[1],
+                              intro->bg_y[3]);
+    if (intro->entities.alpha_override_valid)
+        intro->alpha_blend = intro->entities.alpha_override;
     intro->entities_frame_requested = true;
     return AOS_MODE_SAME;
 }

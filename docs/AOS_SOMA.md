@@ -67,9 +67,14 @@ fixed-point background scrolls (the slowest reaches zero after 3,220 frames),
 88-frame blend, 120-frame flicker and 120-frame palette fade. A/START keeps
 the native stage-sensitive skip behavior; a new game reaches IN_GAME and the
 title's idle preview returns either directly to the title or through the
-Konami logo. The frontend does not yet own the native background, entity,
-palette or song resources, so it displays diagnostic stage/scroll values
-instead of claiming the original presentation.
+Konami logo. The cutscene also runs the six-actor group created by
+`sub_080094AC`: the scroll follower, affine rise, orbit and two moving panels
+retain their native fixed-point motion, activation thresholds, lifetimes and
+alpha ownership, while the main actor retains its five-frame scroll and
+21-column text cadence. The frontend does not yet own the native backgrounds,
+palettes, OAM, animation frames, tile-script drawing or songs, so those
+operations stay typed host requests and it displays diagnostic values instead
+of claiming the original presentation.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v2` text schema instead of claiming compatibility with

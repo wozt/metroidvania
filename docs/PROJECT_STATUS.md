@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0569 - Port Aria's introduction entity controllers
+
+- Ported the six-actor group created by `sub_080094AC`: its main actor,
+  scroll follower, affine rise, orbit and paired moving panels now run inside
+  every introduction frame. Their native fixed-point movement, activation
+  thresholds, lifetimes and cleanup are covered by deterministic tests.
+- Retained the panels' alpha ownership and double-draw intent, the affine
+  actor's 79/80 velocity easing and 256 scale steps, and the main actor's
+  five-frame BG0 movement plus 21-column text cadence. Both natural and
+  skipped exits release the entity group.
+- The ROM-backed `sub_080093E0` tile-script interpreter remains a typed
+  request. Native backgrounds, palettes, OAM, animation actions, sprite
+  resources and songs are not rendered, so the feature stays partial.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission and
+  audio are unchanged.
+- Next: port `sub_080093E0` and connect the introduction's native graphics
+  resources to replace the diagnostic presentation.
+
 ## Patch 0568 - Port Aria's opening introduction controller
 
 - Ported all seven controller stages of `GameModeIntroCutsceneUpdate`: the

@@ -2693,15 +2693,7 @@ aos:c:src/code_08005894.c:sub_08008314	sub_08008314	unclassified				c_function	0
 aos:c:src/code_08005894.c:sub_08008720	sub_08008720	unclassified				c_function	0x08008720	src/code_08005894.c	2457	0	0
 aos:c:src/code_08008750.c:GameModeBossRushMenuUpdate	GameModeBossRushMenuUpdate	menus	name			c_function	0x08008750	src/code_08008750.c	45	1	21
 aos:c:src/code_08008750.c:GameModeUnk9Update	GameModeUnk9Update	startup	referrers			c_function	0x080089D0	src/code_08008750.c	153	1	0
-aos:c:src/code_08008750.c:sub_08008F40	sub_08008F40	cutscenes	referrers			c_function	0x08008F40	src/code_08008750.c	429	0	2
-aos:c:src/code_08008750.c:sub_08008FEC	sub_08008FEC	cutscenes	referrers			c_function	0x08008FEC	src/code_08008750.c	471	0	1
-aos:c:src/code_08008750.c:sub_08009054	sub_08009054	cutscenes	referrers			c_function	0x08009054	src/code_08008750.c	498	0	0
-aos:c:src/code_08008750.c:sub_08009178	sub_08009178	cutscenes	referrers			c_function	0x08009178	src/code_08008750.c	564	0	8
-aos:c:src/code_08008750.c:sub_080092A0	sub_080092A0	cutscenes	referrers			c_function	0x080092A0	src/code_08008750.c	622	0	7
 aos:c:src/code_08008750.c:sub_080093E0	sub_080093E0	cutscenes	referrers			c_function	0x080093E0	src/code_08008750.c	684	1	5
-aos:c:src/code_08008750.c:sub_080094AC	sub_080094AC	cutscenes	referrers			c_function	0x080094AC	src/code_08008750.c	744	1	5
-aos:c:src/code_08008750.c:sub_08009610	sub_08009610	unclassified		technical	exclusive_callees	c_function	0x08009610	src/code_08008750.c	799	0	3
-aos:c:src/code_08008750.c:sub_08009648	sub_08009648	cutscenes	referrers			c_function	0x08009648	src/code_08008750.c	816	0	4
 aos:c:src/code_080096AC.c:GameModeSoulTradeMenu_inline_0	GameModeSoulTradeMenu_inline_0	menus	name			c_function		src/code_080096AC.c	285	1	2
 aos:c:src/code_080096AC.c:GameModeSoulTradeMenu_inline_1	GameModeSoulTradeMenu_inline_1	menus	name			c_function		src/code_080096AC.c	293	3	5
 aos:c:src/code_080096AC.c:NONMATCH	NONMATCH	unclassified				c_function		src/code_080096AC.c	213	0	3

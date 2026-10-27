@@ -79,8 +79,9 @@ three portable files, runs the native opening controller for new files and
 launches the room runtime from its IN_GAME handoff.
 Native save-room detection restores HP and writes the selected portable slot.
 That host bridge is not native graphics or SRAM parity: its renderer remains
-diagnostic, introduction graphics/entities/audio and quicksaves are absent,
-and pause/inventory/map flows plus full progression remain open.
+diagnostic. The six introduction entity controllers run, but their native
+graphics, palettes, OAM, text tile script and audio remain absent; quicksaves,
+pause/inventory/map flows and full progression are also open.
 
 Exit criterion: Aria is normally completable through every native final branch
 from its menu to its credits without debug controls or emulation, with residual

@@ -7,6 +7,7 @@
 
 #include "aos_game_mode.h"
 #include "aos_input.h"
+#include "aos_intro_entities.h"
 
 /* Display-independent state for GameModeIntroCutsceneUpdate. Graphics,
  * entities, palette fades and songs are reported as host requests. */
@@ -19,6 +20,7 @@ typedef struct {
     uint16_t palette_fade_timer;
     int32_t bg_y[4];
     int32_t bg_y_velocity[4];
+    AosIntroEntities entities;
     uint32_t random_state;
     bool preview_only;
     bool hblank_stop_requested;

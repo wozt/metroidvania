@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 444 | 3129 |
+| Castlevania: Aria of Sorrow | 452 | 3121 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1686,14 +1686,14 @@ Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the do
 
 [?] **`aos.cutscenes.inventory-boundary` — source coverage.** The current classifier assigns 10 discovered routine(s) to this category (2 by native name, 8 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.title.intro_cutscene` — Aria opening introduction controller.** The seven-stage controller retains the 129-frame fade-in, exact three-layer fixed-point scroll through its 3,220-frame gate, 88-frame blend, 120-frame flicker, 120-frame palette fade, stage-sensitive A/START skips, idle-preview return destinations and sub_08008ED0 first-room handoff. New files remain in the frontend through the introduction and launch gameplay at Soma's native (120, 141) position. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.title.intro_cutscene` — Aria opening introduction controller.** The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group now preserves fixed-point follower, affine-rise, orbit and panel motion, thresholds, lifetimes, alpha ownership, double-draw intent, 21-column text cadence and cleanup. New files launch gameplay at Soma's native (120, 141) position. Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate`, `aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate_inline`, `aos:c:src/code_08008750.c:sub_08008ED0`.  
-Local implementation: [`src/runtime/aos_intro_cutscene.c`](../src/runtime/aos_intro_cutscene.c), [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
-Tests: [`tests/test_aos_intro_cutscene.c`](../tests/test_aos_intro_cutscene.c), [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Native evidence: `aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate`, `aos:c:src/code_08008750.c:GameModeIntroCutsceneUpdate_inline`, `aos:c:src/code_08008750.c:sub_08008ED0`, `aos:c:src/code_08008750.c:sub_08008F40`, `aos:c:src/code_08008750.c:sub_08008FEC`, `aos:c:src/code_08008750.c:sub_08009054`, `aos:c:src/code_08008750.c:sub_08009178`, `aos:c:src/code_08008750.c:sub_080092A0`, `aos:c:src/code_08008750.c:sub_080094AC`, `aos:c:src/code_08008750.c:sub_08009610`, `aos:c:src/code_08008750.c:sub_08009648`.  
+Local implementation: [`src/runtime/aos_intro_cutscene.c`](../src/runtime/aos_intro_cutscene.c), [`src/runtime/aos_intro_entities.c`](../src/runtime/aos_intro_entities.c), [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
+Tests: [`tests/test_aos_intro_cutscene.c`](../tests/test_aos_intro_cutscene.c), [`tests/test_aos_intro_entities.c`](../tests/test_aos_intro_entities.c), [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.title.input_stage8`, `aos.saves.portable_slots`.  
-Known divergences: The background, entity and palette resources loaded by the native mode are not exported or rendered, the songs are request-only, and the native RNG seed is not traced. The SDL host shows diagnostic stage and scroll values and starts gameplay as a separate process, so there is no visual or emulator comparison.  
-Next action: Port the introduction entities beginning with sub_080094AC and connect its native backgrounds, palettes and renderer before validating the presentation.
+Known divergences: The native backgrounds, palettes, OAM and animation resources are not exported or rendered; sub_080093E0 is only a typed text-step request, sub_0803F17C does not yet supply animation actions, affine allocation cannot fail in the host model, and songs are request-only. The SDL host remains diagnostic and starts gameplay as a separate process, so there is no visual or emulator comparison.  
+Next action: Port sub_080093E0 and connect the native introduction graphics, animation resources, palettes and renderer before validating the presentation.
 
 ### Music and sound effects
 

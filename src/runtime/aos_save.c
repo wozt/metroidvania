@@ -24,7 +24,8 @@ static bool valid(const AosSaveData *save) {
     if (!save || save->slot >= AOS_SAVE_SLOT_COUNT || save->area > 99 ||
         save->room > 999 || !spawn_pair || save->hp <= 0 ||
         save->max_hp < save->hp || save->max_hp > 9999 || save->moves > 0x1Fu ||
-        save->character > 1 || (save->challenge_flags & ~0x300000u))
+        save->character > 1 || (save->challenge_flags & ~0x300000u) ||
+        save->experience > 99999999u || save->gold > 99999999u)
         return false;
     for (unsigned i = 0; i < 8; ++i)
         if (save->name[i] > 0x22) return false;
@@ -49,9 +50,9 @@ static int payload_v1(char *out, size_t size, const AosSaveData *save) {
                     save->hp, save->max_hp, save->moves, save->play_frames);
 }
 
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v2(char *out, size_t size, const AosSaveData *save) {
     return snprintf(out, size,
-                    AOS_SAVE_SCHEMA "\n"
+                    AOS_SAVE_SCHEMA_V2 "\n"
                     "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
                     "hp=%d\nmax_hp=%d\nmoves=%" PRIu32 "\nplay_frames=%" PRIu64 "\n"
                     "name=%u,%u,%u,%u,%u,%u,%u,%u\n"
@@ -61,6 +62,17 @@ static int payload(char *out, size_t size, const AosSaveData *save) {
                     save->name[0], save->name[1], save->name[2], save->name[3],
                     save->name[4], save->name[5], save->name[6], save->name[7],
                     save->character, save->challenge_flags);
+}
+
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    int used = payload_v2(out, size, save);
+    if (used < 0 || (size_t)used >= size) return used;
+    /* The v2 text with its schema line renamed and two more fields. */
+    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    int added = snprintf(out + used, size - (size_t)used,
+                         "experience=%" PRIu32 "\ngold=%" PRIu32 "\n", save->experience,
+                         save->gold);
+    return added < 0 ? added : used + added;
 }
 
 void aos_save_init_new(AosSaveData *save, unsigned slot) {
@@ -101,11 +113,12 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
 
     unsigned slot, area, room, name[8], character;
     int spawn_x, spawn_y, hp, max_hp;
-    uint32_t moves, challenge_flags, expected;
+    uint32_t moves, challenge_flags, expected, experience = 0, gold = 0;
     uint64_t play_frames;
     int consumed = 0;
     bool legacy = strncmp(text, AOS_SAVE_SCHEMA_V1 "\n",
                           sizeof(AOS_SAVE_SCHEMA_V1)) == 0;
+    bool v2 = strncmp(text, AOS_SAVE_SCHEMA_V2 "\n", sizeof(AOS_SAVE_SCHEMA_V2)) == 0;
     int matched;
     if (legacy) {
         matched = sscanf(text,
@@ -115,9 +128,9 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          "\nchecksum=%" SCNx32 "\n%n",
                          &slot, &area, &room, &spawn_x, &spawn_y, &hp, &max_hp, &moves,
                          &play_frames, &expected, &consumed);
-    } else {
+    } else if (v2) {
         matched = sscanf(text,
-                         AOS_SAVE_SCHEMA "\n"
+                         AOS_SAVE_SCHEMA_V2 "\n"
                          "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
                          "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
                          "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
@@ -127,8 +140,21 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &play_frames, &name[0], &name[1], &name[2], &name[3],
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &expected, &consumed);
+    } else {
+        matched = sscanf(text,
+                         AOS_SAVE_SCHEMA "\n"
+                         "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
+                         "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
+                         "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
+                         "character=%u\nchallenge_flags=%" SCNu32
+                         "\nexperience=%" SCNu32 "\ngold=%" SCNu32
+                         "\nchecksum=%" SCNx32 "\n%n",
+                         &slot, &area, &room, &spawn_x, &spawn_y, &hp, &max_hp, &moves,
+                         &play_frames, &name[0], &name[1], &name[2], &name[3],
+                         &name[4], &name[5], &name[6], &name[7], &character,
+                         &challenge_flags, &experience, &gold, &expected, &consumed);
     }
-    int expected_matches = legacy ? 10 : 20;
+    int expected_matches = legacy ? 10 : v2 ? 20 : 22;
     if (matched != expected_matches || consumed <= 0 || (size_t)consumed != used) {
         set_error(error, error_size, "save schema is invalid");
         return false;
@@ -163,9 +189,12 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
         }
         parsed.character = (uint8_t)character;
         parsed.challenge_flags = challenge_flags;
+        parsed.experience = experience;
+        parsed.gold = gold;
     }
     char canonical[AOS_SAVE_TEXT_MAX];
     int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
+                         : v2   ? payload_v2(canonical, sizeof canonical, &parsed)
                                 : payload(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||
         checksum(canonical, (size_t)canonical_size) != expected) {

@@ -60,6 +60,7 @@ typedef struct {
     uint8_t contact;        /* record + 0x13 -> + 0x3C: attack against the player */
     uint8_t defence;        /* record + 0x14 -> + 0x3D */
     uint16_t weak, resist;  /* record + 0x1A, + 0x1C */
+    uint16_t experience;    /* record + 0x10, granted by sub_080683BC */
 } AosEnemyStats;
 
 #define AOS_ENEMY_MAX_ANIMS 20

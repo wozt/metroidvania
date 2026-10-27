@@ -14,6 +14,7 @@
 #include "aos_game_lifecycle.h"
 #include "aos_room.h"
 #include "aos_save.h"
+#include "aos_stats.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
@@ -117,6 +118,7 @@ typedef struct {
     int spawner;            /* entity index of a zombie's spawner, or -1 */
     AosDoor door;
     AosEnemy enemy;
+    uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
 } AriaEntity;
 
 typedef struct {
@@ -482,6 +484,7 @@ typedef struct {
     const AosWeaponFrames *weapon_frames;
     AriaPlayerStats *player;
     const AosAnimSet *effects[AOS_EFFECT_KINDS];   /* Effect/<name>, NULL when not loaded */
+    AosStats *progress;                          /* level, experience, bestiary */
 } AriaCombat;
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
@@ -524,6 +527,22 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
              * frames while its linked helper controls Soma. As with doors,
              * the forced value is consumed on the following frame. */
+            /* sub_080683BC: a defeated enemy grants its experience once;
+             * levels raise Soma's maximum HP (the level-up effect
+             * sub_080455BC and the equipment refresh are not ported). */
+            if (hit.killed && e->enemy.role == AOS_ROLE_ENEMY && combat->progress) {
+                int32_t gained = aos_stats_reward_enemy(
+                    combat->progress, &e->reward_flags, 0, (uint8_t)e->id,
+                    combat->stats[e->id]->experience);
+                if (gained > 0) {
+                    soma->max_hp = (int16_t)combat->progress->max_hp;
+                    printf("Level up: level %u, max HP %u\n", combat->progress->level,
+                           combat->progress->max_hp);
+                }
+                if (gained >= 0)
+                    printf("Experience %u (next level in %d)\n", combat->progress->experience,
+                           aos_stats_experience_to_next(combat->progress));
+            }
             if (hit.force_input && !input->active) {
                 input->active = true;
                 input->held = hit.forced_held;
@@ -774,12 +793,15 @@ static bool load_enemy_data(AriaObjects *objects) {
     if (!f) return false;
     while (fgets(line, sizeof line, f)) {
         int id, hp, field_e, contact, defence;
-        unsigned weak, resist;
-        if (sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x", &id, &hp, &field_e, &contact, &defence,
-                   &weak, &resist) == 7 && id >= 0 && id < ENEMY_KINDS)
+        unsigned weak, resist, experience = 0;
+        /* Schema v1 exports lack the experience column. */
+        int fields = sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x\t%u", &id, &hp, &field_e,
+                            &contact, &defence, &weak, &resist, &experience);
+        if (fields >= 7 && id >= 0 && id < ENEMY_KINDS)
             objects->enemies[id].stats = (AosEnemyStats){(int16_t)hp, (uint8_t)contact,
                                                          (uint8_t)defence, (uint16_t)weak,
-                                                         (uint16_t)resist};
+                                                         (uint16_t)resist,
+                                                         (uint16_t)experience};
     }
     fclose(f);
     return true;
@@ -1448,6 +1470,23 @@ int main(int argc, char **argv) {
     if (!enemies_ok) fprintf(stderr, "No object library: ./build/fusion_rebuild --task aria_objects\n");
     int cam_x = 0, cam_y = 0;
 
+    /* The level and its stats follow from the saved experience
+     * (sub_08033DA4 then sub_08033CAC, as sub_08033E38 rebuilds them). */
+    static AosStats progress;
+    progress.character = has_active_save ? active_save.character : 0;
+    aos_stats_init(&progress);
+    if (has_active_save) {
+        progress.experience = active_save.experience;
+        progress.gold = active_save.gold;
+    }
+    aos_stats_level_up(&progress);
+    if (has_active_save)
+        printf("Aria file %u: level %u, experience %u, max HP %u\n", active_save.slot + 1u,
+               progress.level, progress.experience, progress.max_hp);
+    if (!hp_override && progress.max_hp > player_stats.max_hp) {
+        player_stats.max_hp = progress.max_hp;
+        if (player_stats.hp > player_stats.max_hp) player_stats.hp = player_stats.max_hp;
+    }
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
     soma.hp = (int16_t)player_stats.hp;
@@ -1462,7 +1501,8 @@ int main(int argc, char **argv) {
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
     AriaCombat combat = {{NULL}, {NULL}, &weapon_entity,
-                         weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, {NULL}};
+                         weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, {NULL},
+                         &progress};
     for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
         if (objects.effects[k].def.count) combat.effects[k] = &objects.effects[k].set;
     for (int id = 0; enemies_ok && id < ENEMY_KINDS; ++id) {
@@ -1634,6 +1674,8 @@ int main(int argc, char **argv) {
                     active_save.hp = soma.hp;
                     active_save.max_hp = soma.max_hp;
                     active_save.moves = soma.moves;
+                    active_save.experience = progress.experience;
+                    active_save.gold = progress.gold;
                     char error[256];
                     if (aos_save_store(save_path, &active_save, error, sizeof error))
                         printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",

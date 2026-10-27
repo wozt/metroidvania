@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0578 - Aria levels and experience
+
+- `src/runtime/aos_stats.c` ports Aria's level system from
+  `src/code_08033CAC.c`: starting stats for Soma and Julius, the
+  x(x + 1)(3x + 8) experience curve, the level-up loop to 99 with its four
+  gain tables, experience to the next level, level setting and Julius'
+  bonus; and the experience part of the enemy reward `sub_080683BC` (one
+  reward per entity, bestiary bit, bonus flag, 99999999 cap).
+- The enemy-stats export (`enemies.tsv`, schema v2, task `aria_objects`
+  version 3) adds each record's experience; the runtime grants it when an
+  enemy is reported killed and raises Soma's maximum HP on a level up.
+- Portable saves move to schema v3 with experience and gold (v1 and v2 stay
+  readable); the runtime rebuilds the level from the saved experience and
+  stores both at save points. A v3 save with 700 experience started the
+  runtime at level 5 with 368 maximum HP (local check).
+- Not ported: gold, item and soul drops, the level-up display, the
+  equipment refresh and the other stats' use in combat. Source-derived and
+  unit-tested, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0577 - Aria's native main-menu BG0
 
 - `src/runtime/aos_menu_bg0.c` models the main menu's BG0 as the native

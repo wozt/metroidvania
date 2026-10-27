@@ -1145,8 +1145,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             }
             if (enemy->hp <= 0) {
                 report.killed = true;
-                /* sub_080683BC (rewards, not ported) marks it defeated
-                 * (+ 0x3E bit 1): sub_0806E314 then skips its collisions. */
+                /* sub_080683BC marks it defeated (+ 0x3E bit 1):
+                 * sub_0806E314 then skips its collisions. Its experience
+                 * reward is applied by the runtime (aos_stats). */
                 enemy->defeated = true;
                 if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */

@@ -35,6 +35,8 @@ int main(void) {
     source.name[0] = 0x0B;
     source.character = 1;
     source.challenge_flags = 0x100000;
+    source.experience = 123456;
+    source.gold = 7890;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -67,6 +69,35 @@ int main(void) {
     assert(aos_save_load(legacy_path, &loaded, error, sizeof error));
     assert(loaded.slot == 1 && loaded.area == 2 && loaded.room == 3 &&
            loaded.name[0] == 0x14 && loaded.character == 0);
+
+    /* A v2 file (no experience or gold) still loads, with both at zero. */
+    const char *v2_path = "aos-save-test-v2.sav";
+    char v2[512];
+    int v2_size = snprintf(v2, sizeof v2,
+                           AOS_SAVE_SCHEMA_V2 "\n"
+                           "slot=0\narea=4\nroom=9\nspawn_x=-1\nspawn_y=-1\nhp=300\n"
+                           "max_hp=332\nmoves=31\nplay_frames=60\n"
+                           "name=1,2,3,0,0,0,0,0\ncharacter=0\nchallenge_flags=0\n");
+    assert(v2_size > 0 && (size_t)v2_size < sizeof v2);
+    v2_size += snprintf(v2 + v2_size, sizeof v2 - (size_t)v2_size, "checksum=%08x\n",
+                        test_checksum(v2, (size_t)v2_size));
+    FILE *v2_file = fopen(v2_path, "wb");
+    assert(v2_file && fwrite(v2, 1, (size_t)v2_size, v2_file) == (size_t)v2_size);
+    assert(fclose(v2_file) == 0);
+    loaded.experience = loaded.gold = 5;
+    assert(aos_save_load(v2_path, &loaded, error, sizeof error));
+    assert(loaded.area == 4 && loaded.max_hp == 332 && loaded.name[1] == 2 &&
+           loaded.experience == 0 && loaded.gold == 0);
+    assert(remove(v2_path) == 0);
+
+    /* Experience stops at 99999999 (the native cap of sub_080683BC); gold
+     * uses the same bound in this format. */
+    source.experience = 100000000u;
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.experience = 0;
+    source.gold = 100000000u;
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.gold = 0;
 
     source.slot = AOS_SAVE_SLOT_COUNT;
     assert(!aos_save_store(path, &source, error, sizeof error));

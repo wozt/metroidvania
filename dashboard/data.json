@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T06:46:12+00:00",
+ "generated_at": "2026-10-27T06:59:04+00:00",
  "git": {
-  "commit": "b5eb7a1",
+  "commit": "db739be",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 199,
+   "total": 200,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 43,
+    "partial": 44,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 72.9,
-   "with_passing_tests": 186,
+   "functional_or_better_percent": 72.5,
+   "with_passing_tests": 187,
    "with_passing_tests_percent": 93.5,
    "unknown_or_blocked": 1,
    "features": [
@@ -254,6 +254,7 @@
     "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
+    "aos.progression.experience",
     "aos.saves.portable_slots",
     "aos.startup.mode_dispatch",
     "aos.title.input_stage8",
@@ -433,11 +434,11 @@
    "areas": [
     "aos"
    ],
-   "total": 58,
+   "total": 59,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 19,
+    "partial": 20,
     "functional": 39,
     "faithful": 0,
     "validated": 0,
@@ -445,8 +446,8 @@
     "unknown": 0
    },
    "functional_or_better": 39,
-   "functional_or_better_percent": 67.2,
-   "with_passing_tests": 58,
+   "functional_or_better_percent": 66.1,
+   "with_passing_tests": 59,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -503,6 +504,7 @@
     "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
+    "aos.progression.experience",
     "aos.saves.portable_slots",
     "aos.startup.mode_dispatch",
     "aos.title.input_stage8",
@@ -12418,6 +12420,79 @@
    }
   },
   {
+   "id": "aos.progression.experience",
+   "area": "aos",
+   "category": "player",
+   "title": "Aria levels and experience",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_stats.c",
+    "src/runtime/aria_runtime.c",
+    "src/runtime/aos_save.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_stats.c",
+    "tests/test_aos_save.c"
+   ],
+   "dependencies": [
+    "aos.saves.portable_slots",
+    "aos.player.soma_controller"
+   ],
+   "native_routines": [
+    "sub_08033CAC",
+    "sub_08033DA4",
+    "sub_08033DFC",
+    "sub_08033E10",
+    "sub_08033E38",
+    "sub_08033E6C",
+    "sub_080683BC"
+   ],
+   "limitations": "sub_080683BC is ported for its experience reward only: its item, gold and soul drops and the code after 0x08068476 are not, nor the level-up display sub_080455BC or the equipment refresh sub_0804AD9C that ends sub_08033CAC. The mode byte of gEwramData + 0x4CC is passed as 0 by the runtime (its other modes are not reproduced), and the experience-bonus flag of unk_13260 is never set. The walking-experience accessory path of sub_0801B0D8 is not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables (every fourth level gains a single INT point), sub_08033E10, sub_08033E38 and sub_08033E6C. The experience part of sub_080683BC grants an enemy record's u16 at 0x10 once per entity (its + 0x3E guard), marks the 0x133A0 bestiary bit, applies the 0x133 / 256 bonus flag and the 99999999 cap, and levels up; Julius and the mode bits skip it. The enemy-stats export (schema v2) now carries that field and the runtime rewards each enemy it reports killed, raising maximum HP on a level up; a v3 save with 700 experience starts at level 5 with 368 maximum HP (local runtime check). Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the rest of sub_080683BC (gold, item and soul drops) and the equipment-derived stats of sub_0804AD9C, then show level, experience and gold in the pause and file screens.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_stats.c",
+     "tests/test_aos_save.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_stats.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_stats"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-27"
+   }
+  },
+  {
    "id": "aos.saves.portable_slots",
    "area": "aos",
    "category": "startup",
@@ -12429,7 +12504,8 @@
     "src/runtime/aos_save_room.c",
     "src/runtime/aos_menu_save_bridge.c",
     "src/runtime/aos_title_preview.c",
-    "src/runtime/aria_runtime.c"
+    "src/runtime/aria_runtime.c",
+    "src/runtime/aos_stats.c"
    ],
    "tests": [
     "tests/test_aos_save.c",
@@ -12448,7 +12524,7 @@
     "Object1CUpdate",
     "sub_08068AD4"
    ],
-   "limitations": "The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "The ROM-free v3 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 and v2 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask, play time, experience and gold are represented (the level and its stats are rebuilt from the experience); quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared. Schema v3 adds the experience and gold, bounded by the native 99999999 experience cap; the runtime rebuilds the level from the saved experience and stores both at save points.",
    "next_action": "Add the remaining progression and completed-file fields, then reconstruct quicksave and native SRAM serialization behavior.",
    "evidence": {
     "unit_tests": [
@@ -14660,7 +14736,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 348 traced door, enemy and shared-effect sequences, 1,344 indexed frames, 825 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 828 files are byte-identical to the former Python writer and guarded by recorded digests. Coverage remains partial because only objects and enemies whose create routine is traced are catalogued: wooden door, the 50 named enemy/palette variants and child frames, the common death flame, blood, smoke, fire, spark, dust, impact, ember and casing effects. The Python object writer is removed.",
+   "limitations": "The native C11 rebuild task exports 348 traced door, enemy and shared-effect sequences, 1,344 indexed frames, 825 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 828 files are byte-identical to the former Python writer and guarded by recorded digests. Coverage remains partial because only objects and enemies whose create routine is traced are catalogued: wooden door, the 50 named enemy/palette variants and child frames, the common death flame, blood, smoke, fire, spark, dust, impact, ember and casing effects. The Python object writer is removed. The enemy-stats table (schema v2) also exports each record's experience (u16 at 0x10), which the runtime grants on defeat.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16343,6 +16419,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_stats",
+    "files": [
+     "tests/test_aos_stats.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_menu_bg0",
     "files": [
      "tests/test_aos_menu_bg0.c"
@@ -16561,12 +16644,18 @@
    }
   ],
   "summary": {
-   "passed": 84,
+   "passed": 85,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "db739be",
+   "date": "2026-10-27",
+   "subject": "Model Aria's native main-menu BG0",
+   "scope": "project"
+  },
   {
    "commit": "b5eb7a1",
    "date": "2026-10-27",
@@ -17040,12 +17129,6 @@
    "date": "2026-10-24",
    "subject": "Load Aria video memory natively",
    "scope": "project"
-  },
-  {
-   "commit": "53bc7e2",
-   "date": "2026-10-24",
-   "subject": "Decode Zero Mission Clipdata natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -17106,9 +17189,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 477,
-    "routines_attached_to_features": 477,
-    "unassigned_routines": 3096,
+    "routines_cited_by_features": 484,
+    "routines_attached_to_features": 484,
+    "unassigned_routines": 3089,
     "call_edges": 14228
    }
   },

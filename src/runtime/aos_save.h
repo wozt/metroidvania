@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v2"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v3"
+#define AOS_SAVE_SCHEMA_V2 "metroidvania-aos-save-v2"
 #define AOS_SAVE_SCHEMA_V1 "metroidvania-aos-save-v1"
 #define AOS_SAVE_SLOT_COUNT 3
 
@@ -25,6 +26,10 @@ typedef struct {
     uint8_t name[8];
     uint8_t character;
     uint32_t challenge_flags;
+    /* unk_1325C.currentExperience and currentGold (schema v3). The level and
+     * its stats are derived from the experience (sub_08033E38). */
+    uint32_t experience;
+    uint32_t gold;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

@@ -37,7 +37,7 @@ static void early_enemy_batch_tests(void) {
             kind.modes[a][f] = 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
         }
-    const AosEnemyStats stats = {30, 16, 2, 0, 0};
+    const AosEnemyStats stats = {30, 16, 2, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
     const uint8_t ids[] = {AOS_ENEMY_SKELETON, AOS_ENEMY_PEEPING_EYE,
                            AOS_ENEMY_KILLER_FISH, AOS_ENEMY_BONE_PILLAR,
@@ -176,7 +176,7 @@ static void batch_enemy_tests(void) {
             kind.modes[a][f] = 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
         }
-    const AosEnemyStats stats = {30, 16, 2, 0, 0};
+    const AosEnemyStats stats = {30, 16, 2, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(159), NULL);
     const uint8_t ids[] = {AOS_ENEMY_MERMAN, AOS_ENEMY_SIREN, AOS_ENEMY_TINY_DEVIL,
                            AOS_ENEMY_CATOBLEPAS, AOS_ENEMY_IMP, AOS_ENEMY_GORGON,
@@ -516,7 +516,7 @@ static void zombie_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-5, -31, 8, 31};
         }
     kind.margins[4][0] = kind.margins[4][1] = 48;
-    const AosEnemyStats stats = {18, 9, 1, 0x0021, 0x0010};
+    const AosEnemyStats stats = {18, 9, 1, 0x0021, 0x0010, 0};
 
     /* A zombie record snaps onto the floor and rises, facing the player. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
@@ -698,7 +698,7 @@ static void crow_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-6, -6, 12, 12};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {6, 8, 0, 0, 0};
+    const AosEnemyStats stats = {6, 8, 0, 0, 0, 0};
 
     /* The crow perches (animation 0) until the player is within 60 pixels. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
@@ -850,7 +850,7 @@ static void red_crow_tests(void) {
     static AosEnemyKind kind;
     kind.anims = &anims;
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {30, 20, 0, 0, 0};
+    const AosEnemyStats stats = {30, 20, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
 
     /* It perches until the player is within 120 pixels, then hovers 128
@@ -913,7 +913,7 @@ static void mimic_tests(void) {
             kind.attack[a][f] = (AosBox){-14, -32, 28, 32};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {30, 20, 0, 0, 0};
+    const AosEnemyStats stats = {30, 20, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
 
     /* A placed chest (parameter 0 set) sits closed on the floor: sprite
@@ -1018,7 +1018,7 @@ static void soldier_tests(void) {
             kind.attack[a][f] = (AosBox){-18, -24, 8, 8};
         }
     kind.margins[2][0] = kind.margins[2][1] = 32;
-    const AosEnemyStats stats = {46, 14, 5, 0x0121, 0x0010};
+    const AosEnemyStats stats = {46, 14, 5, 0x0121, 0x0010, 0};
 
     /* Snapped to the floor; far from Soma it steps toward him at 0.25. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
@@ -1196,7 +1196,7 @@ static void armor_tests(void) {
         }
     kind.probes = (AosProbes){2, -40, -1, 6, {-7, -24}};
     kind.margins[4][0] = kind.margins[4][1] = 48;
-    const AosEnemyStats stats = {60, 15, 8, 0x0108, 0};
+    const AosEnemyStats stats = {60, 15, 8, 0x0108, 0, 0};
 
     /* Snapped onto the floor plus one pixel; walking left, it turns at the
      * wall (no patrol length). */
@@ -1385,7 +1385,7 @@ static void archer_tests(void) {
     const int8_t triple_shots[3][2] = {{3, 0}, {9, 1}, {14, 2}};
     memcpy(kind.volleys[2], triple_shots, sizeof triple_shots);
     kind.volley_sizes[2] = 3;
-    const AosEnemyStats stats = {42, 13, 5, 0x0020, 0x0010};
+    const AosEnemyStats stats = {42, 13, 5, 0x0020, 0x0010, 0};
 
     /* Standing: it faces the player and shoots once he is in the 240 x 35
      * box; the volleys go 0, 0, 1, 1, 2 (animations 2, 2, 3, 3, 4). */
@@ -1565,7 +1565,7 @@ static void curly_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {40, 30, 0, 0, 0};
+    const AosEnemyStats stats = {40, 30, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(40), AOS_FIXED(159), NULL);
 
     /* It snaps to the floor and paces at 0.5 (frames 0-3), still on 4-7;
@@ -1636,7 +1636,7 @@ static void valkyrie_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {60, 40, 0, 0, 0};
+    const AosEnemyStats stats = {60, 40, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
 
     /* It waits beyond 120 pixels, then heads at 2.0 for the point 64
@@ -1753,7 +1753,7 @@ static void flea_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-6, -12, 12, 12};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {20, 15, 0, 0, 0};
+    const AosEnemyStats stats = {20, 15, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
 
     /* On the floor, state 1; step 0 then step 4. */
@@ -1839,7 +1839,7 @@ static void warrior_tests(void) {
             kind.modes[a][f] = 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -32, 16, 32};
         }
-    const AosEnemyStats stats = {50, 30, 0, 0, 0};
+    const AosEnemyStats stats = {50, 30, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(240), AOS_FIXED(159), NULL);
 
     /* EnemyDeadWarriorCreate: on the floor plus one pixel, + 0x1C = 50. */
@@ -1909,7 +1909,7 @@ static void knight_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {80, 30, 0, 0, 0};
+    const AosEnemyStats stats = {80, 30, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
 
     /* It waits beyond (x - 90, y - 48, 180, 96), then walks at 0.5. */
@@ -1967,7 +1967,7 @@ static void crusader_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {180, 30, 0, 0, 0};
+    const AosEnemyStats stats = {180, 30, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
 
     /* It waits beyond (x - 90, y - 48, 180, 96), then walks at 0.75. */
@@ -2073,7 +2073,7 @@ static void skull_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-10, -30, 20, 30};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {500, 50, 0, 0, 0};
+    const AosEnemyStats stats = {500, 50, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
 
     /* A Lubicant bobs in place (vy = sin / 2) with its fin, made on the
@@ -2199,7 +2199,7 @@ static void beam_tests(void) {
         }
     for (int f = 0; f < 6; ++f) kind.sprites[4][f] = (uint8_t)(14 + f);   /* frame 5: 0x13 */
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {100, 30, 0, 0, 0};
+    const AosEnemyStats stats = {100, 30, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
 
     /* It patrols at 0.375, turning 40 pixels from its home column. */
@@ -2347,7 +2347,7 @@ static void killer_doll_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -24, 16, 24};
             kind.sprites[a][f] = (uint8_t)(a * 2 + f);
         }
-    const AosEnemyStats stats = {200, 40, 0, 0, 0};
+    const AosEnemyStats stats = {200, 40, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
 
     /* It rests on the floor, then wakes within 60 pixels, rises and
@@ -2472,7 +2472,7 @@ static void nemesis_tests(void) {
         kind.modes[a][0] = 1;
         kind.hurt[a][0] = kind.attack[a][0] = (AosBox){-8, -16, 16, 24};
     }
-    const AosEnemyStats stats = {440, 40, 24, 0x0181, 0};
+    const AosEnemyStats stats = {440, 40, 24, 0x0181, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(100), NULL);
     AosEnemy n;
     aos_enemy_set_flag_8e_40(false);
@@ -2590,7 +2590,7 @@ static void doll_tests(void) {
             kind.sprites[a][f] = (uint8_t)(a * 4 + f);
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {200, 40, 0, 0, 0};
+    const AosEnemyStats stats = {200, 40, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(159), NULL);
 
     /* It rests on the floor until the player is in its 0xF0 x 0x80 box. */
@@ -2753,7 +2753,7 @@ static void ghost_tests(void) {
             kind.modes[a][f] = 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 32};
         }
-    const AosEnemyStats stats = {25, 15, 0, 0, 0};
+    const AosEnemyStats stats = {25, 15, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
 
     /* State 1: step 0 faces the player; then a figure of eight, x +=
@@ -2825,7 +2825,7 @@ static void gargoyle_tests(void) {
     static AosEnemyKind kind;
     kind.anims = &anims;
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {30, 20, 0, 0, 0};
+    const AosEnemyStats stats = {30, 20, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(159), NULL);
 
     /* State 0 step 0: facing the player (right), 0.5; step 1 chases the
@@ -2926,7 +2926,7 @@ static void officer_tests(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -40, 16, 40};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {30, 24, 6, 0, 0};
+    const AosEnemyStats stats = {30, 24, 6, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
 
     /* EnemyZombieOfficerCreate: snapped to the floor, state 0. At the start
@@ -2998,7 +2998,7 @@ static void medusa_tests(void) {
     kind.anims = &anims;
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
     kind.margins[4][0] = kind.margins[4][1] = 48;
-    const AosEnemyStats stats = {12, 20, 0, 0, 0};
+    const AosEnemyStats stats = {12, 20, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(60), AOS_FIXED(159), NULL);
 
     /* A spawner (parameter 1 bit 1): hidden, state 3. One frame in 32 it
@@ -3091,7 +3091,7 @@ static void needles_tests(void) {
     const AosAnimSet anims = {defs, 1};
     static AosEnemyKind kind;
     kind.anims = &anims;
-    const AosEnemyStats stats = {1, 38, 0, 0, 0};
+    const AosEnemyStats stats = {1, 38, 0, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(159), NULL);
 
     /* EnemyNeedlesCreate: state 1, not mirrored, (-8, -8, 16, 16) boxes. */
@@ -3183,7 +3183,7 @@ int main(void) {
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-2, 0, 4, 9};
         }
     for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
-    const AosEnemyStats stats = {10, 6, 0, 0x0001, 0};
+    const AosEnemyStats stats = {10, 6, 0, 0x0001, 0, 0};
 
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);

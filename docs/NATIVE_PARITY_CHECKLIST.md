@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 58 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 59 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 477 | 3096 |
+| Castlevania: Aria of Sorrow | 484 | 3089 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1095,13 +1095,13 @@ Pinned source: `third_party/cvaos` at `bc23d849d578c35ae12a5cec4e66549c3021a5be`
 
 [?] **`aos.startup.inventory-boundary` — source coverage.** The current classifier assigns 5 discovered routine(s) to this category (2 by native name, 3 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.saves.portable_slots` — Portable frontend save slots.** Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared. Schema v3 adds the experience and gold, bounded by the native 99999999 experience cap; the runtime rebuilds the level from the saved experience and stores both at save points.
 
 Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1CCreate`, `aos:asm:asm/code/code_08050A3C.s:Object1CUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_08012744.c:SaveData_ClearSlotInSram`, `aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram`, `aos:c:src/code_08012744.c:SaveData_SaveSlotToSram`, `aos:c:src/code_08012744.c:sub_080127F0`.  
-Local implementation: [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_save_room.c`](../src/runtime/aos_save_room.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Local implementation: [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_save_room.c`](../src/runtime/aos_save_room.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_stats.c`](../src/runtime/aos_stats.c).  
 Tests: [`tests/test_aos_save.c`](../tests/test_aos_save.c), [`tests/test_aos_save_room.c`](../tests/test_aos_save_room.c), [`tests/test_aos_menu_save_bridge.c`](../tests/test_aos_menu_save_bridge.c).
 Dependencies: `aos.startup.mode_dispatch`.  
-Known divergences: The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent.  
+Known divergences: The ROM-free v3 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 and v2 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask, play time, experience and gold are represented (the level and its stats are rebuilt from the experience); quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent.  
 Next action: Add the remaining progression and completed-file fields, then reconstruct quicksave and native SRAM serialization behavior.
 
 [~] **`aos.startup.mode_dispatch` — Aria game mode dispatcher.** The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU, INTRO_CUTSCENE and IN_GAME. The SDL title host persists regular-file menu operations, runs the introduction for new files and launches gameplay only after its native IN_GAME handoff. Source-derived and unit-tested, not emulator-compared.
@@ -1173,6 +1173,15 @@ Native evidence: `aos:asm:asm/code/code_08014548.s:sub_0801B0D8`.
 Local implementation: [`src/runtime/aos_soma.c`](../src/runtime/aos_soma.c).  
 Tests: [`tests/test_aos_soma.c`](../tests/test_aos_soma.c).
 Next action: Port the remaining native Soma states.
+
+[~] **`aos.progression.experience` — Aria levels and experience.** sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables (every fourth level gains a single INT point), sub_08033E10, sub_08033E38 and sub_08033E6C. The experience part of sub_080683BC grants an enemy record's u16 at 0x10 once per entity (its + 0x3E guard), marks the 0x133A0 bestiary bit, applies the 0x133 / 256 bonus flag and the 99999999 cap, and levels up; Julius and the mode bits skip it. The enemy-stats export (schema v2) now carries that field and the runtime rewards each enemy it reports killed, raising maximum HP on a level up; a v3 save with 700 experience starts at level 5 with 368 maximum HP (local runtime check). Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:c:src/code_08033CAC.c:sub_08033CAC`, `aos:c:src/code_08033CAC.c:sub_08033DA4`, `aos:c:src/code_08033CAC.c:sub_08033DFC`, `aos:c:src/code_08033CAC.c:sub_08033E10`, `aos:c:src/code_08033CAC.c:sub_08033E38`, `aos:c:src/code_08033CAC.c:sub_08033E6C`.  
+Local implementation: [`src/runtime/aos_stats.c`](../src/runtime/aos_stats.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_stats.c`](../tests/test_aos_stats.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Dependencies: `aos.saves.portable_slots`, `aos.player.soma_controller`.  
+Known divergences: sub_080683BC is ported for its experience reward only: its item, gold and soul drops and the code after 0x08068476 are not, nor the level-up display sub_080455BC or the equipment refresh sub_0804AD9C that ends sub_08033CAC. The mode byte of gEwramData + 0x4CC is passed as 0 by the runtime (its other modes are not reproduced), and the experience-bonus flag of unk_13260 is never set. The walking-experience accessory path of sub_0801B0D8 is not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat.  
+Next action: Port the rest of sub_080683BC (gold, item and soul drops) and the equipment-derived stats of sub_0804AD9C, then show level, experience and gold in the pause and file screens.
 
 ### Physics
 

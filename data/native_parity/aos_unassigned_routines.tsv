@@ -137,10 +137,8 @@ aos:asm:asm/code/code_080211F0.s:sub_0802D284	sub_0802D284	unclassified				asm_f
 aos:asm:asm/code/code_080211F0.s:sub_0802D2BC	sub_0802D2BC	unclassified				asm_function	0x0802D2BC	asm/code/code_080211F0.s	24075	3	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D300	sub_0802D300	unclassified				asm_function	0x0802D300	asm/code/code_080211F0.s	24110	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D314	sub_0802D314	unclassified		technical	exclusive_callees	asm_function	0x0802D314	asm/code/code_080211F0.s	24122	0	1
-aos:asm:asm/code/code_080211F0.s:sub_0802D344	sub_0802D344	unclassified		technical	exclusive_callees	asm_function	0x0802D344	asm/code/code_080211F0.s	24148	5	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D390	sub_0802D390	unclassified				asm_function	0x0802D390	asm/code/code_080211F0.s	24192	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D3C4	sub_0802D3C4	unclassified				asm_function	0x0802D3C4	asm/code/code_080211F0.s	24221	0	0
-aos:asm:asm/code/code_080211F0.s:sub_0802D408	sub_0802D408	unclassified		technical	exclusive_callees	asm_function	0x0802D408	asm/code/code_080211F0.s	24262	6	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D484	sub_0802D484	abilities	referrers			asm_function	0x0802D484	asm/code/code_080211F0.s	24333	3	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D510	sub_0802D510	unclassified		technical	exclusive_callees	asm_function	0x0802D510	asm/code/code_080211F0.s	24406	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D55C	sub_0802D55C	unclassified				asm_function	0x0802D55C	asm/code/code_080211F0.s	24446	4	1
@@ -276,8 +274,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08043B18	sub_08043B18	environment	referrers
 aos:asm:asm/code/code_08040A38.s:sub_08043BB0	sub_08043BB0	unclassified				asm_function	0x08043BB0	asm/code/code_08040A38.s	4718	1	0
 aos:asm:asm/code/code_08040A38.s:sub_08043C10	sub_08043C10	unclassified		technical	exclusive_callees	asm_function	0x08043C10	asm/code/code_08040A38.s	4769	3	5
 aos:asm:asm/code/code_08040A38.s:sub_08043CE4	sub_08043CE4	unclassified				asm_function	0x08043CE4	asm/code/code_08040A38.s	4869	0	3
-aos:asm:asm/code/code_08040A38.s:sub_0804459C	sub_0804459C	unclassified		technical	exclusive_callees	asm_function	0x0804459C	asm/code/code_08040A38.s	6018	3	10
-aos:asm:asm/code/code_08040A38.s:sub_080446D4	sub_080446D4	unclassified		technical	exclusive_callees	asm_function	0x080446D4	asm/code/code_08040A38.s	6162	0	6
 aos:asm:asm/code/code_08040A38.s:sub_08044840	sub_08044840	unclassified		technical	exclusive_callees	asm_function	0x08044840	asm/code/code_08040A38.s	6348	0	8
 aos:asm:asm/code/code_08040A38.s:sub_08044980	sub_08044980	unclassified		technical	exclusive_callees	asm_function	0x08044980	asm/code/code_08040A38.s	6510	1	9
 aos:asm:asm/code/code_08040A38.s:sub_08044AA4	sub_08044AA4	enemies	referrers			asm_function	0x08044AA4	asm/code/code_08040A38.s	6640	2	8
@@ -2848,20 +2844,16 @@ aos:c:src/code_08013960.c:sub_08013F38	sub_08013F38	unclassified		audio	exclusiv
 aos:c:src/code_08013960.c:sub_08013F6C	sub_08013F6C	unclassified		audio	exclusive_callees	c_function	0x08013F6C	src/code_08013960.c	505	6	1
 aos:c:src/code_08013960.c:sub_080142E8	sub_080142E8	death	referrers			c_function	0x080142E8	src/code_08013960.c	656	0	1
 aos:c:src/code_08032444.c:SoulInventory_AddAmountToFirstGroupTotal	SoulInventory_AddAmountToFirstGroupTotal	inventory	name			c_function	0x080324D0	src/code_08032444.c	94	1	2
-aos:c:src/code_08032444.c:SoulInventory_AddAmountToGroupTotal	SoulInventory_AddAmountToGroupTotal	inventory	name			c_function	0x08032588	src/code_08032444.c	170	5	0
-aos:c:src/code_08032444.c:SoulInventory_AddAmountToSoulTotal	SoulInventory_AddAmountToSoulTotal	inventory	name			c_function	0x0803278C	src/code_08032444.c	370	5	2
 aos:c:src/code_08032444.c:SoulInventory_GetFirstGroupSoulTotal	SoulInventory_GetFirstGroupSoulTotal	inventory	name			c_function	0x08032A2C	src/code_08032444.c	631	0	1
 aos:c:src/code_08032444.c:SoulInventory_GetFirstGroupSoulTotalDifferent	SoulInventory_GetFirstGroupSoulTotalDifferent	inventory	name			c_function	0x08032444	src/code_08032444.c	39	0	1
 aos:c:src/code_08032444.c:SoulInventory_GetGroupSoulTotal	SoulInventory_GetGroupSoulTotal	inventory	name			c_function	0x08032B88	src/code_08032444.c	797	1	0
 aos:c:src/code_08032444.c:SoulInventory_GetInventoryFirstGroupPointer	SoulInventory_GetInventoryFirstGroupPointer	inventory	name			c_function	0x08032A5C	src/code_08032444.c	661	3	1
 aos:c:src/code_08032444.c:SoulInventory_GetInventoryPointer	SoulInventory_GetInventoryPointer	inventory	name			c_function	0x08032B20	src/code_08032444.c	759	3	0
-aos:c:src/code_08032444.c:SoulInventory_GetSoulTotal	SoulInventory_GetSoulTotal	inventory	name			c_function	0x080326B8	src/code_08032444.c	273	20	0
 aos:c:src/code_08032444.c:SoulInventory_SetFirstGroupSoulTotal	SoulInventory_SetFirstGroupSoulTotal	inventory	name			c_function	0x08032A6C	src/code_08032444.c	673	0	1
 aos:c:src/code_08032444.c:SoulInventory_SetGroupTotalAmount	SoulInventory_SetGroupTotalAmount	inventory	name			c_function	0x08032C10	src/code_08032444.c	850	1	0
 aos:c:src/code_08032444.c:SoulInventory_TransferFirstGroupTotalToSecondGroupTotal	SoulInventory_TransferFirstGroupTotalToSecondGroupTotal	inventory	name			c_function	0x08032844	src/code_08032444.c	438	1	1
 aos:c:src/code_08032444.c:SoulInventory_TransferSecondGroupTotalToFirstGroupTotal	SoulInventory_TransferSecondGroupTotalToFirstGroupTotal	inventory	name			c_function	0x08032938	src/code_08032444.c	535	1	1
 aos:c:src/code_08032444.c:sub_08032AB8	sub_08032AB8	unclassified				c_function	0x08032AB8	src/code_08032444.c	702	6	0
-aos:c:src/code_08032444.c:sub_08032ADC	sub_08032ADC	unclassified				c_function	0x08032ADC	src/code_08032444.c	718	5	0
 aos:c:src/code_08032444.c:sub_08032B14	sub_08032B14	unclassified				c_function	0x08032B14	src/code_08032444.c	747	5	0
 aos:c:src/code_08032444.c:sub_08032CA8	sub_08032CA8	menus	referrers			c_function	0x08032CA8	src/code_08032444.c	897	1	0
 aos:c:src/code_08032444.c:sub_08032CBC	sub_08032CBC	menus	referrers			c_function	0x08032CBC	src/code_08032444.c	912	2	0
@@ -2869,7 +2861,6 @@ aos:c:src/code_08032444.c:sub_08032CD0	sub_08032CD0	menus	referrers			c_function
 aos:c:src/code_08032444.c:sub_08032CE0	sub_08032CE0	menus	referrers			c_function	0x08032CE0	src/code_08032444.c	938	1	1
 aos:c:src/code_08032444.c:sub_08032D18	sub_08032D18	menus	referrers			c_function	0x08032D18	src/code_08032444.c	964	1	1
 aos:c:src/code_08032444.c:sub_08032D58	sub_08032D58	unclassified		inventory	exclusive_callees	c_function	0x08032D58	src/code_08032444.c	992	2	1
-aos:c:src/code_08032444.c:sub_08032DBC	sub_08032DBC	unclassified				c_function	0x08032DBC	src/code_08032444.c	1031	1	0
 aos:c:src/code_08032444.c:sub_08032DF0	sub_08032DF0	unclassified				c_function	0x08032DF0	src/code_08032444.c	1048	3	2
 aos:c:src/code_08032E4C.c:Object01Create	Object01Create	environment	name			c_function	0x08033C84	src/code_08032E4C.c	1175	0	1
 aos:c:src/code_08032E4C.c:Object01Update	Object01Update	environment	name			c_function	0x08033C90	src/code_08032E4C.c	1185	0	1

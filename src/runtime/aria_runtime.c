@@ -563,15 +563,26 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                      * ported. No equipment or souls are owned yet, so the
                      * accessory is none and the soul counts as unowned. */
                     AosDropContext context = {
-                        .luck = (int16_t)combat->progress->base[AOS_STAT_LCK],
+                        .luck = (int16_t)combat->progress->current[AOS_STAT_LCK],
+                        .accessory = combat->progress->accessory,
+                        .soul_owned = combat->drops[e->id]->soul_index &&
+                                      aos_souls_total(combat->progress,
+                                                      combat->drops[e->id]->soul_type,
+                                                      combat->drops[e->id]->soul_index - 1),
                         .ground = aos_collision_cell(layer, e->enemy.x >> 16,
                                                      (e->enemy.y >> 16) - 8)};
                     AosDrop drop = aos_stats_roll_drop(combat->progress, (uint8_t)e->id,
                                                        combat->drops[e->id], &context,
                                                        aos_random);
-                    if (drop.kind == AOS_DROP_SOUL)
+                    if (drop.kind == AOS_DROP_SOUL) {
+                        /* sub_0804459C(x, y - 8, type, index, 0). */
+                        if (room->pickup_count < MAX_PICKUPS)
+                            room->pickups[room->pickup_count++] = aos_pickup_create_soul(
+                                drop.soul_type, drop.soul_index, e->enemy.x >> 16,
+                                (e->enemy.y >> 16) - 8, soma->x, soma->y, aos_random);
                         printf("Drop: soul type %u index %u\n", drop.soul_type,
                                drop.soul_index);
+                    }
                     else if (drop.kind == AOS_DROP_ITEM) {
                         /* sub_08044054(x, y - 8, 0xFF, item). */
                         uint8_t category, index;
@@ -688,7 +699,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     kept = 0;
     for (size_t i = 0; i < room->pickup_count; ++i) {
         AosPickup *pickup = &room->pickups[i];
-        aos_pickup_update(pickup, layer);
+        bool soul = pickup->type >= AOS_PICKUP_SOUL;
+        /* Souls move before their collision pass (sub_080446D4); money and
+         * items test it first (sub_08043DD0). */
+        if (soul) aos_pickup_soul_move(pickup, soma->x, soma->y);
         AosRect body = aos_player_rect(soma->hurtbox, soma->x >> 16, soma->y >> 16,
                                        soma->facing_left, false);
         bool touching = !pickup->removed && combat->progress &&
@@ -710,7 +724,17 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             else if (refusal_sound)
                 printf("Cannot carry more of %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
                        pickup->variant);
+        } else if (touching && soul) {
+            static const char *const colours[] = {"red", "blue", "yellow", "ability"};
+            bool fresh = aos_pickup_collect_soul(pickup, combat->progress);
+            printf("Collected %s %s soul %u (held %u, %u souls)\n", fresh ? "new" : "another",
+                   colours[pickup->type - AOS_PICKUP_SOUL], pickup->variant,
+                   aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
+                                   pickup->variant),
+                   combat->progress->souls_collected);
         }
+        if (soul) aos_pickup_soul_finish(pickup, aos_random);
+        else aos_pickup_update(pickup, layer);
         if (!pickup->removed) room->pickups[kept++] = *pickup;
     }
     room->pickup_count = kept;
@@ -916,6 +940,41 @@ static bool load_enemy_data(AriaObjects *objects) {
 }
 
 /* metadata/equipment.tsv: the weapon and armor/accessory records. */
+/* The soul inventories and abilities as the file stores them. */
+_Static_assert(sizeof ((AosStats *)0)->red_souls + sizeof ((AosStats *)0)->blue_souls +
+                       sizeof ((AosStats *)0)->yellow_souls +
+                       sizeof ((AosStats *)0)->ability_souls +
+                       sizeof ((AosStats *)0)->abilities ==
+                   AOS_SAVE_SOUL_BYTES,
+               "the save's soul bytes match the stats");
+static void souls_from_save(AosStats *stats, const AosSaveData *save) {
+    const uint8_t *bytes = save->souls;
+    memcpy(stats->red_souls, bytes, sizeof stats->red_souls);
+    bytes += sizeof stats->red_souls;
+    memcpy(stats->blue_souls, bytes, sizeof stats->blue_souls);
+    bytes += sizeof stats->blue_souls;
+    memcpy(stats->yellow_souls, bytes, sizeof stats->yellow_souls);
+    bytes += sizeof stats->yellow_souls;
+    memcpy(stats->ability_souls, bytes, sizeof stats->ability_souls);
+    bytes += sizeof stats->ability_souls;
+    memcpy(stats->abilities, bytes, sizeof stats->abilities);
+    stats->souls_collected = save->souls_collected;
+}
+
+static void souls_to_save(AosSaveData *save, const AosStats *stats) {
+    uint8_t *bytes = save->souls;
+    memcpy(bytes, stats->red_souls, sizeof stats->red_souls);
+    bytes += sizeof stats->red_souls;
+    memcpy(bytes, stats->blue_souls, sizeof stats->blue_souls);
+    bytes += sizeof stats->blue_souls;
+    memcpy(bytes, stats->yellow_souls, sizeof stats->yellow_souls);
+    bytes += sizeof stats->yellow_souls;
+    memcpy(bytes, stats->ability_souls, sizeof stats->ability_souls);
+    bytes += sizeof stats->ability_souls;
+    memcpy(bytes, stats->abilities, sizeof stats->abilities);
+    save->souls_collected = stats->souls_collected;
+}
+
 static bool load_equipment(const char *path, AosEquipmentTables *tables) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
@@ -1640,6 +1699,7 @@ int main(int argc, char **argv) {
                sizeof progress.weapon_counts);
         memcpy(progress.armor_counts, active_save.inventory + AOS_SAVE_ARMOR,
                sizeof progress.armor_counts);
+        souls_from_save(&progress, &active_save);
     }
     static char save_weapon_name[8];
     if (weapon_override)
@@ -1660,6 +1720,9 @@ int main(int argc, char **argv) {
         if (!atk_override) player_stats.atk = progress.atk;
         if (!def_override) player_stats.def = progress.def;
     } else {
+        /* Without the records the effective stats are the base ones. */
+        static const AosEquipmentTables no_equipment;
+        aos_stats_refresh(&progress, &no_equipment);
         fprintf(stderr, "No equipment table: ./build/fusion_rebuild --task aria_objects "
                         "(ATK and DEF stay diagnostic)\n");
     }
@@ -1872,6 +1935,7 @@ int main(int argc, char **argv) {
                            sizeof progress.weapon_counts);
                     memcpy(active_save.inventory + AOS_SAVE_ARMOR, progress.armor_counts,
                            sizeof progress.armor_counts);
+                    souls_to_save(&active_save, &progress);
                     char error[256];
                     if (aos_save_store(save_path, &active_save, error, sizeof error))
                         printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",

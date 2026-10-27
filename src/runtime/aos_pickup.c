@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_pickup.h"
 
+#include "aos_enemy.h"
+
 enum {
     AOS_PICKUP_GRAVITY = 0x2000,
     AOS_PICKUP_MAX_FALL = 0x40000,
@@ -100,4 +102,74 @@ AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,
     (*count)++;
     pickup->removed = true;
     return AOS_COLLECT_TAKEN;
+}
+
+/* (s16)(value >> 16) with the native rounding toward zero of negatives. */
+static int16_t whole(int32_t value) {
+    return (int16_t)(value < 0 ? -((-value) >> 16) : value >> 16);
+}
+
+/* sub_0802D344: the angle from the pickup to (x, y), 16.16 room pixels. */
+static uint16_t angle_to(const AosPickup *pickup, int32_t x, int32_t y) {
+    return aos_arctan2((int16_t)(whole(x) - (pickup->x >> 16)),
+                       (int16_t)(whole(y) - (pickup->y >> 16)));
+}
+
+AosPickup aos_pickup_create_soul(uint8_t soul_type, uint8_t soul_index, int32_t x, int32_t y,
+                                 int32_t soma_x, int32_t soma_y, AosRandom random) {
+    AosPickup pickup = {.type = (uint8_t)(soul_type + AOS_PICKUP_SOUL), .variant = soul_index,
+                        .x = x * 65536, .y = y * 65536};
+    int32_t target_y = soma_y - (int32_t)((random() & 0x7F) << 12) - 0x80000;
+    pickup.heading = (uint32_t)(angle_to(&pickup, soma_x, target_y) + 0x8000) & 0xFFFF;
+    pickup.turn = 0;
+    pickup.speed = 0x30000;
+    pickup.blink = 200;
+    return pickup;
+}
+
+void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y) {
+    if (pickup->state > 1) return;
+    /* sub_0802D408: one turn step along the shorter way (an exact match
+     * still steps down). */
+    int32_t difference = angle_to(pickup, soma_x, soma_y - 0x100000) - (int32_t)pickup->heading;
+    bool up = difference > 0 ? difference <= 0x7FFF : difference < -0x8000;
+    pickup->heading = (uint32_t)((int32_t)pickup->heading + (up ? pickup->turn : -pickup->turn)) &
+                      0xFFFF;
+    pickup->turn += 0x2A;
+    if (pickup->turn > 0x4000) pickup->turn = 0x4000;
+    pickup->speed += 0x1800;
+    if (pickup->speed > 0x80000) pickup->speed = 0x80000;
+    pickup->vx = (aos_sine(pickup->heading + 0x4000) >> 8) * (pickup->speed >> 8);
+    pickup->vy = (aos_sine(pickup->heading) >> 8) * (pickup->speed >> 8);
+    pickup->x += pickup->vx;
+    pickup->y += pickup->vy;
+}
+
+void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random) {
+    if (!(pickup->blink & 1)) {
+        /* The spark's position offsets, sub_0802D5EC(0x200000) each. */
+        (void)random();
+        (void)random();
+    }
+    if (pickup->state == 0) {
+        if (--pickup->blink == 0) {
+            pickup->blinking = true;
+            pickup->blink = 0x40;
+            pickup->state = 1;
+        }
+    } else if (pickup->state == 1) {
+        if (--pickup->blink == 0) pickup->removed = true;
+    } else {
+        pickup->blink++;
+    }
+}
+
+bool aos_pickup_collect_soul(AosPickup *pickup, AosStats *stats) {
+    int32_t type = pickup->type - AOS_PICKUP_SOUL, index = pickup->variant;
+    bool fresh = aos_souls_total(stats, type, index) == 0;
+    if (fresh && type == AOS_SOUL_ABILITY) aos_souls_set_ability(stats, index, true);
+    aos_souls_add(stats, type, index, 1);
+    aos_souls_count(stats, 1);
+    pickup->removed = true;
+    return fresh;
 }

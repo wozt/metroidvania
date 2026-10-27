@@ -24,6 +24,7 @@ enum {
     AOS_PICKUP_ITEM = 2,    /* itemInventory, records 0x08505B3C */
     AOS_PICKUP_WEAPON = 3,  /* weaponInventory, records 0x08505D3C */
     AOS_PICKUP_ARMOR = 4,   /* armor and accessories, records 0x085063B0 */
+    AOS_PICKUP_SOUL = 5,    /* types 5-8: soul type + 5 (sub_0804459C) */
 };
 
 typedef enum {
@@ -44,7 +45,15 @@ typedef struct {
     uint16_t cooldown;  /* + 0x1A */
     bool blinking;      /* + 0x0F */
     bool removed;       /* + 0x59 bit 3 */
+    /* Souls (sub_080446D4): heading (+ 0x18, 0x10000 per turn), turn step
+     * (+ 0x1C), speed (+ 0x20) and velocity (+ 0x48, + 0x4C). */
+    uint32_t heading;
+    int32_t turn, speed;
+    int32_t vx;
 } AosPickup;
+
+/* Soma's position (16.16) for the soul pickups' homing. */
+typedef uint32_t (*AosRandom)(void);
 
 /* The pickup's collision box (sub_08042884 with 0x1010F8F8). */
 extern const AosBox aos_pickup_box;
@@ -63,6 +72,24 @@ AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int
  * plays only when its 0x20-frame cooldown has run out (*refusal_sound). */
 AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,
                                          bool *refusal_sound);
+/* sub_0804459C for a dropped soul (last argument 0): it starts heading away
+ * from a point above Soma (y - (random & 0x7F) * 0x1000 - 8 pixels, one
+ * draw) at speed 0x30000, with 200 frames to live. */
+AosPickup aos_pickup_create_soul(uint8_t soul_type, uint8_t soul_index, int32_t x, int32_t y,
+                                 int32_t soma_x, int32_t soma_y, AosRandom random);
+/* sub_080446D4 up to its collision pass: turns toward Soma's y - 16 pixels
+ * (sub_0802D408, step + 0x2A per frame up to 0x4000), speeds up by 0x1800
+ * per frame up to 0x80000 and moves. */
+void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y);
+/* sub_080446D4 after its collision pass: on even timer values the trail
+ * spark draws two offsets (sub_0802D5EC(0x200000) twice; the spark itself is
+ * not created), then 200 frames count down, 64 frames blink and the soul is
+ * removed. */
+void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random);
+/* Cases 5-8 of sub_080441F8: a soul not yet held is new (and an ability
+ * soul enables its ability, sub_08032ADC); it is added (sub_08032DBC counts
+ * it) and the pickup removed. Returns whether it was new. */
+bool aos_pickup_collect_soul(AosPickup *pickup, AosStats *stats);
 /* sub_08043DD0 for types up to 4: falls (0x2000 per frame, at most
  * 0x40000), lands on the floor probe of sub_08001D94, rests 300 frames,
  * then blinks 64 frames and is removed. */

@@ -46,6 +46,9 @@ int main(void) {
     source.inventory[0] = 9;
     source.inventory[AOS_SAVE_WEAPONS + 12] = 3;
     source.inventory[AOS_SAVE_INVENTORY - 1] = 1;
+    source.souls[0] = 0x21;
+    source.souls[AOS_SAVE_SOUL_BYTES - 1] = 0xFF;
+    source.souls_collected = 42;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -120,6 +123,37 @@ int main(void) {
     source.armor = 45;
     assert(!aos_save_store(path, &source, error, sizeof error));
     source.armor = 0;
+    /* A v5 file (no souls) loads with none. */
+    {
+        const char *v5_path = "aos-save-test-v5.sav";
+        char v5[1024], digits[AOS_SAVE_INVENTORY + 1];
+        memset(digits, '0', AOS_SAVE_INVENTORY);
+        digits[AOS_SAVE_INVENTORY] = '\0';
+        digits[AOS_SAVE_WEAPONS] = '2';
+        int v5_size = snprintf(v5, sizeof v5,
+                               AOS_SAVE_SCHEMA_V5 "\n"
+                               "slot=1\narea=0\nroom=0\nspawn_x=-1\nspawn_y=-1\nhp=320\n"
+                               "max_hp=320\nmoves=31\nplay_frames=0\n"
+                               "name=0,0,0,0,0,0,0,0\ncharacter=0\nchallenge_flags=0\n"
+                               "experience=5\ngold=6\nweapon=0\narmor=0\naccessory=255\n"
+                               "inventory=%s\n", digits);
+        v5_size += snprintf(v5 + v5_size, sizeof v5 - (size_t)v5_size, "checksum=%08x\n",
+                            test_checksum(v5, (size_t)v5_size));
+        FILE *v5_file = fopen(v5_path, "wb");
+        assert(v5_file && fwrite(v5, 1, (size_t)v5_size, v5_file) == (size_t)v5_size);
+        assert(fclose(v5_file) == 0);
+        AosSaveData old = {0};
+        old.souls[3] = 7;
+        assert(aos_save_load(v5_path, &old, error, sizeof error));
+        assert(old.gold == 6 && old.inventory[AOS_SAVE_WEAPONS] == 2 && old.souls[3] == 0 &&
+               old.souls_collected == 0);
+        assert(remove(v5_path) == 0);
+    }
+    /* The soul total stops at 999. */
+    source.souls_collected = 1000;
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.souls_collected = 42;
+
     /* Counts stop at 9. */
     source.inventory[4] = 10;
     assert(!aos_save_store(path, &source, error, sizeof error));

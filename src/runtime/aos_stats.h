@@ -47,7 +47,22 @@ typedef struct {
     uint8_t item_counts[AOS_ITEM_RECORDS];
     uint8_t weapon_counts[59];
     uint8_t armor_counts[45];
+    /* The soul inventories (0x1331C-0x13394): two groups of nibble counts
+     * per colour; the ability souls have a single array both groups read. */
+    uint8_t red_souls[2][0x1C];
+    uint8_t blue_souls[2][0xD];
+    uint8_t yellow_souls[2][0x12];
+    uint8_t ability_souls[3];
+    uint8_t abilities[2];        /* unk_13396: enabled ability bits */
+    uint16_t souls_collected;    /* totalNbrSoulsCollected */
 } AosStats;
+
+enum {
+    AOS_SOUL_RED,
+    AOS_SOUL_BLUE,
+    AOS_SOUL_YELLOW,
+    AOS_SOUL_ABILITY,
+};
 
 /* One equipment record (metadata/equipment.tsv). */
 typedef struct {
@@ -143,6 +158,20 @@ void aos_stats_new_game_inventory(AosStats *stats);
  * CON / 2 + equipment DEF, at least 0 (sub_08021FA4, sub_08021C44). An
  * index outside its table counts as nothing. */
 void aos_stats_refresh(AosStats *stats, const AosEquipmentTables *tables);
+/* SoulInventory_AddAmountToGroupTotal: one group's nibble, clamped 0-9. */
+void aos_souls_add_group(AosStats *stats, uint8_t group, int32_t type, int32_t index,
+                         int32_t amount);
+/* SoulInventory_GetSoulTotal: both groups summed (an ability soul's single
+ * array is read twice, so it counts double). Unknown types count 0. */
+uint8_t aos_souls_total(const AosStats *stats, int32_t type, int32_t index);
+/* SoulInventory_AddAmountToSoulTotal: adds to group 0, first taking the
+ * amount back from group 1 when group 1 holds some and the total would
+ * pass 9. */
+void aos_souls_add(AosStats *stats, int32_t type, int32_t index, int32_t amount);
+/* sub_08032ADC: enables or disables ability `index`. */
+void aos_souls_set_ability(AosStats *stats, int32_t index, bool enabled);
+/* sub_08032DBC: totalNbrSoulsCollected += count (positive), at most 999. */
+void aos_souls_count(AosStats *stats, int32_t count);
 /* Whether the bestiary bit of an enemy is set. */
 bool aos_stats_enemy_defeated(const AosStats *stats, uint8_t enemy_id);
 #endif

@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v5"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v6"
+#define AOS_SAVE_SCHEMA_V5 "metroidvania-aos-save-v5"
 #define AOS_SAVE_SCHEMA_V4 "metroidvania-aos-save-v4"
 #define AOS_SAVE_SCHEMA_V3 "metroidvania-aos-save-v3"
 #define AOS_SAVE_SCHEMA_V2 "metroidvania-aos-save-v2"
@@ -16,6 +17,7 @@
 /* Portable host save metadata. This is deliberately separate from the
  * original 0x47C-byte SRAM slot until every native field is understood. */
 enum { AOS_SAVE_INVENTORY = 32 + 59 + 45, AOS_SAVE_WEAPONS = 32, AOS_SAVE_ARMOR = 32 + 59 };
+enum { AOS_SAVE_SOUL_BYTES = 56 + 26 + 36 + 3 + 2 };
 
 typedef struct {
     uint8_t slot;
@@ -41,6 +43,11 @@ typedef struct {
      * game: one weapon 0 and one armor 0): 32 items, 59 weapons, 45 armor
      * and accessories. */
     uint8_t inventory[AOS_SAVE_INVENTORY];
+    /* Schema v6: the soul inventories as their native bytes (red 2 x 28,
+     * blue 2 x 13, yellow 2 x 18, ability 3), the enabled abilities (2) and
+     * totalNbrSoulsCollected; older files hold no souls. */
+    uint8_t souls[AOS_SAVE_SOUL_BYTES];
+    uint16_t souls_collected;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

@@ -186,3 +186,58 @@ void aos_stats_new_game_inventory(AosStats *stats) {
     stats->weapon_counts[0] = 1;
     stats->armor_counts[0] = 1;
 }
+
+/* The array a soul type uses for a group (the switch of each routine). */
+static uint8_t *soul_group(AosStats *stats, uint8_t group, int32_t type) {
+    switch (type) {
+    case AOS_SOUL_RED: return stats->red_souls[group];
+    case AOS_SOUL_BLUE: return stats->blue_souls[group];
+    case AOS_SOUL_YELLOW: return stats->yellow_souls[group];
+    case AOS_SOUL_ABILITY: return stats->ability_souls;
+    default: return NULL;
+    }
+}
+
+static uint8_t nibble(const uint8_t *souls, int32_t index) {
+    uint8_t value = souls[index >> 1];
+    return index & 1 ? (value >> 4) & 0xF : value & 0xF;
+}
+
+void aos_souls_add_group(AosStats *stats, uint8_t group, int32_t type, int32_t index,
+                         int32_t amount) {
+    uint8_t *souls = soul_group(stats, group, type);
+    int8_t base = souls ? (int8_t)nibble(souls, index) : 0;
+    int8_t total = (int8_t)(base + amount);
+    if (total < 0) total = 0;
+    else if (total > 9) total = 9;
+    if (!souls) return;
+    uint8_t *cell = &souls[index >> 1];
+    *cell = index & 1 ? (uint8_t)((*cell & 0x0F) | total << 4)
+                      : (uint8_t)((*cell & 0xF0) | total);
+}
+
+uint8_t aos_souls_total(const AosStats *stats, int32_t type, int32_t index) {
+    AosStats *view = (AosStats *)stats;
+    const uint8_t *first = soul_group(view, 0, type), *second = soul_group(view, 1, type);
+    return (uint8_t)((first ? nibble(first, index) : 0) + (second ? nibble(second, index) : 0));
+}
+
+void aos_souls_add(AosStats *stats, int32_t type, int32_t index, int32_t amount) {
+    const uint8_t *second = soul_group(stats, 1, type);
+    uint8_t held = second ? nibble(second, index) : 0;
+    if (held && amount > 0 && (int16_t)(aos_souls_total(stats, type, index) + amount) > 9)
+        aos_souls_add_group(stats, 1, type, index, -amount);
+    aos_souls_add_group(stats, 0, type, index, amount);
+}
+
+void aos_souls_set_ability(AosStats *stats, int32_t index, bool enabled) {
+    uint8_t *bits = &stats->abilities[index >> 3];
+    if (enabled) *bits |= (uint8_t)(1u << (index & 7));
+    else *bits &= (uint8_t)~(1u << (index & 7));
+}
+
+void aos_souls_count(AosStats *stats, int32_t count) {
+    if (count <= 0) return;
+    uint32_t total = stats->souls_collected + (uint32_t)count;
+    stats->souls_collected = (uint16_t)(total > 999 ? 999 : total);
+}

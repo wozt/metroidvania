@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0583 - Aria soul inventory and soul pickups
+
+- `aos_stats` ports the soul inventory routines (`SoulInventory_*`,
+  `sub_08032ADC`, `sub_08032DBC`): nibble counts in two groups per colour,
+  the single ability array both groups read (an ability soul counts double,
+  as natively), the 0-9 clamps and the 999 soul total.
+- `aos_pickup` ports dropped souls: `sub_0804459C` (start heading away from
+  a random point above Soma) and `sub_080446D4` (homing turn of
+  `sub_0802D408`, acceleration, the trail's two random draws, 200 + 64
+  frames), and their collection (cases 5-8 of `sub_080441F8`, enabling an
+  ability soul's ability when new).
+- The runtime creates souls from enemy drop rolls, which now use the
+  equipped accessory, the effective LCK and whether the soul is held; it
+  runs move, collision and trail in the native order (money and items test
+  their collision first, as `sub_08043DD0` does) and saves the souls
+  (schema v6).
+- Not ported: soul equipment and use, the soul sprite, the trail spark,
+  messages and sounds. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0582 - Aria item pickups and inventories
 
 - `aos_item_decode` and `aos_pickup_create_item` port `sub_08044054`'s

@@ -173,4 +173,6 @@ void aos_game_lifecycle_update(AosGameLifecycle *state) {
     state->title_cleanup_requested = false;
     state->save_language_requested = 0;
     aos_game_mode_update(&state->game_mode, handlers, state);
+    if (state->save_language_requested)
+        state->main_menu.language = state->reset.language;
 }

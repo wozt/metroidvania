@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0574 - Render Aria's native main-menu backgrounds
+
+- Added a shared bounded ROM graphics loader for raw and compressed native
+  graphics descriptors and palettes, and moved the introduction renderer onto
+  it without changing its output.
+- Connected the main menu's complete palette, two shared character banks and
+  the English, French or German character bank. The frontend now renders the
+  three native background planes for the base selector and the PLAY, COPY,
+  DELETE and name-entry screens, including BG2's 10:6 alpha composition.
+- Fixed lifecycle language propagation so a confirmed Reset selection chooses
+  the corresponding main-menu bank instead of treating the save-request flag
+  as a language identifier.
+- Synthetic tests cover decompression, VRAM placement, palette conversion and
+  all 15 screen planes. The optional hash-gated ROM smoke test validates all
+  three languages without exporting pixels, and a local SDL review reached
+  the live MAIN_MENU controller and confirmed the native background render.
+- File names, slot statistics, cursors and prompts still use the host's dynamic
+  text overlay because the menu entity/OAM text streams are not ported. Native
+  title artwork is also still absent, so the feature remains partial.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission and
+  audio are unchanged.
+- Next: render the main menu's dynamic entity/OAM and text streams so the host
+  overlay can be removed, then connect the native title graphics.
+
 ## Patch 0573 - Render Aria's native introduction backgrounds
 
 - Added a bounded in-memory loader for the introduction's complete 16-row

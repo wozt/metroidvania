@@ -12,6 +12,7 @@
 #include "aos_intro_font.h"
 #include "aos_intro_graphics.h"
 #include "aos_intro_resources.h"
+#include "aos_main_menu_graphics.h"
 #include "aos_menu_save_bridge.h"
 #include "aos_save.h"
 
@@ -168,6 +169,77 @@ static void render_intro_backgrounds(
     }
 }
 
+static bool create_main_menu_textures(
+    SDL_Renderer *renderer, const AosMainMenuGraphics *graphics,
+    SDL_Texture *textures[AOS_MAIN_GRAPHICS_SCREEN_COUNT]
+                         [AOS_MAIN_GRAPHICS_LAYER_COUNT]) {
+    for (unsigned screen = 0; screen < AOS_MAIN_GRAPHICS_SCREEN_COUNT;
+         ++screen) {
+        for (unsigned layer = 0; layer < AOS_MAIN_GRAPHICS_LAYER_COUNT;
+             ++layer) {
+            const FusionAosRenderedBackground *background =
+                &graphics->backgrounds[screen][layer];
+            textures[screen][layer] = SDL_CreateTexture(
+                renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC,
+                (int)background->width_pixels, (int)background->height_pixels);
+            if (!textures[screen][layer] ||
+                !SDL_UpdateTexture(textures[screen][layer], NULL,
+                                   background->rgba,
+                                   (int)(background->width_pixels * 4)) ||
+                !SDL_SetTextureScaleMode(textures[screen][layer],
+                                         SDL_SCALEMODE_NEAREST) ||
+                !SDL_SetTextureBlendMode(textures[screen][layer],
+                                         SDL_BLENDMODE_BLEND))
+                return false;
+        }
+    }
+    return true;
+}
+
+static void destroy_main_menu_textures(
+    SDL_Texture *textures[AOS_MAIN_GRAPHICS_SCREEN_COUNT]
+                         [AOS_MAIN_GRAPHICS_LAYER_COUNT]) {
+    for (unsigned screen = 0; screen < AOS_MAIN_GRAPHICS_SCREEN_COUNT;
+         ++screen) {
+        for (unsigned layer = 0; layer < AOS_MAIN_GRAPHICS_LAYER_COUNT;
+             ++layer) {
+            if (textures[screen][layer])
+                SDL_DestroyTexture(textures[screen][layer]);
+            textures[screen][layer] = NULL;
+        }
+    }
+}
+
+static AosMainGraphicsScreen main_menu_graphics_screen(
+    const AosMainMenu *menu, int32_t stage) {
+    if (menu->name_entry_active || stage == 8 || stage == 9)
+        return AOS_MAIN_GRAPHICS_NAME;
+    if (!menu->selected_slot_active) return AOS_MAIN_GRAPHICS_BASE;
+    if (menu->selected_slot == 1) return AOS_MAIN_GRAPHICS_COPY;
+    if (menu->selected_slot == 2) return AOS_MAIN_GRAPHICS_DELETE;
+    return AOS_MAIN_GRAPHICS_PLAY;
+}
+
+static void render_main_menu_backgrounds(
+    SDL_Renderer *renderer, const AosMainMenuGraphics *graphics,
+    SDL_Texture *textures[AOS_MAIN_GRAPHICS_SCREEN_COUNT]
+                         [AOS_MAIN_GRAPHICS_LAYER_COUNT],
+    const AosMainMenu *menu, int32_t stage) {
+    AosMainGraphicsScreen screen = main_menu_graphics_screen(menu, stage);
+    SDL_SetRenderDrawColor(renderer, graphics->backdrop_rgb[0],
+                           graphics->backdrop_rgb[1],
+                           graphics->backdrop_rgb[2], 255);
+    SDL_FRect viewport = {0, 0, GBA_W, GBA_H};
+    SDL_RenderFillRect(renderer, &viewport);
+    for (int layer = AOS_MAIN_GRAPHICS_LAYER_COUNT - 1; layer >= 0; --layer) {
+        uint8_t alpha = layer == 1 ? 159 : 255;
+        SDL_SetTextureAlphaMod(textures[screen][layer], alpha);
+        render_wrapped_background(renderer, textures[screen][layer],
+                                  &graphics->backgrounds[screen][layer],
+                                  0, 0);
+    }
+}
+
 int main(int argc, char **argv) {
     const char *image_path = NULL;
     const char *rom_path = NULL;
@@ -262,6 +334,10 @@ int main(int argc, char **argv) {
     AosIntroTextTiles intro_tiles = {0};
     AosIntroGraphics intro_graphics = {0};
     SDL_Texture *intro_background_textures[AOS_INTRO_BACKGROUND_COUNT] = {0};
+    AosMainMenuGraphics main_menu_graphics = {0};
+    SDL_Texture *main_menu_textures[AOS_MAIN_GRAPHICS_SCREEN_COUNT]
+                                   [AOS_MAIN_GRAPHICS_LAYER_COUNT] = {{0}};
+    bool have_main_menu_graphics = false;
     bool have_intro_resources = false;
     if (rom_path) {
         char error[256];
@@ -319,6 +395,23 @@ int main(int argc, char **argv) {
         const uint16_t held = keymask(SDL_GetKeyboardState(NULL));
         aos_input_update(&lifecycle.input, held);
         aos_game_lifecycle_update(&lifecycle);
+        if (intro_rom.data &&
+            lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU &&
+            lifecycle.main_menu.assets_requested &&
+            (!have_main_menu_graphics ||
+             main_menu_graphics.language != lifecycle.main_menu.language)) {
+            destroy_main_menu_textures(main_menu_textures);
+            aos_main_menu_graphics_free(&main_menu_graphics);
+            have_main_menu_graphics = aos_main_menu_graphics_init(
+                &main_menu_graphics, &intro_rom,
+                lifecycle.main_menu.language, launch_error,
+                sizeof launch_error) &&
+                create_main_menu_textures(renderer, &main_menu_graphics,
+                                          main_menu_textures);
+            if (!have_main_menu_graphics && !launch_error[0])
+                snprintf(launch_error, sizeof launch_error,
+                         "MAIN MENU TEXTURE ERROR: %.80s", SDL_GetError());
+        }
         if (have_intro_resources &&
             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
             lifecycle.intro_cutscene.entities_init_requested) {
@@ -374,6 +467,10 @@ int main(int argc, char **argv) {
             render_intro_backgrounds(renderer, &intro_graphics,
                                      intro_background_textures,
                                      &lifecycle.intro_cutscene);
+        } else if (in_main_menu && have_main_menu_graphics) {
+            render_main_menu_backgrounds(
+                renderer, &main_menu_graphics, main_menu_textures,
+                &lifecycle.main_menu, lifecycle.game_mode.update_stage);
         } else if (art && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
             SDL_FRect dst = {0, 0, GBA_W, GBA_H};
             SDL_RenderTexture(renderer, art, NULL, &dst);
@@ -386,10 +483,12 @@ int main(int argc, char **argv) {
             SDL_FRect stripe = {23, 76, 194, 7};
             SDL_RenderFillRect(renderer, &stripe);
         }
-        /* Host text, not the original Aria menu art or transition rendering. */
+        /* Host state labels remain until the native menu entities and their
+         * dynamic text/OAM streams are rendered. */
         if (in_main_menu) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-            SDL_SetRenderDrawColor(renderer, 10, 12, 24, 235);
+            SDL_SetRenderDrawColor(renderer, 10, 12, 24,
+                                   have_main_menu_graphics ? 125 : 235);
             SDL_FRect sheet = {12, 15, 216, 130};
             SDL_RenderFillRect(renderer, &sheet);
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
@@ -511,6 +610,8 @@ int main(int argc, char **argv) {
         if (now < next_frame) SDL_DelayNS(next_frame - now);
         else if (now - next_frame > 100000000ull) next_frame = now;
     }
+    destroy_main_menu_textures(main_menu_textures);
+    aos_main_menu_graphics_free(&main_menu_graphics);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);

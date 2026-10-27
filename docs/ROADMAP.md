@@ -78,9 +78,12 @@ controllers, maps their regular-file create/load/copy/delete/name requests to
 three portable files, runs the native opening controller for new files and
 launches the room runtime from its IN_GAME handoff.
 Native save-room detection restores HP and writes the selected portable slot.
-That host bridge is not native graphics or SRAM parity: its renderer remains
-diagnostic. The six introduction entity controllers run, but their native
-graphics, palettes, OAM and audio remain absent. Its text-script protocol is
+That host bridge is not SRAM parity. Its base, PLAY, COPY, DELETE and
+name-entry background planes now use native palette, character and block-map
+resources in all three languages, while dynamic file text, cursors and prompts
+remain a diagnostic host overlay. The six introduction entity controllers
+run, but their native graphics, palettes, OAM and audio remain absent. Its
+text-script protocol is
 ported and the hash-verified ROM resource owner supplies all three language
 banks without exporting them. The native proportional glyph metrics, 12-row
 bitmap rasterizer and 4bpp tile writes now feed the SDL view. The native

@@ -386,6 +386,11 @@ tilemap expansion and RGBA renderer, and exposes the three planes to SDL. The
 host wraps and scrolls them in BG3-to-BG1 priority order. Actor OAM, animation
 resources, affine/alpha composition and songs are not connected, and
 quicksaves plus completed-file metadata remain open.
+`aos_rom_graphics.c` provides the shared bounded raw/compressed descriptor and
+palette loader. `aos_main_menu_graphics.c` uses it to reconstruct the native
+base, PLAY, COPY, DELETE and name-entry background planes in all three
+languages. SDL composes those planes behind a temporary host overlay; native
+dynamic menu entities, file text, cursor OAM and title artwork remain open.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

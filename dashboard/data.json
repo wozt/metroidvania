@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T06:02:11+00:00",
+ "generated_at": "2026-10-27T06:18:18+00:00",
  "git": {
-  "commit": "d4fe6f0",
+  "commit": "8ec2a41",
   "branch": "main",
   "dirty": true
  },
@@ -12530,6 +12530,8 @@
    "local_sources": [
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos_main_menu.c",
+    "src/runtime/aos_main_menu_graphics.c",
+    "src/runtime/aos_rom_graphics.c",
     "src/runtime/aos_title_input.c",
     "src/runtime/aos_title_fade.c",
     "src/runtime/aos_title_motion.c",
@@ -12541,6 +12543,7 @@
    "tests": [
     "tests/test_aos_game_lifecycle.c",
     "tests/test_aos_main_menu.c",
+    "tests/test_aos_main_menu_graphics.c",
     "tests/test_aos_title_input.c",
     "tests/test_aos_title_fade.c",
     "tests/test_aos_title_motion.c",
@@ -12566,12 +12569,13 @@
     "sub_08008290",
     "sub_08008324"
    ],
-   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu/name graphics and still launches gameplay as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The SDL launcher consumes typed regular-file requests, runs the opening controller for new files and waits for its IN_GAME handoff. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Connect native title/menu/name rendering, then extend the adapter only as new portable completion and quicksave metadata become available.",
+   "limitations": "The SDL frontend renders native menu background resources, but dynamic file/name text, cursor OAM and title artwork remain diagnostic; gameplay still launches as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The verified-ROM renderer reconstructs the base, PLAY, COPY, DELETE and name-entry background planes in all three languages. The SDL launcher consumes typed regular-file requests, runs the opening controller for new files and waits for its IN_GAME handoff. Source-derived, unit-tested and ROM-smoke-tested; not emulator-compared.",
+   "next_action": "Render dynamic menu entity/OAM and text streams, connect native title artwork, then extend portable completion and quicksave metadata.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_lifecycle.c",
      "tests/test_aos_main_menu.c",
+     "tests/test_aos_main_menu_graphics.c",
      "tests/test_aos_title_input.c",
      "tests/test_aos_title_fade.c",
      "tests/test_aos_title_motion.c",
@@ -12605,6 +12609,16 @@
       "registered": true,
       "ctest": [
        "aos_main_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_main_menu_graphics.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_main_menu_graphics"
       ],
       "outcome": "passed",
       "exists": true
@@ -12688,6 +12702,7 @@
     "src/runtime/aos_intro_resources.c",
     "src/runtime/aos_intro_font.c",
     "src/runtime/aos_intro_graphics.c",
+    "src/runtime/aos_rom_graphics.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos_title_preview.c",
     "src/runtime/aos_save.c"
@@ -14234,6 +14249,8 @@
     "src/runtime/aos_save.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos_main_menu.c",
+    "src/runtime/aos_main_menu_graphics.c",
+    "src/runtime/aos_rom_graphics.c",
     "src/runtime/aos_intro_cutscene.c",
     "src/runtime/aos_intro_entities.c",
     "src/runtime/aos_intro_resources.c",
@@ -14246,6 +14263,7 @@
     "tests/test_aos_save.c",
     "tests/test_aos_game_lifecycle.c",
     "tests/test_aos_main_menu.c",
+    "tests/test_aos_main_menu_graphics.c",
     "tests/test_aos_intro_cutscene.c",
     "tests/test_aos_intro_entities.c",
     "tests/test_aos_intro_resources.c",
@@ -14256,7 +14274,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed file operations onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. With --rom it verifies the user's Aria image and renders the three language banks, proportional font, palette, two compressed character banks and three independently scrolling block maps directly from memory without exporting ROM bytes. The introduction's six actor OAM streams, animation frames, affine transforms and alpha composition remain absent. Portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state are also open.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed file operations onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. With --rom it verifies the user's Aria image, renders all five native main-menu background layouts in three languages, and renders the introduction's language banks, proportional font, palette, character banks and scrolling block maps directly from memory without exporting ROM bytes. Dynamic menu entity/OAM text, file statistics, cursor art and native title artwork remain absent, as do the introduction actors' OAM, animation frames, affine transforms and alpha composition. Portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state are also open.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14264,6 +14282,7 @@
      "tests/test_aos_save.c",
      "tests/test_aos_game_lifecycle.c",
      "tests/test_aos_main_menu.c",
+     "tests/test_aos_main_menu_graphics.c",
      "tests/test_aos_intro_cutscene.c",
      "tests/test_aos_intro_entities.c",
      "tests/test_aos_intro_resources.c",
@@ -14316,6 +14335,16 @@
       "registered": true,
       "ctest": [
        "aos_main_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_main_menu_graphics.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_main_menu_graphics"
       ],
       "outcome": "passed",
       "exists": true
@@ -16214,6 +16243,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_main_menu_graphics",
+    "files": [
+     "tests/test_aos_main_menu_graphics.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_main_menu",
     "files": [
      "tests/test_aos_main_menu.c"
@@ -16341,12 +16377,18 @@
    }
   ],
   "summary": {
-   "passed": 81,
+   "passed": 82,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "8ec2a41",
+   "date": "2026-10-27",
+   "subject": "Render Aria introduction backgrounds",
+   "scope": "project"
+  },
   {
    "commit": "d4fe6f0",
    "date": "2026-10-27",
@@ -16819,12 +16861,6 @@
    "commit": "9b78308",
    "date": "2026-10-24",
    "subject": "Serialize Aria world catalog natively",
-   "scope": "project"
-  },
-  {
-   "commit": "e622188",
-   "date": "2026-10-24",
-   "subject": "Serialize Zero Mission ROM bank natively",
    "scope": "project"
   }
  ],

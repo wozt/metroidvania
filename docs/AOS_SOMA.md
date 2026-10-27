@@ -46,6 +46,14 @@ user data directory; `--save-dir DIR` and `--runtime FILE` provide explicit
 development paths. New files start at the native new-game location, area 0
 room 0, with Soma at `(120, 141)` as selected by `sub_08008ED0(0)`.
 
+With `--rom FILE`, the same frontend now loads the main menu's native palette,
+two shared character banks, language-specific character bank and three
+background planes directly from the verified ROM. It selects the English,
+French or German bank chosen by Reset and renders the base, PLAY, COPY, DELETE
+and name-entry layouts with the native BG2-over-BG3 alpha ratio. File names,
+slot statistics, cursors and prompts remain a host text overlay until their
+dynamic entity/OAM streams are ported; the menu therefore remains partial.
+
 The room runtime now routes every simulation frame through the native
 `aos_game_mode_update` lifecycle and its IN_GAME handler. Its explicit
 room/save command-line entry deliberately starts at IN_GAME, while a tested

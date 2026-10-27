@@ -31,6 +31,29 @@ int main(void) {
     }
     assert(saw_licensed && saw_konami && state.game_mode.mode == AOS_MODE_TITLE_SCREEN);
 
+    /* Confirming a Reset language propagates the selected language to the
+     * native main-menu assets, rather than the save-request flag itself. */
+    aos_game_lifecycle_init(&state, false);
+    state.game_mode.update_stage = 5;
+    state.reset.language = 3;
+    state.reset.brightness = 14;
+    aos_game_lifecycle_update(&state);
+    aos_game_lifecycle_update(&state);
+    assert(state.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO &&
+           state.save_language_requested == 1 && state.main_menu.language == 3);
+
+    /* Return to the regular English boot route for the title sequence. */
+    aos_game_lifecycle_init(&state, false);
+    for (unsigned frame = 0; frame < 1000 && state.game_mode.mode != AOS_MODE_TITLE_SCREEN;
+         ++frame) {
+        state.input.new_input = state.game_mode.mode == AOS_MODE_KONAMI_LOGO &&
+                                        state.game_mode.update_stage == 3
+                                    ? AOS_KEY_START
+                                    : 0;
+        aos_game_lifecycle_update(&state);
+    }
+    assert(state.game_mode.mode == AOS_MODE_TITLE_SCREEN);
+
     /* The title handler owns the existing fade and motion stages. */
     aos_game_lifecycle_update(&state);
     assert(state.title_frame_requested && state.game_mode.update_stage == 1);

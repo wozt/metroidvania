@@ -480,6 +480,7 @@ typedef struct {
 typedef struct {
     const AosEnemyKind *kinds[ENEMY_KINDS];     /* NULL when not loaded */
     const AosEnemyStats *stats[ENEMY_KINDS];
+    const AosEnemyDrops *drops[ENEMY_KINDS];
     const AosWeaponEntity *weapon;
     const AosWeaponFrames *weapon_frames;
     AriaPlayerStats *player;
@@ -539,9 +540,31 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     printf("Level up: level %u, max HP %u\n", combat->progress->level,
                            combat->progress->max_hp);
                 }
-                if (gained >= 0)
+                if (gained >= 0) {
                     printf("Experience %u (next level in %d)\n", combat->progress->experience,
                            aos_stats_experience_to_next(combat->progress));
+                    /* The drop draws, in the native order; the pickups they
+                     * would create (souls, items, sub_08043F70/43C10) are not
+                     * ported. No equipment or souls are owned yet, so the
+                     * accessory is none and the soul counts as unowned. */
+                    AosDropContext context = {
+                        .luck = (int16_t)combat->progress->base[AOS_STAT_LCK],
+                        .ground = aos_collision_cell(layer, e->enemy.x >> 16,
+                                                     (e->enemy.y >> 16) - 8)};
+                    AosDrop drop = aos_stats_roll_drop(combat->progress, (uint8_t)e->id,
+                                                       combat->drops[e->id], &context,
+                                                       aos_random);
+                    if (drop.kind == AOS_DROP_SOUL)
+                        printf("Drop: soul type %u index %u\n", drop.soul_type,
+                               drop.soul_index);
+                    else if (drop.kind == AOS_DROP_ITEM)
+                        printf("Drop: %s item 0x%02X\n", drop.rare ? "rare" : "common",
+                               drop.item);
+                    else if (drop.kind != AOS_DROP_NONE)
+                        printf("Drop: pickup sub_%s variant %u\n",
+                               drop.kind == AOS_DROP_PICKUP_43F70 ? "08043F70" : "08043C10",
+                               drop.variant);
+                }
             }
             if (hit.force_input && !input->active) {
                 input->active = true;
@@ -653,6 +676,7 @@ typedef struct {
         AosAnimSet set;
         AosEnemyKind kind;
         AosEnemyStats stats;
+        AosEnemyDrops drops;
         bool loaded;
         int static_ids[ENEMY_STATIC_FRAMES];
         AriaFrame statics[ENEMY_STATIC_FRAMES];
@@ -793,10 +817,17 @@ static bool load_enemy_data(AriaObjects *objects) {
     if (!f) return false;
     while (fgets(line, sizeof line, f)) {
         int id, hp, field_e, contact, defence;
-        unsigned weak, resist, experience = 0;
-        /* Schema v1 exports lack the experience column. */
-        int fields = sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x\t%u", &id, &hp, &field_e,
-                            &contact, &defence, &weak, &resist, &experience);
+        unsigned weak, resist, experience = 0, common = 0, rare = 0, rarity = 0;
+        unsigned common_rate = 0, rare_rate = 0, soul_type = 0, soul_index = 0;
+        /* Schema v1 exports lack the experience column, v2 the drops. */
+        int fields = sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x\t%u\t%x\t%x\t%u\t%u\t%u\t%u\t%u",
+                            &id, &hp, &field_e, &contact, &defence, &weak, &resist,
+                            &experience, &common, &rare, &rarity, &common_rate, &rare_rate,
+                            &soul_type, &soul_index);
+        if (fields == 15 && id >= 0 && id < ENEMY_KINDS)
+            objects->enemies[id].drops = (AosEnemyDrops){
+                (uint16_t)common, (uint16_t)rare, (uint8_t)rarity, (uint8_t)common_rate,
+                (uint8_t)rare_rate, (uint8_t)soul_type, (uint8_t)soul_index};
         if (fields >= 7 && id >= 0 && id < ENEMY_KINDS)
             objects->enemies[id].stats = (AosEnemyStats){(int16_t)hp, (uint8_t)contact,
                                                          (uint8_t)defence, (uint16_t)weak,
@@ -1500,7 +1531,7 @@ int main(int argc, char **argv) {
     bool weapon_ported = soma.weapon.weapon_class <= 4;
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
-    AriaCombat combat = {{NULL}, {NULL}, &weapon_entity,
+    AriaCombat combat = {{NULL}, {NULL}, {NULL}, &weapon_entity,
                          weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, {NULL},
                          &progress};
     for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
@@ -1509,6 +1540,7 @@ int main(int argc, char **argv) {
         if (!objects.enemies[id].loaded) continue;
         combat.kinds[id] = &objects.enemies[id].kind;
         combat.stats[id] = &objects.enemies[id].stats;
+        combat.drops[id] = &objects.enemies[id].drops;
     }
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     /* Native Aria input state is tracked separately from SDL. */

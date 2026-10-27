@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0579 - Aria enemy drop rolls
+
+- `aos_stats_roll_drop` ports the drop decision of `sub_080683BC` with the
+  same random draws in the same order: soul chance from the record's
+  rarity and LCK (higher for unowned souls, +8 with accessory 0x28), the
+  ground-type guard, the rare or common item roll (accessory 0x27) with its
+  item bitsets at 0x133B0/0x133C0, then the two fallback pickups
+  (sub_08043F70, accessory 0x2B; sub_08043C10, accessory 0x1D).
+- The enemy-stats export moves to schema v3 with the records' drop fields
+  (task `aria_objects` version 4); 110 records carry a soul and 69 an item.
+  The runtime draws each killed enemy's drop in the native order, so the
+  random stream advances as natively, and reports the result.
+- Not ported: the pickup entities themselves, inventories and equipment
+  (the runtime passes no accessory, base LCK and unowned souls). Tests in
+  `tests/test_aos_stats.c` script the random draws and check their count.
+  Source-derived, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0578 - Aria levels and experience
 
 - `src/runtime/aos_stats.c` ports Aria's level system from

@@ -92,3 +92,56 @@ bool aos_stats_enemy_defeated(const AosStats *stats, uint8_t enemy_id) {
     return (unsigned)(enemy_id >> 5) < AOS_STATS_ENEMY_WORDS &&
            (stats->defeated[enemy_id >> 5] >> (enemy_id & 31) & 1u);
 }
+
+/* (s16)value >> 4, the arithmetic shift of the native luck term. */
+static int32_t luck_term(int16_t luck) { return luck >> 4; }
+
+AosDrop aos_stats_roll_drop(AosStats *stats, uint8_t enemy_id, const AosEnemyDrops *record,
+                            const AosDropContext *context, uint32_t (*random)(void)) {
+    AosDrop drop = {AOS_DROP_NONE, 0, 0, 0, false, 0};
+    if (record->soul_rarity && record->soul_index) {
+        uint32_t chance = 3;
+        if (!context->soul_owned) chance = context->soul_flag_a1 ? 7 : 6;
+        if (context->accessory == 0x28) chance += 8;
+        int32_t range = record->soul_rarity * 8 - (luck_term(context->luck) - 0x20);
+        if (range <= 15) range = 16;
+        if ((random() >> 2) % (uint32_t)range < chance) {
+            drop.kind = AOS_DROP_SOUL;
+            drop.soul_type = record->soul_type;
+            drop.soul_index = (uint8_t)(record->soul_index - 1);
+            return drop;
+        }
+    }
+    /* A non-zero ground type without bit 3 refuses every other drop. */
+    if (context->ground && !(context->ground & 8)) return drop;
+    bool rare = (random() >> 1 & 0xFF) < (context->accessory == 0x27 ? 0x60u : 0x40u);
+    uint16_t item = rare ? record->rare_item : record->common_item;
+    if (item) {
+        uint32_t chance = context->accessory == 0x27 ? 8 : 4;
+        int32_t range = (rare ? record->rare_rate : record->common_rate) * 4 -
+                        (luck_term(context->luck) - 0x10);
+        if (range <= 15) range = 16;
+        if ((random() >> 3) % (uint32_t)range < chance) {
+            drop.kind = AOS_DROP_ITEM;
+            drop.item = item;
+            drop.rare = rare;
+            if ((unsigned)(enemy_id >> 5) < AOS_STATS_ENEMY_WORDS)
+                stats->dropped[rare][enemy_id >> 5] |= 1u << (enemy_id & 31);
+            return drop;
+        }
+    }
+    if (!(record->common_item | record->rare_item)) return drop;
+    uint8_t base = context->accessory == 0x2B ? 3 : 0;
+    uint32_t roll = random() << 19 >> 22;
+    if (roll <= (base ? 0x3Fu : 7u)) {
+        drop.kind = AOS_DROP_PICKUP_43F70;
+        drop.variant = (uint8_t)(base + (random() >> 1 & 3));
+        return drop;
+    }
+    roll = random() << 18 >> 22;
+    if (roll <= (context->accessory == 0x1D ? 0x3Fu : 7u)) {
+        drop.kind = AOS_DROP_PICKUP_43C10;
+        drop.variant = (random() & 0xC0) == 0;
+    }
+    return drop;
+}

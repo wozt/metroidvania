@@ -30,6 +30,7 @@ typedef struct {
     uint32_t gold;
     uint32_t flags; /* unk_13260 */
     uint32_t defeated[AOS_STATS_ENEMY_WORDS];
+    uint32_t dropped[2][AOS_STATS_ENEMY_WORDS]; /* 0x133B0 common, 0x133C0 rare */
 } AosStats;
 
 /* sub_08033DA4: level 1 and the character's starting HP, MP and STR, CON,
@@ -59,6 +60,49 @@ void aos_stats_julius_bonus(AosStats *stats);
  * -1 when no reward was given. */
 int32_t aos_stats_reward_enemy(AosStats *stats, uint8_t *entity_flags, uint8_t mode,
                                uint8_t enemy_id, uint16_t experience);
+/* The drop fields of an enemy record (0x080E9644, 0x24 bytes). */
+typedef struct {
+    uint16_t common_item;  /* + 0x08 */
+    uint16_t rare_item;    /* + 0x0A */
+    uint8_t soul_rarity;   /* + 0x12 */
+    uint8_t common_rate;   /* + 0x15 */
+    uint8_t rare_rate;     /* + 0x16 */
+    uint8_t soul_type;     /* + 0x17 */
+    uint8_t soul_index;    /* + 0x18, index + 1; 0 means no soul */
+} AosEnemyDrops;
+
+typedef enum {
+    AOS_DROP_NONE,
+    AOS_DROP_SOUL,         /* sub_0804459C(x, y, type, index, 0) */
+    AOS_DROP_ITEM,         /* sub_08044054(x, y, 0xFF, item, 0) */
+    AOS_DROP_PICKUP_43F70, /* sub_08043F70(x, y, variant): variant 0-6 */
+    AOS_DROP_PICKUP_43C10, /* sub_08043C10(x, y, variant, 1): variant 0-1 */
+} AosDropKind;
+
+typedef struct {
+    AosDropKind kind;
+    uint8_t soul_type, soul_index; /* AOS_DROP_SOUL: index 0-based */
+    uint16_t item;                 /* AOS_DROP_ITEM */
+    bool rare;                     /* AOS_DROP_ITEM: the + 0x0A item */
+    uint8_t variant;               /* the pickups */
+} AosDrop;
+
+/* What a player-side state supplies to the drop rolls. */
+typedef struct {
+    uint8_t accessory;   /* equippedAccessory, sub_0804B314(1) */
+    int16_t luck;        /* currentStats[3] at 0x131F8 */
+    bool soul_owned;     /* SoulInventory_GetSoulTotal(type, index) != 0 */
+    bool soul_flag_a1;   /* gEwramData + 0xA1 & 0xF0 */
+    uint8_t ground;      /* sub_08002028 at the drop point */
+} AosDropContext;
+
+/* The drop part of sub_080683BC (from 0x08068476), with the same random
+ * draws in the same order: a soul when the record has one, else (unless
+ * the drop point's collision blocks it) the rare or common item, else, for
+ * records with an item, one of two pickups. Item drops set the record's
+ * bit in the item bitsets at 0x133B0 (common) or 0x133C0 (rare). */
+AosDrop aos_stats_roll_drop(AosStats *stats, uint8_t enemy_id, const AosEnemyDrops *record,
+                            const AosDropContext *context, uint32_t (*random)(void));
 /* Whether the bestiary bit of an enemy is set. */
 bool aos_stats_enemy_defeated(const AosStats *stats, uint8_t enemy_id);
 #endif

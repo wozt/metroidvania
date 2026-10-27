@@ -173,3 +173,64 @@ bool aos_pickup_collect_soul(AosPickup *pickup, AosStats *stats) {
     pickup->removed = true;
     return fresh;
 }
+
+const AosBox aos_heart_box = {-4, -4, 8, 8};
+
+AosBox aos_pickup_box_of(const AosPickup *pickup) {
+    return pickup->type == AOS_PICKUP_HEART ? aos_heart_box : aos_pickup_box;
+}
+
+AosPickup aos_pickup_create_heart(bool big, bool pop, int32_t x, int32_t y) {
+    AosPickup pickup = {.type = AOS_PICKUP_HEART, .variant = big ? 15 : 3,
+                        .x = x * 65536, .y = y * 65536, .small_heart = !big};
+    if (pop) pickup.vy = (int32_t)0xFFFE0000;
+    return pickup;
+}
+
+void aos_pickup_small_heart_update(AosPickup *pickup, const AosCollision *layer) {
+    if (pickup->removed) return;
+    switch (pickup->state) {
+    case 0:
+        if (pickup->vy >= 0) {
+            pickup->state = 1;
+            break;
+        }
+        pickup->vy += 0x2000;
+        pickup->y += pickup->vy;
+        break;
+    case 1: {
+        pickup->vy = 0x4000;
+        pickup->vx = aos_sine((uint32_t)(pickup->blink << 9) + 0x4000) >> 1;
+        pickup->x += pickup->vx;
+        pickup->y += pickup->vy;
+        pickup->blink++;
+        int depth = aos_floor_depth(layer, pickup->x >> 16, (pickup->y >> 16) + 4, 0, false);
+        if (depth) {
+            pickup->y -= depth;
+            pickup->blink = 200;
+            pickup->state = 2;
+        }
+        break;
+    }
+    case 2:
+        if (--pickup->blink == 0) {
+            pickup->blink = 0x40;
+            pickup->state = 3;
+        }
+        break;
+    case 3:
+        pickup->blinking = true;
+        if (--pickup->blink == 0) pickup->removed = true;
+        break;
+    default: break;
+    }
+}
+
+void aos_pickup_collect_heart(AosPickup *pickup, AosStats *stats) {
+    pickup->removed = true;
+    int32_t share = (int32_t)(((uint32_t)stats->max_mp << 16) / 100) * pickup->variant;
+    int32_t gain = share < 0 ? -((-share) >> 16) : share >> 16;
+    if (gain == 0) gain = 1;
+    stats->mp = (int16_t)(stats->mp + gain);
+    if (stats->mp > (int16_t)stats->max_mp) stats->mp = (int16_t)stats->max_mp;
+}

@@ -189,6 +189,51 @@ int main(void) {
     red.removed = false;
     assert(!aos_pickup_collect_soul(&red, &owner) &&
            aos_souls_total(&owner, AOS_SOUL_RED, 2) == 2 && owner.souls_collected == 3);
+    /* sub_08043C10: hearts. A popped small heart rises 2 pixels per frame,
+     * slowing by 0x2000, then turns at the top. */
+    AosPickup heart = aos_pickup_create_heart(false, true, 40, 40);
+    assert(heart.type == AOS_PICKUP_HEART && heart.variant == 3 && heart.small_heart &&
+           heart.vy == (int32_t)0xFFFE0000);
+    assert(aos_pickup_box_of(&heart).w == 8 && aos_pickup_box_of(&heart).x == -4);
+    int32_t top = heart.y;
+    int frames_up = 0;
+    while (heart.state == 0 && frames_up < 40) {
+        aos_pickup_small_heart_update(&heart, &layer);
+        if (heart.y < top) top = heart.y;
+        ++frames_up;
+    }
+    /* 16 rising frames (0x20000 / 0x2000), then one frame turning. */
+    assert(heart.state == 1 && frames_up == 17 && heart.vy == 0);
+    /* sub_08043CE4 state 1: 0.25 down a frame, swaying by half a sine; it
+     * stops where the probe 4 pixels lower meets the floor (y 80). */
+    int32_t x0 = heart.x;
+    aos_pickup_small_heart_update(&heart, &layer);
+    assert(heart.vy == 0x4000 && heart.vx == aos_sine(0x4000) >> 1 && heart.x == x0 + heart.vx);
+    for (int i = 0; i < 400 && heart.state == 1; ++i)
+        aos_pickup_small_heart_update(&heart, &layer);
+    assert(heart.state == 2 && heart.blink == 200 && (heart.y >> 16) + 4 >= 79);
+    for (int i = 0; i < 200; ++i) aos_pickup_small_heart_update(&heart, &layer);
+    assert(heart.state == 3 && heart.blink == 0x40 && !heart.removed);
+    for (int i = 0; i < 64; ++i) aos_pickup_small_heart_update(&heart, &layer);
+    assert(heart.removed && heart.blinking);
+    /* A big heart falls like money and restores 15 %. */
+    AosPickup big = aos_pickup_create_heart(true, false, 40, 30);
+    assert(big.variant == 15 && !big.small_heart && aos_pickup_box_of(&big).w == 8);
+    for (int i = 0; i < 200 && big.state == 0; ++i) aos_pickup_update(&big, &layer);
+    assert(big.state == 1);
+    /* sub_08043BB0: 3 % of 80 MP is 2; 1 at least; capped at the maximum. */
+    AosStats mp = {.max_mp = 80, .mp = 10};
+    AosPickup small = aos_pickup_create_heart(false, false, 0, 0);
+    aos_pickup_collect_heart(&small, &mp);
+    assert(small.removed && mp.mp == 12);
+    mp.max_mp = 20;
+    mp.mp = 0;
+    aos_pickup_collect_heart(&small, &mp);
+    assert(mp.mp == 1);
+    mp.max_mp = 80;
+    mp.mp = 75;
+    aos_pickup_collect_heart(&big, &mp);
+    assert(mp.mp == 80);
     puts("Aria pickup tests passed");
     return 0;
 }

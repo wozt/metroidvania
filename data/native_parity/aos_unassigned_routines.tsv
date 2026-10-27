@@ -264,9 +264,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804342C	sub_0804342C	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_08043908	sub_08043908	unclassified				asm_function	0x08043908	asm/code/code_08040A38.s	4480	1	0
 aos:asm:asm/code/code_08040A38.s:sub_080439A8	sub_080439A8	unclassified				asm_function	0x080439A8	asm/code/code_08040A38.s	4524	0	0
 aos:asm:asm/code/code_08040A38.s:sub_08043B18	sub_08043B18	environment	referrers			asm_function	0x08043B18	asm/code/code_08040A38.s	4626	1	0
-aos:asm:asm/code/code_08040A38.s:sub_08043BB0	sub_08043BB0	unclassified				asm_function	0x08043BB0	asm/code/code_08040A38.s	4718	1	0
-aos:asm:asm/code/code_08040A38.s:sub_08043C10	sub_08043C10	unclassified		technical	exclusive_callees	asm_function	0x08043C10	asm/code/code_08040A38.s	4769	3	5
-aos:asm:asm/code/code_08040A38.s:sub_08043CE4	sub_08043CE4	unclassified				asm_function	0x08043CE4	asm/code/code_08040A38.s	4869	0	3
 aos:asm:asm/code/code_08040A38.s:sub_08044840	sub_08044840	unclassified		technical	exclusive_callees	asm_function	0x08044840	asm/code/code_08040A38.s	6348	0	8
 aos:asm:asm/code/code_08040A38.s:sub_08044980	sub_08044980	unclassified		technical	exclusive_callees	asm_function	0x08044980	asm/code/code_08040A38.s	6510	1	9
 aos:asm:asm/code/code_08040A38.s:sub_08044AA4	sub_08044AA4	enemies	referrers			asm_function	0x08044AA4	asm/code/code_08040A38.s	6640	2	8

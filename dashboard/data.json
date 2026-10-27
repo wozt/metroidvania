@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T13:34:40+00:00",
+ "generated_at": "2026-10-27T13:40:38+00:00",
  "git": {
-  "commit": "ae49639",
+  "commit": "84fe928",
   "branch": "main",
   "dirty": true
  },
@@ -12232,7 +12232,7 @@
    "id": "aos.items.money_pickups",
    "area": "aos",
    "category": "player",
-   "title": "Aria money and item pickups",
+   "title": "Aria money, item and MP heart pickups",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -12250,9 +12250,12 @@
     "sub_08043F70",
     "sub_08043DD0",
     "sub_080441F8",
-    "sub_08044054"
+    "sub_08044054",
+    "sub_08043C10",
+    "sub_08043CE4",
+    "sub_08043BB0"
    ],
-   "limitations": "Their sprites are not drawn: the pickups' graphics (0x081C15F4, sequences of 0x0820ED60) go through the shared sprite-resource system (gEwramData->unk_10170, scripts of sUnk_80E2B34) that selects their sequence and palette from the table's + 0x9 byte (0x15 or 0x21; + 0x8 holds sub_0803B924's attribute bits), which is not reconstructed, so they are not exported, so only the --hitboxes view shows their boxes. sub_08043DD0 is ported for pickup types up to 4 only (the floating soul path and the palette cycles of states 0x63-0x65 are not), and sub_080441F8 for its money and item cases (the placed-item flags of + 0x30, the 0x42C flags, the item-name messages of 0x08506734 and the recent-item lists of sub_0804AE3C are not); its message (sub_0800EF98) is reported and its sound 0xB6 not played. The player's hurtbox stands for the player side of the type-0xB collision. Pickups live in the room and vanish on a room change. sub_08044054 is ported for its 0xFF numbering and categories 2-4 (its money redirect and the icon setup of sub_0801232C / sub_080124F4 are not); item sounds 0xB5 / 0xB7 and the refusal sound 0x13B are reported, not played. sub_08043F70 creates a money pickup from the seven-record table 0x085250E4 (1, 10, 50, 100, 500, 1000 and 2000 gold, exported as metadata/money.tsv), lifted 8 pixels for the four small variants. sub_08043DD0 makes it fall at 0x2000 per frame up to 0x40000, land on the floor probe of sub_08001D94 (8 pixels lower for money), rest 300 frames and blink 64 frames before it is removed. The money case of sub_080441F8 adds the value to the gold, capped at 999999. The runtime spawns one where an enemy's drop roll gives sub_08043F70, at the enemy's (x, y - 8), collects it when Soma's hurtbox meets its 16 x 16 box (0x1010F8F8), and saves the gold at save points. Source-derived and unit-tested, not emulator-compared. sub_08044054 decodes the global item numbers (1-32 items, 33-91 weapons, 92-136 armor and accessories) into pickups that fall like money; cases 2-4 of sub_080441F8 count them in the item, weapon or armor inventory up to 9 and leave them on the ground above 8, with the refusal sound behind a 0x20-frame cooldown. The runtime spawns an item pickup where an enemy's drop roll gives an item and saves the inventories (schema v5).",
+   "limitations": "Their sprites are not drawn: the pickups' graphics (0x081C15F4, sequences of 0x0820ED60) go through the shared sprite-resource system (gEwramData->unk_10170, scripts of sUnk_80E2B34) that selects their sequence and palette from the table's + 0x9 byte (0x15 or 0x21; + 0x8 holds sub_0803B924's attribute bits), which is not reconstructed, so they are not exported, so only the --hitboxes view shows their boxes. sub_08043DD0 is ported for pickup types up to 4 only (the floating soul path and the palette cycles of states 0x63-0x65 are not), and sub_080441F8 for its money and item cases (the placed-item flags of + 0x30, the 0x42C flags, the item-name messages of 0x08506734 and the recent-item lists of sub_0804AE3C are not); its message (sub_0800EF98) is reported and its sound 0xB6 not played. The player's hurtbox stands for the player side of the type-0xB collision. Pickups live in the room and vanish on a room change. sub_08044054 is ported for its 0xFF numbering and categories 2-4 (its money redirect and the icon setup of sub_0801232C / sub_080124F4 are not); item sounds 0xB5 / 0xB7 and the refusal sound 0x13B are reported, not played. sub_08043F70 creates a money pickup from the seven-record table 0x085250E4 (1, 10, 50, 100, 500, 1000 and 2000 gold, exported as metadata/money.tsv), lifted 8 pixels for the four small variants. sub_08043DD0 makes it fall at 0x2000 per frame up to 0x40000, land on the floor probe of sub_08001D94 (8 pixels lower for money), rest 300 frames and blink 64 frames before it is removed. The money case of sub_080441F8 adds the value to the gold, capped at 999999. The runtime spawns one where an enemy's drop roll gives sub_08043F70, at the enemy's (x, y - 8), collects it when Soma's hurtbox meets its 16 x 16 box (0x1010F8F8), and saves the gold at save points. Source-derived and unit-tested, not emulator-compared. sub_08044054 decodes the global item numbers (1-32 items, 33-91 weapons, 92-136 armor and accessories) into pickups that fall like money; cases 2-4 of sub_080441F8 count them in the item, weapon or armor inventory up to 9 and leave them on the ground above 8, with the refusal sound behind a 0x20-frame cooldown. The runtime spawns an item pickup where an enemy's drop roll gives an item and saves the inventories (schema v5). sub_08043C10 creates the MP hearts of enemy drops (popping 2 pixels per frame upward): a big heart (15 %) falls like money through sub_08043DD0, a small one (3 %) rises, then drifts down 0.25 per frame swaying along half a sine until the floor probe 4 pixels below meets ground (its depth subtracted from the raw 16.16 Y, as natively), rests 200 frames and blinks 64; both use the 8 x 8 box 0x0808FCFC, and case 0 of sub_080441F8 (sub_08043BB0) restores that share of the maximum MP, at least 1, capped.",
    "next_action": "Export and draw the pickup sprites and icons with their palettes, then the item-name and soul messages.",
    "evidence": {
     "unit_tests": [
@@ -12588,7 +12591,7 @@
     "sub_08033E6C",
     "sub_080683BC"
    ],
-   "limitations": "sub_080683BC is ported for its experience reward and its drop decision, but the pickups it creates (sub_0804459C souls, sub_08044054 items, sub_08043F70 and sub_08043C10, entities 0x49-0xCF) are not, so a drop is only reported; the two pickups are named by routine because their contents are not traced. The runtime has no equipment or soul inventory yet: it passes the equipped accessory, the effective LCK and whether the soul is held, but the 0xA1 flag as clear, and gEwramData + 0x4CC as 0. The item bitsets (0x133B0, 0x133C0) and the bestiary are not saved. The level-up display sub_080455BC, the equipment refresh sub_0804AD9C and the walking-experience accessory path of sub_0801B0D8 are not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat. sub_08045F9C (a candle's drop) creates the sub_08043C10 pickup unless MP is full, which identifies it as the MP heart; its collection (case 0, sub_08043BB0) is not ported. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables (every fourth level gains a single INT point), sub_08033E10, sub_08033E38 and sub_08033E6C. The experience part of sub_080683BC grants an enemy record's u16 at 0x10 once per entity (its + 0x3E guard), marks the 0x133A0 bestiary bit, applies the 0x133 / 256 bonus flag and the 99999999 cap, and levels up; Julius and the mode bits skip it. Its drop part rolls, with the same random draws in the same order, the soul (rarity * 8 - (LCK / 16 - 32), at least 16; thresholds 3, 6 unowned, 7 with the 0xA1 flag, +8 with accessory 0x28), then unless the ground type blocks it the rare (below 0x40, 0x60 with 0x27) or common item (rate * 4 - (LCK / 16 - 16); 4, 8 with 0x27) with its item bitset, then for records with an item the sub_08043F70 pickup (bits 3-12 <= 7, 0x3F and +3 with 0x2B) or the sub_08043C10 pickup (bits 4-13 <= 7, 0x3F with 0x1D). The enemy-stats export (schema v3) now carries the experience and drop fields and the runtime rewards each enemy it reports killed, raising maximum HP on a level up and drawing its drop in the native order; a v3 save with 700 experience starts at level 5 with 368 maximum HP (local runtime check). Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "sub_080683BC is ported for its experience reward and its drop decision, but the pickups it creates (sub_0804459C souls, sub_08044054 items, sub_08043F70 and sub_08043C10, entities 0x49-0xCF) are not, so a drop is only reported; the two pickups are named by routine because their contents are not traced. The runtime has no equipment or soul inventory yet: it passes the equipped accessory, the effective LCK and whether the soul is held, but the 0xA1 flag as clear, and gEwramData + 0x4CC as 0. The item bitsets (0x133B0, 0x133C0) and the bestiary are not saved. The level-up display sub_080455BC, the equipment refresh sub_0804AD9C and the walking-experience accessory path of sub_0801B0D8 are not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat. sub_08045F9C (a candle's drop) creates the sub_08043C10 pickup unless MP is full, which identifies it as the MP heart (ported with aos.items.money_pickups). sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables (every fourth level gains a single INT point), sub_08033E10, sub_08033E38 and sub_08033E6C. The experience part of sub_080683BC grants an enemy record's u16 at 0x10 once per entity (its + 0x3E guard), marks the 0x133A0 bestiary bit, applies the 0x133 / 256 bonus flag and the 99999999 cap, and levels up; Julius and the mode bits skip it. Its drop part rolls, with the same random draws in the same order, the soul (rarity * 8 - (LCK / 16 - 32), at least 16; thresholds 3, 6 unowned, 7 with the 0xA1 flag, +8 with accessory 0x28), then unless the ground type blocks it the rare (below 0x40, 0x60 with 0x27) or common item (rate * 4 - (LCK / 16 - 16); 4, 8 with 0x27) with its item bitset, then for records with an item the sub_08043F70 pickup (bits 3-12 <= 7, 0x3F and +3 with 0x2B) or the sub_08043C10 pickup (bits 4-13 <= 7, 0x3F with 0x1D). The enemy-stats export (schema v3) now carries the experience and drop fields and the runtime rewards each enemy it reports killed, raising maximum HP on a level up and drawing its drop in the native order; a v3 save with 700 experience starts at level 5 with 368 maximum HP (local runtime check). Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Port the pickup entities (souls, items and the two pickups) with their collection, then the soul and item inventories, equipment and the derived stats of sub_0804AD9C.",
    "evidence": {
     "unit_tests": [
@@ -17049,6 +17052,12 @@
  },
  "timeline": [
   {
+   "commit": "84fe928",
+   "date": "2026-10-27",
+   "subject": "Draw Aria's in-game HUD bars",
+   "scope": "project"
+  },
+  {
    "commit": "ae49639",
    "date": "2026-10-27",
    "subject": "Let Aria's red soul skills damage enemies",
@@ -17521,12 +17530,6 @@
    "date": "2026-10-25",
    "subject": "Serialize Aria room composites natively",
    "scope": "project"
-  },
-  {
-   "commit": "858272e",
-   "date": "2026-10-25",
-   "subject": "Render Zero Mission backgrounds natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -17587,9 +17590,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 519,
-    "routines_attached_to_features": 519,
-    "unassigned_routines": 3054,
+    "routines_cited_by_features": 522,
+    "routines_attached_to_features": 522,
+    "unassigned_routines": 3051,
     "call_edges": 14228
    }
   },

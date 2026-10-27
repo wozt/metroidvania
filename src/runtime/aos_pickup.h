@@ -21,6 +21,7 @@ typedef struct {
 
 enum {
     AOS_MONEY_KINDS = 7,
+    AOS_PICKUP_HEART = 0,   /* sub_08043C10: MP hearts */
     AOS_PICKUP_MONEY = 1,
     AOS_PICKUP_ITEM = 2,    /* itemInventory, records 0x08505B3C */
     AOS_PICKUP_WEAPON = 3,  /* weaponInventory, records 0x08505D3C */
@@ -51,6 +52,7 @@ typedef struct {
     uint32_t heading;
     int32_t turn, speed;
     int32_t vx;
+    bool small_heart;   /* runs sub_08043CE4 instead of sub_08043DD0 */
 } AosPickup;
 
 /* Soma's position (16.16) for the soul pickups' homing. */
@@ -58,6 +60,10 @@ typedef uint32_t (*AosRandom)(void);
 
 /* The pickup's collision box (sub_08042884 with 0x1010F8F8). */
 extern const AosBox aos_pickup_box;
+/* The hearts' box (0x0808FCFC). */
+extern const AosBox aos_heart_box;
+/* The box a pickup registered. */
+AosBox aos_pickup_box_of(const AosPickup *pickup);
 
 /* sub_08043F70: a money pickup of `variant` (0-6) at room pixel (x, y). */
 AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uint8_t variant,
@@ -91,6 +97,19 @@ void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random);
  * soul enables its ability, sub_08032ADC); it is added (sub_08032DBC counts
  * it) and the pickup removed. Returns whether it was new. */
 bool aos_pickup_collect_soul(AosPickup *pickup, AosStats *stats);
+/* sub_08043C10: an MP heart, big (`big`: 15 % of the maximum MP, falling
+ * like money) or small (3 %, fluttering down, sub_08043CE4); `pop` starts
+ * it 2 pixels per frame upward, as enemy drops do. */
+AosPickup aos_pickup_create_heart(bool big, bool pop, int32_t x, int32_t y);
+/* sub_08043CE4, after the collision pass it starts with: rise until the
+ * speed turns, then drift down 0.25 per frame swaying along a sine (half
+ * amplitude) until the floor probe 4 pixels lower meets ground (the depth
+ * is subtracted from the raw 16.16 Y, as natively), rest 200 frames, blink
+ * 64 frames, removed. */
+void aos_pickup_small_heart_update(AosPickup *pickup, const AosCollision *layer);
+/* Case 0 of sub_080441F8 (sub_08043BB0): MP rises by the heart's percent of
+ * the maximum (at least 1), capped at the maximum. */
+void aos_pickup_collect_heart(AosPickup *pickup, AosStats *stats);
 /* sub_08043DD0 for types up to 4: falls (0x2000 per frame, at most
  * 0x40000), lands on the floor probe of sub_08001D94, rests 300 frames,
  * then blinks 64 frames and is removed. */

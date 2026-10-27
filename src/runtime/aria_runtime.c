@@ -695,6 +695,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                         room->pickups[room->pickup_count++] = aos_pickup_create_money(
                             combat->money, drop.variant, e->enemy.x >> 16,
                             (e->enemy.y >> 16) - 8);
+                    else if (drop.kind == AOS_DROP_PICKUP_43C10 &&
+                             room->pickup_count < MAX_PICKUPS)
+                        /* sub_08043C10(x, y - 8, big, 1): an MP heart. */
+                        room->pickups[room->pickup_count++] = aos_pickup_create_heart(
+                            drop.variant != 0, true, e->enemy.x >> 16, (e->enemy.y >> 16) - 8);
                     else if (drop.kind != AOS_DROP_NONE)
                         printf("Drop: pickup sub_%s variant %u\n",
                                drop.kind == AOS_DROP_PICKUP_43F70 ? "08043F70" : "08043C10",
@@ -802,9 +807,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         AosRect body = aos_player_rect(soma->hurtbox, soma->x >> 16, soma->y >> 16,
                                        soma->facing_left, false);
         bool touching = !pickup->removed && combat->progress &&
-                        aos_rect_hits_box(body, aos_pickup_box, pickup->x >> 16,
+                        aos_rect_hits_box(body, aos_pickup_box_of(pickup), pickup->x >> 16,
                                           pickup->y >> 16, false, false);
-        if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
+        if (touching && pickup->type == AOS_PICKUP_HEART) {
+            aos_pickup_collect_heart(pickup, combat->progress);
+            printf("Collected an MP heart (MP %d)\n", combat->progress->mp);
+        } else if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
             uint32_t text = aos_pickup_collect_money(pickup, combat->money,
                                                      &combat->progress->gold);
             printf("Collected %u gold (total %u, message %u)\n",
@@ -830,6 +838,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                    combat->progress->souls_collected);
         }
         if (soul) aos_pickup_soul_finish(pickup, aos_random);
+        else if (pickup->small_heart) aos_pickup_small_heart_update(pickup, layer);
         else aos_pickup_update(pickup, layer);
         if (!pickup->removed) room->pickups[kept++] = *pickup;
     }
@@ -2180,9 +2189,9 @@ int main(int argc, char **argv) {
             for (size_t i = 0; i < room.pickup_count; ++i) {
                 const AosPickup *pickup = &room.pickups[i];
                 if (pickup->blinking && (step & 1)) continue;
-                SDL_FRect box = {(float)((pickup->x >> 16) + aos_pickup_box.x - cam_x),
-                                 (float)((pickup->y >> 16) + aos_pickup_box.y - cam_y),
-                                 aos_pickup_box.w, aos_pickup_box.h};
+                AosBox shape = aos_pickup_box_of(pickup);
+                SDL_FRect box = {(float)((pickup->x >> 16) + shape.x - cam_x),
+                                 (float)((pickup->y >> 16) + shape.y - cam_y), shape.w, shape.h};
                 SDL_RenderRect(renderer, &box);
             }
             AosRect hurt = aos_player_rect(soma.hurtbox, soma.x >> 16, soma.y >> 16,

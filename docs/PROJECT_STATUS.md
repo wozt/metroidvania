@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0587 - Aria MP hearts
+
+- `aos_pickup` ports the MP hearts of `sub_08043C10`: big hearts (15 % of
+  the maximum MP) fall like money, small ones (3 %) rise, then drift down
+  swaying along a sine (`sub_08043CE4`, with its raw-Y floor correction),
+  rest 200 frames and blink 64; both use an 8 x 8 box, and their
+  collection (`sub_08043BB0`) restores at least one MP, capped.
+- The runtime creates hearts where an enemy's drop roll asks for the
+  `sub_08043C10` pickup, popping upward, and collects them on contact.
+- Tests in `tests/test_aos_pickup.c` cover both motions, lifetimes and the
+  MP share. Sprites are still not drawn (only `--hitboxes`).
+  Source-derived, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0586 - Aria in-game HUD bars
 
 - `src/runtime/aos_hud.c` ports the HUD of `sub_0800DA50`: the frame of

@@ -181,3 +181,8 @@ void aos_stats_refresh(AosStats *stats, const AosEquipmentTables *tables) {
     if (stats->atk < 0) stats->atk = 0;
     if (stats->def < 0) stats->def = 0;
 }
+
+void aos_stats_new_game_inventory(AosStats *stats) {
+    stats->weapon_counts[0] = 1;
+    stats->armor_counts[0] = 1;
+}

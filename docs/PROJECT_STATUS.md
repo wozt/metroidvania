@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0582 - Aria item pickups and inventories
+
+- `aos_item_decode` and `aos_pickup_create_item` port `sub_08044054`'s
+  global item numbering (1-32 items, 33-91 weapons, 92-136 armor and
+  accessories) and its pickups, which fall like money; cases 2-4 of
+  `sub_080441F8` count them in the item, weapon and armor inventories (up
+  to 9) and leave them on the ground above 8, with the refusal sound behind
+  a 0x20-frame cooldown.
+- `AosStats` keeps the three inventories with `sub_08014548`'s new-game
+  contents (one weapon 0, one armor 0). Portable saves move to schema v5
+  with the inventory counts; the runtime spawns item drops from enemy drop
+  rolls, collects them and saves the inventories.
+- Not ported: pickup sprites and icons, item-name messages, sounds, the
+  recent-item lists (`sub_0804AE3C`) and soul pickups. Source-derived and
+  unit-tested, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0581 - Aria equipment stats and native ATK/DEF
 
 - `aos_stats_refresh` ports `sub_0804AD9C` with `sub_0804ACD4`,

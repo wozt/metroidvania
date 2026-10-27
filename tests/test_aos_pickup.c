@@ -66,6 +66,48 @@ int main(void) {
     /* The 16 x 16 box centred on the pickup (0x1010F8F8). */
     assert(aos_pickup_box.x == -8 && aos_pickup_box.y == -8 && aos_pickup_box.w == 16 &&
            aos_pickup_box.h == 16);
+    /* sub_08044054's global numbering. */
+    uint8_t category = 0, index = 0;
+    assert(!aos_item_decode(0, &category, &index) && !aos_item_decode(0x89, &category, &index));
+    assert(aos_item_decode(1, &category, &index) && category == AOS_PICKUP_ITEM && index == 0);
+    assert(aos_item_decode(32, &category, &index) && category == AOS_PICKUP_ITEM && index == 31);
+    assert(aos_item_decode(33, &category, &index) && category == AOS_PICKUP_WEAPON && index == 0);
+    assert(aos_item_decode(0x22, &category, &index) && category == AOS_PICKUP_WEAPON &&
+           index == 1);
+    assert(aos_item_decode(91, &category, &index) && category == AOS_PICKUP_WEAPON &&
+           index == 58);
+    assert(aos_item_decode(92, &category, &index) && category == AOS_PICKUP_ARMOR && index == 0);
+    assert(aos_item_decode(0x5D, &category, &index) && category == AOS_PICKUP_ARMOR &&
+           index == 1);
+    assert(aos_item_decode(0x88, &category, &index) && category == AOS_PICKUP_ARMOR &&
+           index == 44);
+
+    /* Item pickups probe at their own height (no 8-pixel money offset). */
+    AosPickup item = aos_pickup_create_item(AOS_PICKUP_WEAPON, 1, 40, 30);
+    assert(item.type == AOS_PICKUP_WEAPON && item.variant == 1 && item.offset == 0);
+    for (int i = 0; i < 200 && item.state == 0; ++i) aos_pickup_update(&item, &layer);
+    assert(item.state == 1 && (item.y >> 16) <= 80);
+
+    /* sub_080441F8 cases 2-4: counted up to 9, then refused. */
+    AosStats held = {0};
+    aos_stats_new_game_inventory(&held);
+    assert(held.weapon_counts[0] == 1 && held.armor_counts[0] == 1);
+    bool sound = true;
+    item.removed = false;
+    assert(aos_pickup_collect_item(&item, &held, &sound) == AOS_COLLECT_TAKEN && !sound &&
+           item.removed && held.weapon_counts[1] == 1);
+    AosPickup potion = aos_pickup_create_item(AOS_PICKUP_ITEM, 3, 0, 0);
+    held.item_counts[3] = 8;
+    assert(aos_pickup_collect_item(&potion, &held, &sound) == AOS_COLLECT_TAKEN &&
+           held.item_counts[3] == 9);
+    potion.removed = false;
+    assert(aos_pickup_collect_item(&potion, &held, &sound) == AOS_COLLECT_FULL && sound &&
+           !potion.removed && potion.cooldown == 0x20 && held.item_counts[3] == 9);
+    /* While the cooldown runs the refusal is silent. */
+    assert(aos_pickup_collect_item(&potion, &held, &sound) == AOS_COLLECT_FULL && !sound);
+    AosPickup ring = aos_pickup_create_item(AOS_PICKUP_ARMOR, 44, 0, 0);
+    assert(aos_pickup_collect_item(&ring, &held, &sound) == AOS_COLLECT_TAKEN &&
+           held.armor_counts[44] == 1);
     puts("Aria pickup tests passed");
     return 0;
 }

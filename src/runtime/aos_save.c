@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { AOS_SAVE_TEXT_MAX = 512 };
+enum { AOS_SAVE_TEXT_MAX = 768 };
 
 static void set_error(char *out, size_t size, const char *format, ...) {
     if (!out || size == 0) return;
@@ -30,6 +30,8 @@ static bool valid(const AosSaveData *save) {
         (save->armor >= 45 && save->armor != 0xFF) ||
         (save->accessory >= 45 && save->accessory != 0xFF))
         return false;
+    for (unsigned i = 0; i < AOS_SAVE_INVENTORY; ++i)
+        if (save->inventory[i] > 9) return false;
     for (unsigned i = 0; i < 8; ++i)
         if (save->name[i] > 0x22) return false;
     return true;
@@ -78,14 +80,25 @@ static int payload_v3(char *out, size_t size, const AosSaveData *save) {
     return added < 0 ? added : used + added;
 }
 
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v4(char *out, size_t size, const AosSaveData *save) {
     int used = payload_v3(out, size, save);
     if (used < 0 || (size_t)used >= size) return used;
-    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    memcpy(out, AOS_SAVE_SCHEMA_V4, sizeof AOS_SAVE_SCHEMA_V4 - 1);
     int added = snprintf(out + used, size - (size_t)used,
                          "weapon=%u\narmor=%u\naccessory=%u\n", save->weapon, save->armor,
                          save->accessory);
     return added < 0 ? added : used + added;
+}
+
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    int used = payload_v4(out, size, save);
+    if (used < 0 || (size_t)used + AOS_SAVE_INVENTORY + 12 >= size) return -1;
+    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    used += snprintf(out + used, size - (size_t)used, "inventory=");
+    for (unsigned i = 0; i < AOS_SAVE_INVENTORY; ++i) out[used++] = (char)('0' + save->inventory[i]);
+    out[used++] = '\n';
+    out[used] = '\0';
+    return used;
 }
 
 void aos_save_init_new(AosSaveData *save, unsigned slot) {
@@ -105,6 +118,8 @@ void aos_save_init_new(AosSaveData *save, unsigned slot) {
         .armor = 0,
         .accessory = 0xFF,
     };
+    save->inventory[AOS_SAVE_WEAPONS] = 1;
+    save->inventory[AOS_SAVE_ARMOR] = 1;
 }
 
 bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t error_size) {
@@ -137,6 +152,8 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                           sizeof(AOS_SAVE_SCHEMA_V1)) == 0;
     bool v2 = strncmp(text, AOS_SAVE_SCHEMA_V2 "\n", sizeof(AOS_SAVE_SCHEMA_V2)) == 0;
     bool v3 = strncmp(text, AOS_SAVE_SCHEMA_V3 "\n", sizeof(AOS_SAVE_SCHEMA_V3)) == 0;
+    bool v4 = strncmp(text, AOS_SAVE_SCHEMA_V4 "\n", sizeof(AOS_SAVE_SCHEMA_V4)) == 0;
+    char inventory[AOS_SAVE_INVENTORY + 1] = {0};
     int matched;
     if (legacy) {
         matched = sscanf(text,
@@ -171,9 +188,9 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &play_frames, &name[0], &name[1], &name[2], &name[3],
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &experience, &gold, &expected, &consumed);
-    } else {
+    } else if (v4) {
         matched = sscanf(text,
-                         AOS_SAVE_SCHEMA "\n"
+                         AOS_SAVE_SCHEMA_V4 "\n"
                          "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
                          "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
                          "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
@@ -186,8 +203,28 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &experience, &gold, &weapon, &armor, &accessory,
                          &expected, &consumed);
+    } else {
+        matched = sscanf(text,
+                         AOS_SAVE_SCHEMA "\n"
+                         "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
+                         "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
+                         "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
+                         "character=%u\nchallenge_flags=%" SCNu32
+                         "\nexperience=%" SCNu32 "\ngold=%" SCNu32
+                         "\nweapon=%u\narmor=%u\naccessory=%u"
+                         "\ninventory=%136[0-9]"
+                         "\nchecksum=%" SCNx32 "\n%n",
+                         &slot, &area, &room, &spawn_x, &spawn_y, &hp, &max_hp, &moves,
+                         &play_frames, &name[0], &name[1], &name[2], &name[3],
+                         &name[4], &name[5], &name[6], &name[7], &character,
+                         &challenge_flags, &experience, &gold, &weapon, &armor, &accessory,
+                         inventory, &expected, &consumed);
     }
-    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : 25;
+    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : v4 ? 25 : 26;
+    if (expected_matches == 26 && matched == 26 && strlen(inventory) != AOS_SAVE_INVENTORY) {
+        set_error(error, error_size, "save schema is invalid");
+        return false;
+    }
     if (matched != expected_matches || consumed <= 0 || (size_t)consumed != used) {
         set_error(error, error_size, "save schema is invalid");
         return false;
@@ -231,11 +268,15 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
         parsed.weapon = (uint8_t)weapon;
         parsed.armor = (uint8_t)armor;
         parsed.accessory = (uint8_t)accessory;
+        if (!v2 && !v3 && !v4)
+            for (unsigned i = 0; i < AOS_SAVE_INVENTORY; ++i)
+                parsed.inventory[i] = (uint8_t)(inventory[i] - '0');
     }
     char canonical[AOS_SAVE_TEXT_MAX];
     int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
                          : v2   ? payload_v2(canonical, sizeof canonical, &parsed)
                          : v3   ? payload_v3(canonical, sizeof canonical, &parsed)
+                         : v4   ? payload_v4(canonical, sizeof canonical, &parsed)
                                 : payload(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||
         checksum(canonical, (size_t)canonical_size) != expected) {

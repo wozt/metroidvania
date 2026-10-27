@@ -57,3 +57,47 @@ uint32_t aos_pickup_collect_money(AosPickup *pickup, const AosMoneyKind kinds[AO
     if (*gold > AOS_GOLD_CAP) *gold = AOS_GOLD_CAP;
     return kinds[pickup->variant].text;
 }
+
+bool aos_item_decode(uint16_t id, uint8_t *category, uint8_t *index) {
+    if (id == 0 || id > 0x88) return false;
+    unsigned zero_based = id - 1u;
+    if (zero_based <= 0x1F) {
+        *category = AOS_PICKUP_ITEM;
+        *index = (uint8_t)zero_based;
+    } else if (zero_based <= 0x5A) {
+        *category = AOS_PICKUP_WEAPON;
+        *index = (uint8_t)(id - 0x21);
+    } else {
+        *category = AOS_PICKUP_ARMOR;
+        *index = (uint8_t)(id - 0x5C);
+    }
+    return true;
+}
+
+AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int32_t y) {
+    return (AosPickup){.type = category, .variant = index, .x = x * 65536, .y = y * 65536};
+}
+
+AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,
+                                         bool *refusal_sound) {
+    uint8_t *counts = pickup->type == AOS_PICKUP_ITEM     ? stats->item_counts
+                      : pickup->type == AOS_PICKUP_WEAPON ? stats->weapon_counts
+                                                          : stats->armor_counts;
+    size_t limit = pickup->type == AOS_PICKUP_ITEM     ? sizeof stats->item_counts
+                   : pickup->type == AOS_PICKUP_WEAPON ? sizeof stats->weapon_counts
+                                                       : sizeof stats->armor_counts;
+    *refusal_sound = false;
+    if (pickup->variant >= limit) {
+        pickup->removed = true;
+        return AOS_COLLECT_TAKEN;
+    }
+    uint8_t *count = &counts[pickup->variant];
+    if (*count > 8) {
+        *refusal_sound = pickup->cooldown == 0;
+        pickup->cooldown = 0x20;
+        return AOS_COLLECT_FULL;
+    }
+    (*count)++;
+    pickup->removed = true;
+    return AOS_COLLECT_TAKEN;
+}

@@ -6,6 +6,8 @@
 
 /* The level fields of gEwramData->unk_1325C (include/structs/ewram.h) and
  * the bestiary bitset at 0x133A0. */
+enum { AOS_ITEM_RECORDS = 0x20 };
+
 enum {
     AOS_STAT_STR,
     AOS_STAT_CON,
@@ -40,6 +42,11 @@ typedef struct {
     int16_t current[AOS_STAT_COUNT];
     uint16_t resist;
     int16_t atk, def;
+    /* itemInventory, weaponInventory, armorInventory + accessoryInventory:
+     * counts 0-9 (0x13294, 0x132B4, 0x132EF). */
+    uint8_t item_counts[AOS_ITEM_RECORDS];
+    uint8_t weapon_counts[59];
+    uint8_t armor_counts[45];
 } AosStats;
 
 /* One equipment record (metadata/equipment.tsv). */
@@ -128,6 +135,8 @@ AosDrop aos_stats_roll_drop(AosStats *stats, uint8_t enemy_id, const AosEnemyDro
                             const AosDropContext *context, uint32_t (*random)(void));
 /* sub_08014548's new-game equipment: weapon 0, armor 0, no accessory. */
 void aos_stats_new_game_equipment(AosStats *stats);
+/* sub_08014548's new-game inventory: one weapon 0 and one armor 0. */
+void aos_stats_new_game_inventory(AosStats *stats);
 /* sub_0804AD9C: sums the weapon, armor and accessory records
  * (sub_0804ACD4; resistances from armor and accessory only), adds the base
  * stats, then sets currentATK = STR + equipment ATK and currentDEF =

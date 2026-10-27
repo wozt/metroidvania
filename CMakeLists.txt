@@ -578,7 +578,8 @@ if(BUILD_TESTING)
     add_test(NAME aos_title_stages COMMAND fusion_aos_title_stages_tests)
 
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_pickup.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c)
+                   src/runtime/aos_collision.c src/runtime/aos_combat.c
+                   src/runtime/aos_stats.c)
     target_include_directories(fusion_aos_pickup_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_pickup_tests)
     add_test(NAME aos_pickup COMMAND fusion_aos_pickup_tests)

@@ -572,9 +572,16 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     if (drop.kind == AOS_DROP_SOUL)
                         printf("Drop: soul type %u index %u\n", drop.soul_type,
                                drop.soul_index);
-                    else if (drop.kind == AOS_DROP_ITEM)
+                    else if (drop.kind == AOS_DROP_ITEM) {
+                        /* sub_08044054(x, y - 8, 0xFF, item). */
+                        uint8_t category, index;
+                        if (aos_item_decode(drop.item, &category, &index) &&
+                            room->pickup_count < MAX_PICKUPS)
+                            room->pickups[room->pickup_count++] = aos_pickup_create_item(
+                                category, index, e->enemy.x >> 16, (e->enemy.y >> 16) - 8);
                         printf("Drop: %s item 0x%02X\n", drop.rare ? "rare" : "common",
                                drop.item);
+                    }
                     else if (drop.kind == AOS_DROP_PICKUP_43F70 && combat->money &&
                              room->pickup_count < MAX_PICKUPS)
                         /* sub_08043F70 at the enemy's (x, y - 8). */
@@ -684,13 +691,25 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         aos_pickup_update(pickup, layer);
         AosRect body = aos_player_rect(soma->hurtbox, soma->x >> 16, soma->y >> 16,
                                        soma->facing_left, false);
-        if (!pickup->removed && combat->money && combat->progress &&
-            aos_rect_hits_box(body, aos_pickup_box, pickup->x >> 16, pickup->y >> 16, false,
-                              false)) {
+        bool touching = !pickup->removed && combat->progress &&
+                        aos_rect_hits_box(body, aos_pickup_box, pickup->x >> 16,
+                                          pickup->y >> 16, false, false);
+        if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
             uint32_t text = aos_pickup_collect_money(pickup, combat->money,
                                                      &combat->progress->gold);
             printf("Collected %u gold (total %u, message %u)\n",
                    combat->money[pickup->variant].value, combat->progress->gold, text);
+        } else if (touching && pickup->type >= AOS_PICKUP_ITEM &&
+                   pickup->type <= AOS_PICKUP_ARMOR) {
+            static const char *const kinds[] = {"item", "weapon", "armor"};
+            bool refusal_sound;
+            if (aos_pickup_collect_item(pickup, combat->progress, &refusal_sound) ==
+                AOS_COLLECT_TAKEN)
+                printf("Collected %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
+                       pickup->variant);
+            else if (refusal_sound)
+                printf("Cannot carry more of %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
+                       pickup->variant);
         }
         if (!pickup->removed) room->pickups[kept++] = *pickup;
     }
@@ -1611,10 +1630,16 @@ int main(int argc, char **argv) {
      * or the --weapon choice. The equipment records give ATK and DEF
      * (sub_0804AD9C) unless --atk / --def ask for diagnostic values. */
     aos_stats_new_game_equipment(&progress);
+    aos_stats_new_game_inventory(&progress);
     if (has_active_save) {
         progress.weapon = active_save.weapon;
         progress.armor = active_save.armor;
         progress.accessory = active_save.accessory;
+        memcpy(progress.item_counts, active_save.inventory, sizeof progress.item_counts);
+        memcpy(progress.weapon_counts, active_save.inventory + AOS_SAVE_WEAPONS,
+               sizeof progress.weapon_counts);
+        memcpy(progress.armor_counts, active_save.inventory + AOS_SAVE_ARMOR,
+               sizeof progress.armor_counts);
     }
     static char save_weapon_name[8];
     if (weapon_override)
@@ -1841,6 +1866,12 @@ int main(int argc, char **argv) {
                     active_save.weapon = progress.weapon;
                     active_save.armor = progress.armor;
                     active_save.accessory = progress.accessory;
+                    memcpy(active_save.inventory, progress.item_counts,
+                           sizeof progress.item_counts);
+                    memcpy(active_save.inventory + AOS_SAVE_WEAPONS, progress.weapon_counts,
+                           sizeof progress.weapon_counts);
+                    memcpy(active_save.inventory + AOS_SAVE_ARMOR, progress.armor_counts,
+                           sizeof progress.armor_counts);
                     char error[256];
                     if (aos_save_store(save_path, &active_save, error, sizeof error))
                         printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",

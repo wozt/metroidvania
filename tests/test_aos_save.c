@@ -40,6 +40,12 @@ int main(void) {
     assert(source.weapon == 0 && source.armor == 0 && source.accessory == 0xFF);
     source.weapon = 12;
     source.accessory = 0x28;
+    /* sub_08014548's new-game inventory, then a few more counts. */
+    assert(source.inventory[AOS_SAVE_WEAPONS] == 1 && source.inventory[AOS_SAVE_ARMOR] == 1 &&
+           source.inventory[0] == 0);
+    source.inventory[0] = 9;
+    source.inventory[AOS_SAVE_WEAPONS + 12] = 3;
+    source.inventory[AOS_SAVE_INVENTORY - 1] = 1;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -91,7 +97,9 @@ int main(void) {
     assert(aos_save_load(v2_path, &loaded, error, sizeof error));
     assert(loaded.area == 4 && loaded.max_hp == 332 && loaded.name[1] == 2 &&
            loaded.experience == 0 && loaded.gold == 0 && loaded.weapon == 0 &&
-           loaded.armor == 0 && loaded.accessory == 0xFF);
+           loaded.armor == 0 && loaded.accessory == 0xFF &&
+           loaded.inventory[AOS_SAVE_WEAPONS] == 1 && loaded.inventory[AOS_SAVE_ARMOR] == 1 &&
+           loaded.inventory[0] == 0);
     assert(remove(v2_path) == 0);
 
     /* Experience stops at 99999999 (the native cap of sub_080683BC); gold
@@ -112,6 +120,10 @@ int main(void) {
     source.armor = 45;
     assert(!aos_save_store(path, &source, error, sizeof error));
     source.armor = 0;
+    /* Counts stop at 9. */
+    source.inventory[4] = 10;
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.inventory[4] = 0;
 
     source.slot = AOS_SAVE_SLOT_COUNT;
     assert(!aos_save_store(path, &source, error, sizeof error));

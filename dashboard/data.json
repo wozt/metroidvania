@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-26T23:57:07+00:00",
+ "generated_at": "2026-10-27T00:07:50+00:00",
  "git": {
-  "commit": "cd8ea82",
+  "commit": "bd10d70",
   "branch": "main",
   "dirty": true
  },
@@ -768,7 +768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -851,7 +851,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -980,7 +980,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1051,7 +1051,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1179,7 +1179,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1268,7 +1268,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1347,7 +1347,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1419,7 +1419,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1492,7 +1492,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1570,7 +1570,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1662,7 +1662,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1736,7 +1736,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1810,7 +1810,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1892,7 +1892,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -1957,7 +1957,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2039,7 +2039,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2101,7 +2101,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2189,7 +2189,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2289,7 +2289,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2348,7 +2348,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2421,7 +2421,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2490,7 +2490,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2561,7 +2561,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2619,7 +2619,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2697,7 +2697,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2755,7 +2755,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2843,7 +2843,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -2926,7 +2926,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3013,7 +3013,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3119,7 +3119,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3237,7 +3237,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3295,7 +3295,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3370,7 +3370,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3463,7 +3463,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3521,7 +3521,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3616,7 +3616,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3680,7 +3680,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3750,7 +3750,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3810,7 +3810,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3922,7 +3922,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -3989,7 +3989,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4049,7 +4049,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4108,7 +4108,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4234,7 +4234,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4306,7 +4306,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4391,7 +4391,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4449,7 +4449,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4508,7 +4508,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4631,7 +4631,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4693,7 +4693,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4761,7 +4761,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4820,7 +4820,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4878,7 +4878,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -4936,7 +4936,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5026,7 +5026,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5098,7 +5098,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5198,7 +5198,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5277,7 +5277,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5390,7 +5390,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5459,7 +5459,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5585,7 +5585,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5684,7 +5684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5804,7 +5804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5869,7 +5869,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -5944,7 +5944,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6042,7 +6042,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6130,7 +6130,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6279,7 +6279,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6351,7 +6351,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6428,7 +6428,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6503,7 +6503,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6564,7 +6564,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6653,7 +6653,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6716,7 +6716,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6809,7 +6809,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -6904,7 +6904,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7094,7 +7094,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7183,7 +7183,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7307,7 +7307,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7366,7 +7366,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7474,7 +7474,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7556,7 +7556,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7633,7 +7633,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7712,7 +7712,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7838,7 +7838,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -7925,7 +7925,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8002,7 +8002,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8100,7 +8100,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8203,7 +8203,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8292,7 +8292,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8384,7 +8384,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8489,7 +8489,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8538,7 +8538,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8620,7 +8620,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8693,7 +8693,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8776,7 +8776,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8858,7 +8858,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8927,7 +8927,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -8998,7 +8998,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9068,7 +9068,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9137,7 +9137,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9215,7 +9215,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9289,7 +9289,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9364,7 +9364,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9433,7 +9433,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9502,7 +9502,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9578,7 +9578,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9654,7 +9654,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9724,7 +9724,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9800,7 +9800,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9871,7 +9871,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -9946,7 +9946,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10015,7 +10015,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10096,7 +10096,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10176,7 +10176,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10257,7 +10257,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10329,7 +10329,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10411,7 +10411,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10487,7 +10487,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10564,7 +10564,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10644,7 +10644,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10722,7 +10722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10797,7 +10797,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10881,7 +10881,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -10953,7 +10953,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11028,7 +11028,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11104,7 +11104,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11174,7 +11174,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11243,7 +11243,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11315,7 +11315,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11390,7 +11390,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11471,7 +11471,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11540,7 +11540,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11616,7 +11616,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11694,7 +11694,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11764,7 +11764,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11834,7 +11834,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11914,7 +11914,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -11990,7 +11990,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12073,7 +12073,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12142,7 +12142,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12207,7 +12207,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12256,7 +12256,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12269,12 +12269,14 @@
    "local_sources": [
     "src/runtime/aos_save.c",
     "src/runtime/aos_save_room.c",
+    "src/runtime/aos_menu_save_bridge.c",
     "src/runtime/aos_title_preview.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
     "tests/test_aos_save.c",
-    "tests/test_aos_save_room.c"
+    "tests/test_aos_save_room.c",
+    "tests/test_aos_menu_save_bridge.c"
    ],
    "dependencies": [
     "aos.startup.mode_dispatch"
@@ -12288,12 +12290,13 @@
     "Object1CUpdate",
     "sub_08068AD4"
    ],
-   "limitations": "The ROM-free text schema is intentionally not the native six-slot 0x47C-byte SRAM layout. Only three frontend files, room, optional spawn, HP, movement mask and play time are represented; inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files can be created and loaded; the selected file launches the room runtime at its recorded area and room. In a room carrying the native save bit or object 0x1C, Up in the verified Object1C rectangle restores HP and writes the selected portable slot.",
-   "next_action": "Port the native save-room animation/question and remaining SRAM progression fields before reconstructing native serialization.",
+   "limitations": "The ROM-free v2 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, optional spawn, HP, movement mask and play time are represented; quicksaves, completed-file metadata, inventory, equipment, souls, event/map state, native healing animation, save question and audio remain absent. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. The selected file launches the room runtime at its recorded area and room; save-room interaction restores HP and updates that file. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Add the remaining progression and completed-file fields, then reconstruct quicksave and native SRAM serialization behavior.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_save.c",
-     "tests/test_aos_save_room.c"
+     "tests/test_aos_save_room.c",
+     "tests/test_aos_menu_save_bridge.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -12324,11 +12327,21 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_aos_menu_save_bridge.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_menu_save_bridge"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12347,6 +12360,8 @@
     "src/runtime/aos_title_motion.c",
     "src/runtime/aos_title_stages.c",
     "src/runtime/aos_input.c",
+    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos_menu_save_bridge.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
@@ -12357,7 +12372,8 @@
     "tests/test_aos_title_input.c",
     "tests/test_aos_title_motion.c",
     "tests/test_aos_title_stages.c",
-    "tests/test_aos_input.c"
+    "tests/test_aos_input.c",
+    "tests/test_aos_menu_save_bridge.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -12369,8 +12385,8 @@
     "GameModeKonamiLogoUpdate",
     "KonamiCodeCheck"
    ],
-   "limitations": "The SDL room runtime uses the native dispatcher but starts at IN_GAME because it still requires a room, save or development launch argument; the separate title launcher is unchanged. No frontend selects the host-neutral boot path or consumes its startup/title/menu graphics, entity-animation, cleanup, slot-operation or audio requests. Portable request consumption remains absent. The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU and IN_GAME. The main-menu path dispatches PLAY/CREATE/LOAD, COPY and DELETE, runs native name entry for blank files and finishes direct load or new-game results through the native IN_GAME and INTRO_CUTSCENE brightness ramps. fusion_aria_runtime dispatches every simulation frame through IN_GAME while preserving all room, save, capture and debug entry arguments. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Attach the standalone SDL launcher to the typed slot/name requests while retaining direct room, save, capture and debug launches.",
+   "limitations": "The standalone SDL frontend now selects the host-neutral boot path and consumes typed slot/name requests, but its graphics and entity animation remain diagnostic and its audio requests are not connected. INTRO_CUTSCENE still launches the separate room-runtime process directly, while explicit room, save, capture and debug launches intentionally start at IN_GAME. The host-neutral handler table connects Reset, both startup logos, all currently reconstructed title stages, MAIN_MENU and IN_GAME. The SDL title host now runs that lifecycle, persists regular-file menu operations and waits for the native IN_GAME or INTRO_CUTSCENE destination fade before launching the gameplay process. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Connect native title/menu graphics and the introduction handler while preserving direct room, save, capture and debug launches.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_mode.c",
@@ -12380,7 +12396,8 @@
      "tests/test_aos_title_input.c",
      "tests/test_aos_title_motion.c",
      "tests/test_aos_title_stages.c",
-     "tests/test_aos_input.c"
+     "tests/test_aos_input.c",
+     "tests/test_aos_menu_save_bridge.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -12471,11 +12488,21 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_aos_menu_save_bridge.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_menu_save_bridge"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12493,7 +12520,8 @@
     "src/runtime/aos_title_motion.c",
     "src/runtime/aos_title_stages.c",
     "src/runtime/aos_title_preview.c",
-    "src/runtime/aos_menu_preview.c"
+    "src/runtime/aos_menu_save_bridge.c",
+    "src/runtime/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_game_lifecycle.c",
@@ -12502,7 +12530,8 @@
     "tests/test_aos_title_fade.c",
     "tests/test_aos_title_motion.c",
     "tests/test_aos_title_stages.c",
-    "tests/test_aos_menu_preview.c"
+    "tests/test_aos_menu_save_bridge.c",
+    "tests/test_aos_save.c"
    ],
    "dependencies": [
     "aos.startup.mode_dispatch",
@@ -12522,8 +12551,8 @@
     "sub_08008290",
     "sub_08008324"
    ],
-   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu graphics and remains separate from the lifecycle. Title/name entity rendering and actual portable save-operation consumption are not attached. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. The eight-character native name controller now retains wrapped grid and position input, insertion/deletion, default SOMA, JULIUS/NOUSE/NOSOUL codes, cancellation and the intro result. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Connect the lifecycle's typed create/load/copy/delete/name requests to the portable save frontend, then replace the diagnostic launcher navigation.",
+   "limitations": "The SDL frontend uses diagnostic rendering rather than original title/menu/name graphics and still launches gameplay as a separate process. INTRO_CUTSCENE has no native presentation handler. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The SDL launcher now consumes the typed regular-file requests and waits for the native destination fade. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Connect native rendering and the introduction handler; then extend the adapter only as new portable completion and quicksave metadata become available.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_lifecycle.c",
@@ -12532,7 +12561,8 @@
      "tests/test_aos_title_fade.c",
      "tests/test_aos_title_motion.c",
      "tests/test_aos_title_stages.c",
-     "tests/test_aos_menu_preview.c"
+     "tests/test_aos_menu_save_bridge.c",
+     "tests/test_aos_save.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -12605,11 +12635,21 @@
       "exists": true
      },
      {
-      "test": "tests/test_aos_menu_preview.c",
+      "test": "tests/test_aos_menu_save_bridge.c",
       "kind": "ctest",
       "registered": true,
       "ctest": [
-       "aos_menu_preview"
+       "aos_menu_save_bridge"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save"
       ],
       "outcome": "passed",
       "exists": true
@@ -12617,7 +12657,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -12692,7 +12732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13026,7 +13066,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13076,7 +13116,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13125,7 +13165,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13187,7 +13227,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13236,7 +13276,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13296,7 +13336,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13453,7 +13493,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13530,7 +13570,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13591,7 +13631,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13675,7 +13715,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13742,7 +13782,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13854,7 +13894,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13905,7 +13945,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -13968,7 +14008,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14017,7 +14057,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14029,41 +14069,47 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_title_preview.c",
-    "src/runtime/aos_menu_preview.c",
+    "src/runtime/aos_menu_save_bridge.c",
     "src/runtime/aos_save.c",
+    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos_main_menu.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
-    "tests/test_aos_menu_preview.c",
-    "tests/test_aos_save.c"
+    "tests/test_aos_menu_save_bridge.c",
+    "tests/test_aos_save.c",
+    "tests/test_aos_game_lifecycle.c",
+    "tests/test_aos_main_menu.c"
    ],
    "dependencies": [
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host offers three checksummed portable save files and launches New Game or Continue into the actual room runtime. It is not the native GameModeMainMenuUpdate or SRAM layout; inventory, equipment, souls, flags, play time and save-room writes remain open.",
+   "limitations": "The SDL host runs the native boot, title and main-menu lifecycle, maps its typed create, load, copy, delete and name requests onto three checksummed portable files, and launches the room runtime after the native destination fade. Portable schema v2 stores the encoded name, selected character and challenge flags while reading v1 files. Rendering remains diagnostic, INTRO launches the room runtime directly, and portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state remain absent.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_menu_preview.c",
-     "tests/test_aos_save.c"
+     "tests/test_aos_menu_save_bridge.c",
+     "tests/test_aos_save.c",
+     "tests/test_aos_game_lifecycle.c",
+     "tests/test_aos_main_menu.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-24",
+   "last_validated": "2026-10-27",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
     "tests": [
      {
-      "test": "tests/test_aos_menu_preview.c",
+      "test": "tests/test_aos_menu_save_bridge.c",
       "kind": "ctest",
       "registered": true,
       "ctest": [
-       "aos_menu_preview"
+       "aos_menu_save_bridge"
       ],
       "outcome": "passed",
       "exists": true
@@ -14077,11 +14123,31 @@
       ],
       "outcome": "passed",
       "exists": true
+     },
+     {
+      "test": "tests/test_aos_game_lifecycle.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_game_lifecycle"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_main_menu.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_main_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
      }
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14145,7 +14211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14210,7 +14276,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14259,7 +14325,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14309,7 +14375,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14358,7 +14424,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14408,7 +14474,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14486,7 +14552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14563,7 +14629,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14628,7 +14694,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14706,7 +14772,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14756,7 +14822,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14821,7 +14887,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14900,7 +14966,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -14964,7 +15030,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15041,7 +15107,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15132,7 +15198,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15210,7 +15276,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15368,7 +15434,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15415,7 +15481,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15458,7 +15524,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-26"
+    "verified_on": "2026-10-27"
    }
   },
   {
@@ -15831,6 +15897,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_menu_save_bridge",
+    "files": [
+     "tests/test_aos_menu_save_bridge.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_save_room",
     "files": [
      "tests/test_aos_save_room.c"
@@ -16007,12 +16080,18 @@
    }
   ],
   "summary": {
-   "passed": 75,
+   "passed": 76,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "bd10d70",
+   "date": "2026-10-27",
+   "subject": "Port Aria native name entry controller",
+   "scope": "project"
+  },
   {
    "commit": "cd8ea82",
    "date": "2026-10-26",
@@ -16485,12 +16564,6 @@
    "commit": "c2a6ce7",
    "date": "2026-10-24",
    "subject": "Port Aria background descriptors to C11",
-   "scope": "project"
-  },
-  {
-   "commit": "f5a5638",
-   "date": "2026-10-24",
-   "subject": "Port Aria room transitions to C11",
    "scope": "project"
   }
  ],

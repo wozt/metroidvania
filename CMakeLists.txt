@@ -194,7 +194,10 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_so
                src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
-               src/runtime/aos_menu_preview.c src/runtime/aos_save.c)
+               src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
+               src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c
+               src/runtime/aos_main_menu.c src/runtime/aos_input.c
+               src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_aria_title_preview)
@@ -548,6 +551,13 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_save_tests)
     add_test(NAME aos_save COMMAND fusion_aos_save_tests
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+    add_executable(fusion_aos_menu_save_bridge_tests
+                   tests/test_aos_menu_save_bridge.c
+                   src/runtime/aos_menu_save_bridge.c src/runtime/aos_save.c)
+    target_include_directories(fusion_aos_menu_save_bridge_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_menu_save_bridge_tests)
+    add_test(NAME aos_menu_save_bridge COMMAND fusion_aos_menu_save_bridge_tests)
 
     add_executable(fusion_aos_save_room_tests tests/test_aos_save_room.c
                    src/runtime/aos_save_room.c)

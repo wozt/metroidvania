@@ -36,11 +36,15 @@ so is the `scripts/aos_soma_sprite.py` preview decoder, whose six hand-selected
 
 ## Frontend and portable saves
 
-`fusion_aria_title_preview` now provides a runnable host path from the title
-input into New Game or Continue, a three-file selection screen and the real
-`fusion_aria_runtime` process. By default it stores files in SDL's user data
-directory; `--save-dir DIR` and `--runtime FILE` provide explicit development
-paths. New files start at the native new-game location, area 0 room 0.
+`fusion_aria_title_preview` now runs the host-neutral native lifecycle from
+Reset through the startup logos, title, PLAY/COPY/DELETE selector, file
+controllers and name entry. A small adapter maps the native controller's
+typed create, load, copy, delete and name requests onto three portable regular
+save files, then launches the real `fusion_aria_runtime` process only after
+the native destination fade completes. By default it stores files in SDL's
+user data directory; `--save-dir DIR` and `--runtime FILE` provide explicit
+development paths. New files start at the native new-game location, area 0
+room 0.
 
 The room runtime now routes every simulation frame through the native
 `aos_game_mode_update` lifecycle and its IN_GAME handler. Its explicit
@@ -48,29 +52,31 @@ room/save command-line entry deliberately starts at IN_GAME, while a tested
 host-neutral boot path crosses Reset and both startup logos into the partial
 title handler. That handler now reaches the native stage-9 destination after
 the title motion, input or quick-reveal paths, including MAIN_MENU and the
-idle INTRO_CUTSCENE override. The standalone title launcher remains separate
-until the native main-menu controller can replace its diagnostic navigation.
-The lifecycle now owns that controller's operation selector, entry/return
-fades and all three selected-operation controllers. PLAY preserves the native
-three file/quicksave pairs, completed-file special positions, optional mode
-choice and direct load/intro results; COPY and DELETE preserve their native
-confirmation paths. They expose typed requests over that topology, but the
-portable save adapter does not consume them yet. Newly created regular files
-now pass through the native eight-character name controller, including its
-grid navigation, edit operations, default SOMA name and the JULIUS, NOUSE and
-NOSOUL codes. Its graphics are still frontend-owned.
+idle INTRO_CUTSCENE override. The lifecycle owns the main-menu operation
+selector, entry/return fades and all three selected-operation controllers.
+PLAY preserves the native three file/quicksave pairs, completed-file special
+positions, optional mode choice and direct load/intro results; COPY and DELETE
+preserve their native confirmation paths. The portable adapter currently maps
+only the three even, regular-file positions because its schema has no
+quicksave or completed-file metadata. Newly created regular files pass through
+the native eight-character name controller, including its grid navigation,
+edit operations, default SOMA name and the JULIUS, NOUSE and NOSOUL codes.
+Rendering is still diagnostic, and the INTRO_CUTSCENE result currently starts
+the room runtime directly rather than presenting the native introduction.
 
 `aos_save.c` deliberately uses the small, checksummed
-`metroidvania-aos-save-v1` text schema instead of claiming compatibility with
-the original six 0x47C-byte SRAM records. The runtime accepts `--save FILE`
-and restores the room, optional spawn, HP and the currently exposed movement
-mask. The native room exporter emits schema version 4's global-map save and
-warp bits. Runtime compatibility also recognizes the native room object
-`0x1C` in older exports. Holding Up inside Object1C's verified rectangle
-(`x=104..136`, `y=128..183`) restores HP and atomically updates the selected
-portable file with the current room, spawn and play time. The native healing
-animation, Yes/No question, object graphics, audio, inventory, equipment,
-souls, event flags, map state and SRAM layout remain open reconstruction work.
+`metroidvania-aos-save-v2` text schema instead of claiming compatibility with
+the original six 0x47C-byte SRAM records. It still reads v1 files, while v2
+adds the encoded player name, selected character and challenge flags. The
+runtime accepts `--save FILE` and restores the room, optional spawn, HP and the
+currently exposed movement mask. The native room exporter emits schema
+version 4's global-map save and warp bits. Runtime compatibility also
+recognizes the native room object `0x1C` in older exports. Holding Up inside
+Object1C's verified rectangle (`x=104..136`, `y=128..183`) restores HP and
+atomically updates the selected portable file with the current room, spawn and
+play time. The native healing animation, Yes/No question, object graphics,
+audio, inventory, equipment, souls, event flags, map state, quicksaves,
+completed-file metadata and SRAM layout remain open reconstruction work.
 
 ## Explicitly unresolved
 

@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v1"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v2"
+#define AOS_SAVE_SCHEMA_V1 "metroidvania-aos-save-v1"
 #define AOS_SAVE_SLOT_COUNT 3
 
 /* Portable host save metadata. This is deliberately separate from the
@@ -21,6 +22,9 @@ typedef struct {
     int16_t max_hp;
     uint32_t moves;
     uint64_t play_frames;
+    uint8_t name[8];
+    uint8_t character;
+    uint32_t challenge_flags;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

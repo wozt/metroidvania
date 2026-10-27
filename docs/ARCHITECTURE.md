@@ -357,12 +357,16 @@ timings and frames, and the SDL-free ports `aos_collision.c`, `aos_soma.c`
 and `aos_anim.c`. Its simulation frames pass through the host-neutral native
 game-mode table in `aos_game_lifecycle.c`; explicit room/save launches enter
 IN_GAME directly while the incomplete boot/title path remains independently
-testable. The same table now reaches the native main-menu operation selector
+testable. `fusion_aria_title_preview` now selects that boot path and reaches
+the native main-menu operation selector
 in `aos_main_menu.c`, including PLAY/CREATE/LOAD, COPY and DELETE, their
 confirmation controllers, special completed-file positions and final direct
 load/intro fades. The same state owns the native eight-character name editor
-and its return/intro results. Its typed slot-operation requests and diagnostic
-rendering remain separate from the portable launcher.
+and its return/intro results. `aos_menu_save_bridge.c` consumes the typed
+regular-file operations and persists them through portable save schema v2;
+the host waits for the native destination fade before starting the separate
+room-runtime process. Rendering remains diagnostic, and quicksaves,
+completed-file metadata and the native introduction are not connected yet.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

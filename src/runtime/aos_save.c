@@ -21,9 +21,14 @@ static void set_error(char *out, size_t size, const char *format, ...) {
 static bool valid(const AosSaveData *save) {
     bool spawn_pair = save && ((save->spawn_x == -1 && save->spawn_y == -1) ||
                                (save->spawn_x >= 0 && save->spawn_y >= 0));
-    return save && save->slot < AOS_SAVE_SLOT_COUNT && save->area <= 99 && save->room <= 999 &&
-           spawn_pair && save->hp > 0 &&
-           save->max_hp >= save->hp && save->max_hp <= 9999 && save->moves <= 0x1Fu;
+    if (!save || save->slot >= AOS_SAVE_SLOT_COUNT || save->area > 99 ||
+        save->room > 999 || !spawn_pair || save->hp <= 0 ||
+        save->max_hp < save->hp || save->max_hp > 9999 || save->moves > 0x1Fu ||
+        save->character > 1 || (save->challenge_flags & ~0x300000u))
+        return false;
+    for (unsigned i = 0; i < 8; ++i)
+        if (save->name[i] > 0x22) return false;
+    return true;
 }
 
 static uint32_t checksum(const char *text, size_t size) {
@@ -35,13 +40,27 @@ static uint32_t checksum(const char *text, size_t size) {
     return hash;
 }
 
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v1(char *out, size_t size, const AosSaveData *save) {
     return snprintf(out, size,
-                    AOS_SAVE_SCHEMA "\n"
+                    AOS_SAVE_SCHEMA_V1 "\n"
                     "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
                     "hp=%d\nmax_hp=%d\nmoves=%" PRIu32 "\nplay_frames=%" PRIu64 "\n",
                     save->slot, save->area, save->room, save->spawn_x, save->spawn_y,
                     save->hp, save->max_hp, save->moves, save->play_frames);
+}
+
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    return snprintf(out, size,
+                    AOS_SAVE_SCHEMA "\n"
+                    "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
+                    "hp=%d\nmax_hp=%d\nmoves=%" PRIu32 "\nplay_frames=%" PRIu64 "\n"
+                    "name=%u,%u,%u,%u,%u,%u,%u,%u\n"
+                    "character=%u\nchallenge_flags=%" PRIu32 "\n",
+                    save->slot, save->area, save->room, save->spawn_x, save->spawn_y,
+                    save->hp, save->max_hp, save->moves, save->play_frames,
+                    save->name[0], save->name[1], save->name[2], save->name[3],
+                    save->name[4], save->name[5], save->name[6], save->name[7],
+                    save->character, save->challenge_flags);
 }
 
 void aos_save_init_new(AosSaveData *save, unsigned slot) {
@@ -55,6 +74,7 @@ void aos_save_init_new(AosSaveData *save, unsigned slot) {
         .hp = 320,
         .max_hp = 320,
         .moves = 0x1F,
+        .name = {0x14, 0x10, 0x0E, 0x02, 0, 0, 0, 0},
     };
 }
 
@@ -78,19 +98,37 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
         return false;
     }
 
-    unsigned slot, area, room;
+    unsigned slot, area, room, name[8], character;
     int spawn_x, spawn_y, hp, max_hp;
-    uint32_t moves, expected;
+    uint32_t moves, challenge_flags, expected;
     uint64_t play_frames;
     int consumed = 0;
-    int matched = sscanf(text,
-                         AOS_SAVE_SCHEMA "\n"
+    bool legacy = strncmp(text, AOS_SAVE_SCHEMA_V1 "\n",
+                          sizeof(AOS_SAVE_SCHEMA_V1)) == 0;
+    int matched;
+    if (legacy) {
+        matched = sscanf(text,
+                         AOS_SAVE_SCHEMA_V1 "\n"
                          "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
                          "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
                          "\nchecksum=%" SCNx32 "\n%n",
                          &slot, &area, &room, &spawn_x, &spawn_y, &hp, &max_hp, &moves,
                          &play_frames, &expected, &consumed);
-    if (matched != 10 || consumed <= 0 || (size_t)consumed != used) {
+    } else {
+        matched = sscanf(text,
+                         AOS_SAVE_SCHEMA "\n"
+                         "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
+                         "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
+                         "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
+                         "character=%u\nchallenge_flags=%" SCNu32
+                         "\nchecksum=%" SCNx32 "\n%n",
+                         &slot, &area, &room, &spawn_x, &spawn_y, &hp, &max_hp, &moves,
+                         &play_frames, &name[0], &name[1], &name[2], &name[3],
+                         &name[4], &name[5], &name[6], &name[7], &character,
+                         &challenge_flags, &expected, &consumed);
+    }
+    int expected_matches = legacy ? 10 : 20;
+    if (matched != expected_matches || consumed <= 0 || (size_t)consumed != used) {
         set_error(error, error_size, "save schema is invalid");
         return false;
     }
@@ -100,11 +138,34 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
         set_error(error, error_size, "save contents are out of range");
         return false;
     }
-    AosSaveData parsed = {(uint8_t)slot, (uint8_t)area, (uint16_t)room,
-                          (int16_t)spawn_x, (int16_t)spawn_y, (int16_t)hp,
-                          (int16_t)max_hp, moves, play_frames};
+    AosSaveData parsed;
+    aos_save_init_new(&parsed, slot);
+    parsed.area = (uint8_t)area;
+    parsed.room = (uint16_t)room;
+    parsed.spawn_x = (int16_t)spawn_x;
+    parsed.spawn_y = (int16_t)spawn_y;
+    parsed.hp = (int16_t)hp;
+    parsed.max_hp = (int16_t)max_hp;
+    parsed.moves = moves;
+    parsed.play_frames = play_frames;
+    if (!legacy) {
+        if (character > 1) {
+            set_error(error, error_size, "save contents are out of range");
+            return false;
+        }
+        for (unsigned i = 0; i < 8; ++i) {
+            if (name[i] > UINT8_MAX) {
+                set_error(error, error_size, "save contents are out of range");
+                return false;
+            }
+            parsed.name[i] = (uint8_t)name[i];
+        }
+        parsed.character = (uint8_t)character;
+        parsed.challenge_flags = challenge_flags;
+    }
     char canonical[AOS_SAVE_TEXT_MAX];
-    int canonical_size = payload(canonical, sizeof canonical, &parsed);
+    int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
+                                : payload(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||
         checksum(canonical, (size_t)canonical_size) != expected) {
         set_error(error, error_size, "save contents or checksum are invalid");

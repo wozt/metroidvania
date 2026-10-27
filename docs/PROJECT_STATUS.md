@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0567 - Connect Aria's native menu to portable saves
+
+- Replaced the standalone title launcher's custom navigation with the native
+  Reset, startup-logo, title and main-menu lifecycle. The SDL host now
+  consumes typed PLAY, COPY, DELETE and name-entry requests and waits for the
+  native IN_GAME or INTRO_CUTSCENE destination fade before starting the room
+  runtime. Explicit room, save, capture and debug launches remain unchanged.
+- Added a host-neutral save bridge from the native controller's three regular
+  even-numbered positions to the three portable files. Create, load, copy,
+  delete and committed names are covered by deterministic tests; native odd
+  quicksave positions and completed-file special metadata remain deliberately
+  unavailable until the portable model represents them.
+- Advanced the checksummed portable format to
+  `metroidvania-aos-save-v2`, adding the encoded name, character choice and
+  challenge flags while retaining read compatibility with v1 files. The
+  format remains separate from native 0x47C-byte SRAM records.
+- The frontend still uses diagnostic rendering and a separate room-runtime
+  process, and its INTRO result does not yet render Aria's native introduction.
+  Statuses therefore remain partial. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+- Next: port and connect the Aria introduction lifecycle handler so a newly
+  named file reaches gameplay through its native opening sequence, while
+  retaining the existing direct development launch paths.
+
 ## Patch 0566 - Port Aria's native name editor
 
 - Ported the controller behavior of `sub_08008324`/`sub_080083C8`: the 4x9

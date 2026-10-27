@@ -198,11 +198,11 @@ add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
-               src/runtime/aos_intro_entities.c
+               src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
                src/runtime/aos_input.c
                src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
-target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 m)
+target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets m)
 fusion_enable_warnings(fusion_aria_title_preview)
 
 target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 m)
@@ -623,6 +623,15 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_aos_intro_entities_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_intro_entities_tests)
     add_test(NAME aos_intro_entities COMMAND fusion_aos_intro_entities_tests)
+
+    add_executable(fusion_aos_intro_resources_tests
+                   tests/test_aos_intro_resources.c
+                   src/runtime/aos_intro_resources.c
+                   src/runtime/aos_intro_entities.c)
+    target_include_directories(fusion_aos_intro_resources_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_intro_resources_tests PRIVATE fusion_assets m)
+    fusion_enable_warnings(fusion_aos_intro_resources_tests)
+    add_test(NAME aos_intro_resources COMMAND fusion_aos_intro_resources_tests)
 
     add_executable(fusion_aos_main_menu_tests tests/test_aos_main_menu.c
                    src/runtime/aos_main_menu.c)

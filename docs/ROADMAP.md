@@ -81,7 +81,8 @@ Native save-room detection restores HP and writes the selected portable slot.
 That host bridge is not native graphics or SRAM parity: its renderer remains
 diagnostic. The six introduction entity controllers run, but their native
 graphics, palettes, OAM and audio remain absent. Its text-script protocol is
-ported, but the ROM-backed script owner and glyph rasterizer are not connected;
+ported and the hash-verified ROM resource owner supplies all three language
+banks without exporting them. The native glyph rasterizer remains absent;
 quicksaves, pause/inventory/map flows and full progression are also open.
 
 Exit criterion: Aria is normally completable through every native final branch

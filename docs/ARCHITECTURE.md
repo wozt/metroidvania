@@ -371,10 +371,14 @@ the native first-room position. `aos_intro_entities.c` advances the six native
 introduction actors, their fixed-point motion, thresholds, lifetimes, alpha
 overrides and cleanup. The same module implements `sub_080093E0` as a bounded
 interpreter over externally supplied native-format scripts; it emits row-clear,
-glyph and string-insertion results without storing original text. Rendering
-remains diagnostic: backgrounds, palettes, OAM, animation resources, scripts,
-glyph rasterization and songs are not connected, and quicksaves plus
-completed-file metadata remain open.
+glyph and string-insertion results without storing original text.
+`aos_intro_resources.c` is a non-owning view of the hash-verified ROM buffer:
+it bounds the native text pointer table, selects the English, French or German
+bank and binds the main script plus insertions to that interpreter. The SDL
+host accepts the ROM through `--rom` and displays only a bounded diagnostic
+line. Backgrounds, palettes, OAM, animation resources, native glyph
+rasterization and songs are not connected, and quicksaves plus completed-file
+metadata remain open.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

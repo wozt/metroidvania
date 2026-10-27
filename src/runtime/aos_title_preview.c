@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "aos_game_lifecycle.h"
+#include "aos_intro_resources.h"
 #include "aos_menu_save_bridge.h"
 #include "aos_save.h"
 
@@ -89,15 +90,17 @@ static bool launch_runtime(const char *runtime, const char *save_path,
 
 int main(int argc, char **argv) {
     const char *image_path = NULL;
+    const char *rom_path = NULL;
     const char *runtime_path = NULL, *save_directory_arg = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--title-bmp") && i + 1 < argc) image_path = argv[++i];
+        else if (!strcmp(argv[i], "--rom") && i + 1 < argc) rom_path = argv[++i];
         else if (!strcmp(argv[i], "--runtime") && i + 1 < argc) runtime_path = argv[++i];
         else if (!strcmp(argv[i], "--save-dir") && i + 1 < argc) save_directory_arg = argv[++i];
         else {
             fprintf(stderr,
-                    "Usage: fusion_aria_title_preview [--title-bmp FILE] [--runtime FILE] "
-                    "[--save-dir DIR]\n");
+                    "Usage: fusion_aria_title_preview [--title-bmp FILE] [--rom FILE] "
+                    "[--runtime FILE] [--save-dir DIR]\n");
             return 2;
         }
     }
@@ -173,6 +176,26 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
+    FusionRom intro_rom = {0};
+    AosIntroResources intro_resources = {0};
+    bool have_intro_resources = false;
+    if (rom_path) {
+        char error[256];
+        if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &intro_rom,
+                             error, sizeof error) ||
+            !aos_intro_resources_init(&intro_resources, &intro_rom, error,
+                                      sizeof error)) {
+            fprintf(stderr, "Cannot load Aria introduction resources: %s\n", error);
+            fusion_rom_close(&intro_rom);
+            if (art) SDL_DestroyTexture(art);
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            SDL_free(preference_path);
+            SDL_Quit();
+            return 2;
+        }
+        have_intro_resources = true;
+    }
     AosGameLifecycle lifecycle;
     AosMenuSaveBridge save_bridge;
     aos_game_lifecycle_init(&lifecycle, false);
@@ -186,6 +209,7 @@ int main(int argc, char **argv) {
     bool interactive = true;
     uint64_t next_frame = SDL_GetTicksNS();
     char launch_error[128] = "";
+    char intro_text_line[29] = "";
     int pending_launch_slot = -1;
     AosPortableStart pending_start = AOS_PORTABLE_START_NONE;
     while (running) {
@@ -199,6 +223,29 @@ int main(int argc, char **argv) {
         const uint16_t held = keymask(SDL_GetKeyboardState(NULL));
         aos_input_update(&lifecycle.input, held);
         aos_game_lifecycle_update(&lifecycle);
+        if (have_intro_resources &&
+            lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
+            lifecycle.intro_cutscene.entities_init_requested) {
+            intro_text_line[0] = '\0';
+            if (!aos_intro_resources_bind(
+                    &intro_resources, &lifecycle.intro_cutscene.entities,
+                    lifecycle.reset.language, launch_error,
+                    sizeof launch_error)) {
+                have_intro_resources = false;
+            }
+        }
+        AosIntroEntities *intro_entities = &lifecycle.intro_cutscene.entities;
+        if (lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
+            intro_entities->text_clear_requested) {
+            size_t count = intro_entities->text_glyph_count;
+            if (count >= sizeof intro_text_line) count = sizeof intro_text_line - 1;
+            for (size_t index = 0; index < count; ++index) {
+                uint8_t glyph = intro_entities->text_glyphs[index];
+                intro_text_line[index] =
+                    glyph >= 0x20 && glyph <= 0x7E ? (char)glyph : '?';
+            }
+            intro_text_line[count] = '\0';
+        }
         if (!aos_menu_save_bridge_consume(&save_bridge, &lifecycle.main_menu)) {
             snprintf(launch_error, sizeof launch_error, "INVALID SLOT OPERATION");
         } else {
@@ -318,7 +365,12 @@ int main(int argc, char **argv) {
                          (long)(lifecycle.intro_cutscene.bg_y[2] >> 16),
                          (long)(lifecycle.intro_cutscene.bg_y[3] >> 16));
                 SDL_RenderDebugText(renderer, 38, 82, scroll);
-                SDL_RenderDebugText(renderer, 62, 110, "A OR START: SKIP");
+                if (intro_text_line[0])
+                    SDL_RenderDebugText(renderer, 8, 103, intro_text_line);
+                else if (!have_intro_resources)
+                    SDL_RenderDebugText(renderer, 20, 103,
+                                        "ADD --rom FOR NATIVE TEXT");
+                SDL_RenderDebugText(renderer, 62, 132, "A OR START: SKIP");
             } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
                 SDL_RenderDebugText(renderer, 72, 122, "PRESS START");
             } else if (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO) {
@@ -353,6 +405,7 @@ int main(int argc, char **argv) {
         if (now < next_frame) SDL_DelayNS(next_frame - now);
         else if (now - next_frame > 100000000ull) next_frame = now;
     }
+    fusion_rom_close(&intro_rom);
     if (art) SDL_DestroyTexture(art);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

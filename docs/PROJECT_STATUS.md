@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0571 - Connect Aria's ROM-backed introduction text
+
+- Added a bounded, non-owning resource view over the verified Aria ROM. It
+  resolves introduction text ID 11 and command-1 insertions directly from the
+  native `0x08506B38` pointer table, including the exact English, French and
+  German table strides.
+- Added `--rom FILE` to `fusion_aria_title_preview`. Each introduction start
+  binds the selected native language to `sub_080093E0`; the SDL diagnostic
+  view displays at most 28 ASCII-safe characters from the latest line. No ROM
+  bytes are exported or retained after shutdown.
+- Synthetic tests cover unsorted resource pointers, insertion lookup,
+  malformed bindings and game validation. An optional smoke path also passed
+  against the local hash-gated Aria ROM without printing or writing its text.
+- Native glyph rasterization, backgrounds, palettes, OAM and animation
+  resources remain disconnected, so the feature stays partial.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission and
+  audio are unchanged.
+- Next: port the native proportional-font glyph rasterizer and feed its tile
+  output into the SDL introduction renderer.
+
 ## Patch 0570 - Port Aria's introduction text-script interpreter
 
 - Ported `sub_080093E0` into the active introduction entity controller. At

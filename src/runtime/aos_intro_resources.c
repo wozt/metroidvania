@@ -148,3 +148,54 @@ bool aos_intro_resources_bind(AosIntroResources *resources,
     if (error && error_size) error[0] = '\0';
     return true;
 }
+
+bool aos_intro_resources_read_text(AosIntroResources *resources,
+                                   uint8_t language, uint16_t id,
+                                   AosNativeText *text, char *error,
+                                   size_t error_size) {
+    if (!resources || !resources->rom || !text || language < 1 ||
+        language > AOS_TEXT_LANGUAGE_COUNT) {
+        set_error(error, error_size, "invalid Aria localized text request");
+        return false;
+    }
+    uint8_t previous_language = resources->language;
+    resources->language = language;
+    const uint8_t *script = NULL;
+    size_t script_size = 0;
+    bool found = script_at(resources, id, &script, &script_size);
+    resources->language = previous_language;
+    if (!found || script_size < 3) {
+        set_error(error, error_size, "Aria localized text is outside the ROM");
+        return false;
+    }
+
+    *text = (AosNativeText){.line_count = 1};
+    for (size_t position = 2; position < script_size; ++position) {
+        uint8_t value = script[position];
+        if (value & 0xE0u) {
+            size_t line = text->line_count - 1;
+            size_t count = text->glyph_counts[line];
+            if (count >= AOS_NATIVE_TEXT_MAX_GLYPHS) {
+                set_error(error, error_size, "Aria localized text line is too long");
+                return false;
+            }
+            text->glyphs[line][count] = value;
+            text->glyph_counts[line] = count + 1;
+        } else if (value == 6) {
+            if (text->line_count >= AOS_NATIVE_TEXT_MAX_LINES) {
+                set_error(error, error_size, "Aria localized text has too many lines");
+                return false;
+            }
+            ++text->line_count;
+        } else if (value == 10) {
+            if (error && error_size) error[0] = '\0';
+            return true;
+        } else {
+            set_error(error, error_size,
+                      "unsupported control in Aria localized text");
+            return false;
+        }
+    }
+    set_error(error, error_size, "unterminated Aria localized text");
+    return false;
+}

@@ -273,6 +273,32 @@ int main(void) {
     assert(mode.update_stage == 0x1E && menu.name_committed &&
            menu.room_setup_requested && menu.intro_requested);
 
+    /* The presentation host consumes the same localized prompt IDs selected
+     * by the native controller routines. */
+    menu = (AosMainMenu){.selected_slot = 0};
+    assert(aos_main_menu_prompt_id(&menu) == 0x354);
+    menu.selected_slot = 2;
+    assert(aos_main_menu_prompt_id(&menu) == 0x356);
+    menu.selected_slot_active = true;
+    menu.selected_slot = 0;
+    assert(aos_main_menu_prompt_id(&menu) == 0x35B);
+    menu.slot_present_mask = 1;
+    assert(aos_main_menu_prompt_id(&menu) == 0x35C);
+    menu.selected_slot = 1;
+    menu.file_phase = 0;
+    assert(aos_main_menu_prompt_id(&menu) == 0x358);
+    menu.file_phase = 1;
+    assert(aos_main_menu_prompt_id(&menu) == 0x359);
+    menu.file_phase = 2;
+    assert(aos_main_menu_prompt_id(&menu) == 0x379);
+    menu.selected_slot = 2;
+    menu.file_phase = 0;
+    assert(aos_main_menu_prompt_id(&menu) == 0x35A);
+    menu.file_phase = 1;
+    assert(aos_main_menu_prompt_id(&menu) == 0x377);
+    menu.name_entry_active = true;
+    assert(aos_main_menu_prompt_id(&menu) == AOS_MAIN_MENU_NO_PROMPT);
+
     puts("Aria native main-menu controller tests passed");
     return 0;
 }

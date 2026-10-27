@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0575 - Native localized prompts in Aria's main menu
+
+- `aos_main_menu_prompt_id` (`src/runtime/aos_main_menu.c`) selects the
+  localized prompt the native controllers show: 0x354-0x356 on the base
+  selector, 0x35B/0x35C for PLAY, 0x358/0x359/0x379 for COPY and
+  0x35A/0x377 for DELETE (sub_08004928, sub_08005908, copy/delete).
+- `aos_intro_resources_read_text` reads any localized entry from the ROM
+  text table (control 6 starts a line, 10 ends the entry, other controls
+  are rejected), and `aos_intro_font_render_span` draws a bounded span with
+  the native proportional font.
+- The frontend now draws the selected prompt natively in place of the host's
+  key hints. Its placement is the host's: the text-window routines
+  (sub_08040748, sub_08041318) are assembly only and not reconstructed, and
+  the PLAY prompt omits the 0x381/0x38B special-mode branches.
+- Tests: the prompt selection in `tests/test_aos_main_menu.c`; synthetic
+  text parsing in `tests/test_aos_intro_resources.c`, whose optional ROM
+  run parses all ten prompts in the three languages. The frontend was not
+  reviewed on screen in this cycle. Source-derived, not emulator-compared;
+  the feature stays partial. Zero Mission is unchanged.
+- Next: the text-window routines for native placement, then file names,
+  statistics and cursor OAM, so the remaining host overlay can be removed.
+
 ## Patch 0574 - Render Aria's native main-menu backgrounds
 
 - Added a shared bounded ROM graphics loader for raw and compressed native

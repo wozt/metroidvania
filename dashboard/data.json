@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T06:18:18+00:00",
+ "generated_at": "2026-10-27T06:31:07+00:00",
  "git": {
-  "commit": "8ec2a41",
+  "commit": "093e7c4",
   "branch": "main",
   "dirty": true
  },
@@ -12538,7 +12538,9 @@
     "src/runtime/aos_title_stages.c",
     "src/runtime/aos_title_preview.c",
     "src/runtime/aos_menu_save_bridge.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos_save.c",
+    "src/runtime/aos_intro_resources.c",
+    "src/runtime/aos_intro_font.c"
    ],
    "tests": [
     "tests/test_aos_game_lifecycle.c",
@@ -12549,7 +12551,8 @@
     "tests/test_aos_title_motion.c",
     "tests/test_aos_title_stages.c",
     "tests/test_aos_menu_save_bridge.c",
-    "tests/test_aos_save.c"
+    "tests/test_aos_save.c",
+    "tests/test_aos_intro_resources.c"
    ],
    "dependencies": [
     "aos.startup.mode_dispatch",
@@ -12569,8 +12572,8 @@
     "sub_08008290",
     "sub_08008324"
    ],
-   "limitations": "The SDL frontend renders native menu background resources, but dynamic file/name text, cursor OAM and title artwork remain diagnostic; gameplay still launches as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The verified-ROM renderer reconstructs the base, PLAY, COPY, DELETE and name-entry background planes in all three languages. The SDL launcher consumes typed regular-file requests, runs the opening controller for new files and waits for its IN_GAME handoff. Source-derived, unit-tested and ROM-smoke-tested; not emulator-compared.",
-   "next_action": "Render dynamic menu entity/OAM and text streams, connect native title artwork, then extend portable completion and quicksave metadata.",
+   "limitations": "The SDL frontend renders native menu background resources and the native localized prompt text, but file names, slot statistics, the YES/NO choice, cursor OAM and title artwork remain diagnostic host overlays, and the prompt sits at a host-chosen position until the text-window routines (sub_08040748, sub_08041318, assembly only) are reconstructed; the PLAY prompt ignores the 0x381/0x38B special-mode branches of sub_08005908. Gameplay still launches as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol. The lifecycle connects title stages 0-9 to all three native main-menu operation controllers. PLAY retains its file/quicksave and special-mode topology; COPY and DELETE retain their cursor and confirmation paths. Native name entry retains wrapped editing and its special codes. The verified-ROM renderer reconstructs the base, PLAY, COPY, DELETE and name-entry background planes in all three languages. aos_main_menu_prompt_id selects the localized prompt (0x354-0x356 base, 0x35B/0x35C PLAY, 0x358/0x359/0x379 COPY, 0x35A/0x377 DELETE) as sub_08004928, sub_08005908 and the copy/delete controllers do; the frontend reads it from the ROM text table (control 6 new line, 10 end) and draws it with the native proportional font. All ten prompts parse in the three languages of the verified ROM (optional local test). The SDL launcher consumes typed regular-file requests, runs the opening controller for new files and waits for its IN_GAME handoff. Source-derived, unit-tested and ROM-smoke-tested; not emulator-compared.",
+   "next_action": "Reconstruct the text-window routines (sub_08040748, sub_08041318) for native prompt placement, render file names, statistics and cursor OAM natively, connect native title artwork, then extend portable completion and quicksave metadata.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_game_lifecycle.c",
@@ -12581,7 +12584,8 @@
      "tests/test_aos_title_motion.c",
      "tests/test_aos_title_stages.c",
      "tests/test_aos_menu_save_bridge.c",
-     "tests/test_aos_save.c"
+     "tests/test_aos_save.c",
+     "tests/test_aos_intro_resources.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -12679,6 +12683,16 @@
       "registered": true,
       "ctest": [
        "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_intro_resources.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_intro_resources"
       ],
       "outcome": "passed",
       "exists": true
@@ -16384,6 +16398,12 @@
  },
  "timeline": [
   {
+   "commit": "093e7c4",
+   "date": "2026-10-27",
+   "subject": "Render Aria main menu backgrounds",
+   "scope": "project"
+  },
+  {
    "commit": "8ec2a41",
    "date": "2026-10-27",
    "subject": "Render Aria introduction backgrounds",
@@ -16855,12 +16875,6 @@
    "commit": "6a2aa1e",
    "date": "2026-10-24",
    "subject": "Decode Zero Mission room descriptors natively",
-   "scope": "project"
-  },
-  {
-   "commit": "9b78308",
-   "date": "2026-10-24",
-   "subject": "Serialize Aria world catalog natively",
    "scope": "project"
   }
  ],

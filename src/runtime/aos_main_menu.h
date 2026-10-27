@@ -67,6 +67,8 @@ typedef struct {
     bool cleanup_requested;
 } AosMainMenu;
 
+enum { AOS_MAIN_MENU_NO_PROMPT = 0xFFFF };
+
 /* sub_08004928: 1 confirms, -1 cancels, 0 stays. */
 int32_t aos_main_menu_input(AosMainMenu *menu, const AosInput *input);
 /* sub_0800744C/sub_080074C0: initialize and update PLAY/CREATE/LOAD. */
@@ -81,6 +83,9 @@ int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input);
 /* sub_08008290/sub_08007B8C: initialize and update the delete controller. */
 void aos_main_menu_delete_init(AosMainMenu *menu);
 int32_t aos_main_menu_delete_update(AosMainMenu *menu, const AosInput *input);
+/* Native localized prompt selected by sub_08004928, sub_08007204 and the
+ * copy/delete controllers. */
+uint16_t aos_main_menu_prompt_id(const AosMainMenu *menu);
 /* GameModeMainMenuUpdate through direct load/intro and name-entry handoff. */
 int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
                                        const AosInput *input);

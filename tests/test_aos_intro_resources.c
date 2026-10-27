@@ -11,6 +11,9 @@ enum {
     TEXT_TABLE_OFFSET = 0x506B38,
     MAIN_OFFSET = 0x1000,
     INSERT_OFFSET = 0x1100,
+    PROMPT_OFFSET = 0x1200,
+    PROMPT_ID = 0x354,
+    BAD_PROMPT_ID = 0x355,
 };
 
 static void write_u32(uint8_t *data, size_t offset, uint32_t value) {
@@ -44,6 +47,17 @@ int main(int argc, char **argv) {
     write_u32(data, TEXT_TABLE_OFFSET + 12 * 4,
               0x08000000 + MAIN_OFFSET + sizeof main_script);
 
+    /* A two-line localized prompt and an entry with an unknown control. */
+    static const uint8_t prompt_script[] = {0, 0, 'P', 'L', 6, 'Y', 10, 'Z'};
+    static const uint8_t bad_script[] = {0, 0, 'Q', 3, 10};
+    memcpy(data + PROMPT_OFFSET, prompt_script, sizeof prompt_script);
+    memcpy(data + PROMPT_OFFSET + 0x20, bad_script, sizeof bad_script);
+    write_u32(data, TEXT_TABLE_OFFSET + PROMPT_ID * 4, 0x08000000 + PROMPT_OFFSET);
+    write_u32(data, TEXT_TABLE_OFFSET + (PROMPT_ID + 1) * 4,
+              0x08000000 + PROMPT_OFFSET + 0x20);
+    write_u32(data, TEXT_TABLE_OFFSET + (BAD_PROMPT_ID + 1) * 4,
+              0x08000000 + PROMPT_OFFSET + 0x20 + sizeof bad_script);
+
     FusionRom rom = {
         .data = data,
         .size = ROM_SIZE,
@@ -64,6 +78,19 @@ int main(int argc, char **argv) {
     assert(entities.text_glyph_count == 2 &&
            memcmp(entities.text_glyphs, "XB", 2) == 0);
     assert(entities.text_script_finished && entities.text_script_position == -1);
+
+    AosNativeText text;
+    assert(aos_intro_resources_read_text(&resources, 1, PROMPT_ID, &text, error,
+                                         sizeof error));
+    assert(text.line_count == 2 && text.glyph_counts[0] == 2 &&
+           memcmp(text.glyphs[0], "PL", 2) == 0 && text.glyph_counts[1] == 1 &&
+           text.glyphs[1][0] == 'Y');
+    assert(resources.language == 1);
+    assert(!aos_intro_resources_read_text(&resources, 1, BAD_PROMPT_ID, &text,
+                                          error, sizeof error));
+    assert(strstr(error, "unsupported control") != NULL);
+    assert(!aos_intro_resources_read_text(&resources, 4, PROMPT_ID, &text,
+                                          error, sizeof error));
 
     assert(!aos_intro_resources_bind(&resources, &entities, 0, error,
                                      sizeof error));
@@ -89,6 +116,18 @@ int main(int argc, char **argv) {
             assert(entities.text_glyph_count > 0 &&
                    !entities.text_script_missing &&
                    !entities.text_script_malformed);
+            /* Every prompt the main-menu controller selects. */
+            static const uint16_t prompts[] = {0x354, 0x355, 0x356, 0x358, 0x359,
+                                               0x35A, 0x35B, 0x35C, 0x377, 0x379};
+            for (size_t index = 0; index < sizeof prompts / sizeof prompts[0]; ++index) {
+                if (!aos_intro_resources_read_text(&resources, language, prompts[index],
+                                                   &text, error, sizeof error)) {
+                    fprintf(stderr, "prompt 0x%X language %u: %s\n", prompts[index],
+                            language, error);
+                    assert(0);
+                }
+                assert(text.glyph_counts[0] > 0);
+            }
         }
         fusion_rom_close(&local);
     }

@@ -28,6 +28,11 @@ void aos_intro_text_tiles_clear(AosIntroTextTiles *tiles);
 bool aos_intro_font_render_line(const AosIntroFont *font,
                                 AosIntroTextTiles *tiles, uint8_t row,
                                 const uint8_t *glyphs, size_t glyph_count);
+bool aos_intro_font_render_span(const AosIntroFont *font,
+                                AosIntroTextTiles *tiles,
+                                unsigned pixel_x, unsigned pixel_y,
+                                unsigned max_width, uint8_t color,
+                                const uint8_t *glyphs, size_t glyph_count);
 uint8_t aos_intro_text_tiles_pixel(const AosIntroTextTiles *tiles,
                                    unsigned x, unsigned y);
 

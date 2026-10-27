@@ -105,6 +105,30 @@ static void render_intro_text(SDL_Renderer *renderer,
     }
 }
 
+/* Renders the native localized prompt that the menu controller selects
+ * (aos_main_menu_prompt_id) with the ROM's proportional font. The text and
+ * glyphs are native; its placement is the host's until the text-window
+ * routines (sub_08040748, sub_08041318) are reconstructed. */
+static bool render_menu_prompt(AosIntroResources *resources,
+                               const AosIntroFont *font,
+                               AosIntroTextTiles *tiles, uint8_t language,
+                               uint16_t id, char *error, size_t error_size) {
+    aos_intro_text_tiles_clear(tiles);
+    if (id == AOS_MAIN_MENU_NO_PROMPT) return true;
+    AosNativeText text;
+    if (!aos_intro_resources_read_text(resources, language, id, &text, error,
+                                       error_size))
+        return false;
+    for (size_t line = 0; line < text.line_count; ++line)
+        if (!aos_intro_font_render_span(font, tiles, 8, (unsigned)line * 14u,
+                                        224, 1, text.glyphs[line],
+                                        text.glyph_counts[line])) {
+            snprintf(error, error_size, "INVALID MENU PROMPT GLYPH");
+            return false;
+        }
+    return true;
+}
+
 static bool create_intro_textures(
     SDL_Renderer *renderer, const AosIntroGraphics *graphics,
     SDL_Texture *textures[AOS_INTRO_BACKGROUND_COUNT]) {
@@ -332,6 +356,10 @@ int main(int argc, char **argv) {
     AosIntroResources intro_resources = {0};
     AosIntroFont intro_font = {0};
     AosIntroTextTiles intro_tiles = {0};
+    AosIntroTextTiles menu_prompt_tiles = {0};
+    uint16_t menu_prompt_id = AOS_MAIN_MENU_NO_PROMPT;
+    uint8_t menu_prompt_language = 0;
+    bool have_menu_prompt = false;
     AosIntroGraphics intro_graphics = {0};
     SDL_Texture *intro_background_textures[AOS_INTRO_BACKGROUND_COUNT] = {0};
     AosMainMenuGraphics main_menu_graphics = {0};
@@ -435,6 +463,19 @@ int main(int argc, char **argv) {
                      "INVALID INTRODUCTION GLYPH");
             have_intro_resources = false;
         }
+        if (have_intro_resources &&
+            lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU) {
+            uint16_t id = aos_main_menu_prompt_id(&lifecycle.main_menu);
+            if (!have_menu_prompt || id != menu_prompt_id ||
+                lifecycle.main_menu.language != menu_prompt_language) {
+                have_menu_prompt = render_menu_prompt(
+                    &intro_resources, &intro_font, &menu_prompt_tiles,
+                    lifecycle.main_menu.language, id, launch_error,
+                    sizeof launch_error);
+                menu_prompt_id = id;
+                menu_prompt_language = lifecycle.main_menu.language;
+            }
+        }
         if (!aos_menu_save_bridge_consume(&save_bridge, &lifecycle.main_menu)) {
             snprintf(launch_error, sizeof launch_error, "INVALID SLOT OPERATION");
         } else {
@@ -494,6 +535,12 @@ int main(int argc, char **argv) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             AosMainMenu *native_menu = &lifecycle.main_menu;
+            bool native_prompt = have_menu_prompt &&
+                                 menu_prompt_id != AOS_MAIN_MENU_NO_PROMPT;
+            if (native_prompt)
+                render_intro_text(renderer, &menu_prompt_tiles, -114,
+                                  intro_graphics.text_rgb);
+            SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             if (native_menu->name_entry_active || lifecycle.game_mode.update_stage == 9) {
                 char name[9];
                 char cursor[48];
@@ -513,7 +560,8 @@ int main(int argc, char **argv) {
                     if (native_menu->selected_slot == i)
                         SDL_RenderDebugText(renderer, 19, 47 + 20 * (float)i, ">");
                 }
-                SDL_RenderDebugText(renderer, 25, 120, "A: SELECT   B: TITLE");
+                if (!native_prompt)
+                    SDL_RenderDebugText(renderer, 25, 120, "A: SELECT   B: TITLE");
             } else {
                 const char *operations[] = {"PLAY", "COPY", "DELETE"};
                 char heading[48];
@@ -544,9 +592,9 @@ int main(int argc, char **argv) {
                 if (confirming) {
                     unsigned choice = native_menu->confirm_active ?
                         native_menu->confirm_choice : native_menu->file_cursor;
-                    SDL_RenderDebugText(renderer, 55, 119,
+                    SDL_RenderDebugText(renderer, 55, native_prompt ? 100 : 119,
                                         choice == 0 ? "> YES      NO" : "  YES    > NO");
-                } else {
+                } else if (!native_prompt) {
                     SDL_RenderDebugText(renderer, 25, 120, "A: SELECT   B: BACK");
                 }
             }

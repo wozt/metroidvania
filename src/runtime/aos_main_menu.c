@@ -380,6 +380,28 @@ int32_t aos_main_menu_input(AosMainMenu *menu, const AosInput *input) {
     return 0;
 }
 
+uint16_t aos_main_menu_prompt_id(const AosMainMenu *menu) {
+    if (!menu || menu->name_entry_active) return AOS_MAIN_MENU_NO_PROMPT;
+    if (!menu->selected_slot_active)
+        return (uint16_t)(0x354u + (menu->selected_slot < 3 ?
+                                   menu->selected_slot : 0));
+    if (menu->selected_slot == 0) {
+        uint8_t slot = menu->file_cursor >= 6 ?
+            (uint8_t)(menu->file_cursor - 6) : menu->file_cursor;
+        bool empty = menu->file_cursor >= 6 ||
+                     !(menu->slot_present_mask & (1u << slot));
+        return empty ? 0x35B : 0x35C;
+    }
+    if (menu->selected_slot == 1) {
+        if (menu->file_phase == 0) return 0x358;
+        if (menu->file_phase == 1) return 0x359;
+        return 0x379;
+    }
+    if (menu->selected_slot == 2)
+        return menu->file_phase == 0 ? 0x35A : 0x377;
+    return AOS_MAIN_MENU_NO_PROMPT;
+}
+
 int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
                                        const AosInput *input) {
     menu->selection_changed = false;

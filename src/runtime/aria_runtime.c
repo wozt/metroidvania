@@ -15,6 +15,7 @@
 #include "aos_room.h"
 #include "aos_save.h"
 #include "aos_stats.h"
+#include "aos_pickup.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
@@ -41,6 +42,8 @@
 #define DEFAULT_WEAPON_SPRITES "assets/extracted/aria/sprites/weapons/runtime/runtime_index.tsv"
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
+#define DEFAULT_MONEY "assets/extracted/aria/metadata/money.tsv"
+#define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
 #define DOOR_STYLES 2
 #define ENEMY_KINDS 100
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
@@ -133,6 +136,8 @@ typedef struct {
     size_t entity_count;
     AosEffect effects[MAX_EFFECTS];
     size_t effect_count;
+    AosPickup pickups[MAX_PICKUPS];
+    size_t pickup_count;
 } AriaRoom;
 
 static void free_room(AriaRoom *room) {
@@ -486,6 +491,7 @@ typedef struct {
     AriaPlayerStats *player;
     const AosAnimSet *effects[AOS_EFFECT_KINDS];   /* Effect/<name>, NULL when not loaded */
     AosStats *progress;                          /* level, experience, bestiary */
+    const AosMoneyKind *money;                   /* NULL without metadata/money.tsv */
 } AriaCombat;
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
@@ -560,6 +566,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     else if (drop.kind == AOS_DROP_ITEM)
                         printf("Drop: %s item 0x%02X\n", drop.rare ? "rare" : "common",
                                drop.item);
+                    else if (drop.kind == AOS_DROP_PICKUP_43F70 && combat->money &&
+                             room->pickup_count < MAX_PICKUPS)
+                        /* sub_08043F70 at the enemy's (x, y - 8). */
+                        room->pickups[room->pickup_count++] = aos_pickup_create_money(
+                            combat->money, drop.variant, e->enemy.x >> 16,
+                            (e->enemy.y >> 16) - 8);
                     else if (drop.kind != AOS_DROP_NONE)
                         printf("Drop: pickup sub_%s variant %u\n",
                                drop.kind == AOS_DROP_PICKUP_43F70 ? "08043F70" : "08043C10",
@@ -655,6 +667,25 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                               &world))
             room->effects[kept++] = room->effects[i];
     room->effect_count = kept;
+    /* Pickups (sub_08043DD0), then the player's collisions with them
+     * (sub_080441F8 through their type-0xB box). */
+    kept = 0;
+    for (size_t i = 0; i < room->pickup_count; ++i) {
+        AosPickup *pickup = &room->pickups[i];
+        aos_pickup_update(pickup, layer);
+        AosRect body = aos_player_rect(soma->hurtbox, soma->x >> 16, soma->y >> 16,
+                                       soma->facing_left, false);
+        if (!pickup->removed && combat->money && combat->progress &&
+            aos_rect_hits_box(body, aos_pickup_box, pickup->x >> 16, pickup->y >> 16, false,
+                              false)) {
+            uint32_t text = aos_pickup_collect_money(pickup, combat->money,
+                                                     &combat->progress->gold);
+            printf("Collected %u gold (total %u, message %u)\n",
+                   combat->money[pickup->variant].value, combat->progress->gold, text);
+        }
+        if (!pickup->removed) room->pickups[kept++] = *pickup;
+    }
+    room->pickup_count = kept;
     return sound;
 }
 
@@ -688,6 +719,8 @@ typedef struct {
         AosAnimDef def;
         AosAnimSet set;
     } effects[AOS_EFFECT_KINDS];    /* Effect/<effect_names[k]>/anim_N */
+    AosMoneyKind money[AOS_MONEY_KINDS];
+    bool money_loaded;
 } AriaObjects;
 
 /* enemy_frames.tsv (boxes, death blink, margins) and enemies.tsv (stats). */
@@ -835,6 +868,22 @@ static bool load_enemy_data(AriaObjects *objects) {
                                                          (uint16_t)experience};
     }
     fclose(f);
+    /* metadata/money.tsv (older exports lack it: money then never drops). */
+    f = fopen(DEFAULT_MONEY, "rb");
+    if (f) {
+        unsigned loaded = 0;
+        while (fgets(line, sizeof line, f)) {
+            unsigned variant, value, text, anim, palette, lifted;
+            if (sscanf(line, "%u\t%u\t%u\t%u\t%u\t%u", &variant, &value, &text, &anim,
+                       &palette, &lifted) == 6 && variant < AOS_MONEY_KINDS) {
+                objects->money[variant] = (AosMoneyKind){value, text, (uint8_t)anim,
+                                                         (uint8_t)palette, (uint16_t)lifted};
+                loaded |= 1u << variant;
+            }
+        }
+        fclose(f);
+        objects->money_loaded = loaded == (1u << AOS_MONEY_KINDS) - 1;
+    }
     return true;
 }
 
@@ -1533,7 +1582,8 @@ int main(int argc, char **argv) {
     AosWeaponEntity weapon_entity = {0};
     AriaCombat combat = {{NULL}, {NULL}, {NULL}, &weapon_entity,
                          weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, {NULL},
-                         &progress};
+                         &progress, NULL};
+    if (objects.money_loaded) combat.money = objects.money;
     for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
         if (objects.effects[k].def.count) combat.effects[k] = &objects.effects[k].set;
     for (int id = 0; enemies_ok && id < ENEMY_KINDS; ++id) {
@@ -1748,6 +1798,16 @@ int main(int argc, char **argv) {
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
         if (show_hitboxes) {
+            /* The pickups' sprites are not exported: their boxes only. */
+            SDL_SetRenderDrawColor(renderer, 240, 210, 60, 255);
+            for (size_t i = 0; i < room.pickup_count; ++i) {
+                const AosPickup *pickup = &room.pickups[i];
+                if (pickup->blinking && (step & 1)) continue;
+                SDL_FRect box = {(float)((pickup->x >> 16) + aos_pickup_box.x - cam_x),
+                                 (float)((pickup->y >> 16) + aos_pickup_box.y - cam_y),
+                                 aos_pickup_box.w, aos_pickup_box.h};
+                SDL_RenderRect(renderer, &box);
+            }
             AosRect hurt = aos_player_rect(soma.hurtbox, soma.x >> 16, soma.y >> 16,
                                            soma.facing_left, false);
             SDL_FRect r = {(float)(hurt.x1 - cam_x), (float)(hurt.y1 - cam_y),

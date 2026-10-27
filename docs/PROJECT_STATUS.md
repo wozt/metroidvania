@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0580 - Aria money pickups
+
+- `src/runtime/aos_pickup.c` ports the money pickup: creation from the
+  table 0x085250E4 (`sub_08043F70`, 1 to 2000 gold, exported as
+  `metadata/money.tsv`), its fall, landing, 300-frame rest and 64-frame
+  blink (`sub_08043DD0`, types up to 4) and its collection (money case of
+  `sub_080441F8`, gold capped at 999999).
+- The runtime now spawns money where an enemy's drop roll asks for it,
+  collects it on contact with Soma's hurtbox and saves the gold at save
+  points (schema v3). Task `aria_objects` version 5.
+- Not ported: the pickup sprites and palette (only `--hitboxes` shows the
+  boxes), item and soul pickups, the message display and the sound.
+  Source-derived and unit-tested (`tests/test_aos_pickup.c`), not
+  emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0579 - Aria enemy drop rolls
 
 - `aos_stats_roll_drop` ports the drop decision of `sub_080683BC` with the

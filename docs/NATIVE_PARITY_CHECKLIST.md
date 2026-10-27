@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 59 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 60 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 484 | 3089 |
+| Castlevania: Aria of Sorrow | 487 | 3086 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1166,6 +1166,15 @@ Next action: Implement original boot/soft-reset lifecycle and complete sub_08010
 ### Player state machine
 
 [?] **`aos.player.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+
+[~] **`aos.items.money_pickups` — Aria money pickups.** sub_08043F70 creates a money pickup from the seven-record table 0x085250E4 (1, 10, 50, 100, 500, 1000 and 2000 gold, exported as metadata/money.tsv), lifted 8 pixels for the four small variants. sub_08043DD0 makes it fall at 0x2000 per frame up to 0x40000, land on the floor probe of sub_08001D94 (8 pixels lower for money), rest 300 frames and blink 64 frames before it is removed. The money case of sub_080441F8 adds the value to the gold, capped at 999999. The runtime spawns one where an enemy's drop roll gives sub_08043F70, at the enemy's (x, y - 8), collects it when Soma's hurtbox meets its 16 x 16 box (0x1010F8F8), and saves the gold at save points. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08043DD0`, `aos:asm:asm/code/code_08040A38.s:sub_08043F70`, `aos:asm:asm/code/code_08040A38.s:sub_080441F8`.  
+Local implementation: [`src/runtime/aos_pickup.c`](../src/runtime/aos_pickup.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_pickup.c`](../tests/test_aos_pickup.c).
+Dependencies: `aos.progression.experience`.  
+Known divergences: Their sprites are not drawn: the pickups' graphics (0x081C15F4, sequences of 0x0820ED60) and their palette (sub_0803F2C8 with 0x15 or 0x21) are not exported, so only the --hitboxes view shows their boxes. sub_08043DD0 is ported for pickup types up to 4 only (the floating soul path and the palette cycles of states 0x63-0x65 are not), and sub_080441F8 for its money case only (items, souls, the full-inventory bounce, the placed-item flags of + 0x30 and the 0x42C flags are not); its message (sub_0800EF98) is reported and its sound 0xB6 not played. The player's hurtbox stands for the player side of the type-0xB collision. Pickups live in the room and vanish on a room change.  
+Next action: Export and draw the pickup sprites with their palette, then port the item and soul pickups (sub_08044054, sub_0804459C) with their inventories.
 
 [~] **`aos.player.soma_controller` — Soma movement and state controller.** Movement and the currently traced ability states are ported; the full native player state machine is not complete.
 

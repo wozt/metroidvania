@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T07:12:25+00:00",
+ "generated_at": "2026-10-27T07:20:22+00:00",
  "git": {
-  "commit": "d197940",
+  "commit": "85868e2",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 200,
+   "total": 201,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 44,
+    "partial": 45,
     "functional": 145,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 145,
-   "functional_or_better_percent": 72.5,
-   "with_passing_tests": 187,
+   "functional_or_better_percent": 72.1,
+   "with_passing_tests": 188,
    "with_passing_tests_percent": 93.5,
    "unknown_or_blocked": 1,
    "features": [
@@ -251,6 +251,7 @@
     "aos.enemies.zombie_soldier",
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
+    "aos.items.money_pickups",
     "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
@@ -434,11 +435,11 @@
    "areas": [
     "aos"
    ],
-   "total": 59,
+   "total": 60,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 20,
+    "partial": 21,
     "functional": 39,
     "faithful": 0,
     "validated": 0,
@@ -446,8 +447,8 @@
     "unknown": 0
    },
    "functional_or_better": 39,
-   "functional_or_better_percent": 66.1,
-   "with_passing_tests": 59,
+   "functional_or_better_percent": 65.0,
+   "with_passing_tests": 60,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -501,6 +502,7 @@
     "aos.enemies.zombie_soldier",
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
+    "aos.items.money_pickups",
     "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
@@ -12219,6 +12221,61 @@
    }
   },
   {
+   "id": "aos.items.money_pickups",
+   "area": "aos",
+   "category": "player",
+   "title": "Aria money pickups",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_pickup.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_pickup.c"
+   ],
+   "dependencies": [
+    "aos.progression.experience"
+   ],
+   "native_routines": [
+    "sub_08043F70",
+    "sub_08043DD0",
+    "sub_080441F8"
+   ],
+   "limitations": "Their sprites are not drawn: the pickups' graphics (0x081C15F4, sequences of 0x0820ED60) and their palette (sub_0803F2C8 with 0x15 or 0x21) are not exported, so only the --hitboxes view shows their boxes. sub_08043DD0 is ported for pickup types up to 4 only (the floating soul path and the palette cycles of states 0x63-0x65 are not), and sub_080441F8 for its money case only (items, souls, the full-inventory bounce, the placed-item flags of + 0x30 and the 0x42C flags are not); its message (sub_0800EF98) is reported and its sound 0xB6 not played. The player's hurtbox stands for the player side of the type-0xB collision. Pickups live in the room and vanish on a room change. sub_08043F70 creates a money pickup from the seven-record table 0x085250E4 (1, 10, 50, 100, 500, 1000 and 2000 gold, exported as metadata/money.tsv), lifted 8 pixels for the four small variants. sub_08043DD0 makes it fall at 0x2000 per frame up to 0x40000, land on the floor probe of sub_08001D94 (8 pixels lower for money), rest 300 frames and blink 64 frames before it is removed. The money case of sub_080441F8 adds the value to the gold, capped at 999999. The runtime spawns one where an enemy's drop roll gives sub_08043F70, at the enemy's (x, y - 8), collects it when Soma's hurtbox meets its 16 x 16 box (0x1010F8F8), and saves the gold at save points. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Export and draw the pickup sprites with their palette, then port the item and soul pickups (sub_08044054, sub_0804459C) with their inventories.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_pickup.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_pickup.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_pickup"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-27"
+   }
+  },
+  {
    "id": "aos.menus.menu_bg0",
    "area": "aos",
    "category": "menus",
@@ -14736,7 +14793,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 348 traced door, enemy and shared-effect sequences, 1,344 indexed frames, 825 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 828 files are byte-identical to the former Python writer and guarded by recorded digests. Coverage remains partial because only objects and enemies whose create routine is traced are catalogued: wooden door, the 50 named enemy/palette variants and child frames, the common death flame, blood, smoke, fire, spark, dust, impact, ember and casing effects. The Python object writer is removed. The enemy-stats table (schema v3) also exports each record's experience (u16 at 0x10) and drop fields (items at 0x08/0x0A, rates at 0x15/0x16, soul rarity, type and index at 0x12/0x17/0x18), which the runtime uses on defeat.",
+   "limitations": "The native C11 rebuild task exports 348 traced door, enemy and shared-effect sequences, 1,344 indexed frames, 825 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 828 files are byte-identical to the former Python writer and guarded by recorded digests. Coverage remains partial because only objects and enemies whose create routine is traced are catalogued: wooden door, the 50 named enemy/palette variants and child frames, the common death flame, blood, smoke, fire, spark, dust, impact, ember and casing effects. The Python object writer is removed. The enemy-stats table (schema v3) also exports each record's experience (u16 at 0x10) and drop fields (items at 0x08/0x0A, rates at 0x15/0x16, soul rarity, type and index at 0x12/0x17/0x18), which the runtime uses on defeat, and metadata/money.tsv the money pickup table 0x085250E4.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16419,6 +16476,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_pickup",
+    "files": [
+     "tests/test_aos_pickup.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_stats",
     "files": [
      "tests/test_aos_stats.c"
@@ -16644,12 +16708,18 @@
    }
   ],
   "summary": {
-   "passed": 85,
+   "passed": 86,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "85868e2",
+   "date": "2026-10-27",
+   "subject": "Port Aria's enemy drop rolls",
+   "scope": "project"
+  },
   {
    "commit": "d197940",
    "date": "2026-10-27",
@@ -17123,12 +17193,6 @@
    "date": "2026-10-24",
    "subject": "Expand Aria background tilemaps natively",
    "scope": "project"
-  },
-  {
-   "commit": "1958889",
-   "date": "2026-10-24",
-   "subject": "Decode Zero Mission room backgrounds natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -17189,9 +17253,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 484,
-    "routines_attached_to_features": 484,
-    "unassigned_routines": 3089,
+    "routines_cited_by_features": 487,
+    "routines_attached_to_features": 487,
+    "unassigned_routines": 3086,
     "call_edges": 14228
    }
   },

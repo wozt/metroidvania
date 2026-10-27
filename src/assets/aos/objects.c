@@ -14,6 +14,7 @@
 enum {
     GBA_BASE = 0x08000000,
     ENEMY_TABLE = 0x080E9644,
+    MONEY_TABLE = 0x085250E4,
     ENEMY_COUNT = 0x71,
     DEATH_BLINK = 0x08118CE0,
     SCREEN_MARGINS = 0x08118D08,
@@ -780,6 +781,23 @@ static bool append_enemy_stats(const FusionRom *rom, Text *stats,
     return true;
 }
 
+/* The money pickup table of sub_08043F70 (0x085250E4, seven 12-byte
+ * records): value, message, sprite sequence, palette and lift flag. */
+static bool append_money(const FusionRom *rom, Text *money, char *error, size_t error_size) {
+    if (!text_append(money,
+            "schema\tmetroidvania-aos-money-v1\n"
+            "# variant\tvalue\ttext\tanim\tpalette\tlifted\n")) return false;
+    for (uint32_t variant = 0; variant < 7; ++variant) {
+        const uint8_t *record = slice(rom, MONEY_TABLE + variant * 12, 12, "money record",
+                                      error, error_size);
+        if (!record || !text_append(money, "%u\t%u\t%u\t%u\t%u\t%u\n", variant,
+                                    read_u32(record), read_u32(record + 4), record[8],
+                                    record[9], read_u16(record + 10)))
+            return false;
+    }
+    return true;
+}
+
 static bool append_global_metadata(const FusionRom *rom, Text *rows,
                                    char *error, size_t error_size) {
     const uint8_t *blink = slice(rom, DEATH_BLINK, 40, "death blink pattern",
@@ -818,7 +836,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0};
+    Text rows = {0}, stats = {0}, money = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
                                                    error_size) &&
@@ -843,7 +861,10 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            write_text_file(metadata_output, "enemy_frames.tsv",
                                            &rows, error, error_size) &&
                            write_text_file(metadata_output, "enemies.tsv",
-                                           &stats, error, error_size);
+                                           &stats, error, error_size) &&
+                           append_money(rom, &money, error, error_size) &&
+                           write_text_file(metadata_output, "money.tsv",
+                                           &money, error, error_size);
     FusionSpriteLibrarySummary library_summary = {0};
     if (success) success = fusion_sprite_library_finish(
         &library, &library_summary, error, error_size);
@@ -858,5 +879,6 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     fusion_sprite_library_free(&library);
     free(rows.data);
     free(stats.data);
+    free(money.data);
     return success;
 }

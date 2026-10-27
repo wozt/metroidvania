@@ -185,6 +185,25 @@ static const EffectSpec effects[] = {
     {"impact", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {7}, -1},
     {"ember", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {1}, -1},
     {"casing", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 0, {0}, 53},
+    /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
+     * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
+     * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows
+     * 0-3: rows 6, 7, 9, 8) loop sequence 21 (sub_0803F2C8), bags (rows 4-6:
+     * rows 6, 7, 8) show frame 33, hearts (row 7) frames 40 (small) and 39
+     * (big), souls (rows of 0x080E1CD0: 7, 6, 8, 9) loop sequence 6. */
+    {"coin0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {21}, -1},
+    {"coin1", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {21}, -1},
+    {"coin2", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {21}, -1},
+    {"coin3", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {21}, -1},
+    {"bag4", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 33},
+    {"bag5", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 0, {0}, 33},
+    {"bag6", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 0, {0}, 33},
+    {"heart_small", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 0, {0}, 40},
+    {"heart_big", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 0, {0}, 39},
+    {"soul0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {6}, -1},
+    {"soul1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {6}, -1},
+    {"soul2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {6}, -1},
+    {"soul3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {6}, -1},
 };
 
 #undef ENTITY

@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0588 - Aria pickup sprites
+
+- The object export now writes the pickup sprites of the shared sheet
+  0x081C15F4 / frames 0x0820ED60 (task `aria_objects` version 10): four
+  small coins (sequence 21), three bags (frame 33), the small and big MP
+  hearts (frames 40 and 39) and the four soul colours (sequence 6), each on
+  the palette bank that `sub_0800C5D8` loads into its OBJ row
+  (`sUnk_084F0DD8`). This identifies `sub_0803B924`'s attribute bits as the
+  palette row and + 0x65 as the still frame.
+- The runtime draws money, hearts and souls from their creation (lifted
+  coins 8 pixels up); a local capture showed coins, a bag and both hearts.
+  Item icons are not exported yet and the blink is approximated as every
+  other frame. Zero Mission is unchanged.
+
 ## Patch 0587 - Aria MP hearts
 
 - `aos_pickup` ports the MP hearts of `sub_08043C10`: big hearts (15 % of

@@ -49,6 +49,12 @@
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
+/* The pickup sprites of the object export (coins 0-3, bags 4-6, hearts,
+ * souls by type); item icons are not exported. */
+#define PICKUP_ARTS 13
+static const char *const pickup_art_names[PICKUP_ARTS] = {
+    "coin0", "coin1", "coin2", "coin3", "bag4", "bag5", "bag6", "heart_small", "heart_big",
+    "soul0", "soul1", "soul2", "soul3"};
 #define DOOR_STYLES 2
 #define ENEMY_KINDS 100
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
@@ -851,6 +857,15 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
 static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
                        long frame_count, int cam_x, int cam_y);
 
+/* The sprite art of a pickup, or -1 (items). */
+static int pickup_art(const AosPickup *pickup) {
+    if (pickup->type == AOS_PICKUP_HEART) return pickup->small_heart ? 7 : 8;
+    if (pickup->type == AOS_PICKUP_MONEY) return pickup->variant < 7 ? pickup->variant : -1;
+    if (pickup->type >= AOS_PICKUP_SOUL && pickup->type < AOS_PICKUP_SOUL + 4)
+        return 9 + pickup->type - AOS_PICKUP_SOUL;
+    return -1;
+}
+
 /* Object sequences of src/assets/aos/objects.c: WoodenDoor/style_N
  * (the door frame under each step of its palette cycle). */
 typedef struct {
@@ -875,7 +890,8 @@ typedef struct {
         uint8_t ticks[MAX_FRAMES];
         AosAnimDef def;
         AosAnimSet set;
-    } effects[AOS_EFFECT_KINDS];    /* Effect/<effect_names[k]>/anim_N */
+    } effects[AOS_EFFECT_KINDS],    /* Effect/<effect_names[k]>/anim_N */
+      pickup_arts[PICKUP_ARTS];     /* Effect/<pickup_art_names[k]>/anim_N */
     AosMoneyKind money[AOS_MONEY_KINDS];
     bool money_loaded;
 } AriaObjects;
@@ -1175,10 +1191,14 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         }
         if (sscanf(line, "Effect/%15[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
                    &frame, &ticks, &ox, &oy, frame_path) == 7) {
-            /* One animation per effect kind. */
-            for (int k = 0; k < AOS_EFFECT_KINDS; ++k) {
-                if (strcmp(enemy_name, effect_names[k])) continue;
-                __typeof__(objects->effects[0]) *art = &objects->effects[k];
+            /* One animation per effect kind or pickup sprite. */
+            for (int k = 0; k < AOS_EFFECT_KINDS + PICKUP_ARTS; ++k) {
+                if (strcmp(enemy_name, k < AOS_EFFECT_KINDS ? effect_names[k]
+                                                            : pickup_art_names[k - AOS_EFFECT_KINDS]))
+                    continue;
+                __typeof__(objects->effects[0]) *art =
+                    k < AOS_EFFECT_KINDS ? &objects->effects[k]
+                                         : &objects->pickup_arts[k - AOS_EFFECT_KINDS];
                 if (frame != art->def.count || frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
                     !load_frame(&art->frames[frame], frame_path, ox, oy, renderer)) {
                     ok = false;
@@ -2171,6 +2191,25 @@ int main(int argc, char **argv) {
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
+        /* Pickups: their sequence from creation, looping; a blinking pickup
+         * shows on even frames (the native blink of + 0x0F is not traced). */
+        for (size_t k = 0; objects_ok && k < room.pickup_count; ++k) {
+            const AosPickup *pickup = &room.pickups[k];
+            int index = pickup_art(pickup);
+            if (index < 0 || (pickup->blinking && (pickup->age & 1))) continue;
+            const __typeof__(objects.pickup_arts[0]) *art = &objects.pickup_arts[index];
+            unsigned total = 0, frame = 0;
+            for (unsigned f = 0; f < art->def.count; ++f) total += art->ticks[f];
+            if (!total) continue;
+            unsigned t = pickup->age % total;
+            while (frame + 1 < art->def.count && t >= art->ticks[frame]) t -= art->ticks[frame++];
+            const AriaFrame *image = &art->frames[frame];
+            if (!image->texture) continue;
+            SDL_FRect rect = {(float)((pickup->x >> 16) + image->offset_x - cam_x),
+                              (float)((pickup->y >> 16) + pickup->offset + image->offset_y - cam_y),
+                              image->w, image->h};
+            SDL_RenderTexture(renderer, image->texture, NULL, &rect);
+        }
         for (int k = 0; objects_ok && k < MAX_SKILLS; ++k) {
             const AriaSkill *skill = &souls.skills[k];
             if (!skill->alive || !skill->started || skill->anim.frame >= MAX_FRAMES) continue;

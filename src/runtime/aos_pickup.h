@@ -53,6 +53,7 @@ typedef struct {
     int32_t turn, speed;
     int32_t vx;
     bool small_heart;   /* runs sub_08043CE4 instead of sub_08043DD0 */
+    uint16_t age;       /* frames updated, for the sprite sequence */
 } AosPickup;
 
 /* Soma's position (16.16) for the soul pickups' homing. */

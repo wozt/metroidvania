@@ -24,6 +24,7 @@ AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uin
 
 void aos_pickup_update(AosPickup *pickup, const AosCollision *layer) {
     if (pickup->removed || pickup->type > 4) return;
+    pickup->age++;
     pickup->y += pickup->vy;
     /* Money probes 8 pixels lower than the item types. */
     int32_t probe_y = (pickup->y >> 16) + pickup->offset + (pickup->type <= 1 ? 8 : 0);
@@ -146,6 +147,7 @@ void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y) {
 }
 
 void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random) {
+    pickup->age++;
     if (!(pickup->blink & 1)) {
         /* The spark's position offsets, sub_0802D5EC(0x200000) each. */
         (void)random();
@@ -189,6 +191,7 @@ AosPickup aos_pickup_create_heart(bool big, bool pop, int32_t x, int32_t y) {
 
 void aos_pickup_small_heart_update(AosPickup *pickup, const AosCollision *layer) {
     if (pickup->removed) return;
+    pickup->age++;
     switch (pickup->state) {
     case 0:
         if (pickup->vy >= 0) {

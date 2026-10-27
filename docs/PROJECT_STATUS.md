@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0573 - Render Aria's native introduction backgrounds
+
+- Added a bounded in-memory loader for the introduction's complete 16-row
+  background palette, its two compressed 8 KiB character banks and the three
+  native block-map metadata records. The loader reuses the C11 Aria tilemap
+  decoder and renderer and never exports ROM-derived pixels.
+- The SDL frontend now draws BG3, BG2 and BG1 in native priority order over
+  palette color zero, wraps their 256-pixel-wide planes and follows the three
+  fixed-point vertical positions from `GameModeIntroCutsceneUpdate`. The text
+  plane now uses color 8 from native palette row 15 instead of a fixed host
+  color.
+- Synthetic tests cover compressed resource headers, VRAM placement, block-map
+  expansion, palette conversion and all three layers. The optional hash-gated
+  ROM smoke check validates the native 256x512, 256x768 and 256x512 planes
+  without unresolved tiles; a local SDL review confirmed the scrolling scene
+  and text together.
+- The six introduction actors still lack their sprite graphics, OAM animation
+  and affine rendering. Alpha interaction with those actors and emulator pixel
+  comparison are therefore open, so the feature remains partial.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission and
+  audio are unchanged.
+- Next: load the native introduction sprite resources and render the six actor
+  OAM streams, including double draws, affine transforms and alpha ownership.
+
 ## Patch 0572 - Render Aria's native introduction font
 
 - Ported the introduction's proportional-font path from `sub_0803FEA4`,

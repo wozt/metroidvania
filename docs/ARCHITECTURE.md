@@ -379,9 +379,13 @@ bank and binds the main script plus insertions to that interpreter.
 32-by-32 GBA 4bpp tile canvas. It retains the 12-row glyph merge/split writes,
 37-cell row clear and proportional six-pixel cursor accounting. The SDL host
 accepts the ROM through `--rom`, maps that canvas through the controller's BG0
-scroll and draws nonzero pixels with a fixed diagnostic color. Backgrounds,
-palettes, OAM, animation resources and songs are not connected, and quicksaves
-plus completed-file metadata remain open.
+scroll and draws nonzero pixels with native palette row 15.
+`aos_intro_graphics.c` resolves the native palette, both compressed character
+banks and all three block maps in memory, reuses the asset library's bounded
+tilemap expansion and RGBA renderer, and exposes the three planes to SDL. The
+host wraps and scrolls them in BG3-to-BG1 priority order. Actor OAM, animation
+resources, affine/alpha composition and songs are not connected, and
+quicksaves plus completed-file metadata remain open.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

@@ -79,10 +79,12 @@ directly from the native pointer table. It never exports those bytes, and no
 original text is embedded in the executable. `aos_intro_font.c` reads the
 native proportional metrics and 12-row glyph bitmaps, reproduces the 4bpp
 tile writes across horizontal and vertical tile boundaries, and the SDL host
-scrolls that tile canvas with BG0. The diagnostic host still substitutes one
-fixed color for palette index 8 and does not yet render the native backgrounds,
-palettes, OAM, animation frames or songs, so it does not claim the original
-presentation.
+scrolls that tile canvas with BG0. `aos_intro_graphics.c` also loads the two
+native character banks, complete background palette and three block maps,
+then renders BG3 through BG1 at their independently scrolling positions. Text
+uses color 8 from native palette row 15. The frontend does not yet render the
+six actors' OAM and animation frames or reproduce their affine and alpha
+composition, so it does not claim the original presentation.
 
 ```sh
 build/fusion_aria_title_preview \

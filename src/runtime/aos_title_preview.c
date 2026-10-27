@@ -10,6 +10,7 @@
 #include <string.h>
 #include "aos_game_lifecycle.h"
 #include "aos_intro_font.h"
+#include "aos_intro_graphics.h"
 #include "aos_intro_resources.h"
 #include "aos_menu_save_bridge.h"
 #include "aos_save.h"
@@ -91,8 +92,8 @@ static bool launch_runtime(const char *runtime, const char *save_path,
 
 static void render_intro_text(SDL_Renderer *renderer,
                               const AosIntroTextTiles *tiles,
-                              int16_t vertical) {
-    SDL_SetRenderDrawColor(renderer, 235, 235, 245, 255);
+                              int16_t vertical, const uint8_t rgb[3]) {
+    SDL_SetRenderDrawColor(renderer, rgb[0], rgb[1], rgb[2], 255);
     for (unsigned y = 0; y < AOS_INTRO_TEXT_CANVAS_SIZE; ++y) {
         unsigned screen_y = (unsigned)((int)y - vertical) & 0xFFu;
         if (screen_y >= GBA_H) continue;
@@ -100,6 +101,70 @@ static void render_intro_text(SDL_Renderer *renderer,
             if (aos_intro_text_tiles_pixel(tiles, x, y))
                 SDL_RenderPoint(renderer, (float)x, (float)screen_y);
         }
+    }
+}
+
+static bool create_intro_textures(
+    SDL_Renderer *renderer, const AosIntroGraphics *graphics,
+    SDL_Texture *textures[AOS_INTRO_BACKGROUND_COUNT]) {
+    for (unsigned index = 0; index < AOS_INTRO_BACKGROUND_COUNT; ++index) {
+        const FusionAosRenderedBackground *background =
+            &graphics->backgrounds[index];
+        textures[index] = SDL_CreateTexture(
+            renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC,
+            (int)background->width_pixels, (int)background->height_pixels);
+        if (!textures[index] ||
+            !SDL_UpdateTexture(textures[index], NULL, background->rgba,
+                               (int)(background->width_pixels * 4)) ||
+            !SDL_SetTextureScaleMode(textures[index], SDL_SCALEMODE_NEAREST) ||
+            !SDL_SetTextureBlendMode(textures[index], SDL_BLENDMODE_BLEND))
+            return false;
+    }
+    return true;
+}
+
+static void destroy_intro_textures(
+    SDL_Texture *textures[AOS_INTRO_BACKGROUND_COUNT]) {
+    for (unsigned index = 0; index < AOS_INTRO_BACKGROUND_COUNT; ++index) {
+        if (textures[index]) SDL_DestroyTexture(textures[index]);
+        textures[index] = NULL;
+    }
+}
+
+static void render_wrapped_background(
+    SDL_Renderer *renderer, SDL_Texture *texture,
+    const FusionAosRenderedBackground *background,
+    int32_t scroll_x, int32_t scroll_y) {
+    int width = (int)background->width_pixels;
+    int height = (int)background->height_pixels;
+    int offset_x = scroll_x % width;
+    int offset_y = scroll_y % height;
+    if (offset_x < 0) offset_x += width;
+    if (offset_y < 0) offset_y += height;
+    for (int y = -offset_y; y < GBA_H; y += height) {
+        for (int x = -offset_x; x < GBA_W; x += width) {
+            SDL_FRect destination = {
+                (float)x, (float)y, (float)width, (float)height};
+            SDL_RenderTexture(renderer, texture, NULL, &destination);
+        }
+    }
+}
+
+static void render_intro_backgrounds(
+    SDL_Renderer *renderer, const AosIntroGraphics *graphics,
+    SDL_Texture *textures[AOS_INTRO_BACKGROUND_COUNT],
+    const AosIntroCutscene *intro) {
+    SDL_SetRenderDrawColor(renderer, graphics->backdrop_rgb[0],
+                           graphics->backdrop_rgb[1],
+                           graphics->backdrop_rgb[2], 255);
+    SDL_FRect screen = {0, 0, GBA_W, GBA_H};
+    SDL_RenderFillRect(renderer, &screen);
+    for (int index = AOS_INTRO_BACKGROUND_COUNT - 1; index >= 0; --index) {
+        unsigned layer = (unsigned)index + 1;
+        render_wrapped_background(renderer, textures[index],
+                                  &graphics->backgrounds[index],
+                                  0,
+                                  intro->bg_y[layer] >> 16);
     }
 }
 
@@ -195,6 +260,8 @@ int main(int argc, char **argv) {
     AosIntroResources intro_resources = {0};
     AosIntroFont intro_font = {0};
     AosIntroTextTiles intro_tiles = {0};
+    AosIntroGraphics intro_graphics = {0};
+    SDL_Texture *intro_background_textures[AOS_INTRO_BACKGROUND_COUNT] = {0};
     bool have_intro_resources = false;
     if (rom_path) {
         char error[256];
@@ -203,8 +270,18 @@ int main(int argc, char **argv) {
             !aos_intro_resources_init(&intro_resources, &intro_rom, error,
                                       sizeof error) ||
             !aos_intro_font_init(&intro_font, &intro_rom, error,
-                                 sizeof error)) {
+                                 sizeof error) ||
+            !aos_intro_graphics_init(&intro_graphics, &intro_rom, error,
+                                     sizeof error) ||
+            !create_intro_textures(renderer, &intro_graphics,
+                                   intro_background_textures)) {
+            if (!error[0])
+                snprintf(error, sizeof error,
+                         "cannot create introduction textures: %s",
+                         SDL_GetError());
             fprintf(stderr, "Cannot load Aria introduction resources: %s\n", error);
+            destroy_intro_textures(intro_background_textures);
+            aos_intro_graphics_free(&intro_graphics);
             fusion_rom_close(&intro_rom);
             if (art) SDL_DestroyTexture(art);
             SDL_DestroyRenderer(renderer);
@@ -292,7 +369,12 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawColor(renderer, 18, 14, 28, 255);
         SDL_RenderClear(renderer);
         bool in_main_menu = lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU;
-        if (art && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
+        bool in_intro = lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE;
+        if (in_intro && have_intro_resources) {
+            render_intro_backgrounds(renderer, &intro_graphics,
+                                     intro_background_textures,
+                                     &lifecycle.intro_cutscene);
+        } else if (art && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
             SDL_FRect dst = {0, 0, GBA_W, GBA_H};
             SDL_RenderTexture(renderer, art, NULL, &dst);
         } else {
@@ -372,24 +454,28 @@ int main(int argc, char **argv) {
             if (launch_error[0]) SDL_RenderDebugText(renderer, 18, 135, launch_error);
         } else {
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
-            if (lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE) {
+            if (in_intro) {
                 char stage[48];
                 char scroll[64];
-                SDL_RenderDebugText(renderer, 58, 42, "ARIA INTRODUCTION");
-                snprintf(stage, sizeof stage, "NATIVE CONTROLLER  STAGE %d",
-                         lifecycle.game_mode.update_stage);
-                SDL_RenderDebugText(renderer, 42, 66, stage);
-                snprintf(scroll, sizeof scroll, "SCROLL %ld / %ld / %ld",
-                         (long)(lifecycle.intro_cutscene.bg_y[1] >> 16),
-                         (long)(lifecycle.intro_cutscene.bg_y[2] >> 16),
-                         (long)(lifecycle.intro_cutscene.bg_y[3] >> 16));
-                SDL_RenderDebugText(renderer, 38, 82, scroll);
-                if (have_intro_resources)
+                if (have_intro_resources) {
                     render_intro_text(renderer, &intro_tiles,
-                                      intro_entities->bg0_vertical);
-                else
+                                      intro_entities->bg0_vertical,
+                                      intro_graphics.text_rgb);
+                } else {
+                    SDL_RenderDebugText(renderer, 58, 42,
+                                        "ARIA INTRODUCTION");
+                    snprintf(stage, sizeof stage,
+                             "NATIVE CONTROLLER  STAGE %d",
+                             lifecycle.game_mode.update_stage);
+                    SDL_RenderDebugText(renderer, 42, 66, stage);
+                    snprintf(scroll, sizeof scroll, "SCROLL %ld / %ld / %ld",
+                             (long)(lifecycle.intro_cutscene.bg_y[1] >> 16),
+                             (long)(lifecycle.intro_cutscene.bg_y[2] >> 16),
+                             (long)(lifecycle.intro_cutscene.bg_y[3] >> 16));
+                    SDL_RenderDebugText(renderer, 38, 82, scroll);
                     SDL_RenderDebugText(renderer, 20, 103,
                                         "ADD --rom FOR NATIVE TEXT");
+                }
                 SDL_RenderDebugText(renderer, 62, 132, "A OR START: SKIP");
             } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
                 SDL_RenderDebugText(renderer, 72, 122, "PRESS START");
@@ -425,6 +511,8 @@ int main(int argc, char **argv) {
         if (now < next_frame) SDL_DelayNS(next_frame - now);
         else if (now - next_frame > 100000000ull) next_frame = now;
     }
+    destroy_intro_textures(intro_background_textures);
+    aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);
     if (art) SDL_DestroyTexture(art);
     SDL_DestroyRenderer(renderer);

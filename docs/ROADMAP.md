@@ -83,9 +83,11 @@ diagnostic. The six introduction entity controllers run, but their native
 graphics, palettes, OAM and audio remain absent. Its text-script protocol is
 ported and the hash-verified ROM resource owner supplies all three language
 banks without exporting them. The native proportional glyph metrics, 12-row
-bitmap rasterizer and 4bpp tile writes now feed the SDL view, using a fixed
-diagnostic color until the native palettes and backgrounds are connected.
-Quicksaves, pause/inventory/map flows and full progression are also open.
+bitmap rasterizer and 4bpp tile writes now feed the SDL view. The native
+palette, two compressed character banks and three vertically scrolling block
+maps are connected as well. The introduction's actor OAM, animation frames,
+affine transforms and alpha composition remain open. Quicksaves,
+pause/inventory/map flows and full progression are also open.
 
 Exit criterion: Aria is normally completable through every native final branch
 from its menu to its credits without debug controls or emulation, with residual

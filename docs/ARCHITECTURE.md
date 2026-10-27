@@ -369,10 +369,12 @@ seven-stage `GameModeIntroCutsceneUpdate` controller in
 `aos_intro_cutscene.c` before starting the separate room-runtime process at
 the native first-room position. `aos_intro_entities.c` advances the six native
 introduction actors, their fixed-point motion, thresholds, lifetimes, alpha
-overrides and cleanup. Rendering remains diagnostic: backgrounds, palettes,
-OAM, animation resources, the text tile script and songs are explicit
-unconsumed requests, and quicksaves plus completed-file metadata are not
-connected yet.
+overrides and cleanup. The same module implements `sub_080093E0` as a bounded
+interpreter over externally supplied native-format scripts; it emits row-clear,
+glyph and string-insertion results without storing original text. Rendering
+remains diagnostic: backgrounds, palettes, OAM, animation resources, scripts,
+glyph rasterization and songs are not connected, and quicksaves plus
+completed-file metadata remain open.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

@@ -71,10 +71,13 @@ Konami logo. The cutscene also runs the six-actor group created by
 `sub_080094AC`: the scroll follower, affine rise, orbit and two moving panels
 retain their native fixed-point motion, activation thresholds, lifetimes and
 alpha ownership, while the main actor retains its five-frame scroll and
-21-column text cadence. The frontend does not yet own the native backgrounds,
-palettes, OAM, animation frames, tile-script drawing or songs, so those
-operations stay typed host requests and it displays diagnostic values instead
-of claiming the original presentation.
+21-row text cadence. Its `sub_080093E0` interpreter now clears the native
+37-cell row and consumes printable runs, string insertions, separators and the
+terminal command from an externally supplied script. No original text is
+embedded in the executable. The frontend does not yet own the native
+backgrounds, palettes, OAM, animation frames, scripts, glyph rasterizer or
+songs, so those resources stay host-owned and it displays diagnostic values
+instead of claiming the original presentation.
 
 `aos_save.c` deliberately uses the small, checksummed
 `metroidvania-aos-save-v2` text schema instead of claiming compatibility with

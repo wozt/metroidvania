@@ -73,18 +73,134 @@ void aos_intro_entities_clear(AosIntroEntities *group) {
     group->graphics_release_requested = true;
 }
 
-/* sub_08009648. sub_080093E0's ROM-backed tile/script interpreter remains a
- * text_step_requested boundary, with its native 21-column counter retained. */
+void aos_intro_entities_set_text_script(AosIntroEntities *group,
+                                        const uint8_t *script,
+                                        size_t script_size,
+                                        AosIntroTextResolver resolver,
+                                        void *resolver_user) {
+    group->text_script = script;
+    group->text_script_size = script_size;
+    group->text_script_position = 0;
+    group->text_resolver = resolver;
+    group->text_resolver_user = resolver_user;
+    group->text_script_missing = script == NULL || script_size < 2;
+    group->text_script_finished = false;
+    group->text_script_malformed = false;
+}
+
+static void append_glyph(AosIntroEntities *group, uint8_t glyph) {
+    if (group->text_glyph_count < AOS_INTRO_TEXT_GLYPH_CAPACITY)
+        group->text_glyphs[group->text_glyph_count++] = glyph;
+    else
+        group->text_output_truncated = true;
+}
+
+/* sub_08041318's printable-byte loop. Each script includes the two-byte
+ * native header, while position indexes its body. */
+static int32_t draw_script(AosIntroEntities *group, const uint8_t *script,
+                           size_t script_size, int32_t position) {
+    if (!script || script_size < 2 || position < 0) return -1;
+    const uint8_t *body = script + 2;
+    size_t body_size = script_size - 2;
+    size_t cursor = (size_t)position;
+    while (cursor < body_size && (body[cursor] & 0xE0u))
+        append_glyph(group, body[cursor++]);
+    return cursor < body_size ? (int32_t)cursor : -1;
+}
+
+/* sub_080093E0. Glyph rasterization remains a host operation, but the native
+ * row clear, command consumption, insertion and script cursor are retained. */
+static void update_text_script(AosIntroEntities *group) {
+    group->text_step_requested = true;
+    group->text_clear_requested = true;
+    group->text_draw_column =
+        (uint8_t)(group->text_column % AOS_INTRO_TEXT_ROWS);
+
+    if (!group->text_script || group->text_script_size < 2) {
+        group->text_script_missing = true;
+        ++group->text_column;
+        return;
+    }
+    if (group->text_script_position < 0) {
+        group->text_script_finished = true;
+        ++group->text_column;
+        return;
+    }
+
+    const uint8_t *body = group->text_script + 2;
+    size_t body_size = group->text_script_size - 2;
+    int32_t position = group->text_script_position;
+    bool parsing = true;
+    while (parsing) {
+        if (position < 0 || (size_t)position >= body_size) {
+            group->text_script_malformed = true;
+            position = -1;
+            break;
+        }
+        uint8_t command = body[position];
+        switch (command) {
+            case 1: {
+                if ((size_t)position + 1 >= body_size) {
+                    group->text_script_malformed = true;
+                    position = -1;
+                    parsing = false;
+                    break;
+                }
+                uint8_t id = body[position + 1];
+                if (group->text_insert_count < AOS_INTRO_TEXT_INSERT_CAPACITY)
+                    group->text_insert_ids[group->text_insert_count++] = id;
+                else
+                    group->text_output_truncated = true;
+                position += 2;
+                const uint8_t *insert = NULL;
+                size_t insert_size = 0;
+                if (!group->text_resolver ||
+                    !group->text_resolver(group->text_resolver_user, id,
+                                          &insert, &insert_size) ||
+                    draw_script(group, insert, insert_size, 0) < 0) {
+                    group->text_script_missing = true;
+                }
+                break;
+            }
+            case 5:
+                ++position;
+                break;
+            case 6:
+            case 9:
+                ++position;
+                parsing = false;
+                break;
+            case 10:
+                position = -1;
+                group->text_script_finished = true;
+                parsing = false;
+                break;
+            default: {
+                int32_t next = draw_script(group, group->text_script,
+                                           group->text_script_size, position);
+                if (next < 0 || next == position) {
+                    group->text_script_malformed = true;
+                    position = -1;
+                    parsing = false;
+                } else {
+                    position = next;
+                }
+                break;
+            }
+        }
+    }
+    group->text_script_position = position;
+    ++group->text_column;
+}
+
+/* sub_08009648. */
 static void update_main(AosIntroEntities *group, AosIntroEntity *entity,
                         int32_t mode_stage) {
     entity->frame_modulo = (uint8_t)((entity->frame_modulo + 1) % 5);
     if (entity->frame_modulo == 0) {
         ++group->bg0_vertical;
-        if ((group->bg0_vertical + 0xF0) % 0x0C == 0) {
-            group->text_draw_column = (uint8_t)(group->text_column % 0x15);
-            ++group->text_column;
-            group->text_step_requested = true;
-        }
+        if ((group->bg0_vertical + 0xF0) % 0x0C == 0)
+            update_text_script(group);
     }
     if (mode_stage > 6) {
         entity->alive = false;
@@ -198,6 +314,10 @@ void aos_intro_entities_update(AosIntroEntities *group, int32_t mode_stage,
                                int32_t bg1_y, int32_t bg1_velocity,
                                int32_t bg3_y) {
     group->text_step_requested = false;
+    group->text_clear_requested = false;
+    group->text_glyph_count = 0;
+    group->text_insert_count = 0;
+    group->text_output_truncated = false;
     group->affine_sound_requested = false;
     group->alpha_override_valid = false;
     group->graphics_release_requested = false;

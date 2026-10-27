@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T02:56:20+00:00",
+ "generated_at": "2026-10-27T05:35:15+00:00",
  "git": {
-  "commit": "172bbdd",
+  "commit": "537bf5d",
   "branch": "main",
   "dirty": true
  },
@@ -12709,12 +12709,13 @@
     "sub_08009054",
     "sub_08009178",
     "sub_080092A0",
+    "sub_080093E0",
     "sub_080094AC",
     "sub_08009610",
     "sub_08009648"
    ],
-   "limitations": "The native backgrounds, palettes, OAM and animation resources are not exported or rendered; sub_080093E0 is only a typed text-step request, sub_0803F17C does not yet supply animation actions, affine allocation cannot fail in the host model, and songs are request-only. The SDL host remains diagnostic and starts gameplay as a separate process, so there is no visual or emulator comparison. The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group now preserves fixed-point follower, affine-rise, orbit and panel motion, thresholds, lifetimes, alpha ownership, double-draw intent, 21-column text cadence and cleanup. New files launch gameplay at Soma's native (120, 141) position. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port sub_080093E0 and connect the native introduction graphics, animation resources, palettes and renderer before validating the presentation.",
+   "limitations": "The native backgrounds, palettes, OAM, glyph rasterizer and animation resources are not exported or rendered; the script and inserted language strings must be supplied by an external ROM-backed resource owner, sub_0803F17C does not yet supply animation actions, affine allocation cannot fail in the host model, and songs are request-only. The SDL host remains diagnostic and starts gameplay as a separate process, so there is no visual or emulator comparison. The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group preserves fixed-point motion, thresholds, lifetimes, alpha ownership and cleanup. sub_080093E0 now retains the 37-cell row clear, 21-row wrap, script position, printable runs, inserted-string lookup, separator commands and terminal state without embedding proprietary text. New files launch gameplay at Soma's native (120, 141) position. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Connect a ROM-backed introduction resource owner, native glyph rasterizer, backgrounds, animation resources, palettes and renderer before validating the presentation.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_intro_cutscene.c",
@@ -14207,7 +14208,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed create, load, copy, delete and name requests onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. Portable schema v2 stores the encoded name, selected character and challenge flags while reading v1 files; new files retain the native area 0 room 0 player position. The introduction now runs its six source-derived entity motion controllers, including fixed-point thresholds, lifetimes, alpha overrides and cleanup. Rendering remains diagnostic; native introduction backgrounds, palettes, sprites, tile scripts and audio are request-only, while portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state remain absent.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed create, load, copy, delete and name requests onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. Portable schema v2 stores the encoded name, selected character and challenge flags while reading v1 files; new files retain the native area 0 room 0 player position. The introduction runs its six source-derived entity controllers and sub_080093E0's row-oriented text script protocol with externally supplied script data. Rendering remains diagnostic; native introduction backgrounds, palettes, sprites, glyph rasterization, script resources and audio remain absent, while portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state are also open.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16245,6 +16246,12 @@
  },
  "timeline": [
   {
+   "commit": "537bf5d",
+   "date": "2026-10-27",
+   "subject": "Port Aria introduction entity controllers",
+   "scope": "project"
+  },
+  {
    "commit": "172bbdd",
    "date": "2026-10-27",
    "subject": "Port Aria opening introduction controller",
@@ -16717,12 +16724,6 @@
    "date": "2026-10-24",
    "subject": "Port Aria boss metadata to C11",
    "scope": "project"
-  },
-  {
-   "commit": "b1ee46c",
-   "date": "2026-10-24",
-   "subject": "Port Aria room entities to C11",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -16783,9 +16784,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 452,
-    "routines_attached_to_features": 452,
-    "unassigned_routines": 3121,
+    "routines_cited_by_features": 453,
+    "routines_attached_to_features": 453,
+    "unassigned_routines": 3120,
     "call_edges": 14228
    }
   },

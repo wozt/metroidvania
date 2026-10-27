@@ -2693,7 +2693,6 @@ aos:c:src/code_08005894.c:sub_08008314	sub_08008314	unclassified				c_function	0
 aos:c:src/code_08005894.c:sub_08008720	sub_08008720	unclassified				c_function	0x08008720	src/code_08005894.c	2457	0	0
 aos:c:src/code_08008750.c:GameModeBossRushMenuUpdate	GameModeBossRushMenuUpdate	menus	name			c_function	0x08008750	src/code_08008750.c	45	1	21
 aos:c:src/code_08008750.c:GameModeUnk9Update	GameModeUnk9Update	startup	referrers			c_function	0x080089D0	src/code_08008750.c	153	1	0
-aos:c:src/code_08008750.c:sub_080093E0	sub_080093E0	cutscenes	referrers			c_function	0x080093E0	src/code_08008750.c	684	1	5
 aos:c:src/code_080096AC.c:GameModeSoulTradeMenu_inline_0	GameModeSoulTradeMenu_inline_0	menus	name			c_function		src/code_080096AC.c	285	1	2
 aos:c:src/code_080096AC.c:GameModeSoulTradeMenu_inline_1	GameModeSoulTradeMenu_inline_1	menus	name			c_function		src/code_080096AC.c	293	3	5
 aos:c:src/code_080096AC.c:NONMATCH	NONMATCH	unclassified				c_function		src/code_080096AC.c	213	0	3

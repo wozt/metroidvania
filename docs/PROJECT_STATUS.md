@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0570 - Port Aria's introduction text-script interpreter
+
+- Ported `sub_080093E0` into the active introduction entity controller. At
+  each native 12-pixel boundary it now clears the correct 37-cell row with a
+  21-row wrap and advances the script position exactly once.
+- Retained printable runs, command-1 language-string insertion, command-5
+  continuation, command-6/9 row stops, command-10 termination and the native
+  two-byte script header. Bounded output and malformed-script detection keep
+  external resource errors safe without changing valid-script behavior.
+- Scripts and inserted strings are injected by a resource owner, and the
+  deterministic tests use synthetic bytes. No original text or extracted ROM
+  data was added. Native glyph rasterization, backgrounds, palettes, OAM and
+  animation resources remain disconnected, so the feature stays partial.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission and
+  audio are unchanged.
+- Next: connect a ROM-backed introduction resource owner and native glyph
+  rasterizer, then feed its output into the SDL presentation.
+
 ## Patch 0569 - Port Aria's introduction entity controllers
 
 - Ported the six-actor group created by `sub_080094AC`: its main actor,

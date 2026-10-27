@@ -31,6 +31,7 @@ typedef struct {
 enum {
     AOS_TYPE_PLAYER = 1,
     AOS_TYPE_WEAPON = 3,
+    AOS_TYPE_SOUL = 5,      /* red soul skills (sub_0804277C(entity, 5, ...)) */
     AOS_TYPE_ENEMY = 8
 };
 

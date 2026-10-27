@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0585 - Aria soul attack damage
+
+- Enemy collisions now test the red soul skills' boxes after the weapon
+  (type 5, its recent-hit slot and cooldown) and send them through the same
+  `sub_0806E218` hit path: `aos_red_soul_power` ports `sub_08021530(5)`,
+  (STR * power / 10 + INT / 4 + power * 6) / 16 of the last used soul's
+  record (`sub_0802D244`), and the hit uses that record's elements.
+  Weapon-only recoils (Valkyrie, harpy, siren) stay weapon-only.
+- The red soul export (schema v2, task `aria_objects` version 8) adds each
+  record's elements; the runtime passes the bat ring's per-frame boxes to the
+  enemies every frame.
+- Tests: power formula in `tests/test_aos_soul.c`; hit, weakness, miss and
+  kill in `tests/test_aos_enemy.c`. A runtime run cast the bat repeatedly
+  (MP spent and regenerated) but met no enemy, so the ring's damage was not
+  observed in play. Source-derived, not emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0584 - Aria red soul casting, MP and the bat's sonic ring
 
 - `src/runtime/aos_soul.c` ports the guards and bookkeeping of Soma's red

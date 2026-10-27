@@ -44,3 +44,12 @@ void aos_stats_mp_regen(AosStats *stats, uint16_t ticks) {
     stats->mp++;
     if (stats->mp > (int16_t)stats->max_mp) stats->mp = (int16_t)stats->max_mp;
 }
+
+int32_t aos_red_soul_power(const AosStats *stats, const AosRedSoulRecord *record, bool reduced) {
+    uint32_t power = ((uint32_t)(stats->current[AOS_STAT_STR] * record->power) / 10u) +
+                     (uint32_t)(stats->current[AOS_STAT_INT] >> 2) + record->power * 4u +
+                     record->power * 2u;
+    power /= 16;
+    if (reduced) power = power * 8 / 10;
+    return (int32_t)power;
+}

@@ -266,6 +266,17 @@ uint16_t aos_arctan2(int16_t x, int16_t y);
  * through the table 0x085254D8) and cleared by sub_0804CC14; its meaning is
  * not traced. Cleared by default. */
 void aos_enemy_set_flag_8e_40(bool set);
+/* A red soul skill's attack this frame: its world rectangle (inclusive),
+ * the power of sub_08021530(5) and the elements of its record (+ 0xC). */
+typedef struct {
+    AosRect rect;
+    int power;
+    uint16_t elements;
+} AosSoulAttack;
+
+/* The soul attacks the next enemy updates test after the weapon (type 5
+ * collisions); NULL for none. */
+void aos_enemy_set_soul_attacks(const AosSoulAttack *attacks, int count);
 /* Creates enemy `id` at a record position; false for unported enemies. */
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,

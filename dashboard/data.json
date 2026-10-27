@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T08:00:41+00:00",
+ "generated_at": "2026-10-27T08:10:53+00:00",
  "git": {
-  "commit": "2d10688",
+  "commit": "44caffe",
   "branch": "main",
   "dirty": true
  },
@@ -12803,12 +12803,14 @@
     "src/runtime/aos_soma.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos_save.c",
-    "src/assets/aos/objects.c"
+    "src/assets/aos/objects.c",
+    "src/runtime/aos_enemy.c"
    ],
    "tests": [
     "tests/test_aos_soul.c",
     "tests/test_aos_soma.c",
-    "tests/test_aos_save.c"
+    "tests/test_aos_save.c",
+    "tests/test_aos_enemy.c"
    ],
    "dependencies": [
     "aos.souls.inventory_pickups",
@@ -12824,15 +12826,19 @@
     "sub_08021994",
     "sub_08022028",
     "SkillBatUse",
-    "sub_08031EA4"
+    "sub_08031EA4",
+    "sub_08021530",
+    "sub_0806E218",
+    "sub_0802D244"
    ],
-   "limitations": "Only SkillBatUse has a skill entity; the runtime refuses the 27 other red souls instead of spending MP. The bat's sonic ring does no damage yet: its type-5 collision and the soul damage formula (sub_0806E218 with sub_08021530 and the record's + 0xA) are not ported, nor sound 0xE2, sub_08042A54(1, 0xF), the cast's per-animation palette and the 0x131B8 & 0x800 gate. sub_08021994 is ported for its MP regeneration only (the curse states of unk_13270 and the earlier input-driven effect of unk_13276 are not), the cast state's pose-3 recoil (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled, and the + 0x1E byte the poses write has no traced reader. There is no soul menu: a red soul is equipped through the file or --red-soul. Skill entities are cleared on a room change. The Julius variant (sub_08034624, table 0x080E1ED8) is not ported. Soma's red soul use of sub_0801B0D8 (_0801C298, Up held and a new attack press with no 0x540 flag) runs sub_08019478: with no skill entity alive the last used soul follows the equipped one; the cast needs that soul's record (0x080E1598, exported as metadata/red_souls.tsv) to have a skill routine, at least its MP cost (Soma may spend his last points, unlike Julius), fewer active entities than the last used record's maximum (sub_0802D2BC) and a free slot of eight (sub_0802D208). It spends the MP, plays the cast animation of sub_0802D1D8 (0x080E1918: ground 22/78/79/80, air 49/78/79/80) with the pose's hop (vy -3.5, gravity -0x1000), lunge (3 px per frame) or recoil byte, sets flag 0x100 and enters state 2, which steers in the air, brakes on the ground and ends with the animation. The weapon attack that follows is refused by the 0x100 flag. sub_08021994 regenerates one MP every 64 ticks of Soma's + 0x22 counter (16 with accessory 0x29, full with 0x2C). SkillBatUse places its entity at Soma's facing and (0, -26) (sub_08031EA4), counts itself on its first update, plays sequence 0 of its resource (0x081CD8D0 / 0x0820B0B0 / 0x082311F8, exported as Enemy/skill_bat with its per-frame attack boxes) and ends with it, freeing its slot. Portable saves keep the equipped souls and MP (schema v7). A local runtime run with soul 2 equipped cast it (MP 80 to 75, state 2, animation 22) and drew the expanding ring. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the soul attack collision and damage (type 5, sub_0806E218 / sub_08021530) for the bat ring, then the other red soul skills in order of availability and the soul equipment menu.",
+   "limitations": "Only SkillBatUse has a skill entity; the runtime refuses the 27 other red souls instead of spending MP. sub_08021530 is ported for type 5 in normal play only (the gEwramData + 0x4CC bit 6 alternative using 0x133EE is not, and the + 0xA1 bit 4 reduction is never set by the runtime); the soul hit takes the elements of the record's + 0xC on the assumption that a type-5 attacker reaches sub_0806B7D8's flag-8 path, and the per-enemy reactions documented as weapon-only (Valkyrie, harpy and siren recoils) stay weapon-only. The ring's damage was not observed in a runtime run (no enemy near the start). Sound 0xE2, sub_08042A54(1, 0xF), the cast's per-animation palette and the 0x131B8 & 0x800 gate. sub_08021994 is ported for its MP regeneration only (the curse states of unk_13270 and the earlier input-driven effect of unk_13276 are not), the cast state's pose-3 recoil (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled, and the + 0x1E byte the poses write has no traced reader. There is no soul menu: a red soul is equipped through the file or --red-soul. Skill entities are cleared on a room change. The Julius variant (sub_08034624, table 0x080E1ED8) is not ported. Soma's red soul use of sub_0801B0D8 (_0801C298, Up held and a new attack press with no 0x540 flag) runs sub_08019478: with no skill entity alive the last used soul follows the equipped one; the cast needs that soul's record (0x080E1598, exported as metadata/red_souls.tsv) to have a skill routine, at least its MP cost (Soma may spend his last points, unlike Julius), fewer active entities than the last used record's maximum (sub_0802D2BC) and a free slot of eight (sub_0802D208). It spends the MP, plays the cast animation of sub_0802D1D8 (0x080E1918: ground 22/78/79/80, air 49/78/79/80) with the pose's hop (vy -3.5, gravity -0x1000), lunge (3 px per frame) or recoil byte, sets flag 0x100 and enters state 2, which steers in the air, brakes on the ground and ends with the animation. The weapon attack that follows is refused by the 0x100 flag. sub_08021994 regenerates one MP every 64 ticks of Soma's + 0x22 counter (16 with accessory 0x29, full with 0x2C). SkillBatUse places its entity at Soma's facing and (0, -26) (sub_08031EA4), counts itself on its first update, plays sequence 0 of its resource (0x081CD8D0 / 0x0820B0B0 / 0x082311F8, exported as Enemy/skill_bat with its per-frame attack boxes) and ends with it, freeing its slot. The ring's frame boxes are type-5 attacks: after the weapon, each enemy tests them with the recent-hit slot and cooldown of type 5 (0x080E33F0), and sub_0806E218 deals sub_08021530(5) = (STR * power / 10 + INT / 4 + power * 6) / 16 of the last used soul's record (sub_0802D244; the bat's power is 60, 26 at level 1) through the existing damage formula with the record's elements. Portable saves keep the equipped souls and MP (schema v7). A local runtime run with soul 2 equipped cast it (MP 80 to 75, state 2, animation 22) and drew the expanding ring. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the other red soul skills in order of availability, then the soul equipment menu and the blue and yellow souls.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul.c",
      "tests/test_aos_soma.c",
-     "tests/test_aos_save.c"
+     "tests/test_aos_save.c",
+     "tests/test_aos_enemy.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -12870,6 +12876,16 @@
       "registered": true,
       "ctest": [
        "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
       ],
       "outcome": "passed",
       "exists": true
@@ -16967,6 +16983,12 @@
  },
  "timeline": [
   {
+   "commit": "44caffe",
+   "date": "2026-10-27",
+   "subject": "Port Aria's red soul casting, MP and the bat's sonic ring",
+   "scope": "project"
+  },
+  {
    "commit": "2d10688",
    "date": "2026-10-27",
    "subject": "Port Aria's soul inventory and soul pickups",
@@ -17439,12 +17461,6 @@
    "date": "2026-10-25",
    "subject": "Decode Zero Mission metatiles natively",
    "scope": "project"
-  },
-  {
-   "commit": "03de137",
-   "date": "2026-10-24",
-   "subject": "Composite Aria backgrounds natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -17505,9 +17521,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 512,
-    "routines_attached_to_features": 512,
-    "unassigned_routines": 3061,
+    "routines_cited_by_features": 515,
+    "routines_attached_to_features": 515,
+    "unassigned_routines": 3058,
     "call_edges": 14228
    }
   },

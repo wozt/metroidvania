@@ -3166,7 +3166,67 @@ static void needles_tests(void) {
     assert(n.removed);
 }
 
+/* Type-5 soul attacks reach the enemy hit path after the weapon: damage
+ * from their own power and elements, the defeated flag at 0 HP, and no
+ * hit when the box misses. */
+static void soul_attack_tests(void) {
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[4] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 4};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 16, 2, 0, 0, 0};
+    /* A floor under the enemies (cell rows 13 and below: y 104). */
+    memset(cells, 0, sizeof cells);
+    for (int y = 13; y < H; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    /* A ring over the enemy (hurt rectangle 92..107 x 84..99). */
+    AosSoulAttack ring = {{90, 80, 110, 104}, 26, 0};
+    aos_enemy_set_soul_attacks(&ring, 1);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        never_zero);
+    int expected = aos_enemy_damage(26, stats.defence, 0, 0, 0);
+    assert(hit.enemy_hit && hit.enemy_damage == expected && e.hp == 30 - expected);
+    /* The weapon's ATK (10) is not used for it. */
+    assert(expected != aos_enemy_damage(10, stats.defence, 0, 0, 0));
+    /* Elements meet the record's weakness. */
+    AosEnemy weak;
+    const AosEnemyStats weak_stats = {30, 16, 2, 0x0004, 0, 0};
+    assert(aos_enemy_create(&weak, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &weak_stats));
+    AosSoulAttack fire = {{90, 80, 110, 104}, 26, 0x0004};
+    aos_enemy_set_soul_attacks(&fire, 1);
+    hit = aos_enemy_update(&weak, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.enemy_damage == aos_enemy_damage(26, 2, 0x0004, 0, 0x0004) &&
+           hit.enemy_damage > expected);
+    /* A box beside the enemy does nothing. */
+    AosEnemy apart;
+    assert(aos_enemy_create(&apart, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    AosSoulAttack beside = {{130, 80, 150, 104}, 26, 0};
+    aos_enemy_set_soul_attacks(&beside, 1);
+    hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!hit.enemy_hit && apart.hp == 30);
+    /* Enough power kills it. */
+    AosSoulAttack strong = {{90, 80, 110, 104}, 200, 0};
+    aos_enemy_set_soul_attacks(&strong, 1);
+    hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.killed && apart.defeated);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    memset(cells, 0, sizeof cells);
+}
+
 int main(void) {
+    soul_attack_tests();
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);
     assert(aos_sine(0x2000) == 46340 && aos_sine(0xA000) == -46340);

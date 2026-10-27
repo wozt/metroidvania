@@ -563,6 +563,28 @@ static void update_skills(AriaSouls *souls, const AosAnimSet *bat) {
     }
 }
 
+/* The skills' attack boxes this frame for the enemies' type-5 tests:
+ * SkillBatUse enables its frame's box (frame record + 8) when it has one.
+ * The power and elements come from the last used soul's record
+ * (sub_0802D244). */
+static int soul_attacks(const AriaSouls *souls, const AosEnemyKind *bat,
+                        AosSoulAttack attacks[MAX_SKILLS]) {
+    int count = 0;
+    if (!souls->records || souls->caster.last_used >= AOS_RED_SOUL_RECORDS) return 0;
+    const AosRedSoulRecord *record = &souls->records[souls->caster.last_used];
+    for (int i = 0; i < MAX_SKILLS; ++i) {
+        const AriaSkill *skill = &souls->skills[i];
+        if (!skill->alive || !skill->started || skill->anim.frame >= AOS_ENEMY_MAX_FRAMES)
+            continue;
+        AosBox box = bat->attack[0][skill->anim.frame];
+        if (!box.w || !box.h) continue;
+        attacks[count++] = (AosSoulAttack){
+            aos_entity_rect(box, skill->x, skill->y, skill->facing_left, false),
+            aos_red_soul_power(souls->stats, record, false), record->elements};
+    }
+    return count;
+}
+
 /* A room change deletes the skill entities with the room's. */
 static void clear_skills(AriaSouls *souls) {
     for (int i = 0; i < MAX_SKILLS; ++i) souls->skills[i].alive = false;
@@ -1024,13 +1046,15 @@ static bool load_red_souls(const char *path, AosRedSoulRecord records[AOS_RED_SO
     char line[256];
     unsigned loaded = 0;
     while (fgets(line, sizeof line, f)) {
-        unsigned soul, skill, pose, maximum, field_a, parameter;
+        unsigned soul, skill, pose, maximum, power, parameter, elements;
         int mp;
-        if (sscanf(line, "%u\t%x\t%u\t%d\t%u\t%u\t%u", &soul, &skill, &pose, &mp, &maximum,
-                   &field_a, &parameter) != 7 || soul >= AOS_RED_SOUL_RECORDS)
+        if (sscanf(line, "%u\t%x\t%u\t%d\t%u\t%u\t%u\t%x", &soul, &skill, &pose, &mp,
+                   &maximum, &power, &parameter, &elements) != 8 ||
+            soul >= AOS_RED_SOUL_RECORDS)
             continue;
         records[soul] = (AosRedSoulRecord){skill, (uint16_t)pose, (int16_t)mp,
-                                           (uint8_t)maximum, (uint16_t)parameter};
+                                           (uint8_t)maximum, (uint16_t)parameter,
+                                           (uint16_t)power, (uint16_t)elements};
         loaded++;
     }
     fclose(f);
@@ -2089,7 +2113,13 @@ int main(int argc, char **argv) {
                     if (combat.effects[weapon_entity.effects[k].kind])
                         room.effects[room.effect_count++] = weapon_entity.effects[k];
             }
+            AosSoulAttack attacks[MAX_SKILLS];
+            aos_enemy_set_soul_attacks(attacks, souls.bat_loaded
+                                                    ? soul_attacks(&souls, &objects.skill_bat.kind,
+                                                                   attacks)
+                                                    : 0);
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
+            aos_enemy_set_soul_attacks(NULL, 0);
         }
 
         int sx = soma.x >> 16, sy = soma.y >> 16;

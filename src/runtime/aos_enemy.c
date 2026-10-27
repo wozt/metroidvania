@@ -19,6 +19,15 @@ void aos_random_seed(uint32_t seed) {
 
 static bool flag_8e_40;
 
+/* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
+static const AosSoulAttack *soul_attacks;
+static int soul_attack_count;
+
+void aos_enemy_set_soul_attacks(const AosSoulAttack *attacks, int count) {
+    soul_attacks = attacks;
+    soul_attack_count = attacks ? count : 0;
+}
+
 void aos_enemy_set_flag_8e_40(bool set) {
     flag_8e_40 = set;
 }
@@ -1079,12 +1088,17 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             report.soma_hit = true;
         }
     }
-    /* The weapon's attack box against the enemy's hurtbox (sub_08041864). */
+    /* The weapon's attack box against the enemy's hurtbox (sub_08041864),
+     * then the red soul skills' boxes (type 5); both reach sub_0806E218. */
     int wx, wy, ww, wh;
+    bool struck = false;
+    uint8_t attacker = 0;
+    int power = 0;
+    uint16_t elements = 0;
+    AosRect target = aos_entity_rect(hurt, ex, ey, enemy->mirrored, enemy->vflip);
     if (hurt_on && weapon && weapon_frames &&
         aos_combat_can_take(&enemy->combat, AOS_TYPE_WEAPON) &&
         aos_weapon_hitbox(weapon, soma, weapon_frames, &wx, &wy, &ww, &wh)) {
-        AosRect target = aos_entity_rect(hurt, ex, ey, enemy->mirrored, enemy->vflip);
         AosRect blade = {(int16_t)wx, (int16_t)wy, (int16_t)(wx + ww - 1), (int16_t)(wy + wh - 1)};
         if (ww > 1 && wh > 1 && blade.x1 <= target.x2 && target.x1 <= blade.x2 &&
             blade.y1 <= target.y2 && target.y1 <= blade.y2) {
@@ -1092,6 +1106,27 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                             aos_combat_cooldown(AOS_TYPE_WEAPON, soma->weapon.interval));
             /* sub_0802346C (weapon callback): the kick-hit flag. */
             soma->flags |= AOS_FLAG_KICK_HIT;
+            struck = true;
+            attacker = AOS_TYPE_WEAPON;
+            /* sub_08021530(3) = ATK * 16 / 16. */
+            power = soma_atk;
+            elements = soma->weapon.flags;
+        }
+    }
+    for (int i = 0; hurt_on && !struck && i < soul_attack_count; ++i) {
+        const AosSoulAttack *attack = &soul_attacks[i];
+        if (!aos_combat_can_take(&enemy->combat, AOS_TYPE_SOUL)) break;
+        if (attack->rect.x1 <= target.x2 && target.x1 <= attack->rect.x2 &&
+            attack->rect.y1 <= target.y2 && target.y1 <= attack->rect.y2) {
+            aos_combat_take(&enemy->combat, AOS_TYPE_SOUL, aos_combat_cooldown(AOS_TYPE_SOUL, 0));
+            struck = true;
+            attacker = AOS_TYPE_SOUL;
+            power = attack->power;
+            elements = attack->elements;
+        }
+    }
+    {
+        if (struck) {
             report.enemy_hit = true;
             if (enemy->role == AOS_ROLE_MIMIC_TRIGGER) {
                 /* sub_080993EC: the trigger bursts (state 1, 40 frames)
@@ -1118,17 +1153,17 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 enemy->timer = 0;
                 goto contact;
             }
-            /* sub_0806E218 with sub_08021530(3) = ATK * 16 / 16. */
-            report.enemy_damage = aos_enemy_damage(soma_atk, enemy->stats.defence,
+            /* sub_0806E218: sub_08021530 for the attacker type. */
+            report.enemy_damage = aos_enemy_damage(power, enemy->stats.defence,
                                                    enemy->stats.weak, enemy->stats.resist,
-                                                   soma->weapon.flags);
+                                                   elements);
             /* sub_0808F848: a guarding dead crusader takes no damage
              * (sound 0x69). */
             if (enemy->id == AOS_ENEMY_DEAD_CRUSADER && enemy->guarding)
                 report.enemy_damage = 0;
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
-            if (enemy->hp > 0 &&
+            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
                 (enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN)) {
                 /* sub_08075CAC: a surviving weapon hit throws the flyer
                  * into its short recoil state. */
@@ -1136,7 +1171,8 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 enemy->step = enemy->substep = 0;
                 enemy->timer = 0;
             }
-            if (enemy->hp > 0 && enemy->id == AOS_ENEMY_VALKYRIE && enemy->state == 1) {
+            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON && enemy->id == AOS_ENEMY_VALKYRIE &&
+                enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
                  * during its attack, it recoils (state 3). */
                 play(enemy, kind->anims, 0);

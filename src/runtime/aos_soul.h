@@ -13,6 +13,8 @@ typedef struct {
     int16_t mp;          /* + 0x6: MP cost */
     uint8_t maximum;     /* + 0x8: skill entities alive at once */
     uint16_t parameter;  /* + 0xE: given to the skill entity (+ 0x1E) */
+    uint16_t power;      /* + 0xA: sub_08021530(5) */
+    uint16_t elements;   /* + 0xC: sub_0806B7D8's attack elements */
 } AosRedSoulRecord;
 
 enum { AOS_RED_SOUL_RECORDS = 29, AOS_RED_SOUL_SLOTS = 8 };
@@ -39,6 +41,10 @@ uint8_t aos_red_soul_cast_animation(uint16_t pose, bool airborne);
 /* A skill entity's end: its slot is freed and the active count drops. */
 void aos_red_soul_release(AosRedSoulCaster *caster, int slot);
 
+/* sub_08021530(5) in normal play (gEwramData + 0x4CC bit 6 clear) for the
+ * last used soul's record: (STR * power / 10 + INT / 4 + power * 6) / 16,
+ * scaled by 8 / 10 when gEwramData + 0xA1 bit 4 is set (`reduced`). */
+int32_t aos_red_soul_power(const AosStats *stats, const AosRedSoulRecord *record, bool reduced);
 /* sub_08021994's MP regeneration, run with Soma's + 0x22 tick counter
  * before it advances: accessory 0x2C keeps MP full; otherwise one MP every
  * 64 ticks (every 16 with accessory 0x29), at most the maximum. The curse

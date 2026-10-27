@@ -8,9 +8,9 @@ int main(void) {
     /* Records 2 and 3 as on the ROM: the bat's (5 MP, 3 at once) and
      * another with a skill (8 MP, 3 at once); record 4 has no skill. */
     AosRedSoulRecord records[AOS_RED_SOUL_RECORDS] = {{0}};
-    records[2] = (AosRedSoulRecord){0x08026C55, 0, 5, 3, 0};
-    records[3] = (AosRedSoulRecord){0x08025785, 0, 8, 3, 3};
-    records[5] = (AosRedSoulRecord){0x08024275, 0, 22, 1, 6};
+    records[2] = (AosRedSoulRecord){0x08026C55, 0, 5, 3, 0, 60, 0};
+    records[3] = (AosRedSoulRecord){0x08025785, 0, 8, 3, 3, 75, 0};
+    records[5] = (AosRedSoulRecord){0x08024275, 0, 22, 1, 6, 60, 1};
     AosStats stats = {.red_soul = 2, .mp = 12, .max_mp = 80};
     AosRedSoulCaster caster = {0};
 
@@ -80,6 +80,17 @@ int main(void) {
     regen.accessory = 0x2C;
     aos_stats_mp_regen(&regen, 3);
     assert(regen.mp == 11);
+    /* sub_08021530(5): the bat (power 60) at STR 10, INT 11 gives
+     * (600 / 10 + 11 / 4 + 360) / 16 = 26, 20 when reduced. */
+    AosStats caster_stats = {0};
+    caster_stats.current[AOS_STAT_STR] = 10;
+    caster_stats.current[AOS_STAT_INT] = 11;
+    assert(aos_red_soul_power(&caster_stats, &records[2], false) == 26);
+    assert(aos_red_soul_power(&caster_stats, &records[2], true) == 20);
+    caster_stats.current[AOS_STAT_STR] = 99;
+    caster_stats.current[AOS_STAT_INT] = 40;
+    assert(aos_red_soul_power(&caster_stats, &records[3], false) ==
+           (99 * 75 / 10 + 10 + 75 * 6) / 16);
     puts("Aria red soul tests passed");
     return 0;
 }

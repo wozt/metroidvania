@@ -2522,9 +2522,6 @@ aos:c:src/code/code_08039340.c:sub_0803FD60	sub_0803FD60	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803FD9C	sub_0803FD9C	unclassified				c_function	0x0803FD9C	src/code/code_08039340.c	5831	23	2
 aos:c:src/code/code_08039340.c:sub_0803FE0C	sub_0803FE0C	unclassified				c_function	0x0803FE0C	src/code/code_08039340.c	5880	3	1
 aos:c:src/code/code_08039340.c:sub_0803FE64	sub_0803FE64	environment	referrers			c_function	0x0803FE64	src/code/code_08039340.c	5917	1	0
-aos:c:src/code/code_08039340.c:sub_0803FEA4	sub_0803FEA4	unclassified				c_function	0x0803FEA4	src/code/code_08039340.c	5940	2	0
-aos:c:src/code/code_08039340.c:sub_0803FF64	sub_0803FF64	unclassified				c_function	0x0803FF64	src/code/code_08039340.c	5994	1	1
-aos:c:src/code/code_08039340.c:sub_08040048	sub_08040048	unclassified				c_function	0x08040048	src/code/code_08039340.c	6043	1	1
 aos:c:src/code/code_08039340.c:sub_0804017C	sub_0804017C	unclassified				c_function	0x0804017C	src/code/code_08039340.c	6107	1	0
 aos:c:src/code/code_08039340.c:sub_08040208	sub_08040208	unclassified				c_function	0x08040208	src/code/code_08039340.c	6151	1	0
 aos:c:src/code/code_08039340.c:sub_080402DC	sub_080402DC	unclassified				c_function	0x080402DC	src/code/code_08039340.c	6215	2	0

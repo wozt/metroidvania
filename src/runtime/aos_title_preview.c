@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "aos_game_lifecycle.h"
+#include "aos_intro_font.h"
 #include "aos_intro_resources.h"
 #include "aos_menu_save_bridge.h"
 #include "aos_save.h"
@@ -86,6 +87,20 @@ static bool launch_runtime(const char *runtime, const char *save_path,
     SDL_DestroyProcess(process);
     error[0] = '\0';
     return true;
+}
+
+static void render_intro_text(SDL_Renderer *renderer,
+                              const AosIntroTextTiles *tiles,
+                              int16_t vertical) {
+    SDL_SetRenderDrawColor(renderer, 235, 235, 245, 255);
+    for (unsigned y = 0; y < AOS_INTRO_TEXT_CANVAS_SIZE; ++y) {
+        unsigned screen_y = (unsigned)((int)y - vertical) & 0xFFu;
+        if (screen_y >= GBA_H) continue;
+        for (unsigned x = 0; x < GBA_W; ++x) {
+            if (aos_intro_text_tiles_pixel(tiles, x, y))
+                SDL_RenderPoint(renderer, (float)x, (float)screen_y);
+        }
+    }
 }
 
 int main(int argc, char **argv) {
@@ -178,13 +193,17 @@ int main(int argc, char **argv) {
     }
     FusionRom intro_rom = {0};
     AosIntroResources intro_resources = {0};
+    AosIntroFont intro_font = {0};
+    AosIntroTextTiles intro_tiles = {0};
     bool have_intro_resources = false;
     if (rom_path) {
         char error[256];
         if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &intro_rom,
                              error, sizeof error) ||
             !aos_intro_resources_init(&intro_resources, &intro_rom, error,
-                                      sizeof error)) {
+                                      sizeof error) ||
+            !aos_intro_font_init(&intro_font, &intro_rom, error,
+                                 sizeof error)) {
             fprintf(stderr, "Cannot load Aria introduction resources: %s\n", error);
             fusion_rom_close(&intro_rom);
             if (art) SDL_DestroyTexture(art);
@@ -194,6 +213,7 @@ int main(int argc, char **argv) {
             SDL_Quit();
             return 2;
         }
+        aos_intro_text_tiles_clear(&intro_tiles);
         have_intro_resources = true;
     }
     AosGameLifecycle lifecycle;
@@ -209,7 +229,6 @@ int main(int argc, char **argv) {
     bool interactive = true;
     uint64_t next_frame = SDL_GetTicksNS();
     char launch_error[128] = "";
-    char intro_text_line[29] = "";
     int pending_launch_slot = -1;
     AosPortableStart pending_start = AOS_PORTABLE_START_NONE;
     while (running) {
@@ -226,7 +245,7 @@ int main(int argc, char **argv) {
         if (have_intro_resources &&
             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
             lifecycle.intro_cutscene.entities_init_requested) {
-            intro_text_line[0] = '\0';
+            aos_intro_text_tiles_clear(&intro_tiles);
             if (!aos_intro_resources_bind(
                     &intro_resources, &lifecycle.intro_cutscene.entities,
                     lifecycle.reset.language, launch_error,
@@ -235,16 +254,16 @@ int main(int argc, char **argv) {
             }
         }
         AosIntroEntities *intro_entities = &lifecycle.intro_cutscene.entities;
-        if (lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
-            intro_entities->text_clear_requested) {
-            size_t count = intro_entities->text_glyph_count;
-            if (count >= sizeof intro_text_line) count = sizeof intro_text_line - 1;
-            for (size_t index = 0; index < count; ++index) {
-                uint8_t glyph = intro_entities->text_glyphs[index];
-                intro_text_line[index] =
-                    glyph >= 0x20 && glyph <= 0x7E ? (char)glyph : '?';
-            }
-            intro_text_line[count] = '\0';
+        if (have_intro_resources &&
+            lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE &&
+            intro_entities->text_clear_requested &&
+            !aos_intro_font_render_line(&intro_font, &intro_tiles,
+                                        intro_entities->text_draw_column,
+                                        intro_entities->text_glyphs,
+                                        intro_entities->text_glyph_count)) {
+            snprintf(launch_error, sizeof launch_error,
+                     "INVALID INTRODUCTION GLYPH");
+            have_intro_resources = false;
         }
         if (!aos_menu_save_bridge_consume(&save_bridge, &lifecycle.main_menu)) {
             snprintf(launch_error, sizeof launch_error, "INVALID SLOT OPERATION");
@@ -365,9 +384,10 @@ int main(int argc, char **argv) {
                          (long)(lifecycle.intro_cutscene.bg_y[2] >> 16),
                          (long)(lifecycle.intro_cutscene.bg_y[3] >> 16));
                 SDL_RenderDebugText(renderer, 38, 82, scroll);
-                if (intro_text_line[0])
-                    SDL_RenderDebugText(renderer, 8, 103, intro_text_line);
-                else if (!have_intro_resources)
+                if (have_intro_resources)
+                    render_intro_text(renderer, &intro_tiles,
+                                      intro_entities->bg0_vertical);
+                else
                     SDL_RenderDebugText(renderer, 20, 103,
                                         "ADD --rom FOR NATIVE TEXT");
                 SDL_RenderDebugText(renderer, 62, 132, "A OR START: SKIP");

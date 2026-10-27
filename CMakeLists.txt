@@ -199,6 +199,7 @@ add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
+               src/runtime/aos_intro_font.c
                src/runtime/aos_input.c
                src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
@@ -632,6 +633,14 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_aos_intro_resources_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_intro_resources_tests)
     add_test(NAME aos_intro_resources COMMAND fusion_aos_intro_resources_tests)
+
+    add_executable(fusion_aos_intro_font_tests
+                   tests/test_aos_intro_font.c
+                   src/runtime/aos_intro_font.c)
+    target_include_directories(fusion_aos_intro_font_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_intro_font_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_aos_intro_font_tests)
+    add_test(NAME aos_intro_font COMMAND fusion_aos_intro_font_tests)
 
     add_executable(fusion_aos_main_menu_tests tests/test_aos_main_menu.c
                    src/runtime/aos_main_menu.c)

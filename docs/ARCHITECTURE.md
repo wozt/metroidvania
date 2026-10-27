@@ -374,11 +374,14 @@ interpreter over externally supplied native-format scripts; it emits row-clear,
 glyph and string-insertion results without storing original text.
 `aos_intro_resources.c` is a non-owning view of the hash-verified ROM buffer:
 it bounds the native text pointer table, selects the English, French or German
-bank and binds the main script plus insertions to that interpreter. The SDL
-host accepts the ROM through `--rom` and displays only a bounded diagnostic
-line. Backgrounds, palettes, OAM, animation resources, native glyph
-rasterization and songs are not connected, and quicksaves plus completed-file
-metadata remain open.
+bank and binds the main script plus insertions to that interpreter.
+`aos_intro_font.c` resolves the native metric and bitmap tables into a bounded
+32-by-32 GBA 4bpp tile canvas. It retains the 12-row glyph merge/split writes,
+37-cell row clear and proportional six-pixel cursor accounting. The SDL host
+accepts the ROM through `--rom`, maps that canvas through the controller's BG0
+scroll and draws nonzero pixels with a fixed diagnostic color. Backgrounds,
+palettes, OAM, animation resources and songs are not connected, and quicksaves
+plus completed-file metadata remain open.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 

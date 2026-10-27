@@ -51,7 +51,8 @@ typedef struct {
 } AosIntroEntity;
 
 /* Controller-only representation of the entity group created by
- * sub_080094AC. Sprite graphics and glyph rasterization stay host requests. */
+ * sub_080094AC. Sprite graphics stay host requests; the emitted glyph rows
+ * feed the separate native-format font rasterizer. */
 typedef struct {
     AosIntroEntity entities[AOS_INTRO_ENTITY_COUNT];
     int16_t bg0_vertical;

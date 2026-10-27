@@ -76,10 +76,13 @@ alpha ownership, while the main actor retains its five-frame scroll and
 terminal command. With `--rom FILE`, the frontend verifies the user's Aria ROM
 and resolves the main script plus its English, French or German insertions
 directly from the native pointer table. It never exports those bytes, and no
-original text is embedded in the executable. The latest line is shown with a
-bounded ASCII-safe diagnostic font. The frontend does not yet render the
-native backgrounds, palettes, OAM, animation frames, glyphs or songs, so it
-does not claim the original presentation.
+original text is embedded in the executable. `aos_intro_font.c` reads the
+native proportional metrics and 12-row glyph bitmaps, reproduces the 4bpp
+tile writes across horizontal and vertical tile boundaries, and the SDL host
+scrolls that tile canvas with BG0. The diagnostic host still substitutes one
+fixed color for palette index 8 and does not yet render the native backgrounds,
+palettes, OAM, animation frames or songs, so it does not claim the original
+presentation.
 
 ```sh
 build/fusion_aria_title_preview \

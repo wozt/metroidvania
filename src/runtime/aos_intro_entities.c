@@ -108,8 +108,8 @@ static int32_t draw_script(AosIntroEntities *group, const uint8_t *script,
     return cursor < body_size ? (int32_t)cursor : -1;
 }
 
-/* sub_080093E0. Glyph rasterization remains a host operation, but the native
- * row clear, command consumption, insertion and script cursor are retained. */
+/* sub_080093E0. The native row clear, command consumption, insertion and
+ * script cursor are retained; emitted glyphs feed aos_intro_font.c. */
 static void update_text_script(AosIntroEntities *group) {
     group->text_step_requested = true;
     group->text_clear_requested = true;

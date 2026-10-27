@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-27T05:41:53+00:00",
+ "generated_at": "2026-10-27T05:50:42+00:00",
  "git": {
-  "commit": "bd9e49f",
+  "commit": "1fdc204",
   "branch": "main",
   "dirty": true
  },
@@ -12686,6 +12686,7 @@
     "src/runtime/aos_intro_cutscene.c",
     "src/runtime/aos_intro_entities.c",
     "src/runtime/aos_intro_resources.c",
+    "src/runtime/aos_intro_font.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos_title_preview.c",
     "src/runtime/aos_save.c"
@@ -12694,6 +12695,7 @@
     "tests/test_aos_intro_cutscene.c",
     "tests/test_aos_intro_entities.c",
     "tests/test_aos_intro_resources.c",
+    "tests/test_aos_intro_font.c",
     "tests/test_aos_game_lifecycle.c",
     "tests/test_aos_save.c"
    ],
@@ -12714,15 +12716,19 @@
     "sub_080093E0",
     "sub_080094AC",
     "sub_08009610",
-    "sub_08009648"
+    "sub_08009648",
+    "sub_0803FEA4",
+    "sub_0803FF64",
+    "sub_08040048"
    ],
-   "limitations": "The native backgrounds, palettes, OAM, glyph rasterizer and animation resources are not rendered; sub_0803F17C does not yet supply animation actions, affine allocation cannot fail in the host model, and songs are request-only. The SDL host shows at most 28 ASCII-safe characters of the current ROM-backed line with its diagnostic font and starts gameplay as a separate process, so there is no native visual or emulator comparison. The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group preserves fixed-point motion, thresholds, lifetimes, alpha ownership and cleanup. sub_080093E0 retains the complete row-oriented script protocol. The verified-ROM resource view resolves the main script and language insertions directly from the native pointer table for English, French and German without exporting proprietary bytes. Source-derived, unit-tested and smoke-tested against the local hash-gated ROM; not emulator-compared.",
-   "next_action": "Port the native glyph rasterizer and connect the introduction backgrounds, animation resources, palettes, OAM and SDL renderer before validating the presentation.",
+   "limitations": "The native backgrounds, palette 15, OAM and animation resources are not rendered; sub_0803F17C does not yet supply animation actions, affine allocation cannot fail in the host model, and songs are request-only. The SDL host substitutes one fixed diagnostic color for nonzero text pixels and starts gameplay as a separate process, so there is no native visual or emulator comparison. The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group preserves fixed-point motion, thresholds, lifetimes, alpha ownership and cleanup. sub_080093E0 retains the complete row-oriented script protocol. The verified-ROM resource view resolves the main script and language insertions directly from the native pointer table for English, French and German without exporting proprietary bytes. The introduction use of sub_0803FEA4, sub_0803FF64 and sub_08040048 reads the native proportional metrics and 12-row bitmaps, reproduces their merge/split writes in a bounded 4bpp tile canvas, clears the native 37-cell row and follows BG0 vertical scroll. Source-derived, unit-tested and smoke-tested against the local hash-gated ROM; not emulator-compared.",
+   "next_action": "Connect the introduction backgrounds, palette 15, animation resources and OAM before validating the presentation.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_intro_cutscene.c",
      "tests/test_aos_intro_entities.c",
      "tests/test_aos_intro_resources.c",
+     "tests/test_aos_intro_font.c",
      "tests/test_aos_game_lifecycle.c",
      "tests/test_aos_save.c"
     ],
@@ -12762,6 +12768,16 @@
       "registered": true,
       "ctest": [
        "aos_intro_resources"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_intro_font.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_intro_font"
       ],
       "outcome": "passed",
       "exists": true
@@ -14208,6 +14224,7 @@
     "src/runtime/aos_intro_cutscene.c",
     "src/runtime/aos_intro_entities.c",
     "src/runtime/aos_intro_resources.c",
+    "src/runtime/aos_intro_font.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
@@ -14217,13 +14234,14 @@
     "tests/test_aos_main_menu.c",
     "tests/test_aos_intro_cutscene.c",
     "tests/test_aos_intro_entities.c",
-    "tests/test_aos_intro_resources.c"
+    "tests/test_aos_intro_resources.c",
+    "tests/test_aos_intro_font.c"
    ],
    "dependencies": [
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed file operations onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. With --rom it verifies the user's Aria image, resolves the introduction script and English/French/German insertions directly from the native pointer table, and displays an ASCII-safe diagnostic line without exporting ROM bytes. Native introduction backgrounds, palettes, sprites, glyph rasterization and audio remain absent, while portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state are also open.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed file operations onto three checksummed portable files, and launches the room runtime only after the native gameplay handoff. With --rom it verifies the user's Aria image, resolves the introduction script and English/French/German insertions directly from the native pointer table, then renders native proportional glyph metrics and 12-row bitmaps into a bounded 4bpp tile canvas without exporting ROM bytes. Native introduction backgrounds, palette 15, sprites and audio remain absent, and the SDL view substitutes one fixed diagnostic glyph color. Portable quicksaves, completed-file metadata, inventory, equipment, souls, events and map state are also open.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -14233,7 +14251,8 @@
      "tests/test_aos_main_menu.c",
      "tests/test_aos_intro_cutscene.c",
      "tests/test_aos_intro_entities.c",
-     "tests/test_aos_intro_resources.c"
+     "tests/test_aos_intro_resources.c",
+     "tests/test_aos_intro_font.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -14311,6 +14330,16 @@
       "registered": true,
       "ctest": [
        "aos_intro_resources"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_intro_font.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_intro_font"
       ],
       "outcome": "passed",
       "exists": true
@@ -16145,6 +16174,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_intro_font",
+    "files": [
+     "tests/test_aos_intro_font.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_main_menu",
     "files": [
      "tests/test_aos_main_menu.c"
@@ -16272,12 +16308,18 @@
    }
   ],
   "summary": {
-   "passed": 79,
+   "passed": 80,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "1fdc204",
+   "date": "2026-10-27",
+   "subject": "Connect Aria introduction ROM text",
+   "scope": "project"
+  },
   {
    "commit": "bd9e49f",
    "date": "2026-10-27",
@@ -16751,12 +16793,6 @@
    "date": "2026-10-24",
    "subject": "Port Zero Mission ROM symbols to C11",
    "scope": "project"
-  },
-  {
-   "commit": "4eecf83",
-   "date": "2026-10-24",
-   "subject": "Add native Aria world summary",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -16817,9 +16853,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 453,
-    "routines_attached_to_features": 453,
-    "unassigned_routines": 3120,
+    "routines_cited_by_features": 456,
+    "routines_attached_to_features": 456,
+    "unassigned_routines": 3117,
     "call_edges": 14228
    }
   },

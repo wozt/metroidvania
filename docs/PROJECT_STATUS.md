@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0572 - Render Aria's native introduction font
+
+- Ported the introduction's proportional-font path from `sub_0803FEA4`,
+  `sub_0803FF64` and `sub_08040048`. The bounded renderer reads the native
+  four-byte metrics and 14-byte glyph records directly from the verified ROM,
+  draws their 12 bitmap rows into a 32-by-32 GBA 4bpp tile canvas and preserves
+  both horizontal tile splitting and vertical tile-row transitions.
+- Reproduced the native 37-cell row clear and six-pixel proportional cursor
+  accounting. The SDL introduction host now consumes the interpreter's glyph
+  rows and maps the resulting tile canvas through the live BG0 vertical scroll
+  instead of substituting a truncated ASCII debug line.
+- Synthetic tests cover exact packed pixels, left cropping, both tile-boundary
+  directions, proportional placement, row-clear bounds and invalid ROMs. The
+  optional local smoke check also passed against the hash-gated Aria ROM; it
+  writes and prints no proprietary glyph data.
+- The host currently draws palette index 8 with one diagnostic color. Native
+  introduction backgrounds, palette 15, OAM and animation resources remain
+  disconnected, so the feature stays partial. Source-derived and unit-tested,
+  not emulator-compared. Zero Mission and audio are unchanged.
+- Next: connect the introduction's native background graphics and palette 15,
+  then render the six actor OAM streams over the completed text plane.
+
 ## Patch 0571 - Connect Aria's ROM-backed introduction text
 
 - Added a bounded, non-owning resource view over the verified Aria ROM. It

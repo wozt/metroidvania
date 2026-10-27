@@ -672,8 +672,10 @@ palette row 7, which `sub_0800C5D8` fills with bank 3 of `0x082099FC`
 (`sUnk_084F0DD8` maps rows 4 to 9 and 14); it rises 0.5 per frame after
 its first and is deleted when the animation ends. The export names it
 `Effect/flame/anim_0`; the runtime updates flames after the enemies. `src/runtime/aos_combat.c` ports the boxes,
-overlaps, slots and formulas; the new-game stats are not traced, so the
-runtime takes ATK, DEF and HP as diagnostic options.
+overlaps, slots and formulas; `src/runtime/aos_stats.c` derives ATK
+(STR + equipment ATK) and DEF (CON / 2 + equipment DEF) from the level and
+the equipment records (sub_0804AD9C), and `--atk`, `--def` and `--hp` remain
+diagnostic overrides.
 
 Zombie (enemy 0x01, `EnemyZombieCreate` / `EnemyZombieUpdate`): tiles
 `0x081CBF8C`, palette `0x0820A62C`, frames `0x082178B8` (`sub_0807B404`);

@@ -432,7 +432,8 @@ save-choice prompt remain partial.
 The growing native enemy subset recorded in `docs/NATIVE_PARITY_CHECKLIST.md`,
 including Nemesis and its linked helper, the Killer and Lightning Dolls and their burning pieces, attacks Soma (he flinches,
 is knocked back, or dies at 0 HP) and dies to his weapon with native rules
-(`--atk/--def/--hp` set diagnostic stats, the new-game stats are not traced);
+(ATK and DEF follow the level and equipment as natively, a new file starting
+at ATK 15 and DEF 11; `--atk/--def/--hp` override them for diagnosis);
 wooden doors open natively with
 their native sprite and palette cycle (`./build/fusion_rebuild --task aria_objects`).
 Leaving a room

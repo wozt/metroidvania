@@ -31,7 +31,30 @@ typedef struct {
     uint32_t flags; /* unk_13260 */
     uint32_t defeated[AOS_STATS_ENEMY_WORDS];
     uint32_t dropped[2][AOS_STATS_ENEMY_WORDS]; /* 0x133B0 common, 0x133C0 rare */
+    /* equippedWeapon, equippedArmor, equippedAccessory (0xFF: none). */
+    uint8_t weapon, armor, accessory;
+    /* sub_0804AD9C's results: equipment ATK and DEF (0x131FC, 0x131FE),
+     * effective STR, CON, INT, LCK (currentStats), resistances (0x131FA),
+     * then currentATK and currentDEF (sub_08021C44). */
+    int16_t equipment_atk, equipment_def;
+    int16_t current[AOS_STAT_COUNT];
+    uint16_t resist;
+    int16_t atk, def;
 } AosStats;
+
+/* One equipment record (metadata/equipment.tsv). */
+typedef struct {
+    uint8_t atk, def;
+    int8_t stats[AOS_STAT_COUNT];
+    uint16_t resist;
+} AosEquipmentRecord;
+
+enum { AOS_WEAPON_RECORDS = 59, AOS_ARMOR_RECORDS = 45, AOS_EQUIPMENT_NONE = 0xFF };
+
+typedef struct {
+    AosEquipmentRecord weapons[AOS_WEAPON_RECORDS];
+    AosEquipmentRecord armor[AOS_ARMOR_RECORDS];   /* armor and accessories */
+} AosEquipmentTables;
 
 /* sub_08033DA4: level 1 and the character's starting HP, MP and STR, CON,
  * INT, LCK. Experience, gold and the bestiary are kept. */
@@ -103,6 +126,14 @@ typedef struct {
  * bit in the item bitsets at 0x133B0 (common) or 0x133C0 (rare). */
 AosDrop aos_stats_roll_drop(AosStats *stats, uint8_t enemy_id, const AosEnemyDrops *record,
                             const AosDropContext *context, uint32_t (*random)(void));
+/* sub_08014548's new-game equipment: weapon 0, armor 0, no accessory. */
+void aos_stats_new_game_equipment(AosStats *stats);
+/* sub_0804AD9C: sums the weapon, armor and accessory records
+ * (sub_0804ACD4; resistances from armor and accessory only), adds the base
+ * stats, then sets currentATK = STR + equipment ATK and currentDEF =
+ * CON / 2 + equipment DEF, at least 0 (sub_08021FA4, sub_08021C44). An
+ * index outside its table counts as nothing. */
+void aos_stats_refresh(AosStats *stats, const AosEquipmentTables *tables);
 /* Whether the bestiary bit of an enemy is set. */
 bool aos_stats_enemy_defeated(const AosStats *stats, uint8_t enemy_id);
 #endif

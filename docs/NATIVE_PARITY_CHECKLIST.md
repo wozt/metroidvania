@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 60 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 61 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 487 | 3086 |
+| Castlevania: Aria of Sorrow | 494 | 3079 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1182,6 +1182,15 @@ Native evidence: `aos:asm:asm/code/code_08014548.s:sub_0801B0D8`.
 Local implementation: [`src/runtime/aos_soma.c`](../src/runtime/aos_soma.c).  
 Tests: [`tests/test_aos_soma.c`](../tests/test_aos_soma.c).
 Next action: Port the remaining native Soma states.
+
+[~] **`aos.progression.equipment_stats` — Aria equipment and derived ATK and DEF.** sub_0804ACD4 sums the weapon record (0x08505D3C, 59 x 28 bytes) and the armor and accessory records (0x085063B0, 45 x 20 bytes): ATK, DEF, the signed STR, CON, INT, LCK and, for armor and accessory only, the ORed resistances; sub_0804AD9C adds the base stats and sub_08021FA4 / sub_08021C44 give currentATK = STR + equipment ATK and currentDEF = CON / 2 + equipment DEF, at least 0. The object export writes both tables as metadata/equipment.tsv. Portable saves (schema v4) keep the weapon, armor and accessory, older files taking sub_08014548's new-game set (weapon 0, armor 0, no accessory); the runtime equips them, derives ATK and DEF at load and after every level up, and a new file starts at ATK 15 and DEF 11 (local runtime check; level 5 gives 19 and 13). --atk and --def remain overrides. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_0804ACD4`, `aos:asm:asm/code/code_08040A38.s:sub_0804AD9C`, `aos:asm:asm/code/code_08040A38.s:sub_0804B314`, `aos:c:src/code/code_080211F0.c:sub_08021C44`, `aos:c:src/code/code_080211F0.c:sub_08021F64`, `aos:c:src/code/code_080211F0.c:sub_08021F84`, `aos:c:src/code/code_080211F0.c:sub_08021FA4`.  
+Local implementation: [`src/runtime/aos_stats.c`](../src/runtime/aos_stats.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_stats.c`](../tests/test_aos_stats.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Dependencies: `aos.progression.experience`, `aos.saves.portable_slots`.  
+Known divergences: Only the three equipped records are summed (sub_0804ACD4's preview override, used by the equipment menu, is not modelled) and an index past its table counts as nothing. There is no inventory or equipment menu yet, so equipment changes only through the file or --weapon; armor and accessories have no other effect than their records (no accessory-specific behaviour such as MP regeneration). The resistance word is computed but not yet applied to damage, and the effective INT and LCK are not used.  
+Next action: Port the inventories and the equipment menu, apply the resistances and the accessory effects, then the souls.
 
 [~] **`aos.progression.experience` — Aria levels, experience and enemy drop rolls.** sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables (every fourth level gains a single INT point), sub_08033E10, sub_08033E38 and sub_08033E6C. The experience part of sub_080683BC grants an enemy record's u16 at 0x10 once per entity (its + 0x3E guard), marks the 0x133A0 bestiary bit, applies the 0x133 / 256 bonus flag and the 99999999 cap, and levels up; Julius and the mode bits skip it. Its drop part rolls, with the same random draws in the same order, the soul (rarity * 8 - (LCK / 16 - 32), at least 16; thresholds 3, 6 unowned, 7 with the 0xA1 flag, +8 with accessory 0x28), then unless the ground type blocks it the rare (below 0x40, 0x60 with 0x27) or common item (rate * 4 - (LCK / 16 - 16); 4, 8 with 0x27) with its item bitset, then for records with an item the sub_08043F70 pickup (bits 3-12 <= 7, 0x3F and +3 with 0x2B) or the sub_08043C10 pickup (bits 4-13 <= 7, 0x3F with 0x1D). The enemy-stats export (schema v3) now carries the experience and drop fields and the runtime rewards each enemy it reports killed, raising maximum HP on a level up and drawing its drop in the native order; a v3 save with 700 experience starts at level 5 with 368 maximum HP (local runtime check). Source-derived and unit-tested, not emulator-compared.
 

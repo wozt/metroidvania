@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0581 - Aria equipment stats and native ATK/DEF
+
+- `aos_stats_refresh` ports `sub_0804AD9C` with `sub_0804ACD4`,
+  `sub_08021FA4` and `sub_08021C44`: the weapon, armor and accessory records
+  add ATK, DEF, signed STR/CON/INT/LCK and (armor and accessory) resistances
+  to the base stats; ATK = STR + equipment ATK, DEF = CON / 2 + equipment
+  DEF, at least 0.
+- The object export writes both equipment tables (`metadata/equipment.tsv`,
+  task `aria_objects` version 6). Portable saves move to schema v4 with the
+  equipped weapon, armor and accessory; older files take the new-game set of
+  `sub_08014548` (weapon 0, armor 0, no accessory).
+- The runtime equips the file's weapon and derives ATK and DEF at load and
+  after each level up instead of using diagnostic defaults: a new file
+  starts at ATK 15 and DEF 11, level 5 at 19 and 13 (local runtime check).
+  `--atk`, `--def` and `--weapon` remain overrides.
+- Not ported: inventories, the equipment menu, resistances in damage and
+  accessory effects. Source-derived and unit-tested, not emulator-compared.
+  Zero Mission is unchanged.
+
 ## Patch 0580 - Aria money pickups
 
 - `src/runtime/aos_pickup.c` ports the money pickup: creation from the

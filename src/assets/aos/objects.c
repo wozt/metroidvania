@@ -15,6 +15,8 @@ enum {
     GBA_BASE = 0x08000000,
     ENEMY_TABLE = 0x080E9644,
     MONEY_TABLE = 0x085250E4,
+    WEAPON_STATS = 0x08505D3C,
+    ARMOR_STATS = 0x085063B0,
     ENEMY_COUNT = 0x71,
     DEATH_BLINK = 0x08118CE0,
     SCREEN_MARGINS = 0x08118D08,
@@ -798,6 +800,32 @@ static bool append_money(const FusionRom *rom, Text *money, char *error, size_t 
     return true;
 }
 
+/* The equipment records sub_0804ACD4 reads: weapons (0x08505D3C, 59
+ * records of 28 bytes) and armor/accessories (0x085063B0, 45 records of 20
+ * bytes): ATK (+ 0xA), DEF (+ 0xB), STR, CON, INT, LCK (+ 0xC-0xF, signed)
+ * and the armor table's resistances (+ 0x10). */
+static bool append_equipment(const FusionRom *rom, Text *equipment, char *error,
+                             size_t error_size) {
+    if (!text_append(equipment,
+            "schema\tmetroidvania-aos-equipment-v1\n"
+            "# kind\tindex\tatk\tdef\tstr\tcon\tint\tlck\tresist\n")) return false;
+    static const struct { const char *kind; uint32_t table, stride, count; } tables[] = {
+        {"weapon", WEAPON_STATS, 28, 59}, {"armor", ARMOR_STATS, 20, 45}};
+    for (size_t table = 0; table < 2; ++table)
+        for (uint32_t index = 0; index < tables[table].count; ++index) {
+            const uint8_t *record = slice(rom, tables[table].table + index * tables[table].stride,
+                                          tables[table].stride, "equipment record", error,
+                                          error_size);
+            if (!record || !text_append(equipment, "%s\t%u\t%u\t%u\t%d\t%d\t%d\t%d\t0x%04x\n",
+                                        tables[table].kind, index, record[0xA], record[0xB],
+                                        (int8_t)record[0xC], (int8_t)record[0xD],
+                                        (int8_t)record[0xE], (int8_t)record[0xF],
+                                        table ? read_u16(record + 0x10) : 0))
+                return false;
+        }
+    return true;
+}
+
 static bool append_global_metadata(const FusionRom *rom, Text *rows,
                                    char *error, size_t error_size) {
     const uint8_t *blink = slice(rom, DEATH_BLINK, 40, "death blink pattern",
@@ -836,7 +864,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0};
+    Text rows = {0}, stats = {0}, money = {0}, equipment = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
                                                    error_size) &&
@@ -864,7 +892,10 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                                            &stats, error, error_size) &&
                            append_money(rom, &money, error, error_size) &&
                            write_text_file(metadata_output, "money.tsv",
-                                           &money, error, error_size);
+                                           &money, error, error_size) &&
+                           append_equipment(rom, &equipment, error, error_size) &&
+                           write_text_file(metadata_output, "equipment.tsv",
+                                           &equipment, error, error_size);
     FusionSpriteLibrarySummary library_summary = {0};
     if (success) success = fusion_sprite_library_finish(
         &library, &library_summary, error, error_size);
@@ -880,5 +911,6 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(rows.data);
     free(stats.data);
     free(money.data);
+    free(equipment.data);
     return success;
 }

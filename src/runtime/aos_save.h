@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v3"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v4"
+#define AOS_SAVE_SCHEMA_V3 "metroidvania-aos-save-v3"
 #define AOS_SAVE_SCHEMA_V2 "metroidvania-aos-save-v2"
 #define AOS_SAVE_SCHEMA_V1 "metroidvania-aos-save-v1"
 #define AOS_SAVE_SLOT_COUNT 3
@@ -30,6 +31,9 @@ typedef struct {
      * its stats are derived from the experience (sub_08033E38). */
     uint32_t experience;
     uint32_t gold;
+    /* equippedWeapon, equippedArmor, equippedAccessory (schema v4; older
+     * files get sub_08014548's new-game set: 0, 0, none = 0xFF). */
+    uint8_t weapon, armor, accessory;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

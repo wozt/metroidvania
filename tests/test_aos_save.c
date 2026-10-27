@@ -37,6 +37,9 @@ int main(void) {
     source.challenge_flags = 0x100000;
     source.experience = 123456;
     source.gold = 7890;
+    assert(source.weapon == 0 && source.armor == 0 && source.accessory == 0xFF);
+    source.weapon = 12;
+    source.accessory = 0x28;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -87,7 +90,8 @@ int main(void) {
     loaded.experience = loaded.gold = 5;
     assert(aos_save_load(v2_path, &loaded, error, sizeof error));
     assert(loaded.area == 4 && loaded.max_hp == 332 && loaded.name[1] == 2 &&
-           loaded.experience == 0 && loaded.gold == 0);
+           loaded.experience == 0 && loaded.gold == 0 && loaded.weapon == 0 &&
+           loaded.armor == 0 && loaded.accessory == 0xFF);
     assert(remove(v2_path) == 0);
 
     /* Experience stops at 99999999 (the native cap of sub_080683BC); gold
@@ -98,6 +102,16 @@ int main(void) {
     source.gold = 100000000u;
     assert(!aos_save_store(path, &source, error, sizeof error));
     source.gold = 0;
+
+    /* Equipment indices stay within their tables (59 weapons, 45 armor). */
+    source.weapon = 59;
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.weapon = 0xFF;
+    source.armor = 44;
+    assert(aos_save_store(path, &source, error, sizeof error));
+    source.armor = 45;
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.armor = 0;
 
     source.slot = AOS_SAVE_SLOT_COUNT;
     assert(!aos_save_store(path, &source, error, sizeof error));

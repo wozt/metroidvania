@@ -43,6 +43,7 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DEFAULT_MONEY "assets/extracted/aria/metadata/money.tsv"
+#define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
 #define DOOR_STYLES 2
 #define ENEMY_KINDS 100
@@ -475,8 +476,8 @@ static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **back
     return true;
 }
 
-/* The player's combat stats: diagnostic inputs, the new-game values are
- * not traced. */
+/* The player's combat stats: ATK and DEF come from aos_stats_refresh
+ * (sub_0804AD9C) unless --atk / --def override them; HP from the file. */
 typedef struct {
     int atk, def, hp, max_hp;
 } AriaPlayerStats;
@@ -492,6 +493,8 @@ typedef struct {
     const AosAnimSet *effects[AOS_EFFECT_KINDS];   /* Effect/<name>, NULL when not loaded */
     AosStats *progress;                          /* level, experience, bestiary */
     const AosMoneyKind *money;                   /* NULL without metadata/money.tsv */
+    const AosEquipmentTables *equipment;         /* NULL without metadata/equipment.tsv */
+    bool derive_atk, derive_def;                 /* false under --atk / --def */
 } AriaCombat;
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
@@ -543,6 +546,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     combat->stats[e->id]->experience);
                 if (gained > 0) {
                     soma->max_hp = (int16_t)combat->progress->max_hp;
+                    /* sub_08033CAC ends with sub_0804AD9C. */
+                    if (combat->equipment) {
+                        aos_stats_refresh(combat->progress, combat->equipment);
+                        if (combat->derive_atk) combat->player->atk = combat->progress->atk;
+                        if (combat->derive_def) combat->player->def = combat->progress->def;
+                    }
                     printf("Level up: level %u, max HP %u\n", combat->progress->level,
                            combat->progress->max_hp);
                 }
@@ -885,6 +894,35 @@ static bool load_enemy_data(AriaObjects *objects) {
         objects->money_loaded = loaded == (1u << AOS_MONEY_KINDS) - 1;
     }
     return true;
+}
+
+/* metadata/equipment.tsv: the weapon and armor/accessory records. */
+static bool load_equipment(const char *path, AosEquipmentTables *tables) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[256];
+    unsigned weapons = 0, armor = 0;
+    while (fgets(line, sizeof line, f)) {
+        char kind[16];
+        unsigned index, atk, def, resist;
+        int str, con, intelligence, lck;
+        if (sscanf(line, "%15s\t%u\t%u\t%u\t%d\t%d\t%d\t%d\t%x", kind, &index, &atk, &def,
+                   &str, &con, &intelligence, &lck, &resist) != 9)
+            continue;
+        AosEquipmentRecord record = {(uint8_t)atk, (uint8_t)def,
+                                     {(int8_t)str, (int8_t)con, (int8_t)intelligence,
+                                      (int8_t)lck},
+                                     (uint16_t)resist};
+        if (!strcmp(kind, "weapon") && index < AOS_WEAPON_RECORDS) {
+            tables->weapons[index] = record;
+            weapons++;
+        } else if (!strcmp(kind, "armor") && index < AOS_ARMOR_RECORDS) {
+            tables->armor[index] = record;
+            armor++;
+        }
+    }
+    fclose(f);
+    return weapons == AOS_WEAPON_RECORDS && armor == AOS_ARMOR_RECORDS;
 }
 
 static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Renderer *renderer) {
@@ -1425,6 +1463,7 @@ int main(int argc, char **argv) {
     int spawn_x = -1, spawn_y = -1;
     bool check = false, show_hitboxes = false, debug_at_start = false;
     bool hp_override = false, moves_override = false, spawn_override = false;
+    bool atk_override = false, def_override = false, weapon_override = false;
     const char *debug_input = NULL;
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
@@ -1442,7 +1481,10 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--library") && i + 1 < argc) library_path = argv[++i];
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
-        else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) weapon_name = argv[++i];
+        else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) {
+            weapon_name = argv[++i];
+            weapon_override = true;
+        }
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
         else if (!strcmp(argv[i], "--debug-menu")) debug_at_start = true;
         else if (!strcmp(argv[i], "--debug-input") && i + 1 < argc) debug_input = argv[++i];
@@ -1454,8 +1496,13 @@ int main(int argc, char **argv) {
             }
         }
         else if (!strcmp(argv[i], "--repeat") && i + 1 < argc) repeat = atol(argv[++i]);
-        else if (!strcmp(argv[i], "--atk") && i + 1 < argc) player_stats.atk = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--def") && i + 1 < argc) player_stats.def = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--atk") && i + 1 < argc) {
+            player_stats.atk = atoi(argv[++i]);
+            atk_override = true;
+        } else if (!strcmp(argv[i], "--def") && i + 1 < argc) {
+            player_stats.def = atoi(argv[++i]);
+            def_override = true;
+        }
         else if (!strcmp(argv[i], "--hp") && i + 1 < argc) {
             player_stats.hp = player_stats.max_hp = atoi(argv[++i]);
             hp_override = true;
@@ -1560,9 +1607,41 @@ int main(int argc, char **argv) {
         progress.gold = active_save.gold;
     }
     aos_stats_level_up(&progress);
+    /* Equipment: the file's (sub_08014548's new-game set for older files),
+     * or the --weapon choice. The equipment records give ATK and DEF
+     * (sub_0804AD9C) unless --atk / --def ask for diagnostic values. */
+    aos_stats_new_game_equipment(&progress);
+    if (has_active_save) {
+        progress.weapon = active_save.weapon;
+        progress.armor = active_save.armor;
+        progress.accessory = active_save.accessory;
+    }
+    static char save_weapon_name[8];
+    if (weapon_override)
+        progress.weapon = strcmp(weapon_name, "none") ? (uint8_t)atoi(weapon_name)
+                                                      : AOS_EQUIPMENT_NONE;
+    else if (has_active_save) {
+        if (progress.weapon == AOS_EQUIPMENT_NONE)
+            weapon_name = "none";
+        else {
+            snprintf(save_weapon_name, sizeof save_weapon_name, "%u", progress.weapon);
+            weapon_name = save_weapon_name;
+        }
+    }
+    static AosEquipmentTables equipment;
+    bool have_equipment = load_equipment(DEFAULT_EQUIPMENT, &equipment);
+    if (have_equipment) {
+        aos_stats_refresh(&progress, &equipment);
+        if (!atk_override) player_stats.atk = progress.atk;
+        if (!def_override) player_stats.def = progress.def;
+    } else {
+        fprintf(stderr, "No equipment table: ./build/fusion_rebuild --task aria_objects "
+                        "(ATK and DEF stay diagnostic)\n");
+    }
     if (has_active_save)
-        printf("Aria file %u: level %u, experience %u, max HP %u\n", active_save.slot + 1u,
-               progress.level, progress.experience, progress.max_hp);
+        printf("Aria file %u: level %u, experience %u, max HP %u, ATK %d, DEF %d\n",
+               active_save.slot + 1u, progress.level, progress.experience, progress.max_hp,
+               player_stats.atk, player_stats.def);
     if (!hp_override && progress.max_hp > player_stats.max_hp) {
         player_stats.max_hp = progress.max_hp;
         if (player_stats.hp > player_stats.max_hp) player_stats.hp = player_stats.max_hp;
@@ -1582,7 +1661,8 @@ int main(int argc, char **argv) {
     AosWeaponEntity weapon_entity = {0};
     AriaCombat combat = {{NULL}, {NULL}, {NULL}, &weapon_entity,
                          weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, {NULL},
-                         &progress, NULL};
+                         &progress, NULL, have_equipment ? &equipment : NULL,
+                         !atk_override, !def_override};
     if (objects.money_loaded) combat.money = objects.money;
     for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
         if (objects.effects[k].def.count) combat.effects[k] = &objects.effects[k].set;
@@ -1627,8 +1707,8 @@ int main(int argc, char **argv) {
     debug_menu_value(&debug, "HP", &debug_hp, 1, 9999, 1, NULL, DEBUG_HP);
     debug_menu_value(&debug, "Max HP", &debug_max_hp, 1, 9999, 1, NULL, DEBUG_MAX_HP);
     debug_menu_action(&debug, "Refill HP", DEBUG_REFILL);
-    debug_menu_value(&debug, "ATK (diagnostic)", &player_stats.atk, 0, 999, 1, NULL, DEBUG_ATK);
-    debug_menu_value(&debug, "DEF (diagnostic)", &player_stats.def, 0, 999, 1, NULL, DEBUG_DEF);
+    debug_menu_value(&debug, "ATK (override)", &player_stats.atk, 0, 999, 1, NULL, DEBUG_ATK);
+    debug_menu_value(&debug, "DEF (override)", &player_stats.def, 0, 999, 1, NULL, DEBUG_DEF);
     for (int i = 0; i < 5; ++i)
         debug_menu_toggle(&debug, debug_move_labels[i], &debug_moves[i], DEBUG_MOVES);
     if (enemy_count) {
@@ -1758,6 +1838,9 @@ int main(int argc, char **argv) {
                     active_save.moves = soma.moves;
                     active_save.experience = progress.experience;
                     active_save.gold = progress.gold;
+                    active_save.weapon = progress.weapon;
+                    active_save.armor = progress.armor;
+                    active_save.accessory = progress.accessory;
                     char error[256];
                     if (aos_save_store(save_path, &active_save, error, sizeof error))
                         printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",

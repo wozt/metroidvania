@@ -25,7 +25,10 @@ static bool valid(const AosSaveData *save) {
         save->room > 999 || !spawn_pair || save->hp <= 0 ||
         save->max_hp < save->hp || save->max_hp > 9999 || save->moves > 0x1Fu ||
         save->character > 1 || (save->challenge_flags & ~0x300000u) ||
-        save->experience > 99999999u || save->gold > 99999999u)
+        save->experience > 99999999u || save->gold > 99999999u ||
+        (save->weapon >= 59 && save->weapon != 0xFF) ||
+        (save->armor >= 45 && save->armor != 0xFF) ||
+        (save->accessory >= 45 && save->accessory != 0xFF))
         return false;
     for (unsigned i = 0; i < 8; ++i)
         if (save->name[i] > 0x22) return false;
@@ -64,14 +67,24 @@ static int payload_v2(char *out, size_t size, const AosSaveData *save) {
                     save->character, save->challenge_flags);
 }
 
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v3(char *out, size_t size, const AosSaveData *save) {
     int used = payload_v2(out, size, save);
     if (used < 0 || (size_t)used >= size) return used;
     /* The v2 text with its schema line renamed and two more fields. */
-    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    memcpy(out, AOS_SAVE_SCHEMA_V3, sizeof AOS_SAVE_SCHEMA_V3 - 1);
     int added = snprintf(out + used, size - (size_t)used,
                          "experience=%" PRIu32 "\ngold=%" PRIu32 "\n", save->experience,
                          save->gold);
+    return added < 0 ? added : used + added;
+}
+
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    int used = payload_v3(out, size, save);
+    if (used < 0 || (size_t)used >= size) return used;
+    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    int added = snprintf(out + used, size - (size_t)used,
+                         "weapon=%u\narmor=%u\naccessory=%u\n", save->weapon, save->armor,
+                         save->accessory);
     return added < 0 ? added : used + added;
 }
 
@@ -88,6 +101,9 @@ void aos_save_init_new(AosSaveData *save, unsigned slot) {
         .max_hp = 320,
         .moves = 0x1F,
         .name = {0x14, 0x10, 0x0E, 0x02, 0, 0, 0, 0},
+        .weapon = 0,
+        .armor = 0,
+        .accessory = 0xFF,
     };
 }
 
@@ -114,11 +130,13 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
     unsigned slot, area, room, name[8], character;
     int spawn_x, spawn_y, hp, max_hp;
     uint32_t moves, challenge_flags, expected, experience = 0, gold = 0;
+    unsigned weapon = 0, armor = 0, accessory = 0xFF;
     uint64_t play_frames;
     int consumed = 0;
     bool legacy = strncmp(text, AOS_SAVE_SCHEMA_V1 "\n",
                           sizeof(AOS_SAVE_SCHEMA_V1)) == 0;
     bool v2 = strncmp(text, AOS_SAVE_SCHEMA_V2 "\n", sizeof(AOS_SAVE_SCHEMA_V2)) == 0;
+    bool v3 = strncmp(text, AOS_SAVE_SCHEMA_V3 "\n", sizeof(AOS_SAVE_SCHEMA_V3)) == 0;
     int matched;
     if (legacy) {
         matched = sscanf(text,
@@ -140,9 +158,9 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &play_frames, &name[0], &name[1], &name[2], &name[3],
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &expected, &consumed);
-    } else {
+    } else if (v3) {
         matched = sscanf(text,
-                         AOS_SAVE_SCHEMA "\n"
+                         AOS_SAVE_SCHEMA_V3 "\n"
                          "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
                          "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
                          "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
@@ -153,8 +171,23 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &play_frames, &name[0], &name[1], &name[2], &name[3],
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &experience, &gold, &expected, &consumed);
+    } else {
+        matched = sscanf(text,
+                         AOS_SAVE_SCHEMA "\n"
+                         "slot=%u\narea=%u\nroom=%u\nspawn_x=%d\nspawn_y=%d\n"
+                         "hp=%d\nmax_hp=%d\nmoves=%" SCNu32 "\nplay_frames=%" SCNu64
+                         "\nname=%u,%u,%u,%u,%u,%u,%u,%u\n"
+                         "character=%u\nchallenge_flags=%" SCNu32
+                         "\nexperience=%" SCNu32 "\ngold=%" SCNu32
+                         "\nweapon=%u\narmor=%u\naccessory=%u"
+                         "\nchecksum=%" SCNx32 "\n%n",
+                         &slot, &area, &room, &spawn_x, &spawn_y, &hp, &max_hp, &moves,
+                         &play_frames, &name[0], &name[1], &name[2], &name[3],
+                         &name[4], &name[5], &name[6], &name[7], &character,
+                         &challenge_flags, &experience, &gold, &weapon, &armor, &accessory,
+                         &expected, &consumed);
     }
-    int expected_matches = legacy ? 10 : v2 ? 20 : 22;
+    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : 25;
     if (matched != expected_matches || consumed <= 0 || (size_t)consumed != used) {
         set_error(error, error_size, "save schema is invalid");
         return false;
@@ -191,10 +224,18 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
         parsed.challenge_flags = challenge_flags;
         parsed.experience = experience;
         parsed.gold = gold;
+        if (weapon > 0xFF || armor > 0xFF || accessory > 0xFF) {
+            set_error(error, error_size, "save contents are out of range");
+            return false;
+        }
+        parsed.weapon = (uint8_t)weapon;
+        parsed.armor = (uint8_t)armor;
+        parsed.accessory = (uint8_t)accessory;
     }
     char canonical[AOS_SAVE_TEXT_MAX];
     int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
                          : v2   ? payload_v2(canonical, sizeof canonical, &parsed)
+                         : v3   ? payload_v3(canonical, sizeof canonical, &parsed)
                                 : payload(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||
         checksum(canonical, (size_t)canonical_size) != expected) {

@@ -196,6 +196,49 @@ int main(void) {
     context.ground = 9;
     script(2, (uint32_t[]){0x3Fu << 1, 0});
     assert(aos_stats_roll_drop(&drops, 3, &items, &context, scripted).kind == AOS_DROP_ITEM);
+    /* sub_0804AD9C. The ROM's first records: weapon 0 ATK 5, armor 0 DEF 5,
+     * so a new-game Soma at level 1 has ATK 10 + 5 = 15 and DEF 12 / 2 + 5
+     * = 11. */
+    static AosEquipmentTables tables;
+    tables.weapons[0] = (AosEquipmentRecord){5, 0, {0, 0, 0, 0}, 0x0001};
+    tables.armor[0] = (AosEquipmentRecord){0, 5, {0, 0, 0, 0}, 0};
+    tables.armor[2] = (AosEquipmentRecord){0, 11, {0, 2, 0, 0}, 0x0010};
+    tables.armor[0x28] = (AosEquipmentRecord){0, 1, {1, 1, 1, 1}, 0x0200};
+    tables.armor[0x2C] = (AosEquipmentRecord){0, 0, {-40, -40, 0, -9}, 0};
+    AosStats hero = {0};
+    aos_stats_init(&hero);
+    aos_stats_new_game_equipment(&hero);
+    assert(hero.weapon == 0 && hero.armor == 0 && hero.accessory == AOS_EQUIPMENT_NONE);
+    aos_stats_refresh(&hero, &tables);
+    assert(hero.atk == 15 && hero.def == 11 && hero.equipment_atk == 5 &&
+           hero.equipment_def == 5 && hero.current[AOS_STAT_LCK] == 9);
+    /* The weapon's resistance word is ignored; armor and accessory are ORed;
+     * signed stat bonuses join the base stats. */
+    assert(hero.resist == 0);
+    hero.armor = 2;
+    hero.accessory = 0x28;
+    aos_stats_refresh(&hero, &tables);
+    assert(hero.resist == 0x0210 && hero.current[AOS_STAT_CON] == 12 + 2 + 1 &&
+           hero.current[AOS_STAT_STR] == 11 && hero.atk == 11 + 5 &&
+           hero.def == 15 / 2 + 11 + 1);
+    /* Negative totals stop at 0; 0xFF (and any index past a table) is none. */
+    hero.weapon = AOS_EQUIPMENT_NONE;
+    hero.armor = AOS_EQUIPMENT_NONE;
+    hero.accessory = 0x2C;
+    aos_stats_refresh(&hero, &tables);
+    assert(hero.current[AOS_STAT_STR] == -30 && hero.atk == 0 && hero.def == 0 &&
+           hero.current[AOS_STAT_LCK] == 0);
+    hero.accessory = 200;
+    aos_stats_refresh(&hero, &tables);
+    assert(hero.atk == 10 && hero.def == 6);
+    /* Levels raise them through the base stats. */
+    hero.weapon = 0;
+    hero.armor = 0;
+    hero.accessory = AOS_EQUIPMENT_NONE;
+    aos_stats_set_level(&hero, 10);
+    aos_stats_refresh(&hero, &tables);
+    assert(hero.atk == hero.base[AOS_STAT_STR] + 5 &&
+           hero.def == (hero.base[AOS_STAT_CON] >> 1) + 5);
     puts("Aria stats and experience tests passed");
     return 0;
 }

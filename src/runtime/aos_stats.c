@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_stats.h"
 
+#include <stddef.h>
+
 /* sUnk_080E1DCC, sUnk_080E1DE0, sUnk_080E1DF4 and sUnk_080E1E08
  * (src/code_08033CAC.c), indexed by level / 5. */
 static const uint8_t str_gain[20] = {1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
@@ -144,4 +146,38 @@ AosDrop aos_stats_roll_drop(AosStats *stats, uint8_t enemy_id, const AosEnemyDro
         drop.variant = (random() & 0xC0) == 0;
     }
     return drop;
+}
+
+void aos_stats_new_game_equipment(AosStats *stats) {
+    stats->weapon = 0;
+    stats->armor = 0;
+    stats->accessory = AOS_EQUIPMENT_NONE;
+}
+
+void aos_stats_refresh(AosStats *stats, const AosEquipmentTables *tables) {
+    int16_t atk = 0, def = 0, extra[AOS_STAT_COUNT] = {0};
+    uint16_t resist = 0;
+    const AosEquipmentRecord *records[3] = {
+        stats->weapon < AOS_WEAPON_RECORDS ? &tables->weapons[stats->weapon] : NULL,
+        stats->armor < AOS_ARMOR_RECORDS ? &tables->armor[stats->armor] : NULL,
+        stats->accessory < AOS_ARMOR_RECORDS ? &tables->armor[stats->accessory] : NULL,
+    };
+    for (int slot = 0; slot < 3; ++slot) {
+        const AosEquipmentRecord *record = records[slot];
+        if (!record) continue;
+        atk = (int16_t)(atk + record->atk);
+        def = (int16_t)(def + record->def);
+        for (int stat = 0; stat < AOS_STAT_COUNT; ++stat)
+            extra[stat] = (int16_t)(extra[stat] + record->stats[stat]);
+        if (slot) resist |= record->resist;
+    }
+    stats->equipment_atk = atk;
+    stats->equipment_def = def;
+    for (int stat = 0; stat < AOS_STAT_COUNT; ++stat)
+        stats->current[stat] = (int16_t)(extra[stat] + stats->base[stat]);
+    stats->resist = resist;
+    stats->atk = (int16_t)(stats->current[AOS_STAT_STR] + atk);
+    stats->def = (int16_t)((stats->current[AOS_STAT_CON] >> 1) + def);
+    if (stats->atk < 0) stats->atk = 0;
+    if (stats->def < 0) stats->def = 0;
 }

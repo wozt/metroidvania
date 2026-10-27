@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 63 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 64 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 515 | 3058 |
+| Castlevania: Aria of Sorrow | 519 | 3054 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1147,6 +1147,15 @@ Dependencies: `aos.title.input_stage8`.
 Known divergences: Cursor and window state only: the 4-bpp tile blitters (sub_0803FF64, sub_08040048, sub_080402DC, sub_0804039C) and the cell erasers (sub_08040E90, sub_080410BC, through sub_08040F84 and sub_080411AC) are not ported; callbacks receive each glyph and cell position, and the frontend draws glyphs with the existing proportional-font renderer. Context B's font (metrics 0x080E2EC0) is not loaded, so only context A is drawn. The native print loop is unbounded; the port stops at the entry's end.  
 Next action: Port the tile blitters and cell erasers with VRAM tile output, load context B's font for the language menu, and move the file names and statistics onto this window.
 
+[~] **`aos.ui.hud` — Aria in-game HUD bars.** sub_0800DA50 sets BG0 (map base 28, scrolled 6 pixels up), the tiles of 0x0827B208 at tile 0x200 and palette rows 13-14 from 0x0820C428 (exported together as metadata/hud.bin), lays the frame of sub_0800DB78 (sUnk_080E0F74's two blocks) and draws both bars with sub_0800F138: eight tiles from cell (4, 1) for HP (tiles 0x200-0x208) and (4, 2) for MP (0x210-0x218), filled value * 100 / max * 64 / 100 pixels and at least one when positive. sub_0800DC70 moves the shown HP, MP and maxima two steps a frame toward the real values and redraws a bar that moved. The runtime draws it from Soma's HP and the current MP; a local capture showed the native frame, a full red HP bar and a green MP bar catching up after two bat casts. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:c:src/code_0800CB00.c:sub_0800DA50`, `aos:c:src/code_0800CB00.c:sub_0800DB78`, `aos:c:src/code_0800CB00.c:sub_0800DC70`, `aos:c:src/code_0800CB00.c:sub_0800F138`.  
+Local implementation: [`src/runtime/aos_hud.c`](../src/runtime/aos_hud.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_hud.c`](../tests/test_aos_hud.c).
+Dependencies: `aos.souls.red_soul_use`, `aos.progression.experience`.  
+Known divergences: Only the frame and the two bars of BG0 are drawn: the HUD's text window set up by sub_0800DA50 (font at 0x5000, window 0, 0, 0x1A, 1) and whatever it shows are not ported, nor the HUD's other updaters in code_0800CB00.c, its fades or its hiding during menus and transitions. sub_0800DA50's VRAM clears and the palette transfer are modelled by the export and a fresh map. The HUD is drawn over the room at a fixed priority.  
+Next action: Port the HUD text window and its numbers, then the pause menu.
+
 ### Controls and input
 
 [?] **`aos.input.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (2 by native name). Category completeness has not been established.
@@ -1198,7 +1207,7 @@ Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:c:src/cod
 Local implementation: [`src/runtime/aos_stats.c`](../src/runtime/aos_stats.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_stats.c`](../tests/test_aos_stats.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
 Dependencies: `aos.saves.portable_slots`, `aos.player.soma_controller`.  
-Known divergences: sub_080683BC is ported for its experience reward and its drop decision, but the pickups it creates (sub_0804459C souls, sub_08044054 items, sub_08043F70 and sub_08043C10, entities 0x49-0xCF) are not, so a drop is only reported; the two pickups are named by routine because their contents are not traced. The runtime has no equipment or soul inventory yet: it passes the equipped accessory, the effective LCK and whether the soul is held, but the 0xA1 flag as clear, and gEwramData + 0x4CC as 0. The item bitsets (0x133B0, 0x133C0) and the bestiary are not saved. The level-up display sub_080455BC, the equipment refresh sub_0804AD9C and the walking-experience accessory path of sub_0801B0D8 are not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat.  
+Known divergences: sub_080683BC is ported for its experience reward and its drop decision, but the pickups it creates (sub_0804459C souls, sub_08044054 items, sub_08043F70 and sub_08043C10, entities 0x49-0xCF) are not, so a drop is only reported; the two pickups are named by routine because their contents are not traced. The runtime has no equipment or soul inventory yet: it passes the equipped accessory, the effective LCK and whether the soul is held, but the 0xA1 flag as clear, and gEwramData + 0x4CC as 0. The item bitsets (0x133B0, 0x133C0) and the bestiary are not saved. The level-up display sub_080455BC, the equipment refresh sub_0804AD9C and the walking-experience accessory path of sub_0801B0D8 are not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat. sub_08045F9C (a candle's drop) creates the sub_08043C10 pickup unless MP is full, which identifies it as the MP heart; its collection (case 0, sub_08043BB0) is not ported.  
 Next action: Port the pickup entities (souls, items and the two pickups) with their collection, then the soul and item inventories, equipment and the derived stats of sub_0804AD9C.
 
 [~] **`aos.souls.inventory_pickups` — Aria soul inventory and soul pickups.** The soul inventories keep native nibble counts in two groups per colour (red 2 x 28, blue 2 x 13, yellow 2 x 18 bytes) and a single ability array that both groups read, so an ability soul counts double as natively; SoulInventory_AddAmountToGroupTotal clamps a group to 0-9 and AddAmountToSoulTotal first takes the amount back from group 1 when it holds some and the total would pass 9. sub_08032ADC enables an ability bit and sub_08032DBC counts collected souls up to 999. sub_0804459C creates a dropped soul heading away from a random point above Soma (one draw) at speed 0x30000; sub_080446D4 turns it toward Soma's y - 16 (sub_0802D408 over ArcTan2, step + 0x2A per frame up to 0x4000), speeds it up by 0x1800 up to 0x80000, makes the trail's two random draws on even timer values and lets it live 200 frames plus 64 blinking. Cases 5-8 of sub_080441F8 add it, enabling an ability soul's ability when new. The runtime creates souls from enemy drop rolls (now with the equipped accessory, effective LCK and held-soul test), runs move, collision and trail in that order, and saves the souls (schema v6). Source-derived and unit-tested, not emulator-compared.

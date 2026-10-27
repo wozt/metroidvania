@@ -184,7 +184,7 @@ target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c src/runtime/aos_soul.c
-               src/runtime/aos_stats.c src/runtime/aos_pickup.c
+               src/runtime/aos_stats.c src/runtime/aos_pickup.c src/runtime/aos_hud.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
@@ -585,6 +585,11 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_aos_pickup_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_pickup_tests)
     add_test(NAME aos_pickup COMMAND fusion_aos_pickup_tests)
+
+    add_executable(fusion_aos_hud_tests tests/test_aos_hud.c src/runtime/aos_hud.c)
+    target_include_directories(fusion_aos_hud_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_hud_tests)
+    add_test(NAME aos_hud COMMAND fusion_aos_hud_tests)
 
     add_executable(fusion_aos_soul_tests tests/test_aos_soul.c src/runtime/aos_soul.c)
     target_include_directories(fusion_aos_soul_tests PRIVATE src/runtime)

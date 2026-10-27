@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0586 - Aria in-game HUD bars
+
+- `src/runtime/aos_hud.c` ports the HUD of `sub_0800DA50`: the frame of
+  `sub_0800DB78`, the HP and MP bars of `sub_0800F138` (eight tiles, value *
+  64 / max pixels, at least one when positive) and the two-step chase of
+  `sub_0800DC70`. The object export writes the HUD tiles and palette
+  (`metadata/hud.bin`, task `aria_objects` version 9).
+- The runtime draws the HUD over the room from Soma's HP and the current
+  MP. A local capture showed the native frame with a full HP bar and the
+  MP bar catching up after two bat casts, the bat ring around Soma.
+- Not ported: the HUD's text window and numbers, its other updaters and
+  fades. A candle's drop routine (`sub_08045F9C`) identifies the
+  `sub_08043C10` pickup as the MP heart. Source-derived and unit-tested
+  (`tests/test_aos_hud.c`), not emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0585 - Aria soul attack damage
 
 - Enemy collisions now test the red soul skills' boxes after the weapon

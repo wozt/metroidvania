@@ -18,6 +18,8 @@ enum {
     WEAPON_STATS = 0x08505D3C,
     ARMOR_STATS = 0x085063B0,
     RED_SOULS = 0x080E1598,
+    HUD_PALETTE = 0x0820C428,
+    HUD_TILES = 0x0827B208,
     ENEMY_COUNT = 0x71,
     DEATH_BLINK = 0x08118CE0,
     SCREEN_MARGINS = 0x08118D08,
@@ -855,6 +857,38 @@ static bool append_red_souls(const FusionRom *rom, Text *souls, char *error,
     return true;
 }
 
+/* The in-game HUD resources of sub_0800DA50: palette rows 0-1 of
+ * 0x0820C428 (rows 13-14 of BG palette memory) and the 16 x 16 tiles of
+ * 0x0827B208 (BG tiles 0x200-0x2FF), as one private binary: 64 palette
+ * bytes then 0x2000 tile bytes. */
+static bool write_hud(const FusionRom *rom, const char *metadata_output, char *error,
+                      size_t error_size) {
+    const uint8_t *palette = slice(rom, HUD_PALETTE, 4 + 2 * 32, "HUD palette", error,
+                                   error_size);
+    if (!palette || palette[0] != 0 || palette[2] < 2) {
+        if (palette) set_error(error, error_size, "unsupported HUD palette resource");
+        return false;
+    }
+    TileSheet sheet;
+    if (!load_tile_sheet(rom, HUD_TILES, &sheet, error, error_size)) return false;
+    bool ok = sheet.size == 0x2000;
+    uint8_t *bytes = ok ? malloc(64 + sheet.size) : NULL;
+    if (bytes) {
+        memcpy(bytes, palette + 4, 64);
+        memcpy(bytes + 64, sheet.data, sheet.size);
+        char path[FUSION_EXPORT_PATH_CAPACITY];
+        ok = fusion_export_join(path, metadata_output, "hud.bin") &&
+             fusion_export_write_file(path, bytes, 64 + sheet.size, error, error_size);
+    } else {
+        if (ok) set_error(error, error_size, "cannot allocate the HUD resources");
+        else set_error(error, error_size, "unexpected HUD tile sheet size");
+        ok = false;
+    }
+    free(bytes);
+    free(sheet.data);
+    return ok;
+}
+
 static bool append_global_metadata(const FusionRom *rom, Text *rows,
                                    char *error, size_t error_size) {
     const uint8_t *blink = slice(rom, DEATH_BLINK, 40, "death blink pattern",
@@ -927,7 +961,8 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                                            &equipment, error, error_size) &&
                            append_red_souls(rom, &red_souls, error, error_size) &&
                            write_text_file(metadata_output, "red_souls.tsv",
-                                           &red_souls, error, error_size);
+                                           &red_souls, error, error_size) &&
+                           write_hud(rom, metadata_output, error, error_size);
     FusionSpriteLibrarySummary library_summary = {0};
     if (success) success = fusion_sprite_library_finish(
         &library, &library_summary, error, error_size);

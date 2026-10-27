@@ -2697,9 +2697,6 @@ aos:c:src/code_0800CB00.c:sub_0800D154	sub_0800D154	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800D1F0	sub_0800D1F0	unclassified				c_function	0x0800D1F0	src/code_0800CB00.c	410	6	0
 aos:c:src/code_0800CB00.c:sub_0800D288	sub_0800D288	unclassified				c_function	0x0800D288	src/code_0800CB00.c	438	6	15
 aos:c:src/code_0800CB00.c:sub_0800D288_inline_0	sub_0800D288_inline_0	unclassified				c_function		src/code_0800CB00.c	429	1	0
-aos:c:src/code_0800CB00.c:sub_0800DA50	sub_0800DA50	unclassified		technical	exclusive_callees	c_function	0x0800DA50	src/code_0800CB00.c	758	6	8
-aos:c:src/code_0800CB00.c:sub_0800DB78	sub_0800DB78	unclassified				c_function	0x0800DB78	src/code_0800CB00.c	828	1	0
-aos:c:src/code_0800CB00.c:sub_0800DC70	sub_0800DC70	unclassified		technical	exclusive_callees	c_function	0x0800DC70	src/code_0800CB00.c	914	2	1
 aos:c:src/code_0800CB00.c:sub_0800DC70_inline_0	sub_0800DC70_inline_0	unclassified		technical	exclusive_callees	c_function		src/code_0800CB00.c	860	1	1
 aos:c:src/code_0800CB00.c:sub_0800DE4C	sub_0800DE4C	unclassified				c_function	0x0800DE4C	src/code_0800CB00.c	1034	1	10
 aos:c:src/code_0800CB00.c:sub_0800E0E8	sub_0800E0E8	unclassified				c_function	0x0800E0E8	src/code_0800CB00.c	1150	1	11
@@ -2721,7 +2718,6 @@ aos:c:src/code_0800CB00.c:sub_0800EF98	sub_0800EF98	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800EFD4	sub_0800EFD4	unclassified				c_function	0x0800EFD4	src/code_0800CB00.c	2007	2	3
 aos:c:src/code_0800CB00.c:sub_0800F038	sub_0800F038	unclassified				c_function	0x0800F038	src/code_0800CB00.c	2040	1	2
 aos:c:src/code_0800CB00.c:sub_0800F0AC	sub_0800F0AC	unclassified				c_function	0x0800F0AC	src/code_0800CB00.c	2055	1	2
-aos:c:src/code_0800CB00.c:sub_0800F138	sub_0800F138	unclassified		technical	exclusive_callees	c_function	0x0800F138	src/code_0800CB00.c	2075	1	1
 aos:c:src/code_0800CB00.c:sub_0800F1C4	sub_0800F1C4	unclassified				c_function	0x0800F1C4	src/code_0800CB00.c	2134	0	0
 aos:c:src/code_0800F1FC.c:sub_0800F1FC	sub_0800F1FC	unclassified		technical	exclusive_callees	c_function	0x0800F1FC	src/code_0800F1FC.c	171	4	7
 aos:c:src/code_0800F1FC.c:sub_0800F4F8	sub_0800F4F8	unclassified		technical	exclusive_callees	c_function	0x0800F4F8	src/code_0800F1FC.c	311	1	1

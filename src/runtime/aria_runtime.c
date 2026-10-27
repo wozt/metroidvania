@@ -17,6 +17,7 @@
 #include "aos_stats.h"
 #include "aos_pickup.h"
 #include "aos_soul.h"
+#include "aos_hud.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
@@ -46,6 +47,7 @@
 #define DEFAULT_MONEY "assets/extracted/aria/metadata/money.tsv"
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
+#define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
 #define DOOR_STYLES 2
 #define ENEMY_KINDS 100
@@ -1881,8 +1883,30 @@ int main(int argc, char **argv) {
                         .soma = &soma};
     soma.cast = cast_red_soul;
     soma.cast_context = &souls;
+    /* The in-game HUD (sub_0800DA50), drawn from the exported resources. */
+    static uint8_t hud_bytes[64 + AOS_HUD_TILE_BYTES];
+    static AosHud hud;
+    bool have_hud = false;
+    {
+        FILE *f = fopen(DEFAULT_HUD, "rb");
+        if (f) {
+            have_hud = fread(hud_bytes, 1, sizeof hud_bytes, f) == sizeof hud_bytes;
+            fclose(f);
+        }
+    }
+    SDL_Texture *hud_texture = have_hud ? SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                                            SDL_TEXTUREACCESS_STREAMING, 240,
+                                                            160)
+                                        : NULL;
+    if (hud_texture) {
+        SDL_SetTextureBlendMode(hud_texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(hud_texture, SDL_SCALEMODE_NEAREST);
+    }
+    static uint16_t hud_drawn[AOS_HUD_MAP_SIZE * AOS_HUD_MAP_SIZE];
+    bool hud_dirty = true;
     soma.hp = (int16_t)player_stats.hp;
     soma.max_hp = (int16_t)player_stats.max_hp;
+    if (have_hud) aos_hud_init(&hud, soma.hp, soma.max_hp, progress.mp, (int16_t)progress.max_mp);
     if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
         fprintf(stderr, "Export the weapons first: ./build/fusion_rebuild --task aria_weapons\n");
         goto cleanup;
@@ -2044,6 +2068,9 @@ int main(int argc, char **argv) {
             if (!lifecycle.in_game_frame_requested) continue;
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);
+            /* sub_0800DC70: the HUD chases the current values. */
+            if (have_hud) aos_hud_update(&hud, soma.hp, soma.max_hp, progress.mp,
+                                         (int16_t)progress.max_mp);
             /* sub_08021994 runs inside the update, before + 0x22 advances. */
             aos_stats_mp_regen(&progress, (uint16_t)(soma.ticks - 1));
             souls.bat_loaded = objects_ok && objects.skill_bat.loaded;
@@ -2228,6 +2255,29 @@ int main(int argc, char **argv) {
                 SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
                 SDL_RenderRect(renderer, &box);
             }
+        }
+        if (hud_texture) {
+            if (hud_dirty || memcmp(hud_drawn, hud.map, sizeof hud_drawn)) {
+                static uint8_t pixels[240 * 160 * 4];
+                for (unsigned y = 0; y < 160; ++y)
+                    for (unsigned x = 0; x < 240; ++x) {
+                        uint8_t *out = pixels + (y * 240 + x) * 4;
+                        uint16_t color;
+                        if (!aos_hud_pixel(&hud, hud_bytes + 64, hud_bytes, x, y, &color)) {
+                            memset(out, 0, 4);
+                            continue;
+                        }
+                        out[0] = (uint8_t)(((color & 31) * 255) / 31);
+                        out[1] = (uint8_t)((((color >> 5) & 31) * 255) / 31);
+                        out[2] = (uint8_t)((((color >> 10) & 31) * 255) / 31);
+                        out[3] = 255;
+                    }
+                SDL_UpdateTexture(hud_texture, NULL, pixels, 240 * 4);
+                memcpy(hud_drawn, hud.map, sizeof hud_drawn);
+                hud_dirty = false;
+            }
+            SDL_FRect whole = {0, 0, 240, 160};
+            SDL_RenderTexture(renderer, hud_texture, NULL, &whole);
         }
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {

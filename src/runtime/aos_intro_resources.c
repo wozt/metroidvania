@@ -149,6 +149,18 @@ bool aos_intro_resources_bind(AosIntroResources *resources,
     return true;
 }
 
+bool aos_intro_resources_entry(AosIntroResources *resources, uint8_t language,
+                               uint16_t id, const uint8_t **entry, size_t *entry_size) {
+    if (!resources || !resources->rom || !entry || !entry_size || language < 1 ||
+        language > AOS_TEXT_LANGUAGE_COUNT)
+        return false;
+    uint8_t previous_language = resources->language;
+    resources->language = language;
+    bool found = script_at(resources, id, entry, entry_size);
+    resources->language = previous_language;
+    return found;
+}
+
 bool aos_intro_resources_read_text(AosIntroResources *resources,
                                    uint8_t language, uint16_t id,
                                    AosNativeText *text, char *error,

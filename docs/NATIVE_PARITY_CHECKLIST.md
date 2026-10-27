@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 56 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 57 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 456 | 3117 |
+| Castlevania: Aria of Sorrow | 472 | 3101 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1122,12 +1122,21 @@ Native evidence: `aos:c:src/code_08002454.c:GameModeMainMenuUpdate`, `aos:c:src/
 Local implementation: [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_main_menu.c`](../src/runtime/aos_main_menu.c), [`src/runtime/aos_main_menu_graphics.c`](../src/runtime/aos_main_menu_graphics.c), [`src/runtime/aos_rom_graphics.c`](../src/runtime/aos_rom_graphics.c), [`src/runtime/aos_title_input.c`](../src/runtime/aos_title_input.c), [`src/runtime/aos_title_fade.c`](../src/runtime/aos_title_fade.c), [`src/runtime/aos_title_motion.c`](../src/runtime/aos_title_motion.c), [`src/runtime/aos_title_stages.c`](../src/runtime/aos_title_stages.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aos_menu_save_bridge.c`](../src/runtime/aos_menu_save_bridge.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/runtime/aos_intro_resources.c`](../src/runtime/aos_intro_resources.c), [`src/runtime/aos_intro_font.c`](../src/runtime/aos_intro_font.c).  
 Tests: [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_aos_main_menu.c`](../tests/test_aos_main_menu.c), [`tests/test_aos_main_menu_graphics.c`](../tests/test_aos_main_menu_graphics.c), [`tests/test_aos_title_input.c`](../tests/test_aos_title_input.c), [`tests/test_aos_title_fade.c`](../tests/test_aos_title_fade.c), [`tests/test_aos_title_motion.c`](../tests/test_aos_title_motion.c), [`tests/test_aos_title_stages.c`](../tests/test_aos_title_stages.c), [`tests/test_aos_menu_save_bridge.c`](../tests/test_aos_menu_save_bridge.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c), [`tests/test_aos_intro_resources.c`](../tests/test_aos_intro_resources.c).
 Dependencies: `aos.startup.mode_dispatch`, `aos.input.gamepad`, `aos.saves.portable_slots`.  
-Known divergences: The SDL frontend renders native menu background resources and the native localized prompt text, but file names, slot statistics, the YES/NO choice, cursor OAM and title artwork remain diagnostic host overlays, and the prompt sits at a host-chosen position until the text-window routines (sub_08040748, sub_08041318, assembly only) are reconstructed; the PLAY prompt ignores the 0x381/0x38B special-mode branches of sub_08005908. Gameplay still launches as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol.  
-Next action: Reconstruct the text-window routines (sub_08040748, sub_08041318) for native prompt placement, render file names, statistics and cursor OAM natively, connect native title artwork, then extend portable completion and quicksave metadata.
+Known divergences: The SDL frontend renders native menu background resources and the native prompt and YES/NO texts at their native positions (aos.menus.text_window), but file names, slot statistics, cursor OAM and title artwork remain diagnostic host overlays, and the selection marker of the YES/NO choice is the host's; the PLAY prompt ignores the 0x381/0x38B special-mode branches of sub_08005908. Gameplay still launches as a separate process. The decompilation's nonmatching sub_080083C8 body is source evidence but is not emitted as a separate static-inventory symbol.  
+Next action: Render file names, statistics and cursor OAM natively, connect native title artwork, then extend portable completion and quicksave metadata.
 
 ### Menus and options
 
 [?] **`aos.menus.inventory-boundary` — source coverage.** The current classifier assigns 33 discovered routine(s) to this category (10 by native name, 23 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.menus.text_window` — Aria text cursors and windows.** Both text cursors of gEwramData + 0x115A0 (context A, 12-pixel rows up to 20) and + 0x115B2 (context B, 8-pixel rows up to 31) are ported from the assembly: cell and pixel cursors (with the native 12-pixel row of sub_0804090C in context B), windows (right edge x + w - 2, bottom y + h - 1, clamped after the store), newline and glyph advance with the single 6-pixel carry, right-edge and bottom wrapping, positioned puts, window clears (left column to one past the right) and the print loops that stop at the first control. The main menu prints its prompt at (0, 1) of window (0, 1, 0x25, 3) and the copy/delete YES/NO entries at (9, 2) and (0x14, 2) for COPY or (0xA, 2) and (0x15, 2) for DELETE; the frontend shows text tiles 0x20-0x9F through the native BG0 map from screen tile (2, 15). With the verified ROM all ten menu texts fit their row in the three languages (optional local test). Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:c:src/code/code_08039340.c:sub_0804066C`, `aos:c:src/code/code_08039340.c:sub_080406E4`, `aos:c:src/code/code_08039340.c:sub_08040748`, `aos:c:src/code/code_08039340.c:sub_08040814`, `aos:c:src/code/code_08039340.c:sub_08040898`, `aos:c:src/code/code_08039340.c:sub_0804090C`, `aos:c:src/code/code_08039340.c:sub_08040970`, `aos:c:src/code/code_08039340.c:sub_08040A38`, `aos:c:src/code/code_08039340.c:sub_08040AB8`, `aos:c:src/code/code_08039340.c:sub_08040BDC`, `aos:c:src/code/code_08039340.c:sub_08040C60`, `aos:c:src/code/code_08039340.c:sub_08040E10`, `aos:c:src/code/code_08039340.c:sub_08040FE0`, `aos:c:src/code/code_08039340.c:sub_08041204`, `aos:c:src/code/code_08039340.c:sub_08041318`, `aos:c:src/code/code_08039340.c:sub_08041338`.  
+Local implementation: [`src/runtime/aos_text_window.c`](../src/runtime/aos_text_window.c), [`src/runtime/aos_intro_font.c`](../src/runtime/aos_intro_font.c), [`src/runtime/aos_intro_resources.c`](../src/runtime/aos_intro_resources.c), [`src/runtime/aos_main_menu.c`](../src/runtime/aos_main_menu.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c).  
+Tests: [`tests/test_aos_text_window.c`](../tests/test_aos_text_window.c), [`tests/test_aos_main_menu.c`](../tests/test_aos_main_menu.c).
+Dependencies: `aos.title.input_stage8`.  
+Known divergences: Cursor and window state only: the 4-bpp tile blitters (sub_0803FF64, sub_08040048, sub_080402DC, sub_0804039C) and the cell erasers (sub_08040E90, sub_080410BC, through sub_08040F84 and sub_080411AC) are not ported; callbacks receive each glyph and cell position, and the frontend draws glyphs with the existing proportional-font renderer. Context B's font (metrics 0x080E2EC0) is not loaded, so only context A is drawn. The native print loop is unbounded; the port stops at the entry's end.  
+Next action: Port the tile blitters and cell erasers with VRAM tile output, load context B's font for the language menu, and move the file names and statistics onto this window.
 
 ### Controls and input
 

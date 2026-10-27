@@ -13,6 +13,7 @@
 #include "aos_intro_graphics.h"
 #include "aos_intro_resources.h"
 #include "aos_main_menu_graphics.h"
+#include "aos_text_window.h"
 #include "aos_menu_save_bridge.h"
 #include "aos_save.h"
 
@@ -105,28 +106,74 @@ static void render_intro_text(SDL_Renderer *renderer,
     }
 }
 
-/* Renders the native localized prompt that the menu controller selects
- * (aos_main_menu_prompt_id) with the ROM's proportional font. The text and
- * glyphs are native; its placement is the host's until the text-window
- * routines (sub_08040748, sub_08041318) are reconstructed. */
-static bool render_menu_prompt(AosIntroResources *resources,
-                               const AosIntroFont *font,
-                               AosIntroTextTiles *tiles, uint8_t language,
-                               uint16_t id, char *error, size_t error_size) {
+typedef struct {
+    const AosIntroFont *font;
+    AosIntroTextTiles *tiles;
+    bool valid;
+} MenuTextTarget;
+
+static void menu_text_glyph(void *user, uint16_t pixel_x, uint16_t pixel_y,
+                            uint8_t code, uint8_t left, uint8_t width) {
+    (void)left;
+    (void)width;
+    MenuTextTarget *target = user;
+    target->valid &= aos_intro_font_draw_glyph(target->font, target->tiles,
+                                               pixel_x, pixel_y, code);
+}
+
+static void menu_text_clear(void *user, uint16_t pixel_x, uint16_t pixel_y) {
+    MenuTextTarget *target = user;
+    aos_intro_text_tiles_clear_rect(target->tiles, pixel_x, pixel_y, 6, 12);
+}
+
+/* Prints the menu's text window as the native controllers do: the window
+ * (0, 1, 0x25, 3) of GameModeMainMenuUpdate's setup, cleared (sub_08040FE0)
+ * and printed entry by entry from its text cell (sub_0804066C, sub_08041318). */
+static bool render_menu_texts(AosIntroResources *resources,
+                              const AosIntroFont *font,
+                              AosIntroTextTiles *tiles, uint8_t language,
+                              const AosMainMenuText *texts, size_t count,
+                              char *error, size_t error_size) {
+    MenuTextTarget target = {font, tiles, true};
+    AosTextCursor cursor;
+    aos_text_cursor_init_a(&cursor);
     aos_intro_text_tiles_clear(tiles);
-    if (id == AOS_MAIN_MENU_NO_PROMPT) return true;
-    AosNativeText text;
-    if (!aos_intro_resources_read_text(resources, language, id, &text, error,
-                                       error_size))
-        return false;
-    for (size_t line = 0; line < text.line_count; ++line)
-        if (!aos_intro_font_render_span(font, tiles, 8, (unsigned)line * 14u,
-                                        224, 1, text.glyphs[line],
-                                        text.glyph_counts[line])) {
-            snprintf(error, error_size, "INVALID MENU PROMPT GLYPH");
+    aos_text_set_window(&cursor, 0, 1, 0x25, 3);
+    aos_text_clear_window(&cursor, menu_text_clear, &target);
+    for (size_t index = 0; index < count; ++index) {
+        const uint8_t *entry;
+        size_t entry_size;
+        if (!aos_intro_resources_entry(resources, language, texts[index].id,
+                                       &entry, &entry_size)) {
+            snprintf(error, error_size, "MENU TEXT 0x%X OUTSIDE THE ROM",
+                     texts[index].id);
             return false;
         }
-    return true;
+        aos_text_set_cursor(&cursor, texts[index].column, texts[index].row);
+        aos_text_print(&cursor, font->metrics, entry, entry_size, 0,
+                       menu_text_glyph, &target);
+    }
+    if (!target.valid) snprintf(error, error_size, "INVALID MENU TEXT GLYPH");
+    return target.valid;
+}
+
+/* The main menu's BG0 map (screen base 28) receives 128 consecutive entries
+ * from map cell 15 * 32 + 2 on, naming text tiles 0x20-0x9F with palette 12,
+ * so the text canvas shows linearly from screen tile (2, 15). */
+static void render_menu_text(SDL_Renderer *renderer,
+                             const AosIntroTextTiles *tiles, const uint8_t rgb[3]) {
+    SDL_SetRenderDrawColor(renderer, rgb[0], rgb[1], rgb[2], 255);
+    for (unsigned entry = 0; entry < 0x80; ++entry) {
+        unsigned tile = 0x20 + entry, cell = 15 * 32 + 2 + entry;
+        unsigned source_x = (tile % 32) * 8, source_y = (tile / 32) * 8;
+        unsigned screen_x = (cell % 32) * 8, screen_y = (cell / 32) * 8;
+        if (screen_x >= GBA_W || screen_y >= GBA_H) continue;
+        for (unsigned y = 0; y < 8; ++y)
+            for (unsigned x = 0; x < 8; ++x)
+                if (aos_intro_text_tiles_pixel(tiles, source_x + x, source_y + y))
+                    SDL_RenderPoint(renderer, (float)(screen_x + x),
+                                    (float)(screen_y + y));
+    }
 }
 
 static bool create_intro_textures(
@@ -357,7 +404,8 @@ int main(int argc, char **argv) {
     AosIntroFont intro_font = {0};
     AosIntroTextTiles intro_tiles = {0};
     AosIntroTextTiles menu_prompt_tiles = {0};
-    uint16_t menu_prompt_id = AOS_MAIN_MENU_NO_PROMPT;
+    AosMainMenuText menu_texts[AOS_MAIN_MENU_TEXT_MAX];
+    size_t menu_text_count = 0;
     uint8_t menu_prompt_language = 0;
     bool have_menu_prompt = false;
     AosIntroGraphics intro_graphics = {0};
@@ -465,14 +513,17 @@ int main(int argc, char **argv) {
         }
         if (have_intro_resources &&
             lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU) {
-            uint16_t id = aos_main_menu_prompt_id(&lifecycle.main_menu);
-            if (!have_menu_prompt || id != menu_prompt_id ||
+            AosMainMenuText texts[AOS_MAIN_MENU_TEXT_MAX];
+            size_t count = aos_main_menu_text_layout(&lifecycle.main_menu, texts);
+            if (!have_menu_prompt || count != menu_text_count ||
+                memcmp(texts, menu_texts, count * sizeof texts[0]) ||
                 lifecycle.main_menu.language != menu_prompt_language) {
-                have_menu_prompt = render_menu_prompt(
+                have_menu_prompt = render_menu_texts(
                     &intro_resources, &intro_font, &menu_prompt_tiles,
-                    lifecycle.main_menu.language, id, launch_error,
+                    lifecycle.main_menu.language, texts, count, launch_error,
                     sizeof launch_error);
-                menu_prompt_id = id;
+                memcpy(menu_texts, texts, count * sizeof texts[0]);
+                menu_text_count = count;
                 menu_prompt_language = lifecycle.main_menu.language;
             }
         }
@@ -535,11 +586,10 @@ int main(int argc, char **argv) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             AosMainMenu *native_menu = &lifecycle.main_menu;
-            bool native_prompt = have_menu_prompt &&
-                                 menu_prompt_id != AOS_MAIN_MENU_NO_PROMPT;
+            bool native_prompt = have_menu_prompt && menu_text_count > 0;
             if (native_prompt)
-                render_intro_text(renderer, &menu_prompt_tiles, -114,
-                                  intro_graphics.text_rgb);
+                render_menu_text(renderer, &menu_prompt_tiles,
+                                 intro_graphics.text_rgb);
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             if (native_menu->name_entry_active || lifecycle.game_mode.update_stage == 9) {
                 char name[9];
@@ -589,7 +639,13 @@ int main(int argc, char **argv) {
                 bool confirming = native_menu->confirm_active ||
                     (native_menu->selected_slot == 1 && native_menu->file_phase == 2) ||
                     (native_menu->selected_slot == 2 && native_menu->file_phase == 1);
-                if (confirming) {
+                if (confirming && native_prompt && !native_menu->confirm_active) {
+                    /* YES/NO are native text; the selection marker is not. */
+                    unsigned choice = native_menu->file_cursor;
+                    float marker = native_menu->selected_slot == 1 ?
+                        (choice == 0 ? 9 : 0x14) : (choice == 0 ? 0xA : 0x15);
+                    SDL_RenderDebugText(renderer, 16 + marker * 6 - 8, 136, ">");
+                } else if (confirming) {
                     unsigned choice = native_menu->confirm_active ?
                         native_menu->confirm_choice : native_menu->file_cursor;
                     SDL_RenderDebugText(renderer, 55, native_prompt ? 100 : 119,

@@ -2529,33 +2529,17 @@ aos:c:src/code/code_08039340.c:sub_0804039C	sub_0804039C	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_080404A0	sub_080404A0	unclassified				c_function	0x080404A0	src/code/code_08039340.c	6322	1	0
 aos:c:src/code/code_08039340.c:sub_08040508	sub_08040508	unclassified				c_function	0x08040508	src/code/code_08039340.c	6355	1	0
 aos:c:src/code/code_08039340.c:sub_0804059C	sub_0804059C	unclassified				c_function	0x0804059C	src/code/code_08039340.c	6402	11	0
-aos:c:src/code/code_08039340.c:sub_0804066C	sub_0804066C	unclassified				c_function	0x0804066C	src/code/code_08039340.c	6455	23	2
-aos:c:src/code/code_08039340.c:sub_080406E4	sub_080406E4	unclassified				c_function	0x080406E4	src/code/code_08039340.c	6481	0	0
-aos:c:src/code/code_08039340.c:sub_08040748	sub_08040748	unclassified				c_function	0x08040748	src/code/code_08039340.c	6509	28	0
-aos:c:src/code/code_08039340.c:sub_08040814	sub_08040814	unclassified				c_function	0x08040814	src/code/code_08039340.c	6546	0	2
-aos:c:src/code/code_08039340.c:sub_08040898	sub_08040898	unclassified				c_function	0x08040898	src/code/code_08039340.c	6567	4	2
-aos:c:src/code/code_08039340.c:sub_0804090C	sub_0804090C	unclassified				c_function	0x0804090C	src/code/code_08039340.c	6593	12	0
-aos:c:src/code/code_08039340.c:sub_08040970	sub_08040970	unclassified				c_function	0x08040970	src/code/code_08039340.c	6621	29	0
-aos:c:src/code/code_08039340.c:sub_08040A38	sub_08040A38	unclassified				c_function	0x08040A38	src/code/code_08039340.c	6658	0	2
-aos:c:src/code/code_08039340.c:sub_08040AB8	sub_08040AB8	unclassified				c_function	0x08040AB8	src/code/code_08039340.c	6691	5	3
 aos:c:src/code/code_08039340.c:sub_08040AB8_inline_0	sub_08040AB8_inline_0	unclassified				c_function		src/code/code_08039340.c	6678	2	2
-aos:c:src/code/code_08039340.c:sub_08040BDC	sub_08040BDC	unclassified				c_function	0x08040BDC	src/code/code_08039340.c	6756	0	3
-aos:c:src/code/code_08039340.c:sub_08040C60	sub_08040C60	unclassified				c_function	0x08040C60	src/code/code_08039340.c	6797	5	4
 aos:c:src/code/code_08039340.c:sub_08040C60_inline_0	sub_08040C60_inline_0	unclassified				c_function		src/code/code_08039340.c	6785	1	2
 aos:c:src/code/code_08039340.c:sub_08040C60_inline_1	sub_08040C60_inline_1	unclassified				c_function		src/code/code_08039340.c	6792	1	0
-aos:c:src/code/code_08039340.c:sub_08040E10	sub_08040E10	unclassified				c_function	0x08040E10	src/code/code_08039340.c	6881	0	3
 aos:c:src/code/code_08039340.c:sub_08040E90	sub_08040E90	unclassified				c_function	0x08040E90	src/code/code_08039340.c	6906	1	3
 aos:c:src/code/code_08039340.c:sub_08040F84	sub_08040F84	unclassified				c_function	0x08040F84	src/code/code_08039340.c	6952	1	3
-aos:c:src/code/code_08039340.c:sub_08040FE0	sub_08040FE0	unclassified				c_function	0x08040FE0	src/code/code_08039340.c	6966	38	3
 aos:c:src/code/code_08039340.c:sub_080410BC	sub_080410BC	unclassified				c_function	0x080410BC	src/code/code_08039340.c	6997	1	3
 aos:c:src/code/code_08039340.c:sub_080410BC_inline_0	sub_080410BC_inline_0	unclassified				c_function		src/code/code_08039340.c	6986	1	2
 aos:c:src/code/code_08039340.c:sub_080411AC	sub_080411AC	unclassified				c_function	0x080411AC	src/code/code_08039340.c	7040	1	3
-aos:c:src/code/code_08039340.c:sub_08041204	sub_08041204	unclassified				c_function	0x08041204	src/code/code_08039340.c	7054	25	3
 aos:c:src/code/code_08039340.c:sub_080412DC	sub_080412DC	unclassified				c_function	0x080412DC	src/code/code_08039340.c	7079	14	0
 aos:c:src/code/code_08039340.c:sub_080412F0	sub_080412F0	unclassified				c_function	0x080412F0	src/code/code_08039340.c	7089	17	0
 aos:c:src/code/code_08039340.c:sub_08041304	sub_08041304	unclassified				c_function	0x08041304	src/code/code_08039340.c	7099	21	0
-aos:c:src/code/code_08039340.c:sub_08041318	sub_08041318	unclassified				c_function	0x08041318	src/code/code_08039340.c	7111	17	1
-aos:c:src/code/code_08039340.c:sub_08041338	sub_08041338	unclassified				c_function	0x08041338	src/code/code_08039340.c	7128	21	1
 aos:c:src/code/code_08039340.c:sub_08041358	sub_08041358	unclassified				c_function	0x08041358	src/code/code_08039340.c	7145	0	0
 aos:c:src/code/code_08039340.c:sub_0804136C	sub_0804136C	unclassified				c_function	0x0804136C	src/code/code_08039340.c	7155	3	0
 aos:c:src/code/code_08039340.c:sub_08041380	sub_08041380	unclassified				c_function	0x08041380	src/code/code_08039340.c	7165	0	0

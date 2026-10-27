@@ -3,6 +3,7 @@
 #define AOS_MAIN_MENU_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "aos_game_mode.h"
@@ -86,6 +87,21 @@ int32_t aos_main_menu_delete_update(AosMainMenu *menu, const AosInput *input);
 /* Native localized prompt selected by sub_08004928, sub_08007204 and the
  * copy/delete controllers. */
 uint16_t aos_main_menu_prompt_id(const AosMainMenu *menu);
+
+/* One localized entry the controllers print, at its context-A text cell. */
+typedef struct {
+    uint16_t id;
+    uint8_t column, row;
+} AosMainMenuText;
+
+enum { AOS_MAIN_MENU_TEXT_MAX = 3 };
+
+/* The entries the menu's text window shows: the prompt at (0, 1) and, while
+ * COPY or DELETE asks for confirmation, YES (0x34B) and NO (0x34D) on row 2
+ * at columns 9/0x14 (copy, sub_08007914) or 0xA/0x15 (delete, sub_08007B8C).
+ * Returns the number of entries. */
+size_t aos_main_menu_text_layout(const AosMainMenu *menu,
+                                 AosMainMenuText texts[AOS_MAIN_MENU_TEXT_MAX]);
 /* GameModeMainMenuUpdate through direct load/intro and name-entry handoff. */
 int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
                                        const AosInput *input);

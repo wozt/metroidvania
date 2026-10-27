@@ -184,3 +184,33 @@ bool aos_intro_font_render_span(const AosIntroFont *font,
     }
     return true;
 }
+
+bool aos_intro_font_draw_glyph(const AosIntroFont *font, AosIntroTextTiles *tiles,
+                               unsigned pixel_x, unsigned pixel_y, uint8_t code) {
+    if (!font || !font->metrics || !font->glyphs || !tiles ||
+        code < AOS_FONT_FIRST_GLYPH)
+        return false;
+    size_t glyph_index = (size_t)(code - AOS_FONT_FIRST_GLYPH);
+    const uint8_t *metric = font->metrics + glyph_index * AOS_FONT_METRIC_SIZE;
+    const uint8_t *bitmap = font->glyphs + glyph_index * AOS_FONT_GLYPH_SIZE;
+    unsigned left = metric[0];
+    unsigned width = metric[1];
+    if (left > 7 || width > 8 || left + width > 8) return false;
+    for (unsigned y = 0; y < AOS_FONT_DRAW_ROWS; ++y) {
+        uint8_t bits = (uint8_t)(bitmap[y] << left);
+        for (unsigned x = 0; x < width; ++x)
+            if (pixel_x + x < AOS_INTRO_TEXT_CANVAS_SIZE &&
+                pixel_y + y < AOS_INTRO_TEXT_CANVAS_SIZE)
+                set_pixel(tiles, pixel_x + x, pixel_y + y,
+                          bits & (0x80u >> x) ? AOS_FONT_FOREGROUND : 0);
+    }
+    return true;
+}
+
+void aos_intro_text_tiles_clear_rect(AosIntroTextTiles *tiles, unsigned pixel_x,
+                                     unsigned pixel_y, unsigned width, unsigned height) {
+    if (!tiles) return;
+    for (unsigned y = pixel_y; y < pixel_y + height && y < AOS_INTRO_TEXT_CANVAS_SIZE; ++y)
+        for (unsigned x = pixel_x; x < pixel_x + width && x < AOS_INTRO_TEXT_CANVAS_SIZE; ++x)
+            set_pixel(tiles, x, y, 0);
+}

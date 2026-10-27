@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0576 - Aria's native text cursors and windows
+
+- `src/runtime/aos_text_window.c` ports Aria's two text cursors from the
+  assembly (`gEwramData + 0x115A0` and `+ 0x115B2`): cell and pixel cursors,
+  windows, newline, the glyph advance with its single 6-pixel carry and
+  right/bottom wrapping, positioned puts, window clears and the print loops
+  (sub_0804066C to sub_08041338, sixteen routines, row
+  `aos.menus.text_window`).
+- The main menu now prints its prompt and the COPY/DELETE YES/NO texts
+  through that window at their native cells (`aos_main_menu_text_layout`),
+  and the frontend shows the text canvas through the native BG0 map (tiles
+  0x20-0x9F from screen tile (2, 15)) instead of a host position.
+- Not ported: the 4-bpp tile blitters and cell erasers (glyphs are drawn by
+  the existing font renderer through callbacks) and context B's font. The
+  YES/NO selection marker, file names and statistics remain host overlays.
+- Tests: `tests/test_aos_text_window.c` (CTest `aos_text_window`) covers
+  every routine's arithmetic and wrapping; its optional ROM run checks that
+  all ten menu texts fit their native row in the three languages. Layout
+  cases in `tests/test_aos_main_menu.c`. Not reviewed on screen in this
+  cycle; source-derived, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0575 - Native localized prompts in Aria's main menu
 
 - `aos_main_menu_prompt_id` (`src/runtime/aos_main_menu.c`) selects the

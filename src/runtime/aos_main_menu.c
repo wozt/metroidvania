@@ -402,6 +402,21 @@ uint16_t aos_main_menu_prompt_id(const AosMainMenu *menu) {
     return AOS_MAIN_MENU_NO_PROMPT;
 }
 
+size_t aos_main_menu_text_layout(const AosMainMenu *menu,
+                                 AosMainMenuText texts[AOS_MAIN_MENU_TEXT_MAX]) {
+    uint16_t prompt = aos_main_menu_prompt_id(menu);
+    if (prompt == AOS_MAIN_MENU_NO_PROMPT) return 0;
+    texts[0] = (AosMainMenuText){prompt, 0, 1};
+    bool copy_confirm = menu->selected_slot_active && menu->selected_slot == 1 &&
+                        menu->file_phase == 2;
+    bool delete_confirm = menu->selected_slot_active && menu->selected_slot == 2 &&
+                          menu->file_phase == 1;
+    if (!copy_confirm && !delete_confirm) return 1;
+    texts[1] = (AosMainMenuText){0x34B, copy_confirm ? 9 : 0xA, 2};
+    texts[2] = (AosMainMenuText){0x34D, copy_confirm ? 0x14 : 0x15, 2};
+    return 3;
+}
+
 int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
                                        const AosInput *input) {
     menu->selection_changed = false;

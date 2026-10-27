@@ -33,6 +33,13 @@ bool aos_intro_font_render_span(const AosIntroFont *font,
                                 unsigned pixel_x, unsigned pixel_y,
                                 unsigned max_width, uint8_t color,
                                 const uint8_t *glyphs, size_t glyph_count);
+/* Draws one glyph (code 0x20-0xFF) with its native left offset and width at
+ * a pixel position: the glyph rows of sub_0803FF64/sub_08040048. */
+bool aos_intro_font_draw_glyph(const AosIntroFont *font, AosIntroTextTiles *tiles,
+                               unsigned pixel_x, unsigned pixel_y, uint8_t code);
+/* Erases a rectangle of the canvas, clipped to it. */
+void aos_intro_text_tiles_clear_rect(AosIntroTextTiles *tiles, unsigned pixel_x,
+                                     unsigned pixel_y, unsigned width, unsigned height);
 uint8_t aos_intro_text_tiles_pixel(const AosIntroTextTiles *tiles,
                                    unsigned x, unsigned y);
 

@@ -299,6 +299,24 @@ int main(void) {
     menu.name_entry_active = true;
     assert(aos_main_menu_prompt_id(&menu) == AOS_MAIN_MENU_NO_PROMPT);
 
+    /* The text window layout of the copy and delete confirmations. */
+    AosMainMenuText texts[AOS_MAIN_MENU_TEXT_MAX];
+    assert(aos_main_menu_text_layout(&menu, texts) == 0);
+    menu = (AosMainMenu){.selected_slot = 1};
+    assert(aos_main_menu_text_layout(&menu, texts) == 1 && texts[0].id == 0x355 &&
+           texts[0].column == 0 && texts[0].row == 1);
+    menu.selected_slot_active = true;
+    menu.file_phase = 2;
+    assert(aos_main_menu_text_layout(&menu, texts) == 3 && texts[0].id == 0x379 &&
+           texts[1].id == 0x34B && texts[1].column == 9 && texts[1].row == 2 &&
+           texts[2].id == 0x34D && texts[2].column == 0x14 && texts[2].row == 2);
+    menu.selected_slot = 2;
+    menu.file_phase = 1;
+    assert(aos_main_menu_text_layout(&menu, texts) == 3 && texts[0].id == 0x377 &&
+           texts[1].column == 0xA && texts[2].column == 0x15);
+    menu.file_phase = 0;
+    assert(aos_main_menu_text_layout(&menu, texts) == 1 && texts[0].id == 0x35A);
+
     puts("Aria native main-menu controller tests passed");
     return 0;
 }

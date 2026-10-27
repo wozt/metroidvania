@@ -33,6 +33,10 @@ bool aos_intro_resources_init(AosIntroResources *resources,
 bool aos_intro_resources_bind(AosIntroResources *resources,
                               AosIntroEntities *entities, uint8_t language,
                               char *error, size_t error_size);
+/* The raw bytes of one localized entry of the native text table
+ * (sub_08041434), bounded by the next entry of the table. */
+bool aos_intro_resources_entry(AosIntroResources *resources, uint8_t language,
+                               uint16_t id, const uint8_t **entry, size_t *entry_size);
 /* Reads one localized entry from the native text table. Control 6 starts a
  * new line and control 10 terminates the entry, matching sub_08046BC8. */
 bool aos_intro_resources_read_text(AosIntroResources *resources,

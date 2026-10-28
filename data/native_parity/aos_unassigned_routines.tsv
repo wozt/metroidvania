@@ -61,7 +61,6 @@ aos:asm:asm/code/code_080211F0.s:SkillFishHeadUse	SkillFishHeadUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	21386	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUse	SkillFlameDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	16280	0	11
 aos:asm:asm/code/code_080211F0.s:SkillFlyingArmorUse	SkillFlyingArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	26120	0	9
-aos:asm:asm/code/code_080211F0.s:SkillGhostUse	SkillGhostUse	abilities	name			asm_function		asm/code/code_080211F0.s	18890	0	7
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
 aos:asm:asm/code/code_080211F0.s:SkillGiantWormUse	SkillGiantWormUse	abilities	name			asm_function		asm/code/code_080211F0.s	33890	0	1
 aos:asm:asm/code/code_080211F0.s:SkillGladiatorUse	SkillGladiatorUse	abilities	name			asm_function		asm/code/code_080211F0.s	20353	0	16
@@ -108,8 +107,6 @@ aos:asm:asm/code/code_080211F0.s:sub_080286BC	sub_080286BC	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_080292B4	sub_080292B4	abilities	referrers			asm_function	0x080292B4	asm/code/code_080211F0.s	16151	0	10
 aos:asm:asm/code/code_080211F0.s:sub_08029568	sub_08029568	abilities	referrers			asm_function	0x08029568	asm/code/code_080211F0.s	16482	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802A330	sub_0802A330	abilities	referrers			asm_function	0x0802A330	asm/code/code_080211F0.s	18182	0	3
-aos:asm:asm/code/code_080211F0.s:sub_0802A3CC	sub_0802A3CC	abilities	referrers			asm_function	0x0802A3CC	asm/code/code_080211F0.s	18263	1	6
-aos:asm:asm/code/code_080211F0.s:sub_0802A49C	sub_0802A49C	abilities	referrers			asm_function	0x0802A49C	asm/code/code_080211F0.s	18366	0	14
 aos:asm:asm/code/code_080211F0.s:sub_0802B028	sub_0802B028	abilities	referrers			asm_function	0x0802B028	asm/code/code_080211F0.s	19785	0	9
 aos:asm:asm/code/code_080211F0.s:sub_0802CD6C	sub_0802CD6C	abilities	referrers			asm_function	0x0802CD6C	asm/code/code_080211F0.s	23388	0	3
 aos:asm:asm/code/code_080211F0.s:sub_0802CE20	sub_0802CE20	abilities	referrers			asm_function	0x0802CE20	asm/code/code_080211F0.s	23484	1	7

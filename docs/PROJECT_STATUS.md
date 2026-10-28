@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0618 - Ghost soul and sounds
+
+- `src/runtime/aos_skill_ghost.c` ports `SkillGhostUse` and
+  `sub_0802A49C`: two spirits appear around Soma, select the nearest entry
+  in the native homing list, steer for up to 64 frames or wander toward
+  random room points, then fly off screen. Their type-5 attack box and hit
+  callback are connected.
+- The spell reuses sequence 1 of the already exported resource 21 and plays
+  0xD6. A local room 0/3 capture drew the source-derived cast; it was not
+  emulator-compared or listened to.
+- A lethal hit on the Ghost requests its native 0x6E sound. Its enemy fade,
+  palette transitions, producer accounting and full AI remain partial, so
+  the complete-monster total stays 9 of 47. Zero Mission is unchanged.
+
 ## Patch 0617 - Zombie Soldier soul and sounds; burst effects
 
 - The shared throw routine follows flags 4 (rolling with the probe

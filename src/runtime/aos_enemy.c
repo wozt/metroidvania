@@ -1235,6 +1235,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->step = 0;
                     enemy->vx = enemy->ax = enemy->vy = 0;
                     enemy->ay = 0x2000;
+                } else if (enemy->id == AOS_ENEMY_GHOST) {
+                    /* sub_0808A0C8: a lethal hit plays 0x6E. The native
+                     * palette fade and producer accounting remain open. */
+                    aos_audio_play_song(0x6E);
+                    play_loop(enemy, kind->anims, 1, false);
+                    enemy->timer = 8;
+                    enemy->state = 1;
+                    enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_RIPPER &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080C2D70 -> sub_080C2A18: state 0xFF. */

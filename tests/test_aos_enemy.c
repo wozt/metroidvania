@@ -1844,7 +1844,7 @@ static void valkyrie_tests(void) {
     assert(hit.enemy_hit && !hit.killed && e.state == 1);
 }
 
-/* The death sounds of sub_080AD5B8 (bat) and sub_080C2388 (Fleaman). */
+/* Death sounds of sub_080AD5B8, sub_080C2388 and sub_0808A0C8. */
 static void death_sound_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t two[] = {4, 4}, four[] = {4, 4, 4, 4};
@@ -1873,6 +1873,17 @@ static void death_sound_tests(void) {
     aos_audio_clear();
     aos_enemy_update(&flea, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) && flea.step == 2);
+    AosEnemy ghost;
+    kind.modes[0][0] = 1;
+    kind.hurt[0][0] = (AosBox){-8, -8, 16, 16};
+    assert(aos_enemy_create(&ghost, AOS_ENEMY_GHOST, 100, 60, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    AosSoulAttack soul = {{90, 50, 110, 70}, 100, 0, false};
+    aos_enemy_set_soul_attacks(&soul, 1);
+    aos_audio_clear();
+    aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(ghost.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1);
 }
 
 static void flea_tests(void) {

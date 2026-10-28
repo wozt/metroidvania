@@ -820,6 +820,20 @@ Peeping Eye gaps, White Dragon's complete affine choreography and damage
 callbacks, Giant Ghost visual children, Bone Pillar tower, Buer fire component,
 attacks, fades, sounds and rewards still need their own native state machines.
 
+Ghost's red soul is separate from that partial enemy controller.
+`SkillGhostUse` places an invisible owner 24 pixels above Soma, requests song
+0xD6 and creates two `sub_0802A49C` spirits at a 16-pixel radius. Each plays
+sequence 1 of resource 21, then chooses the nearest of the four
+`sub_08021924` homing-list entries; without one it turns toward a new random
+point in the native 512 by 256 range each frame. It accelerates by 0x2000 to
+4 pixels per frame, turns 0x300 per frame, attacks with the 16 by 16 box of
+0x1010F8F8 and leaves its target after 64 frames, a hit or the target's death.
+It is deleted beyond margin table entry 2. The native visual trail created by
+`sub_0802A3CC` and the boss-only forced target are not connected. This is
+source-derived and unit-tested, not emulator-compared; a local room 0/3 run
+drew the cast. The enemy Ghost's lethal callback also requests song 0x6E,
+while its fade and palette state remain open.
+
 Tiny Devil (0x10) and Imp (0x31) share one sheet with palette banks 1 and 0,
 including the per-component OBJ palette-row byte used by their OAM records,
 but have distinct attack paths. Tiny Devil wanders for the native 100..599

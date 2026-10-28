@@ -726,6 +726,12 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_skill_needles_tests)
     add_test(NAME aos_skill_needles COMMAND fusion_aos_skill_needles_tests)
 
+    add_executable(fusion_aos_skill_ripper_tests tests/test_aos_skill_ripper.c
+                   src/runtime/aos_skill_ripper.c src/runtime/aos_audio.c)
+    target_include_directories(fusion_aos_skill_ripper_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_skill_ripper_tests)
+    add_test(NAME aos_skill_ripper COMMAND fusion_aos_skill_ripper_tests)
+
     add_executable(fusion_aos_skill_ghost_tests tests/test_aos_skill_ghost.c
                    src/runtime/aos_skill_ghost.c src/runtime/aos_skill_devil.c
                    src/runtime/aos_enemy.c src/runtime/aos_weapon.c src/runtime/aos_effect.c

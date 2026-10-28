@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0625 - Ripper red soul deterministic motion model
+
+- `src/runtime/aos_skill_ripper.c` isolates source-traced states 1-4 of
+  `Skill_EvilButcher_Ripper_Use` (0x08023A70): the initial horizontal
+  flight from Soma at y - 26, signed wall offset and rebound, 16.16
+  velocities, 50-frame ending countdown, angle step, variant-specific
+  termination controlled by native configuration byte +15, and calls to
+  PlaySong 0xE6 and 0x138. New ROM-free
+  tests cover both parameter variants, one-shot sounds, timeouts, and
+  activity-window removal.
+- This module is intentionally NOT connected to the in-game caster yet:
+  native 0x084F128C graphics, palettes, affine transforms, wall probes,
+  linked-parent behavior, and collision callbacks are still required.
+  Ripper's soul aspect therefore stays **partial** and monster completeness
+  remains **15/47**. Source-derived only, not emulator-compared.
+- Zero Mission is unchanged.
+
 ## Patch 0624 - Ripper native sound requests
 
 - The Ripper enemy requests the three source-traced PlaySong IDs: 0x72 on its first death frame (sub_080C2A18), 0x89 when its linked blade begins flight (sub_080C2B74), and 0x13A when the blade hits Soma (sub_080C2DC4). Deterministic ROM-free tests cover these one-shot requests.

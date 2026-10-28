@@ -2026,6 +2026,7 @@ static void crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *anims) 
         if (player_within(c, soma, 0x3C0000)) {
             c->step = 3;
             c->substep = 0;
+            aos_audio_play_song(0x8B);
         }
         break;
     case 3:
@@ -2130,6 +2131,8 @@ static void feather_update(AosEnemy *f) {
 static void crow_die(AosEnemy *c, const AosEnemyKind *kind, uint32_t (*random)(void),
                      AosHitReport *report) {
     if (c->step == 0) {
+        /* sub_080C9D68 / sub_080CA308 step 0: sound 0x72. */
+        aos_audio_play_song(0x72);
         crow_feathers(c, report);
         if (c->anim.id != 3) play_loop(c, kind->anims, 3, false);
         stop(c);
@@ -2182,6 +2185,7 @@ static void red_crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *ani
             }
             c->timer = (uint8_t)((c->vy / c->ay < 0 ? -(c->vy / c->ay) : c->vy / c->ay) * 2);
             c->substep = 1;
+            aos_audio_play_song(0x8B);
         }
         if (--c->timer == 0xFF) {
             c->step = 3;

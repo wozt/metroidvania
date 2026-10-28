@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0615 - Blue Crow soul; crow sounds
+
+- `src/runtime/aos_skill_crow.c` ports `sub_SkillBlueCrowUse`: a crow
+  circles Soma for 50 frames on an arc that opens to 59 pixels and
+  closes, attacking with its frame boxes (`Enemy/skill_crow`).
+- The blue crow plays 0x8B at take-off, the red crow at its swoop, and
+  both 0x72 at death; unit-tested.
+- 7 of 47 monsters are complete. Not listened to or emulator-compared.
+  Zero Mission is unchanged.
+
 ## Patch 0614 - Tiny Devil soul and sounds; the homing list
 
 - `src/runtime/aos_skill_devil.c` ports `SkillTinyDevilUse` and its

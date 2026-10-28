@@ -769,8 +769,11 @@ static void crow_tests(void) {
     assert(crow.step == 1);
     soma.x = AOS_FIXED(160);
     soma.y = AOS_FIXED(160);
+    aos_audio_clear();
     aos_enemy_update(&crow, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(crow.step == 3 && crow.substep == 0);
+    /* sub_080C9AF4: sound 0x8B as it takes off. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x8B) == 1);
     /* It flaps in place (animation 2) for 33 frames. */
     int frames = 0;
     while (crow.substep < 2 && frames < 100) {
@@ -843,6 +846,7 @@ static void crow_tests(void) {
     int32_t x0 = crow.x, y0 = crow.y;
     int dying = 0, blood = 0, flames = 0;
     AosEnemy feathers[2];
+    aos_audio_clear();
     while (!crow.removed && dying < 100) {
         hit = aos_enemy_update(&crow, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
                                never_zero);
@@ -863,6 +867,8 @@ static void crow_tests(void) {
     }
     assert(dying == 64 && crow.anim.id == 3 && crow.y == y0 + 64 * 0x8000);
     assert(blood == 5 && flames == 10);
+    /* sub_080C9D68 step 0: sound 0x72, once. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
 
     /* sub_080C9ED4: frame 8, (x + 8, y + 4) drifting right and (x - 8,
      * y - 4) mirrored drifting left; 49 + 25 frames, blinking on bit 0. */
@@ -912,8 +918,11 @@ static void red_crow_tests(void) {
         ++frames;
     }
     assert(frames == 129 && c.step == 2 && c.volley_count == 1);
+    aos_audio_clear();
     aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(c.anim.id == 1 && c.vy == 0x20000 - 0x1000 && c.timer == 63);
+    /* sub_080CA0D4: the swoop's sound 0x8B. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x8B) == 1);
     int32_t y0 = c.y;
     frames = 0;
     int32_t low = c.y;

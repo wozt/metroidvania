@@ -187,6 +187,8 @@ static const EntitySpec entities[] = {
      * then 16 still frames, one per direction). */
     STATIC("skill_devil", 0x081D6918, 0x0820B358, 0, 0x0823445C, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8,
            9, 10, 11, 12, 13, 14, 15),
+    /* Resource 31 of 0x080E13BC: the Blue Crow soul's crow (sequence 2). */
+    ENTITY("skill_crow", 0x081DB940, 0x0820B4C0, 0, 0x08235F04),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
 };

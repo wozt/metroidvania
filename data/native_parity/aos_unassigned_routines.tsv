@@ -174,7 +174,6 @@ aos:asm:asm/code/code_080211F0.s:sub_080321A0	sub_080321A0	unclassified				asm_f
 aos:asm:asm/code/code_080211F0.s:sub_080321C4	sub_080321C4	unclassified		technical	exclusive_callees	asm_function	0x080321C4	asm/code/code_080211F0.s	34008	3	1
 aos:asm:asm/code/code_080211F0.s:sub_0803222C	sub_0803222C	unclassified				asm_function	0x0803222C	asm/code/code_080211F0.s	34061	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0803242C	sub_0803242C	unclassified				asm_function	0x0803242C	asm/code/code_080211F0.s	34322	0	0
-aos:asm:asm/code/code_080211F0.s:sub_SkillBlueCrowUse	sub_SkillBlueCrowUse	unclassified		technical	exclusive_callees	asm_function		asm/code/code_080211F0.s	22287	0	11
 aos:asm:asm/code/code_08039340.s:sub_08039820	sub_08039820	unclassified				asm_function	0x08039820	asm/code/code_08039340.s	620	0	0
 aos:asm:asm/code/code_08039340.s:sub_08039A6C	sub_08039A6C	unclassified				asm_function	0x08039A6C	asm/code/code_08039340.s	925	0	0
 aos:asm:asm/code/code_08039340.s:sub_0803ACE0	sub_0803ACE0	unclassified				asm_function	0x0803ACE0	asm/code/code_08039340.s	3286	1	1

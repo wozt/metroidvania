@@ -2110,10 +2110,7 @@ aos:asm:asm/libagbsyscall.s:VBlankIntrWait	VBlankIntrWait	unclassified				asm_fu
 aos:asm:asm/m4a0.s:MP2KClearChain	MP2KClearChain	audio	path			asm_function		asm/m4a0.s	439	1	0
 aos:asm:asm/m4a0.s:MP2K_event_port	MP2K_event_port	audio	path			asm_function		asm/m4a0.s	756	0	0
 aos:asm:asm/m4a0.s:MPlayJumpTableCopy	MPlayJumpTableCopy	audio	path			asm_function		asm/m4a0.s	491	1	0
-aos:asm:asm/m4a0.s:SoundMain	SoundMain	audio	path			asm_function		asm/m4a0.s	16	1	0
 aos:asm:asm/m4a0.s:SoundMainBTM	SoundMainBTM	audio	path			asm_function		asm/m4a0.s	424	0	0
-aos:asm:asm/m4a0.s:SoundMainRAM	SoundMainRAM	audio	path			asm_function		asm/m4a0.s	82	0	0
-aos:asm:asm/m4a0.s:SoundMainRAM_NoReverb	SoundMainRAM_NoReverb	audio	path			asm_function		asm/m4a0.s	111	0	1
 aos:asm:asm/m4a0.s:SoundMainRAM_Reverb	SoundMainRAM_Reverb	audio	path			asm_function		asm/m4a0.s	91	0	0
 aos:asm:asm/m4a0.s:__umul3232H32	__umul3232H32	audio	path			asm_function		asm/m4a0.s	10	0	0
 aos:asm:asm/m4a0.s:clear_modM	clear_modM	audio	path			asm_function		asm/m4a0.s	1528	3	0

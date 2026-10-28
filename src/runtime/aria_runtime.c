@@ -119,6 +119,47 @@ static const struct { int id, bank; } variant_keys[VARIANT_ARTS] = {
     {57, 1}, {29, 1}, {29, 2}, {-1, 0},
 };
 
+/* A WAV recording of the mixer output (unsigned 8-bit mono). */
+typedef struct {
+    FILE *file;
+    uint32_t bytes;
+} AriaWav;
+
+static void wav_header(FILE *file, uint32_t bytes) {
+    uint8_t header[44] = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ',
+                          16, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 8, 0,
+                          'd', 'a', 't', 'a', 0, 0, 0, 0};
+    uint32_t riff = 36 + bytes, rate = AOS_MP2K_MIX_RATE;
+    for (int i = 0; i < 4; ++i) {
+        header[4 + i] = (uint8_t)(riff >> (8 * i));
+        header[24 + i] = (uint8_t)(rate >> (8 * i));
+        header[28 + i] = (uint8_t)(rate >> (8 * i));
+        header[40 + i] = (uint8_t)(bytes >> (8 * i));
+    }
+    fwrite(header, 1, sizeof header, file);
+}
+
+static bool wav_open(AriaWav *wav, const char *path) {
+    wav->file = fopen(path, "wb");
+    if (!wav->file) return false;
+    wav_header(wav->file, 0);
+    return true;
+}
+
+static void wav_write(AriaWav *wav, const int8_t *pcm, size_t count) {
+    if (!wav->file) return;
+    for (size_t i = 0; i < count; ++i) fputc((uint8_t)(pcm[i] + 128), wav->file);
+    wav->bytes += (uint32_t)count;
+}
+
+static void wav_close(AriaWav *wav) {
+    if (!wav->file) return;
+    fseek(wav->file, 0, SEEK_SET);
+    wav_header(wav->file, wav->bytes);
+    fclose(wav->file);
+    wav->file = NULL;
+}
+
 static void start_mp2k_song(void *context, uint16_t song,
                             const AosAudioSongInfo *info) {
     (void)song;
@@ -2160,12 +2201,16 @@ static void usage(const char *name) {
             "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
+            "       [--play-song N: PlaySong at the start] [--audio-wav out.wav] [--mute]\n"
             "       (--area A --room R | room-folder)\n",
             name);
 }
 
 int main(int argc, char **argv) {
     const char *folder = NULL, *library_path = DEFAULT_LIBRARY, *capture_path = NULL;
+    const char *audio_wav_path = NULL;
+    long start_song = -1;
+    bool mute = false;
     const char *weapon_name = "none", *save_path = NULL;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
@@ -2242,6 +2287,13 @@ int main(int argc, char **argv) {
             spawn_x = atoi(argv[++i]);
             spawn_y = atoi(argv[++i]);
             spawn_override = true;
+        } else if (!strcmp(argv[i], "--play-song") && i + 1 < argc) {
+            start_song = strtol(argv[++i], &end, 0);
+            if (*end || start_song < 0 || start_song > 0xFFFF) { usage(argv[0]); return 2; }
+        } else if (!strcmp(argv[i], "--audio-wav") && i + 1 < argc) {
+            audio_wav_path = argv[++i];
+        } else if (!strcmp(argv[i], "--mute")) {
+            mute = true;
         } else if (!strcmp(argv[i], "--capture") && i + 3 < argc) {
             capture_path = argv[++i];
             capture_frames = strtol(argv[++i], &end, 10);
@@ -2348,13 +2400,26 @@ int main(int argc, char **argv) {
         return ok ? 0 : 1;
     }
 
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | (mute ? 0 : SDL_INIT_AUDIO))) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&mp2k);
         return 1;
     }
     gba_input_init(&gamepad, &pad_map);
+    /* SoundMainRAM's output: signed 8-bit mono at the mode's 10512 Hz. */
+    SDL_AudioStream *audio_stream = NULL;
+    if (!mute && have_audio_bank) {
+        SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_MIX_RATE};
+        audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL,
+                                                 NULL);
+        if (audio_stream) SDL_ResumeAudioStreamDevice(audio_stream);
+        else fprintf(stderr, "No audio output: %s\n", SDL_GetError());
+    }
+    AriaWav wav = {0};
+    if (audio_wav_path && !wav_open(&wav, audio_wav_path))
+        fprintf(stderr, "Cannot write %s\n", audio_wav_path);
+    if (start_song >= 0) aos_audio_play_song((uint16_t)start_song);
     int rc = 1;
     SDL_Window *window = SDL_CreateWindow("Metroid Vania - experimental Aria runtime",
                                           VIEW_W * 4, VIEW_H * 4, SDL_WINDOW_RESIZABLE);
@@ -2637,7 +2702,13 @@ int main(int argc, char **argv) {
             aos_audio_volume_update();
             /* m4aSoundMain: each started player's sequencer clocks (no voices
              * or mixing yet, so still silent). */
-            if (have_audio_bank) aos_mp2k_engine_frame(&mp2k);
+            if (have_audio_bank) {
+                aos_mp2k_engine_frame(&mp2k);
+                int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
+                aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
+                if (audio_stream) SDL_PutAudioStreamData(audio_stream, pcm, sizeof pcm);
+                wav_write(&wav, pcm, sizeof pcm);
+            }
             if (!lifecycle.in_game_frame_requested) continue;
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);
@@ -3012,6 +3083,8 @@ int main(int argc, char **argv) {
     }
     rc = 0;
 cleanup:
+    if (audio_stream) SDL_DestroyAudioStream(audio_stream);
+    wav_close(&wav);
     aos_audio_set_start_sink(NULL, NULL);
     aos_mp2k_engine_destroy(&mp2k);
     gba_input_close(&gamepad);

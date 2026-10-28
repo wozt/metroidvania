@@ -271,6 +271,78 @@ static void mix_test(void) {
     assert(c->frequency == 26758);
 }
 
+/* SoundMainRAM: envelopes and the mono byte mixer. */
+static void mixer_test(void) {
+    static uint8_t bank[64];
+    for (size_t i = 0; i < sizeof bank; ++i) bank[i] = 0;
+    /* A wave at 0: size 4, loop start 2, samples 10 20 30 40. */
+    bank[12] = 4;
+    bank[16] = 10;
+    bank[17] = 20;
+    bank[18] = 30;
+    bank[19] = 40;
+    AosMp2kEngine engine;
+    aos_mp2k_engine_init(&engine);
+    assert(aos_mp2k_engine_set_bank(&engine, bank, sizeof bank, BASE));
+    int8_t out[8];
+
+    /* Envelope: attack 0x80, decay 0x80 to sustain 0x40, release 0x80 (on
+     * a looping wave, so the sample does not end the channel first). */
+    bank[3] = 0x40;
+    AosMp2kChannel *c = &engine.direct[0];
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8, .right_volume = 0x80,
+                          .left_volume = 0x80};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0x80, .decay = 0x80,
+                            .sustain = 0x40, .release = 0x80};
+    aos_mp2k_mix(&engine, out, 1);
+    assert(c->envelope == 0x80 && (c->status & 3) == 3 && c->mix_volume == 64);
+    aos_mp2k_mix(&engine, out, 1);
+    assert(c->envelope == 0xFF && (c->status & 3) == 2);
+    aos_mp2k_mix(&engine, out, 1);
+    assert(c->envelope == 0x7F && (c->status & 3) == 2);
+    aos_mp2k_mix(&engine, out, 1);
+    assert(c->envelope == 0x40 && (c->status & 3) == 1);
+    c->status |= AOS_MP2K_CHANNEL_STOP;
+    aos_mp2k_mix(&engine, out, 1);
+    assert(c->envelope == 0x20 && c->status);
+    for (int i = 0; i < 8 && c->status; ++i) aos_mp2k_mix(&engine, out, 1);
+    assert(c->status == 0);
+
+    /* Fixed frequency, full volume (254): one sample per output; the
+     * non-looping sample ends its channel. */
+    bank[3] = 0;
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8, .right_volume = 255,
+                          .left_volume = 255};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0xFF};
+    aos_mp2k_mix(&engine, out, 6);
+    assert(c->mix_volume == 254);
+    assert(out[0] == 9 && out[1] == 19 && out[2] == 29 && out[3] == 39 && out[4] == 0 &&
+           out[5] == 0 && c->status == 0);
+    /* Looping from sample 2 (sustained at full volume). */
+    bank[3] = 0x40;
+    bank[8] = 2;
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8, .right_volume = 255,
+                          .left_volume = 255};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0xFF, .sustain = 0xFF};
+    aos_mp2k_mix(&engine, out, 8);
+    assert(out[3] == 39 && out[4] == 29 && out[5] == 39 && out[6] == 29 &&
+           (c->status & AOS_MP2K_CHANNEL_LOOP));
+    /* Two channels add, wrapping as bytes. */
+    engine.direct[1] = *c;
+    aos_mp2k_mix(&engine, out, 1);
+    assert(out[0] == 2 * 29 && c->mix_volume == 254);
+
+    /* Interpolated at the mixing rate: 10512 * 798 is just under one
+     * sample a step, so the second output is nearly the next sample. */
+    bank[3] = 0;
+    engine.direct[1].status = 0;
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .right_volume = 255,
+                          .left_volume = 255, .frequency = AOS_MP2K_MIX_RATE};
+    c->tone = (AosMp2kTone){.wav = BASE, .attack = 0xFF};
+    aos_mp2k_mix(&engine, out, 2);
+    assert(out[0] == 9 && out[1] == ((19 * 254) >> 8));
+}
+
 /* MP2KPlayerMain's tempo clock: 150 per clock, TEMPO doubling its value. */
 static void player_tempo_test(void) {
     const uint8_t stream[] = {0xBB, 60, 0x83, 0xB1};
@@ -310,6 +382,7 @@ int main(void) {
     channel_test();
     allocation_test();
     mix_test();
+    mixer_test();
     engine_song_start_test();
     parameter_and_note_test();
     pattern_and_repeat_test();

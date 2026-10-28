@@ -664,3 +664,147 @@ static void channel_events(AosMp2kEngine *engine, uint8_t player, uint8_t track)
         else play_note(engine, player, track, note);
     }
 }
+
+/* The WaveData of a channel: + 0x3 loop flags, + 0x8 loop start, + 0xC
+ * size, + 0x10 the signed 8-bit samples. */
+typedef struct {
+    const uint8_t *data;
+    size_t available;   /* sample bytes inside the bank */
+    bool loop;
+    uint32_t loop_start, size;
+} Wave;
+
+static bool wave_of(const AosMp2kEngine *engine, uint32_t pointer, Wave *wave) {
+    const uint8_t *header = NULL;
+    if (!bank_slice(engine, pointer, 16, &header)) return false;
+    *wave = (Wave){.loop = (header[3] & 0xC0) != 0, .loop_start = read_u32(header + 8),
+                   .size = read_u32(header + 12)};
+    uint64_t offset = (uint64_t)pointer + 16 - engine->bank_base;
+    wave->data = engine->bank + offset;
+    wave->available = engine->bank_size - (size_t)offset;
+    return wave->size <= wave->available && wave->loop_start <= wave->size;
+}
+
+/* A sample byte; the one past the end is read too, as natively. */
+static int sample_at(const Wave *wave, uint32_t index) {
+    return index < wave->available ? (int8_t)wave->data[index] : 0;
+}
+
+/* The envelope step at the head of SoundMainRAM's channel loop. Returns
+ * false when the channel is (or becomes) silent. */
+static bool envelope(AosMp2kChannel *channel, const Wave *wave) {
+    uint8_t status = channel->status;
+    unsigned env = channel->envelope;
+    if (status & AOS_MP2K_CHANNEL_START) {
+        if (status & AOS_MP2K_CHANNEL_STOP) {
+            channel->status = 0;
+            return false;
+        }
+        status = 3;
+        channel->position = 0;
+        channel->remaining = (int32_t)wave->size;
+        channel->fine = 0;
+        env = 0;
+        if (wave->loop) status |= AOS_MP2K_CHANNEL_LOOP;
+        goto attack;
+    }
+    if (status & AOS_MP2K_CHANNEL_ECHO) {
+        if (--channel->echo_length == 0) {
+            channel->status = 0;
+            return false;
+        }
+    } else if (status & AOS_MP2K_CHANNEL_STOP) {
+        env = env * channel->tone.release >> 8;
+        if (env <= channel->echo_volume) {
+        echo:
+            env = channel->echo_volume;
+            if (!env) {
+                channel->status = 0;
+                return false;
+            }
+            status |= AOS_MP2K_CHANNEL_ECHO;
+        }
+    } else if ((status & 3) == 2) {
+        env = env * channel->tone.decay >> 8;
+        if (env <= channel->tone.sustain) {
+            env = channel->tone.sustain;
+            if (!env) goto echo;
+            status--;
+        }
+    } else if ((status & 3) == 3) {
+    attack:
+        env += channel->tone.attack;
+        if (env >= 0xFF) {
+            env = 0xFF;
+            status--;
+        }
+    }
+    channel->status = status;
+    channel->envelope = (uint8_t)env;
+    unsigned scaled = (AOS_MP2K_MASTER_VOLUME + 1u) * env >> 4;
+    channel->mix_volume =
+        (uint8_t)((channel->right_volume + channel->left_volume) * scaled >> 9);
+    return true;
+}
+
+/* The end of a sample: a looping one restarts within its loop, another
+ * ends its channel. */
+static bool wrap(AosMp2kChannel *channel, const Wave *wave) {
+    uint32_t length = wave->size - wave->loop_start;
+    if (!(channel->status & AOS_MP2K_CHANNEL_LOOP) || !length) {
+        channel->status = 0;
+        return false;
+    }
+    while (channel->remaining <= 0) channel->remaining += (int32_t)length;
+    channel->position = wave->size - (uint32_t)channel->remaining;
+    return true;
+}
+
+static void mix_channel(AosMp2kChannel *channel, const Wave *wave, int8_t *out, size_t count) {
+    int volume = channel->mix_volume;
+    if (channel->type & 8) {
+        /* Fixed frequency: one sample per output. */
+        for (size_t index = 0; index < count; ++index) {
+            int value = sample_at(wave, channel->position);
+            out[index] = (int8_t)(uint8_t)(out[index] + ((value * volume) >> 8));
+            channel->position++;
+            if (--channel->remaining == 0 && !wrap(channel, wave)) return;
+        }
+        return;
+    }
+    uint32_t step = channel->frequency * AOS_MP2K_DIV_FREQ;
+    int s0 = sample_at(wave, channel->position), d = sample_at(wave, channel->position + 1) - s0;
+    for (size_t index = 0; index < count; ++index) {
+        int value = s0 + (((int32_t)channel->fine * d) >> 23);
+        out[index] = (int8_t)(uint8_t)(out[index] + ((value * volume) >> 8));
+        channel->fine += step;
+        uint32_t advance = channel->fine >> 23;
+        if (!advance) continue;
+        channel->fine &= 0x7FFFFF;
+        channel->remaining -= (int32_t)advance;
+        if (channel->remaining <= 0) {
+            if (!wrap(channel, wave)) return;
+        } else {
+            channel->position += advance;
+        }
+        s0 = sample_at(wave, channel->position);
+        d = sample_at(wave, channel->position + 1) - s0;
+    }
+}
+
+void aos_mp2k_mix(AosMp2kEngine *engine, int8_t *out, size_t count) {
+    if (!out) return;
+    for (size_t index = 0; index < count; ++index) out[index] = 0;
+    if (!engine) return;
+    for (size_t index = 0; index < AOS_MP2K_DIRECT_CHANNELS; ++index) {
+        AosMp2kChannel *channel = &engine->direct[index];
+        if (!(channel->status & AOS_MP2K_CHANNEL_ACTIVE)) continue;
+        Wave wave;
+        if (!wave_of(engine, channel->tone.wav, &wave)) {
+            channel->status = 0;
+            continue;
+        }
+        if (!envelope(channel, &wave)) continue;
+        mix_channel(channel, &wave, out, count);
+    }
+}

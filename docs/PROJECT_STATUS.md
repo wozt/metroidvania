@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0607 - Aria MP2K mixer and SDL audio output
+
+- `aos_mp2k_mix` ports `SoundMainRAM` without reverb: per-frame channel
+  envelopes (attack, decay, sustain, release, echo), the mix volume and
+  the mono 8-bit mixer at 10512 Hz (176 samples a frame) with linear
+  interpolation, fixed-frequency tones and looping waves.
+- The runtime plays it through SDL (`--mute` to disable), can record it
+  (`--audio-wav`) and request a song (`--play-song N`). A local run
+  recorded 10 seconds of song 1 with a non-zero, varying signal.
+- Not ported: CGB synthesis, reverb, LFO, public volume controls; not
+  yet compared by ear or with an emulator. Zero Mission is unchanged.
+
 ## Patch 0606 - Aria MP2K channel volume and frequency
 
 - `TrkVolPitSet`, `ChnVolSetAsm` and `MidiKeyToFreq` are ported: each

@@ -21,6 +21,14 @@ enum {
     AOS_MP2K_CHANNEL_START = 0x80,
     AOS_MP2K_CHANNEL_STOP = 0x40,
     AOS_MP2K_CHANNEL_ACTIVE = 0xC7,
+    AOS_MP2K_CHANNEL_ECHO = 0x04,
+    AOS_MP2K_CHANNEL_LOOP = 0x10,
+    /* DEFAULT_SOUND_MODE: 10512 Hz (176 samples a frame, divFreq 798),
+     * master volume 15. */
+    AOS_MP2K_MIX_RATE = 10512,
+    AOS_MP2K_SAMPLES_PER_FRAME = 176,
+    AOS_MP2K_DIV_FREQ = 798,
+    AOS_MP2K_MASTER_VOLUME = 15,
 };
 
 typedef struct {
@@ -56,6 +64,13 @@ typedef struct {
     uint8_t right_volume;   /* + 0x02: ChnVolSetAsm */
     uint8_t left_volume;    /* + 0x03 */
     uint32_t frequency;     /* + 0x20: MidiKeyToFreq (DirectSound only) */
+    uint8_t envelope;       /* + 0x09 */
+    uint8_t mix_volume;     /* + 0x0A */
+    uint8_t echo_volume;    /* + 0x0C */
+    uint8_t echo_length;    /* + 0x0D */
+    int32_t remaining;      /* + 0x18: samples left before the end */
+    uint32_t fine;          /* + 0x1C: 23-bit position fraction */
+    uint32_t position;      /* + 0x28 as an index into the sample data */
     AosMp2kTone tone;
     bool linked;            /* in its track's chain (+ 0x2C, + 0x30, + 0x34) */
     uint8_t player, track;
@@ -182,6 +197,16 @@ void aos_mp2k_track_vol_pit_set(AosMp2kTrack *track);
  * adjustment `fine` (256ths of a semitone) through gScaleTable and
  * gFreqTable. */
 uint32_t aos_mp2k_key_to_freq(uint32_t wav_freq, uint8_t key, uint8_t fine);
+/* SoundMainRAM (no reverb) for `count` output samples of the 8 DirectSound
+ * channels: each channel's envelope steps once (attack from a start,
+ * decay to sustain, release on a stop down to the echo, the echo
+ * countdown), its mix volume is (right + left) * envelope >> 9 with the
+ * master volume, and its samples are added into the signed 8-bit mono
+ * buffer, wrapping like the native byte sums: fixed-frequency tones one
+ * sample per output, the others linearly interpolated at frequency *
+ * divFreq per output in 23-bit steps, looping samples restarting at their
+ * loop start, others ending their channel. CGB channels are not mixed. */
+void aos_mp2k_mix(AosMp2kEngine *engine, int8_t *out, size_t count);
 /* A voice group's entry `index` (VOICE copies it into the track). */
 bool aos_mp2k_tone(const AosMp2kEngine *engine, uint32_t voicegroup, unsigned index,
                    AosMp2kTone *tone);

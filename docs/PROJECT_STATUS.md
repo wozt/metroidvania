@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0592 - Aria Skeleton red soul
+
+- The object export writes `metadata/skill_throws.tsv`, the eight
+  records of 0x084F12C8 the shared Skeleton skill routine reads, and the
+  bone sprite `Enemy/skill_bone` (resource 7 of 0x080E13BC).
+- `src/runtime/aos_skill_throw.c` ports that routine for the Skeleton's
+  record (parameter 3: flag 0x80 only): the bone starts at Soma's facing
+  and (8, -26), flies at (0.5, -4) pixels a frame with gravity, turns
+  0x0B00 a frame and is deleted after leaving the screen margins. The
+  runtime casts it, draws it turning and tests its type-5 box; it passes
+  through enemies, as the native hit callback only marks the hit.
+- The runtime's skill sprites are now one table (`skill_bat`,
+  `skill_archer`, `skill_bone`).
+- The other parameters of the routine (Zombie Soldier and others) stay
+  refused. A local run with soul 3 drew the bone rising and turning.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0591 - Aria Skull Archer red soul
 
 - The object export adds `Enemy/skill_archer` (bow animation and the

@@ -18,6 +18,7 @@ enum {
     WEAPON_STATS = 0x08505D3C,
     ARMOR_STATS = 0x085063B0,
     RED_SOULS = 0x080E1598,
+    SKILL_THROWS = 0x084F12C8,
     HUD_PALETTE = 0x0820C428,
     HUD_TILES = 0x0827B208,
     ENEMY_COUNT = 0x71,
@@ -175,6 +176,8 @@ static const EntitySpec entities[] = {
     /* SkillSkullArcherUse and its arrow sub_08028BC4: entry 18 of 0x080E13BC
      * (the bow plays sequence 0, the arrow shows frame 1). */
     STATIC("skill_archer", 0x081D510C, 0x0820B2EC, 0, 0x08233BCC, 1, 1),
+    /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
+    STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
 };
 
 static const EffectSpec effects[] = {
@@ -963,6 +966,33 @@ static bool append_red_souls(const FusionRom *rom, Text *souls, char *error,
     return true;
 }
 
+/* The thrown-object records of the shared Skeleton skill routine
+ * (0x084F12C8, 8 x 24 bytes, indexed by the red soul's parameter): launch
+ * speeds (+ 0x0, + 0x4), gravity (+ 0x8), graphics record of 0x080E13BC
+ * (+ 0xC), still frame (+ 0xD), sequence (+ 0xE), palette row (+ 0xF),
+ * song (+ 0x10), flags (+ 0x12), spin (+ 0x14) and + 0x16. */
+static bool append_skill_throws(const FusionRom *rom, Text *throws, char *error,
+                                size_t error_size) {
+    if (!text_append(throws,
+            "schema\tmetroidvania-aos-skill-throws-v1\n"
+            "# parameter\tvx\tvy\tgravity\tresource\tframe\tsequence\tpalette\tsong\tflags"
+            "\tspin\tfield_16\n")) return false;
+    for (uint32_t index = 0; index < 8; ++index) {
+        const uint8_t *record = slice(rom, SKILL_THROWS + index * 24, 24, "skill throw record",
+                                      error, error_size);
+        if (!record || !text_append(throws,
+                                    "%u\t%d\t%d\t%d\t%u\t%u\t%u\t%u\t0x%04x\t0x%04x\t0x%04x"
+                                    "\t0x%04x\n",
+                                    index, (int32_t)read_u32(record),
+                                    (int32_t)read_u32(record + 4), (int32_t)read_u32(record + 8),
+                                    record[0xC], record[0xD], record[0xE], record[0xF],
+                                    read_u16(record + 0x10), read_u16(record + 0x12),
+                                    read_u16(record + 0x14), read_u16(record + 0x16)))
+            return false;
+    }
+    return true;
+}
+
 /* The in-game HUD resources of sub_0800DA50: palette rows 0-1 of
  * 0x0820C428 (rows 13-14 of BG palette memory) and the 16 x 16 tiles of
  * 0x0827B208 (BG tiles 0x200-0x2FF), as one private binary: 64 palette
@@ -1033,7 +1063,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0},
+    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0}, skill_throws = {0},
          item_icons = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
@@ -1070,6 +1100,9 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            append_red_souls(rom, &red_souls, error, error_size) &&
                            write_text_file(metadata_output, "red_souls.tsv",
                                            &red_souls, error, error_size) &&
+                           append_skill_throws(rom, &skill_throws, error, error_size) &&
+                           write_text_file(metadata_output, "skill_throws.tsv",
+                                           &skill_throws, error, error_size) &&
                            write_hud(rom, metadata_output, error, error_size) &&
                            append_item_icons(rom, &item_icons, error, error_size) &&
                            write_text_file(metadata_output, "item_icons.tsv",
@@ -1091,6 +1124,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(money.data);
     free(equipment.data);
     free(red_souls.data);
+    free(skill_throws.data);
     free(item_icons.data);
     return success;
 }

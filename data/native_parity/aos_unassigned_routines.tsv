@@ -95,7 +95,6 @@ aos:asm:asm/code/code_080211F0.s:SkillTinyDevilUse	SkillTinyDevilUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillUkobackUse	SkillUkobackUse	abilities	name			asm_function		asm/code/code_080211F0.s	17899	0	15
 aos:asm:asm/code/code_080211F0.s:SkillUneUse	SkillUneUse	abilities	name			asm_function		asm/code/code_080211F0.s	10605	0	13
 aos:asm:asm/code/code_080211F0.s:SkillWerewolfUse	SkillWerewolfUse	abilities	name			asm_function		asm/code/code_080211F0.s	14478	0	13
-aos:asm:asm/code/code_080211F0.s:SkillWingedSkeletonUse	SkillWingedSkeletonUse	abilities	name			asm_function		asm/code/code_080211F0.s	9892	0	16
 aos:asm:asm/code/code_080211F0.s:SkillWoodenGolemUse	SkillWoodenGolemUse	abilities	name			asm_function		asm/code/code_080211F0.s	34158	0	1
 aos:asm:asm/code/code_080211F0.s:SkillZombieUse	SkillZombieUse	abilities	name			asm_function		asm/code/code_080211F0.s	34181	0	1
 aos:asm:asm/code/code_080211F0.s:Skill_Devil_Manticore_Curly_Use	Skill_Devil_Manticore_Curly_Use	abilities	name			asm_function		asm/code/code_080211F0.s	27777	0	12
@@ -107,7 +106,6 @@ aos:asm:asm/code/code_080211F0.s:Skill_Witch_GiantGhost_Use	Skill_Witch_GiantGho
 aos:asm:asm/code/code_080211F0.s:sub_08025540	sub_08025540	abilities	referrers			asm_function	0x08025540	asm/code/code_080211F0.s	8562	1	4
 aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers			asm_function	0x08025620	asm/code/code_080211F0.s	8666	0	5
 aos:asm:asm/code/code_080211F0.s:sub_080256AC	sub_080256AC	abilities	referrers			asm_function	0x080256AC	asm/code/code_080211F0.s	8737	1	5
-aos:asm:asm/code/code_080211F0.s:sub_08025F70	sub_08025F70	abilities	referrers			asm_function	0x08025F70	asm/code/code_080211F0.s	9818	0	4
 aos:asm:asm/code/code_080211F0.s:sub_08026858	sub_08026858	abilities	referrers			asm_function	0x08026858	asm/code/code_080211F0.s	10924	0	5
 aos:asm:asm/code/code_080211F0.s:sub_08027140	sub_08027140	abilities	referrers			asm_function	0x08027140	asm/code/code_080211F0.s	12036	0	9
 aos:asm:asm/code/code_080211F0.s:sub_08028018	sub_08028018	abilities	referrers			asm_function	0x08028018	asm/code/code_080211F0.s	13874	0	2
@@ -2541,14 +2539,12 @@ aos:c:src/code_08001194.c:GetWarpRoomFlagFromMapPosition	GetWarpRoomFlagFromMapP
 aos:c:src/code_08001194.c:HBlankEffectSetup	HBlankEffectSetup	unclassified				c_function	0x08001718	src/code_08001194.c	437	21	0
 aos:c:src/code_08001194.c:sub_08001800	sub_08001800	unclassified				c_function	0x08001800	src/code_08001194.c	500	2	0
 aos:c:src/code_08001194.c:sub_08001994	sub_08001994	unclassified				c_function	0x08001994	src/code_08001194.c	622	7	1
-aos:c:src/code_08001194.c:sub_08001A00	sub_08001A00	unclassified				c_function	0x08001A00	src/code_08001194.c	658	22	1
 aos:c:src/code_08001194.c:sub_08001B40	sub_08001B40	unclassified				c_function	0x08001B40	src/code_08001194.c	799	5	0
 aos:c:src/code_08001194.c:sub_08001BA0	sub_08001BA0	unclassified				c_function	0x08001BA0	src/code_08001194.c	850	5	0
 aos:c:src/code_08001194.c:sub_08001C1C	sub_08001C1C	unclassified				c_function	0x08001C1C	src/code_08001194.c	928	32	2
 aos:c:src/code_08001194.c:sub_08001CCC	sub_08001CCC	unclassified				c_function	0x08001CCC	src/code_08001194.c	998	2	3
 aos:c:src/code_08001194.c:sub_08001D94	sub_08001D94	unclassified				c_function	0x08001D94	src/code_08001194.c	1069	34	2
 aos:c:src/code_08001194.c:sub_08001E58	sub_08001E58	unclassified				c_function	0x08001E58	src/code_08001194.c	1139	12	3
-aos:c:src/code_08001194.c:sub_08001F3C	sub_08001F3C	unclassified				c_function	0x08001F3C	src/code_08001194.c	1210	14	2
 aos:c:src/code_08001194.c:sub_08001FE8	sub_08001FE8	unclassified				c_function	0x08001FE8	src/code_08001194.c	1307	1	1
 aos:c:src/code_08001194.c:sub_08002028	sub_08002028	unclassified				c_function	0x08002028	src/code_08001194.c	1322	6	1
 aos:c:src/code_08001194.c:sub_08002058	sub_08002058	unclassified				c_function	0x08002058	src/code_08001194.c	1337	32	2

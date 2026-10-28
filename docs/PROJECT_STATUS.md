@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0595 - Aria Winged Skeleton red soul
+
+- `src/runtime/aos_skill_spear.c` ports `SkillWingedSkeletonUse`: the
+  spear flies in an arc, turning down 0x100 a frame, and sticks for 32
+  blinking frames when the point 16 pixels along it meets a solid,
+  non-special collision cell; its child `sub_08025F70` carries the
+  16 x 16 type-5 box at that point.
+- The runtime's `sub_08031EA4` placement now copies whole pixels only,
+  as natively (it writes + 0x42 and + 0x46 of a fresh entity).
+- A local run with soul 1 drew the spear leaving Soma's hand and turning
+  down. Not ported: its sounds. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0594 - Aria Axe Armor red soul
 
 - `src/runtime/aos_skill_axe.c` ports `SkillAxeArmorUse`: the axe flies

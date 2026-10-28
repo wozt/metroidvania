@@ -1125,8 +1125,12 @@ animation and is deleted when it ends. A struck axe leaves a flame of
 `sub_0806D5C0(x, y, 8.0, 8.0)`: `sub_0806E524` at a random point of the w x h
 area around (x, y), mirrored by a third draw. Under the global `0x8E & 0x40`
 the armor is created in state 3 (animation only; no hit callback or floor
-snap). Not ported: the palette bits, the global pause `0x4BE` and the
-sounds. The walker's one-way platform bit (mode bit 1) is not used by the
+snap). The native `PlaySong` request IDs and timing are connected: 0x86 for
+the struck axe, 0x6F at death start, 0x6E for each eighth-frame spark and
+0xE3 when its red soul creates the player axe. The Aria song table, samples
+and renderer are not ported, so these requests are not audible. Not ported:
+the palette bits and the global pause `0x4BE`. The walker's one-way platform
+bit (mode bit 1) is not used by the
 armor (mode 0x14) or the archer (0xC, 0xD). The axe's affine rotation
 follows `sub_0803E058` (see the class 1 weapon).
 

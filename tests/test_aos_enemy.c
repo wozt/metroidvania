@@ -2,6 +2,7 @@
 /* ROM-free tests for the Aria of Sorrow enemy framework and its ported enemy
  * state machines, including Nemesis. */
 #include "aos_enemy.h"
+#include "aos_audio.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -1176,6 +1177,7 @@ static void soldier_tests(void) {
 static uint32_t always_one(void) { return 1; }
 
 static void armor_tests(void) {
+    aos_audio_clear();
     /* Floor at cell row 20 (top 160) from cell 4 to 49, walls at cells 3
      * and 50 (x 24..31 and 400..407). */
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
@@ -1291,6 +1293,7 @@ static void armor_tests(void) {
     soma.y = struck.y + AOS_FIXED(30);
     hit = aos_enemy_update(&struck, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
     assert(hit.enemy_hit && struck.removed);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x86));
     /* sub_0806D5C0: a flame within 8 x 8 pixels of the struck axe. */
     assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
     assert(hit.effects[0].x == struck.x + 1 - 0x40000 && hit.effects[0].y == struck.y + 1 - 0x40000);
@@ -1300,6 +1303,7 @@ static void armor_tests(void) {
     soma.x = a.x - AOS_FIXED(5);
     soma.y = a.y + AOS_FIXED(20);
     soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    aos_audio_clear();
     a.hp = 1;
     a.mirrored = true;
     hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, never_zero);
@@ -1331,6 +1335,12 @@ static void armor_tests(void) {
     }
     assert(a.removed && a.anim.id == 4 && dying >= 11 * 5);
     assert(fires == 16 && sparks == 4);
+    assert(aos_audio_count() == 5);
+    assert(aos_audio_get(0).action == AOS_AUDIO_START_SONG && aos_audio_get(0).value == 0x6F);
+    for (int i = 1; i < 5; ++i) {
+        assert(aos_audio_get(i).action == AOS_AUDIO_START_SONG);
+        assert(aos_audio_get(i).value == 0x6E);
+    }
 
     /* Under gEwramData + 0x8E bit 0x40: state 3, no floor snap, animation
      * only. */

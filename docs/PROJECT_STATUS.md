@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0599 - Aria PlaySong requests and Axe Armor sound events
+
+- `src/runtime/aos_audio.c` introduces a host-neutral, tested boundary for
+  Aria's `PlaySong`: table IDs below 0x400 become start requests,
+  `STOP_SONG` masks the ID, and other values become audio-command requests.
+  Requests are logged and may be forwarded to a sink.
+- Axe Armor now requests 0x86 when its thrown axe is struck, 0x6F when its
+  death begins and 0x6E at each eighth-frame spark. `SkillAxeArmorUse`
+  requests 0xE3 when the red-soul axe is created. Their exact event counts
+  and ordering have ROM-free regression tests.
+- This is request routing, not audible playback: Aria's song table, M4A
+  sequencer, native samples, mixer and SDL output remain absent. Axe Armor's
+  sound aspect therefore moves from `missing` to `partial`; no monster is
+  complete yet. Source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+
 ## Patch 0598 - Per-monster completeness on the dashboard
 
 - New registry `data/native_parity/aos_monster_aspects.tsv`: for every

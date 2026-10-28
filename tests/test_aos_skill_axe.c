@@ -3,10 +3,13 @@
 #include <stdio.h>
 
 #include "../src/runtime/aos_skill_axe.h"
+#include "../src/runtime/aos_audio.h"
 
 static void axe_tests(void) {
+    aos_audio_clear();
     /* Fractions are dropped. */
     AosAxe axe = aos_axe_create((100 << 16) + 0x8000, (200 << 16) + 0x4000, false);
+    assert(aos_audio_count() == 1 && aos_audio_requested(AOS_AUDIO_START_SONG, 0xE3));
     assert(axe.x == 100 << 16 && axe.y == 174 << 16 && axe.vx == 0x34000 && axe.ax == -0x1000);
     assert(aos_axe_update(&axe, 0, 100, 16, 16));
     assert(axe.state == 1 && axe.x == (100 << 16) + 0x34000 && axe.vx == 0x33000);

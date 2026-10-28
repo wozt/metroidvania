@@ -1,7 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_skill_axe.h"
 
+#include "aos_audio.h"
+
 AosAxe aos_axe_create(int32_t soma_x, int32_t soma_y, bool soma_facing_left) {
+    /* SkillAxeArmorUse calls PlaySong(0xE3) when it creates the axe. */
+    aos_audio_play_song(0xE3);
     /* Only the integer halves are copied (strh to + 0x42, + 0x46). */
     AosAxe axe = {.x = (int32_t)((uint32_t)(int16_t)(soma_x >> 16) << 16),
                   .y = (int32_t)((uint32_t)(int16_t)((soma_y >> 16) - 0x1A) << 16)};

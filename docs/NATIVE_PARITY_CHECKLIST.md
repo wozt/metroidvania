@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 64 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 65 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 559 | 3014 |
+| Castlevania: Aria of Sorrow | 560 | 3013 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1265,14 +1265,14 @@ Evidence: in game: `aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 
 
 [?] **`aos.enemies.inventory-boundary` — source coverage.** The current classifier assigns 1518 discovered routine(s) to this category (228 by native name, 1290 by exclusive referrers). Category completeness has not been established.
 
-[+] **`aos.enemies.axe_armor` — Axe armor, its axe and the probe walker.** Walking with the native probe walker, patrols, high and low throws, the returning axe with its strike flame (sub_0806D5C0), the death with its fire column and sparks (sub_080B11DC / sub_08045CEC: animation 1 row 8, animation 16 row 6) and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.axe_armor` — Axe armor, its axe and the probe walker.** Walking with the native probe walker, patrols, high and low throws, the returning axe with its strike flame (sub_0806D5C0), the death with its fire column and sparks (sub_080B11DC / sub_08045CEC: animation 1 row 8, animation 16 row 6) and state 3 under gEwramData + 0x8E bit 0x40 are ported. PlaySong requests now occur for a struck axe (0x86), death start (0x6F), each eighth-frame spark (0x6E) and the red-soul axe (0xE3). Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045C9C`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0D5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0F1C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1030`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B11DC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B13BC`, `aos:c:src/code/code_08039340.c:sub_0803E058`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
-Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Dependencies: `aos.enemies.zombie`.  
-Known divergences: The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sounds (0x6E, 0x6F, 0x86), the palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
-Next action: Play the sounds once the Aria sound path exists.
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045C9C`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyAxeArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0D5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0F1C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1030`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B11DC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B13BC`, `aos:c:src/code/code_080211F0.c:SkillAxeArmorUse`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_skill_axe.c`](../src/runtime/aos_skill_axe.c), [`src/runtime/aos_audio.c`](../src/runtime/aos_audio.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_aos_skill_axe.c`](../tests/test_aos_skill_axe.c), [`tests/test_aos_audio.c`](../tests/test_aos_audio.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.audio.play_song`, `aos.enemies.zombie`.  
+Known divergences: The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sound requests are timed, but the song table, samples and renderer are absent, so they are not audible. The palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
+Next action: Render the requested songs from the native Aria sound data, then compare their timing and output with an emulator.
 Evidence: in game: `aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)`.
 
 [+] **`aos.enemies.bat` — Bat enemy.** Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported.
@@ -1770,6 +1770,14 @@ Next action: Load and render the six actors' native animation resources and OAM,
 ### Music and sound effects
 
 [?] **`aos.audio.inventory-boundary` — source coverage.** The current classifier assigns 101 discovered routine(s) to this category (99 by source path, 2 by native name). Category completeness has not been established.
+
+[~] **`aos.audio.play_song` — PlaySong request routing.** Song IDs below 0x400 become start requests, STOP_SONG masks the ID to ten bits, and remaining values become audio-command requests. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_audio.c`](../src/runtime/aos_audio.c).  
+Tests: [`tests/test_aos_audio.c`](../tests/test_aos_audio.c).
+Known divergences: StartSong, AudioCommand, the song table, M4A sequencer, mixer, native sample bank and SDL output are not connected, so requests are recorded and forwarded to an optional sink but produce no sound.  
+Next action: Port StartSong and AudioCommand against verified Aria song and voice tables, then connect a native M4A renderer and SDL sink.
 
 ### Inventory and progression data
 

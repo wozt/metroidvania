@@ -1,5 +1,5 @@
 enemy	sprite	animations	sounds	loot	soul	soul_ref	notes
-axe_armor	ported	ported	missing	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: no Aria audio is ported.
+axe_armor	ported	ported	partial	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: native event IDs and timing are connected to PlaySong requests, but no song or sample renderer exists yet.
 bat	ported	ported	missing	n/a	ported	red:2	Soul: drops, is collected and casts (SkillBatUse). Sounds: no Aria audio is ported.
 beam_skeleton	ported	ported	missing	n/a	partial	red:39	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 blue_crow	ported	ported	missing	n/a	partial	red:8	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.

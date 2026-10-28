@@ -183,7 +183,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_audio.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c
                src/runtime/aos_stats.c src/runtime/aos_pickup.c src/runtime/aos_hud.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
@@ -579,7 +579,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_title_stages COMMAND fusion_aos_title_stages_tests)
 
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_pickup.c
-                   src/runtime/aos_stats.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_stats.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
                    src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_pickup_tests PRIVATE src/runtime)
@@ -622,13 +622,19 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_skill_merman_tests)
     add_test(NAME aos_skill_merman COMMAND fusion_aos_skill_merman_tests)
 
-    add_executable(fusion_aos_skill_axe_tests tests/test_aos_skill_axe.c src/runtime/aos_skill_axe.c)
+    add_executable(fusion_aos_audio_tests tests/test_aos_audio.c src/runtime/aos_audio.c)
+    target_include_directories(fusion_aos_audio_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_audio_tests)
+    add_test(NAME aos_audio COMMAND fusion_aos_audio_tests)
+
+    add_executable(fusion_aos_skill_axe_tests tests/test_aos_skill_axe.c
+                   src/runtime/aos_skill_axe.c src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_skill_axe_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_skill_axe_tests)
     add_test(NAME aos_skill_axe COMMAND fusion_aos_skill_axe_tests)
 
     add_executable(fusion_aos_skill_spear_tests tests/test_aos_skill_spear.c
-                   src/runtime/aos_skill_spear.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_spear.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c)
@@ -810,7 +816,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_weapon COMMAND fusion_aos_weapon_tests)
 
     add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c src/runtime/aos_enemy.c
-                   src/runtime/aos_weapon.c src/runtime/aos_effect.c
+                   src/runtime/aos_audio.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
                    src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_enemy_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_enemy_tests PRIVATE m)

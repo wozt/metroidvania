@@ -2,6 +2,8 @@
 /* Aria of Sorrow enemies; comments name the cvaos routine. */
 #include "aos_enemy.h"
 
+#include "aos_audio.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5495,6 +5497,7 @@ static AosHitReport axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind 
     if (axe->state != 0) {
         report = collide(axe, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         if (axe->hp <= 0) {
+            aos_audio_play_song(0x86);
             /* sub_0806D5C0(x, y, 8.0, 8.0): a flame where it was struck. */
             spawn_flame_at(axe->x, axe->y, 0x80000, 0x80000, random, &report);
             axe->removed = true;
@@ -5545,6 +5548,7 @@ static AosHitReport axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind 
 static void armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(void),
                       AosHitReport *report) {
     if (a->step == 0) {
+        aos_audio_play_song(0x6F);
         play_loop(a, kind->anims, 4, false);
         a->step = 1;
         a->vy = (int32_t)0xFFD80000;
@@ -5571,6 +5575,7 @@ static void armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(
         }
     }
     if ((a->timer & 7) == 0) {
+        aos_audio_play_song(0x6E);
         int32_t x = a->x + (int32_t)((uint32_t)random_centred(random, 16) << 16);
         int32_t y = height + (int32_t)((uint32_t)random_centred(random, 4) << 16);
         spawn_drift(AOS_EFFECT_SPARK, x, y, report);

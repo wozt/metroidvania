@@ -2940,7 +2940,6 @@ aos:c:src/code_080D73B8.c:GetPlayerUpdatedVolume	GetPlayerUpdatedVolume	unclassi
 aos:c:src/code_080D73B8.c:InitializeAudio	InitializeAudio	unclassified		audio	exclusive_callees	c_function	0x080D7880	src/code_080D73B8.c	315	1	4
 aos:c:src/code_080D73B8.c:MPlayVolumeSet	MPlayVolumeSet	audio	name			c_function	0x080D773C	src/code_080D73B8.c	209	1	1
 aos:c:src/code_080D73B8.c:MPlayVolumeUpdate	MPlayVolumeUpdate	audio	name			c_function	0x080D77B0	src/code_080D73B8.c	243	1	2
-aos:c:src/code_080D73B8.c:PlaySong	PlaySong	unclassified		audio	exclusive_callees	c_function	0x080D7910	src/code_080D73B8.c	357	495	3
 aos:c:src/code_080D73B8.c:ResetAudio	ResetAudio	technical	referrers			c_function	0x080D7984	src/code_080D73B8.c	384	1	1
 aos:c:src/code_080D73B8.c:StartSong	StartSong	unclassified		audio	exclusive_callees	c_function	0x080D73B8	src/code_080D73B8.c	45	2	2
 aos:c:src/m4a.c:CgbModVol	CgbModVol	audio	path			c_function		src/m4a.c	806	1	1

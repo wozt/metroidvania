@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0622 - Valkyrie soul
+
+- `src/runtime/aos_skill_valkyrie.c` ports `SkillValkyrieUse`: a spectral
+  warrior strikes where it is summoned, throwing sparkles along its sword
+  (`sub_08045B44` type 0), then blinks out; `aos_effect` gains these
+  timed sparkles and the export adds `Enemy/skill_valkyrie` and
+  `Effect/sparkle`.
+- The Valkyrie is complete: 14 of 47 monsters. Not listened to or
+  emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0621 - Beam Skeleton soul
 
 - `src/runtime/aos_skill_skull.c` ports `SkillBeamSkeletonUse`: a skull

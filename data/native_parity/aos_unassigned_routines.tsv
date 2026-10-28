@@ -250,7 +250,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08044F50	sub_08044F50	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_08044F80	sub_08044F80	unclassified				asm_function	0x08044F80	asm/code/code_08040A38.s	7279	1	0
 aos:asm:asm/code/code_08040A38.s:sub_08044FA8	sub_08044FA8	unclassified				asm_function	0x08044FA8	asm/code/code_08040A38.s	7301	2	0
 aos:asm:asm/code/code_08040A38.s:sub_08044FF4	sub_08044FF4	unclassified				asm_function	0x08044FF4	asm/code/code_08040A38.s	7346	0	1
-aos:asm:asm/code/code_08040A38.s:sub_08045000	sub_08045000	unclassified		technical	exclusive_callees	asm_function	0x08045000	asm/code/code_08040A38.s	7354	0	3
 aos:asm:asm/code/code_08040A38.s:sub_080450C8	sub_080450C8	unclassified		technical	exclusive_callees	asm_function	0x080450C8	asm/code/code_08040A38.s	7452	0	4
 aos:asm:asm/code/code_08040A38.s:sub_08045164	sub_08045164	unclassified		audio	exclusive_callees	asm_function	0x08045164	asm/code/code_08040A38.s	7531	0	5
 aos:asm:asm/code/code_08040A38.s:sub_080451F4	sub_080451F4	unclassified				asm_function	0x080451F4	asm/code/code_08040A38.s	7604	0	1
@@ -260,13 +259,11 @@ aos:asm:asm/code/code_08040A38.s:sub_08045454	sub_08045454	unclassified		technic
 aos:asm:asm/code/code_08040A38.s:sub_080455BC	sub_080455BC	unclassified		technical	exclusive_callees	asm_function	0x080455BC	asm/code/code_08040A38.s	8087	2	5
 aos:asm:asm/code/code_08040A38.s:sub_08045654	sub_08045654	unclassified		technical	exclusive_callees	asm_function	0x08045654	asm/code/code_08040A38.s	8157	0	5
 aos:asm:asm/code/code_08040A38.s:sub_080458E4	sub_080458E4	unclassified		technical	exclusive_callees	asm_function	0x080458E4	asm/code/code_08040A38.s	8493	26	7
-aos:asm:asm/code/code_08040A38.s:sub_08045B44	sub_08045B44	unclassified		technical	exclusive_callees	asm_function	0x08045B44	asm/code/code_08040A38.s	8800	24	1
 aos:asm:asm/code/code_08040A38.s:sub_08045BC8	sub_08045BC8	unclassified		technical	exclusive_callees	asm_function	0x08045BC8	asm/code/code_08040A38.s	8869	4	1
 aos:asm:asm/code/code_08040A38.s:sub_08045C34	sub_08045C34	unclassified		technical	exclusive_callees	asm_function	0x08045C34	asm/code/code_08040A38.s	8925	1	5
 aos:asm:asm/code/code_08040A38.s:sub_08045D5C	sub_08045D5C	unclassified				asm_function	0x08045D5C	asm/code/code_08040A38.s	9069	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08045DC8	sub_08045DC8	unclassified		technical	exclusive_callees	asm_function	0x08045DC8	asm/code/code_08040A38.s	9127	4	3
 aos:asm:asm/code/code_08040A38.s:sub_08045E38	sub_08045E38	enemies	referrers			asm_function	0x08045E38	asm/code/code_08040A38.s	9181	2	0
-aos:asm:asm/code/code_08040A38.s:sub_08045E4C	sub_08045E4C	unclassified				asm_function	0x08045E4C	asm/code/code_08040A38.s	9195	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08045EE0	sub_08045EE0	unclassified				asm_function	0x08045EE0	asm/code/code_08040A38.s	9273	0	4
 aos:asm:asm/code/code_08040A38.s:sub_08045F9C	sub_08045F9C	unclassified		technical	exclusive_callees	asm_function	0x08045F9C	asm/code/code_08040A38.s	9372	3	5
 aos:asm:asm/code/code_08040A38.s:sub_08046080	sub_08046080	unclassified		technical	exclusive_callees	asm_function	0x08046080	asm/code/code_08040A38.s	9489	1	7
@@ -2157,7 +2154,6 @@ aos:c:src/code/code_080211F0.c:SkillChronomageUse	SkillChronomageUse	abilities	n
 aos:c:src/code/code_080211F0.c:SkillKillerDollUse	SkillKillerDollUse	abilities	name			c_function	0x08024F38	src/code/code_080211F0.c	3341	0	14
 aos:c:src/code/code_080211F0.c:SkillLoadGraphicsInline	SkillLoadGraphicsInline	unclassified		technical	exclusive_callees	c_function		src/code/code_080211F0.c	2389	9	3
 aos:c:src/code/code_080211F0.c:SkillNemesisUse	SkillNemesisUse	abilities	name			c_function	0x080251F0	src/code/code_080211F0.c	3488	0	6
-aos:c:src/code/code_080211F0.c:SkillValkyrieUse	SkillValkyrieUse	abilities	name			c_function	0x08024CBC	src/code/code_080211F0.c	3236	0	11
 aos:c:src/code/code_080211F0.c:Skill_EvilButcher_Ripper_Use	Skill_EvilButcher_Ripper_Use	abilities	name			c_function	0x08023A70	src/code/code_080211F0.c	2401	0	14
 aos:c:src/code/code_080211F0.c:sub_080211F0	sub_080211F0	technical	referrers			c_function	0x080211F0	src/code/code_080211F0.c	35	1	0
 aos:c:src/code/code_080211F0.c:sub_080211F4	sub_080211F4	unclassified				c_function	0x080211F4	src/code/code_080211F0.c	44	0	0

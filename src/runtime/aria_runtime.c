@@ -30,6 +30,7 @@
 #include "aos_skill_merman.h"
 #include "aos_skill_shot.h"
 #include "aos_skill_skull.h"
+#include "aos_skill_valkyrie.h"
 #include "aos_skill_spear.h"
 #include "aos_skill_throw.h"
 #include "aos_hud.h"
@@ -207,11 +208,13 @@ static int enemy_bank(const AosEnemy *enemy) {
 #define ENEMY_STATIC_FRAMES 16 /* single sprite frames of child entities per kind */
 /* The red soul skills' sprites (Enemy/skill_<name>). */
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
-       SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ARTS };
+       SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
+       SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
-                                                         "skill_flea", "skill_skull"};
+                                                         "skill_flea", "skill_skull",
+                                                         "skill_valkyrie"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -223,7 +226,7 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "dark_smoke", "fire", "spark",
                                                           "dust", "impact", "casing",
                                                           "ember", "burst_1", "burst_12",
-                                                          "burst_15"};
+                                                          "burst_15", "sparkle"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -656,7 +659,7 @@ static void homing_clear(void) {
 enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, SKILL_AXE,
        SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
-       SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL };
+       SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE };
 
 typedef struct {
     bool alive, started;
@@ -682,6 +685,7 @@ typedef struct {
     AosGhostSoul ghost;     /* SKILL_GHOST_SOUL */
     AosSirenSoul siren;     /* SKILL_SIREN */
     AosSkull skull;         /* SKILL_SKULL */
+    AosValkyrie valkyrie;   /* SKILL_VALKYRIE */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
@@ -703,6 +707,7 @@ typedef struct {
 #define SKILL_GHOST_ROUTINE 0x0802A8D5u
 #define SKILL_SIREN_ROUTINE 0x08026369u
 #define SKILL_SKULL_ROUTINE 0x080289B5u
+#define SKILL_VALKYRIE_ROUTINE 0x08024CBDu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -729,6 +734,8 @@ typedef struct {
     const AosEnemyKind *crow_kind;  /* its frame boxes */
     const AosAnimSet *skull;        /* resource 19, NULL when missing */
     const AosEnemyKind *skull_kind; /* its frame boxes */
+    const AosAnimSet *valkyrie;     /* resource 2, NULL when missing */
+    const AosEnemyKind *valkyrie_kind;
     const AosAnimSet *flea;         /* resource 20, NULL when missing */
     const AosEnemyKind *flea_kind;  /* its probes and frame boxes */
     const AosBox *flea_still_attack;   /* the attack boxes of its still frames */
@@ -794,6 +801,7 @@ static int cast_red_soul(void *context) {
                          static_index(souls->shared_ids, souls->shared_count, 3) >= 0
                    ? SKILL_SIREN
                : routine == SKILL_SKULL_ROUTINE && souls->skull ? SKILL_SKULL
+               : routine == SKILL_VALKYRIE_ROUTINE && souls->valkyrie ? SKILL_VALKYRIE
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -804,7 +812,13 @@ static int cast_red_soul(void *context) {
     /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
     if (kind == SKILL_BAT)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
-    else if (kind == SKILL_SKULL) {
+    else if (kind == SKILL_VALKYRIE) {
+        skill->valkyrie = aos_valkyrie_create(souls->soma->x, souls->soma->y,
+                                              souls->soma->facing_left);
+        skill->x = skill->valkyrie.x;
+        skill->y = skill->valkyrie.y;
+        skill->facing_left = skill->valkyrie.facing_left;
+    } else if (kind == SKILL_SKULL) {
         skill->skull = aos_skull_create(souls->soma->facing_left);
         skill->facing_left = skill->skull.facing_left;
     }
@@ -1159,6 +1173,34 @@ static void update_skills(AriaSouls *souls) {
             skill->facing_left = false;
             break;
         }
+        case SKILL_VALKYRIE: {
+            /* SkillValkyrieUse: counted with sound 0x1AF and sequence 0 on
+             * its first update (sub_08042A54(1, 0x3C) is not run). */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1AF);
+                aos_anim_start(&skill->anim, souls->valkyrie, 0, false);
+            }
+            AosValkyrieSpark spark;
+            if (!aos_valkyrie_update(&skill->valkyrie, souls->cam_x, souls->cam_y, aos_random,
+                                     &spark)) {
+                end_skill(souls, skill);
+                break;
+            }
+            /* sub_08045B44(x, y, 0, ay, 0, 6), shown twice by its draw. */
+            for (int copy = 0; spark.spawn && souls->effects && copy < 2 &&
+                               *souls->effect_count < MAX_EFFECTS;
+                 ++copy)
+                souls->effects[(*souls->effect_count)++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .timed = true,
+                    .x = spark.x + (copy ? spark.offset_x : 0),
+                    .y = spark.y + (copy ? spark.offset_y : 0), .vy = -0x10000, .ay = spark.ay,
+                    .timer = 12};
+            if (aos_anim_step(&skill->anim, souls->valkyrie) == 3)
+                aos_valkyrie_animation_ended(&skill->valkyrie);
+            break;
+        }
         case SKILL_SKULL:
             /* SkillBeamSkeletonUse: counted with sound 0x1A9 and sequence 0
              * on its first update (sub_08042A54(1, 0x10) is not run). */
@@ -1397,6 +1439,9 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
                       : (skill->anim.frame < AOS_ENEMY_MAX_FRAMES
                              ? souls->flea_kind->attack[AOS_FLEA_END_SEQUENCE][skill->anim.frame]
                              : (AosBox){0, 0, 0, 0});
+        else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
+                 skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
+            box = souls->valkyrie_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->skull_kind->attack[0][skill->anim.frame];
@@ -3173,6 +3218,11 @@ int main(int argc, char **argv) {
                              : NULL;
             souls.flea_kind = souls.flea ? &flea->kind : NULL;
             souls.flea_still_attack = flea->static_attack;
+            const __typeof__(objects.skills[0]) *valkyrie = &objects.skills[SKILL_ART_VALKYRIE];
+            souls.valkyrie = objects_ok && valkyrie->loaded && valkyrie->defs[0].count
+                                 ? &valkyrie->set
+                                 : NULL;
+            souls.valkyrie_kind = souls.valkyrie ? &valkyrie->kind : NULL;
             const __typeof__(objects.skills[0]) *skull = &objects.skills[SKILL_ART_SKULL];
             souls.skull = objects_ok && skull->loaded && skull->defs[0].count ? &skull->set : NULL;
             souls.skull_kind = souls.skull ? &skull->kind : NULL;
@@ -3384,6 +3434,7 @@ int main(int argc, char **argv) {
             }
             if (skill->kind == SKILL_SPEAR && skill->spear.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_FLEA && skill->flea.blinking && (step & 1)) continue;
+            if (skill->kind == SKILL_VALKYRIE && skill->valkyrie.blinking && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
@@ -3396,6 +3447,10 @@ int main(int argc, char **argv) {
                 : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
                     ? blade_frame(&objects.skills[SKILL_ART_BLADES],
                                   skill->kind == SKILL_SHOT ? 2 : AOS_DAGGER_FRAME)
+                : skill->kind == SKILL_VALKYRIE
+                    ? (skill->valkyrie.hidden
+                           ? NULL
+                           : &objects.skills[SKILL_ART_VALKYRIE].frames[0][skill->anim.frame])
                 : skill->kind == SKILL_SKULL
                     ? &objects.skills[SKILL_ART_SKULL].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_CROW

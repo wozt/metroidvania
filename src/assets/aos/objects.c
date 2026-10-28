@@ -194,6 +194,8 @@ static const EntitySpec entities[] = {
     {"skill_flea", 0x081D6114, 0x0820B334, 0, 0x0823415C, 0x084F13BE, 0, 0, 3, {0, 1, 2}},
     /* Resource 19 of 0x080E13BC: the Beam Skeleton soul's skull (sequence 0). */
     ENTITY("skill_skull", 0x081D5910, 0x0820B310, 0, 0x08233FA8),
+    /* Resource 2 of 0x080E13BC: the Valkyrie soul's warrior (sequence 0). */
+    ENTITY("skill_valkyrie", 0x081CD0CC, 0x0820B08C, 0, 0x08230F88),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */
@@ -215,6 +217,8 @@ static const EffectSpec effects[] = {
     {"burst_1", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {1}, -1},
     {"burst_12", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {12}, -1},
     {"burst_15", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {15}, -1},
+    /* sub_08045B44 type 0: still frame 0x36, OBJ row 6 (bank 2). */
+    {"sparkle", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x36},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows

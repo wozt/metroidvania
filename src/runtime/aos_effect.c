@@ -54,6 +54,21 @@ static bool drift_update(AosEffect *e, const AosAnimSet *anims) {
 
 static void clamped_move(int32_t *pos, int32_t *v, int32_t a);
 
+/* sub_08045000 state 1: the move, then the lifetime. */
+static bool timed_update(AosEffect *e, const AosAnimSet *anims) {
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, true)) return false;
+        e->anim.id = 0;
+        e->started = true;
+    }
+    e->x += e->vx;
+    e->y += e->vy;
+    e->vx += e->ax;
+    e->vy += e->ay;
+    aos_anim_step(&e->anim, anims);
+    return --e->timer != 0;
+}
+
 /* sub_08045E80: hidden through its delay, then moved and animated. */
 static bool burst_update(AosEffect *e, const AosAnimSet *anims) {
     if (!e->started) {
@@ -134,6 +149,7 @@ bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t
     if (effect->particle) return particle_update(effect, anims, blink);
     if (effect->drift) return drift_update(effect, anims);
     if (effect->burst) return burst_update(effect, anims);
+    if (effect->timed) return timed_update(effect, anims);
     if (!effect->started) {
         /* State 0: the graphics set up, the animation played once. */
         aos_anim_start(&effect->anim, anims, 0, false);

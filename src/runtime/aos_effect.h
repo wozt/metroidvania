@@ -37,12 +37,17 @@
  *   ends. Burst list 0 (0x08525498) uses animation 0 row 7 (the flame
  *   art), 4 and 5 row 6 (dust, smoke) and the burst arts 1 row 7
  *   (Effect/burst_1), 12 row 6 (Effect/burst_12) and 15 row 7
- *   (Effect/burst_15). */
+ *   (Effect/burst_15);
+ * - the timed sparkles of sub_08045B44 type 0 (0x085251A8: still frame
+ *   0x36, 12 frames; Effect/sparkle, row 6) updated by sub_08045000
+ *   (`timed`): x += vx, y += vy, vx += ax, vy += ay, deleted when + 0x0D
+ *   runs out. Its draw routine sub_08045E4C also shows it at a random
+ *   offset (+ 0x1C, + 0x20), which the runtime models as a second sparkle. */
 enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
        AOS_EFFECT_DUST = 6, AOS_EFFECT_IMPACT = 7, AOS_EFFECT_CASING = 8,
        AOS_EFFECT_EMBER = 9, AOS_EFFECT_BURST_1 = 10, AOS_EFFECT_BURST_12 = 11,
-       AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_KINDS = 13 };
+       AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_SPARKLE = 13, AOS_EFFECT_KINDS = 14 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */
@@ -54,6 +59,7 @@ typedef struct {
     bool casing;            /* sub_080228F8 */
     bool follow;            /* sub_080C9198: a spark held on the player */
     bool burst;             /* sub_08045E80 */
+    bool timed;             /* sub_08045000 */
     uint8_t state;          /* + 0x0A of a casing: 1 falling, 2 bounced */
     int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
     uint8_t flags;          /* + 0x18 of a particle */

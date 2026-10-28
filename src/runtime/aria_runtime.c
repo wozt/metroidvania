@@ -18,6 +18,7 @@
 #include "aos_pickup.h"
 #include "aos_soul.h"
 #include "aos_hud.h"
+#include "aos_game_over.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
@@ -1727,6 +1728,10 @@ int main(int argc, char **argv) {
     bool hp_override = false, moves_override = false, spawn_override = false;
     bool atk_override = false, def_override = false, weapon_override = false;
     long red_soul_override = -1;   /* --red-soul: equippedRedSoul (no soul menu yet) */
+    /* --frontend FILE and --frontend-arg ARG...: the frontend to return to
+     * with --game-over once Soma's death fade has ended. */
+    const char *frontend_command[64] = {NULL};
+    int frontend_count = 0;
     const char *debug_input = NULL;
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
@@ -1747,6 +1752,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--weapon") && i + 1 < argc) {
             weapon_name = argv[++i];
             weapon_override = true;
+        } else if (!strcmp(argv[i], "--frontend") && i + 1 < argc) {
+            frontend_command[0] = argv[++i];
+            if (!frontend_count) frontend_count = 1;
+        } else if (!strcmp(argv[i], "--frontend-arg") && i + 1 < argc) {
+            if (!frontend_count) frontend_count = 1;
+            if (frontend_count < 60) frontend_command[frontend_count++] = argv[i + 1];
+            ++i;
         } else if (!strcmp(argv[i], "--red-soul") && i + 1 < argc) {
             red_soul_override = strtol(argv[++i], &end, 10);
         }
@@ -1990,6 +2002,7 @@ int main(int argc, char **argv) {
     AosForcedInput forced = {0};
     AosSaveRoom save_room = {0};
     bool announced_death = false;
+    static AosGameOver death;
     long step = 0;
     AosInput aria_input = {0};
     AosGameLifecycle lifecycle;
@@ -2134,9 +2147,24 @@ int main(int argc, char **argv) {
             ++step;
             if (has_active_save) active_save.play_frames++;
             if (soma.state == 16 && !announced_death) {
-                /* The game-over mode (0x42C |= 0x10) is not ported. */
+                /* sub_0801AF20 enters the death sub-state (unk_64 = 2):
+                 * sub_0800C8C8 fades BG and OBJ to black (MUS mute is not
+                 * played). */
                 printf("Soma died (frame %ld)\n", step);
                 announced_death = true;
+                aos_death_start(&death);
+            }
+            if (announced_death && aos_death_update(&death)) {
+                printf("Game over (frame %ld)\n", step);
+                if (frontend_command[0]) {
+                    frontend_command[frontend_count] = "--game-over";
+                    frontend_command[frontend_count + 1] = NULL;
+                    SDL_Process *process = SDL_CreateProcess(frontend_command, false);
+                    if (process) SDL_DestroyProcess(process);
+                    else fprintf(stderr, "Cannot return to the frontend: %s\n", SDL_GetError());
+                }
+                running = false;
+                break;
             }
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
@@ -2209,6 +2237,14 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         SDL_FRect src = {(float)cam_x, (float)cam_y, VIEW_W, VIEW_H}, dst = {0, 0, VIEW_W, VIEW_H};
+        {
+            /* The BG fade of sub_0800C8C8, relative to the OBJ veil. */
+            float bg = announced_death && death.obj.weight > 0
+                           ? (float)death.bg.weight / (float)death.obj.weight : 1.0f;
+            uint8_t mod = (uint8_t)((bg > 1.0f ? 1.0f : bg) * 255.0f);
+            SDL_SetTextureColorMod(background, mod, mod, mod);
+            if (hud_texture) SDL_SetTextureColorMod(hud_texture, mod, mod, mod);
+        }
         SDL_RenderTexture(renderer, background, &src, &dst);
         draw_save_point(renderer, &room, cam_x, cam_y,
                         aos_save_room_player_inside(sx, sy), step);
@@ -2366,6 +2402,19 @@ int main(int argc, char **argv) {
             }
             SDL_FRect whole = {0, 0, 240, 160};
             SDL_RenderTexture(renderer, hud_texture, NULL, &whole);
+        }
+        /* sub_0800C8C8's fades: BG at its own weight (the room and the HUD
+         * scaled so that the black veil below completes it), everything at
+         * the OBJ weight. */
+        if (announced_death) {
+            float obj = (float)death.obj.weight / 65536.0f;
+            if (obj < 1.0f) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, (uint8_t)((1.0f - obj) * 255.0f));
+                SDL_FRect whole = {0, 0, 240, 160};
+                SDL_RenderFillRect(renderer, &whole);
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+            }
         }
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {

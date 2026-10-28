@@ -144,7 +144,15 @@ static int32_t intro_handler(AosGameMode *mode, void *context) {
                                                 &state->input);
 }
 
+static int32_t game_over_handler(AosGameMode *mode, void *context) {
+    (void)mode;
+    AosGameLifecycle *state = context;
+    state->game_over_frame_requested = true;
+    return aos_game_over_update(&state->game_over, &state->input);
+}
+
 static const AosGameModeHandler handlers[AOS_MODE_COUNT] = {
+    [AOS_MODE_GAME_OVER] = game_over_handler,
     [AOS_MODE_KONAMI_LOGO] = konami_handler,
     [AOS_MODE_TITLE_SCREEN] = title_handler,
     [AOS_MODE_MAIN_MENU] = main_menu_handler,
@@ -168,6 +176,7 @@ void aos_game_lifecycle_update(AosGameLifecycle *state) {
     state->title_frame_requested = false;
     state->intro_frame_requested = false;
     state->in_game_frame_requested = false;
+    state->game_over_frame_requested = false;
     state->title_submenu_requested = false;
     state->title_back_requested = false;
     state->title_cleanup_requested = false;
@@ -175,4 +184,9 @@ void aos_game_lifecycle_update(AosGameLifecycle *state) {
     aos_game_mode_update(&state->game_mode, handlers, state);
     if (state->save_language_requested)
         state->main_menu.language = state->reset.language;
+}
+
+void aos_game_lifecycle_start_game_over(AosGameLifecycle *state) {
+    state->game_over = (AosGameOver){0};
+    aos_game_mode_set(&state->game_mode, AOS_MODE_GAME_OVER);
 }

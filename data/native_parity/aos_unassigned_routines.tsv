@@ -2368,23 +2368,19 @@ aos:c:src/code/code_08039340.c:sub_0803CCBC	sub_0803CCBC	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803CD08	sub_0803CD08	unclassified				c_function	0x0803CD08	src/code/code_08039340.c	2253	0	0
 aos:c:src/code/code_08039340.c:sub_0803CD74	sub_0803CD74	unclassified				c_function	0x0803CD74	src/code/code_08039340.c	2277	0	0
 aos:c:src/code/code_08039340.c:sub_0803CDDC	sub_0803CDDC	unclassified				c_function	0x0803CDDC	src/code/code_08039340.c	2297	1	3
-aos:c:src/code/code_08039340.c:sub_0803CDF0	sub_0803CDF0	unclassified				c_function	0x0803CDF0	src/code/code_08039340.c	2314	36	1
 aos:c:src/code/code_08039340.c:sub_0803CE90	sub_0803CE90	unclassified				c_function	0x0803CE90	src/code/code_08039340.c	2338	0	0
 aos:c:src/code/code_08039340.c:sub_0803CED4	sub_0803CED4	unclassified				c_function	0x0803CED4	src/code/code_08039340.c	2355	29	0
 aos:c:src/code/code_08039340.c:sub_0803CF34	sub_0803CF34	unclassified				c_function	0x0803CF34	src/code/code_08039340.c	2384	2	1
 aos:c:src/code/code_08039340.c:sub_0803CFC0	sub_0803CFC0	unclassified				c_function	0x0803CFC0	src/code/code_08039340.c	2407	0	0
 aos:c:src/code/code_08039340.c:sub_0803D004	sub_0803D004	unclassified				c_function	0x0803D004	src/code/code_08039340.c	2424	1	0
-aos:c:src/code/code_08039340.c:sub_0803D06C	sub_0803D06C	unclassified				c_function	0x0803D06C	src/code/code_08039340.c	2446	7	0
 aos:c:src/code/code_08039340.c:sub_0803D080	sub_0803D080	unclassified				c_function	0x0803D080	src/code/code_08039340.c	2456	0	0
 aos:c:src/code/code_08039340.c:sub_0803D0E4	sub_0803D0E4	unclassified				c_function	0x0803D0E4	src/code/code_08039340.c	2478	0	0
 aos:c:src/code/code_08039340.c:sub_0803D148	sub_0803D148	unclassified				c_function	0x0803D148	src/code/code_08039340.c	2502	0	0
-aos:c:src/code/code_08039340.c:sub_0803D18C	sub_0803D18C	unclassified				c_function	0x0803D18C	src/code/code_08039340.c	2524	38	1
 aos:c:src/code/code_08039340.c:sub_0803D22C	sub_0803D22C	unclassified				c_function	0x0803D22C	src/code/code_08039340.c	2548	0	0
 aos:c:src/code/code_08039340.c:sub_0803D270	sub_0803D270	unclassified				c_function	0x0803D270	src/code/code_08039340.c	2564	30	0
 aos:c:src/code/code_08039340.c:sub_0803D2D0	sub_0803D2D0	unclassified				c_function	0x0803D2D0	src/code/code_08039340.c	2593	2	1
 aos:c:src/code/code_08039340.c:sub_0803D35C	sub_0803D35C	unclassified				c_function	0x0803D53C	src/code/code_08039340.c	2616	0	0
 aos:c:src/code/code_08039340.c:sub_0803D3A0	sub_0803D3A0	unclassified				c_function	0x0803D3A0	src/code/code_08039340.c	2633	2	0
-aos:c:src/code/code_08039340.c:sub_0803D408	sub_0803D408	unclassified				c_function	0x0803D408	src/code/code_08039340.c	2655	12	0
 aos:c:src/code/code_08039340.c:sub_0803D41C	sub_0803D41C	unclassified				c_function	0x0803D41C	src/code/code_08039340.c	2665	0	0
 aos:c:src/code/code_08039340.c:sub_0803D480	sub_0803D480	unclassified				c_function	0x0803D480	src/code/code_08039340.c	2688	0	0
 aos:c:src/code/code_08039340.c:sub_0803D4E4	sub_0803D4E4	unclassified				c_function	0x0803D4E4	src/code/code_08039340.c	2713	0	0
@@ -2438,7 +2434,6 @@ aos:c:src/code/code_08039340.c:sub_0803E820	sub_0803E820	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803E83C	sub_0803E83C	unclassified				c_function	0x0803E83C	src/code/code_08039340.c	4097	0	0
 aos:c:src/code/code_08039340.c:sub_0803E854	sub_0803E854	unclassified				c_function	0x0803E854	src/code/code_08039340.c	4109	0	0
 aos:c:src/code/code_08039340.c:sub_0803E86C	sub_0803E86C	unclassified				c_function	0x0803E86C	src/code/code_08039340.c	4122	58	0
-aos:c:src/code/code_08039340.c:sub_0803E8BC	sub_0803E8BC	unclassified				c_function	0x0803E8BC	src/code/code_08039340.c	4173	5	0
 aos:c:src/code/code_08039340.c:sub_0803E8FC	sub_0803E8FC	unclassified				c_function	0x0803E8FC	src/code/code_08039340.c	4218	2	0
 aos:c:src/code/code_08039340.c:sub_0803E92C	sub_0803E92C	unclassified				c_function	0x0803E92C	src/code/code_08039340.c	4253	0	0
 aos:c:src/code/code_08039340.c:sub_0803E934	sub_0803E934	unclassified				c_function	0x0803E934	src/code/code_08039340.c	4265	1	0
@@ -2679,7 +2674,6 @@ aos:c:src/code_0800B700.c:sub_0800C6F8	sub_0800C6F8	unclassified				c_function	0
 aos:c:src/code_0800B700.c:sub_0800C72C	sub_0800C72C	unclassified				c_function	0x0800C72C	src/code_0800B700.c	1313	1	2
 aos:c:src/code_0800B700.c:sub_0800C778	sub_0800C778	unclassified				c_function	0x0800C778	src/code_0800B700.c	1335	6	0
 aos:c:src/code_0800B700.c:sub_0800C7A4	sub_0800C7A4	unclassified				c_function	0x0800C7A4	src/code_0800B700.c	1351	4	12
-aos:c:src/code_0800B700.c:sub_0800C8C8	sub_0800C8C8	unclassified				c_function	0x0800C8C8	src/code_0800B700.c	1397	1	16
 aos:c:src/code_0800B700.c:sub_0800CA40	sub_0800CA40	unclassified		technical	exclusive_callees	c_function	0x0800CA40	src/code_0800B700.c	1463	4	3
 aos:c:src/code_0800B700.c:sub_0800CA98	sub_0800CA98	unclassified				c_function	0x0800CA98	src/code_0800B700.c	1487	1	3
 aos:c:src/code_0800CB00.c:NONMATCH	NONMATCH	unclassified				c_function		src/code_0800CB00.c	1489	0	12
@@ -2806,7 +2800,6 @@ aos:c:src/code_08012744.c:sub_080137F8	sub_080137F8	unclassified				c_function	0
 aos:c:src/code_08012744.c:sub_080137FC	sub_080137FC	unclassified		saves	exclusive_callees	c_function	0x080137FC	src/code_08012744.c	697	1	4
 aos:c:src/code_08012744.c:sub_08013854	sub_08013854	unclassified		saves	exclusive_callees	c_function	0x08013854	src/code_08012744.c	727	0	2
 aos:c:src/code_08013960.c:GameModeCreditsUpdate	GameModeCreditsUpdate	endings	name			c_function	0x0801430C	src/code_08013960.c	669	1	6
-aos:c:src/code_08013960.c:GameModeGameOverUpdate	GameModeGameOverUpdate	death	name			c_function	0x08013FA0	src/code_08013960.c	519	1	16
 aos:c:src/code_08013960.c:sub_08013960	sub_08013960	unclassified				c_function	0x08013960	src/code_08013960.c	63	10	8
 aos:c:src/code_08013960.c:sub_08013960_inline_0	sub_08013960_inline_0	unclassified		audio	exclusive_callees	c_function		src/code_08013960.c	39	3	1
 aos:c:src/code_08013960.c:sub_08013B44	sub_08013B44	unclassified		rooms	exclusive_callees	c_function	0x08013B44	src/code_08013960.c	155	3	3
@@ -2822,7 +2815,6 @@ aos:c:src/code_08013960.c:sub_08013EAC	sub_08013EAC	unclassified		audio	exclusiv
 aos:c:src/code_08013960.c:sub_08013EEC	sub_08013EEC	unclassified		audio	exclusive_callees	c_function	0x08013EEC	src/code_08013960.c	466	8	2
 aos:c:src/code_08013960.c:sub_08013F38	sub_08013F38	unclassified		audio	exclusive_callees	c_function	0x08013F38	src/code_08013960.c	491	1	1
 aos:c:src/code_08013960.c:sub_08013F6C	sub_08013F6C	unclassified		audio	exclusive_callees	c_function	0x08013F6C	src/code_08013960.c	505	6	1
-aos:c:src/code_08013960.c:sub_080142E8	sub_080142E8	death	referrers			c_function	0x080142E8	src/code_08013960.c	656	0	1
 aos:c:src/code_08032444.c:SoulInventory_AddAmountToFirstGroupTotal	SoulInventory_AddAmountToFirstGroupTotal	inventory	name			c_function	0x080324D0	src/code_08032444.c	94	1	2
 aos:c:src/code_08032444.c:SoulInventory_GetFirstGroupSoulTotal	SoulInventory_GetFirstGroupSoulTotal	inventory	name			c_function	0x08032A2C	src/code_08032444.c	631	0	1
 aos:c:src/code_08032444.c:SoulInventory_GetFirstGroupSoulTotalDifferent	SoulInventory_GetFirstGroupSoulTotalDifferent	inventory	name			c_function	0x08032444	src/code_08032444.c	39	0	1

@@ -129,5 +129,20 @@ int main(void) {
     assert(state.in_game_frame_requested && !state.intro_frame_requested);
 
     puts("Aria native game lifecycle tests passed");
+    /* The runtime's game over: GAME_OVER (graphics frames requested) until
+     * a press, then the white fade, then the Konami logo of the boot path. */
+    AosGameLifecycle over;
+    aos_game_lifecycle_init(&over, false);
+    aos_game_lifecycle_start_game_over(&over);
+    assert(over.game_mode.mode == AOS_MODE_GAME_OVER);
+    int over_frames = 0;
+    while (over.game_mode.mode == AOS_MODE_GAME_OVER && over_frames < 2000) {
+        over.input = (AosInput){0};
+        if (over.game_over.stage == 3) over.input.new_input = 1;
+        aos_game_lifecycle_update(&over);
+        if (over.game_mode.mode == AOS_MODE_GAME_OVER) assert(over.game_over_frame_requested);
+        ++over_frames;
+    }
+    assert(over.game_mode.mode == AOS_MODE_KONAMI_LOGO && !over.game_over.sprite_shown);
     return 0;
 }

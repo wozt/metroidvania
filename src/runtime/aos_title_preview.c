@@ -13,6 +13,7 @@
 #include "aos_intro_graphics.h"
 #include "aos_intro_resources.h"
 #include "aos_main_menu_graphics.h"
+#include "aos_game_over_graphics.h"
 #include "aos_text_window.h"
 #include "aos_menu_bg0.h"
 #include "aos_menu_save_bridge.h"
@@ -80,9 +81,26 @@ static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT], const char *director
     return true;
 }
 
+/* The runtime gets this frontend's command line to come back to after a
+ * game over (--frontend, then one --frontend-arg per argument). */
+static int frontend_argc;
+static char **frontend_argv;
+
 static bool launch_runtime(const char *runtime, const char *save_path,
                            char *error, size_t error_size) {
-    const char *arguments[] = {runtime, "--save", save_path, NULL};
+    const char *arguments[64];
+    int count = 0;
+    arguments[count++] = runtime;
+    arguments[count++] = "--save";
+    arguments[count++] = save_path;
+    arguments[count++] = "--frontend";
+    arguments[count++] = frontend_argv[0];
+    for (int i = 1; i < frontend_argc && count + 3 < 64; ++i) {
+        if (!strcmp(frontend_argv[i], "--game-over")) continue;
+        arguments[count++] = "--frontend-arg";
+        arguments[count++] = frontend_argv[i];
+    }
+    arguments[count] = NULL;
     SDL_Process *process = SDL_CreateProcess(arguments, false);
     if (!process) {
         snprintf(error, error_size, "LAUNCH FAILED: %.90s", SDL_GetError());
@@ -317,15 +335,19 @@ int main(int argc, char **argv) {
     const char *image_path = NULL;
     const char *rom_path = NULL;
     const char *runtime_path = NULL, *save_directory_arg = NULL;
+    bool start_game_over = false;
+    frontend_argc = argc;
+    frontend_argv = argv;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--title-bmp") && i + 1 < argc) image_path = argv[++i];
         else if (!strcmp(argv[i], "--rom") && i + 1 < argc) rom_path = argv[++i];
         else if (!strcmp(argv[i], "--runtime") && i + 1 < argc) runtime_path = argv[++i];
         else if (!strcmp(argv[i], "--save-dir") && i + 1 < argc) save_directory_arg = argv[++i];
+        else if (!strcmp(argv[i], "--game-over")) start_game_over = true;
         else {
             fprintf(stderr,
                     "Usage: fusion_aria_title_preview [--title-bmp FILE] [--rom FILE] "
-                    "[--runtime FILE] [--save-dir DIR]\n");
+                    "[--runtime FILE] [--save-dir DIR] [--game-over]\n");
             return 2;
         }
     }
@@ -458,6 +480,11 @@ int main(int argc, char **argv) {
     AosGameLifecycle lifecycle;
     AosMenuSaveBridge save_bridge;
     aos_game_lifecycle_init(&lifecycle, false);
+    /* --game-over: the runtime's Soma died; GAME_OVER then the Konami logo. */
+    if (start_game_over) aos_game_lifecycle_start_game_over(&lifecycle);
+    static AosGameOverGraphics game_over_graphics;
+    bool have_game_over_graphics = false;
+    SDL_Texture *game_over_background = NULL, *game_over_sprite = NULL;
     aos_menu_save_bridge_init(&save_bridge);
     for (unsigned i = 0; i < AOS_SAVE_SLOT_COUNT; ++i) {
         save_bridge.present[i] = slots[i].present;
@@ -582,6 +609,58 @@ int main(int argc, char **argv) {
             render_main_menu_backgrounds(
                 renderer, &main_menu_graphics, main_menu_textures,
                 &lifecycle.main_menu, lifecycle.game_mode.update_stage);
+        } else if (lifecycle.game_mode.mode == AOS_MODE_GAME_OVER && intro_rom.data) {
+            if (!have_game_over_graphics) {
+                have_game_over_graphics = aos_game_over_graphics_init(
+                    &game_over_graphics, &intro_rom, lifecycle.reset.language, launch_error,
+                    sizeof launch_error);
+                if (have_game_over_graphics) {
+                    const FusionAosRenderedBackground *bg = &game_over_graphics.background;
+                    game_over_background = SDL_CreateTexture(
+                        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC,
+                        (int)bg->width_pixels, (int)bg->height_pixels);
+                    if (game_over_background)
+                        SDL_UpdateTexture(game_over_background, NULL, bg->rgba,
+                                          (int)bg->width_pixels * 4);
+                    SDL_Surface *surface = SDL_LoadBMP_IO(
+                        SDL_IOFromConstMem(game_over_graphics.sprite_bmp,
+                                           game_over_graphics.sprite_bmp_size), true);
+                    if (surface) {
+                        game_over_sprite = SDL_CreateTextureFromSurface(renderer, surface);
+                        SDL_DestroySurface(surface);
+                    }
+                    if (game_over_sprite)
+                        SDL_SetTextureBlendMode(game_over_sprite, SDL_BLENDMODE_BLEND);
+                }
+            }
+            const AosGameOver *over = &lifecycle.game_over;
+            if (game_over_background) {
+                SDL_FRect source = {0, 0, GBA_W, GBA_H}, whole = {0, 0, GBA_W, GBA_H};
+                SDL_RenderTexture(renderer, game_over_background, &source, &whole);
+            }
+            /* BLDALPHA: the sprite (OBJ, first target) over BG1 at EVA / 16,
+             * the BG behind it at EVB / 16 (EVA + EVB = 16). */
+            if (game_over_sprite && over->sprite_shown) {
+                float w, h;
+                SDL_GetTextureSize(game_over_sprite, &w, &h);
+                SDL_FRect rect = {(float)(AOS_GAME_OVER_SPRITE_X + game_over_graphics.sprite_left),
+                                  (float)(AOS_GAME_OVER_SPRITE_Y + game_over_graphics.sprite_top),
+                                  w, h};
+                SDL_SetTextureAlphaMod(game_over_sprite, (uint8_t)(over->eva * 255u / 16u));
+                SDL_RenderTexture(renderer, game_over_sprite, NULL, &rect);
+            }
+            /* The palette fades: each colour mixed with the target colour by
+             * the weight; BG and OBJ share their weight on this screen. */
+            if (over->bg.weight < 0x10000) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                SDL_SetRenderDrawColor(renderer, (uint8_t)(over->bg.r * 255 / 31),
+                                       (uint8_t)(over->bg.g * 255 / 31),
+                                       (uint8_t)(over->bg.b * 255 / 31),
+                                       (uint8_t)((0x10000 - over->bg.weight) * 255 / 0x10000));
+                SDL_FRect whole = {0, 0, GBA_W, GBA_H};
+                SDL_RenderFillRect(renderer, &whole);
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+            }
         } else if (art && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
             SDL_FRect dst = {0, 0, GBA_W, GBA_H};
             SDL_RenderTexture(renderer, art, NULL, &dst);
@@ -708,7 +787,8 @@ int main(int argc, char **argv) {
                 SDL_RenderDebugText(renderer, 86, 76, "KONAMI");
             }
         }
-        uint16_t brightness = in_main_menu ? lifecycle.main_menu.brightness :
+        uint16_t brightness = lifecycle.game_mode.mode == AOS_MODE_GAME_OVER ? 0 :
+            in_main_menu ? lifecycle.main_menu.brightness :
             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE ?
                 lifecycle.intro_cutscene.brightness :
             lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN ?

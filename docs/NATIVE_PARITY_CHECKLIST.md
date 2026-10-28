@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 524 | 3049 |
+| Castlevania: Aria of Sorrow | 532 | 3041 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1787,12 +1787,14 @@ Next action: Load and render the six actors' native animation resources and OAM,
 
 [?] **`aos.death.inventory-boundary` — source coverage.** The current classifier assigns 2 discovered routine(s) to this category (1 by native name, 1 by exclusive referrers). Category completeness has not been established.
 
-[~] **`aos.death.soma` — Soma death state.** Soma's death state is ported; game-over flow, restart and save integration are absent.
+[~] **`aos.death.soma` — Soma death, death fade and game-over screen.** Soma's death (sub_0801AF20) enters the in-game death sub-state: sub_0800C8C8 fades BG to black over 0x40 frames and OBJ over 0x80 and enters GAME_OVER once the OBJ fade has ended. GameModeGameOverUpdate shows BG1 in 256 colours (tiles 0x080E5C08 and 0x080E5C10, palette 0x080E6A3C, map 0x080E9584; the background renderer now supports 8-bpp tiles), fades it in from black over 0x20 frames, waits 0x80 frames, creates the language's GAME OVER sprite at (0x80, 0xE) and blends it in over 0x20 frames (BLDALPHA from EVA 0 / EVB 16 to 16 / 0), waits for any new press, fades to white over 0x20 frames and returns to the Konami logo. The runtime runs the death fade (Soma died at frame 284 in room 0/3 and the game over followed at frame 412) and relaunches the frontend with --game-over, which shows the native painting and sprite from the ROM and continues through the boot modes. An offscreen render of the screen showed the native painting with 'Game Over'. Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:asm:asm/code/code_08014548.s:sub_0801AF20`.  
-Local implementation: [`src/runtime/aos_soma.c`](../src/runtime/aos_soma.c).  
-Tests: [`tests/test_aos_soma.c`](../tests/test_aos_soma.c).
-Next action: Port the native game-over flow and its save integration.
+Native evidence: `aos:asm:asm/code/code_08014548.s:sub_0801AF20`, `aos:c:src/code/code_08039340.c:sub_0803CDF0`, `aos:c:src/code/code_08039340.c:sub_0803D06C`, `aos:c:src/code/code_08039340.c:sub_0803D18C`, `aos:c:src/code/code_08039340.c:sub_0803D408`, `aos:c:src/code/code_08039340.c:sub_0803E8BC`, `aos:c:src/code_0800B700.c:sub_0800C8C8`, `aos:c:src/code_08013960.c:GameModeGameOverUpdate`, `aos:c:src/code_08013960.c:sub_080142E8`.  
+Local implementation: [`src/runtime/aos_soma.c`](../src/runtime/aos_soma.c), [`src/runtime/aos_game_over.c`](../src/runtime/aos_game_over.c), [`src/runtime/aos_game_over_graphics.c`](../src/runtime/aos_game_over_graphics.c), [`src/runtime/aos_game_lifecycle.c`](../src/runtime/aos_game_lifecycle.c), [`src/runtime/aos_title_preview.c`](../src/runtime/aos_title_preview.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/runtime_room.c`](../src/assets/aos/runtime_room.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_soma.c`](../tests/test_aos_soma.c), [`tests/test_aos_game_over.c`](../tests/test_aos_game_over.c), [`tests/test_aos_game_over_graphics.c`](../tests/test_aos_game_over_graphics.c), [`tests/test_aos_game_lifecycle.c`](../tests/test_aos_game_lifecycle.c), [`tests/test_fusion_assets_aos.c`](../tests/test_fusion_assets_aos.c).
+Dependencies: `aos.startup.mode_dispatch`, `aos.title.input_stage8`.  
+Known divergences: The palette-fade processor that applies sub_0803D18C / sub_0803CDF0 each frame is not decompiled: fades are modelled as their traced step (sub_0803E8BC) added once per frame until the target. The runtime shows the BG and OBJ fades with a colour modulation and a black veil, and the frontend the game-over fades with a veil (exact for one shared weight). The 0x42C & 0x200000 restart branch of sub_0800C8C8, the music (MUS_15, the mute) and the death particles of sub_0801B03C are not ported. The runtime hands over to the frontend process (--frontend, --game-over) rather than switching mode in one process, and no save is touched (the native game over returns to the Konami logo).  
+Next action: Port the 0x42C & 0x200000 restart and the death particles, then the in-game pause and the save-room reload on continue.
 
 ### Victory conditions
 

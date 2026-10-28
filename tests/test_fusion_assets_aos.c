@@ -288,11 +288,20 @@ int main(void) {
            rendered.rgba[2] == 0 && rendered.rgba[3] == 255);
     fusion_aos_free_rendered_background(&rendered);
     assert(rendered.rgba == NULL && rendered.pixel_count == 0);
+    /* 256 colours (BGCNT bit 7): 64-byte tiles, one byte per pixel into
+     * the whole palette; the entry's palette bank is ignored. Cell 0 is tile
+     * 15 flipped both ways, so its first pixel is byte 63 of the tile. */
     FusionAosBackground eight_bpp = backgrounds.entries[0];
     eight_bpp.control |= 0x80;
-    assert(!fusion_aos_render_background(&eight_bpp, &tilemap,
-                                         &render_memory, &rendered,
-                                         error, sizeof error));
+    size_t eight_base = (size_t)((eight_bpp.control >> 2) & 3) * 0x4000;
+    render_memory.vram[eight_base + 15 * 64 + 63] = 49;
+    write_u16(render_memory.palette, 49 * 2, 0x7C00);
+    assert(fusion_aos_render_background(&eight_bpp, &tilemap,
+                                        &render_memory, &rendered,
+                                        error, sizeof error));
+    assert(rendered.rgba[0] == 0 && rendered.rgba[1] == 0 && rendered.rgba[2] == 255 &&
+           rendered.rgba[3] == 255);
+    fusion_aos_free_rendered_background(&rendered);
     uint8_t front_rgba[] = {255, 0, 0, 255, 0, 0, 0, 0};
     uint8_t rear_rgba[] = {0, 0, 255, 255};
     FusionAosBackground front = {.layer = 1, .field_0 = 22};

@@ -295,6 +295,14 @@ bool fusion_aos_load_video_memory(const FusionRom *rom,
                                   const FusionAosRoomDescriptor *descriptor,
                                   FusionAosVideoMemory *memory,
                                   char *error, size_t error_size);
+/* One object sprite frame rendered from the ROM: tile sheet `graphics`,
+ * palette bank `bank` of `palette`, record `frame` of the frame list
+ * `frames`, as a cropped 32-bit BMP (freed by the caller) whose top-left is
+ * at (left, top) from the entity's position. */
+bool fusion_aos_render_object_frame(const FusionRom *rom, uint32_t graphics, uint32_t palette,
+                                    uint8_t bank, uint32_t frames, uint8_t frame,
+                                    uint8_t **bmp, size_t *bmp_size, int *left, int *top,
+                                    char *error, size_t error_size);
 bool fusion_aos_render_background(const FusionAosBackground *background,
                                   const FusionAosBackgroundTilemap *tilemap,
                                   const FusionAosVideoMemory *memory,

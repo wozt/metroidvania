@@ -279,11 +279,9 @@ bool fusion_aos_render_background(const FusionAosBackground *background,
         set_error(error, error_size, "invalid Aria background-render request");
         return false;
     }
-    if (background->control & 0x80) {
-        set_error(error, error_size,
-                  "Aria 8-bpp text backgrounds are not supported");
-        return false;
-    }
+    /* BGCNT bit 7: 256 colours, 64-byte tiles indexing the whole palette. */
+    bool full_color = (background->control & 0x80) != 0;
+    size_t tile_bytes = full_color ? 64 : 32;
     size_t width = tilemap->width_tiles * 8;
     size_t height = tilemap->height_tiles * 8;
     if (width == 0 || height == 0 ||
@@ -311,21 +309,25 @@ bool fusion_aos_render_background(const FusionAosBackground *background,
         for (size_t tile_x = 0; tile_x < tilemap->width_tiles; ++tile_x) {
             uint16_t word = tilemap->cells[
                 tile_x + tile_y * tilemap->width_tiles];
-            size_t tile_offset = character_base + (size_t)(word & 0x3FF) * 32;
+            size_t tile_offset = character_base + (size_t)(word & 0x3FF) * tile_bytes;
             if (tile_offset > sizeof memory->vram ||
-                32 > sizeof memory->vram - tile_offset) {
+                tile_bytes > sizeof memory->vram - tile_offset) {
                 ++unresolved;
                 continue;
             }
-            size_t palette_bank = (word >> 12) & 0xF;
+            size_t palette_bank = full_color ? 0 : (word >> 12) & 0xF;
             for (size_t y = 0; y < 8; ++y) {
                 size_t source_y = (word & 0x800) ? 7 - y : y;
                 for (size_t x = 0; x < 8; ++x) {
                     size_t source_x = (word & 0x400) ? 7 - x : x;
-                    uint8_t packed = memory->vram[
-                        tile_offset + source_y * 4 + source_x / 2];
-                    uint8_t color_index =
-                        (packed >> (4 * (source_x & 1))) & 0xF;
+                    uint8_t color_index;
+                    if (full_color) {
+                        color_index = memory->vram[tile_offset + source_y * 8 + source_x];
+                    } else {
+                        uint8_t packed = memory->vram[
+                            tile_offset + source_y * 4 + source_x / 2];
+                        color_index = (packed >> (4 * (source_x & 1))) & 0xF;
+                    }
                     if (color_index == 0) continue;
                     size_t color_offset =
                         (palette_bank * 16 + color_index) * 2;

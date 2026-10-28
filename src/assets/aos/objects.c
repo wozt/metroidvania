@@ -1091,3 +1091,26 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(item_icons.data);
     return success;
 }
+
+bool fusion_aos_render_object_frame(const FusionRom *rom, uint32_t graphics, uint32_t palette,
+                                    uint8_t bank, uint32_t frames, uint8_t frame,
+                                    uint8_t **bmp, size_t *bmp_size, int *left, int *top,
+                                    char *error, size_t error_size) {
+    if (!rom || !bmp || !bmp_size || !left || !top) {
+        set_error(error, error_size, "invalid Aria object frame request");
+        return false;
+    }
+    TileSheet sheet;
+    if (!load_tile_sheet(rom, graphics, &sheet, error, error_size)) return false;
+    const uint8_t *colors = load_palette(rom, palette, bank, error, error_size);
+    RenderedFrame rendered = {0};
+    bool success = colors && render_frame(rom, frames, &sheet, colors, frame, &rendered,
+                                          error, error_size);
+    free(sheet.data);
+    if (!success) return false;
+    *bmp = rendered.bmp;
+    *bmp_size = rendered.bmp_size;
+    *left = rendered.left;
+    *top = rendered.top;
+    return true;
+}

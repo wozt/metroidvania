@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0590 - Aria death fade and game over
+
+- `src/runtime/aos_game_over.c` ports the in-game death sub-state
+  `sub_0800C8C8` (BG to black over 0x40 frames, OBJ over 0x80) and
+  `GameModeGameOverUpdate` (fade-in, 0x80-frame wait, the GAME OVER sprite
+  blended in, any press, white fade, back to the Konami logo), with the
+  palette fades of `sub_0803D18C` / `sub_0803CDF0` and the step of
+  `sub_0803E8BC`.
+- The Aria background renderer supports 8-bpp (256-colour) tiles; the
+  game-over painting renders from the ROM (`aos_game_over_graphics`) with
+  the language's sprite through the new `fusion_aos_render_object_frame`.
+- The runtime now fades out when Soma dies and hands over to the frontend
+  (`--frontend` / `--frontend-arg`, passed by the frontend when it launches
+  a file) with `--game-over`; the frontend shows the screen and continues
+  through the boot modes. A run in room 0/3 with 1 HP died at frame 284 and
+  reached the game over at frame 412; an offscreen render showed the native
+  painting with 'Game Over'.
+- Not ported: the restart branch, music and death particles; the fade
+  processor is modelled. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0589 - Aria item pickup icons
 
 - The object export writes the 132 item icons the item, weapon and armor

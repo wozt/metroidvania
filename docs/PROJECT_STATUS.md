@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0598 - Per-monster completeness on the dashboard
+
+- New registry `data/native_parity/aos_monster_aspects.tsv`: for every
+  ported Aria monster, the state of its sprite, animations, sounds, loot
+  and dropped soul (with the soul's use), as `ported`, `partial`,
+  `missing` or `n/a`. `fusion_dashboard` validates it against
+  `AOS_ENEMY_*` and the Monsters & items view shows the matrix and its
+  totals: 0 of 47 monsters complete, because no Aria audio is ported;
+  8 souls usable, 39 dropped and collected only.
+- The Aria item families on that view now follow their pickup features
+  instead of reading "not started".
+- The red soul table is 56 records (one per count of the 0x1C-byte
+  inventory groups), not 29: the export and the runtime now read all of
+  them, so the 27 later red souls are no longer outside the table.
+- `AGENTS.md` lists the new registry among those to keep in sync. Zero
+  Mission is unchanged.
+
 ## Patch 0597 - Aria Harpy red soul
 
 - `src/runtime/aos_skill_dagger.c` ports the daggers of `SkillHarpyUse`

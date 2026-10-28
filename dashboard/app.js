@@ -266,12 +266,35 @@
       </tbody></table></div>`;
   }
 
+  /* The per-monster aspects (sprite, animations, sounds, loot, soul). */
+  const aspectNames = ["sprite", "animations", "sounds", "loot", "soul"];
+
+  function aspectBadge(value) {
+    const kind = value === "ported" ? "ok" : value === "partial" ? "warn" : value === "missing" ? "bad" : "";
+    return `<span class="badge ${kind}">${esc(value)}</span>`;
+  }
+
+  function aspectTable(g) {
+    const s = g.aspects;
+    const q = state.query;
+    const rows = g.monsters.filter((row) => row.aspects &&
+      (!q || (row.name + " " + row.aspects.notes + " " + row.aspects.soul_ref).toLowerCase().includes(q)));
+    const totals = aspectNames.map((name) =>
+      `<li><strong>${esc(name)}</strong> ${s[name].ported} ported · ${s[name].partial} partial · ${s[name].missing} missing</li>`).join("");
+    return `<h3>Monster completeness <span class="muted">${s.complete}/${s.monsters} complete</span></h3>
+      <p class="muted">${esc(g.aspects_note)}</p><ul class="aspect-totals">${totals}</ul>
+      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th>${aspectNames.map((name) => `<th>${esc(name)}</th>`).join("")}<th>Soul</th><th>Notes</th></tr></thead><tbody>
+      ${rows.map((row) => `<tr><td><code>0x${row.id.toString(16).toUpperCase().padStart(2, "0")}</code></td><td>${esc(row.name)}</td>${aspectNames.map((name) => `<td>${aspectBadge(row.aspects[name])}</td>`).join("")}<td><code>${esc(row.aspects.soul_ref)}</code></td><td class="muted">${esc(row.aspects.notes)}</td></tr>`).join("") ||
+      '<tr><td colspan="9" class="muted">No match.</td></tr>'}
+      </tbody></table></div>`;
+  }
+
   function bestiaryView() {
     const b = data.bestiary;
     if (!b || !b.games) return '<p class="notice">No bestiary data. Regenerate with <code>./build/fusion_dashboard</code>.</p>';
     const games = ["mzm", "aos"].map((key) => {
       const g = b.games[key];
-      return `<h2>${esc(g.title)}</h2>${bestiaryTable(g.monsters, "Monsters")}
+      return `<h2>${esc(g.title)}</h2>${g.aspects ? aspectTable(g) : ""}${bestiaryTable(g.monsters, "Monsters")}
         ${g.items_note ? `<p class="muted">${esc(g.items_note)}</p>` : ""}${bestiaryTable(g.items, "Items")}`;
     });
     return `<p class="notice">${esc(b.method)}</p>${games.join("")}`;

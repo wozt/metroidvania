@@ -9,7 +9,10 @@
 - Do not publish releases or rewrite remote history without an explicit request.
 - After every feature change, synchronize the registries that describe it in
   the same commit: `data/native_parity/annotations.tsv` for the two original
-  reconstructions, `data/dashboard/features.tsv` for assets, tools, story,
+  reconstructions, `data/native_parity/aos_monster_aspects.tsv` for each
+  ported Aria monster's sprite, animations, sounds, loot and dropped soul
+  (a monster is implemented with all five, not with its AI alone),
+  `data/dashboard/features.tsv` for assets, tools, story,
   platforms and the Metroidvania layer, and any hand-written document that
   states the feature's scope (`README.md`, `docs/*.md`). Update the notes,
   divergences, limitations, sources, tests, dependencies and next actions to

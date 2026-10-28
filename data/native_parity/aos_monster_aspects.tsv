@@ -1,0 +1,48 @@
+enemy	sprite	animations	sounds	loot	soul	soul_ref	notes
+axe_armor	ported	ported	missing	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: no Aria audio is ported.
+bat	ported	ported	missing	n/a	ported	red:2	Soul: drops, is collected and casts (SkillBatUse). Sounds: no Aria audio is ported.
+beam_skeleton	ported	ported	missing	n/a	partial	red:39	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+blue_crow	ported	ported	missing	n/a	partial	red:8	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+bone_pillar	ported	partial	missing	ported	partial	blue:10	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+buer	ported	partial	missing	n/a	partial	blue:4	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+cagnazzo	ported	ported	missing	ported	partial	blue:11	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
+catoblepas	ported	ported	missing	ported	partial	blue:9	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
+curly	ported	ported	missing	ported	partial	blue:20	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
+dead_crusader	ported	ported	missing	ported	partial	yellow:29	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+dead_warrior	ported	ported	missing	ported	partial	yellow:5	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+durga	ported	ported	missing	ported	ported	red:13	Soul: drops, is collected and casts (SkillDurgaUse). Sounds: no Aria audio is ported.
+erinys	ported	ported	missing	ported	partial	yellow:16	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+fleaman	ported	ported	missing	ported	partial	red:17	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+gargoyle	ported	ported	missing	n/a	partial	yellow:21	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+ghost	ported	partial	missing	n/a	partial	red:10	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+ghost_dancer	ported	ported	missing	ported	partial	yellow:34	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+giant_ghost	ported	partial	missing	n/a	partial	blue:6	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+gorgon	ported	ported	missing	ported	partial	yellow:28	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+gremlin	ported	ported	missing	n/a	partial	yellow:35	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+harpy	ported	ported	missing	n/a	ported	red:24	Soul: drops, is collected and casts (SkillHarpyUse). Sounds: no Aria audio is ported.
+imp	ported	ported	missing	ported	partial	blue:22	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
+killer_doll	ported	ported	missing	n/a	partial	red:51	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+killer_fish	ported	partial	missing	ported	partial	red:7	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+lightning_doll	ported	ported	missing	n/a	partial	red:45	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+lubicant	ported	ported	missing	ported	partial	yellow:13	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+medusa_head	ported	ported	missing	n/a	partial	blue:15	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
+merman	ported	ported	missing	n/a	ported	red:4	Soul: drops, is collected and casts (SkillMermanUse). Sounds: no Aria audio is ported.
+mimic	ported	ported	missing	n/a	partial	yellow:17	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+needles	ported	ported	missing	ported	partial	red:26	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+nemesis	ported	ported	missing	n/a	partial	red:52	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+peeping_eye	ported	partial	missing	n/a	partial	yellow:6	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+red_crow	ported	ported	missing	n/a	partial	yellow:30	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+ripper	ported	ported	missing	ported	partial	red:34	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+rock_armor	ported	partial	missing	ported	partial	red:14	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+siren	ported	ported	missing	n/a	partial	red:11	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+skeleton	ported	partial	missing	n/a	ported	red:3	Soul: drops, is collected and casts (the shared throw routine (parameter 3)). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+skeleton_knight	ported	ported	missing	ported	partial	yellow:22	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+skull_archer	ported	ported	missing	n/a	ported	red:6	Soul: drops, is collected and casts (SkillSkullArcherUse). Sounds: no Aria audio is ported.
+skull_millione	ported	ported	missing	ported	partial	red:40	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+tiny_devil	ported	ported	missing	ported	partial	red:12	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+valkyrie	ported	ported	missing	ported	partial	red:46	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+white_dragon	ported	partial	missing	n/a	partial	yellow:26	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+winged_skeleton	ported	partial	missing	ported	ported	red:1	Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
+zombie	ported	ported	missing	ported	partial	yellow:12	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+zombie_officer	ported	ported	missing	ported	partial	yellow:3	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
+zombie_soldier	ported	ported	missing	ported	partial	red:9	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.

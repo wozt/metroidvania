@@ -17,7 +17,7 @@ typedef struct {
     uint16_t elements;   /* + 0xC: sub_0806B7D8's attack elements */
 } AosRedSoulRecord;
 
-enum { AOS_RED_SOUL_RECORDS = 29, AOS_RED_SOUL_SLOTS = 8 };
+enum { AOS_RED_SOUL_RECORDS = 56, AOS_RED_SOUL_SLOTS = 8 };
 
 /* The active red soul entities: activeRedSoulEntities (0x13124),
  * nbrActiveRedSoulEntities (0x131BE) and lastUsedRedSoul (0x131BF). */

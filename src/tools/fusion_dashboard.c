@@ -952,12 +952,17 @@ static const char *const mzm_family_annotations[][2] = {
     {"MZM_FAMILY_CHOZO_STATUE", "mzm.items.chozo_statues"},
     {"MZM_FAMILY_ITEM_SPRITE", "mzm.items.item_sprites"},
     {"MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE", "mzm.enemies.imago_larva"}};
-static const char *const aria_item_families[][2] = {
-    {"money", "Money pickups"},          {"consumable", "Consumable items"},
-    {"weapon", "Weapons"},               {"armor", "Armor"},
-    {"accessory", "Accessories"},        {"red_soul", "Red souls (offensive)"},
-    {"blue_soul", "Blue souls (guardian)"}, {"yellow_soul", "Yellow souls (passive)"},
-    {"ability_soul", "Ability souls (movement)"}};
+/* Aria pickup families and the parity annotation that covers each. */
+static const char *const aria_item_families[][3] = {
+    {"money", "Money pickups", "aos.items.money_pickups"},
+    {"consumable", "Consumable items", "aos.items.money_pickups"},
+    {"weapon", "Weapons", "aos.items.money_pickups"},
+    {"armor", "Armor", "aos.items.money_pickups"},
+    {"accessory", "Accessories", "aos.items.money_pickups"},
+    {"red_soul", "Red souls (offensive)", "aos.souls.red_soul_use"},
+    {"blue_soul", "Blue souls (guardian)", "aos.souls.inventory_pickups"},
+    {"yellow_soul", "Yellow souls (passive)", "aos.souls.inventory_pickups"},
+    {"ability_soul", "Ability souls (movement)", "aos.souls.inventory_pickups"}};
 static const char *const statue_items[][2] = {
     {"LONG", "Long Beam"},     {"ICE", "Ice Beam"},         {"WAVE", "Wave Beam"},
     {"BOMB", "Bombs"},         {"SPEEDBOOSTER", "Speed Booster"}, {"HIGH_JUMP", "High Jump"},
@@ -1093,6 +1098,59 @@ static int64_t record_id(const FusionJson *record) {
     return fusion_json_member(record, "native_id")->integer;
 }
 
+/* data/native_parity/aos_monster_aspects.tsv: what of each Aria monster is
+ * implemented: {enemy: {sprite, animations, sounds, loot, soul, soul_ref,
+ * notes}}. */
+static const char *const aspect_columns[] = {"enemy", "sprite", "animations", "sounds",
+                                             "loot", "soul", "soul_ref", "notes"};
+static const char *const aspect_values[] = {"missing", "partial", "ported", "n/a"};
+
+static bool load_aspects(FusionJson *aspects) {
+    const char *relative = "data/native_parity/aos_monster_aspects.tsv";
+    char *text = read_file(relative, NULL);
+    if (!text) return fail("cannot load %s", relative);
+    *aspects = fusion_json_object();
+    char previous[128] = "";
+    int number = 1;
+    bool ok = true;
+    for (char *line = text, *next; ok && line; line = next, ++number) {
+        next = strchr(line, '\n');
+        if (next) *next++ = '\0';
+        char *fields[10];
+        size_t count = *line ? split_tabs(line, fields, 10) : 0;
+        if (number == 1) {
+            bool header = count == COUNT(aspect_columns);
+            for (size_t index = 0; header && index < count; ++index)
+                header = !strcmp(fields[index], aspect_columns[index]);
+            if (!header) ok = fail("%s: header must be exactly the aspect columns", relative);
+            continue;
+        }
+        if (!*line) continue;
+        if (count != COUNT(aspect_columns)) {
+            ok = fail("%s:%d: expected %zu columns, got %zu", relative, number,
+                      COUNT(aspect_columns), count);
+            break;
+        }
+        if (strcmp(fields[0], previous) <= 0) {
+            ok = fail("%s:%d: rows must be sorted by unique enemy; '%s' is out of order or "
+                      "duplicated", relative, number, fields[0]);
+            break;
+        }
+        snprintf(previous, sizeof previous, "%s", fields[0]);
+        FusionJson row = fusion_json_object();
+        for (size_t index = 1; ok && index < COUNT(aspect_columns); ++index) {
+            if (index <= 5 && !known(fields[index], aspect_values, COUNT(aspect_values)))
+                ok = fail("%s:%d: unknown %s value '%s'", relative, number,
+                          aspect_columns[index], fields[index]);
+            put_string(&row, aspect_columns[index], fields[index]);
+        }
+        put(aspects, fields[0], row);
+    }
+    free(text);
+    if (!ok) fusion_json_free(aspects);
+    return ok;
+}
+
 static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     FusionJson mapping, records;
     if (!sprite_annotations(annotations, &mapping)) return false;
@@ -1148,8 +1206,20 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     }
     fusion_json_free(&records);
     fusion_json_free(&mapping);
+    FusionJson aspects;
+    if (!load_aspects(&aspects)) {
+        fusion_json_free(&monsters);
+        fusion_json_free(&items);
+        return false;
+    }
     char *header = read_file("src/runtime/aos_enemy.h", NULL);
-    if (!header) return fail("cannot read src/runtime/aos_enemy.h");
+    if (!header) {
+        fusion_json_free(&aspects);
+        return fail("cannot read src/runtime/aos_enemy.h");
+    }
+    /* Per aspect: monsters ported, partial, missing; complete monsters have
+     * every aspect ported or n/a. */
+    int64_t aspect_counts[5][3] = {{0}}, complete = 0, listed = 0;
     FusionJson aos_monsters = fusion_json_array();
     bool ported[0x71] = {false};
     bool ok = true;
@@ -1175,11 +1245,34 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
             break;
         }
         prettify(identifier, pretty, sizeof pretty);
-        push(&aos_monsters, bestiary_row(fusion_json_int(address), pretty, annotation, "", annotations));
+        FusionJson row = bestiary_row(fusion_json_int(address), pretty, annotation, "", annotations);
+        const FusionJson *aspect = fusion_json_member(&aspects, annotation + 12);
+        if (!aspect) {
+            ok = fail("AOS_ENEMY_%s: no row in data/native_parity/aos_monster_aspects.tsv",
+                      identifier);
+            fusion_json_free(&row);
+            break;
+        }
+        bool whole = true;
+        for (size_t index = 0; index < 5; ++index) {
+            const char *value = text_of(aspect, aspect_columns[index + 1]);
+            if (!strcmp(value, "ported")) aspect_counts[index][0]++;
+            else if (!strcmp(value, "partial")) aspect_counts[index][1]++;
+            else if (!strcmp(value, "missing")) aspect_counts[index][2]++;
+            if (strcmp(value, "ported") && strcmp(value, "n/a")) whole = false;
+        }
+        complete += whole;
+        listed++;
+        put(&row, "aspects", copy_of(aspect));
+        push(&aos_monsters, row);
         if (address >= 0 && address < 0x71) ported[address] = true;
         at = c;
     }
     free(header);
+    if (ok && listed != (int64_t)aspects.count)
+        ok = fail("data/native_parity/aos_monster_aspects.tsv: %zu rows for %lld ported "
+                  "enemies", aspects.count, (long long)listed);
+    fusion_json_free(&aspects);
     if (!ok) {
         fusion_json_free(&monsters);
         fusion_json_free(&items);
@@ -1207,9 +1300,8 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     FusionJson aos_items = fusion_json_array();
     for (size_t index = 0; index < COUNT(aria_item_families); ++index)
         push(&aos_items, bestiary_row(fusion_json_string(aria_item_families[index][0]),
-                                      aria_item_families[index][1], NULL,
-                                      "Documented pickup family; no runtime pickup behavior is ported",
-                                      annotations));
+                                      aria_item_families[index][1], aria_item_families[index][2],
+                                      "", annotations));
     /* Tanks are Clipdata (BgClipCheckTouchingTransitionOrTank), not sprites. */
     static const char *const tanks[][2] = {{"tank_energy", "Energy Tank"},
                                            {"tank_missile", "Missile Tank"},
@@ -1228,6 +1320,22 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                "(Clipdata, not sprites).");
     put_string(&aos, "title", "Castlevania: Aria of Sorrow");
     put(&aos, "monsters", aos_monsters);
+    FusionJson summary = fusion_json_object();
+    for (size_t index = 0; index < 5; ++index) {
+        FusionJson entry = fusion_json_object();
+        put_int(&entry, "ported", aspect_counts[index][0]);
+        put_int(&entry, "partial", aspect_counts[index][1]);
+        put_int(&entry, "missing", aspect_counts[index][2]);
+        put(&summary, aspect_columns[index + 1], entry);
+    }
+    put_int(&summary, "complete", complete);
+    put_int(&summary, "monsters", listed);
+    put(&aos, "aspects", summary);
+    put_string(&aos, "aspects_note",
+               "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, "
+               "animations, sounds, loot and dropped soul (including the soul's use). 'ported' "
+               "means implemented from the native routines, unit-tested and seen in a local run; "
+               "not emulator-compared. A monster is complete when every aspect is ported or n/a.");
     put(&aos, "items", aos_items);
     put(&games, "mzm", mzm);
     put(&games, "aos", aos);

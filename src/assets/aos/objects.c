@@ -956,7 +956,8 @@ static bool append_equipment(const FusionRom *rom, Text *equipment, char *error,
     return true;
 }
 
-/* Soma's red soul records (0x080E1598, 29 x 16 bytes; record 0 is none):
+/* Soma's red soul records (0x080E1598, 56 x 16 bytes, one per count
+ * nibble of a 0x1C-byte red soul inventory group; record 0 is none):
  * whether a skill entity exists (+ 0x0), the cast pose (+ 0x4), the MP cost
  * (+ 0x6), the most active at once (+ 0x8), the power of sub_08021530(5)
  * (+ 0xA), the parameter given to the skill entity (+ 0xE) and the attack
@@ -966,7 +967,7 @@ static bool append_red_souls(const FusionRom *rom, Text *souls, char *error,
     if (!text_append(souls,
             "schema\tmetroidvania-aos-red-souls-v2\n"
             "# soul\tskill\tpose\tmp\tmaximum\tpower\tparameter\telements\n")) return false;
-    for (uint32_t soul = 0; soul < 29; ++soul) {
+    for (uint32_t soul = 0; soul < 56; ++soul) {
         const uint8_t *record = slice(rom, RED_SOULS + soul * 16, 16, "red soul record",
                                       error, error_size);
         if (!record || !text_append(souls, "%u\t0x%08x\t%u\t%d\t%u\t%u\t%u\t0x%04x\n", soul,

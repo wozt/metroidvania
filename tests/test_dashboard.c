@@ -314,7 +314,10 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(working_count == COUNT(working), "functional Aria count %zu", working_count);
     EXPECT(aos_items->count == COUNT(aria_item_families), "Aria item families");
     for (size_t index = 0; index < aos_items->count; ++index)
-        EXPECT(!strcmp(text_of(&aos_items->items[index], "status"), "not_started"), "Aria item status");
+        /* Each family follows its pickup feature. */
+        EXPECT(strcmp(text_of(&aos_items->items[index], "status"), "not_started") &&
+                   *text_of(&aos_items->items[index], "feature"),
+               "Aria item status");
 }
 
 static void test_engine_switch(void) {

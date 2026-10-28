@@ -6935,6 +6935,12 @@ static AosHitReport ripper_blade_update(AosEnemy *b, AosSoma *soma,
                                         const AosWeaponFrames *weapon_frames, int soma_atk,
                                         int soma_def, int cam_x, int cam_y) {
     AosHitReport report = {0};
+    /* sub_080C2B74: native state 3 starts the blade's flight.
+     * The host runtime creates the blade directly in its flying state 4. */
+    if (b->state == 4 && !b->firing) {
+        b->firing = true;
+        aos_audio_play_song(0x89);
+    }
     if (b->state == 4) {
         b->vx += b->ax;
         b->x += b->vx;
@@ -6950,6 +6956,8 @@ static AosHitReport ripper_blade_update(AosEnemy *b, AosSoma *soma,
     }
     report = collide(b, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     if (report.enemy_hit || report.soma_hit) {
+        /* sub_080C2DC4: only contact with Soma plays this sound. */
+        if (report.soma_hit) aos_audio_play_song(0x13A);
         b->state = 6;
         b->vx = b->ax = 0;
         b->vy = 0x8000;
@@ -6974,6 +6982,8 @@ static AosHitReport ripper_update(AosEnemy *e, AosSoma *soma,
     }
     if (e->state == 0xFF) {
         if (e->step == 0) {
+            /* sub_080C2A18: the Ripper's one-shot death sound. */
+            aos_audio_play_song(0x72);
             play(e, kind->anims, 2);
             e->timer = 50;
             e->vx = e->ax = e->vy = 0;

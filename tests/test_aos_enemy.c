@@ -266,18 +266,30 @@ static void batch_enemy_tests(void) {
         }
     }
     assert(got_blade && blade.parent == &ripper && blade.vx == 0x30000);
+    aos_audio_clear();
     int32_t blade_x = blade.x;
     aos_enemy_update(&blade, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(blade.x > blade_x && blade.vx > 0x30000);
+    /* sub_080C2B74: sound once at the start of flight. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
     soma.x = blade.x + blade.vx;
     soma.y = blade.y;
     hit = aos_enemy_update(&blade, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.soma_hit && blade.state == 6 && blade.vy == 0x8000 && blade.ay == 0x1000);
+    /* sub_080C2DC4: blade contact, without repeating the flight sound. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x13A) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
+    aos_audio_clear();
     soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(159), NULL);
     ripper.state = 0xFF;
     ripper.step = 0;
     aos_enemy_update(&ripper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(ripper.step == 1 && ripper.anim.id == 2 && ripper.timer == 49 && ripper.ay == 0x2000);
+    /* sub_080C2A18: play once on the first death update. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
+    aos_enemy_update(&ripper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     never_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
 
     /* Merman's hidden form produces at most three waiting bodies. The body
      * attack plays animation 3 and launches its animation-6 horizontal shot;

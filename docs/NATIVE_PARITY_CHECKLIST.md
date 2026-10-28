@@ -1582,14 +1582,14 @@ Known divergences: As the blue crow: sounds 0x72 and 0x8B, the palette bits, the
 Next action: Follow the blue crow's open items.
 Evidence: in game: `aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)`.
 
-[+] **`aos.enemies.ripper` — Ripper.** The exact six-way random jump table, close-player reversal, carried drop, landing delay, attack animation, accelerating linked blade and its falling collision state are ported. Ripper uses its native animation-2 50-frame falling death, frame boxes, combat and global inert state.
+[+] **`aos.enemies.ripper` — Ripper.** The exact six-way random jump table, close-player reversal, carried drop, landing delay, attack animation, accelerating linked blade and its falling collision state are ported. Ripper uses its native animation-2 50-frame falling death, frame boxes, combat and global inert state. The native Ripper sound requests are ported: 0x72 at death (sub_080C2A18), 0x89 at the linked blade flight (sub_080C2B74), and 0x13A on Soma contact (sub_080C2DC4), with deterministic audio request tests. Not listened to or emulator-compared.
 
-Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C25F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2A18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2ABC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2B74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D20`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D70`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2DC4`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyRipperUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C25F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2A18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2ABC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2B74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D20`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2D70`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2DC4`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c), [`src/runtime/aos_audio.c`](../src/runtime/aos_audio.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.fleaman`.  
-Known divergences: Animation-marker timing is represented by the exported animation frame/cycle state; sounds, palette callbacks and rewards are not ported.  
-Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator.
+Known divergences: Animation-marker timing is represented by the exported animation frame/cycle state; palette callbacks and rewards are not ported.  
+Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator. Port Skill_EvilButcher_Ripper_Use and its sprite resource.
 Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts`.
 
 [~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected.

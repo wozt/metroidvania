@@ -2,6 +2,11 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0624 - Ripper native sound requests
+
+- The Ripper enemy requests the three source-traced PlaySong IDs: 0x72 on its first death frame (sub_080C2A18), 0x89 when its linked blade begins flight (sub_080C2B74), and 0x13A when the blade hits Soma (sub_080C2DC4). Deterministic ROM-free tests cover these one-shot requests.
+- Ripper's red soul (Skill_EvilButcher_Ripper_Use, red:34) is still missing. Its sprite, animation, sound and loot aspects are ported, but its soul aspect remains partial. Monster completeness stays at 15 of 47. Sound has not been listened to or compared against an emulator. Zero Mission is unchanged.
+
 ## Patch 0623 - Needles soul and sound
 
 - `src/runtime/aos_skill_needles.c` ports `SkillNeedlesUse`: an urchin

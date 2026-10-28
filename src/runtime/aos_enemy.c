@@ -474,6 +474,14 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
          * floor offsets and producer forms come directly from the ten native
          * create routines. Their multipart children and attack states remain
          * deliberately outside this first pass. */
+        if (id == AOS_ENEMY_GHOST && param1) {
+            /* EnemyGhostCreate's room producer: no art or collision, state 3.
+             * param0 caps its live children and param1 delays spawn attempts. */
+            enemy->state = 3;
+            enemy->hidden = true;
+            enemy->combat.attack_off = enemy->combat.hurt_off = true;
+            return true;
+        }
         unsigned animation = id == AOS_ENEMY_KILLER_FISH ? 1 :
                              id == AOS_ENEMY_WINGED_SKELETON ? 2 : 0;
         bool direct_frame = id == AOS_ENEMY_BUER || id == AOS_ENEMY_WHITE_DRAGON;
@@ -489,7 +497,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             if (id == AOS_ENEMY_GHOST) enemy->y -= AOS_FIXED(36);
             return true;
         }
-        if ((id == AOS_ENEMY_GHOST || id == AOS_ENEMY_WINGED_SKELETON) && param1) {
+        if (id == AOS_ENEMY_WINGED_SKELETON && param1) {
             enemy->state = 3;
             enemy->hidden = true;
             enemy->combat.attack_off = enemy->combat.hurt_off = true;
@@ -543,6 +551,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             break;
         case AOS_ENEMY_GHOST:
             enemy->state = 0;
+            enemy->combat.attack_off = enemy->combat.hurt_off = true;
             break;
         case AOS_ENEMY_ROCK_ARMOR:
             enemy->state = 0;
@@ -5049,10 +5058,10 @@ static void ghost_fade(AosEnemy *g) {
  * deleted when its animation ends), then the animation step and, except
  * while dying, the collision pass (sub_080421AC: no on-screen test).
  * Contact sub_080C339C: type 0, element 0. */
-static AosHitReport ghost_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind *kind,
-                                 const AosWeaponEntity *weapon,
-                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
-                                 int cam_x, int cam_y) {
+static AosHitReport ghost_dancer_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind *kind,
+                                        const AosWeaponEntity *weapon,
+                                        const AosWeaponFrames *weapon_frames, int soma_atk,
+                                        int soma_def, int cam_x, int cam_y) {
     AosHitReport report = {0};
     if (g->state == 5) {
         step_anim(g, kind->anims);
@@ -7330,6 +7339,109 @@ static void winged_skeleton_controller(AosEnemy *e, const AosSoma *soma,
     }
 }
 
+/* sub_08089E64: after animation 0 has appeared, animation 1 attacks while
+ * the Ghost accelerates toward Soma at a random height. Near that target it
+ * receives a two-pixel impulse away from a point 64 pixels below Soma. */
+static void ghost_controller(AosEnemy *g, const AosSoma *soma, const AosEnemyKind *kind,
+                             uint32_t (*random)(void)) {
+    if (g->step == 0) {
+        if (!g->cycle_done) return;
+        g->step = 1;
+        play(g, kind->anims, 1);
+        g->combat.attack_off = g->combat.hurt_off = false;
+        g->speed = -(int32_t)(random() & 0xFFFFF);
+        return;
+    }
+
+    face_player(g, soma);
+    int32_t dx = soma->x - g->x;
+    int32_t dy = soma->y - g->y + g->speed -
+                 ((dx < 0 ? -dx : dx) <= 0x5FFFFF ? 0x100000 : 0x200000);
+    g->ax = dx > 0x40000 ? 0x400 : dx < -0x40000 ? -0x400 : 0;
+    g->ay = dy > 0x40000 ? 0x400 : dy < -0x40000 ? -0x400 : 0;
+    g->vx = g->vx * 31 / 32;
+    g->vy = g->vy * 31 / 32;
+    g->vx += g->ax;
+    g->vy += g->ay;
+    if (g->ax >= 0 ? g->vx > 0x400000 : g->vx < -0x400000)
+        g->vx = g->ax >= 0 ? 0x400000 : -0x400000;
+    if (g->ay >= 0 ? g->vy > 0x400000 : g->vy < -0x400000)
+        g->vy = g->ay >= 0 ? 0x400000 : -0x400000;
+    g->x += g->vx;
+    g->y += g->vy;
+
+    if ((dx < 0 ? -dx : dx) > 0x3FFFF || (dy < 0 ? -dy : dy) > 0x3FFFF) return;
+    int16_t away_x = (int16_t)pixel_delta(g->x, soma->x);
+    int16_t away_y = (int16_t)pixel_delta(g->y + 0x400000, soma->y);
+    uint16_t angle = aos_arctan2(away_x, away_y);
+    angle = (uint16_t)(angle - 0x1000 + (random() & 0x1FFF));
+    g->vx = fixed_mul(aos_sine(angle + 0x4000u), 0x20000);
+    g->vy = fixed_mul(aos_sine(angle), 0x20000);
+}
+
+/* EnemyGhostUpdate: the normal attack/death states, the event-state variant
+ * and state 3's hidden room producer. The producer uses raw 0..239 and
+ * 16..191 room coordinates exactly as the native routine does. */
+static AosHitReport enemy_ghost_update(AosEnemy *g, AosSoma *soma,
+                                       const AosEnemyKind *kind,
+                                       const AosWeaponEntity *weapon,
+                                       const AosWeaponFrames *weapon_frames, int soma_atk,
+                                       int soma_def, int cam_x, int cam_y,
+                                       uint32_t (*random)(void)) {
+    AosHitReport report = {0};
+    if (g->state == 3) {
+        if (g->producer_timer++ < (uint16_t)g->param1 || (random() & 0x1F)) return report;
+        g->producer_timer = 0;
+        if (g->spawned_count >= g->param0) return report;
+        int x = 0, y = 0;
+        bool found_x = false, found_y = false;
+        for (int attempt = 0; attempt < 256 && !found_x; ++attempt) {
+            x = (int)(random() % 0xF0);
+            int32_t distance = soma->x - AOS_FIXED(x);
+            found_x = (distance < 0 ? -distance : distance) > 0x300000;
+        }
+        for (int attempt = 0; attempt < 256 && !found_y; ++attempt) {
+            y = (int)(random() % 0xB0) + 0x10;
+            int32_t distance = soma->y - AOS_FIXED(y);
+            found_y = (distance < 0 ? -distance : distance) > 0x300000;
+        }
+        if (!found_x || !found_y) return report;
+        g->spawned_count++;
+        report.spawn = true;
+        report.spawn_x = x;
+        report.spawn_y = y;
+        return report;
+    }
+    if (g->defeated || g->state == 1) {
+        generic_death(g, kind, random, &report);
+        aos_combat_tick(&g->combat);
+        return report;
+    }
+    if (g->state == 2) {
+        if (g->step == 0 && g->cycle_done) {
+            g->step = 1;
+            play(g, kind->anims, 1);
+        }
+        step_anim(g, kind->anims);
+        return report;
+    }
+
+    int sx = (g->x >> 16) - cam_x, sy = (g->y >> 16) - cam_y;
+    if (outside_margins(kind, 4, sx, sy)) return report;
+    g->hidden = false;
+    ghost_controller(g, soma, kind, random);
+    step_anim(g, kind->anims);
+    sx = (g->x >> 16) - cam_x;
+    sy = (g->y >> 16) - cam_y;
+    g->hidden = outside_margins(kind, 4, sx, sy);
+    if ((uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0) {
+        AosHitReport hit = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        merge_enemy_hit(&report, hit);
+    }
+    aos_combat_tick(&g->combat);
+    return report;
+}
+
 static bool early_enemy_inert(const AosEnemy *e) {
     if ((e->id == AOS_ENEMY_SKELETON || e->id == AOS_ENEMY_KILLER_FISH) && e->state == 5)
         return true;
@@ -7341,10 +7453,10 @@ static bool early_enemy_inert(const AosEnemy *e) {
             e->id == AOS_ENEMY_WHITE_DRAGON || e->id == AOS_ENEMY_GHOST) && e->state == 2;
 }
 
-/* First observable loops for the ten constructor-table enemies introduced
- * together. This deliberately stops at the boundary documented in the
- * parity rows: linked multipart bodies and enemy-specific attacks are not
- * treated as ported by this shared path. */
+/* First observable loops for the remaining constructor-table enemies. The
+ * Ghost has its complete specialized path above. This stops at the boundary
+ * documented in the parity rows: linked multipart bodies and enemy-specific
+ * attacks are not treated as ported by this shared path. */
 static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
                                        const AosCollision *layer, const AosEnemyKind *kind,
                                        const AosWeaponEntity *weapon,
@@ -7414,12 +7526,6 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     case AOS_ENEMY_WHITE_DRAGON:
         white_dragon_controller(e, soma);
         break;
-    case AOS_ENEMY_GHOST:
-        move_toward(e, soma->x, soma->y - AOS_FIXED(16), 0x6000);
-        e->x += e->vx;
-        e->y += e->vy;
-        face_player(e, soma);
-        break;
     case AOS_ENEMY_GIANT_GHOST:
         giant_ghost_controller(e, soma);
         break;
@@ -7455,7 +7561,7 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                                        soma_def, cam_x, cam_y, random);
     int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
     report.targetable = enemy->role == AOS_ROLE_ENEMY && !enemy->removed && !enemy->defeated &&
-                        enemy->hp > 0 && (uint16_t)(sx + 0x10) <= 0x110 &&
+                        !enemy->hidden && enemy->hp > 0 && (uint16_t)(sx + 0x10) <= 0x110 &&
                         (uint16_t)sy <= 0xB0;
     return report;
 }
@@ -7472,6 +7578,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         enemy->role == AOS_ROLE_BUER_FIRE ||
         enemy->role == AOS_ROLE_WHITE_DRAGON_PART)
         return linked_early_child_update(enemy, kind);
+    if (enemy->id == AOS_ENEMY_GHOST && enemy->role == AOS_ROLE_ENEMY)
+        return enemy_ghost_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                                  cam_x, cam_y, random);
     if (is_early_enemy(enemy->id) && enemy->role == AOS_ROLE_ENEMY)
         return early_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y, random);
@@ -7570,8 +7679,8 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return medusa_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                              cam_y, random);
     if (enemy->id == AOS_ENEMY_GHOST_DANCER)
-        return ghost_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
-                            cam_y);
+        return ghost_dancer_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+                                   cam_x, cam_y);
     if (enemy->id == AOS_ENEMY_ZOMBIE && enemy->role == AOS_ROLE_ENEMY)
         return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);

@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 612 | 2961 |
+| Castlevania: Aria of Sorrow | 614 | 2959 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1412,14 +1412,14 @@ Known divergences: Sounds 0x6E and 0x87, the palette bits and sub_080683BC are n
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)`.
 
-[~] **`aos.enemies.ghost` — Ghost.** The native sheet, palette, frame boxes, hidden parameter-1 producer form, inert state, basic homing loop and lethal-hit sound 0x6E are connected. Source-derived and unit-tested, not emulator-compared.
+[+] **`aos.enemies.ghost` — Ghost.** The native sheet, palette and frame boxes are connected. Animation 0 appears with collision disabled, then animation 1 attacks while the Ghost follows its random-height acceleration, damping, speed cap and close-target impulse. State 2 follows the event animation path. The eight-frame generic flame/blink death requests 0x6E. A parameter-1 record runs the hidden producer with its delay, 1-in-32 gate, active-child cap, coordinate rejection and child accounting. Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGhostCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGhostUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808A030`, `aos:asm:asm/code/code_080809C0.s:sub_0808A0C8`, `aos:asm:asm/code/code_080809C0.s:sub_0808A1AC`.  
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGhostCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGhostUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08089E64`, `aos:asm:asm/code/code_080809C0.s:sub_0808A030`, `aos:asm:asm/code/code_080809C0.s:sub_0808A0C8`, `aos:asm:asm/code/code_080809C0.s:sub_0808A1AC`, `aos:asm:asm/code/code_080809C0.s:sub_0808A1F8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: The native fade, palette transitions and room spawner behavior are not ported.  
-Next action: Port the fade and attack state machine.
-Evidence: in game: `aria area_00_room_018: Ghost producer record at x 0, y 0`.
+Known divergences: The host does not reproduce the palette-bit callback installed by sub_0804277C/sub_080427B8, the alternative target selected through gEwramData + 0x13168/+0x13118, or sub_0806D4C0's global collision interruption. Producer coordinates and motion are source-derived but not emulator-compared.  
+Next action: Compare the producer timing, target motion and palette callback frame by frame in an emulator.
+Evidence: in game: `aria area_00_room_018 (--spawn 180 150 --hp 9999): the hidden producer creates a Ghost; it appears, homes into Soma and deals 17 contact damage`.
 
 [+] **`aos.enemies.ghost_dancer` — Ghost Dancer.** The figure-of-eight dance, its animation swap, the fade between opaque and semi-transparent every half turn, the margin hiding, the hit stun, the death animation and state 5 under gEwramData + 0x8E bit 0x40 are ported; palette banks 0 to 2 follow parameter 0.
 

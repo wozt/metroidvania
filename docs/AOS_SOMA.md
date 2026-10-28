@@ -801,11 +801,20 @@ Buer (0x0A), White Dragon (0x0B), Ghost (0x0E), Rock Armor (0x12), Giant Ghost
 their native sheets, palettes, animation descriptors, direct child frames and
 frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
-states, and supplies deliberately small observable patrol, swimming, hovering
-and homing loops. The dedicated parent motion controllers are now dispatched
+states, and supplies deliberately small observable patrol, swimming and
+hovering loops. The dedicated parent motion controllers are now dispatched
 for Peeping Eye, White Dragon, Buer, Rock Armor, Giant Ghost and Winged
-Skeleton, while the Peeping Eye still emits its two eye overlays and six
-parent-linked static segments. Its segments now use a target-oriented polar
+Skeleton. Ghost now has its complete specialized state machine: animation 0
+appears without collision, animation 1 enables its attack and accelerates
+toward a random height 16 to 32 pixels above Soma with 31/32 damping; inside
+four pixels it takes a two-pixel impulse away from a point below him. Its
+event-state animation, eight-frame flame/blink death, and hidden room producer
+are connected. The producer observes its native delay, random attempt, active
+cap, coordinate ranges and 48-pixel exclusion. A local area 0 room 18 run
+showed a produced Ghost home into Soma and deal 17 damage. This is
+source-derived and unit-tested, not emulator-compared. The Peeping Eye still
+emits its two eye overlays and six parent-linked static segments. Its segments
+now use a target-oriented polar
 angle and fixed-point radius; the White Dragon emits all nine animation-1 body
 parts in two linked batches, with a curved chain and per-part affine angle
 forwarded to the renderer. Its middle body record also owns the native shared
@@ -815,12 +824,13 @@ native 180 by 200 proximity window and its ten-stage, 40-frame extension
 sequence; it then chooses a random point 64 to 112 pixels sideways and 32 to
 80 pixels upward, steering toward it with the native damping, acceleration,
 speed cap and timeout. Its state-3 visual variant table, ceiling probes and
-callbacks are still open. The ten parity rows remain partial because of those
-Peeping Eye gaps, White Dragon's complete affine choreography and damage
-callbacks, Giant Ghost visual children, Bone Pillar tower, Buer fire component,
-attacks, fades, sounds and rewards still need their own native state machines.
+callbacks are still open. The other nine parity rows remain partial because
+of those Peeping Eye gaps, White Dragon's complete affine choreography and
+damage callbacks, Giant Ghost visual children, Bone Pillar tower, Buer fire
+component, attacks, fades, sounds and rewards still need their own native
+state machines.
 
-Ghost's red soul is separate from that partial enemy controller.
+Ghost's red soul is separate from its enemy controller.
 `SkillGhostUse` places an invisible owner 24 pixels above Soma, requests song
 0xD6 and creates two `sub_0802A49C` spirits at a 16-pixel radius. Each plays
 sequence 1 of resource 21, then chooses the nearest of the four
@@ -831,8 +841,9 @@ point in the native 512 by 256 range each frame. It accelerates by 0x2000 to
 It is deleted beyond margin table entry 2. The native visual trail created by
 `sub_0802A3CC` and the boss-only forced target are not connected. This is
 source-derived and unit-tested, not emulator-compared; a local room 0/3 run
-drew the cast. The enemy Ghost's lethal callback also requests song 0x6E,
-while its fade and palette state remain open.
+drew the cast. The enemy Ghost's lethal callback also requests song 0x6E.
+Its native hit/death palette callback and alternate global target pointer are
+not represented by the host renderer.
 
 Tiny Devil (0x10) and Imp (0x31) share one sheet with palette banks 1 and 0,
 including the per-component OBJ palette-row byte used by their OAM records,

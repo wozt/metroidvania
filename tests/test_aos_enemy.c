@@ -113,6 +113,48 @@ static void early_enemy_batch_tests(void) {
                             &stats));
     assert(producer.state == 3 && producer.hidden && producer.combat.attack_off &&
            producer.combat.hurt_off);
+    AosSoma distant = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(400), NULL);
+    assert(aos_enemy_create(&producer, AOS_ENEMY_GHOST, 0, 0, 2, 1, &distant, &layer, &kind,
+                            &stats));
+    AosHitReport ghost_spawn = aos_enemy_update(&producer, &distant, &layer, &kind, NULL, NULL,
+                                                 10, 4, 0, 0, always_zero);
+    assert(!ghost_spawn.spawn && producer.producer_timer == 1);
+    static const uint32_t ghost_spawn_draws[] = {0, 10, 20};
+    script = ghost_spawn_draws;
+    script_at = 0;
+    ghost_spawn = aos_enemy_update(&producer, &distant, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                   scripted);
+    assert(ghost_spawn.spawn && ghost_spawn.spawn_x == 10 && ghost_spawn.spawn_y == 36 &&
+           producer.spawned_count == 1 && script_at == 3 && !ghost_spawn.targetable);
+
+    AosEnemy ghost;
+    soma = aos_soma_spawn(AOS_FIXED(140), AOS_FIXED(120), NULL);
+    assert(aos_enemy_create(&ghost, AOS_ENEMY_GHOST, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(ghost.state == 0 && ghost.step == 0 && ghost.combat.attack_off &&
+           ghost.combat.hurt_off && ghost.anim.id == 0);
+    for (int frame = 0; frame < 8 && ghost.step == 0; ++frame)
+        aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(ghost.step == 1 && ghost.anim.id == 1 && !ghost.combat.attack_off &&
+           !ghost.combat.hurt_off);
+    int32_t ghost_x = ghost.x;
+    aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(ghost.ax == 0x400 && ghost.vx > 0 && ghost.x > ghost_x);
+    ghost.x = soma.x;
+    ghost.y = soma.y - AOS_FIXED(16);
+    ghost.vx = ghost.vy = ghost.speed = 0;
+    aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(ghost.vx || ghost.vy);
+
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&ghost, AOS_ENEMY_GHOST, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(ghost.state == 2 && ghost.y == AOS_FIXED(64));
+    for (int frame = 0; frame < 8 && ghost.step == 0; ++frame)
+        aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(ghost.step == 1 && ghost.anim.id == 1 && ghost.x == AOS_FIXED(100));
+
     assert(aos_enemy_create(&producer, AOS_ENEMY_WINGED_SKELETON, 100, 100, 0, 1, &soma,
                             &layer, &kind, &stats));
     assert(producer.state == 3 && producer.hidden);
@@ -1897,14 +1939,28 @@ static void death_sound_tests(void) {
     AosEnemy ghost;
     kind.modes[0][0] = 1;
     kind.hurt[0][0] = (AosBox){-8, -8, 16, 16};
+    kind.modes[1][0] = kind.modes[1][1] = 1;
+    kind.hurt[1][0] = kind.hurt[1][1] = (AosBox){-8, -8, 16, 16};
     assert(aos_enemy_create(&ghost, AOS_ENEMY_GHOST, 100, 60, 0, 0, &soma, &layer, &kind,
                             &stats));
-    AosSoulAttack soul = {{90, 50, 110, 70}, 100, 0, false};
+    for (int frame = 0; frame < 24 && ghost.step == 0; ++frame)
+        aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    assert(ghost.step == 1);
+    AosSoulAttack soul = {{ghost.x >> 16, ghost.y >> 16, ghost.x >> 16, ghost.y >> 16},
+                          100, 0, false};
     aos_enemy_set_soul_attacks(&soul, 1);
     aos_audio_clear();
     aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     aos_enemy_set_soul_attacks(NULL, 0);
     assert(ghost.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1);
+    int ghost_flames = 0;
+    for (int frame = 0; frame < 8; ++frame) {
+        AosHitReport death = aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                               0, 0, always_zero);
+        ghost_flames += death.effect_count;
+    }
+    assert(ghost.removed && ghost_flames == 2);
 }
 
 static void flea_tests(void) {

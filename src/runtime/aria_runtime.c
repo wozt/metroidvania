@@ -1399,8 +1399,8 @@ static void clear_skills(AriaSouls *souls) {
 }
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
- * spawn once per room visit; the wooden door, the bat, the zombie, the
- * blue crow and the zombie soldier (with its grenades) are ported. */
+ * spawn once per room visit; native enemies include hidden producers such
+ * as the Ghost's, whose children retain their producer slot. */
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
     int sound = 0;
@@ -1517,8 +1517,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 input->held = hit.forced_held;
             }
             if (!was_removed && e->enemy.removed && e->spawner >= 0) {
-                /* A spawned zombie or a Needles piece leaves: its spawner's count
-             * drops. */
+                /* A spawned enemy or linked piece leaves: its producer's
+                 * count drops. */
                 AosEnemy *spawner = &room->entities[e->spawner].enemy;
                 if (spawner->spawned_count) spawner->spawned_count--;
             }
@@ -1562,7 +1562,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                       .y = hit.spawn_y, .param1 = hit.spawn_param1,
                                       .spawned = true, .spawner = (int)i};
                 /* Merman's hidden producer writes parameter 0 = 1 on its
-                 * children, selecting their 60-frame submerged wait. */
+                 * children, selecting their 60-frame submerged wait. Ghost
+                 * producer children keep both parameters at zero. */
                 int16_t child_param0 = e->id == AOS_ENEMY_MERMAN ? 1 : 0;
                 if (aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x, hit.spawn_y,
                                      child_param0,

@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0620 - Ghost enemy and room producer
+
+- `EnemyGhostUpdate` now follows the native appearance gate and animation-1
+  attack: its random height around Soma, 31/32 velocity damping, `0x400`
+  acceleration, four-pixel target tolerance and two-pixel escape impulse are
+  source-derived and covered by deterministic frame tests.
+- The parameter-1 room form is a hidden producer again. It respects its
+  delay, 1-in-32 attempt, active-child cap, native coordinate ranges and
+  48-pixel exclusion around Soma; runtime child removal releases its count.
+  The event-state animation and eight-frame flame/blink death also run.
+- A local area 0 room 18 run showed the producer's Ghost appear, home into
+  Soma and deal 17 contact damage. It was not emulator-compared. The Ghost
+  now has all five tracked aspects ported: 12 of 47 monsters are complete.
+  Zero Mission is unchanged.
+
 ## Patch 0619 - Siren soul; Harpy and Siren complete
 
 - `src/runtime/aos_skill_siren.c` ports the parameter-0 path of

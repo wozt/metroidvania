@@ -22,6 +22,8 @@
  * Tiny Devil (0x10) with its aimed orb, Imp (0x31) with its linked helper
  * and forced-attack state, Merman (0x03) with its hidden producer and shot,
  * and Ripper (0x4A) with its accelerating blade,
+ * the Ghost (0x0E) with its appearance, attack flight, death and hidden
+ * room producer,
  * the Killer Doll (0x1F) and Lightning Doll (0x3B) with their burning pieces, the beam skeleton
  * (0x59) with its beam and bones, Nemesis (0x26), Skull Millione (0x5B),
  * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
@@ -184,6 +186,7 @@ typedef struct AosEnemy {
     int16_t param0, param1; /* + 0x30, + 0x32: record parameters */
     int32_t walk_timer;     /* + 0x1C (a gib: its parent's y at spawn) */
     uint8_t spawned_count;  /* + 0x18 of a spawner */
+    uint16_t producer_timer; /* + 0x1A of a Ghost producer */
     bool attack_off;        /* + 0x72 bit 1 */
     bool cycle_done;        /* + 0x59 bit 0: the animation looped or ended */
     uint8_t hit_flash;      /* + 0x2D */

@@ -176,8 +176,9 @@ static const EntitySpec entities[] = {
     /* SkillSkullArcherUse and its arrow sub_08028BC4: entry 18 of 0x080E13BC
      * (the bow plays sequence 0, the arrow shows frame 1). */
     STATIC("skill_archer", 0x081D510C, 0x0820B2EC, 0, 0x08233BCC, 1, 1),
-    /* Resource 0 of 0x080E13BC: the Merman soul's spout and drops. */
-    ENTITY("skill_merman", 0x081CC0C4, 0x0820B044, 0, 0x082308E8),
+    /* Resource 0 of 0x080E13BC, shared by several souls: the Merman's spout
+     * and drops (sequences 0, 6), the Axe Armor's axe (still frame 6). */
+    STATIC("skill_shared", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 1, 6),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
 };

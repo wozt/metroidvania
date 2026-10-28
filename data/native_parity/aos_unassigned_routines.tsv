@@ -2204,7 +2204,6 @@ aos:c:src/code/code_08014548.c:sub_08014628	sub_08014628	unclassified		technical
 aos:c:src/code/code_08014548.c:sub_08014720	sub_08014720	unclassified		technical	exclusive_callees	c_function	0x08014720	src/code/code_08014548.c	125	0	18
 aos:c:src/code/code_08014548.c:sub_0801487C	sub_0801487C	unclassified		technical	exclusive_callees	c_function	0x0801487C	src/code/code_08014548.c	183	1	6
 aos:c:src/code/code_080211F0.c:CheckUnk_53C_6	CheckUnk_53C_6	unclassified				c_function		src/code/code_080211F0.c	2873	1	0
-aos:c:src/code/code_080211F0.c:SkillAxeArmorUse	SkillAxeArmorUse	abilities	name			c_function	0x08024274	src/code/code_080211F0.c	2750	0	11
 aos:c:src/code/code_080211F0.c:SkillChronomageUse	SkillChronomageUse	abilities	name			c_function	0x08024950	src/code/code_080211F0.c	3076	0	11
 aos:c:src/code/code_080211F0.c:SkillKillerDollUse	SkillKillerDollUse	abilities	name			c_function	0x08024F38	src/code/code_080211F0.c	3341	0	14
 aos:c:src/code/code_080211F0.c:SkillLoadGraphicsInline	SkillLoadGraphicsInline	unclassified		technical	exclusive_callees	c_function		src/code/code_080211F0.c	2389	9	3
@@ -2277,7 +2276,6 @@ aos:c:src/code/code_080211F0.c:sub_0802383C	sub_0802383C	abilities	referrers			c
 aos:c:src/code/code_080211F0.c:sub_0802393C	sub_0802393C	abilities	referrers			c_function	0x0802393C	src/code/code_080211F0.c	2307	2	3
 aos:c:src/code/code_080211F0.c:sub_080239E4	sub_080239E4	abilities	referrers			c_function	0x080239E4	src/code/code_080211F0.c	2345	0	1
 aos:c:src/code/code_080211F0.c:sub_08023E50	sub_08023E50	unclassified		technical	exclusive_callees	c_function	0x08023E50	src/code/code_080211F0.c	2592	0	11
-aos:c:src/code/code_080211F0.c:sub_080240A0	sub_080240A0	abilities	referrers			c_function	0x080240A0	src/code/code_080211F0.c	2678	0	6
 aos:c:src/code/code_080211F0.c:sub_08024530	sub_08024530	unclassified		technical	exclusive_callees	c_function	0x08024530	src/code/code_080211F0.c	2883	0	15
 aos:c:src/code/code_080211F0.c:sub_08024530_inline_0	sub_08024530_inline_0	unclassified				c_function		src/code/code_080211F0.c	2858	1	0
 aos:c:src/code/code_080211F0.c:sub_08024C18	sub_08024C18	unclassified				c_function	0x08024C18	src/code/code_080211F0.c	3199	0	0

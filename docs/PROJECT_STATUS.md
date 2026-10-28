@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0594 - Aria Axe Armor red soul
+
+- `src/runtime/aos_skill_axe.c` ports `SkillAxeArmorUse`: the axe flies
+  3.25 pixels a frame ahead, is pulled back like a boomerang up to 8
+  pixels a frame, turns 0x800 a frame with a 20 x 20 type-5 box and goes
+  once off screen; its two afterimages (`sub_080240A0`) trail 3 and 6
+  frames behind.
+- Resource 0 of 0x080E13BC is exported once as `Enemy/skill_shared`
+  (the Merman's sequences and the axe's still frame 6).
+- A local run with soul 5 drew the axe and its afterimages. Not ported:
+  sound 0xE3 and the afterimages' exact blend weights (drawn at half
+  opacity). Source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+
 ## Patch 0593 - Aria Merman red soul
 
 - The object export adds `Enemy/skill_merman` (resource 0 of 0x080E13BC).

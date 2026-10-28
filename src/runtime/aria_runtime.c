@@ -2322,7 +2322,7 @@ int main(int argc, char **argv) {
                      * not follow yet (PORT, XCMD) fail closed and are counted. */
                     AosMp2kPlayer *player = &mp2k.players[info.player];
                     for (int frame = 0; frame < 600 && !player->ended && !player->failed; ++frame)
-                        aos_mp2k_player_frame(player);
+                        aos_mp2k_engine_player_frame(&mp2k, info.player);
                     if (player->failed) failed_songs++;
                     else if (player->ended) ended_songs++;
                 }
@@ -2338,8 +2338,10 @@ int main(int argc, char **argv) {
             printf("Aria MP2K bank: %zu bytes\n", mp2k.bank_size);
         if (have_audio_table && have_audio_bank)
             printf("Aria MP2K headers: %zu/%zu initialized; over 600 frames %zu ended, %zu "
-                   "stopped on an unsupported or invalid stream\n",
-                   initialized_headers, aos_audio_song_count(), ended_songs, failed_songs);
+                   "stopped on an unsupported or invalid stream, %u channel notes, %zu "
+                   "dropped\n",
+                   initialized_headers, aos_audio_song_count(), ended_songs, failed_songs,
+                   mp2k.serial, mp2k.dropped_notes);
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);

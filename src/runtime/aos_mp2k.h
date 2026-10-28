@@ -13,14 +13,51 @@ enum {
     AOS_MP2K_PLAYER_COUNT = 8,
     AOS_MP2K_TRACK_COUNT = 16,
     AOS_MP2K_BANK_BASE = 0x0827B2C0,
-    AOS_MP2K_BANK_SIZE = 0x275638
+    AOS_MP2K_BANK_SIZE = 0x275638,
+    /* DEFAULT_SOUND_MODE: 8 DirectSound channels (SOUND_MODE_MAXCHN). */
+    AOS_MP2K_DIRECT_CHANNELS = 8,
+    AOS_MP2K_CGB_CHANNELS = 4,
+    /* Channel status bits (+ 0x00). */
+    AOS_MP2K_CHANNEL_START = 0x80,
+    AOS_MP2K_CHANNEL_STOP = 0x40,
+    AOS_MP2K_CHANNEL_ACTIVE = 0xC7,
 };
 
 typedef struct {
     uint8_t key;
     uint8_t velocity;
     uint8_t gate;
+    bool end_tie;   /* an EOT for `key`, logged in order with the notes */
+    uint8_t voice;      /* the track's voice and priority when it was read */
+    uint8_t priority;
 } AosMp2kNote;
+
+/* One ToneData record of a voice group (12 bytes). */
+typedef struct {
+    uint8_t type;       /* + 0x0: & 7 CGB channel, 0x40 key split, 0x80 rhythm */
+    uint8_t key;        /* + 0x1: a rhythm entry's key */
+    uint8_t length;     /* + 0x2 */
+    uint8_t pan_sweep;  /* + 0x3: a rhythm entry's pan when bit 7 is set */
+    uint32_t wav;       /* + 0x4: sample, or the sub voice group of 0x40 / 0x80 */
+    uint8_t attack, decay, sustain, release;   /* + 0x8; 0x40's key table pointer */
+} AosMp2kTone;
+
+/* A sound channel as MP2K_event_nxx leaves it; envelopes, volume, pitch
+ * and mixing are not ported, so a stopped channel stays stopped. */
+typedef struct {
+    uint8_t status;         /* + 0x00 */
+    uint8_t type;           /* + 0x01: the tone's type */
+    uint8_t key;            /* + 0x08: the key played (a rhythm entry's own) */
+    uint8_t gate;           /* + 0x10 */
+    uint8_t midi_key;       /* + 0x11: the note's key, which EOT matches */
+    uint8_t velocity;       /* + 0x12 */
+    uint8_t priority;       /* + 0x13 */
+    int8_t rhythm_pan;      /* + 0x14 */
+    AosMp2kTone tone;
+    bool linked;            /* in its track's chain (+ 0x2C, + 0x30, + 0x34) */
+    uint8_t player, track;
+    uint32_t serial;        /* chain order: newer channels are nearer the head */
+} AosMp2kChannel;
 
 typedef struct {
     const uint8_t *data;
@@ -82,6 +119,10 @@ typedef struct {
     size_t bank_size;
     uint32_t bank_base;
     AosMp2kPlayer players[AOS_MP2K_PLAYER_COUNT];
+    AosMp2kChannel direct[AOS_MP2K_DIRECT_CHANNELS];   /* SoundMixerState + 0x50 */
+    AosMp2kChannel cgb[AOS_MP2K_CGB_CHANNELS];         /* cgbChans */
+    uint32_t serial;
+    size_t dropped_notes;   /* notes MP2K_event_nxx found no channel or tone for */
 } AosMp2kEngine;
 
 void aos_mp2k_track_start(AosMp2kTrack *track, const uint8_t *data,
@@ -109,6 +150,21 @@ const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player
  * the player ends; then the counter loses 150. Fades, channel gates, LFOs
  * and TrkVolPitSet are not part of this step. */
 void aos_mp2k_player_frame(AosMp2kPlayer *player);
+/* The same frame with the channel side of MP2K_event_nxx, MP2K_event_endtie
+ * and the gate countdown: before each track's clock its channels' gates
+ * count down (a gate reaching 0 stops the channel); each note resolves its
+ * tone from the voice group (key split 0x40 through its key table, rhythm
+ * 0x80 with the entry's key and pan; a nested split or rhythm is dropped),
+ * takes priority min(255, player + track) and a channel: the tone's CGB
+ * channel when free, stopping, lower in priority or equal from a track not
+ * before it, else the first free DirectSound channel, else the best
+ * stopping one, else the lowest active one below or equal to it; an EOT
+ * stops the newest active channel of the track with its key. Players are
+ * ordered as their indices for the track-address comparisons. */
+void aos_mp2k_engine_player_frame(AosMp2kEngine *engine, uint8_t player);
+/* A voice group's entry `index` (VOICE copies it into the track). */
+bool aos_mp2k_tone(const AosMp2kEngine *engine, uint32_t voicegroup, unsigned index,
+                   AosMp2kTone *tone);
 /* m4aSoundMain's walk over the players: one frame of each active one. */
 void aos_mp2k_engine_frame(AosMp2kEngine *engine);
 

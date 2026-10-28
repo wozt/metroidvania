@@ -68,9 +68,11 @@ static void parameter_and_note_test(void) {
     assert(aos_mp2k_track_tick(&track) && track.wait == 1);
     assert(aos_mp2k_track_tick(&track) && track.wait == 0);
     assert(aos_mp2k_track_tick(&track));
-    assert(track.note_count == 2 && track.notes[1].key == 62);
+    assert(track.note_count == 3 && track.notes[1].key == 62 && !track.notes[1].end_tie);
     assert(track.notes[1].velocity == 90 && track.notes[1].gate == 4);
     assert(track.end_tie_count == 1 && track.end_tie_key == 62);
+    /* The EOT is logged after the note, in stream order. */
+    assert(track.notes[2].end_tie && track.notes[2].key == 62 && track.notes[1].voice == 9);
     assert(!track.active && !track.failed);
 }
 
@@ -130,6 +132,106 @@ static void running_status_and_failure_test(void) {
     assert(track.failed && !track.active);
 }
 
+/* A bank with one song (one track at 200, priority 10) and a voice group:
+ * 0 DirectSound, 1 CGB channel 1, 2 rhythm and 3 key split over the sub
+ * group at 160 (entry 0: key 50, pan 0xC8; entry 1 a nested split). */
+static uint8_t channel_bank[512];
+
+static void channel_song(AosMp2kEngine *engine, const uint8_t *stream, size_t size) {
+    uint8_t *bank = channel_bank;
+    for (size_t i = 0; i < sizeof channel_bank; ++i) bank[i] = 0;
+    bank[0] = 1;
+    bank[2] = 10;
+    write_pointer(bank, 4, 100);
+    write_pointer(bank, 8, 200);
+    bank[100 + 12] = 1;
+    bank[100 + 24] = 0x80;
+    write_pointer(bank, 100 + 28, 160);
+    bank[100 + 36] = 0x40;
+    write_pointer(bank, 100 + 40, 160);
+    write_pointer(bank, 100 + 44, 260);
+    bank[160 + 1] = 50;
+    bank[160 + 3] = 0xC8;
+    bank[160 + 12] = 0x40;
+    bank[260 + 60] = 0;
+    bank[260 + 61] = 1;
+    for (size_t i = 0; i < size; ++i) bank[200 + i] = stream[i];
+    aos_mp2k_engine_init(engine);
+    assert(aos_mp2k_engine_set_bank(engine, bank, sizeof channel_bank, BASE));
+    assert(aos_mp2k_player_start(engine, 0, BASE));
+}
+
+static void channel_test(void) {
+    AosMp2kEngine engine;
+    /* A note of gate 2: allocated, then its gate runs out two clocks later. */
+    const uint8_t gated[] = {0xBD, 0, 0xD1, 60, 100, 0x81, 0x81, 0x81, 0xB1};
+    channel_song(&engine, gated, sizeof gated);
+    aos_mp2k_engine_player_frame(&engine, 0);
+    const AosMp2kChannel *c = &engine.direct[0];
+    assert(c->status == AOS_MP2K_CHANNEL_START && c->gate == 2 && c->midi_key == 60);
+    assert(c->key == 60 && c->velocity == 100 && c->priority == 10 && c->linked);
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(c->gate == 1 && !(c->status & AOS_MP2K_CHANNEL_STOP));
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(c->gate == 0 && (c->status & AOS_MP2K_CHANNEL_STOP));
+    /* A restart stops nothing more but unlinks it (TrackStop). */
+    assert(aos_mp2k_player_start(&engine, 0, BASE) && !c->linked);
+
+    /* TIE holds (gate 0) until its EOT. */
+    const uint8_t tied[] = {0xBD, 0, 0xCF, 60, 100, 0x81, 0xCE, 60, 0x81, 0xB1};
+    channel_song(&engine, tied, sizeof tied);
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(engine.direct[0].status == AOS_MP2K_CHANNEL_START && engine.direct[0].gate == 0);
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(engine.direct[0].status & AOS_MP2K_CHANNEL_STOP);
+
+    /* Rhythm: the entry the key selects, with its own key and pan; key split through its table, a
+     * nested entry dropped; a CGB tone takes its own channel. */
+    const uint8_t mixed[] = {0xBD, 2, 0xD1, 0, 100, 0xBD, 3, 0xD1, 60, 0xD1, 61,
+                             0xBD, 1, 0xD1, 62, 0x81, 0xB1};
+    channel_song(&engine, mixed, sizeof mixed);
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(engine.direct[0].key == 50 && engine.direct[0].rhythm_pan == 16);
+    assert(engine.direct[0].midi_key == 0);
+    assert(engine.direct[1].status == AOS_MP2K_CHANNEL_START && engine.direct[1].key == 60 &&
+           engine.direct[1].rhythm_pan == 0);
+    assert(engine.dropped_notes == 1 && !engine.direct[2].status);
+    assert(engine.cgb[0].status == AOS_MP2K_CHANNEL_START && engine.cgb[0].midi_key == 62);
+}
+
+/* The DirectSound choice when every channel is busy. */
+static void allocation_test(void) {
+    AosMp2kEngine engine;
+    const uint8_t one[] = {0xBD, 0, 0xD1, 70, 100, 0x81, 0xB1};
+    channel_song(&engine, one, sizeof one);
+    for (int i = 0; i < AOS_MP2K_DIRECT_CHANNELS; ++i)
+        engine.direct[i] = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .priority = 20,
+                                            .player = 1, .linked = true};
+    /* All active and above it (20 > 10): the note is dropped. */
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(engine.dropped_notes == 1);
+    /* A stopping channel wins over lower active ones; the lowest stopping
+     * one among several. */
+    channel_song(&engine, one, sizeof one);
+    for (int i = 0; i < AOS_MP2K_DIRECT_CHANNELS; ++i)
+        engine.direct[i] = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .priority = 1,
+                                            .player = 1, .linked = true};
+    engine.direct[3].status |= AOS_MP2K_CHANNEL_STOP;
+    engine.direct[3].priority = 40;
+    engine.direct[5].status |= AOS_MP2K_CHANNEL_STOP;
+    engine.direct[5].priority = 30;
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(engine.direct[5].midi_key == 70 && engine.direct[5].status == AOS_MP2K_CHANNEL_START);
+    /* No stopping one: the lowest active priority below it. */
+    channel_song(&engine, one, sizeof one);
+    for (int i = 0; i < AOS_MP2K_DIRECT_CHANNELS; ++i)
+        engine.direct[i] = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .priority = 9,
+                                            .player = 1, .linked = true};
+    engine.direct[6].priority = 4;
+    aos_mp2k_engine_player_frame(&engine, 0);
+    assert(engine.direct[6].midi_key == 70 && engine.direct[6].player == 0);
+}
+
 /* MP2KPlayerMain's tempo clock: 150 per clock, TEMPO doubling its value. */
 static void player_tempo_test(void) {
     const uint8_t stream[] = {0xBB, 60, 0x83, 0xB1};
@@ -166,6 +268,8 @@ static void player_tempo_test(void) {
 
 int main(void) {
     player_tempo_test();
+    channel_test();
+    allocation_test();
     engine_song_start_test();
     parameter_and_note_test();
     pattern_and_repeat_test();

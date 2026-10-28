@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0605 - Aria MP2K note channels
+
+- The channel side of `MP2K_event_nxx` is ported in `aos_mp2k.c`: tone
+  resolution (key splits, rhythm tables), note priority, the CGB channel
+  rule and the choice among the 8 DirectSound channels; gates count down
+  per clock, `EOT` stops the newest matching note and a song restart
+  stops its player's channels.
+- Notes are logged with the voice and priority current when read (a test
+  caught notes using the clock's last voice).
+- A local `--check` gave 5640 channel notes and 54 dropped over 600
+  frames of every song. Still silent: envelopes, volumes, frequencies and
+  the mixer are next. Source-derived and unit-tested, not
+  emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0604 - Aria MP2K tempo clock
 
 - `aos_mp2k_player_frame` ports the sequencer clock of `MP2KPlayerMain`:

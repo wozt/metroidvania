@@ -2934,14 +2934,10 @@ aos:c:src/code_08038A38.c:GameModeDebug4531Update	GameModeDebug4531Update	techni
 aos:c:src/code_08038A38.c:sub_08038D38	sub_08038D38	technical	referrers			c_function	0x08038D38	src/code_08038A38.c	224	1	1
 aos:c:src/code_08038A38.c:sub_08038F8C	sub_08038F8C	technical	referrers			c_function	0x08038F8C	src/code_08038A38.c	409	1	12
 aos:c:src/code_08038A38.c:sub_080392A4	sub_080392A4	technical	referrers			c_function	0x080392A4	src/code_08038A38.c	542	1	3
-aos:c:src/code_080D73B8.c:AudioCommand	AudioCommand	unclassified		audio	exclusive_callees	c_function	0x080D744C	src/code_080D73B8.c	75	1	6
 aos:c:src/code_080D73B8.c:AudioVSync	AudioVSync	unclassified		audio	exclusive_callees	c_function	0x080D7900	src/code_080D73B8.c	346	1	2
 aos:c:src/code_080D73B8.c:GetPlayerUpdatedVolume	GetPlayerUpdatedVolume	unclassified				c_function	0x080D79CC	src/code_080D73B8.c	405	0	0
 aos:c:src/code_080D73B8.c:InitializeAudio	InitializeAudio	unclassified		audio	exclusive_callees	c_function	0x080D7880	src/code_080D73B8.c	315	1	4
-aos:c:src/code_080D73B8.c:MPlayVolumeSet	MPlayVolumeSet	audio	name			c_function	0x080D773C	src/code_080D73B8.c	209	1	1
-aos:c:src/code_080D73B8.c:MPlayVolumeUpdate	MPlayVolumeUpdate	audio	name			c_function	0x080D77B0	src/code_080D73B8.c	243	1	2
 aos:c:src/code_080D73B8.c:ResetAudio	ResetAudio	technical	referrers			c_function	0x080D7984	src/code_080D73B8.c	384	1	1
-aos:c:src/code_080D73B8.c:StartSong	StartSong	unclassified		audio	exclusive_callees	c_function	0x080D73B8	src/code_080D73B8.c	45	2	2
 aos:c:src/m4a.c:CgbModVol	CgbModVol	audio	path			c_function		src/m4a.c	806	1	1
 aos:c:src/m4a.c:CgbOscOff	CgbOscOff	audio	path			c_function		src/m4a.c	766	2	0
 aos:c:src/m4a.c:CgbPan	CgbPan	audio	path			c_function		src/m4a.c	786	1	0

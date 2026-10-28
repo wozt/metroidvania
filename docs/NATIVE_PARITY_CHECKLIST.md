@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 560 | 3013 |
+| Castlevania: Aria of Sorrow | 564 | 3009 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1771,13 +1771,13 @@ Next action: Load and render the six actors' native animation resources and OAM,
 
 [?] **`aos.audio.inventory-boundary` — source coverage.** The current classifier assigns 101 discovered routine(s) to this category (99 by source path, 2 by native name). Category completeness has not been established.
 
-[~] **`aos.audio.play_song` — PlaySong request routing.** Song IDs below 0x400 become start requests, STOP_SONG masks the ID to ten bits, and remaining values become audio-command requests. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.audio.play_song` — PlaySong and audio control.** PlaySong routes start, stop and command values. With an injected song table, StartSong applies the native music-current assignment, player pause and header-priority replacement rules; AudioCommand handles global and per-player stop, pause, resume and mute, song volume targets, twelve frequency modes and four amplitude resolutions. MPlayVolumeSet and MPlayVolumeUpdate reproduce the source-derived ramps and stop at mute. Unit-tested, not emulator-compared.
 
-Native evidence: `aos:c:src/code_080D73B8.c:PlaySong`.  
+Native evidence: `aos:c:src/code_080D73B8.c:AudioCommand`, `aos:c:src/code_080D73B8.c:MPlayVolumeSet`, `aos:c:src/code_080D73B8.c:MPlayVolumeUpdate`, `aos:c:src/code_080D73B8.c:PlaySong`, `aos:c:src/code_080D73B8.c:StartSong`.  
 Local implementation: [`src/runtime/aos_audio.c`](../src/runtime/aos_audio.c).  
 Tests: [`tests/test_aos_audio.c`](../tests/test_aos_audio.c).
-Known divergences: StartSong, AudioCommand, the song table, M4A sequencer, mixer, native sample bank and SDL output are not connected, so requests are recorded and forwarded to an optional sink but produce no sound.  
-Next action: Port StartSong and AudioCommand against verified Aria song and voice tables, then connect a native M4A renderer and SDL sink.
+Known divergences: The real gSongTable is not loaded, so the runtime cannot yet provide player and priority metadata. M4A track execution, m4aSoundMode hardware changes, the mixer, native sample bank and SDL output are absent; the controller changes deterministic host state but produces no sound.  
+Next action: Export gSongTable with each header priority and player, then connect the MP2K track sequencer, voice/sample data, mixer and SDL sink.
 
 ### Inventory and progression data
 

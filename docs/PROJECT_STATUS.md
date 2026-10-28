@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0600 - Aria native audio controller
+
+- `src/runtime/aos_audio.c` now carries the control portion of `StartSong`
+  and `AudioCommand`: song/player metadata can be injected, song replacement
+  follows pause and header priority, and the current-music quirk occurs
+  before that priority decision.
+- Global and per-player stop, pause, resume and mute commands, the song mute,
+  quiet and loud targets, all twelve frequency selections and the 6–9-bit
+  amplitude modes update deterministic controller state. The source-derived
+  `MPlayVolumeSet` and `MPlayVolumeUpdate` ramps are covered through their
+  target and mute-stop conditions.
+- This still produces no audio. The runtime has no exported `gSongTable`,
+  MP2K track interpreter, voice/sample bank, mixer or SDL sink, so Axe
+  Armor's sound aspect remains `partial` and no monster is complete. The
+  controller is source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+
 ## Patch 0599 - Aria PlaySong requests and Axe Armor sound events
 
 - `src/runtime/aos_audio.c` introduces a host-neutral, tested boundary for

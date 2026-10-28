@@ -603,6 +603,7 @@ static void play_note(AosMp2kEngine *engine, uint8_t number, uint8_t index,
             (candidate->status & AOS_MP2K_CHANNEL_STOP) || candidate->priority < priority ||
             (candidate->priority == priority && owner >= self))
             channel = candidate;
+        if (channel) engine->cgb_notes++;
     } else {
         channel = direct_channel(engine, priority, self);
     }

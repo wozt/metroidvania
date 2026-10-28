@@ -2488,7 +2488,6 @@ aos:c:src/code_08001194.c:BgCmdBuffer_WriteData	BgCmdBuffer_WriteData	technical	
 aos:c:src/code_08001194.c:BgCmdBuffer_WriteNumber	BgCmdBuffer_WriteNumber	technical	name			c_function	0x08001350	src/code_08001194.c	167	1	2
 aos:c:src/code_08001194.c:BgCmdBuffer_WriteString	BgCmdBuffer_WriteString	technical	name			c_function	0x0800125C	src/code_08001194.c	104	16	0
 aos:c:src/code_08001194.c:BgCmdBuffer_WriteString_Duplicate	BgCmdBuffer_WriteString_Duplicate	technical	name			c_function	0x0800148C	src/code_08001194.c	256	0	0
-aos:c:src/code_08001194.c:CheckRoomTransition	CheckRoomTransition	transitions	name			c_function	0x08001780	src/code_08001194.c	464	2	1
 aos:c:src/code_08001194.c:DmaQueue_DirectCopy	DmaQueue_DirectCopy	unclassified				c_function	0x08001668	src/code_08001194.c	379	8	0
 aos:c:src/code_08001194.c:DmaQueue_IndirectCopy	DmaQueue_IndirectCopy	unclassified				c_function	0x080016D0	src/code_08001194.c	408	13	0
 aos:c:src/code_08001194.c:DmaQueue_Process	DmaQueue_Process	unclassified				c_function	0x080015E4	src/code_08001194.c	344	1	0
@@ -2499,8 +2498,6 @@ aos:c:src/code_08001194.c:GetEntityRoomYPositionInteger	GetEntityRoomYPositionIn
 aos:c:src/code_08001194.c:GetEntityRoomYPositionWhole	GetEntityRoomYPositionWhole	enemies	referrers			c_function	0x080021E4	src/code_08001194.c	1480	2	0
 aos:c:src/code_08001194.c:GetRoomFromMapPosition	GetRoomFromMapPosition	rooms	name			c_function	0x080018D0	src/code_08001194.c	562	9	0
 aos:c:src/code_08001194.c:GetRoomPointer	GetRoomPointer	rooms	name			c_function	0x08001980	src/code_08001194.c	609	4	0
-aos:c:src/code_08001194.c:GetSaveRoomFlagFromMapPosition	GetSaveRoomFlagFromMapPosition	rooms	name			c_function	0x0800190C	src/code_08001194.c	577	4	0
-aos:c:src/code_08001194.c:GetWarpRoomFlagFromMapPosition	GetWarpRoomFlagFromMapPosition	rooms	name			c_function	0x08001944	src/code_08001194.c	592	4	0
 aos:c:src/code_08001194.c:HBlankEffectSetup	HBlankEffectSetup	unclassified				c_function	0x08001718	src/code_08001194.c	437	21	0
 aos:c:src/code_08001194.c:sub_08001800	sub_08001800	unclassified				c_function	0x08001800	src/code_08001194.c	500	2	0
 aos:c:src/code_08001194.c:sub_08001994	sub_08001994	unclassified				c_function	0x08001994	src/code_08001194.c	622	7	1
@@ -2746,7 +2743,6 @@ aos:c:src/code_08012744.c:sub_080137F8	sub_080137F8	unclassified				c_function	0
 aos:c:src/code_08012744.c:sub_080137FC	sub_080137FC	unclassified		saves	exclusive_callees	c_function	0x080137FC	src/code_08012744.c	697	1	4
 aos:c:src/code_08012744.c:sub_08013854	sub_08013854	unclassified		saves	exclusive_callees	c_function	0x08013854	src/code_08012744.c	727	0	2
 aos:c:src/code_08013960.c:GameModeCreditsUpdate	GameModeCreditsUpdate	endings	name			c_function	0x0801430C	src/code_08013960.c	669	1	6
-aos:c:src/code_08013960.c:sub_08013960	sub_08013960	unclassified				c_function	0x08013960	src/code_08013960.c	63	10	8
 aos:c:src/code_08013960.c:sub_08013960_inline_0	sub_08013960_inline_0	unclassified		audio	exclusive_callees	c_function		src/code_08013960.c	39	3	1
 aos:c:src/code_08013960.c:sub_08013B44	sub_08013B44	unclassified		rooms	exclusive_callees	c_function	0x08013B44	src/code_08013960.c	155	3	3
 aos:c:src/code_08013960.c:sub_08013BCC	sub_08013BCC	unclassified		rooms	exclusive_callees	c_function	0x08013BCC	src/code_08013960.c	191	3	3
@@ -2760,7 +2756,6 @@ aos:c:src/code_08013960.c:sub_08013E74	sub_08013E74	unclassified		audio	exclusiv
 aos:c:src/code_08013960.c:sub_08013EAC	sub_08013EAC	unclassified		audio	exclusive_callees	c_function	0x08013EAC	src/code_08013960.c	442	0	1
 aos:c:src/code_08013960.c:sub_08013EEC	sub_08013EEC	unclassified		audio	exclusive_callees	c_function	0x08013EEC	src/code_08013960.c	466	8	2
 aos:c:src/code_08013960.c:sub_08013F38	sub_08013F38	unclassified		audio	exclusive_callees	c_function	0x08013F38	src/code_08013960.c	491	1	1
-aos:c:src/code_08013960.c:sub_08013F6C	sub_08013F6C	unclassified		audio	exclusive_callees	c_function	0x08013F6C	src/code_08013960.c	505	6	1
 aos:c:src/code_08032444.c:SoulInventory_AddAmountToFirstGroupTotal	SoulInventory_AddAmountToFirstGroupTotal	inventory	name			c_function	0x080324D0	src/code_08032444.c	94	1	2
 aos:c:src/code_08032444.c:SoulInventory_GetFirstGroupSoulTotal	SoulInventory_GetFirstGroupSoulTotal	inventory	name			c_function	0x08032A2C	src/code_08032444.c	631	0	1
 aos:c:src/code_08032444.c:SoulInventory_GetFirstGroupSoulTotalDifferent	SoulInventory_GetFirstGroupSoulTotalDifferent	inventory	name			c_function	0x08032444	src/code_08032444.c	39	0	1

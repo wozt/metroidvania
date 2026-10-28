@@ -11,6 +11,7 @@
  * separate reconstruction work. */
 #include "aos_audio.h"
 #include "aos_mp2k.h"
+#include "aos_room_music.h"
 #include "aos_door.h"
 #include "aos_enemy.h"
 #include "aos_game_lifecycle.h"
@@ -59,6 +60,7 @@
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
 #define DEFAULT_AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
 #define DEFAULT_AUDIO_BANK "assets/extracted/aria/sound/runtime/sound_bank.bin"
+#define DEFAULT_ROOM_MUSIC "assets/extracted/aria/sound/runtime/room_music.tsv"
 #define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
 #define DEFAULT_ITEM_ICONS "assets/extracted/aria/metadata/item_icons.tsv"
 #define ITEM_ICONS 193     /* icon numbers 1-192 of sub_0801232C */
@@ -158,6 +160,28 @@ static void wav_close(AriaWav *wav) {
     wav_header(wav->file, wav->bytes);
     fclose(wav->file);
     wav->file = NULL;
+}
+
+/* metadata room_music.tsv: sub_08013960's flags per (area, room). */
+#define MUSIC_AREAS 16
+#define MUSIC_ROOMS 256
+static AosRoomMusicFlags room_music_flags[MUSIC_AREAS][MUSIC_ROOMS];
+
+static bool load_room_music(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[128];
+    unsigned rows = 0;
+    while (fgets(line, sizeof line, f)) {
+        unsigned area, room, save, warp, transition;
+        if (sscanf(line, "%u\t%u\t%u\t%u\t%u", &area, &room, &save, &warp, &transition) != 5 ||
+            area >= MUSIC_AREAS || room >= MUSIC_ROOMS)
+            continue;
+        room_music_flags[area][room] = (AosRoomMusicFlags){save != 0, warp != 0, transition != 0};
+        rows++;
+    }
+    fclose(f);
+    return rows > 0;
 }
 
 static void start_mp2k_song(void *context, uint16_t song,
@@ -2390,10 +2414,10 @@ int main(int argc, char **argv) {
             printf("Aria MP2K bank: %zu bytes\n", mp2k.bank_size);
         if (have_audio_table && have_audio_bank)
             printf("Aria MP2K headers: %zu/%zu initialized; over 600 frames %zu ended, %zu "
-                   "stopped on an unsupported or invalid stream, %u channel notes, %zu "
-                   "dropped, %zu sample reads outside the bank\n",
+                   "stopped on an unsupported or invalid stream, %u channel notes (%zu on "
+                   "CGB channels), %zu dropped, %zu sample reads outside the bank\n",
                    initialized_headers, aos_audio_song_count(), ended_songs, failed_songs,
-                   mp2k.serial, mp2k.dropped_notes, mp2k.missing_samples);
+                   mp2k.serial, mp2k.cgb_notes, mp2k.dropped_notes, mp2k.missing_samples);
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);
@@ -2420,6 +2444,12 @@ int main(int argc, char **argv) {
     if (audio_wav_path && !wav_open(&wav, audio_wav_path))
         fprintf(stderr, "Cannot write %s\n", audio_wav_path);
     if (start_song >= 0) aos_audio_play_song((uint16_t)start_song);
+    /* sub_08013960 runs at each room load (the start counts as one). */
+    bool have_room_music = load_room_music(DEFAULT_ROOM_MUSIC);
+    if (!have_room_music)
+        fprintf(stderr, "No Aria room music flags: ./build/fusion_rebuild --task aria_sound\n");
+    AosRoomMusic room_music = {0};
+    int music_area = -1, music_room = -1;
     int rc = 1;
     SDL_Window *window = SDL_CreateWindow("Metroid Vania - experimental Aria runtime",
                                           VIEW_W * 4, VIEW_H * 4, SDL_WINDOW_RESIZABLE);
@@ -2698,6 +2728,17 @@ int main(int argc, char **argv) {
             aos_input_update(&aria_input, held);
             lifecycle.input = aria_input;
             aos_game_lifecycle_update(&lifecycle);
+            if (have_room_music && start_song < 0 &&
+                (room.area != music_area || room.number != music_room)) {
+                music_area = room.area;
+                music_room = room.number;
+                const AosRoomMusicFlags *flags =
+                    music_area >= 0 && music_area < MUSIC_AREAS && music_room >= 0 &&
+                            music_room < MUSIC_ROOMS
+                        ? &room_music_flags[music_area][music_room]
+                        : NULL;
+                aos_room_music_enter(&room_music, music_area, music_room, flags);
+            }
             /* AudioVSync advances the native volume commands every frame. */
             aos_audio_volume_update();
             /* m4aSoundMain: each started player's sequencer clocks (no voices

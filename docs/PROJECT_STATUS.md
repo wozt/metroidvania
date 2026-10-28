@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0608 - Aria room music
+
+- `src/runtime/aos_room_music.c` ports `sub_08013960`: on each room
+  load the runtime quiets the music in save and warp rooms, mutes it in
+  transition rooms and otherwise plays the area's song or a room's
+  special song. The sound export adds `room_music.tsv` (17 save, 8 warp,
+  16 transition rooms from the map table and `sUnk_0850E968`).
+- A local run of room 0/3 now plays the area's music by itself.
+- Not modelled: event bits, Julius, boss mode; the fade flag is never
+  cleared (not traced). Zero Mission is unchanged.
+
 ## Patch 0607 - Aria MP2K mixer and SDL audio output
 
 - `aos_mp2k_mix` ports `SoundMainRAM` without reverb: per-frame channel

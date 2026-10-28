@@ -14,6 +14,8 @@ enum {
     SOUND_BANK_START = 0x0827B2C0,
     SOUND_BANK_END = 0x084F08F8,
     SONG_TABLE = 0x0827CD38,
+    TRANSITION_ROOMS = 0x0850E968,   /* sUnk_0850E968: room pointers, 0-terminated */
+    TRANSITION_ROOM_LIMIT = 256,
     SONG_RECORD_SIZE = 8
 };
 
@@ -123,6 +125,57 @@ static bool text_append(Text *text, const char *format, ...) {
     return true;
 }
 
+/* sub_08013960's room inputs: per room, whether a map cell of it carries
+ * the save (bit 15) or warp (bit 14) flag of the map table, and whether its
+ * room pointer is in the transition-room list CheckRoomTransition scans. */
+static bool append_room_music(const FusionRom *rom, Text *text, char *error,
+                              size_t error_size) {
+    static FusionAosMap map;
+    FusionAosAreaDirectory directory;
+    if (!fusion_aos_read_area_directory(rom, &directory, error, error_size) ||
+        !fusion_aos_read_map(rom, &directory, &map, error, error_size))
+        return false;
+    uint32_t transitions[TRANSITION_ROOM_LIMIT];
+    size_t transition_count = 0;
+    for (;; ++transition_count) {
+        const uint8_t *entry = NULL;
+        if (transition_count == TRANSITION_ROOM_LIMIT ||
+            !slice(rom, TRANSITION_ROOMS + (uint32_t)transition_count * 4, 4, &entry, error,
+                   error_size)) {
+            if (transition_count == TRANSITION_ROOM_LIMIT)
+                set_error(error, error_size, "unterminated Aria transition-room list");
+            return false;
+        }
+        uint32_t pointer = read_u32(entry);
+        if (!pointer) break;
+        transitions[transition_count] = pointer;
+    }
+    if (!text_append(text, "schema\tmetroidvania-aos-room-music-v1\n"
+                           "# area\troom\tsave\twarp\ttransition\n"))
+        return false;
+    for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area)
+        for (size_t room = 0; room < directory.areas[area].room_count; ++room) {
+            const uint8_t *entry = NULL;
+            if (!slice(rom, directory.areas[area].room_table_pointer + (uint32_t)room * 4, 4,
+                       &entry, error, error_size))
+                return false;
+            uint32_t pointer = read_u32(entry);
+            bool save = false, warp = false, transition = false;
+            for (size_t index = 0; index < map.count; ++index) {
+                const FusionAosMapCell *cell = &map.cells[index];
+                if (cell->area != area || cell->room != room) continue;
+                save = save || cell->save;
+                warp = warp || cell->warp;
+            }
+            for (size_t index = 0; index < transition_count; ++index)
+                transition = transition || transitions[index] == pointer;
+            if (!text_append(text, "%zu\t%zu\t%u\t%u\t%u\n", area, room, save, warp,
+                             transition))
+                return false;
+        }
+    return true;
+}
+
 bool fusion_aos_export_sound(const FusionRom *rom, const char *output,
                              size_t *song_count,
                              char *error, size_t error_size) {
@@ -156,6 +209,12 @@ bool fusion_aos_export_sound(const FusionRom *rom, const char *output,
               fusion_export_join(path, output, "sound_bank.bin") &&
               fusion_export_write_file(path, bank, SOUND_BANK_END - SOUND_BANK_START,
                                        error, error_size);
+    Text rooms = {0};
+    success = success && append_room_music(rom, &rooms, error, error_size) &&
+              fusion_export_join(path, output, "room_music.tsv") &&
+              fusion_export_write_file(path, (const uint8_t *)rooms.data, rooms.size, error,
+                                       error_size);
+    free(rooms.data);
     if (!success && (!error || !error[0]))
         set_error(error, error_size, "cannot export Aria song table");
     if (success) *song_count = table.count;

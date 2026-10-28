@@ -151,6 +151,7 @@ typedef struct {
     uint32_t serial;
     size_t dropped_notes;   /* notes MP2K_event_nxx found no channel or tone for */
     size_t missing_samples; /* DirectSound mixes whose sample is outside the bank */
+    size_t cgb_notes;       /* notes given to a CGB channel (not synthesized) */
 } AosMp2kEngine;
 
 void aos_mp2k_track_start(AosMp2kTrack *track, const uint8_t *data,

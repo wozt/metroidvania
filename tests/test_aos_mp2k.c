@@ -130,7 +130,42 @@ static void running_status_and_failure_test(void) {
     assert(track.failed && !track.active);
 }
 
+/* MP2KPlayerMain's tempo clock: 150 per clock, TEMPO doubling its value. */
+static void player_tempo_test(void) {
+    const uint8_t stream[] = {0xBB, 60, 0x83, 0xB1};
+    AosMp2kPlayer player = {.active = true, .track_count = 1, .tempo_raw = 150,
+                            .tempo_interval = 150, .tempo_scale = 0x100};
+    aos_mp2k_track_start(&player.tracks[0], stream, sizeof stream, BASE);
+    /* Frame 1: one clock reads TEMPO 60 (raw 120, interval 120) and waits 3. */
+    aos_mp2k_player_frame(&player);
+    assert(player.clock == 1 && player.tempo_raw == 120 && player.tempo_interval == 120);
+    assert(player.tempo_counter == 0 && player.tracks[0].wait == 2 && player.track_bits == 1);
+    /* Frame 2: 120 is under 150, no clock. */
+    aos_mp2k_player_frame(&player);
+    assert(player.clock == 1 && player.tempo_counter == 120);
+    /* Frames 3-5: 240, 210, 180 each give one clock; the fifth reads FINE. */
+    aos_mp2k_player_frame(&player);
+    assert(player.clock == 2 && player.tempo_counter == 90 && player.tracks[0].wait == 1);
+    aos_mp2k_player_frame(&player);
+    assert(player.clock == 3 && player.tempo_counter == 60 && player.tracks[0].wait == 0);
+    aos_mp2k_player_frame(&player);
+    assert(player.clock == 4 && player.tempo_counter == 30 && !player.tracks[0].active);
+    assert(!player.ended && player.track_bits == 1);
+    /* Frame 6: the next clock finds no track and ends the player. */
+    aos_mp2k_player_frame(&player);
+    assert(player.ended && player.clock == 5 && player.track_bits == 0 && !player.failed);
+    aos_mp2k_player_frame(&player);
+    assert(player.clock == 5);
+    /* The scale applies to the next TEMPO (m4aMPlayTempoControl keeps it). */
+    AosMp2kPlayer scaled = {.active = true, .track_count = 1, .tempo_raw = 150,
+                            .tempo_interval = 150, .tempo_scale = 0x80};
+    aos_mp2k_track_start(&scaled.tracks[0], stream, sizeof stream, BASE);
+    aos_mp2k_player_frame(&scaled);
+    assert(scaled.tempo_interval == 60);
+}
+
 int main(void) {
+    player_tempo_test();
     engine_song_start_test();
     parameter_and_note_test();
     pattern_and_repeat_test();

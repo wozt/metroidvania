@@ -102,7 +102,10 @@ static bool parameter(AosMp2kTrack *track, uint8_t command) {
     if (!read_byte(track, &value)) return false;
     switch (command) {
     case MP2K_PRIO: track->priority = value; break;
-    case MP2K_TEMPO: track->tempo_raw = (uint16_t)(value * 2u); break;
+    case MP2K_TEMPO:
+        track->tempo_raw = (uint16_t)(value * 2u);
+        track->tempo_changed = true;
+        break;
     case MP2K_KEYSH: track->key_shift = (int8_t)value; break;
     case MP2K_VOICE: track->voice = value; break;
     case MP2K_VOL: track->volume = value; break;
@@ -355,4 +358,39 @@ bool aos_mp2k_player_start(AosMp2kEngine *engine, uint8_t player,
 
 const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player) {
     return engine && player < AOS_MP2K_PLAYER_COUNT ? &engine->players[player] : NULL;
+}
+
+void aos_mp2k_player_frame(AosMp2kPlayer *player) {
+    if (!player || !player->active || player->ended) return;
+    player->tempo_counter = (uint16_t)(player->tempo_counter + player->tempo_interval);
+    while (player->tempo_counter >= 150) {
+        uint16_t bits = 0;
+        for (uint8_t index = 0; index < player->track_count; ++index) {
+            AosMp2kTrack *track = &player->tracks[index];
+            if (!track->active) continue;
+            bits |= (uint16_t)(1u << index);
+            if (!aos_mp2k_track_tick(track) && track->failed) player->failed = true;
+            /* MP2K_event_tempo writes the player's fields at once. */
+            if (track->tempo_changed) {
+                track->tempo_changed = false;
+                player->tempo_raw = track->tempo_raw;
+                player->tempo_interval =
+                    (uint16_t)((uint32_t)player->tempo_raw * player->tempo_scale >> 8);
+            }
+        }
+        player->clock++;
+        if (!bits) {
+            player->ended = true;
+            player->track_bits = 0;
+            return;
+        }
+        player->track_bits = bits;
+        player->tempo_counter = (uint16_t)(player->tempo_counter - 150);
+    }
+}
+
+void aos_mp2k_engine_frame(AosMp2kEngine *engine) {
+    if (!engine) return;
+    for (uint8_t player = 0; player < AOS_MP2K_PLAYER_COUNT; ++player)
+        aos_mp2k_player_frame(&engine->players[player]);
 }

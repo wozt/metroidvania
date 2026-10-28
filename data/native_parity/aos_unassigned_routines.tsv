@@ -2943,7 +2943,6 @@ aos:c:src/m4a.c:MPlayContinue	MPlayContinue	audio	path			c_function		src/m4a.c	6
 aos:c:src/m4a.c:MPlayExtender	MPlayExtender	audio	path			c_function		src/m4a.c	234	1	0
 aos:c:src/m4a.c:MPlayFadeOut	MPlayFadeOut	audio	path			c_function		src/m4a.c	72	1	0
 aos:c:src/m4a.c:MPlayOpen	MPlayOpen	audio	path			c_function		src/m4a.c	504	1	1
-aos:c:src/m4a.c:MPlayStart	MPlayStart	audio	path			c_function		src/m4a.c	549	3	2
 aos:c:src/m4a.c:MPlayStop	MPlayStop	audio	path			c_function		src/m4a.c	602	5	1
 aos:c:src/m4a.c:MidiKeyToCgbFreq	MidiKeyToCgbFreq	audio	path			c_function		src/m4a.c	729	0	0
 aos:c:src/m4a.c:MidiKeyToFreq	MidiKeyToFreq	audio	path			c_function		src/m4a.c	38	2	1

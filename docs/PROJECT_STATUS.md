@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0604 - Aria MP2K tempo clock
+
+- `aos_mp2k_player_frame` ports the sequencer clock of `MP2KPlayerMain`:
+  the tempo counter gains its interval each frame and every 150 advances
+  all the player's tracks one clock; `TEMPO` events set the player's
+  interval (raw * scale >> 8); a player with no track left ends. The
+  runtime runs every player each frame.
+- A local `--check` ran all 495 songs for 600 frames: 340 ended, none
+  stopped on an unsupported stream.
+- Still silent: voices, gates, LFOs, volume/pitch and the mixer are not
+  ported. Source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+
 ## Patch 0603 - Aria MP2K bank and song headers
 
 - The sound export writes the private MP2K bank

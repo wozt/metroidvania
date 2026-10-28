@@ -48,6 +48,7 @@ typedef struct {
     uint8_t mod_depth;
     uint8_t mod_type;
     uint16_t tempo_raw;
+    bool tempo_changed;     /* a TEMPO event ran since the player read it */
     uint8_t end_tie_key;
     bool active;
     bool failed;
@@ -64,9 +65,14 @@ typedef struct {
     uint8_t block_count;
     uint8_t priority;
     uint8_t reverb;
-    uint16_t tempo_raw;
-    uint16_t tempo_interval;
-    uint16_t tempo_scale;
+    uint16_t tempo_raw;         /* + 0x1C */
+    uint16_t tempo_interval;    /* + 0x20 */
+    uint16_t tempo_scale;       /* + 0x1E */
+    uint16_t tempo_counter;     /* + 0x22 */
+    uint32_t clock;             /* + 0x0C */
+    uint16_t track_bits;        /* + 0x04: the tracks that existed on the last clock */
+    bool ended;                 /* + 0x04 = 0x80000000: no track left */
+    bool failed;                /* a track met an unsupported or invalid stream */
     AosMp2kTrack tracks[AOS_MP2K_TRACK_COUNT];
 } AosMp2kPlayer;
 
@@ -96,5 +102,14 @@ void aos_mp2k_engine_destroy(AosMp2kEngine *engine);
 bool aos_mp2k_player_start(AosMp2kEngine *engine, uint8_t player,
                            uint32_t header_pointer);
 const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player);
+/* MP2KPlayerMain's sequencer part for one frame: the tempo counter gains
+ * the interval, and while it is at least 150 every existing track advances
+ * one clock (a TEMPO event sets the raw tempo to twice its value and the
+ * interval to raw * scale >> 8), the clock counts, and with no track left
+ * the player ends; then the counter loses 150. Fades, channel gates, LFOs
+ * and TrkVolPitSet are not part of this step. */
+void aos_mp2k_player_frame(AosMp2kPlayer *player);
+/* m4aSoundMain's walk over the players: one frame of each active one. */
+void aos_mp2k_engine_frame(AosMp2kEngine *engine);
 
 #endif /* AOS_MP2K_H */

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T15:02:05+00:00",
+ "generated_at": "2026-10-28T15:07:49+00:00",
  "git": {
-  "commit": "92b3658",
+  "commit": "2b42242",
   "branch": "main",
   "dirty": true
  },
@@ -8559,10 +8559,13 @@
     "MP2K_event_modt",
     "MP2K_event_tune",
     "MP2K_event_endtie",
-    "MP2K_event_nxx"
+    "MP2K_event_nxx",
+    "MP2KPlayerMain",
+    "MP2K_event_tempo",
+    "MPlayStart"
    ],
-   "limitations": "Only the song header and track cursors are initialized on an accepted StartSong: the tracks are not yet ticked by a tempo scheduler. The decoder's PORT and XCMD events, tempo-to-frame scheduler, voice allocation and gate countdown are absent. m4aSoundMode hardware changes, the voice and sample banks, mixer and SDL output remain absent, so the controller still produces no sound. The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. A bounded host-neutral MP2K track decoder now reproduces the native wait clock table, running status, FINE, GOTO, three-level PATT and PEND, REPT, EOT, note parsing and the PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS, LFODL, MOD, MODT and TUNE state changes. Invalid pointers, recursive command loops and unsupported PORT or XCMD streams fail closed. Source-derived and unit-tested, not emulator-compared. The private MP2K bank (0x0827B2C0-0x084F08F8: the voice groups the song headers use, from the decompilation's audio segment, through gMPlayTable and the song data) is exported as sound/runtime/sound_bank.bin; aos_mp2k_player_start reads a song header (track count, block count, priority, reverb, voice group) and starts each track at its pointer, failing closed outside the bank. StartSong calls it only after its player-priority replacement accepts the song. A local --check run initialized all 495 song headers of the exported table.",
-   "next_action": "Port the tempo scheduler that ticks each player's tracks, then voice allocation, sample mixing and SDL output.",
+   "limitations": "MP2KPlayerMain is ported for its sequencer clock only: fades (FadeOutBody), channel gate countdowns, track LFOs and TrkVolPitSet are not run. The decoder's PORT and XCMD events, tempo-to-frame scheduler, voice allocation and gate countdown are absent. m4aSoundMode hardware changes, the voice and sample banks, mixer and SDL output remain absent, so the controller still produces no sound. The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. A bounded host-neutral MP2K track decoder now reproduces the native wait clock table, running status, FINE, GOTO, three-level PATT and PEND, REPT, EOT, note parsing and the PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS, LFODL, MOD, MODT and TUNE state changes. Invalid pointers, recursive command loops and unsupported PORT or XCMD streams fail closed. Source-derived and unit-tested, not emulator-compared. The private MP2K bank (0x0827B2C0-0x084F08F8: the voice groups the song headers use, from the decompilation's audio segment, through gMPlayTable and the song data) is exported as sound/runtime/sound_bank.bin; aos_mp2k_player_start reads a song header (track count, block count, priority, reverb, voice group) and starts each track at its pointer, failing closed outside the bank. StartSong calls it only after its player-priority replacement accepts the song. A local --check run initialized all 495 song headers of the exported table. aos_mp2k_player_frame ports MP2KPlayerMain's tempo clock: each frame the counter (+ 0x22) gains the interval (+ 0x20); while it is at least 150 every existing track advances one clock, MP2K_event_tempo sets the raw tempo to twice its value and the interval to raw * scale >> 8, the clock (+ 0x0C) counts, and a clock that finds no track ends the player (+ 0x04 = 0x80000000); then the counter loses 150. The runtime runs it for every player each frame after the volume update. A local --check ran all 495 songs for 600 frames each: 340 ended and none hit an unsupported or invalid stream.",
+   "next_action": "Port the channel side: voice allocation from the voice groups (ply_note into channels), gate countdowns, LFO and TrkVolPitSet, then the DirectSound and CGB mixer and SDL output.",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_aos.c",
@@ -17535,6 +17538,12 @@
  },
  "timeline": [
   {
+   "commit": "2b42242",
+   "date": "2026-10-28",
+   "subject": "Start Aria MP2K songs from the exported sound bank",
+   "scope": "project"
+  },
+  {
    "commit": "92b3658",
    "date": "2026-10-28",
    "subject": "Port the Aria MP2K track decoder",
@@ -18007,12 +18016,6 @@
    "date": "2026-10-25",
    "subject": "Write verified ROM manifests natively",
    "scope": "project"
-  },
-  {
-   "commit": "c230325",
-   "date": "2026-10-25",
-   "subject": "Run the Zero Mission ROM bank natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -18073,9 +18076,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 585,
-    "routines_attached_to_features": 585,
-    "unassigned_routines": 2988,
+    "routines_cited_by_features": 586,
+    "routines_attached_to_features": 586,
+    "unassigned_routines": 2987,
     "call_edges": 14228
    }
   },

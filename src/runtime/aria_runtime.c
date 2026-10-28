@@ -2311,13 +2311,21 @@ int main(int argc, char **argv) {
     static AriaLibrary library;
     if (check) {
         bool ok = load_library(library_path, &library, NULL);
-        size_t initialized_headers = 0;
+        size_t initialized_headers = 0, failed_songs = 0, ended_songs = 0;
         if (have_audio_table && have_audio_bank) {
             for (size_t song = 0; song < aos_audio_song_count(); ++song) {
                 AosAudioSongInfo info;
                 if (aos_audio_song_info(song, &info) &&
-                    aos_mp2k_player_start(&mp2k, info.player, info.header_pointer))
+                    aos_mp2k_player_start(&mp2k, info.player, info.header_pointer)) {
                     initialized_headers++;
+                    /* Ten seconds of sequencer clocks: streams the decoder does
+                     * not follow yet (PORT, XCMD) fail closed and are counted. */
+                    AosMp2kPlayer *player = &mp2k.players[info.player];
+                    for (int frame = 0; frame < 600 && !player->ended && !player->failed; ++frame)
+                        aos_mp2k_player_frame(player);
+                    if (player->failed) failed_songs++;
+                    else if (player->ended) ended_songs++;
+                }
             }
             if (initialized_headers != aos_audio_song_count()) ok = false;
         }
@@ -2329,8 +2337,9 @@ int main(int argc, char **argv) {
         if (have_audio_bank)
             printf("Aria MP2K bank: %zu bytes\n", mp2k.bank_size);
         if (have_audio_table && have_audio_bank)
-            printf("Aria MP2K headers: %zu/%zu initialized\n", initialized_headers,
-                   aos_audio_song_count());
+            printf("Aria MP2K headers: %zu/%zu initialized; over 600 frames %zu ended, %zu "
+                   "stopped on an unsupported or invalid stream\n",
+                   initialized_headers, aos_audio_song_count(), ended_songs, failed_songs);
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);
@@ -2624,6 +2633,9 @@ int main(int argc, char **argv) {
             aos_game_lifecycle_update(&lifecycle);
             /* AudioVSync advances the native volume commands every frame. */
             aos_audio_volume_update();
+            /* m4aSoundMain: each started player's sequencer clocks (no voices
+             * or mixing yet, so still silent). */
+            if (have_audio_bank) aos_mp2k_engine_frame(&mp2k);
             if (!lifecycle.in_game_frame_requested) continue;
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);

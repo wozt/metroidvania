@@ -1132,8 +1132,11 @@ and the volume ramps apply their source-derived control rules when supplied
 song metadata. The native importer now exports all 495 `gSongTable` records
 and their fixed MP2K header fields; the runtime loads the real player and
 priority values and advances the volume controller each lifecycle frame.
-The MP2K track interpreter, voice and sample banks, mixer and SDL output are
-not ported, so these requests are not audible. Not ported:
+A bounded standalone MP2K decoder now handles the native wait table, running
+status, notes, parameters, branches, three-level patterns and repeats. It is
+not yet connected to `StartSong` or the private ROM bank; PORT, XCMD, tempo
+scheduling, voice allocation, voice and sample banks, mixing and SDL output
+remain open, so these requests are not audible. Not ported:
 the palette bits and the global pause `0x4BE`. The walker's one-way platform
 bit (mode bit 1) is not used by the
 armor (mode 0x14) or the archer (0xC, 0xD). The axe's affine rotation

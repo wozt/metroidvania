@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0602 - Aria MP2K track event decoder
+
+- New host-neutral `aos_mp2k` code advances one sequencer clock at a time.
+  It reproduces the 49-entry wait and note clock table, running status, note
+  parameters, EOT, FINE, absolute GOTO, three nested PATT/PEND calls and
+  counted or infinite REPT branches.
+- The source-derived PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS,
+  LFODL, MOD, MODT and TUNE commands update deterministic track state.
+  Bounds checks reject bad stream pointers, excessive command loops and the
+  still-unported PORT and XCMD events. Synthetic tests cover waits, notes,
+  retained running parameters, patterns, repeats and failure paths.
+- This decoder is intentionally not connected to `StartSong` yet: the
+  private MP2K bank, song-header track initialization, tempo scheduler,
+  voice allocation, sample mixer and SDL sink remain absent. Audio and Axe
+  Armor's sound aspect stay `partial`; nothing is audible yet. Source-derived
+  and unit-tested, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0601 - Aria native song-table export and runtime routing
 
 - `src/assets/aos/sound.c` reads all 495 entries of Aria's `gSongTable` and

@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 564 | 3009 |
+| Castlevania: Aria of Sorrow | 585 | 2988 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1771,13 +1771,13 @@ Next action: Load and render the six actors' native animation resources and OAM,
 
 [?] **`aos.audio.inventory-boundary` — source coverage.** The current classifier assigns 101 discovered routine(s) to this category (99 by source path, 2 by native name). Category completeness has not been established.
 
-[~] **`aos.audio.play_song` — PlaySong and audio control.** The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. PlaySong routes start, stop and command values; StartSong applies the native music-current assignment, player pause and header-priority replacement rules; AudioCommand handles global and per-player stop, pause, resume and mute, song volume targets, twelve frequency modes and four amplitude resolutions. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.audio.play_song` — PlaySong and audio control.** The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. A bounded host-neutral MP2K track decoder now reproduces the native wait clock table, running status, FINE, GOTO, three-level PATT and PEND, REPT, EOT, note parsing and the PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS, LFODL, MOD, MODT and TUNE state changes. Invalid pointers, recursive command loops and unsupported PORT or XCMD streams fail closed. Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:c:src/code_080D73B8.c:AudioCommand`, `aos:c:src/code_080D73B8.c:MPlayVolumeSet`, `aos:c:src/code_080D73B8.c:MPlayVolumeUpdate`, `aos:c:src/code_080D73B8.c:PlaySong`, `aos:c:src/code_080D73B8.c:StartSong`.  
-Local implementation: [`src/assets/aos/sound.c`](../src/assets/aos/sound.c), [`src/runtime/aos_audio.c`](../src/runtime/aos_audio.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/pipeline/tasks.c`](../src/pipeline/tasks.c).  
-Tests: [`tests/test_fusion_assets_aos.c`](../tests/test_fusion_assets_aos.c), [`tests/test_aos_audio.c`](../tests/test_aos_audio.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: M4A track execution, m4aSoundMode hardware changes, the voice and sample banks, mixer and SDL output are absent; the controller has the real routing metadata and changes deterministic host state but still produces no sound.  
-Next action: Connect the MP2K track sequencer, voice/sample data, mixer and SDL sink, then compare playback with an emulator.
+Native evidence: `aos:asm:asm/m4a0.s:MP2KPlayerMain`, `aos:asm:asm/m4a0.s:MP2K_event_bend`, `aos:asm:asm/m4a0.s:MP2K_event_bendr`, `aos:asm:asm/m4a0.s:MP2K_event_endtie`, `aos:asm:asm/m4a0.s:MP2K_event_fine`, `aos:asm:asm/m4a0.s:MP2K_event_goto`, `aos:asm:asm/m4a0.s:MP2K_event_keysh`, `aos:asm:asm/m4a0.s:MP2K_event_lfodl`, `aos:asm:asm/m4a0.s:MP2K_event_lfos`, `aos:asm:asm/m4a0.s:MP2K_event_mod`, `aos:asm:asm/m4a0.s:MP2K_event_modt`, `aos:asm:asm/m4a0.s:MP2K_event_nxx`, `aos:asm:asm/m4a0.s:MP2K_event_pan`, `aos:asm:asm/m4a0.s:MP2K_event_patt`, `aos:asm:asm/m4a0.s:MP2K_event_pend`, `aos:asm:asm/m4a0.s:MP2K_event_prio`, `aos:asm:asm/m4a0.s:MP2K_event_rept`, `aos:asm:asm/m4a0.s:MP2K_event_tempo`, `aos:asm:asm/m4a0.s:MP2K_event_tune`, `aos:asm:asm/m4a0.s:MP2K_event_voice`, `aos:asm:asm/m4a0.s:MP2K_event_vol`, `aos:c:src/code_080D73B8.c:AudioCommand`, `aos:c:src/code_080D73B8.c:MPlayVolumeSet`, `aos:c:src/code_080D73B8.c:MPlayVolumeUpdate`, `aos:c:src/code_080D73B8.c:PlaySong`, `aos:c:src/code_080D73B8.c:StartSong`.  
+Local implementation: [`src/assets/aos/sound.c`](../src/assets/aos/sound.c), [`src/runtime/aos_audio.c`](../src/runtime/aos_audio.c), [`src/runtime/aos_mp2k.c`](../src/runtime/aos_mp2k.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/pipeline/tasks.c`](../src/pipeline/tasks.c).  
+Tests: [`tests/test_fusion_assets_aos.c`](../tests/test_fusion_assets_aos.c), [`tests/test_aos_audio.c`](../tests/test_aos_audio.c), [`tests/test_aos_mp2k.c`](../tests/test_aos_mp2k.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The track decoder is not connected to StartSong or the private ROM sound bank. Its PORT and XCMD events, tempo-to-frame scheduler, voice allocation and gate countdown are absent. m4aSoundMode hardware changes, the voice and sample banks, mixer and SDL output remain absent, so the controller still produces no sound.  
+Next action: Export the private MP2K bank, initialize each song's tracks from its header, connect the decoder to accepted StartSong requests, then port voice allocation, sample mixing and SDL output.
 
 ### Inventory and progression data
 

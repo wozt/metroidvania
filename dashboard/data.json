@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T12:39:21+00:00",
+ "generated_at": "2026-10-28T12:51:55+00:00",
  "git": {
-  "commit": "3599a5b",
+  "commit": "43bcb47",
   "branch": "main",
   "dirty": true
  },
@@ -8522,12 +8522,14 @@
    "local_sources": [
     "src/assets/aos/sound.c",
     "src/runtime/aos_audio.c",
+    "src/runtime/aos_mp2k.c",
     "src/runtime/aria_runtime.c",
     "src/pipeline/tasks.c"
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
     "tests/test_aos_audio.c",
+    "tests/test_aos_mp2k.c",
     "tests/test_native_golden.c"
    ],
    "dependencies": [],
@@ -8536,14 +8538,36 @@
     "StartSong",
     "AudioCommand",
     "MPlayVolumeSet",
-    "MPlayVolumeUpdate"
+    "MPlayVolumeUpdate",
+    "MP2KPlayerMain",
+    "MP2K_event_fine",
+    "MP2K_event_goto",
+    "MP2K_event_patt",
+    "MP2K_event_pend",
+    "MP2K_event_rept",
+    "MP2K_event_prio",
+    "MP2K_event_tempo",
+    "MP2K_event_keysh",
+    "MP2K_event_voice",
+    "MP2K_event_vol",
+    "MP2K_event_pan",
+    "MP2K_event_bend",
+    "MP2K_event_bendr",
+    "MP2K_event_lfos",
+    "MP2K_event_lfodl",
+    "MP2K_event_mod",
+    "MP2K_event_modt",
+    "MP2K_event_tune",
+    "MP2K_event_endtie",
+    "MP2K_event_nxx"
    ],
-   "limitations": "M4A track execution, m4aSoundMode hardware changes, the voice and sample banks, mixer and SDL output are absent; the controller has the real routing metadata and changes deterministic host state but still produces no sound. The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. PlaySong routes start, stop and command values; StartSong applies the native music-current assignment, player pause and header-priority replacement rules; AudioCommand handles global and per-player stop, pause, resume and mute, song volume targets, twelve frequency modes and four amplitude resolutions. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Connect the MP2K track sequencer, voice/sample data, mixer and SDL sink, then compare playback with an emulator.",
+   "limitations": "The track decoder is not connected to StartSong or the private ROM sound bank. Its PORT and XCMD events, tempo-to-frame scheduler, voice allocation and gate countdown are absent. m4aSoundMode hardware changes, the voice and sample banks, mixer and SDL output remain absent, so the controller still produces no sound. The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. A bounded host-neutral MP2K track decoder now reproduces the native wait clock table, running status, FINE, GOTO, three-level PATT and PEND, REPT, EOT, note parsing and the PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS, LFODL, MOD, MODT and TUNE state changes. Invalid pointers, recursive command loops and unsupported PORT or XCMD streams fail closed. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Export the private MP2K bank, initialize each song's tracks from its header, connect the decoder to accepted StartSong requests, then port voice allocation, sample mixing and SDL output.",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_aos.c",
      "tests/test_aos_audio.c",
+     "tests/test_aos_mp2k.c",
      "tests/test_native_golden.c"
     ],
     "in_game_check": [],
@@ -8572,6 +8596,16 @@
       "registered": true,
       "ctest": [
        "aos_audio"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_mp2k.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_mp2k"
       ],
       "outcome": "passed",
       "exists": true
@@ -16023,6 +16057,7 @@
     "src/tools/sound_ids.c",
     "src/assets/aos/sound.c",
     "src/runtime/aos_audio.c",
+    "src/runtime/aos_mp2k.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
@@ -16031,6 +16066,7 @@
     "tests/test_fusion_assets_aos.c",
     "tests/test_native_golden.c",
     "tests/test_aos_audio.c",
+    "tests/test_aos_mp2k.c",
     "tests/test_aos_enemy.c",
     "tests/test_aos_skill_axe.c"
    ],
@@ -16038,7 +16074,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Zero Mission: its sound bank and engine tables are exported privately; the music and the sound effects of the ported systems (Samus, weapons, hatches, blocks, enemies, drops) play through the ported engine, with the item jingles inserted in front of the music and the current track replayed after them, and the Chozo hint music; the audio device pulls the sound frame by frame at the hardware's 65.536 kHz rate (resampled by SDL), so game slowdowns cannot starve it; not yet compared with hardware. Liquids, ground effects, charge beams, bombs and bosses have no sounds yet. Aria: the native aria_sound task exports all 495 gSongTable records and fixed MP2K header fields into a private golden-guarded manifest. The runtime loads the real player and priority metadata before PlaySong and advances the StartSong, AudioCommand and volume-ramp controller each lifecycle frame. Axe Armor's enemy and red-soul events enter that controller, but the MP2K sequencer, voice/sample banks, mixer and SDL sink are absent, so requests remain inaudible.",
+   "limitations": "Zero Mission: its sound bank and engine tables are exported privately; the music and the sound effects of the ported systems (Samus, weapons, hatches, blocks, enemies, drops) play through the ported engine, with the item jingles inserted in front of the music and the current track replayed after them, and the Chozo hint music; the audio device pulls the sound frame by frame at the hardware's 65.536 kHz rate (resampled by SDL), so game slowdowns cannot starve it; not yet compared with hardware. Liquids, ground effects, charge beams, bombs and bosses have no sounds yet. Aria: the native aria_sound task exports all 495 gSongTable records and fixed MP2K header fields into a private golden-guarded manifest. The runtime loads the real player and priority metadata before PlaySong and advances the StartSong, AudioCommand and volume-ramp controller each lifecycle frame. A bounded standalone track decoder now handles the native wait table, running status, notes, parameters, branches, patterns and repeats, but it is not yet connected to the private bank or StartSong. Voice allocation, samples, mixing and SDL output are absent, so requests remain inaudible.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16047,6 +16083,7 @@
      "tests/test_fusion_assets_aos.c",
      "tests/test_native_golden.c",
      "tests/test_aos_audio.c",
+     "tests/test_aos_mp2k.c",
      "tests/test_aos_enemy.c",
      "tests/test_aos_skill_axe.c"
     ],
@@ -16107,6 +16144,16 @@
       "registered": true,
       "ctest": [
        "aos_audio"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_mp2k.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_mp2k"
       ],
       "outcome": "passed",
       "exists": true
@@ -17221,6 +17268,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_mp2k",
+    "files": [
+     "tests/test_aos_mp2k.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_skill_axe",
     "files": [
      "tests/test_aos_skill_axe.c"
@@ -17474,12 +17528,18 @@
    }
   ],
   "summary": {
-   "passed": 97,
+   "passed": 98,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "43bcb47",
+   "date": "2026-10-28",
+   "subject": "Export and route the Aria song table",
+   "scope": "project"
+  },
   {
    "commit": "3599a5b",
    "date": "2026-10-28",
@@ -17953,12 +18013,6 @@
    "date": "2026-10-25",
    "subject": "Run the Aria world catalog natively",
    "scope": "project"
-  },
-  {
-   "commit": "ec24262",
-   "date": "2026-10-25",
-   "subject": "Run the Aria room export natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -18019,9 +18073,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 564,
-    "routines_attached_to_features": 564,
-    "unassigned_routines": 3009,
+    "routines_cited_by_features": 585,
+    "routines_attached_to_features": 585,
+    "unassigned_routines": 2988,
     "call_edges": 14228
    }
   },
@@ -20376,7 +20430,7 @@
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:5",
-       "notes": "Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: native IDs and timing use player and priority from the exported 495-entry song table, but the MP2K sequencer, samples, mixer and SDL renderer are absent."
+       "notes": "Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: native IDs and timing use player and priority from the exported 495-entry song table; a standalone MP2K track decoder exists, but bank wiring, voices, samples, mixing and SDL output are absent."
       }
      },
      {

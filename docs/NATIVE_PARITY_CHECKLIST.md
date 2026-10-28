@@ -1275,12 +1275,12 @@ Known divergences: The axe turns clockwise for a positive angle after its horizo
 Next action: Port the MP2K sequencer, voice and sample banks, mixer and SDL sink, then compare timing and output with an emulator.
 Evidence: in game: `aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)`.
 
-[+] **`aos.enemies.bat` — Bat enemy.** Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.bat` — Bat enemy.** Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyBatUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD364`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD44C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD5B8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD6AC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: Sound 0x72, the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced.  
+Known divergences: the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced.  
 Next action: Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_005: knife kill at frame ~200 (--spawn 210 260 --atk 50 --repeat 2), flames captured at frames 212, 228 and 245`.
 
@@ -1392,13 +1392,13 @@ Known divergences: As the Valkyrie.
 Next action: Follow the Valkyrie's open items.
 Evidence: in game: `aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)`.
 
-[+] **`aos.enemies.fleaman` — Fleaman.** The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.fleaman` — Fleaman.** The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyFleamanUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C1E88`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C1FBC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2388`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C242C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2458`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.bat`.  
-Known divergences: Sound 0x72, the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback.  
+Known divergences: the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback.  
 Next action: Find what releases a carried Fleaman (step 1).
 Evidence: in game: `aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)`.
 

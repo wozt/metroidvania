@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0609 - Bat and Fleaman death sounds; first complete monster
+
+- The bat (`sub_080AD5B8`) and the Fleaman (`sub_080C2388`) request their
+  only native sound, 0x72, when their death starts; unit-tested, and a
+  local run rendered it as a 0.7-second effect through the mixer.
+- The monster matrix marks both sounds ported: the bat is the first
+  complete monster (sprite, animations, sounds, soul; no loot). Not
+  listened to or emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0608 - Aria room music
 
 - `src/runtime/aos_room_music.c` ports `sub_08013960`: on each room

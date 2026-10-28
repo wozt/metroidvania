@@ -1028,12 +1028,13 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     return true;
 }
 
-/* sub_080AD5B8: the bat falls, blinks with a flame every 15 frames
- * (sub_0806BE74 over 8 x 6 pixels) and is deleted. Sound 0x72, the palette
- * bits of + 0x5A and sub_080683BC are not ported. */
+/* sub_080AD5B8: the bat plays sound 0x72, falls, blinks with a flame every
+ * 15 frames (sub_0806BE74 over 8 x 6 pixels) and is deleted. The palette
+ * bits of + 0x5A are not ported; sub_080683BC is the caller's reward. */
 static void bat_die(AosEnemy *bat, const AosEnemyKind *kind, uint32_t (*random)(void),
                     AosHitReport *report) {
     if (bat->step == 0) {
+        aos_audio_play_song(0x72);
         aos_anim_start(&bat->anim, kind->anims, 2, true);
         bat->anim.id = 2;
         bat->anim.frame = 2;
@@ -3245,6 +3246,7 @@ static AosHitReport flea_update(AosEnemy *f, AosSoma *soma, const AosCollision *
         flea_hop(f, soma, layer, kind->anims, random);
     } else if (f->state == 0xFF) {
         if (f->step == 0) {
+            aos_audio_play_song(0x72);
             play(f, kind->anims, 2);
             f->timer = 0x32;
             f->vx = f->ax = f->vy = 0;

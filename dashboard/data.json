@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T15:48:07+00:00",
+ "generated_at": "2026-10-28T15:55:05+00:00",
  "git": {
-  "commit": "d5e08ae",
+  "commit": "16a9970",
   "branch": "main",
   "dirty": true
  },
@@ -8925,7 +8925,7 @@
     "sub_0806BE74",
     "sub_0806E524"
    ],
-   "limitations": "Sound 0x72, the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced. Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "the palette bits of + 0x5A and sub_080683BC are not ported. The meaning of gEwramData + 0x8E bit 0x40 (set by sub_0804C404, cleared by sub_0804CC14) is not traced; the runtime never sets it. The flames are updated after the enemies of their frame; their native slot order is not traced. Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).",
    "next_action": "Port sound 0x72 and the palette bits once the Aria sound and palette paths exist.",
    "evidence": {
     "unit_tests": [
@@ -9810,7 +9810,7 @@
     "sub_0806AE54",
     "sub_0806BE74"
    ],
-   "limitations": "Sound 0x72, the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback. The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "the palette bits, sub_080683BC, the global pause of sub_0806D4C0 (taken as 0) and the carrier of a carried Fleaman (parameters 0xFF: its slot-record check never passes in the code read, so it waits in step 1) are not ported; the death starts on the update after the killing blow instead of inside the hit callback. The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).",
    "next_action": "Find what releases a carried Fleaman (step 1).",
    "evidence": {
     "unit_tests": [
@@ -17574,6 +17574,12 @@
  },
  "timeline": [
   {
+   "commit": "16a9970",
+   "date": "2026-10-28",
+   "subject": "Play Aria's room music",
+   "scope": "project"
+  },
+  {
    "commit": "d5e08ae",
    "date": "2026-10-28",
    "subject": "Mix Aria MP2K channels and play them through SDL",
@@ -18045,12 +18051,6 @@
    "commit": "c96c11f",
    "date": "2026-10-26",
    "subject": "Export the Samus and projectile libraries natively",
-   "scope": "project"
-  },
-  {
-   "commit": "544c0ef",
-   "date": "2026-10-26",
-   "subject": "Remove the unconsumed Samus and Soma preview decoders",
    "scope": "project"
   }
  ],
@@ -20354,11 +20354,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "red:2",
-       "notes": "Soul: drops, is collected and casts (SkillBatUse). Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and casts (SkillBatUse). Sounds: its only native sound, 0x72 at the start of its death (sub_080AD5B8), is requested, unit-tested and mixed (a local run rendered it, not listened to)."
       }
      },
      {
@@ -20960,11 +20960,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "red:17",
-       "notes": "Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops and is collected; its red skill routine is not ported. Sounds: its only native sound, 0x72 at the start of its death (sub_080C2388), is requested, unit-tested and mixed (a local run rendered it, not listened to)."
       }
      },
      {
@@ -22411,9 +22411,9 @@
       "missing": 0
      },
      "sounds": {
-      "ported": 0,
+      "ported": 2,
       "partial": 1,
-      "missing": 46
+      "missing": 44
      },
      "loot": {
       "ported": 26,
@@ -22425,7 +22425,7 @@
       "partial": 39,
       "missing": 0
      },
-     "complete": 0,
+     "complete": 1,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",

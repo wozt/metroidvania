@@ -1749,6 +1749,37 @@ static void valkyrie_tests(void) {
     assert(hit.enemy_hit && !hit.killed && e.state == 1);
 }
 
+/* The death sounds of sub_080AD5B8 (bat) and sub_080C2388 (Fleaman). */
+static void death_sound_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t two[] = {4, 4}, four[] = {4, 4, 4, 4};
+    const AosAnimDef defs[4] = {{2, two}, {2, two}, {4, four}, {4, four}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    const AosEnemyStats stats = {20, 15, 0, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(100), NULL);
+    AosEnemy bat;
+    assert(aos_enemy_create(&bat, AOS_ENEMY_BAT, 100, 60, 0, 0, &soma, &layer, &kind, &stats));
+    bat.state = 3;
+    bat.step = 0;
+    aos_audio_clear();
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) && bat.step == 1);
+    /* Only on the death's first frame. */
+    aos_audio_clear();
+    aos_enemy_update(&bat, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!aos_audio_requested(AOS_AUDIO_START_SONG, 0x72));
+    AosEnemy flea;
+    assert(aos_enemy_create(&flea, AOS_ENEMY_FLEAMAN, 100, 60, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    flea.state = 0xFF;
+    flea.step = 0;
+    aos_audio_clear();
+    aos_enemy_update(&flea, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) && flea.step == 2);
+}
+
 static void flea_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
@@ -3239,6 +3270,7 @@ static void soul_attack_tests(void) {
 
 int main(void) {
     soul_attack_tests();
+    death_sound_tests();
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);
     assert(aos_sine(0x2000) == 46340 && aos_sine(0xA000) == -46340);

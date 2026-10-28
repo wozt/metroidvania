@@ -1,6 +1,6 @@
 enemy	sprite	animations	sounds	loot	soul	soul_ref	notes
 axe_armor	ported	ported	partial	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: native IDs and timing use player and priority from the exported 495-entry song table; a standalone MP2K track decoder exists, but bank wiring, voices, samples, mixing and SDL output are absent.
-bat	ported	ported	missing	n/a	ported	red:2	Soul: drops, is collected and casts (SkillBatUse). Sounds: no Aria audio is ported.
+bat	ported	ported	ported	n/a	ported	red:2	Soul: drops, is collected and casts (SkillBatUse). Sounds: its only native sound, 0x72 at the start of its death (sub_080AD5B8), is requested, unit-tested and mixed (a local run rendered it, not listened to).
 beam_skeleton	ported	ported	missing	n/a	partial	red:39	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 blue_crow	ported	ported	missing	n/a	partial	red:8	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 bone_pillar	ported	partial	missing	ported	partial	blue:10	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
@@ -12,7 +12,7 @@ dead_crusader	ported	ported	missing	ported	partial	yellow:29	Soul: drops and is 
 dead_warrior	ported	ported	missing	ported	partial	yellow:5	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
 durga	ported	ported	missing	ported	ported	red:13	Soul: drops, is collected and casts (SkillDurgaUse). Sounds: no Aria audio is ported.
 erinys	ported	ported	missing	ported	partial	yellow:16	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
-fleaman	ported	ported	missing	ported	partial	red:17	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+fleaman	ported	ported	ported	ported	partial	red:17	Soul: drops and is collected; its red skill routine is not ported. Sounds: its only native sound, 0x72 at the start of its death (sub_080C2388), is requested, unit-tested and mixed (a local run rendered it, not listened to).
 gargoyle	ported	ported	missing	n/a	partial	yellow:21	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
 ghost	ported	partial	missing	n/a	partial	red:10	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
 ghost_dancer	ported	ported	missing	ported	partial	yellow:34	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.

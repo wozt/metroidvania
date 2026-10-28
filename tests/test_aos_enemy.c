@@ -3375,8 +3375,10 @@ static void needles_tests(void) {
     AosWeaponEntity weapon = {.active = true};
     hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
     assert(hit.killed && n.state == 2);
+    aos_audio_clear();
     hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
     assert(n.hidden && !n.removed && hit.child_count == 5 && n.spawned_count == 5);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);     /* sub_080CB894 */
     const AosEnemy *p = &hit.children[0];
     assert(p->role == AOS_ROLE_NEEDLE_PIECE && p->static_frame == 5 && p->x == n.x - 0x40000);
     assert(p->y == n.y - 0x40000 && p->vx == -0x8000 && p->vy == -0x30000 && p->timer == 60);

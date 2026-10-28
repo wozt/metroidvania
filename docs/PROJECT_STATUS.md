@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0623 - Needles soul and sound
+
+- `src/runtime/aos_skill_needles.c` ports `SkillNeedlesUse`: an urchin
+  waits up to 128 frames, then bursts into four pieces flying out
+  (`sub_08028018`); the export adds `Enemy/skill_needles`.
+- The Needles enemy plays 0x70 as it shatters. Unit-tested.
+- 15 of 47 monsters are complete. Not listened to or emulator-compared.
+  Zero Mission is unchanged.
+
 ## Patch 0622 - Valkyrie soul
 
 - `src/runtime/aos_skill_valkyrie.c` ports `SkillValkyrieUse`: a spectral

@@ -196,6 +196,9 @@ static const EntitySpec entities[] = {
     ENTITY("skill_skull", 0x081D5910, 0x0820B310, 0, 0x08233FA8),
     /* Resource 2 of 0x080E13BC: the Valkyrie soul's warrior (sequence 0). */
     ENTITY("skill_valkyrie", 0x081CD0CC, 0x0820B08C, 0, 0x08230F88),
+    /* Resource 12 of 0x080E13BC: the Needles soul's urchin (sequence 0)
+     * and its four burst pieces (still frames 0-3). */
+    STATIC("skill_needles", 0x081D20F4, 0x0820B214, 0, 0x08232300, 4, 0, 1, 2, 3),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

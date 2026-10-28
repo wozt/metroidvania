@@ -6081,6 +6081,8 @@ static AosHitReport needles_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
     }
     if (n->state == 2) {
         if (n->step == 0) {
+            /* sub_080CB894 step 0: sound 0x70. */
+            aos_audio_play_song(0x70);
             n->hidden = true;
             needles_shatter(n, &report);
             n->spawned_count = report.child_count;

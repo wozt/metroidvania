@@ -27,7 +27,7 @@ enum {
     TILE_BYTES = 32,
     MAX_ANIMATIONS = 256,
     MAX_FRAMES = 128,
-    MAX_STATIC_FRAMES = 10,
+    MAX_STATIC_FRAMES = 16,
     CANVAS_SIZE = 512,
     CANVAS_ORIGIN = 256,
 };
@@ -183,6 +183,10 @@ static const EntitySpec entities[] = {
     /* Resource 24 of 0x080E13BC: the Harpy soul's dagger (still frame 1) and
      * its trail (3-5), the Durga soul's sword (2). */
     STATIC("skill_blades", 0x081D8124, 0x0820B3C4, 0, 0x082347BC, 5, 1, 2, 3, 4, 5),
+    /* Resource 21 of 0x080E13BC: the Tiny Devil soul's fire (sequence 0,
+     * then 16 still frames, one per direction). */
+    STATIC("skill_devil", 0x081D6918, 0x0820B358, 0, 0x0823445C, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8,
+           9, 10, 11, 12, 13, 14, 15),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
 };

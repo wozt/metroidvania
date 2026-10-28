@@ -6616,7 +6616,9 @@ static AosHitReport tiny_devil_orb_update(AosEnemy *orb, AosSoma *soma,
         if (orb->cycle_done) {
             orb->cycle_done = false;
             if (++orb->phase > orb->variant) {
+                /* sub_080C5A44: animation 6, then sound 0x89. */
                 play_loop(orb, kind->anims, 6, false);
+                aos_audio_play_song(0x89);
                 orb->state = 2;
                 orb->timer = 0;
                 orb->scaled = true;
@@ -6836,6 +6838,8 @@ static AosHitReport devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
     }
     if (e->state == 0xFF) {
         if (e->step == 0) {
+            /* sub_080C580C / sub_080C4ED4 step 0: sound 0x72. */
+            aos_audio_play_song(0x72);
             if (imp) imp_death_child(e, &report);
             e->step = 1;
         }
@@ -7408,10 +7412,31 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     return report;
 }
 
+static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk,
+                                 int soma_def, int cam_x, int cam_y, uint32_t (*random)(void));
+
+/* The enemies register themselves in the activity check most of them run
+ * (sub_0806CC20); here every active enemy that is not rewarded does, which
+ * approximates the native call sites. */
 AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                               int cam_x, int cam_y, uint32_t (*random)(void)) {
+    AosHitReport report = enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+                                       soma_def, cam_x, cam_y, random);
+    int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
+    report.targetable = enemy->role == AOS_ROLE_ENEMY && !enemy->removed && !enemy->defeated &&
+                        enemy->hp > 0 && (uint16_t)(sx + 0x10) <= 0x110 &&
+                        (uint16_t)sy <= 0xB0;
+    return report;
+}
+
+static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames, int soma_atk,
+                                 int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;

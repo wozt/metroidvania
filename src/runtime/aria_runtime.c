@@ -22,6 +22,7 @@
 #include "aos_soul.h"
 #include "aos_skill_axe.h"
 #include "aos_skill_dagger.h"
+#include "aos_skill_devil.h"
 #include "aos_skill_merman.h"
 #include "aos_skill_shot.h"
 #include "aos_skill_spear.h"
@@ -197,11 +198,13 @@ static int enemy_bank(const AosEnemy *enemy) {
     if (enemy->id == AOS_ENEMY_GHOST_DANCER) return enemy->param0 & 0xFF;
     return 0;
 }
-#define ENEMY_STATIC_FRAMES 10 /* single sprite frames of child entities per kind */
+#define ENEMY_STATIC_FRAMES 16 /* single sprite frames of child entities per kind */
 /* The red soul skills' sprites (Enemy/skill_<name>). */
-enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES, SKILL_ARTS };
+enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
+       SKILL_ART_DEVIL, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
-                                                         "skill_shared", "skill_blades"};
+                                                         "skill_shared", "skill_blades",
+                                                         "skill_devil"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -597,10 +600,54 @@ typedef struct {
     bool derive_atk, derive_def;                 /* false under --atk / --def */
 } AriaCombat;
 
+/* The homing list gEwramData + 0x13194 (sub_08021924, aged by
+ * sub_08021DC4): four room entity indices with their seen and aged counts;
+ * an entry not seen again since the last ageing is dropped. */
+static struct {
+    int index[4];
+    uint8_t seen[4], aged[4];
+} homing = {{-1, -1, -1, -1}, {0}, {0}};
+static const AriaRoom *homing_room;
+
+static void homing_register(int index) {
+    int empty = -1;
+    for (int slot = 0; slot < 4; ++slot) {
+        if (homing.index[slot] == index) {
+            homing.seen[slot]++;
+            return;
+        }
+        if (empty < 0 && homing.index[slot] < 0) empty = slot;
+    }
+    if (empty < 0) return;
+    homing.index[empty] = index;
+    homing.seen[empty] = 1;
+    homing.aged[empty] = 0;
+}
+
+static void homing_age(void) {
+    for (int slot = 0; slot < 4; ++slot) {
+        if (homing.index[slot] < 0) continue;
+        if (homing.aged[slot] == homing.seen[slot]) {
+            homing.index[slot] = -1;
+            homing.seen[slot] = homing.aged[slot] = 0;
+        } else {
+            homing.aged[slot] = homing.seen[slot];
+        }
+    }
+}
+
+static void homing_clear(void) {
+    for (int slot = 0; slot < 4; ++slot) {
+        homing.index[slot] = -1;
+        homing.seen[slot] = homing.aged[slot] = 0;
+    }
+}
+
 /* A red soul skill entity (EntityCreateInRange(2, 0x10)): SkillBatUse,
  * SkillSkullArcherUse's bow and its arrow sub_08028BC4 are ported. */
 enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, SKILL_AXE,
-       SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER };
+       SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
+       SKILL_DEVIL, SKILL_DEVIL_FIRE };
 
 typedef struct {
     bool alive, started;
@@ -620,6 +667,8 @@ typedef struct {
     AosSpear spear;         /* SKILL_SPEAR */
     AosShot shot;           /* SKILL_SHOT */
     AosDagger dagger;       /* SKILL_DAGGER, with its trail entity */
+    AosDevilFire fire;      /* SKILL_DEVIL_FIRE */
+    int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
     uint8_t parameter;      /* + 0x1E: the record's parameter */
@@ -634,6 +683,7 @@ typedef struct {
 #define SKILL_SPEAR_ROUTINE 0x08026009u
 #define SKILL_DURGA_ROUTINE 0x0802B809u
 #define SKILL_HARPY_ROUTINE 0x0802CC85u
+#define SKILL_DEVIL_ROUTINE 0x08029FB1u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -648,6 +698,7 @@ typedef struct {
     const AosCollision *layer;      /* the room's BG1 collision */
     bool durga;                     /* resource 24's still frame 2 is loaded */
     bool harpy;                     /* and its frames 1 and 3-5 */
+    const AosAnimSet *devil;        /* resource 21's sequence 0, NULL when missing */
     AosBox durga_attack;            /* that frame's attack box */
     const int *shared_ids;          /* resource 0's exported still frames */
     int shared_count;
@@ -697,6 +748,7 @@ static int cast_red_soul(void *context) {
                    ? SKILL_SPEAR
                : routine == SKILL_DURGA_ROUTINE && souls->durga ? SKILL_SHOT
                : routine == SKILL_HARPY_ROUTINE && souls->harpy ? SKILL_HARPY
+               : routine == SKILL_DEVIL_ROUTINE && souls->devil ? SKILL_DEVIL
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -707,6 +759,8 @@ static int cast_red_soul(void *context) {
     /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
     if (kind == SKILL_BAT)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
+    else if (kind == SKILL_DEVIL)
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 8, -0x1A);
     else if (kind == SKILL_HARPY)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0x14, -0x1A);
     else if (kind == SKILL_SHOT) {
@@ -918,6 +972,66 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->spear.x;
             skill->y = skill->spear.y;
             break;
+        case SKILL_DEVIL:
+            /* SkillTinyDevilUse: counted, sound 0x1A3 and three
+             * SkillTinyDevilUpdate fires from its position (sub_08042A54(1,
+             * 0x14) is not run); deleted on its next update. */
+            if (skill->started) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->started = true;
+            souls->caster.active++;
+            aos_audio_play_song(0x1A3);
+            for (int k = 0; k < AOS_DEVIL_FIRES; ++k) {
+                AriaSkill *fire = spawn_child(souls, SKILL_DEVIL_FIRE);
+                if (!fire) break;
+                fire->soul = skill->soul;
+                fire->fire = aos_devil_fire_create(k, skill->x, skill->y, skill->facing_left);
+                fire->fire_target = -1;
+                fire->x = skill->x;
+                fire->y = skill->y;
+            }
+            break;
+        case SKILL_DEVIL_FIRE: {
+            AosDevilFire *fire = &skill->fire;
+            fire->struck = skill->struck;
+            if (fire->state == 0) {
+                aos_anim_start(&skill->anim, souls->devil, 0, false);
+                fire->state = 1;
+            }
+            if (fire->state == 1) {
+                if (aos_anim_step(&skill->anim, souls->devil) == 3) {
+                    /* The homing list's filled slots (0x13220 is never set
+                     * by the runtime), the 0x134 sound; the two afterimage
+                     * trails of sub_0802383C are not ported. */
+                    bool slots[4];
+                    for (int slot = 0; slot < 4; ++slot) slots[slot] = homing.index[slot] >= 0;
+                    aos_devil_fire_launch(fire, aos_random(), slots);
+                    skill->fire_target = fire->target >= 0 ? homing.index[fire->target] : -1;
+                    aos_audio_play_song(0x134);
+                    skill->started = true;
+                }
+            } else {
+                AosSkillTarget target = {false, 0, 0, 0};
+                if (skill->fire_target >= 0 && homing_room &&
+                    (size_t)skill->fire_target < homing_room->entity_count) {
+                    const AriaEntity *entity = &homing_room->entities[skill->fire_target];
+                    target = (AosSkillTarget){entity->spawned && !entity->enemy.removed,
+                                              entity->enemy.x, entity->enemy.y, entity->enemy.hp};
+                }
+                aos_devil_fire_update(fire, &target);
+            }
+            int mx = souls->margins ? souls->margins[2][0] : 16;
+            int my = souls->margins ? souls->margins[2][1] : 16;
+            if (aos_devil_fire_outside(fire, souls->cam_x, souls->cam_y, mx, my)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = fire->x;
+            skill->y = fire->y;
+            break;
+        }
         case SKILL_HARPY:
             /* SkillHarpyUse: counted, then (same update) two sub_0802CAC0
              * daggers from its position (sound 0xE6 and sub_08042A54(1,
@@ -1051,6 +1165,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = souls->durga_attack;          /* the still frame's, sub_08042848 */
         else if (skill->kind == SKILL_DAGGER)
             box = (AosBox){-1, -1, 2, 2};      /* 0x0202FFFF */
+        else if (skill->kind == SKILL_DEVIL_FIRE && skill->fire.state >= 2)
+            box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_SPEAR_TIP)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
@@ -1067,6 +1183,7 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
 /* A room change deletes the skill entities with the room's. */
 static void clear_skills(AriaSouls *souls) {
     for (int i = 0; i < MAX_SKILLS; ++i) souls->skills[i].alive = false;
+    homing_clear();
     souls->caster = (AosRedSoulCaster){.last_used = souls->caster.last_used};
 }
 
@@ -1107,6 +1224,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
+            if (hit.targetable) homing_register((int)i);
             /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
              * frames while its linked helper controls Soma. As with doors,
              * the forced value is consumed on the following frame. */
@@ -2765,6 +2883,9 @@ int main(int argc, char **argv) {
             souls.bone = objects_ok && objects.skills[SKILL_ART_BONE].static_count;
             const __typeof__(objects.skills[0]) *blades = &objects.skills[SKILL_ART_BLADES];
             souls.durga = objects_ok && blade_frame(blades, 2);
+            const __typeof__(objects.skills[0]) *devil = &objects.skills[SKILL_ART_DEVIL];
+            souls.devil = objects_ok && devil->loaded && devil->static_count == 16 ? &devil->set
+                                                                                   : NULL;
             souls.harpy = objects_ok && blade_frame(blades, AOS_DAGGER_FRAME) &&
                           blade_frame(blades, 3) && blade_frame(blades, 4) && blade_frame(blades, 5);
             souls.durga_attack = objects.skills[SKILL_ART_BLADES].static_attack[2];
@@ -2866,7 +2987,9 @@ int main(int argc, char **argv) {
             int attack_count = soul_attacks(&souls, souls.bat ? &objects.skills[SKILL_ART_BAT].kind : NULL,
                                             attacks, owners);
             aos_enemy_set_soul_attacks(attacks, attack_count);
+            homing_room = &room;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
+            homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
             for (int k = 0; k < attack_count; ++k)
                 if (attacks[k].struck) owners[k]->struck = true;
@@ -2933,7 +3056,9 @@ int main(int argc, char **argv) {
             const __typeof__(objects.skills[0]) *shared = &objects.skills[SKILL_ART_SHARED];
             int still = static_index(shared->static_ids, shared->static_count,
                                      skill->kind == SKILL_SPEAR ? 0 : skill->parameter);
-            if (skill->kind == SKILL_SPEAR_TIP || skill->kind == SKILL_HARPY) continue;
+            if (skill->kind == SKILL_SPEAR_TIP || skill->kind == SKILL_HARPY ||
+                skill->kind == SKILL_DEVIL)
+                continue;
             if (skill->kind == SKILL_DAGGER) {
                 /* sub_0802DC60: frames 3-5 at the history's entries 1-3
                  * (the trail entity's own facing is the dagger's). */
@@ -2962,6 +3087,11 @@ int main(int argc, char **argv) {
                 : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
                     ? blade_frame(&objects.skills[SKILL_ART_BLADES],
                                   skill->kind == SKILL_SHOT ? 2 : AOS_DAGGER_FRAME)
+                : skill->kind == SKILL_DEVIL_FIRE
+                    ? (skill->fire.state <= 1
+                           ? &objects.skills[SKILL_ART_DEVIL].frames[0][skill->anim.frame]
+                           : blade_frame(&objects.skills[SKILL_ART_DEVIL],
+                                         aos_devil_fire_frame(&skill->fire)))
                 : skill->kind == SKILL_AXE || skill->kind == SKILL_AXE_TRAIL ||
                         skill->kind == SKILL_SPEAR
                     ? (still < 0 ? NULL : &shared->statics[still])

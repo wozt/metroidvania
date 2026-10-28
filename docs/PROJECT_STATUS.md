@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0614 - Tiny Devil soul and sounds; the homing list
+
+- `src/runtime/aos_skill_devil.c` ports `SkillTinyDevilUse` and its
+  fires: three fires animate, then home on an enemy of the homing list
+  (turning 0x100 a frame, up to 5 pixels a frame) or fly straight.
+- The runtime keeps the homing list (`sub_08021924`, `sub_08021DC4`):
+  enemies flag themselves targetable when on screen (`AosHitReport`).
+  A local run in room 0/6 sent the fires at three registered enemies.
+- The Tiny Devil plays 0x72 at death and 0x89 when its orb launches; the
+  Imp 0x72 at death. Unit-tested.
+- The object export allows 16 still frames per entity and adds
+  `Enemy/skill_devil`. 6 of 47 monsters are complete. Not ported: the
+  fires' afterimage trails. Zero Mission is unchanged.
+
 ## Patch 0613 - Curly, Durga, Valkyrie and Erinys sounds
 
 - Curly's routines (Durga runs them too) request 0x85 at walk frame 4 and

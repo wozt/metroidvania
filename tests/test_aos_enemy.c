@@ -431,12 +431,15 @@ static void batch_enemy_tests(void) {
     assert(got_orb && orb.anim.id == 4 && orb.own_attack.w == 10 && orb.own_attack.h == 10);
     int orb_frames = 0;
     bool launched = false;
+    aos_audio_clear();
     while (!orb.removed && orb_frames < 200) {
         aos_enemy_update(&orb, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         if (orb.state == 2) launched = true;
         ++orb_frames;
     }
     assert(launched && orb.removed && orb_frames > 60);
+    /* sub_080C5A44: the launch's sound 0x89, once. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
 
     /* Imp creates its hidden linked helper on the first update, then moves
      * through the approach and possession states. At Soma it reproduces
@@ -479,16 +482,20 @@ static void batch_enemy_tests(void) {
     devil.step = 0;
     devil.timer = 0x32;
     devil.vy = 0x8000;
+    aos_audio_clear();
     for (int frame = 0; frame < 50 && !devil.removed; ++frame) {
         AosHitReport devil_death = aos_enemy_update(&devil, &soma, &layer, &kind, NULL, NULL,
                                                     10, 4, 0, 0, always_zero);
         assert(devil_death.child_count == 0);
     }
     assert(devil.removed);
+    /* sub_080C580C step 0: sound 0x72, once. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
     imp.defeated = true;
     imp.state = 0xFF;
     imp.step = 0;
     imp.timer = 0x32;
+    aos_audio_clear();
     imp.vy = 0x8000;
     imp.helper_spawned = true;
     AosHitReport imp_death = aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
@@ -496,6 +503,7 @@ static void batch_enemy_tests(void) {
     assert(imp_death.child_count == 1 &&
            imp_death.children[0].role == AOS_ROLE_IMP_DEATH &&
            imp_death.children[0].static_frame == 0x15);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);     /* sub_080C4ED4 */
     AosEnemy imp_piece = imp_death.children[0];
     for (int frame = 0; frame < 50 && !imp_piece.removed; ++frame)
         aos_enemy_update(&imp_piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,

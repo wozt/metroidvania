@@ -251,6 +251,9 @@ typedef struct {
     uint16_t forced_held;
     uint8_t effect_count;   /* shared effects to add */
     AosEffect effects[AOS_ENEMY_MAX_EFFECTS];
+    /* sub_0806CC20's sub_08021924: an active, unrewarded enemy within the
+     * screen box (-16, 0, 0x110, 0xB0) enters the homing list this frame. */
+    bool targetable;
 } AosHitReport;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed

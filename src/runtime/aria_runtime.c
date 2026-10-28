@@ -510,18 +510,26 @@ typedef struct {
     bool derive_atk, derive_def;                 /* false under --atk / --def */
 } AriaCombat;
 
-/* A red soul skill entity (EntityCreateInRange(2, 0x10)); only the bat's
- * routine, SkillBatUse, is ported. */
+/* A red soul skill entity (EntityCreateInRange(2, 0x10)): SkillBatUse,
+ * SkillSkullArcherUse's bow and its arrow sub_08028BC4 are ported. */
+enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW };
+
 typedef struct {
     bool alive, started;
-    int slot;
+    int kind;
+    int slot;               /* + 0x1A */
     uint8_t soul;           /* + 0x1C: the soul it was cast with */
-    int32_t x, y;           /* room pixels */
+    int32_t x, y;           /* room pixels, 16.16 */
+    int32_t vx;             /* + 0x48 */
     bool facing_left;
+    uint8_t state, timer;   /* + 0x0A, + 0x0D */
+    bool struck;            /* + 0x20 set by the arrow's hit callback */
     AosAnimState anim;
 } AriaSkill;
 
 #define MAX_SKILLS AOS_RED_SOUL_SLOTS
+#define SKILL_BAT_ROUTINE 0x08026C55u
+#define SKILL_ARCHER_ROUTINE 0x08028D69u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -530,68 +538,161 @@ typedef struct {
     const AosRedSoulRecord *records;
     AriaSkill skills[MAX_SKILLS];
     const AosSoma *soma;
-    bool bat_loaded;
+    const AosAnimSet *bat, *bow;    /* NULL when not exported */
+    const int16_t (*margins)[2];    /* sub_0806D128's table */
+    int cam_x, cam_y;
 } AriaSouls;
 
+/* sub_08031EA4(entity, source, dx, dy): the source's facing and position,
+ * dx mirrored when it faces left. */
+static void place(AriaSkill *skill, int32_t x, int32_t y, bool facing_left, int dx, int dy) {
+    skill->facing_left = facing_left;
+    skill->x = x + (int32_t)((facing_left ? -dx : dx) * 65536);
+    skill->y = y + dy * 65536;
+}
+
 /* Soma's cast hook: sub_08019478's guards and bookkeeping, then the skill
- * entity; only SkillBatUse (soul 2's routine 0x08026C55) has one, so other
- * souls are refused rather than spending MP on nothing. */
+ * entity; souls whose routine is not ported are refused rather than
+ * spending MP on nothing. */
 static int cast_red_soul(void *context) {
     AriaSouls *souls = context;
-    if (!souls->records || !souls->bat_loaded ||
-        souls->stats->red_soul >= AOS_RED_SOUL_RECORDS ||
-        souls->records[souls->stats->red_soul].skill != 0x08026C55u)
-        return -1;
+    if (!souls->records || souls->stats->red_soul >= AOS_RED_SOUL_RECORDS) return -1;
+    uint32_t routine = souls->records[souls->stats->red_soul].skill;
+    int kind = routine == SKILL_BAT_ROUTINE && souls->bat      ? SKILL_BAT
+               : routine == SKILL_ARCHER_ROUTINE && souls->bow ? SKILL_BOW
+                                                               : -1;
+    if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
     if (slot < 0) return -1;
-    /* sub_08031EA4(entity, Soma, 0, -0x1A): Soma's facing and position. */
-    souls->skills[slot] = (AriaSkill){.alive = true, .slot = slot,
-                                      .soul = souls->stats->red_soul,
-                                      .x = souls->soma->x >> 16,
-                                      .y = (souls->soma->y >> 16) - 0x1A,
-                                      .facing_left = souls->soma->facing_left};
+    AriaSkill *skill = &souls->skills[slot];
+    *skill = (AriaSkill){.alive = true, .kind = kind, .slot = slot,
+                         .soul = souls->stats->red_soul};
+    /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
+    if (kind == SKILL_BAT)
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
+    else
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, -0xC, -0x18);
     printf("Red soul %u cast (MP %d)\n", souls->stats->red_soul, souls->stats->mp);
     return souls->records[souls->stats->red_soul].pose;
 }
 
-/* SkillBatUse: on its first update it counts itself (0x131BE) and starts
- * sequence 0 (sound 0xE2 and sub_08042A54(1, 0xF) are not played); it
- * stays where it was created and ends with its animation. */
-static void update_skills(AriaSouls *souls, const AosAnimSet *bat) {
+/* sub_08023530: a child skill entity in a free slot, counted (0x131BE). */
+static AriaSkill *spawn_child(AriaSouls *souls, int kind) {
+    for (int i = 0; i < MAX_SKILLS; ++i) {
+        if (souls->caster.slots[i]) continue;
+        souls->caster.slots[i] = true;
+        souls->caster.active++;
+        AriaSkill *child = &souls->skills[i];
+        *child = (AriaSkill){.alive = true, .started = false, .kind = kind, .slot = i};
+        return child;
+    }
+    return NULL;
+}
+
+static void end_skill(AriaSouls *souls, AriaSkill *skill) {
+    aos_red_soul_release(&souls->caster, skill->slot);
+    skill->alive = false;
+}
+
+/* sub_0806D128(e, n) on the camera. */
+static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n) {
+    int mx = souls->margins ? souls->margins[n][0] : 16, my = souls->margins ? souls->margins[n][1] : 16;
+    int sx = (skill->x >> 16) - souls->cam_x, sy = (skill->y >> 16) - souls->cam_y;
+    return sx < -mx || sx > mx + 0xF0 || sy < -my || sy > my + 0xA0;
+}
+
+static void update_skills(AriaSouls *souls) {
     for (int i = 0; i < MAX_SKILLS; ++i) {
         AriaSkill *skill = &souls->skills[i];
         if (!skill->alive) continue;
-        if (!skill->started) {
-            skill->started = true;
-            souls->caster.active++;
-            aos_anim_start(&skill->anim, bat, 0, false);
-        }
-        /* sub_0803F17C steps the animation and reports its end (3). */
-        if (aos_anim_step(&skill->anim, bat) == 3) {
-            aos_red_soul_release(&souls->caster, skill->slot);
-            skill->alive = false;
+        switch (skill->kind) {
+        case SKILL_BAT:
+            /* SkillBatUse: on its first update it counts itself and starts
+             * sequence 0 (sound 0xE2 and sub_08042A54(1, 0xF) are not
+             * played); it stays where it was created and ends with it. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_anim_start(&skill->anim, souls->bat, 0, false);
+            }
+            if (aos_anim_step(&skill->anim, souls->bat) == 3) end_skill(souls, skill);
+            break;
+        case SKILL_BOW:
+            /* SkillSkullArcherUse: counted on its first update, sequence 0;
+             * on frame 14 it shoots the arrow from its own position; state
+             * 2 (animation over or off screen) deletes it on the next
+             * update. */
+            if (skill->state == 2) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_anim_start(&skill->anim, souls->bow, 0, false);
+                skill->state = 1;
+            }
+            if (skill->anim.frame == 14) {
+                AriaSkill *arrow = spawn_child(souls, SKILL_ARROW);
+                if (arrow) {
+                    arrow->soul = skill->soul;
+                    place(arrow, skill->x, skill->y, skill->facing_left, 0, 0);
+                }
+            }
+            if (aos_anim_step(&skill->anim, souls->bow) == 3) skill->state = 2;
+            if (skill->state != 2 && skill_outside(souls, skill, 4)) skill->state = 2;
+            break;
+        case SKILL_ARROW:
+            /* sub_08028BC4: frame 1, 6 pixels a frame (sound 0xC8 is not
+             * played); once its hit callback has run it stops and blinks 16
+             * frames (the stuck-arrow helper sub_080239E4 is not ported). */
+            if (!skill->started) {
+                skill->started = true;
+                skill->vx = skill->facing_left ? -0x60000 : 0x60000;
+                skill->state = 1;
+            }
+            if (skill->state == 1) {
+                skill->x += skill->vx;
+                if (skill->struck) {
+                    skill->state = 2;
+                    skill->timer = 0x10;
+                }
+            } else if (skill->state == 2) {
+                if (skill->timer == 0) {
+                    end_skill(souls, skill);
+                    break;
+                }
+                skill->timer--;
+            }
+            if (skill_outside(souls, skill, 2)) end_skill(souls, skill);
+            break;
+        default: break;
         }
     }
 }
 
 /* The skills' attack boxes this frame for the enemies' type-5 tests:
- * SkillBatUse enables its frame's box (frame record + 8) when it has one.
- * The power and elements come from the last used soul's record
- * (sub_0802D244). */
-static int soul_attacks(const AriaSouls *souls, const AosEnemyKind *bat,
-                        AosSoulAttack attacks[MAX_SKILLS]) {
+ * SkillBatUse enables its frame's box (frame record + 8) when it has one;
+ * the arrow keeps 0x0202FF08 (8, -1, 2 x 2) until it has struck. The power
+ * and elements come from the last used soul's record (sub_0802D244). */
+static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack attacks[MAX_SKILLS],
+                        AriaSkill *owners[MAX_SKILLS]) {
     int count = 0;
     if (!souls->records || souls->caster.last_used >= AOS_RED_SOUL_RECORDS) return 0;
     const AosRedSoulRecord *record = &souls->records[souls->caster.last_used];
     for (int i = 0; i < MAX_SKILLS; ++i) {
-        const AriaSkill *skill = &souls->skills[i];
-        if (!skill->alive || !skill->started || skill->anim.frame >= AOS_ENEMY_MAX_FRAMES)
-            continue;
-        AosBox box = bat->attack[0][skill->anim.frame];
+        AriaSkill *skill = &souls->skills[i];
+        if (!skill->alive || !skill->started) continue;
+        AosBox box = {0, 0, 0, 0};
+        if (skill->kind == SKILL_BAT && bat && skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
+            box = bat->attack[0][skill->anim.frame];
+        else if (skill->kind == SKILL_ARROW && skill->state == 1 && !skill->struck)
+            box = (AosBox){8, -1, 2, 2};
         if (!box.w || !box.h) continue;
+        owners[count] = skill;
         attacks[count++] = (AosSoulAttack){
-            aos_entity_rect(box, skill->x, skill->y, skill->facing_left, false),
-            aos_red_soul_power(souls->stats, record, false), record->elements};
+            aos_entity_rect(box, skill->x >> 16, skill->y >> 16, skill->facing_left, false),
+            aos_red_soul_power(souls->stats, record, false), record->elements, false};
     }
     return count;
 }
@@ -887,7 +988,7 @@ typedef struct {
         int static_ids[ENEMY_STATIC_FRAMES];
         AriaFrame statics[ENEMY_STATIC_FRAMES];
         int static_count;
-    } enemies[ENEMY_KINDS], variants[VARIANT_ARTS], skill_bat;   /* Enemy/skill_bat */
+    } enemies[ENEMY_KINDS], variants[VARIANT_ARTS], skill_bat, skill_archer; /* Enemy/skill_* */
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -1001,11 +1102,14 @@ static bool load_enemy_data(AriaObjects *objects) {
                    &a[3]) != 14 ||
             anim < 0 || anim >= AOS_ENEMY_MAX_ANIMS || index < 0 || index >= AOS_ENEMY_MAX_FRAMES)
             continue;
-        for (int id = 0; id <= ENEMY_KINDS; ++id) {
+        for (int id = 0; id <= ENEMY_KINDS + 1; ++id) {
             AosEnemyKind *kind;
             if (id == ENEMY_KINDS) {
                 if (strcmp(name, "skill_bat")) continue;
                 kind = &objects->skill_bat.kind;
+            } else if (id == ENEMY_KINDS + 1) {
+                if (strcmp(name, "skill_archer")) continue;
+                kind = &objects->skill_archer.kind;
             } else {
                 if (!enemy_names[id] || strcmp(name, enemy_names[id])) continue;
                 kind = &objects->enemies[id].kind;
@@ -1197,9 +1301,12 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         char enemy_name[24];
         if (sscanf(line, "Enemy/%15[^/]/frame_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
                    &frame, &ticks, &ox, &oy, frame_path) == 7) {
-            for (int id = 0; id < ENEMY_KINDS; ++id) {
-                if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
-                __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+            for (int id = 0; id <= ENEMY_KINDS; ++id) {
+                if (id == ENEMY_KINDS ? strcmp(enemy_name, "skill_archer")
+                                      : !enemy_names[id] || strcmp(enemy_name, enemy_names[id]))
+                    continue;
+                __typeof__(objects->enemies[0]) *art =
+                    id == ENEMY_KINDS ? &objects->skill_archer : &objects->enemies[id];
                 if (frame != 0 || art->static_count >= ENEMY_STATIC_FRAMES ||
                     !load_frame(&art->statics[art->static_count], frame_path, ox, oy, renderer)) {
                     ok = false;
@@ -1233,11 +1340,13 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         }
         if (sscanf(line, "Enemy/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
-            for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS + 1; ++id) {
+            for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS + 2; ++id) {
                 __typeof__(objects->enemies[0]) *art;
-                if (id == ENEMY_KINDS + VARIANT_ARTS) {
-                    if (strcmp(enemy_name, "skill_bat")) continue;
-                    art = &objects->skill_bat;
+                if (id >= ENEMY_KINDS + VARIANT_ARTS) {
+                    const char *skill = id == ENEMY_KINDS + VARIANT_ARTS ? "skill_bat" : "skill_archer";
+                    if (strcmp(enemy_name, skill)) continue;
+                    art = id == ENEMY_KINDS + VARIANT_ARTS ? &objects->skill_bat
+                                                           : &objects->skill_archer;
                 } else if (id < ENEMY_KINDS) {
                     if (!enemy_names[id] || strcmp(enemy_name, enemy_names[id])) continue;
                     art = &objects->enemies[id];
@@ -1295,6 +1404,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
     for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
     objects->skill_bat.set.anims = objects->skill_bat.defs;
+    objects->skill_archer.set.anims = objects->skill_archer.defs;
     return ok;
 }
 
@@ -2142,8 +2252,14 @@ int main(int argc, char **argv) {
                                          (int16_t)progress.max_mp);
             /* sub_08021994 runs inside the update, before + 0x22 advances. */
             aos_stats_mp_regen(&progress, (uint16_t)(soma.ticks - 1));
-            souls.bat_loaded = objects_ok && objects.skill_bat.loaded;
-            if (souls.bat_loaded) update_skills(&souls, &objects.skill_bat.set);
+            souls.bat = objects_ok && objects.skill_bat.loaded ? &objects.skill_bat.set : NULL;
+            souls.bow = objects_ok && objects.skill_archer.loaded && objects.skill_archer.static_count
+                            ? &objects.skill_archer.set
+                            : NULL;
+            souls.margins = objects_ok ? (const int16_t(*)[2])objects.enemies[0].kind.margins : NULL;
+            souls.cam_x = cam_x;
+            souls.cam_y = cam_y;
+            update_skills(&souls);
             ++step;
             if (has_active_save) active_save.play_frames++;
             if (soma.state == 16 && !announced_death) {
@@ -2225,12 +2341,14 @@ int main(int argc, char **argv) {
                         room.effects[room.effect_count++] = weapon_entity.effects[k];
             }
             AosSoulAttack attacks[MAX_SKILLS];
-            aos_enemy_set_soul_attacks(attacks, souls.bat_loaded
-                                                    ? soul_attacks(&souls, &objects.skill_bat.kind,
-                                                                   attacks)
-                                                    : 0);
+            AriaSkill *owners[MAX_SKILLS];
+            int attack_count = soul_attacks(&souls, souls.bat ? &objects.skill_bat.kind : NULL,
+                                            attacks, owners);
+            aos_enemy_set_soul_attacks(attacks, attack_count);
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
             aos_enemy_set_soul_attacks(NULL, 0);
+            for (int k = 0; k < attack_count; ++k)
+                if (attacks[k].struck) owners[k]->struck = true;
         }
 
         int sx = soma.x >> 16, sy = soma.y >> 16;
@@ -2289,11 +2407,16 @@ int main(int argc, char **argv) {
         for (int k = 0; objects_ok && k < MAX_SKILLS; ++k) {
             const AriaSkill *skill = &souls.skills[k];
             if (!skill->alive || !skill->started || skill->anim.frame >= MAX_FRAMES) continue;
-            const AriaFrame *art = &objects.skill_bat.frames[0][skill->anim.frame];
+            /* The arrow blinks (+ 0x0F) while it counts down. */
+            if (skill->kind == SKILL_ARROW && skill->state == 2 && (step & 1)) continue;
+            const AriaFrame *art = skill->kind == SKILL_BAT   ? &objects.skill_bat.frames[0][skill->anim.frame]
+                                   : skill->kind == SKILL_BOW ? &objects.skill_archer.frames[0][skill->anim.frame]
+                                                              : &objects.skill_archer.statics[0];
             if (!art->texture) continue;
-            float x = skill->facing_left ? (float)(skill->x - art->offset_x) - art->w
-                                         : (float)(skill->x + art->offset_x);
-            SDL_FRect rect = {x - (float)cam_x, (float)(skill->y + art->offset_y - cam_y), art->w,
+            int px = skill->x >> 16, py = skill->y >> 16;
+            float x = skill->facing_left ? (float)(px - art->offset_x) - art->w
+                                         : (float)(px + art->offset_x);
+            SDL_FRect rect = {x - (float)cam_x, (float)(py + art->offset_y - cam_y), art->w,
                               art->h};
             SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
                                      skill->facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);

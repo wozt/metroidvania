@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T10:22:02+00:00",
+ "generated_at": "2026-10-28T10:31:33+00:00",
  "git": {
-  "commit": "fa920bd",
+  "commit": "900b510",
   "branch": "main",
   "dirty": true
  },
@@ -12902,9 +12902,14 @@
     "sub_08031EA4",
     "sub_08021530",
     "sub_0806E218",
-    "sub_0802D244"
+    "sub_0802D244",
+    "SkillSkullArcherUse",
+    "sub_08028BC4",
+    "sub_08023530",
+    "sub_0802DB84",
+    "sub_0806D128"
    ],
-   "limitations": "Only SkillBatUse has a skill entity; the runtime refuses the 27 other red souls instead of spending MP. sub_08021530 is ported for type 5 in normal play only (the gEwramData + 0x4CC bit 6 alternative using 0x133EE is not, and the + 0xA1 bit 4 reduction is never set by the runtime); the soul hit takes the elements of the record's + 0xC on the assumption that a type-5 attacker reaches sub_0806B7D8's flag-8 path, and the per-enemy reactions documented as weapon-only (Valkyrie, harpy and siren recoils) stay weapon-only. The ring's damage was not observed in a runtime run (no enemy near the start). Sound 0xE2, sub_08042A54(1, 0xF), the cast's per-animation palette and the 0x131B8 & 0x800 gate. sub_08021994 is ported for its MP regeneration only (the curse states of unk_13270 and the earlier input-driven effect of unk_13276 are not), the cast state's pose-3 recoil (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled, and the + 0x1E byte the poses write has no traced reader. There is no soul menu: a red soul is equipped through the file or --red-soul. Skill entities are cleared on a room change. The Julius variant (sub_08034624, table 0x080E1ED8) is not ported. Soma's red soul use of sub_0801B0D8 (_0801C298, Up held and a new attack press with no 0x540 flag) runs sub_08019478: with no skill entity alive the last used soul follows the equipped one; the cast needs that soul's record (0x080E1598, exported as metadata/red_souls.tsv) to have a skill routine, at least its MP cost (Soma may spend his last points, unlike Julius), fewer active entities than the last used record's maximum (sub_0802D2BC) and a free slot of eight (sub_0802D208). It spends the MP, plays the cast animation of sub_0802D1D8 (0x080E1918: ground 22/78/79/80, air 49/78/79/80) with the pose's hop (vy -3.5, gravity -0x1000), lunge (3 px per frame) or recoil byte, sets flag 0x100 and enters state 2, which steers in the air, brakes on the ground and ends with the animation. The weapon attack that follows is refused by the 0x100 flag. sub_08021994 regenerates one MP every 64 ticks of Soma's + 0x22 counter (16 with accessory 0x29, full with 0x2C). SkillBatUse places its entity at Soma's facing and (0, -26) (sub_08031EA4), counts itself on its first update, plays sequence 0 of its resource (0x081CD8D0 / 0x0820B0B0 / 0x082311F8, exported as Enemy/skill_bat with its per-frame attack boxes) and ends with it, freeing its slot. The ring's frame boxes are type-5 attacks: after the weapon, each enemy tests them with the recent-hit slot and cooldown of type 5 (0x080E33F0), and sub_0806E218 deals sub_08021530(5) = (STR * power / 10 + INT / 4 + power * 6) / 16 of the last used soul's record (sub_0802D244; the bat's power is 60, 26 at level 1) through the existing damage formula with the record's elements. Portable saves keep the equipped souls and MP (schema v7). A local runtime run with soul 2 equipped cast it (MP 80 to 75, state 2, animation 22) and drew the expanding ring. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "Only SkillBatUse and SkillSkullArcherUse have skill entities; the runtime refuses the 26 other red souls instead of spending MP. The arrow's stuck helper sub_080239E4 and its sound 0xC8 are not ported, the arrow's first update both sets its speed and moves (the split between its states 0 and 1 is not verified frame by frame), and the arrow's hit has not been observed against an enemy in a runtime run. sub_08021530 is ported for type 5 in normal play only (the gEwramData + 0x4CC bit 6 alternative using 0x133EE is not, and the + 0xA1 bit 4 reduction is never set by the runtime); the soul hit takes the elements of the record's + 0xC on the assumption that a type-5 attacker reaches sub_0806B7D8's flag-8 path, and the per-enemy reactions documented as weapon-only (Valkyrie, harpy and siren recoils) stay weapon-only. The ring's damage was not observed in a runtime run (no enemy near the start). Sound 0xE2, sub_08042A54(1, 0xF), the cast's per-animation palette and the 0x131B8 & 0x800 gate. sub_08021994 is ported for its MP regeneration only (the curse states of unk_13270 and the earlier input-driven effect of unk_13276 are not), the cast state's pose-3 recoil (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled, and the + 0x1E byte the poses write has no traced reader. There is no soul menu: a red soul is equipped through the file or --red-soul. Skill entities are cleared on a room change. The Julius variant (sub_08034624, table 0x080E1ED8) is not ported. Soma's red soul use of sub_0801B0D8 (_0801C298, Up held and a new attack press with no 0x540 flag) runs sub_08019478: with no skill entity alive the last used soul follows the equipped one; the cast needs that soul's record (0x080E1598, exported as metadata/red_souls.tsv) to have a skill routine, at least its MP cost (Soma may spend his last points, unlike Julius), fewer active entities than the last used record's maximum (sub_0802D2BC) and a free slot of eight (sub_0802D208). It spends the MP, plays the cast animation of sub_0802D1D8 (0x080E1918: ground 22/78/79/80, air 49/78/79/80) with the pose's hop (vy -3.5, gravity -0x1000), lunge (3 px per frame) or recoil byte, sets flag 0x100 and enters state 2, which steers in the air, brakes on the ground and ends with the animation. The weapon attack that follows is refused by the 0x100 flag. sub_08021994 regenerates one MP every 64 ticks of Soma's + 0x22 counter (16 with accessory 0x29, full with 0x2C). SkillBatUse places its entity at Soma's facing and (0, -26) (sub_08031EA4), counts itself on its first update, plays sequence 0 of its resource (0x081CD8D0 / 0x0820B0B0 / 0x082311F8, exported as Enemy/skill_bat with its per-frame attack boxes) and ends with it, freeing its slot. The ring's frame boxes are type-5 attacks: after the weapon, each enemy tests them with the recent-hit slot and cooldown of type 5 (0x080E33F0), and sub_0806E218 deals sub_08021530(5) = (STR * power / 10 + INT / 4 + power * 6) / 16 of the last used soul's record (sub_0802D244; the bat's power is 60, 26 at level 1) through the existing damage formula with the record's elements. Portable saves keep the equipped souls and MP (schema v7). SkillSkullArcherUse places its bow at Soma's facing and (-12, -24), counts itself on its first update and plays sequence 0 of its resource (0x081D510C / 0x0820B2EC / 0x08233BCC, exported as Enemy/skill_archer); on animation frame 14 it takes a free slot (sub_08023530) for the arrow sub_08028BC4 at its own position, and it ends with its animation or outside the screen margins 4 (sub_0806D128). The arrow (still frame 1) flies 6 pixels a frame with the type-5 box (8, -1, 2, 2) of 0x0202FF08; once an enemy took it (sub_0802DB84, reported back through the soul attack) it stops, blinks 16 frames and is deleted, as it is outside the margins 2. A local runtime run with soul 6 equipped drew the bow behind Soma and an arrow leaving it to the right. A local runtime run with soul 2 equipped cast it (MP 80 to 75, state 2, animation 22) and drew the expanding ring. Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Port the other red soul skills in order of availability, then the soul equipment menu and the blue and yellow souls.",
    "evidence": {
     "unit_tests": [
@@ -17134,6 +17139,12 @@
  },
  "timeline": [
   {
+   "commit": "900b510",
+   "date": "2026-10-28",
+   "subject": "Port Aria's death fade and game over screen",
+   "scope": "project"
+  },
+  {
    "commit": "fa920bd",
    "date": "2026-10-28",
    "subject": "Draw Aria's item pickup icons",
@@ -17606,12 +17617,6 @@
    "date": "2026-10-25",
    "subject": "Serialize Zero Mission room cores natively",
    "scope": "project"
-  },
-  {
-   "commit": "46d890e",
-   "date": "2026-10-25",
-   "subject": "Serialize Zero Mission backgrounds natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -17672,9 +17677,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 532,
-    "routines_attached_to_features": 532,
-    "unassigned_routines": 3041,
+    "routines_cited_by_features": 537,
+    "routines_attached_to_features": 537,
+    "unassigned_routines": 3036,
     "call_edges": 14228
    }
   },

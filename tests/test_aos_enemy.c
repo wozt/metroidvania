@@ -3190,12 +3190,14 @@ static void soul_attack_tests(void) {
     assert(aos_enemy_create(&e, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
     /* A ring over the enemy (hurt rectangle 92..107 x 84..99). */
-    AosSoulAttack ring = {{90, 80, 110, 104}, 26, 0};
+    AosSoulAttack ring = {{90, 80, 110, 104}, 26, 0, false};
     aos_enemy_set_soul_attacks(&ring, 1);
     AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                         never_zero);
     int expected = aos_enemy_damage(26, stats.defence, 0, 0, 0);
     assert(hit.enemy_hit && hit.enemy_damage == expected && e.hp == 30 - expected);
+    /* The skill learns it struck (its hit callback). */
+    assert(ring.struck);
     /* The weapon's ATK (10) is not used for it. */
     assert(expected != aos_enemy_damage(10, stats.defence, 0, 0, 0));
     /* Elements meet the record's weakness. */
@@ -3203,7 +3205,7 @@ static void soul_attack_tests(void) {
     const AosEnemyStats weak_stats = {30, 16, 2, 0x0004, 0, 0};
     assert(aos_enemy_create(&weak, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
                             &weak_stats));
-    AosSoulAttack fire = {{90, 80, 110, 104}, 26, 0x0004};
+    AosSoulAttack fire = {{90, 80, 110, 104}, 26, 0x0004, false};
     aos_enemy_set_soul_attacks(&fire, 1);
     hit = aos_enemy_update(&weak, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.enemy_damage == aos_enemy_damage(26, 2, 0x0004, 0, 0x0004) &&
@@ -3212,12 +3214,12 @@ static void soul_attack_tests(void) {
     AosEnemy apart;
     assert(aos_enemy_create(&apart, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
-    AosSoulAttack beside = {{130, 80, 150, 104}, 26, 0};
+    AosSoulAttack beside = {{130, 80, 150, 104}, 26, 0, false};
     aos_enemy_set_soul_attacks(&beside, 1);
     hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(!hit.enemy_hit && apart.hp == 30);
+    assert(!hit.enemy_hit && apart.hp == 30 && !beside.struck);
     /* Enough power kills it. */
-    AosSoulAttack strong = {{90, 80, 110, 104}, 200, 0};
+    AosSoulAttack strong = {{90, 80, 110, 104}, 200, 0, false};
     aos_enemy_set_soul_attacks(&strong, 1);
     hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.killed && apart.defeated);

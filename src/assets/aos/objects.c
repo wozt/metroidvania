@@ -172,6 +172,9 @@ static const EntitySpec entities[] = {
     /* SkillBatUse: entry 3 of the skill resources 0x080E13BC (tiles,
      * palette row 0, frames), exported with its per-frame attack boxes. */
     ENTITY("skill_bat", 0x081CD8D0, 0x0820B0B0, 0, 0x082311F8),
+    /* SkillSkullArcherUse and its arrow sub_08028BC4: entry 18 of 0x080E13BC
+     * (the bow plays sequence 0, the arrow shows frame 1). */
+    STATIC("skill_archer", 0x081D510C, 0x0820B2EC, 0, 0x08233BCC, 1, 1),
 };
 
 static const EffectSpec effects[] = {

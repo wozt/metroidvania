@@ -20,10 +20,10 @@ void aos_random_seed(uint32_t seed) {
 static bool flag_8e_40;
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
-static const AosSoulAttack *soul_attacks;
+static AosSoulAttack *soul_attacks;
 static int soul_attack_count;
 
-void aos_enemy_set_soul_attacks(const AosSoulAttack *attacks, int count) {
+void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count) {
     soul_attacks = attacks;
     soul_attack_count = attacks ? count : 0;
 }
@@ -1114,13 +1114,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
         }
     }
     for (int i = 0; hurt_on && !struck && i < soul_attack_count; ++i) {
-        const AosSoulAttack *attack = &soul_attacks[i];
+        AosSoulAttack *attack = &soul_attacks[i];
         if (!aos_combat_can_take(&enemy->combat, AOS_TYPE_SOUL)) break;
         if (attack->rect.x1 <= target.x2 && target.x1 <= attack->rect.x2 &&
             attack->rect.y1 <= target.y2 && target.y1 <= attack->rect.y2) {
             aos_combat_take(&enemy->combat, AOS_TYPE_SOUL, aos_combat_cooldown(AOS_TYPE_SOUL, 0));
             struck = true;
             attacker = AOS_TYPE_SOUL;
+            attack->struck = true;
             power = attack->power;
             elements = attack->elements;
         }

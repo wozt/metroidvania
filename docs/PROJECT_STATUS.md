@@ -1,6 +1,22 @@
 # Project status
 
-Last updated: **2026-10-27**.
+Last updated: **2026-10-28**.
+
+## Patch 0591 - Aria Skull Archer red soul
+
+- The object export adds `Enemy/skill_archer` (bow animation and the
+  arrow's still frame, resource 0x081D510C / 0x0820B2EC / 0x08233BCC).
+- The runtime's skill entities are generalised: `SkillSkullArcherUse`
+  places the bow at Soma's facing and (-12, -24), shoots the arrow
+  `sub_08028BC4` from a free slot (`sub_08023530`) on animation frame 14
+  and ends with its animation or off screen (`sub_0806D128` margins 4).
+  The arrow flies 6 pixels a frame with the type-5 box (8, -1, 2, 2),
+  and once an enemy took it (now reported through `AosSoulAttack.struck`)
+  stops, blinks 16 frames and is deleted.
+- A local run with soul 6 equipped drew the bow and an arrow leaving it.
+  Not ported: the stuck-arrow helper `sub_080239E4` and sound 0xC8; the
+  arrow's hit was not observed against an enemy. Source-derived and
+  unit-tested, not emulator-compared. Zero Mission is unchanged.
 
 ## Patch 0590 - Aria death fade and game over
 

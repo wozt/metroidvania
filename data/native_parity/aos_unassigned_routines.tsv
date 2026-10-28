@@ -81,7 +81,6 @@ aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillPersephoneUse	SkillPersephoneUse	abilities	name			asm_function		asm/code/code_080211F0.s	29857	0	12
 aos:asm:asm/code/code_080211F0.s:SkillRedMinotaurUse	SkillRedMinotaurUse	abilities	name			asm_function		asm/code/code_080211F0.s	11109	0	11
 aos:asm:asm/code/code_080211F0.s:SkillShadowKnightUse	SkillShadowKnightUse	abilities	name			asm_function		asm/code/code_080211F0.s	28459	0	13
-aos:asm:asm/code/code_080211F0.s:SkillSirenUse	SkillSirenUse	abilities	name			asm_function		asm/code/code_080211F0.s	10321	0	14
 aos:asm:asm/code/code_080211F0.s:SkillSkullMillioneUse	SkillSkullMillioneUse	abilities	name			asm_function		asm/code/code_080211F0.s	19978	0	9
 aos:asm:asm/code/code_080211F0.s:SkillSkyFishUse	SkillSkyFishUse	abilities	name			asm_function		asm/code/code_080211F0.s	28016	0	15
 aos:asm:asm/code/code_080211F0.s:SkillSlimeUse	SkillSlimeUse	abilities	name			asm_function		asm/code/code_080211F0.s	23700	0	15

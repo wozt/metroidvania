@@ -26,6 +26,7 @@
 #include "aos_skill_flea.h"
 #include "aos_skill_devil.h"
 #include "aos_skill_ghost.h"
+#include "aos_skill_siren.h"
 #include "aos_skill_merman.h"
 #include "aos_skill_shot.h"
 #include "aos_skill_spear.h"
@@ -654,7 +655,7 @@ static void homing_clear(void) {
 enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, SKILL_AXE,
        SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
-       SKILL_GHOST_SOUL };
+       SKILL_GHOST_SOUL, SKILL_SIREN };
 
 typedef struct {
     bool alive, started;
@@ -678,6 +679,7 @@ typedef struct {
     AosCrow crow;           /* SKILL_CROW */
     AosFlea flea;           /* SKILL_FLEA */
     AosGhostSoul ghost;     /* SKILL_GHOST_SOUL */
+    AosSirenSoul siren;     /* SKILL_SIREN */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
@@ -697,6 +699,7 @@ typedef struct {
 #define SKILL_CROW_ROUTINE 0x0802C489u
 #define SKILL_FLEA_ROUTINE 0x080299A1u
 #define SKILL_GHOST_ROUTINE 0x0802A8D5u
+#define SKILL_SIREN_ROUTINE 0x08026369u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -781,6 +784,10 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_GHOST_ROUTINE && souls->devil &&
                          souls->devil->count > AOS_GHOST_SEQUENCE
                    ? SKILL_GHOST
+               : routine == SKILL_SIREN_ROUTINE &&
+                         static_index(souls->shared_ids, souls->shared_count, 2) >= 0 &&
+                         static_index(souls->shared_ids, souls->shared_count, 3) >= 0
+                   ? SKILL_SIREN
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -793,6 +800,9 @@ static int cast_red_soul(void *context) {
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
     else if (kind == SKILL_GHOST)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x18);
+    else if (kind == SKILL_SIREN) {
+        /* SkillSirenUse consumes its two random draws on the first update. */
+    }
     else if (kind == SKILL_FLEA) {
         skill->flea = aos_flea_create(souls->soma->x, souls->soma->y, souls->soma->facing_left);
         skill->x = skill->flea.body.x;
@@ -1112,6 +1122,33 @@ static void update_skills(AriaSouls *souls) {
             skill->y = ghost->y;
             break;
         }
+        case SKILL_SIREN: {
+            /* SkillSirenUse parameter 0: one counted note, sound 0xDD or
+             * 0xDE, then the native horizontal and sine-wave motion.
+             * sub_08042A54(1, 0xA) is not run. */
+            AosSirenSoul *note = &skill->siren;
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                uint32_t variant_random = aos_random();
+                uint32_t phase_random = aos_random();
+                *note = aos_siren_soul_create(souls->soma->x, souls->soma->y,
+                                              souls->soma->facing_left, variant_random,
+                                              phase_random);
+                aos_audio_play_song(note->song);
+            }
+            note->struck = skill->struck;
+            int mx = souls->margins ? souls->margins[1][0] : 16;
+            int my = souls->margins ? souls->margins[1][1] : 16;
+            if (!aos_siren_soul_update(note, souls->cam_x, souls->cam_y, mx, my)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = note->x;
+            skill->y = note->y;
+            skill->facing_left = false;
+            break;
+        }
         case SKILL_CROW:
             /* sub_SkillBlueCrowUse: counted with sound 0xEE on its first
              * update, looping sequence 2 (sub_08042A54(1, 0x14) is not
@@ -1337,6 +1374,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = souls->crow_kind->attack[AOS_CROW_SEQUENCE][skill->anim.frame];
         else if (skill->kind == SKILL_GHOST_SOUL && skill->ghost.state >= 2)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
+        else if (skill->kind == SKILL_SIREN && skill->siren.state == 1)
+            box = (AosBox){-4, -4, 8, 8};      /* 0x0808FCFC */
         else if (skill->kind == SKILL_DEVIL_FIRE && skill->fire.state >= 2)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_SPEAR_TIP)
@@ -3333,6 +3372,8 @@ int main(int argc, char **argv) {
                 : skill->kind == SKILL_GHOST_SOUL
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_GHOST_SEQUENCE][skill->anim.frame]
+                : skill->kind == SKILL_SIREN
+                    ? blade_frame(shared, skill->siren.frame)
                 : skill->kind == SKILL_DEVIL_FIRE
                     ? (skill->fire.state <= 1
                            ? &objects.skills[SKILL_ART_DEVIL].frames[0][skill->anim.frame]

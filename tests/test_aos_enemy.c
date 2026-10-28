@@ -337,6 +337,7 @@ static void batch_enemy_tests(void) {
     assert(harpy_shots == 5 && flyer.state == 0);
     /* sub_0807594C: 0x89 after the three feathers and after the two. */
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 2);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x8B) >= 1);
     assert(aos_enemy_create(&flyer, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
     for (int frame = 0; frame < 30; ++frame)
@@ -366,6 +367,16 @@ static void batch_enemy_tests(void) {
     }
     assert(siren_shots == 3 && flyer.state == 0);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x8B) >= 1);
+    assert(aos_enemy_create(&flyer, AOS_ENEMY_SIREN, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    for (int frame = 0; frame < 30; ++frame)
+        aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    aos_audio_clear();
+    aos_enemy_update(&flyer, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(flyer.state == 1 && flyer.step == 1 && flyer.anim.id == 2);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) == 1);
     /* A killing hit: sub_08075CAC's sound 0x1C3. */
     AosEnemy doomed_harpy;
     assert(aos_enemy_create(&doomed_harpy, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer,
@@ -378,6 +389,16 @@ static void batch_enemy_tests(void) {
                          always_zero);
     aos_enemy_set_soul_attacks(NULL, 0);
     assert(doomed_harpy.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, 0x1C3) == 1);
+    AosEnemy doomed_siren;
+    assert(aos_enemy_create(&doomed_siren, AOS_ENEMY_SIREN, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    aos_enemy_set_soul_attacks(&harpy_blast, 1);
+    aos_audio_clear();
+    for (int frame = 0; frame < 4 && !doomed_siren.defeated; ++frame)
+        aos_enemy_update(&doomed_siren, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(doomed_siren.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, 0x1C3) == 1);
     uint32_t note_angle = note.angle;
     int32_t note_x = note.x;
     aos_enemy_update(&note, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);

@@ -178,8 +178,8 @@ static const EntitySpec entities[] = {
     STATIC("skill_archer", 0x081D510C, 0x0820B2EC, 0, 0x08233BCC, 1, 1),
     /* Resource 0 of 0x080E13BC, shared by several souls: the Merman's spout
      * and drops (sequences 0, 6), the Winged Skeleton's spear (still frame
-     * 0) and the Axe Armor's axe (still frame 6). */
-    STATIC("skill_shared", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 2, 0, 6),
+     * 0), the Siren's notes (2-3) and the Axe Armor's axe (6). */
+    STATIC("skill_shared", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 4, 0, 2, 3, 6),
     /* Resource 24 of 0x080E13BC: the Harpy soul's dagger (still frame 1) and
      * its trail (3-5), the Durga soul's sword (2). */
     STATIC("skill_blades", 0x081D8124, 0x0820B3C4, 0, 0x082347BC, 5, 1, 2, 3, 4, 5),

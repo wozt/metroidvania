@@ -855,7 +855,18 @@ and fall through the 40-frame flame/blink death with four fragments. Harpy's
 two-stage volley uses frames 12/10/8 followed by 11/9 at speed 0.75; Siren uses
 its palette-bank-1 sheet and fires the frames 14/13/14 angular notes, whose
 heading bends for 16 frames in each direction. Each shot carries its native
-6x6 box, can be struck and leaves at the activity margin.
+6x6 box, can be struck and leaves at the activity margin. Both enemies request
+0x8B at the shared idle-flight animation boundary, 0x87 when diving, 0x89 after
+their volleys and 0x1C3 at death. The 0x8B boundary is source-adapted because
+the rising-flight path of `sub_080756FC` remains simplified.
+
+The Siren red soul's parameter-0 `SkillSirenUse` path chooses direct frame 2
+or 3 of shared skill resource 0 and sound 0xDD or 0xDE from one random draw.
+It appears at Soma's facing and (8, -26), flies four pixels per frame without
+sprite mirroring, adds `sin(phase)` to Y while advancing the phase by 0x400,
+and attacks with the native 8x8 box. A hit or margin-1 exit enters its delayed
+deletion state. A local room 0/3 capture drew the source-derived note; it was
+not emulator-compared.
 
 Gorgon (0x33) and Catoblepas (0x1C) share `EnemyGorgonUpdate`, with palette
 banks 0 and 1. They patrol on the floor, turn at collision, wind up through

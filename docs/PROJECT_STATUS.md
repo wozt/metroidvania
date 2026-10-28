@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0619 - Siren soul; Harpy and Siren complete
+
+- `src/runtime/aos_skill_siren.c` ports the parameter-0 path of
+  `SkillSirenUse`: it chooses note frame 2 or 3 and sound 0xDD or 0xDE,
+  starts at Soma's facing and (8, -26), then flies four pixels per frame
+  with native sine motion, an 8 x 8 type-5 attack box and delayed deletion.
+- The object export adds both note frames. A local room 0/3 capture drew the
+  source-derived note in flight; it was not emulator-compared or listened to.
+- The shared Harpy/Siren controller requests 0x8B at its corresponding idle
+  animation boundary. Together with the already tested 0x87, 0x89 and 0x1C3,
+  both monsters now have every tracked aspect ported: 11 of 47 complete.
+  The exact 0x8B timing remains source-adapted because the rising-flight path
+  is simplified. Zero Mission is unchanged.
+
 ## Patch 0618 - Ghost soul and sounds
 
 - `src/runtime/aos_skill_ghost.c` ports `SkillGhostUse` and

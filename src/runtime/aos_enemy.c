@@ -6382,6 +6382,10 @@ static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
         }
     } else if (e->state == 0) {
         face_player(e, soma);
+        /* sub_080756FC plays the shared Harpy/Siren wing sound while its
+         * idle flight advances. This controller's hover is source-adapted,
+         * so connect it to the corresponding animation boundary. */
+        if (e->anim.frame == 1 && e->anim.tick == 0) aos_audio_play_song(0x8B);
         e->y += aos_sine(e->phase) / 32;
         e->phase = (uint16_t)(e->phase + 0x180);
         int dx = (int)((soma->x - e->x) >> 16);

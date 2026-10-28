@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0616 - Fleaman soul
+
+- `src/runtime/aos_skill_flea.c` ports `SkillFleamanUse`: a flea hops
+  ahead of Soma on the terrain for 160 frames with the enemies' probe
+  walker (now public as `aos_enemy_probe_walk`), then blinks out.
+- The object export adds `Enemy/skill_flea` with its walker probes; the
+  runtime loads skill probes. 8 of 47 monsters are complete. Not ported:
+  the flea's end sparks. Zero Mission is unchanged.
+
 ## Patch 0615 - Blue Crow soul; crow sounds
 
 - `src/runtime/aos_skill_crow.c` ports `sub_SkillBlueCrowUse`: a crow

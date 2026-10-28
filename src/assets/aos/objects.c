@@ -189,6 +189,9 @@ static const EntitySpec entities[] = {
            9, 10, 11, 12, 13, 14, 15),
     /* Resource 31 of 0x080E13BC: the Blue Crow soul's crow (sequence 2). */
     ENTITY("skill_crow", 0x081DB940, 0x0820B4C0, 0, 0x08235F04),
+    /* Resource 20 of 0x080E13BC: the Fleaman soul's flea (still frames 0-2,
+     * sequence 1, the walker probes 0x084F13BE). */
+    {"skill_flea", 0x081D6114, 0x0820B334, 0, 0x0823415C, 0x084F13BE, 0, 0, 3, {0, 1, 2}},
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
 };

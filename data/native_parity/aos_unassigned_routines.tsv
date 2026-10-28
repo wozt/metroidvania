@@ -60,7 +60,6 @@ aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities
 aos:asm:asm/code/code_080211F0.s:SkillFishHeadUse	SkillFishHeadUse	abilities	name			asm_function		asm/code/code_080211F0.s	20174	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	21386	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUse	SkillFlameDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	16280	0	11
-aos:asm:asm/code/code_080211F0.s:SkillFleamanUse	SkillFleamanUse	abilities	name			asm_function		asm/code/code_080211F0.s	16996	0	15
 aos:asm:asm/code/code_080211F0.s:SkillFlyingArmorUse	SkillFlyingArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	26120	0	9
 aos:asm:asm/code/code_080211F0.s:SkillGhostUse	SkillGhostUse	abilities	name			asm_function		asm/code/code_080211F0.s	18890	0	7
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7

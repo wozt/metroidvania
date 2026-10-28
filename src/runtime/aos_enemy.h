@@ -283,6 +283,12 @@ typedef struct {
 /* The soul attacks the next enemy updates test after the weapon (type 5
  * collisions); NULL for none. */
 void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count);
+/* sub_0806CAF8 for another entity carried in an AosEnemy (x, y, vx, vy,
+ * ax, ay, mirrored, ground): one walker step at `speed` toward its facing
+ * with the probe table; mode bit 0 (face the player) is not available
+ * here. Returns the probe walker's flags (1 / 2 walls, 8 floor). */
+int aos_enemy_probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes *p,
+                         int32_t speed, int mode);
 /* Creates enemy `id` at a record position; false for unported enemies. */
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,

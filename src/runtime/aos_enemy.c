@@ -5403,6 +5403,11 @@ static int ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *lay
     return result;
 }
 
+int aos_enemy_probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes *p,
+                         int32_t speed, int mode) {
+    return ground_walk(e, NULL, layer, p, speed, mode & ~1);
+}
+
 /* sub_0806BBC4 and sub_0806D044: the player ahead (by the facing) within
  * `range` pixels (the BIOS Sqrt of the squared whole-pixel distance). */
 static bool player_ahead_within(const AosEnemy *e, const AosSoma *soma, int range) {

@@ -29,6 +29,7 @@
 #include "aos_skill_siren.h"
 #include "aos_skill_merman.h"
 #include "aos_skill_needles.h"
+#include "aos_skill_ripper.h"
 #include "aos_skill_shot.h"
 #include "aos_skill_skull.h"
 #include "aos_skill_valkyrie.h"
@@ -210,12 +211,13 @@ static int enemy_bank(const AosEnemy *enemy) {
 /* The red soul skills' sprites (Enemy/skill_<name>). */
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
-       SKILL_ART_NEEDLES, SKILL_ARTS };
+       SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
                                                          "skill_flea", "skill_skull",
-                                                         "skill_valkyrie", "skill_needles"};
+                                                         "skill_valkyrie", "skill_needles",
+                                                         "skill_ripper"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -660,7 +662,8 @@ static void homing_clear(void) {
 enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, SKILL_AXE,
        SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
-       SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES };
+       SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
+       SKILL_RIPPER };
 
 typedef struct {
     bool alive, started;
@@ -688,6 +691,7 @@ typedef struct {
     AosSkull skull;         /* SKILL_SKULL */
     AosValkyrie valkyrie;   /* SKILL_VALKYRIE */
     AosNeedles needles;     /* SKILL_NEEDLES */
+    AosRipperSoul ripper;   /* SKILL_RIPPER */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
@@ -711,6 +715,7 @@ typedef struct {
 #define SKILL_SKULL_ROUTINE 0x080289B5u
 #define SKILL_VALKYRIE_ROUTINE 0x08024CBDu
 #define SKILL_NEEDLES_ROUTINE 0x080280B1u
+#define SKILL_RIPPER_ROUTINE 0x08023A71u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -740,6 +745,7 @@ typedef struct {
     const AosAnimSet *valkyrie;     /* resource 2, NULL when missing */
     const AosEnemyKind *valkyrie_kind;
     const AosAnimSet *needles;      /* resource 12 with its four piece frames */
+    bool ripper;                    /* both still frames of 0x084F128C */
     const AosAnimSet *flea;         /* resource 20, NULL when missing */
     const AosEnemyKind *flea_kind;  /* its probes and frame boxes */
     const AosBox *flea_still_attack;   /* the attack boxes of its still frames */
@@ -807,6 +813,8 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_SKULL_ROUTINE && souls->skull ? SKILL_SKULL
                : routine == SKILL_VALKYRIE_ROUTINE && souls->valkyrie ? SKILL_VALKYRIE
                : routine == SKILL_NEEDLES_ROUTINE && souls->needles ? SKILL_NEEDLES
+               : routine == SKILL_RIPPER_ROUTINE && souls->ripper && record->parameter < 2
+                   ? SKILL_RIPPER
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -823,6 +831,16 @@ static int cast_red_soul(void *context) {
         skill->x = skill->needles.x;
         skill->y = skill->needles.y;
         skill->facing_left = skill->needles.facing_left;
+    } else if (kind == SKILL_RIPPER) {
+        skill->parameter = (uint8_t)record->parameter;
+        /* Both configuration entries have byte +15 clear and therefore
+         * enter the rebound branch after a wall correction. */
+        skill->ripper = aos_ripper_soul_create(souls->soma->x, souls->soma->y,
+                                               souls->soma->facing_left,
+                                               skill->parameter, true);
+        skill->x = skill->ripper.x;
+        skill->y = skill->ripper.y;
+        skill->facing_left = skill->ripper.facing_left;
     } else if (kind == SKILL_VALKYRIE) {
         skill->valkyrie = aos_valkyrie_create(souls->soma->x, souls->soma->y,
                                               souls->soma->facing_left);
@@ -1212,6 +1230,35 @@ static void update_skills(AriaSouls *souls) {
             skill->y = skill->needles.y;
             break;
         }
+        case SKILL_RIPPER: {
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+            }
+            int16_t wall = 0;
+            bool outside = false;
+            if (skill->ripper.state == AOS_RIPPER_FLYING) {
+                int32_t next_x = (int32_t)((uint32_t)skill->ripper.x +
+                                           (uint32_t)skill->ripper.vx);
+                int x = next_x >> 16, y = skill->ripper.y >> 16;
+                if (souls->layer)
+                    wall = skill->ripper.facing_left
+                               ? (int16_t)aos_wall_push_right(souls->layer, x - 6, y)
+                               : (int16_t)aos_wall_push_left(souls->layer, x + 6, y);
+                int mx = souls->margins ? souls->margins[4][0] : 16;
+                int my = souls->margins ? souls->margins[4][1] : 16;
+                int sx = (next_x >> 16) - souls->cam_x;
+                int sy = (skill->ripper.y >> 16) - souls->cam_y;
+                outside = sx < -mx || sx > mx + 0xF0 || sy < -my || sy > my + 0xA0;
+            }
+            if (!aos_ripper_soul_update(&skill->ripper, wall, outside)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->ripper.x;
+            skill->y = skill->ripper.y;
+            break;
+        }
         case SKILL_VALKYRIE: {
             /* SkillValkyrieUse: counted with sound 0x1AF and sequence 0 on
              * its first update (sub_08042A54(1, 0x3C) is not run). */
@@ -1480,6 +1527,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
                              : (AosBox){0, 0, 0, 0});
         else if (skill->kind == SKILL_NEEDLES && skill->needles.state != 3)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
+        else if (skill->kind == SKILL_RIPPER && skill->ripper.state == AOS_RIPPER_FLYING)
+            box = (AosBox){-1, -1, 2, 2};      /* 0x0202FFFF */
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->valkyrie_kind->attack[0][skill->anim.frame];
@@ -3264,6 +3313,8 @@ int main(int argc, char **argv) {
                                     needles->defs[0].count
                                 ? &needles->set
                                 : NULL;
+            const __typeof__(objects.skills[0]) *ripper = &objects.skills[SKILL_ART_RIPPER];
+            souls.ripper = objects_ok && ripper->loaded && ripper->static_count == 2;
             const __typeof__(objects.skills[0]) *valkyrie = &objects.skills[SKILL_ART_VALKYRIE];
             souls.valkyrie = objects_ok && valkyrie->loaded && valkyrie->defs[0].count
                                  ? &valkyrie->set
@@ -3500,6 +3551,7 @@ int main(int argc, char **argv) {
             if (skill->kind == SKILL_SPEAR && skill->spear.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_FLEA && skill->flea.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_VALKYRIE && skill->valkyrie.blinking && (step & 1)) continue;
+            if (skill->kind == SKILL_RIPPER && skill->ripper.blink == 2 && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
@@ -3514,6 +3566,8 @@ int main(int argc, char **argv) {
                                   skill->kind == SKILL_SHOT ? 2 : AOS_DAGGER_FRAME)
                 : skill->kind == SKILL_NEEDLES
                     ? &objects.skills[SKILL_ART_NEEDLES].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_RIPPER
+                    ? blade_frame(&objects.skills[SKILL_ART_RIPPER], skill->parameter)
                 : skill->kind == SKILL_VALKYRIE
                     ? (skill->valkyrie.hidden
                            ? NULL
@@ -3557,6 +3611,8 @@ int main(int argc, char **argv) {
                                ? (uint16_t)skill->spear.angle * 360.0 / 65536.0
                            : skill->kind == SKILL_AXE_TRAIL
                                ? (uint16_t)skill->trail.angle * 360.0 / 65536.0
+                           : skill->kind == SKILL_RIPPER
+                               ? (uint16_t)skill->ripper.angle * 360.0 / 65536.0
                                : 0;
             /* The afterimages are semi-transparent objects (+ 0x5A mode 1);
              * the blend weights in force are not traced: half here. */

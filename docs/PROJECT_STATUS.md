@@ -1,6 +1,23 @@
 # Project status
 
-Last updated: **2026-10-28**.
+Last updated: **2026-10-29**.
+
+## Patch 0626 - Ripper red soul runtime integration
+
+- Exported the two native `0x084F128C` blade variants from their shared
+  graphics, palette and frame descriptor, and connected the Thumb routine
+  `0x08023A71` to Aria's red-soul caster without spending MP when its art is
+  unavailable.
+- The runtime now places and flips the blade from Soma, requests sounds
+  0xE6 and 0x138, applies the native left/right wall corrections, rebound
+  velocity, gravity, affine turn, 50-frame blink, activity-window removal,
+  2 x 2 type-5 attack and active-slot cleanup. The native hit helper that
+  pins the blade relative to an enemy is not reproduced because the current
+  attack bridge reports the hit but not its target entity.
+- A local offscreen room 0/3 capture showed Ripper's variant-1 blade leaving
+  Soma. Its five tracked aspects are now ported, bringing completeness to
+  **16/47**. Source-derived and unit-tested, not emulator-compared; Zero
+  Mission is unchanged.
 
 ## Patch 0625 - Ripper red soul deterministic motion model
 

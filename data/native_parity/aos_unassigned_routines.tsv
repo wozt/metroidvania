@@ -2152,7 +2152,6 @@ aos:c:src/code/code_080211F0.c:SkillChronomageUse	SkillChronomageUse	abilities	n
 aos:c:src/code/code_080211F0.c:SkillKillerDollUse	SkillKillerDollUse	abilities	name			c_function	0x08024F38	src/code/code_080211F0.c	3341	0	14
 aos:c:src/code/code_080211F0.c:SkillLoadGraphicsInline	SkillLoadGraphicsInline	unclassified		technical	exclusive_callees	c_function		src/code/code_080211F0.c	2389	9	3
 aos:c:src/code/code_080211F0.c:SkillNemesisUse	SkillNemesisUse	abilities	name			c_function	0x080251F0	src/code/code_080211F0.c	3488	0	6
-aos:c:src/code/code_080211F0.c:Skill_EvilButcher_Ripper_Use	Skill_EvilButcher_Ripper_Use	abilities	name			c_function	0x08023A70	src/code/code_080211F0.c	2401	0	14
 aos:c:src/code/code_080211F0.c:sub_080211F0	sub_080211F0	technical	referrers			c_function	0x080211F0	src/code/code_080211F0.c	35	1	0
 aos:c:src/code/code_080211F0.c:sub_080211F4	sub_080211F4	unclassified				c_function	0x080211F4	src/code/code_080211F0.c	44	0	0
 aos:c:src/code/code_080211F0.c:sub_08021214	sub_08021214	unclassified				c_function	0x08021214	src/code/code_080211F0.c	58	1	0

@@ -199,6 +199,9 @@ static const EntitySpec entities[] = {
     /* Resource 12 of 0x080E13BC: the Needles soul's urchin (sequence 0)
      * and its four burst pieces (still frames 0-3). */
     STATIC("skill_needles", 0x081D20F4, 0x0820B214, 0, 0x08232300, 4, 0, 1, 2, 3),
+    /* The two entries of 0x084F128C share their data and select still frame
+     * 0 (Evil Butcher) or 1 (Ripper). */
+    STATIC("skill_ripper", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0, 2, 0, 1),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

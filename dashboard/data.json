@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T11:59:35+00:00",
+ "generated_at": "2026-10-28T12:02:59+00:00",
  "git": {
-  "commit": "3464bd2",
+  "commit": "a9acde8",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 145,
    "functional_or_better_percent": 70.7,
-   "with_passing_tests": 188,
-   "with_passing_tests_percent": 91.7,
+   "with_passing_tests": 192,
+   "with_passing_tests_percent": 93.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -541,8 +541,8 @@
    },
    "functional_or_better": 8,
    "functional_or_better_percent": 34.8,
-   "with_passing_tests": 21,
-   "with_passing_tests_percent": 91.3,
+   "with_passing_tests": 22,
+   "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_early_enemy_components_0477",
@@ -589,8 +589,8 @@
    },
    "functional_or_better": 4,
    "functional_or_better_percent": 30.8,
-   "with_passing_tests": 9,
-   "with_passing_tests_percent": 69.2,
+   "with_passing_tests": 11,
+   "with_passing_tests_percent": 84.6,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -687,8 +687,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 1,
-   "with_passing_tests_percent": 33.3,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -14532,7 +14532,7 @@
       "ctest": [
        "native_inventory_writer"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -14546,11 +14546,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-28"
    }
   },
   {
@@ -14689,15 +14687,13 @@
       "ctest": [
        "native_inventory_writer"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-28"
    }
   },
   {
@@ -16479,7 +16475,7 @@
       "ctest": [
        "native_inventory_writer"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -16493,11 +16489,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-28"
    }
   },
   {
@@ -16582,14 +16576,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-28"
    }
   },
   {
@@ -16734,7 +16726,7 @@
     "files": [
      "tests/test_inventory_writer.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "fusion_inventory_routines_current",
@@ -17285,12 +17277,18 @@
    }
   ],
   "summary": {
-   "passed": 95,
-   "failed": 1,
+   "passed": 96,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "a9acde8",
+   "date": "2026-10-28",
+   "subject": "Track each Aria monster's aspects on the dashboard",
+   "scope": "project"
+  },
   {
    "commit": "3464bd2",
    "date": "2026-10-28",
@@ -17763,12 +17761,6 @@
    "commit": "79d768e",
    "date": "2026-10-25",
    "subject": "Run the test suite once per work cycle",
-   "scope": "project"
-  },
-  {
-   "commit": "427942f",
-   "date": "2026-10-25",
-   "subject": "Write the Zero Mission room export natively",
    "scope": "project"
   }
  ],

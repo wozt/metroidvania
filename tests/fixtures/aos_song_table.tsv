@@ -1,0 +1,4 @@
+schema	metroidvania-aos-song-table-v1
+# kind	id	header	player	channel	tracks	blocks	priority	reverb
+song	0	0x08000100	3	3	1	0	1	0x00
+song	1	0x08000200	0	0	2	0	10	0x80

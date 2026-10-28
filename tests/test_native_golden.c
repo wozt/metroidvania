@@ -252,6 +252,7 @@ static void aos_current(Lines *lines) {
         free(output.data);
     }
     char world[4096], rooms[4096], output[4096], soma[4096], metadata[4096], runtime[4096];
+    char sound[4096];
     char hash[65];
     subdirectory(world, sizeof world, "world.json", false);
     subdirectory(rooms, sizeof rooms, "rooms.tsv", false);
@@ -281,6 +282,10 @@ static void aos_current(Lines *lines) {
     console_line(lines, "object-console", run(objects));
     file_lines(lines, "object-file", "metadata/", metadata);
     file_lines(lines, "object-file", "runtime/", runtime);
+    subdirectory(sound, sizeof sound, "sound", true);
+    const char *export_sound[] = {IMPORTER, "--aria-export-sound", ARIA_ROM, sound, NULL};
+    console_line(lines, "sound-console", run(export_sound));
+    file_lines(lines, "sound-file", "", sound);
 }
 
 static void mzm_current(Lines *lines) {

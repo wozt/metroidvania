@@ -72,6 +72,9 @@ typedef struct {
 void aos_audio_set_sink(AosAudioSink sink, void *context);
 /* Install the gSongTable fields needed by StartSong. The data is copied. */
 bool aos_audio_set_song_table(const AosAudioSongInfo *songs, size_t count);
+/* Load the private song-table manifest exported from the verified Aria ROM. */
+bool aos_audio_load_song_table(const char *path, char *error, size_t error_size);
+size_t aos_audio_song_count(void);
 /* Reset the host controller and remove its song table, retaining the sink. */
 void aos_audio_reset(void);
 /* PlaySong: route a song ID, STOP_SONG request or AudioCommand value. */

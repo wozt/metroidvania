@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0601 - Aria native song-table export and runtime routing
+
+- `src/assets/aos/sound.c` reads all 495 entries of Aria's `gSongTable` and
+  the fixed fields of every MP2K header. The new `aria_sound` rebuild task
+  writes a private manifest with the header pointer, player, channel, track
+  count, block count, priority and reverb; its complete output is guarded by
+  the native golden digest without committing ROM-derived data.
+- `aos_audio_load_song_table` validates and installs the real player and
+  priority routing metadata. The room runtime loads it before `PlaySong` and
+  calls `MPlayVolumeUpdate` once per lifecycle frame. Synthetic tests cover
+  failed and successful loading, while the local-ROM asset test checks
+  known entries on players 0, 1, 2 and 6.
+- Playback is still inaudible: the MP2K track interpreter, voice and sample
+  banks, mixer and SDL sink are not ported. Axe Armor's sound aspect remains
+  `partial`, no monster becomes complete, and the audio feature remains
+  `partial`. Source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+
 ## Patch 0600 - Aria native audio controller
 
 - `src/runtime/aos_audio.c` now carries the control portion of `StartSong`

@@ -66,6 +66,7 @@ build/fusion_importer --aria-summary "roms/Castlevania - Aria of Sorrow (USA).gb
 build/fusion_importer --aria-catalog "roms/Castlevania - Aria of Sorrow (USA).gba" WORLD_JSON ROOMS_TSV
 build/fusion_importer --aria-export-rooms "roms/Castlevania - Aria of Sorrow (USA).gba" OUTPUT_DIR
 build/fusion_importer --aria-export-soma "roms/Castlevania - Aria of Sorrow (USA).gba" OUTPUT_DIR
+build/fusion_importer --aria-export-sound "roms/Castlevania - Aria of Sorrow (USA).gba" OUTPUT_DIR
 build/fusion_importer --mzm-symbols "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
 build/fusion_importer --mzm-rom-bank "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf OUTPUT_DIR
 build/fusion_importer --mzm-rooms "roms/Metroid - Zero Mission (USA).gba" third_party/mzm/mzm_us.elf
@@ -130,7 +131,9 @@ their tests and the room-only helpers of `mzm_sprites` / `mzm_c_tables`, and
 `native_golden_aos`) checks recorded SHA-256 digests of
 every native command output and export file instead of the Python
 reference. Aria's composite image, `AOSROOM-NATIVE` v4 serialization and
-complete 685-file private export are now native too. The `aria_rooms` rebuild
+complete 685-file private export are now native too. The 495-entry Aria
+`gSongTable` and each fixed MP2K header are exported through the native
+`aria_sound` task into a private runtime manifest. The `aria_rooms` rebuild
 task calls `build/fusion_importer --aria-export-rooms`, the former Python room
 exporter and its tests are removed, and a recorded digest fixture replaces the
 temporary Python equivalence test. The editor previews use the native

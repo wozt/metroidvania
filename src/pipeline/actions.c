@@ -248,6 +248,11 @@ bool fusion_rebuild_run_registered_action(const char *root,
                              aria_rom, output_a, output_b, NULL};
         return RUN(arguments);
     }
+    if (!strcmp(task->name, "aria_sound")) {
+        if (!OUTPUT(output_a, "assets/extracted/aria/sound/runtime")) return false;
+        char *arguments[] = {importer, "--aria-export-sound", aria_rom, output_a, NULL};
+        return RUN(arguments);
+    }
     if (!strcmp(task->name, "metroid_rooms")) {
         if (!OUTPUT(output_a, "assets/extracted/metroid/rooms/runtime")) return false;
         char *arguments[] = {importer, "--mzm-export-rooms", metroid_rom, mzm_elf,

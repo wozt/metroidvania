@@ -32,6 +32,9 @@ enum {
     COMPRESSED_GRAPHICS_RESOURCE_OFFSET = 0xD900,
     PALETTE_RESOURCE_OFFSET = 0xDA00,
     GRAPHICS_LZ77_OFFSET = 0xDB00,
+    SONG_TABLE_OFFSET = 0x27CD38,
+    SONG_HEADER_OFFSET = 0x300000,
+    SONG_RECORD_SIZE = 8,
     ENEMY_TABLE_OFFSET = 0x0E9644,
     ENEMY_ENTRY_SIZE = 0x24,
     FIXTURE_SIZE = DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
@@ -176,6 +179,17 @@ int main(void) {
         write_entity(bytes, entity_offset + 12, INT16_MAX, 0, 0, 0, 0, 0, 0, 0);
     }
 
+    for (size_t index = 0; index < FUSION_AOS_SONG_COUNT; ++index) {
+        size_t record = SONG_TABLE_OFFSET + index * SONG_RECORD_SIZE;
+        write_u32(bytes, record, GBA_ROM_BASE + SONG_HEADER_OFFSET);
+        write_u16(bytes, record + 4, (uint16_t)(index % 8));
+        write_u16(bytes, record + 6, (uint16_t)(index % 8));
+    }
+    bytes[SONG_HEADER_OFFSET] = 1;
+    bytes[SONG_HEADER_OFFSET + 1] = 0;
+    bytes[SONG_HEADER_OFFSET + 2] = 42;
+    bytes[SONG_HEADER_OFFSET + 3] = 0x80;
+
     FusionRom rom = {bytes, FIXTURE_SIZE, FUSION_ASSET_GAME_ARIA};
     FusionAosAreaDirectory directory;
     char error[160];
@@ -183,6 +197,37 @@ int main(void) {
     assert(directory.total_rooms == total_entries);
     for (size_t area = 0; area < FUSION_AOS_AREA_COUNT; ++area) {
         assert(directory.areas[area].room_count == room_counts[area]);
+    }
+    FusionAosSongTable songs;
+    assert(fusion_aos_read_song_table(&rom, &songs, error, sizeof error));
+    assert(songs.count == FUSION_AOS_SONG_COUNT);
+    assert(songs.entries[0xE3].header_pointer == GBA_ROM_BASE + SONG_HEADER_OFFSET);
+    assert(songs.entries[0xE3].player == 3 && songs.entries[0xE3].channel == 3);
+    assert(songs.entries[0xE3].track_count == 1 && songs.entries[0xE3].priority == 42);
+    write_u32(bytes, SONG_TABLE_OFFSET + 4 * SONG_RECORD_SIZE, 0x07000000);
+    assert(!fusion_aos_read_song_table(&rom, &songs, error, sizeof error));
+    write_u32(bytes, SONG_TABLE_OFFSET + 4 * SONG_RECORD_SIZE,
+              GBA_ROM_BASE + SONG_HEADER_OFFSET);
+
+    char rom_path[1024];
+    snprintf(rom_path, sizeof rom_path, "%s/roms/Castlevania - Aria of Sorrow (USA).gba",
+             FUSION_SOURCE_DIR);
+    FILE *probe = fopen(rom_path, "rb");
+    if (probe) {
+        fclose(probe);
+        FusionRom actual = {0};
+        assert(fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &actual,
+                               error, sizeof error));
+        assert(fusion_aos_read_song_table(&actual, &songs, error, sizeof error));
+        assert(songs.count == 495);
+        assert(songs.entries[1].header_pointer == 0x084D8E60u);
+        assert(songs.entries[1].player == 0 && songs.entries[1].priority == 50);
+        assert(songs.entries[0x6E].player == 1 && songs.entries[0x6E].priority == 54);
+        assert(songs.entries[0xE3].player == 2 && songs.entries[0xE3].priority == 50);
+        assert(songs.entries[0x1EE].player == 6 && songs.entries[0x1EE].priority == 55);
+        fusion_rom_close(&actual);
+    } else {
+        puts("Aria ROM unavailable; skipping song-table evidence check");
     }
 
     write_room_descriptor(bytes, ROOM_BASE_OFFSET, 0,

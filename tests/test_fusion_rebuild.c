@@ -15,8 +15,9 @@ static void test_registered_graph(void) {
     size_t count = 0;
     const FusionRebuildTask *tasks = fusion_rebuild_tasks(&count);
     assert(tasks != NULL);
-    assert(count == 15);
+    assert(count == 16);
     assert(fusion_rebuild_find_task("aria_rooms") != NULL);
+    assert(fusion_rebuild_find_task("aria_sound") != NULL);
     assert(fusion_rebuild_find_task("missing") == NULL);
 
     const char *selected[] = {"raw_import", "checklist", "aria_objects"};

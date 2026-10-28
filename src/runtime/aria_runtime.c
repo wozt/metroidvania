@@ -9,6 +9,7 @@
  * animation timing. Room transitions and a portable frontend save can select
  * the active room; complete inventory, soul and native SRAM parity remain
  * separate reconstruction work. */
+#include "aos_audio.h"
 #include "aos_door.h"
 #include "aos_enemy.h"
 #include "aos_game_lifecycle.h"
@@ -55,6 +56,7 @@
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
+#define DEFAULT_AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
 #define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
 #define DEFAULT_ITEM_ICONS "assets/extracted/aria/metadata/item_icons.tsv"
 #define ITEM_ICONS 193     /* icon numbers 1-192 of sub_0801232C */
@@ -2281,12 +2283,21 @@ int main(int argc, char **argv) {
         free_room(&room);
         return 1;
     }
+    char audio_error[256];
+    aos_audio_reset();
+    bool have_audio_table = aos_audio_load_song_table(DEFAULT_AUDIO_TABLE,
+                                                       audio_error, sizeof audio_error);
+    if (!have_audio_table)
+        fprintf(stderr, "No Aria song table: ./build/fusion_rebuild --task aria_sound (%s)\n",
+                audio_error);
     static AriaLibrary library;
     if (check) {
         bool ok = load_library(library_path, &library, NULL);
         if (ok) printf("Aria room %s: %d x %d cells, Soma library %d animations, spawn %d,%d\n",
                        folder, room.width_cells, room.height_cells, library.set.count,
                        spawn_x, spawn_y);
+        if (have_audio_table)
+            printf("Aria audio table: %zu songs\n", aos_audio_song_count());
         free_room(&room);
         return ok ? 0 : 1;
     }
@@ -2574,6 +2585,8 @@ int main(int argc, char **argv) {
             aos_input_update(&aria_input, held);
             lifecycle.input = aria_input;
             aos_game_lifecycle_update(&lifecycle);
+            /* AudioVSync advances the native volume commands every frame. */
+            aos_audio_volume_update();
             if (!lifecycle.in_game_frame_requested) continue;
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);

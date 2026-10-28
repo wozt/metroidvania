@@ -38,6 +38,7 @@ static void usage(const char *name) {
             "       %s --aria-export-soma ROM OUTPUT_DIR\n"
             "       %s --aria-export-weapons ROM METADATA_DIR RUNTIME_DIR\n"
             "       %s --aria-export-objects ROM METADATA_DIR RUNTIME_DIR\n"
+            "       %s --aria-export-sound ROM OUTPUT_DIR\n"
             "       %s --mzm-symbols ROM ELF\n"
             "       %s --mzm-rom-bank ROM ELF OUTPUT_DIR\n"
             "       %s --mzm-rooms ROM ELF\n"
@@ -68,7 +69,7 @@ static void usage(const char *name) {
             name,
             name, name, name, name,
             name, name, name, name, name, name, name, name, name, name, name,
-            name, name, name, name, name);
+            name, name, name, name, name, name);
 }
 
 static bool read_file(const char *path, uint8_t **data, size_t *size,
@@ -906,6 +907,22 @@ static int export_aria_objects(const char *path, const char *metadata,
     }
     printf("Aria object library: %zu sequences, %zu frames\n",
            summary.sequences, summary.frames);
+    fusion_rom_close(&rom);
+    return 0;
+}
+
+static int export_aria_sound(const char *path, const char *output) {
+    FusionRom rom = {0};
+    size_t songs = 0;
+    char error[256];
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, path, &rom,
+                         error, sizeof error) ||
+        !fusion_aos_export_sound(&rom, output, &songs, error, sizeof error)) {
+        fprintf(stderr, "aria-export-sound: %s\n", error);
+        fusion_rom_close(&rom);
+        return 1;
+    }
+    printf("Aria sound table: %zu songs\n", songs);
     fusion_rom_close(&rom);
     return 0;
 }
@@ -2830,6 +2847,8 @@ int main(int argc, char **argv) {
     const char *aria_objects_rom_path = NULL;
     const char *aria_objects_metadata = NULL;
     const char *aria_objects_runtime = NULL;
+    const char *aria_sound_rom_path = NULL;
+    const char *aria_sound_output = NULL;
     const char *aria_catalog_rom_path = NULL;
     const char *aria_catalog_output_path = NULL;
     const char *aria_catalog_index_path = NULL;
@@ -2934,6 +2953,10 @@ int main(int argc, char **argv) {
             aria_objects_rom_path = argv[++i];
             aria_objects_metadata = argv[++i];
             aria_objects_runtime = argv[++i];
+        }
+        else if (!strcmp(argv[i], "--aria-export-sound") && i + 2 < argc) {
+            aria_sound_rom_path = argv[++i];
+            aria_sound_output = argv[++i];
         }
         else if (!strcmp(argv[i], "--aria-catalog") && i + 3 < argc) {
             aria_catalog_rom_path = argv[++i];
@@ -3092,6 +3115,8 @@ int main(int argc, char **argv) {
         return export_aria_objects(aria_objects_rom_path,
                                    aria_objects_metadata,
                                    aria_objects_runtime);
+    if (aria_sound_rom_path)
+        return export_aria_sound(aria_sound_rom_path, aria_sound_output);
     if (aria_catalog_rom_path)
         return write_aria_catalog(aria_catalog_rom_path, aria_catalog_output_path,
                                   aria_catalog_index_path);

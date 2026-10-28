@@ -63,6 +63,7 @@ add_library(fusion_assets STATIC
     src/assets/aos/runtime_room.c
     src/assets/aos/export.c
     src/assets/aos/objects.c
+    src/assets/aos/sound.c
     src/assets/aos/soma.c
     src/assets/aos/weapons.c
     src/assets/aos/world.c
@@ -252,6 +253,8 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_assets_gba_header_tests)
     add_test(NAME fusion_assets_gba_header COMMAND fusion_assets_gba_header_tests)
     add_executable(fusion_assets_aos_tests tests/test_fusion_assets_aos.c)
+    target_compile_definitions(fusion_assets_aos_tests PRIVATE
+        FUSION_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(fusion_assets_aos_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_assets_aos_tests)
     add_test(NAME fusion_assets_aos COMMAND fusion_assets_aos_tests)
@@ -624,6 +627,8 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_audio_tests tests/test_aos_audio.c src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_audio_tests PRIVATE src/runtime)
+    target_compile_definitions(fusion_aos_audio_tests PRIVATE
+        FUSION_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     fusion_enable_warnings(fusion_aos_audio_tests)
     add_test(NAME aos_audio COMMAND fusion_aos_audio_tests)
 

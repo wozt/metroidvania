@@ -29,7 +29,8 @@ enum {
     FUSION_AOS_ROOM_FLAG_SAVE = 1 << 0,
     FUSION_AOS_ROOM_FLAG_WARP = 1 << 1,
     FUSION_AOS_MAP_CELL_CAPACITY = FUSION_AOS_MAP_WIDTH * FUSION_AOS_MAP_HEIGHT,
-    FUSION_AOS_EXPORT_SKIP_CAPACITY = 64
+    FUSION_AOS_EXPORT_SKIP_CAPACITY = 64,
+    FUSION_AOS_SONG_COUNT = 495
 };
 
 typedef struct {
@@ -408,5 +409,29 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                                const char *runtime_output,
                                FusionAosObjectExportSummary *summary,
                                char *error, size_t error_size);
+
+typedef struct {
+    uint32_t header_pointer;
+    uint16_t player;
+    uint16_t channel;
+    uint8_t track_count;
+    uint8_t block_count;
+    uint8_t priority;
+    uint8_t reverb;
+} FusionAosSong;
+
+typedef struct {
+    FusionAosSong entries[FUSION_AOS_SONG_COUNT];
+    size_t count;
+} FusionAosSongTable;
+
+/* Reads gSongTable and the fixed fields of every MP2K song header. */
+bool fusion_aos_read_song_table(const FusionRom *rom,
+                                FusionAosSongTable *table,
+                                char *error, size_t error_size);
+/* Writes the private runtime song-table manifest into OUTPUT. */
+bool fusion_aos_export_sound(const FusionRom *rom, const char *output,
+                             size_t *song_count,
+                             char *error, size_t error_size);
 
 #endif /* FUSION_ASSETS_AOS_H */

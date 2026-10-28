@@ -2,6 +2,7 @@
 #include "aos_audio.h"
 
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 enum {
@@ -38,6 +39,61 @@ bool aos_audio_set_song_table(const AosAudioSongInfo *songs, size_t count) {
     g_song_count = count;
     return true;
 }
+
+static bool load_error(char *error, size_t error_size, const char *message) {
+    if (error && error_size) {
+        snprintf(error, error_size, "%s", message);
+        error[error_size - 1] = '\0';
+    }
+    return false;
+}
+
+bool aos_audio_load_song_table(const char *path, char *error, size_t error_size) {
+    if (!path) return load_error(error, error_size, "invalid song-table path");
+    FILE *file = fopen(path, "rb");
+    if (!file) return load_error(error, error_size, "cannot open song table");
+    char line[512];
+    if (!fgets(line, sizeof line, file) ||
+        strcmp(line, "schema\tmetroidvania-aos-song-table-v1\n")) {
+        fclose(file);
+        return load_error(error, error_size, "invalid Aria song-table schema");
+    }
+    AosAudioSongInfo songs[AOS_AUDIO_MAX_SONGS];
+    size_t count = 0;
+    unsigned line_number = 1;
+    while (fgets(line, sizeof line, file)) {
+        ++line_number;
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+        unsigned id, header, player, channel, tracks, blocks, priority, reverb;
+        int used = 0;
+        int fields = sscanf(line, "song\t%u\t0x%x\t%u\t%u\t%u\t%u\t%u\t0x%x%n",
+                            &id, &header, &player, &channel, &tracks, &blocks,
+                            &priority, &reverb, &used);
+        if (fields != 8 || (line[used] != '\n' && line[used] != '\r' && line[used] != '\0') ||
+            id != count || count >= AOS_AUDIO_MAX_SONGS ||
+            player >= AOS_AUDIO_PLAYER_COUNT || channel >= AOS_AUDIO_PLAYER_COUNT ||
+            tracks > 16 || blocks > UINT8_MAX || priority > UINT8_MAX ||
+            reverb > UINT8_MAX || header < 0x08000000u) {
+            char message[96];
+            snprintf(message, sizeof message, "invalid Aria song-table row %u", line_number);
+            fclose(file);
+            return load_error(error, error_size, message);
+        }
+        songs[count++] = (AosAudioSongInfo){(uint8_t)player, (uint8_t)priority};
+    }
+    if (ferror(file)) {
+        fclose(file);
+        return load_error(error, error_size, "cannot read Aria song table");
+    }
+    fclose(file);
+    if (!count) return load_error(error, error_size, "Aria song table is empty");
+    if (!aos_audio_set_song_table(songs, count))
+        return load_error(error, error_size, "cannot install Aria song table");
+    if (error && error_size) error[0] = '\0';
+    return true;
+}
+
+size_t aos_audio_song_count(void) { return g_song_count; }
 
 void aos_audio_reset(void) {
     memset(&g_state, 0, sizeof g_state);

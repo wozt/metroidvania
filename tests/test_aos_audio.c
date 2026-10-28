@@ -107,9 +107,25 @@ static void controller_tests(void) {
     }
 }
 
+static void loader_tests(void) {
+    char error[128];
+    aos_audio_reset();
+    assert(aos_audio_load_song_table(FUSION_SOURCE_DIR "/tests/fixtures/aos_song_table.tsv",
+                                     error, sizeof error));
+    assert(aos_audio_song_count() == 2);
+    aos_audio_play_song(1);
+    const AosAudioState *state = aos_audio_state();
+    assert(state->players[0].active && state->players[0].song == 1);
+    assert(state->players[0].priority == 10);
+    assert(!aos_audio_load_song_table(FUSION_SOURCE_DIR "/tests/fixtures/missing.tsv",
+                                      error, sizeof error));
+    assert(aos_audio_song_count() == 2);
+}
+
 int main(void) {
     routing_tests();
     controller_tests();
+    loader_tests();
     puts("aos audio tests passed");
     return 0;
 }

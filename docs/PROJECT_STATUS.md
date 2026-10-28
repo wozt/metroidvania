@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0593 - Aria Merman red soul
+
+- The object export adds `Enemy/skill_merman` (resource 0 of 0x080E13BC).
+- `src/runtime/aos_skill_merman.c` ports the drops of `SkillMermanUse`
+  (`sub_08026DB8`): five drops at 1 to 5 pixels a frame, slowed by their
+  128th, striking for 16 frames, then falling with gravity until they
+  leave the screen. The runtime casts soul 4: the spout follows Soma
+  and ends with its animation, the drops take skill slots.
+- A local run with soul 4 drew the stream from Soma's hand. Not ported:
+  the drops' splashes and the sounds. Source-derived and unit-tested,
+  not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0592 - Aria Skeleton red soul
 
 - The object export writes `metadata/skill_throws.tsv`, the eight

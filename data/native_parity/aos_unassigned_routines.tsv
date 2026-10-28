@@ -80,7 +80,6 @@ aos:asm:asm/code/code_080211F0.s:SkillLubicantUse	SkillLubicantUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:SkillMandragoraUse	SkillMandragoraUse	abilities	name			asm_function		asm/code/code_080211F0.s	19459	0	19
 aos:asm:asm/code/code_080211F0.s:SkillMedusaHeadUse	SkillMedusaHeadUse	abilities	name			asm_function		asm/code/code_080211F0.s	31367	0	4
-aos:asm:asm/code/code_080211F0.s:SkillMermanUse	SkillMermanUse	abilities	name			asm_function		asm/code/code_080211F0.s	11814	0	10
 aos:asm:asm/code/code_080211F0.s:SkillNeedlesUse	SkillNeedlesUse	abilities	name			asm_function		asm/code/code_080211F0.s	13954	0	15
 aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	name			asm_function		asm/code/code_080211F0.s	19018	0	20
 aos:asm:asm/code/code_080211F0.s:SkillPersephoneUse	SkillPersephoneUse	abilities	name			asm_function		asm/code/code_080211F0.s	29857	0	12
@@ -110,7 +109,6 @@ aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_080256AC	sub_080256AC	abilities	referrers			asm_function	0x080256AC	asm/code/code_080211F0.s	8737	1	5
 aos:asm:asm/code/code_080211F0.s:sub_08025F70	sub_08025F70	abilities	referrers			asm_function	0x08025F70	asm/code/code_080211F0.s	9818	0	4
 aos:asm:asm/code/code_080211F0.s:sub_08026858	sub_08026858	abilities	referrers			asm_function	0x08026858	asm/code/code_080211F0.s	10924	0	5
-aos:asm:asm/code/code_080211F0.s:sub_08026DB8	sub_08026DB8	abilities	referrers			asm_function	0x08026DB8	asm/code/code_080211F0.s	11598	0	13
 aos:asm:asm/code/code_080211F0.s:sub_08027140	sub_08027140	abilities	referrers			asm_function	0x08027140	asm/code/code_080211F0.s	12036	0	9
 aos:asm:asm/code/code_080211F0.s:sub_08028018	sub_08028018	abilities	referrers			asm_function	0x08028018	asm/code/code_080211F0.s	13874	0	2
 aos:asm:asm/code/code_080211F0.s:sub_080286BC	sub_080286BC	abilities	referrers			asm_function	0x080286BC	asm/code/code_080211F0.s	14687	0	9

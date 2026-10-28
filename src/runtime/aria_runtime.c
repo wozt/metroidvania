@@ -17,6 +17,7 @@
 #include "aos_stats.h"
 #include "aos_pickup.h"
 #include "aos_soul.h"
+#include "aos_skill_merman.h"
 #include "aos_skill_throw.h"
 #include "aos_hud.h"
 #include "aos_game_over.h"
@@ -118,8 +119,9 @@ static int enemy_bank(const AosEnemy *enemy) {
 }
 #define ENEMY_STATIC_FRAMES 10 /* single sprite frames of child entities per kind */
 /* The red soul skills' sprites (Enemy/skill_<name>). */
-enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ARTS };
-static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone"};
+enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_MERMAN, SKILL_ARTS };
+static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
+                                                         "skill_merman"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -517,7 +519,7 @@ typedef struct {
 
 /* A red soul skill entity (EntityCreateInRange(2, 0x10)): SkillBatUse,
  * SkillSkullArcherUse's bow and its arrow sub_08028BC4 are ported. */
-enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW };
+enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP };
 
 typedef struct {
     bool alive, started;
@@ -531,6 +533,7 @@ typedef struct {
     bool struck;            /* + 0x20 set by the arrow's hit callback */
     AosAnimState anim;
     AosThrow thrown;        /* SKILL_THROW: the whole entity */
+    AosMermanDrop drop;     /* SKILL_DROP: the whole entity */
     uint8_t parameter;      /* + 0x1E: the record's parameter */
 } AriaSkill;
 
@@ -538,6 +541,7 @@ typedef struct {
 #define SKILL_BAT_ROUTINE 0x08026C55u
 #define SKILL_ARCHER_ROUTINE 0x08028D69u
 #define SKILL_THROW_ROUTINE 0x08025785u
+#define SKILL_MERMAN_ROUTINE 0x08026F75u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -546,7 +550,7 @@ typedef struct {
     const AosRedSoulRecord *records;
     AriaSkill skills[MAX_SKILLS];
     const AosSoma *soma;
-    const AosAnimSet *bat, *bow;    /* NULL when not exported */
+    const AosAnimSet *bat, *bow, *merman; /* NULL when not exported */
     const AosThrowRecord *throws;   /* metadata/skill_throws.tsv, NULL when missing */
     bool bone;                      /* resource 7 (Enemy/skill_bone) is loaded */
     const int16_t (*margins)[2];    /* sub_0806D128's table */
@@ -578,6 +582,7 @@ static int cast_red_soul(void *context) {
     int kind = routine == SKILL_BAT_ROUTINE && souls->bat      ? SKILL_BAT
                : routine == SKILL_ARCHER_ROUTINE && souls->bow ? SKILL_BOW
                : throwable                                     ? SKILL_THROW
+               : routine == SKILL_MERMAN_ROUTINE && souls->merman ? SKILL_SPOUT
                                                                : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -588,6 +593,8 @@ static int cast_red_soul(void *context) {
     /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
     if (kind == SKILL_BAT)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
+    else if (kind == SKILL_SPOUT)
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 6, -0x1A);
     else if (kind == SKILL_THROW) {
         skill->parameter = (uint8_t)record->parameter;
         skill->thrown = aos_throw_create(souls->soma->x, souls->soma->y, souls->soma->facing_left);
@@ -683,6 +690,47 @@ static void update_skills(AriaSouls *souls) {
             skill->facing_left = thrown->facing_left;
             break;
         }
+        case SKILL_SPOUT:
+            /* SkillMermanUse: on its first update it starts sequence 0
+             * (sound 0xED and sub_08042A54(1, 0x1E) are not played), counts
+             * itself and drops five sub_08026DB8 children from (6, -0x1A);
+             * every update it then stays at Soma's (0, -0x1A) and it ends
+             * with its animation. */
+            if (!skill->started) {
+                skill->started = true;
+                aos_anim_start(&skill->anim, souls->merman, AOS_MERMAN_SPOUT_SEQUENCE, false);
+                souls->caster.active++;
+                for (int k = 0; k < AOS_MERMAN_DROPS; ++k) {
+                    AriaSkill *drop = spawn_child(souls, SKILL_DROP);
+                    if (!drop) continue;
+                    drop->soul = skill->soul;
+                    drop->drop = aos_merman_drop_create(k, skill->x, skill->y, skill->facing_left);
+                    drop->x = skill->x;
+                    drop->y = skill->y;
+                    drop->facing_left = skill->facing_left;
+                }
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
+            if (aos_anim_step(&skill->anim, souls->merman) == 3) end_skill(souls, skill);
+            break;
+        case SKILL_DROP: {
+            /* sub_08026DB8: its splash (sub_0802DAD4) is not created. */
+            if (!skill->started) {
+                skill->started = true;
+                aos_anim_start(&skill->anim, souls->merman, AOS_MERMAN_DROP_SEQUENCE, true);
+            }
+            int mx = souls->margins ? souls->margins[3][0] : 16;
+            int my = souls->margins ? souls->margins[3][1] : 16;
+            bool splash;
+            if (!aos_merman_drop_update(&skill->drop, souls->cam_x, souls->cam_y, mx, my, &splash)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->drop.x;
+            skill->y = skill->drop.y;
+            aos_anim_step(&skill->anim, souls->merman);
+            break;
+        }
         case SKILL_ARROW:
             /* sub_08028BC4: frame 1, 6 pixels a frame (sound 0xC8 is not
              * played); once its hit callback has run it stops and blinks 16
@@ -730,6 +778,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         else if (skill->kind == SKILL_ARROW && skill->state == 1 && !skill->struck)
             box = (AosBox){8, -1, 2, 2};
         else if (skill->kind == SKILL_THROW && skill->thrown.state == 1)
+            box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
+        else if (skill->kind == SKILL_DROP && skill->drop.attacking)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         if (!box.w || !box.h) continue;
         owners[count] = skill;
@@ -2319,6 +2369,12 @@ int main(int argc, char **argv) {
             souls.bat = objects_ok && bat->loaded ? &bat->set : NULL;
             souls.bow = objects_ok && archer->loaded && archer->static_count ? &archer->set : NULL;
             souls.bone = objects_ok && objects.skills[SKILL_ART_BONE].static_count;
+            const __typeof__(objects.skills[0]) *merman = &objects.skills[SKILL_ART_MERMAN];
+            souls.merman = objects_ok && merman->set.count > AOS_MERMAN_DROP_SEQUENCE &&
+                                   merman->defs[AOS_MERMAN_SPOUT_SEQUENCE].count &&
+                                   merman->defs[AOS_MERMAN_DROP_SEQUENCE].count
+                               ? &merman->set
+                               : NULL;
             souls.margins = objects_ok ? (const int16_t(*)[2])objects.enemies[0].kind.margins : NULL;
             souls.cam_x = cam_x;
             souls.cam_y = cam_y;
@@ -2476,7 +2532,9 @@ int main(int argc, char **argv) {
                 skill->kind == SKILL_BAT   ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_ARROW ? &objects.skills[SKILL_ART_ARCHER].statics[0]
-                                             : &objects.skills[SKILL_ART_BONE].statics[0];
+                : skill->kind == SKILL_THROW ? &objects.skills[SKILL_ART_BONE].statics[0]
+                                             : &objects.skills[SKILL_ART_MERMAN]
+                                                    .frames[skill->anim.id][skill->anim.frame];
             if (!art->texture) continue;
             int px = skill->x >> 16, py = skill->y >> 16;
             float x = skill->facing_left ? (float)(px - art->offset_x) - art->w

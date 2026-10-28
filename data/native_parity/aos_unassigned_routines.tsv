@@ -2107,7 +2107,6 @@ aos:asm:asm/libagbsyscall.s:Mod	Mod	technical	name			asm_function		asm/libagbsys
 aos:asm:asm/libagbsyscall.s:SoftReset	SoftReset	unclassified				asm_function		asm/libagbsyscall.s	44	1	0
 aos:asm:asm/libagbsyscall.s:Sqrt	Sqrt	technical	name			asm_function		asm/libagbsyscall.s	57	38	0
 aos:asm:asm/libagbsyscall.s:VBlankIntrWait	VBlankIntrWait	unclassified				asm_function		asm/libagbsyscall.s	62	2	0
-aos:asm:asm/m4a0.s:ChnVolSetAsm	ChnVolSetAsm	audio	path			asm_function		asm/m4a0.s	1180	2	0
 aos:asm:asm/m4a0.s:MP2KClearChain	MP2KClearChain	audio	path			asm_function		asm/m4a0.s	439	1	0
 aos:asm:asm/m4a0.s:MP2K_event_port	MP2K_event_port	audio	path			asm_function		asm/m4a0.s	756	0	0
 aos:asm:asm/m4a0.s:MPlayJumpTableCopy	MPlayJumpTableCopy	audio	path			asm_function		asm/m4a0.s	491	1	0
@@ -2124,7 +2123,6 @@ aos:asm:asm/m4a0.s:ldrb_r3_r2	ldrb_r3_r2	audio	path			asm_function		asm/m4a0.s	5
 aos:asm:asm/m4a0.s:m4aSoundVSync	m4aSoundVSync	audio	path			asm_function		asm/m4a0.s	770	1	0
 aos:asm:asm/m4a0.s:sub_080D88BC	sub_080D88BC	audio	path			asm_function	0x080D88BC	asm/m4a0.s	277	0	0
 aos:asm:asm/m4a0.s:sub_080D8A58	sub_080D8A58	audio	path			asm_function	0x080D8A58	asm/m4a0.s	401	1	0
-aos:asm:asm/m4a0.s:umul3232H32	umul3232H32	audio	path			asm_function		asm/m4a0.s	5	1	0
 aos:asm:asm/rom_header.s:start_code	start_code	unclassified				asm_function		asm/rom_header.s	4	0	1
 aos:c:src/agb_multi_sio_sync.c:MultiSioSyncGetId	MultiSioSyncGetId	technical	path			c_function	0x080D80BC	src/agb_multi_sio_sync.c	567	4	0
 aos:c:src/agb_multi_sio_sync.c:MultiSioSyncInitialize	MultiSioSyncInitialize	technical	path			c_function	0x080D79E4	src/agb_multi_sio_sync.c	44	1	0
@@ -2944,12 +2942,10 @@ aos:c:src/m4a.c:MPlayFadeOut	MPlayFadeOut	audio	path			c_function		src/m4a.c	72	
 aos:c:src/m4a.c:MPlayOpen	MPlayOpen	audio	path			c_function		src/m4a.c	504	1	1
 aos:c:src/m4a.c:MPlayStop	MPlayStop	audio	path			c_function		src/m4a.c	602	5	1
 aos:c:src/m4a.c:MidiKeyToCgbFreq	MidiKeyToCgbFreq	audio	path			c_function		src/m4a.c	729	0	0
-aos:c:src/m4a.c:MidiKeyToFreq	MidiKeyToFreq	audio	path			c_function		src/m4a.c	38	2	1
 aos:c:src/m4a.c:MusicPlayerJumpTableCopy	MusicPlayerJumpTableCopy	audio	path			c_function		src/m4a.c	289	0	0
 aos:c:src/m4a.c:SampleFreqSet	SampleFreqSet	audio	path			c_function		src/m4a.c	348	2	1
 aos:c:src/m4a.c:SoundClear	SoundClear	audio	path			c_function		src/m4a.c	433	0	1
 aos:c:src/m4a.c:SoundInit	SoundInit	audio	path			c_function		src/m4a.c	306	1	2
-aos:c:src/m4a.c:TrkVolPitSet	TrkVolPitSet	audio	path			c_function		src/m4a.c	690	2	0
 aos:c:src/m4a.c:m4aMPlayAllContinue	m4aMPlayAllContinue	audio	path			c_function		src/m4a.c	179	1	1
 aos:c:src/m4a.c:m4aMPlayAllStop	m4aMPlayAllStop	audio	path			c_function		src/m4a.c	169	2	1
 aos:c:src/m4a.c:m4aMPlayContinue	m4aMPlayContinue	audio	path			c_function		src/m4a.c	177	1	1

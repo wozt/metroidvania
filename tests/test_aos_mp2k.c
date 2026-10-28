@@ -232,6 +232,45 @@ static void allocation_test(void) {
     assert(engine.direct[6].midi_key == 70 && engine.direct[6].player == 0);
 }
 
+/* TrkVolPitSet, ChnVolSetAsm and MidiKeyToFreq. */
+static void mix_test(void) {
+    AosMp2kTrack track;
+    const uint8_t fine[] = {0xB1};
+    aos_mp2k_track_start(&track, fine, sizeof fine, BASE);
+    assert(track.vol_public == 0x40);
+    track.volume = 100;
+    track.key_shift = 2;
+    track.tune = 3;
+    track.bend = 4;
+    track.bend_range = 2;
+    aos_mp2k_track_vol_pit_set(&track);
+    assert(track.vol_right == 100 && track.vol_left == 99);
+    assert(track.key_shift_calculated == 2 && track.pitch_calculated == 44);
+    track.pan = -64;
+    aos_mp2k_track_vol_pit_set(&track);
+    assert(track.vol_right == 0 && track.vol_left == 199);
+    /* Key 60 plays the sample at its own rate, an octave up at twice it. */
+    assert(aos_mp2k_key_to_freq(13379u << 10, 60, 0) == 13379);
+    assert(aos_mp2k_key_to_freq(13379u << 10, 72, 0) == 26758);
+    uint32_t half = aos_mp2k_key_to_freq(13379u << 10, 60, 128);
+    assert(half > 13379 && half < aos_mp2k_key_to_freq(13379u << 10, 61, 0));
+    /* Past 178 the key and the fine adjustment saturate. */
+    assert(aos_mp2k_key_to_freq(1u << 20, 200, 0) == aos_mp2k_key_to_freq(1u << 20, 178, 255));
+
+    /* A channel's volumes and frequency after a note: volume 100, velocity
+     * 127, a sample of rate 13379 << 10 at 300. */
+    AosMp2kEngine engine;
+    const uint8_t loud[] = {0xBD, 0, 0xBE, 100, 0xD1, 72, 127, 0x81, 0x81, 0xB1};
+    channel_song(&engine, loud, sizeof loud);
+    write_pointer(channel_bank, 100 + 4, 300);
+    uint32_t rate = 13379u << 10;
+    for (int i = 0; i < 4; ++i) channel_bank[304 + i] = (uint8_t)(rate >> (8 * i));
+    aos_mp2k_engine_player_frame(&engine, 0);
+    const AosMp2kChannel *c = &engine.direct[0];
+    assert(c->right_volume == ((128 * 127 * 100) >> 14) && c->left_volume == ((127 * 127 * 99) >> 14));
+    assert(c->frequency == 26758);
+}
+
 /* MP2KPlayerMain's tempo clock: 150 per clock, TEMPO doubling its value. */
 static void player_tempo_test(void) {
     const uint8_t stream[] = {0xBB, 60, 0x83, 0xB1};
@@ -270,6 +309,7 @@ int main(void) {
     player_tempo_test();
     channel_test();
     allocation_test();
+    mix_test();
     engine_song_start_test();
     parameter_and_note_test();
     pattern_and_repeat_test();

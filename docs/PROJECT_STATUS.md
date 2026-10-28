@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0606 - Aria MP2K channel volume and frequency
+
+- `TrkVolPitSet`, `ChnVolSetAsm` and `MidiKeyToFreq` are ported: each
+  DirectSound channel now carries its right and left volume and its
+  sample rate, recomputed after every player frame.
+- A local `--check` found every sample the songs play inside the
+  exported bank.
+- Still silent: the envelopes and the mixer are next. No LFO, CGB
+  frequency or public volume controls yet. Source-derived and
+  unit-tested, not emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0605 - Aria MP2K note channels
 
 - The channel side of `MP2K_event_nxx` is ported in `aos_mp2k.c`: tone

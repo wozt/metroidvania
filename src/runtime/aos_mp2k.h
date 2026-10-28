@@ -53,6 +53,9 @@ typedef struct {
     uint8_t velocity;       /* + 0x12 */
     uint8_t priority;       /* + 0x13 */
     int8_t rhythm_pan;      /* + 0x14 */
+    uint8_t right_volume;   /* + 0x02: ChnVolSetAsm */
+    uint8_t left_volume;    /* + 0x03 */
+    uint32_t frequency;     /* + 0x20: MidiKeyToFreq (DirectSound only) */
     AosMp2kTone tone;
     bool linked;            /* in its track's chain (+ 0x2C, + 0x30, + 0x34) */
     uint8_t player, track;
@@ -84,6 +87,15 @@ typedef struct {
     uint8_t lfo_delay;
     uint8_t mod_depth;
     uint8_t mod_type;
+    /* MPlayVolumeControl and the other public controls (+ 0x13, + 0x15,
+     * + 0x0B, + 0x09 sources), and TrkVolPitSet's results. */
+    uint8_t vol_public;         /* 0x40 at the track's start */
+    int8_t pan_public;
+    int8_t key_shift_public;
+    uint8_t pitch_public;
+    uint8_t vol_right, vol_left;    /* + 0x10, + 0x11 */
+    int8_t key_shift_calculated;    /* + 0x08 */
+    uint8_t pitch_calculated;       /* + 0x09 */
     uint16_t tempo_raw;
     bool tempo_changed;     /* a TEMPO event ran since the player read it */
     uint8_t end_tie_key;
@@ -123,6 +135,7 @@ typedef struct {
     AosMp2kChannel cgb[AOS_MP2K_CGB_CHANNELS];         /* cgbChans */
     uint32_t serial;
     size_t dropped_notes;   /* notes MP2K_event_nxx found no channel or tone for */
+    size_t missing_samples; /* DirectSound mixes whose sample is outside the bank */
 } AosMp2kEngine;
 
 void aos_mp2k_track_start(AosMp2kTrack *track, const uint8_t *data,
@@ -162,6 +175,13 @@ void aos_mp2k_player_frame(AosMp2kPlayer *player);
  * stops the newest active channel of the track with its key. Players are
  * ordered as their indices for the track-address comparisons. */
 void aos_mp2k_engine_player_frame(AosMp2kEngine *engine, uint8_t player);
+/* TrkVolPitSet with no LFO (modCalculated 0): the volume split by pan and
+ * the key shift and pitch from bend, range, tune and the public controls. */
+void aos_mp2k_track_vol_pit_set(AosMp2kTrack *track);
+/* MidiKeyToFreq: the sample's rate for `key` (clamped at 178) and the fine
+ * adjustment `fine` (256ths of a semitone) through gScaleTable and
+ * gFreqTable. */
+uint32_t aos_mp2k_key_to_freq(uint32_t wav_freq, uint8_t key, uint8_t fine);
 /* A voice group's entry `index` (VOICE copies it into the track). */
 bool aos_mp2k_tone(const AosMp2kEngine *engine, uint32_t voicegroup, unsigned index,
                    AosMp2kTone *tone);

@@ -2339,9 +2339,9 @@ int main(int argc, char **argv) {
         if (have_audio_table && have_audio_bank)
             printf("Aria MP2K headers: %zu/%zu initialized; over 600 frames %zu ended, %zu "
                    "stopped on an unsupported or invalid stream, %u channel notes, %zu "
-                   "dropped\n",
+                   "dropped, %zu sample reads outside the bank\n",
                    initialized_headers, aos_audio_song_count(), ended_songs, failed_songs,
-                   mp2k.serial, mp2k.dropped_notes);
+                   mp2k.serial, mp2k.dropped_notes, mp2k.missing_samples);
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);

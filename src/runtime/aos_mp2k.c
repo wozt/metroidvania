@@ -81,6 +81,7 @@ bool aos_mp2k_track_start_at(AosMp2kTrack *track, const uint8_t *data,
         .address_base = address_base,
         .bend_range = 2,
         .lfo_speed = 0x16,
+        .vol_public = 0x40,
         .active = data != NULL && size != 0,
     };
     if (!data || start_address < address_base ||
@@ -412,9 +413,14 @@ static void player_frame(AosMp2kEngine *engine, AosMp2kPlayer *player, uint8_t n
 
 void aos_mp2k_player_frame(AosMp2kPlayer *player) { player_frame(NULL, player, 0); }
 
+static void player_mix(AosMp2kEngine *engine, uint8_t number);
+
 void aos_mp2k_engine_player_frame(AosMp2kEngine *engine, uint8_t player) {
-    if (engine && player < AOS_MP2K_PLAYER_COUNT)
-        player_frame(engine, &engine->players[player], player);
+    if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return;
+    AosMp2kPlayer *state = &engine->players[player];
+    if (!state->active || state->ended) return;
+    player_frame(engine, state, player);
+    if (!state->ended) player_mix(engine, player);
 }
 
 void aos_mp2k_engine_frame(AosMp2kEngine *engine) {
@@ -430,6 +436,67 @@ bool aos_mp2k_tone(const AosMp2kEngine *engine, uint32_t voicegroup, unsigned in
     *tone = (AosMp2kTone){data[0], data[1], data[2], data[3], read_u32(data + 4),
                           data[8], data[9], data[10], data[11]};
     return true;
+}
+
+/* gFreqTable (m4a_tables.c): 2^31 * 2^(n / 12). gScaleTable is
+ * ((14 - key / 12) << 4) | key % 12 for keys 0-179. */
+static const uint32_t freq_table[12] = {
+    2147483648u, 2275179671u, 2410468894u, 2553802834u, 2705659852u, 2866546760u,
+    3037000500u, 3217589947u, 3408917802u, 3611622603u, 3826380858u, 4053909305u,
+};
+
+static uint32_t umul_high(uint32_t a, uint32_t b) {
+    return (uint32_t)(((uint64_t)a * b) >> 32);
+}
+
+static uint32_t scale(unsigned key) {
+    unsigned entry = ((14u - key / 12u) << 4) | (key % 12u);
+    return freq_table[entry & 0xF] >> (entry >> 4);
+}
+
+uint32_t aos_mp2k_key_to_freq(uint32_t wav_freq, uint8_t key, uint8_t fine) {
+    uint32_t shifted = (uint32_t)fine << 24;
+    if (key > 178) {
+        key = 178;
+        shifted = 255u << 24;
+    }
+    uint32_t low = scale(key), high = scale(key + 1u);
+    return umul_high(wav_freq, low + umul_high(high - low, shifted));
+}
+
+void aos_mp2k_track_vol_pit_set(AosMp2kTrack *track) {
+    if (!track) return;
+    int32_t x = (int32_t)((uint32_t)(track->volume * track->vol_public) >> 5);
+    int32_t y = 2 * track->pan + track->pan_public;
+    if (y < -128) y = -128;
+    else if (y > 127) y = 127;
+    track->vol_right = (uint8_t)((uint32_t)((y + 128) * x) >> 8);
+    track->vol_left = (uint8_t)((uint32_t)((127 - y) * x) >> 8);
+    int32_t bend = track->bend * track->bend_range;
+    int32_t pitch = (track->tune + bend) * 4 + (track->key_shift << 8) +
+                    (track->key_shift_public << 8) + track->pitch_public;
+    track->key_shift_calculated = (int8_t)(pitch >> 8);
+    track->pitch_calculated = (uint8_t)pitch;
+}
+
+/* ChnVolSetAsm and the frequency part of MP2K_event_nxx / MP2KPlayerMain. */
+static void channel_mix(AosMp2kEngine *engine, AosMp2kChannel *channel,
+                        const AosMp2kTrack *track) {
+    int32_t right = ((0x80 + channel->rhythm_pan) * channel->velocity * track->vol_right) >> 14;
+    int32_t left = ((0x7F - channel->rhythm_pan) * channel->velocity * track->vol_left) >> 14;
+    channel->right_volume = (uint8_t)(right > 0xFF ? 0xFF : right);
+    channel->left_volume = (uint8_t)(left > 0xFF ? 0xFF : left);
+    int key = channel->key + track->key_shift_calculated;
+    if (key < 0) key = 0;
+    const uint8_t *wave = NULL;
+    channel->frequency = 0;
+    if (channel->type & 7) return;
+    if (!bank_slice(engine, channel->tone.wav, 8, &wave)) {
+        engine->missing_samples++;
+        return;
+    }
+    channel->frequency = aos_mp2k_key_to_freq(read_u32(wave + 4), (uint8_t)key,
+                                              track->pitch_calculated);
 }
 
 /* The tone word at + 0x8 read as a pointer (a key split's key table). */
@@ -549,6 +616,28 @@ static void play_note(AosMp2kEngine *engine, uint8_t number, uint8_t index,
         .priority = priority, .rhythm_pan = pan, .tone = tone, .linked = true,
         .player = number, .track = index, .serial = ++engine->serial,
     };
+    AosMp2kTrack *track = &player->tracks[index];
+    aos_mp2k_track_vol_pit_set(track);
+    channel_mix(engine, channel, track);
+}
+
+/* MP2KPlayerMain after its clocks: every track's TrkVolPitSet and its
+ * chained channels' volume and frequency (the VOLSET / PITSET flags only
+ * skip recomputing the same values). */
+static void player_mix(AosMp2kEngine *engine, uint8_t number) {
+    AosMp2kPlayer *player = &engine->players[number];
+    for (uint8_t index = 0; index < player->track_count; ++index)
+        if (player->tracks[index].active) aos_mp2k_track_vol_pit_set(&player->tracks[index]);
+    AosMp2kChannel *lists[2] = {engine->direct, engine->cgb};
+    size_t counts[2] = {AOS_MP2K_DIRECT_CHANNELS, AOS_MP2K_CGB_CHANNELS};
+    for (int list = 0; list < 2; ++list)
+        for (size_t index = 0; index < counts[list]; ++index) {
+            AosMp2kChannel *channel = &lists[list][index];
+            if (!channel->linked || channel->player != number) continue;
+            const AosMp2kTrack *track = &player->tracks[channel->track];
+            if (!track->active || !(channel->status & AOS_MP2K_CHANNEL_ACTIVE)) continue;
+            channel_mix(engine, channel, track);
+        }
 }
 
 static void end_tie(AosMp2kEngine *engine, uint8_t player, uint8_t track, uint8_t key) {

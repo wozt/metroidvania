@@ -47,7 +47,11 @@ enum {
 typedef struct {
     uint8_t player;
     uint8_t priority;
+    uint32_t header_pointer;
 } AosAudioSongInfo;
+
+typedef void (*AosAudioStartSink)(void *context, uint16_t song,
+                                  const AosAudioSongInfo *info);
 
 typedef struct {
     bool active;
@@ -70,11 +74,14 @@ typedef struct {
 } AosAudioState;
 
 void aos_audio_set_sink(AosAudioSink sink, void *context);
+/* Observe songs only after StartSong accepts the player-priority replacement. */
+void aos_audio_set_start_sink(AosAudioStartSink sink, void *context);
 /* Install the gSongTable fields needed by StartSong. The data is copied. */
 bool aos_audio_set_song_table(const AosAudioSongInfo *songs, size_t count);
 /* Load the private song-table manifest exported from the verified Aria ROM. */
 bool aos_audio_load_song_table(const char *path, char *error, size_t error_size);
 size_t aos_audio_song_count(void);
+bool aos_audio_song_info(size_t song, AosAudioSongInfo *info);
 /* Reset the host controller and remove its song table, retaining the sink. */
 void aos_audio_reset(void);
 /* PlaySong: route a song ID, STOP_SONG request or AudioCommand value. */

@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0603 - Aria MP2K bank and song headers
+
+- The sound export writes the private MP2K bank
+  `sound/runtime/sound_bank.bin` (0x0827B2C0-0x084F08F8: the voice
+  groups the song headers use, then gMPlayTable and the song data; the
+  first bound starting at gMPlayTable was too late for the headers).
+- `aos_mp2k_player_start` reads a song header and starts its tracks from
+  the bank; `StartSong` calls it only for songs its player-priority
+  replacement accepts. A local `--check` initialized all 495 headers.
+- Still silent: no tempo scheduler, voices, mixer or SDL output yet.
+  Source-derived and unit-tested, not emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0602 - Aria MP2K track event decoder
 
 - New host-neutral `aos_mp2k` code advances one sequencer clock at a time.

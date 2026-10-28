@@ -14,6 +14,8 @@ enum {
 
 static AosAudioSink g_sink;
 static void *g_context;
+static AosAudioStartSink g_start_sink;
+static void *g_start_context;
 static AosAudioRequest g_log[AOS_AUDIO_LOG_CAPACITY];
 static int g_count;
 static AosAudioSongInfo g_songs[AOS_AUDIO_MAX_SONGS];
@@ -23,6 +25,11 @@ static AosAudioState g_state = {.current_song = -1, .sound_mode = AOS_DEFAULT_SO
 void aos_audio_set_sink(AosAudioSink sink, void *context) {
     g_sink = sink;
     g_context = context;
+}
+
+void aos_audio_set_start_sink(AosAudioStartSink sink, void *context) {
+    g_start_sink = sink;
+    g_start_context = context;
 }
 
 static void request(AosAudioAction action, uint16_t value) {
@@ -79,7 +86,9 @@ bool aos_audio_load_song_table(const char *path, char *error, size_t error_size)
             fclose(file);
             return load_error(error, error_size, message);
         }
-        songs[count++] = (AosAudioSongInfo){(uint8_t)player, (uint8_t)priority};
+        songs[count++] = (AosAudioSongInfo){
+            (uint8_t)player, (uint8_t)priority, header,
+        };
     }
     if (ferror(file)) {
         fclose(file);
@@ -94,6 +103,12 @@ bool aos_audio_load_song_table(const char *path, char *error, size_t error_size)
 }
 
 size_t aos_audio_song_count(void) { return g_song_count; }
+
+bool aos_audio_song_info(size_t song, AosAudioSongInfo *info) {
+    if (!info || song >= g_song_count) return false;
+    *info = g_songs[song];
+    return true;
+}
 
 void aos_audio_reset(void) {
     memset(&g_state, 0, sizeof g_state);
@@ -138,6 +153,7 @@ static void start_song(uint16_t song) {
     player->priority = info.priority;
     player->volume_step = 0;
     player->volume_current = 0xFF0;
+    if (g_start_sink) g_start_sink(g_start_context, song, &info);
 }
 
 static void stop_song(uint16_t song) {

@@ -14,6 +14,38 @@ static void write_pointer(uint8_t *data, size_t offset, size_t target) {
     data[offset + 3] = (uint8_t)(pointer >> 24);
 }
 
+static void engine_song_start_test(void) {
+    uint8_t bank[128] = {0};
+    bank[16] = 2;
+    bank[17] = 1;
+    bank[18] = 50;
+    bank[19] = 0x80;
+    write_pointer(bank, 20, 96);
+    write_pointer(bank, 24, 64);
+    write_pointer(bank, 28, 80);
+    bank[64] = 0xB1;
+    bank[80] = 0xB1;
+
+    AosMp2kEngine engine;
+    aos_mp2k_engine_init(&engine);
+    assert(aos_mp2k_engine_set_bank(&engine, bank, sizeof bank, BASE));
+    assert(aos_mp2k_player_start(&engine, 2, BASE + 16));
+    const AosMp2kPlayer *player = aos_mp2k_player(&engine, 2);
+    assert(player && player->active && player->track_count == 2);
+    assert(player->header_pointer == BASE + 16 && player->voicegroup_pointer == BASE + 96);
+    assert(player->block_count == 1 && player->priority == 50 && player->reverb == 0x80);
+    assert(player->tempo_raw == 150 && player->tempo_interval == 150);
+    assert(player->tempo_scale == 0x100);
+    assert(player->tracks[0].cursor == 64 && player->tracks[1].cursor == 80);
+    assert(player->tracks[0].bend_range == 2 && player->tracks[0].lfo_speed == 0x16);
+
+    write_pointer(bank, 24, sizeof bank);
+    assert(!aos_mp2k_player_start(&engine, 2, BASE + 16));
+    assert(aos_mp2k_player(&engine, 2)->tracks[0].cursor == 64);
+    assert(!aos_mp2k_player_start(&engine, AOS_MP2K_PLAYER_COUNT, BASE + 16));
+    aos_mp2k_engine_destroy(&engine);
+}
+
 static void parameter_and_note_test(void) {
     const uint8_t stream[] = {
         0x80, 0xBA, 7, 0xBB, 75, 0xBC, 0xFE, 0xBD, 9, 0xBE, 100,
@@ -99,6 +131,7 @@ static void running_status_and_failure_test(void) {
 }
 
 int main(void) {
+    engine_song_start_test();
     parameter_and_note_test();
     pattern_and_repeat_test();
     running_status_and_failure_test();

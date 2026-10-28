@@ -10,6 +10,7 @@
  * the active room; complete inventory, soul and native SRAM parity remain
  * separate reconstruction work. */
 #include "aos_audio.h"
+#include "aos_mp2k.h"
 #include "aos_door.h"
 #include "aos_enemy.h"
 #include "aos_game_lifecycle.h"
@@ -57,6 +58,7 @@
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
 #define DEFAULT_AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
+#define DEFAULT_AUDIO_BANK "assets/extracted/aria/sound/runtime/sound_bank.bin"
 #define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
 #define DEFAULT_ITEM_ICONS "assets/extracted/aria/metadata/item_icons.tsv"
 #define ITEM_ICONS 193     /* icon numbers 1-192 of sub_0801232C */
@@ -116,6 +118,13 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
 static const struct { int id, bank; } variant_keys[VARIANT_ARTS] = {
     {57, 1}, {29, 1}, {29, 2}, {-1, 0},
 };
+
+static void start_mp2k_song(void *context, uint16_t song,
+                            const AosAudioSongInfo *info) {
+    (void)song;
+    AosMp2kEngine *engine = context;
+    (void)aos_mp2k_player_start(engine, info->player, info->header_pointer);
+}
 
 /* The palette bank an enemy is drawn with. */
 static int enemy_bank(const AosEnemy *enemy) {
@@ -2290,20 +2299,48 @@ int main(int argc, char **argv) {
     if (!have_audio_table)
         fprintf(stderr, "No Aria song table: ./build/fusion_rebuild --task aria_sound (%s)\n",
                 audio_error);
+    AosMp2kEngine mp2k;
+    aos_mp2k_engine_init(&mp2k);
+    bool have_audio_bank = aos_mp2k_engine_load_bank(&mp2k, DEFAULT_AUDIO_BANK,
+                                                      audio_error, sizeof audio_error);
+    if (!have_audio_bank)
+        fprintf(stderr, "No Aria MP2K bank: ./build/fusion_rebuild --task aria_sound (%s)\n",
+                audio_error);
+    if (have_audio_table && have_audio_bank)
+        aos_audio_set_start_sink(start_mp2k_song, &mp2k);
     static AriaLibrary library;
     if (check) {
         bool ok = load_library(library_path, &library, NULL);
+        size_t initialized_headers = 0;
+        if (have_audio_table && have_audio_bank) {
+            for (size_t song = 0; song < aos_audio_song_count(); ++song) {
+                AosAudioSongInfo info;
+                if (aos_audio_song_info(song, &info) &&
+                    aos_mp2k_player_start(&mp2k, info.player, info.header_pointer))
+                    initialized_headers++;
+            }
+            if (initialized_headers != aos_audio_song_count()) ok = false;
+        }
         if (ok) printf("Aria room %s: %d x %d cells, Soma library %d animations, spawn %d,%d\n",
                        folder, room.width_cells, room.height_cells, library.set.count,
                        spawn_x, spawn_y);
         if (have_audio_table)
             printf("Aria audio table: %zu songs\n", aos_audio_song_count());
+        if (have_audio_bank)
+            printf("Aria MP2K bank: %zu bytes\n", mp2k.bank_size);
+        if (have_audio_table && have_audio_bank)
+            printf("Aria MP2K headers: %zu/%zu initialized\n", initialized_headers,
+                   aos_audio_song_count());
+        aos_audio_set_start_sink(NULL, NULL);
+        aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);
         return ok ? 0 : 1;
     }
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+        aos_audio_set_start_sink(NULL, NULL);
+        aos_mp2k_engine_destroy(&mp2k);
         return 1;
     }
     gba_input_init(&gamepad, &pad_map);
@@ -2961,6 +2998,8 @@ int main(int argc, char **argv) {
     }
     rc = 0;
 cleanup:
+    aos_audio_set_start_sink(NULL, NULL);
+    aos_mp2k_engine_destroy(&mp2k);
     gba_input_close(&gamepad);
     free_library(&library);
     free_weapon_sprite(&weapon_sprite);

@@ -11,6 +11,8 @@
 
 enum {
     GBA_BASE = 0x08000000,
+    SOUND_BANK_START = 0x0827B2C0,
+    SOUND_BANK_END = 0x084F08F8,
     SONG_TABLE = 0x0827CD38,
     SONG_RECORD_SIZE = 8
 };
@@ -147,6 +149,13 @@ bool fusion_aos_export_sound(const FusionRom *rom, const char *output,
               fusion_export_join(path, output, "song_table.tsv") &&
               fusion_export_write_file(path, (const uint8_t *)text.data,
                                        text.size, error, error_size);
+    const uint8_t *bank = NULL;
+    success = success &&
+              slice(rom, SOUND_BANK_START, SOUND_BANK_END - SOUND_BANK_START,
+                    &bank, error, error_size) &&
+              fusion_export_join(path, output, "sound_bank.bin") &&
+              fusion_export_write_file(path, bank, SOUND_BANK_END - SOUND_BANK_START,
+                                       error, error_size);
     if (!success && (!error || !error[0]))
         set_error(error, error_size, "cannot export Aria song table");
     if (success) *song_count = table.count;

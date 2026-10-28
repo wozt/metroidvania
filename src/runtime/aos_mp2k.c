@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_mp2k.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 enum {
     MP2K_WAIT_FIRST = 0x80,
     MP2K_WAIT_LAST = 0xB0,
@@ -65,7 +68,13 @@ static bool read_pointer(AosMp2kTrack *track, size_t *target) {
 
 void aos_mp2k_track_start(AosMp2kTrack *track, const uint8_t *data,
                           size_t size, uint32_t address_base) {
-    if (!track) return;
+    (void)aos_mp2k_track_start_at(track, data, size, address_base, address_base);
+}
+
+bool aos_mp2k_track_start_at(AosMp2kTrack *track, const uint8_t *data,
+                             size_t size, uint32_t address_base,
+                             uint32_t start_address) {
+    if (!track) return false;
     *track = (AosMp2kTrack){
         .data = data,
         .size = size,
@@ -74,6 +83,14 @@ void aos_mp2k_track_start(AosMp2kTrack *track, const uint8_t *data,
         .lfo_speed = 0x16,
         .active = data != NULL && size != 0,
     };
+    if (!data || start_address < address_base ||
+        (uint64_t)start_address - address_base >= size) {
+        track->active = false;
+        track->failed = true;
+        return false;
+    }
+    track->cursor = (size_t)(start_address - address_base);
+    return true;
 }
 
 void aos_mp2k_track_clear_notes(AosMp2kTrack *track) {
@@ -210,4 +227,132 @@ bool aos_mp2k_track_tick(AosMp2kTrack *track) {
     }
     if (track->active) return fail(track);
     return !track->failed;
+}
+
+static void set_error(char *error, size_t error_size, const char *message) {
+    if (!error || !error_size) return;
+    snprintf(error, error_size, "%s", message);
+    error[error_size - 1] = '\0';
+}
+
+void aos_mp2k_engine_init(AosMp2kEngine *engine) {
+    if (engine) *engine = (AosMp2kEngine){.bank_base = AOS_MP2K_BANK_BASE};
+}
+
+void aos_mp2k_engine_destroy(AosMp2kEngine *engine) {
+    if (!engine) return;
+    free(engine->owned_bank);
+    aos_mp2k_engine_init(engine);
+}
+
+bool aos_mp2k_engine_set_bank(AosMp2kEngine *engine, const uint8_t *bank,
+                              size_t size, uint32_t address_base) {
+    if (!engine || !bank || !size) return false;
+    free(engine->owned_bank);
+    *engine = (AosMp2kEngine){
+        .bank = bank,
+        .bank_size = size,
+        .bank_base = address_base,
+    };
+    return true;
+}
+
+bool aos_mp2k_engine_load_bank(AosMp2kEngine *engine, const char *path,
+                               char *error, size_t error_size) {
+    if (!engine || !path) {
+        set_error(error, error_size, "invalid MP2K bank request");
+        return false;
+    }
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        set_error(error, error_size, "cannot open MP2K bank");
+        return false;
+    }
+    if (fseek(file, 0, SEEK_END) != 0) {
+        fclose(file);
+        set_error(error, error_size, "cannot seek MP2K bank");
+        return false;
+    }
+    long length = ftell(file);
+    if (length != AOS_MP2K_BANK_SIZE || fseek(file, 0, SEEK_SET) != 0) {
+        fclose(file);
+        set_error(error, error_size, "invalid MP2K bank size");
+        return false;
+    }
+    uint8_t *bank = malloc(AOS_MP2K_BANK_SIZE);
+    if (!bank) {
+        fclose(file);
+        set_error(error, error_size, "cannot allocate MP2K bank");
+        return false;
+    }
+    bool complete = fread(bank, 1, AOS_MP2K_BANK_SIZE, file) == AOS_MP2K_BANK_SIZE &&
+                    ferror(file) == 0;
+    fclose(file);
+    if (!complete) {
+        free(bank);
+        set_error(error, error_size, "cannot read MP2K bank");
+        return false;
+    }
+    free(engine->owned_bank);
+    *engine = (AosMp2kEngine){
+        .owned_bank = bank,
+        .bank = bank,
+        .bank_size = AOS_MP2K_BANK_SIZE,
+        .bank_base = AOS_MP2K_BANK_BASE,
+    };
+    if (error && error_size) error[0] = '\0';
+    return true;
+}
+
+static bool bank_slice(const AosMp2kEngine *engine, uint32_t pointer,
+                       size_t size, const uint8_t **data) {
+    if (!engine || !engine->bank || pointer < engine->bank_base) return false;
+    uint64_t offset = (uint64_t)pointer - engine->bank_base;
+    if (offset > engine->bank_size || size > engine->bank_size - (size_t)offset)
+        return false;
+    *data = engine->bank + offset;
+    return true;
+}
+
+static uint32_t read_u32(const uint8_t *data) {
+    return (uint32_t)data[0] | (uint32_t)data[1] << 8 |
+           (uint32_t)data[2] << 16 | (uint32_t)data[3] << 24;
+}
+
+bool aos_mp2k_player_start(AosMp2kEngine *engine, uint8_t player,
+                           uint32_t header_pointer) {
+    if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return false;
+    const uint8_t *song_header = NULL;
+    if (!bank_slice(engine, header_pointer, 8, &song_header)) return false;
+    uint8_t track_count = song_header[0];
+    if (track_count > AOS_MP2K_TRACK_COUNT ||
+        !bank_slice(engine, header_pointer, 8 + track_count * 4u, &song_header))
+        return false;
+    AosMp2kPlayer next = {
+        .active = track_count != 0,
+        .header_pointer = header_pointer,
+        .voicegroup_pointer = read_u32(song_header + 4),
+        .track_count = track_count,
+        .block_count = song_header[1],
+        .priority = song_header[2],
+        .reverb = song_header[3],
+        .tempo_raw = 150,
+        .tempo_interval = 150,
+        .tempo_scale = 0x100,
+    };
+    const uint8_t *voicegroup = NULL;
+    if (track_count &&
+        !bank_slice(engine, next.voicegroup_pointer, 12, &voicegroup)) return false;
+    for (uint8_t index = 0; index < track_count; ++index) {
+        uint32_t track_pointer = read_u32(song_header + 8 + index * 4u);
+        if (!aos_mp2k_track_start_at(&next.tracks[index], engine->bank,
+                                     engine->bank_size, engine->bank_base,
+                                     track_pointer)) return false;
+    }
+    engine->players[player] = next;
+    return true;
+}
+
+const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player) {
+    return engine && player < AOS_MP2K_PLAYER_COUNT ? &engine->players[player] : NULL;
 }

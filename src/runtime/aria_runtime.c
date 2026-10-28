@@ -61,6 +61,7 @@
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
+#define DEFAULT_BURSTS "assets/extracted/aria/metadata/bursts.tsv"
 #define DEFAULT_AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
 #define DEFAULT_AUDIO_BANK "assets/extracted/aria/sound/runtime/sound_bank.bin"
 #define DEFAULT_ROOM_MUSIC "assets/extracted/aria/sound/runtime/room_music.tsv"
@@ -218,7 +219,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
 static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
                                                           "dark_smoke", "fire", "spark",
                                                           "dust", "impact", "casing",
-                                                          "ember"};
+                                                          "ember", "burst_1", "burst_12",
+                                                          "burst_15"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -702,6 +704,13 @@ typedef struct {
     const AosAnimSet *bat, *bow, *merman; /* NULL when not exported */
     const AosThrowRecord *throws;   /* metadata/skill_throws.tsv, NULL when missing */
     bool bone;                      /* resource 7 (Enemy/skill_bone) is loaded */
+    const AosEnemyKind *bone_kind;  /* its walker probes and still frames */
+    const int *bone_ids;            /* its exported still frames */
+    int bone_count;
+    AosEffect *effects;             /* the room's shared effects */
+    size_t *effect_count;
+    const AosEffect *burst;         /* burst list 0 of sub_08045A98 */
+    size_t burst_count;
     const AosCollision *layer;      /* the room's BG1 collision */
     bool durga;                     /* resource 24's still frame 2 is loaded */
     bool harpy;                     /* and its frames 1 and 3-5 */
@@ -747,7 +756,9 @@ static int cast_red_soul(void *context) {
     bool throwable = routine == SKILL_THROW_ROUTINE && souls->throws &&
                      record->parameter < AOS_THROW_RECORDS &&
                      aos_throw_supported(&souls->throws[record->parameter]) &&
-                     souls->throws[record->parameter].resource == 7 && souls->bone;
+                     souls->throws[record->parameter].resource == 7 && souls->bone &&
+                     static_index(souls->bone_ids, souls->bone_count,
+                                  souls->throws[record->parameter].frame) >= 0;
     int kind = routine == SKILL_BAT_ROUTINE && souls->bat      ? SKILL_BAT
                : routine == SKILL_ARCHER_ROUTINE && souls->bow ? SKILL_BOW
                : throwable                                     ? SKILL_THROW
@@ -879,8 +890,8 @@ static void update_skills(AriaSouls *souls) {
             if (skill->state != 2 && skill_outside(souls, skill, 4)) skill->state = 2;
             break;
         case SKILL_THROW: {
-            /* The shared throw routine: counted on its first update; sound
-             * and sub_08042A54(1, 0x1E) are not played. */
+            /* The shared throw routine: counted on its first update
+             * (sub_08042A54(1, 0x1E) is not run). */
             const AosThrowRecord *record = &souls->throws[skill->parameter];
             if (!skill->started) {
                 skill->started = true;
@@ -889,9 +900,20 @@ static void update_skills(AriaSouls *souls) {
             AosThrow *thrown = &skill->thrown;
             int mx = souls->margins ? souls->margins[4][0] : 16;
             int my = souls->margins ? souls->margins[4][1] : 16;
-            if (!aos_throw_update(thrown, record, souls->cam_x, souls->cam_y, mx, my)) {
+            if (!aos_throw_update_world(thrown, record, souls->layer,
+                                        souls->bone_kind ? &souls->bone_kind->probes : NULL,
+                                        souls->cam_x, souls->cam_y, mx, my)) {
                 end_skill(souls, skill);
                 break;
+            }
+            /* sub_08045A98(x, y, 0): burst list 0 at its whole position. */
+            for (size_t k = 0; thrown->exploded && souls->effects && k < souls->burst_count &&
+                               *souls->effect_count < MAX_EFFECTS;
+                 ++k) {
+                AosEffect piece = souls->burst[k];
+                piece.x = (int32_t)((uint32_t)(int16_t)((thrown->x >> 16) + (piece.x >> 16)) << 16);
+                piece.y = (int32_t)((uint32_t)(int16_t)((thrown->y >> 16) + (piece.y >> 16)) << 16);
+                souls->effects[(*souls->effect_count)++] = piece;
             }
             skill->x = thrown->x;
             skill->y = thrown->y;
@@ -1220,8 +1242,11 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = bat->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_ARROW && skill->state == 1 && !skill->struck)
             box = (AosBox){8, -1, 2, 2};
-        else if (skill->kind == SKILL_THROW && skill->thrown.state == 1)
-            box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
+        else if (skill->kind == SKILL_THROW && skill->thrown.attacking &&
+                 skill->thrown.state != 3)
+            /* 0x1010F8F8, or the fused throws' 0x2838E2E4 once exploded. */
+            box = souls->throws[skill->parameter].flags & 0x60 ? (AosBox){-28, -30, 56, 40}
+                                                                : (AosBox){-8, -8, 16, 16};
         else if (skill->kind == SKILL_DROP && skill->drop.attacking)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_SHOT)
@@ -1787,6 +1812,41 @@ static bool load_red_souls(const char *path, AosRedSoulRecord records[AOS_RED_SO
     }
     fclose(f);
     return loaded == AOS_RED_SOUL_RECORDS;
+}
+
+/* metadata/bursts.tsv: burst list 0 as ready burst effects (offsets in the
+ * whole pixels of x and y). Its arts are those of their animation and row. */
+#define MAX_BURST 32
+static AosEffect burst_list[MAX_BURST];
+static size_t burst_size;
+
+static bool load_bursts(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[256];
+    burst_size = 0;
+    while (fgets(line, sizeof line, f)) {
+        unsigned list, anim, row, priority, delay;
+        int dx, dy, vx, vy, ax, ay;
+        if (sscanf(line, "%u\t%u\t%u\t%u\t%u\t%d\t%d\t%d\t%d\t%d\t%d", &list, &anim, &row,
+                   &priority, &delay, &dx, &dy, &vx, &vy, &ax, &ay) != 11 ||
+            list != 0 || burst_size >= MAX_BURST)
+            continue;
+        int kind = anim == 0 && row == 7    ? AOS_EFFECT_FLAME
+                   : anim == 1 && row == 7  ? AOS_EFFECT_BURST_1
+                   : anim == 4 && row == 6  ? AOS_EFFECT_DUST
+                   : anim == 5 && row == 6  ? AOS_EFFECT_SMOKE
+                   : anim == 12 && row == 6 ? AOS_EFFECT_BURST_12
+                   : anim == 15 && row == 7 ? AOS_EFFECT_BURST_15
+                                            : -1;
+        if (kind < 0) continue;
+        burst_list[burst_size++] = (AosEffect){
+            .kind = (uint8_t)kind, .burst = true, .x = (int32_t)((uint32_t)dx << 16),
+            .y = (int32_t)((uint32_t)dy << 16), .vx = vx, .vy = vy, .ax = ax, .ay = ay,
+            .timer = (uint8_t)delay};
+    }
+    fclose(f);
+    return burst_size > 0;
 }
 
 /* metadata/skill_throws.tsv: the shared throw routine's records. */
@@ -2731,11 +2791,13 @@ int main(int argc, char **argv) {
     bool have_red_souls = load_red_souls(DEFAULT_RED_SOULS, red_souls);
     static AosThrowRecord skill_throws[AOS_THROW_RECORDS];
     bool have_skill_throws = load_skill_throws(DEFAULT_SKILL_THROWS, skill_throws);
+    if (!load_bursts(DEFAULT_BURSTS)) fprintf(stderr, "No Aria burst list: %s\n", DEFAULT_BURSTS);
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
     static AriaSouls souls;
     souls = (AriaSouls){.stats = &progress, .records = have_red_souls ? red_souls : NULL,
-                        .throws = have_skill_throws ? skill_throws : NULL, .soma = &soma};
+                        .throws = have_skill_throws ? skill_throws : NULL, .soma = &soma,
+                        .burst = burst_list, .burst_count = burst_size};
     soma.cast = cast_red_soul;
     soma.cast_context = &souls;
     /* The in-game HUD (sub_0800DA50), drawn from the exported resources. */
@@ -2989,6 +3051,11 @@ int main(int argc, char **argv) {
             souls.cam_x = cam_x;
             souls.cam_y = cam_y;
             souls.layer = &layer;
+            souls.effects = room.effects;
+            souls.effect_count = &room.effect_count;
+            souls.bone_kind = &objects.skills[SKILL_ART_BONE].kind;
+            souls.bone_ids = objects.skills[SKILL_ART_BONE].static_ids;
+            souls.bone_count = objects.skills[SKILL_ART_BONE].static_count;
             update_skills(&souls);
             ++step;
             if (has_active_save) active_save.play_frames++;
@@ -3172,7 +3239,11 @@ int main(int argc, char **argv) {
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_ARROW ? &objects.skills[SKILL_ART_ARCHER].statics[0]
-                : skill->kind == SKILL_THROW ? &objects.skills[SKILL_ART_BONE].statics[0]
+                : skill->kind == SKILL_THROW
+                    ? (skill->thrown.hidden
+                           ? NULL
+                           : blade_frame(&objects.skills[SKILL_ART_BONE],
+                                         souls.throws[skill->parameter].frame))
                 : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
                     ? blade_frame(&objects.skills[SKILL_ART_BLADES],
                                   skill->kind == SKILL_SHOT ? 2 : AOS_DAGGER_FRAME)

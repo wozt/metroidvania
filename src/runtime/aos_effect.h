@@ -30,11 +30,19 @@
  *   (Effect/dust), 7, row 8 (Effect/impact, a class 4 shot on a wall) and
  *   1, row 7 (Effect/ember, the dead warrior's death);
  * - the shell casing sub_080228F8 (`casing`): sprite frame 0x35 with row 8
- *   (Effect/casing, a looping one-frame animation), see aos_effect_update. */
+ *   (Effect/casing, a looping one-frame animation), see aos_effect_update;
+ * - the burst pieces of sub_08045A98 updated by sub_08045E80 (`burst`):
+ *   hidden while + 0x0D counts down, then moved by sub_0806D430 /
+ *   sub_0806D460 (8.0 clamps) and animated, deleted when the animation
+ *   ends. Burst list 0 (0x08525498) uses animation 0 row 7 (the flame
+ *   art), 4 and 5 row 6 (dust, smoke) and the burst arts 1 row 7
+ *   (Effect/burst_1), 12 row 6 (Effect/burst_12) and 15 row 7
+ *   (Effect/burst_15). */
 enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
        AOS_EFFECT_DUST = 6, AOS_EFFECT_IMPACT = 7, AOS_EFFECT_CASING = 8,
-       AOS_EFFECT_EMBER = 9, AOS_EFFECT_KINDS = 10 };
+       AOS_EFFECT_EMBER = 9, AOS_EFFECT_BURST_1 = 10, AOS_EFFECT_BURST_12 = 11,
+       AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_KINDS = 13 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */
@@ -45,6 +53,7 @@ typedef struct {
     bool drift;             /* sub_08045C9C */
     bool casing;            /* sub_080228F8 */
     bool follow;            /* sub_080C9198: a spark held on the player */
+    bool burst;             /* sub_08045E80 */
     uint8_t state;          /* + 0x0A of a casing: 1 falling, 2 bounced */
     int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
     uint8_t flags;          /* + 0x18 of a particle */

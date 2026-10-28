@@ -265,7 +265,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08045454	sub_08045454	unclassified		technic
 aos:asm:asm/code/code_08040A38.s:sub_080455BC	sub_080455BC	unclassified		technical	exclusive_callees	asm_function	0x080455BC	asm/code/code_08040A38.s	8087	2	5
 aos:asm:asm/code/code_08040A38.s:sub_08045654	sub_08045654	unclassified		technical	exclusive_callees	asm_function	0x08045654	asm/code/code_08040A38.s	8157	0	5
 aos:asm:asm/code/code_08040A38.s:sub_080458E4	sub_080458E4	unclassified		technical	exclusive_callees	asm_function	0x080458E4	asm/code/code_08040A38.s	8493	26	7
-aos:asm:asm/code/code_08040A38.s:sub_08045A98	sub_08045A98	unclassified		technical	exclusive_callees	asm_function	0x08045A98	asm/code/code_08040A38.s	8715	2	4
 aos:asm:asm/code/code_08040A38.s:sub_08045B44	sub_08045B44	unclassified		technical	exclusive_callees	asm_function	0x08045B44	asm/code/code_08040A38.s	8800	24	1
 aos:asm:asm/code/code_08040A38.s:sub_08045BC8	sub_08045BC8	unclassified		technical	exclusive_callees	asm_function	0x08045BC8	asm/code/code_08040A38.s	8869	4	1
 aos:asm:asm/code/code_08040A38.s:sub_08045C34	sub_08045C34	unclassified		technical	exclusive_callees	asm_function	0x08045C34	asm/code/code_08040A38.s	8925	1	5
@@ -273,7 +272,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08045D5C	sub_08045D5C	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_08045DC8	sub_08045DC8	unclassified		technical	exclusive_callees	asm_function	0x08045DC8	asm/code/code_08040A38.s	9127	4	3
 aos:asm:asm/code/code_08040A38.s:sub_08045E38	sub_08045E38	enemies	referrers			asm_function	0x08045E38	asm/code/code_08040A38.s	9181	2	0
 aos:asm:asm/code/code_08040A38.s:sub_08045E4C	sub_08045E4C	unclassified				asm_function	0x08045E4C	asm/code/code_08040A38.s	9195	0	1
-aos:asm:asm/code/code_08040A38.s:sub_08045E80	sub_08045E80	unclassified				asm_function	0x08045E80	asm/code/code_08040A38.s	9222	0	3
 aos:asm:asm/code/code_08040A38.s:sub_08045EE0	sub_08045EE0	unclassified				asm_function	0x08045EE0	asm/code/code_08040A38.s	9273	0	4
 aos:asm:asm/code/code_08040A38.s:sub_08045F9C	sub_08045F9C	unclassified		technical	exclusive_callees	asm_function	0x08045F9C	asm/code/code_08040A38.s	9372	3	5
 aos:asm:asm/code/code_08040A38.s:sub_08046080	sub_08046080	unclassified		technical	exclusive_callees	asm_function	0x08046080	asm/code/code_08040A38.s	9489	1	7

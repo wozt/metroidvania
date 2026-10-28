@@ -614,8 +614,12 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul COMMAND fusion_aos_soul_tests)
 
     add_executable(fusion_aos_skill_throw_tests tests/test_aos_skill_throw.c
-                   src/runtime/aos_skill_throw.c)
+                   src/runtime/aos_skill_throw.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
+                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
+                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_skill_throw_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_skill_throw_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_skill_throw_tests)
     add_test(NAME aos_skill_throw COMMAND fusion_aos_skill_throw_tests)
 

@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "aos_enemy.h"
+
 /* One record of 0x084F12C8 (8 x 24 bytes), the table of
  * Skill_Skeleton_ZombieSoldier_RockArmor_WaiterSkeleton_GiantSkeleton_BomberArmor_Use
  * indexed by the red soul's parameter (entity + 0x1E), exported as
@@ -24,11 +26,14 @@ typedef struct {
 enum {
     AOS_THROW_RECORDS = 8,
     AOS_THROW_ANIMATED = 0x0001,
+    AOS_THROW_ROLL = 0x0004,        /* walks the terrain and bounces */
+    AOS_THROW_FUSE = 0x0040,        /* explodes after 0x50 frames (0x20: with a flash) */
     AOS_THROW_SPIN = 0x0080,
-    /* The flags this port follows; the others (terrain probes 2 and 4,
-     * flashes 0x60, shards 0x100, frame boxes 0x200, timers 0x400, the
-     * 0x13168 link 8, the landing 0x10) are refused. */
-    AOS_THROW_PORTED_FLAGS = AOS_THROW_SPIN,
+    /* The flags this port follows; the others (terrain probe 2, the flash
+     * 0x20, shards 0x100, frame boxes 0x200, timers 0x400, the 0x13168
+     * link 8, the landing 0x10) are refused. */
+    AOS_THROW_PORTED_FLAGS = AOS_THROW_SPIN | AOS_THROW_ROLL | AOS_THROW_FUSE,
+    AOS_THROW_FUSE_FRAMES = 0x50,
 };
 
 typedef struct {
@@ -38,14 +43,21 @@ typedef struct {
     int16_t spin;           /* + 0x2E */
     uint16_t angle;         /* + 0x2C */
     bool facing_left;       /* + 0x58 bit 6 */
-    uint8_t state;          /* + 0x0A: 0 created, 1 flying, 3 deleted next */
+    uint8_t state;          /* + 0x0A: 0 created, 1 flying, 2 and 4 exploding,
+                             * 3 deleted next */
     bool struck;            /* + 0x20: sub_0802DACC */
+    int32_t roll_speed;     /* + 0x24: the record's vx, 0 once a roll stops */
+    uint8_t timer;          /* + 0x0D */
+    bool attacking;         /* + 0x72 bit 1 clear */
+    bool hidden;            /* + 0x58 bit 5 after the explosion */
+    bool exploded;          /* the update that ran sub_08045A98(x, y, 0) */
+    AosEnemy body;          /* the probe walker's view of a rolling throw */
 } AosThrow;
 
 /* Whether this port follows every flag of a record. */
 bool aos_throw_supported(const AosThrowRecord *record);
 /* The skill entity as sub_08019478 leaves it, placed by sub_08031EA4 at
- * Soma's facing and (8, -0x1A). */
+ * Soma's facing and (8, -0x1A) (whole pixels). */
 AosThrow aos_throw_create(int32_t soma_x, int32_t soma_y, bool facing_left);
 /* One update of the routine for a supported record: state 0 sets the
  * velocities (mirrored when facing left) and the spin, state 1 moves with
@@ -56,4 +68,15 @@ AosThrow aos_throw_create(int32_t soma_x, int32_t soma_y, bool facing_left);
  * on entry: its slot is released and the count drops). */
 bool aos_throw_update(AosThrow *entity, const AosThrowRecord *record, int cam_x, int cam_y,
                       int mx, int my);
+/* The same with the terrain a rolling throw (flag 4) walks: state 0 also
+ * plays the record's song and arms a fused throw (flag 0x40: 0x50 frames,
+ * its attack off); in state 1 the fuse counts down and at 0 explodes it
+ * (`exploded`; sound 0xD7, its attack on, hidden, state 2 for 2 frames,
+ * then state 4 for 16, then gone); a rolling throw steps the walker
+ * sub_0806CAF8 (mode 0, the speed negated) with the gravity, turns at
+ * walls and on a floor bounces at -vy / 2 with sound 0x11B when it fell
+ * faster than 1.0, else stops rolling. */
+bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
+                            const AosCollision *layer, const AosProbes *probes, int cam_x,
+                            int cam_y, int mx, int my);
 #endif

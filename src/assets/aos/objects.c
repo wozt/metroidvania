@@ -193,7 +193,9 @@ static const EntitySpec entities[] = {
      * sequence 1, the walker probes 0x084F13BE). */
     {"skill_flea", 0x081D6114, 0x0820B334, 0, 0x0823415C, 0x084F13BE, 0, 0, 3, {0, 1, 2}},
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
-    STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
+    /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
+     * the walker probes 0x084F1388 of the bouncing throws (flag 4). */
+    {"skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 0x084F1388, 0, 0, 2, {0, 3}},
 };
 
 static const EffectSpec effects[] = {
@@ -207,6 +209,10 @@ static const EffectSpec effects[] = {
     {"impact", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {7}, -1},
     {"ember", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {1}, -1},
     {"casing", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 0, {0}, 53},
+    /* The arts of burst list 0 of sub_08045A98 not shared with the above. */
+    {"burst_1", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {1}, -1},
+    {"burst_12", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {12}, -1},
+    {"burst_15", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {15}, -1},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows
@@ -994,6 +1000,33 @@ static bool append_red_souls(const FusionRom *rom, Text *souls, char *error,
  * speeds (+ 0x0, + 0x4), gravity (+ 0x8), graphics record of 0x080E13BC
  * (+ 0xC), still frame (+ 0xD), sequence (+ 0xE), palette row (+ 0xF),
  * song (+ 0x10), flags (+ 0x12), spin (+ 0x14) and + 0x16. */
+/* Burst list 0 of sub_08045A98 (0x08525498[0], 24-byte entries ended by a
+ * row byte 0xFF): animation (+ 0x0), OBJ row (+ 0x1), priority (+ 0x2),
+ * delay (+ 0x3), x and y offsets (+ 0x4, + 0x6, s16), vx, vy, ax, ay
+ * (+ 0x8 to + 0x14). */
+static bool append_bursts(const FusionRom *rom, Text *text, char *error, size_t error_size) {
+    const uint8_t *head = slice(rom, 0x08525498, 4, "burst lists", error, error_size);
+    if (!head || !text_append(text, "schema\tmetroidvania-aos-bursts-v1\n"
+                                    "# list\tanimation\trow\tpriority\tdelay\tdx\tdy\tvx\tvy"
+                                    "\tax\tay\n"))
+        return false;
+    uint32_t pointer = read_u32(head);
+    for (unsigned index = 0; index < 64; ++index) {
+        const uint8_t *entry = slice(rom, pointer + index * 24, 24, "burst entry", error,
+                                     error_size);
+        if (!entry) return false;
+        if (entry[1] == 0xFF) return true;
+        if (!text_append(text, "0\t%u\t%u\t%u\t%u\t%d\t%d\t%d\t%d\t%d\t%d\n", entry[0],
+                         entry[1], entry[2], entry[3], (int16_t)read_u16(entry + 4),
+                         (int16_t)read_u16(entry + 6), (int32_t)read_u32(entry + 8),
+                         (int32_t)read_u32(entry + 12), (int32_t)read_u32(entry + 16),
+                         (int32_t)read_u32(entry + 20)))
+            return false;
+    }
+    set_error(error, error_size, "unterminated burst list");
+    return false;
+}
+
 static bool append_skill_throws(const FusionRom *rom, Text *throws, char *error,
                                 size_t error_size) {
     if (!text_append(throws,
@@ -1086,7 +1119,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0}, skill_throws = {0},
+    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0}, skill_throws = {0}, bursts = {0},
          item_icons = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
@@ -1126,6 +1159,9 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            append_skill_throws(rom, &skill_throws, error, error_size) &&
                            write_text_file(metadata_output, "skill_throws.tsv",
                                            &skill_throws, error, error_size) &&
+                           append_bursts(rom, &bursts, error, error_size) &&
+                           write_text_file(metadata_output, "bursts.tsv",
+                                           &bursts, error, error_size) &&
                            write_hud(rom, metadata_output, error, error_size) &&
                            append_item_icons(rom, &item_icons, error, error_size) &&
                            write_text_file(metadata_output, "item_icons.tsv",
@@ -1148,6 +1184,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(equipment.data);
     free(red_souls.data);
     free(skill_throws.data);
+    free(bursts.data);
     free(item_icons.data);
     return success;
 }

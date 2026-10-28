@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0617 - Zombie Soldier soul and sounds; burst effects
+
+- The shared throw routine follows flags 4 (rolling with the probe
+  walker, bouncing) and 0x40 (an 80-frame fuse, then burst list 0 of
+  `sub_08045A98` and a 56 x 40 attack box): the Zombie Soldier's grenade
+  soul (parameter 5) works; throws now play their record's song.
+- `aos_effect` gains the burst pieces of `sub_08045E80`; the export adds
+  `metadata/bursts.tsv` and three burst arts.
+- The Zombie Soldier plays 0x85, 0x70, and 0x11B / 0x76 for its grenade;
+  the Zombie Officer 0x85 and 0x70. Unit-tested.
+- 9 of 47 monsters are complete. Not listened to or emulator-compared.
+  Zero Mission is unchanged.
+
 ## Patch 0616 - Fleaman soul
 
 - `src/runtime/aos_skill_flea.c` ports `SkillFleamanUse`: a flea hops

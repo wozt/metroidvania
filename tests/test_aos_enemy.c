@@ -1114,6 +1114,7 @@ static void soldier_tests(void) {
     soma.x = AOS_FIXED(600);
     AosEnemy flying = g;
     int bounces = 0, guard = 0;
+    aos_audio_clear();
     int32_t vy_before = 0;
     while (flying.state == 0 && guard++ < 300) {
         vy_before = flying.vy;      /* sub_08092CCC passes vy / 3 before gravity */
@@ -1124,6 +1125,17 @@ static void soldier_tests(void) {
         }
     }
     assert(bounces == 1 && flying.state == 2 && flying.timer == 2);
+    /* sub_08092CCC: 0x11B at the bounce, 0x76 when it explodes. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x11B) == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) == 1);
+    /* sub_08092A28 step 1: the close attack's 0x85 at the start of frame 2. */
+    AosEnemy biter = z;
+    biter.state = 1;
+    biter.step = 1;
+    biter.anim = (AosAnimState){.id = 1, .frame = 2, .tick = 0};
+    aos_audio_clear();
+    aos_enemy_update(&biter, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
     int blast = 0, kinds[AOS_EFFECT_KINDS] = {0};
     while (!flying.removed && blast < 100) {
         hit = aos_enemy_update(&flying, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -1176,8 +1188,10 @@ static void soldier_tests(void) {
     AosWeaponEntity weapon = {.active = true};
     /* The camera follows it: off-screen, the activity window pauses it. */
     int cam = (z.x >> 16) - 120;
+    aos_audio_clear();
     hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, 0, never_zero);
     assert(hit.killed && z.state == 2 && z.anim.id == 3 && z.timer == 0x28);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);      /* sub_08092B38 */
     /* First death frame: two gibs from the draws dx, dy, vx, vy each, then
      * the generic death's flame (timer 0x28). */
     static const uint32_t gib_draws[] = {0x90000, 0x30000, 0x1234, 0x10000,
@@ -3081,11 +3095,14 @@ static void officer_tests(void) {
     aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(z.anim.id == 1 && z.step == 1);
     frames = 0;
+    aos_audio_clear();
     while (z.state == 1 && frames < 80) {
         aos_enemy_update(&z, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         ++frames;
     }
     assert(z.state == 0 && z.anim.id == 0 && frames == 18);
+    /* sub_080924AC: 0x85 at the start of attack frame 4. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
 
     /* The killing blow: animation 2, then three gibs (0x10, 0x11, 0x0F at
      * (+6 mirrored, -13)) and the 40-frame generic death. */
@@ -3098,9 +3115,11 @@ static void officer_tests(void) {
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
     z.hp = 1;
+    aos_audio_clear();
     AosHitReport hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
                                         always_zero);
     assert(hit.killed && z.state == 2 && z.anim.id == 2 && z.timer == 0x28);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);      /* sub_0809252C */
     hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
     assert(hit.child_count == 3 && hit.children[2].static_frame == 0x0F);
     int32_t dx = z.mirrored ? 0x60000 : -0x60000;

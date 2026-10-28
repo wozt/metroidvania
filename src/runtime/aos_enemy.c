@@ -1207,8 +1207,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER) {
-                    /* sub_08092B38: death animation 3 and the generic death
-                     * in state 2 (sound 0x70; sub_080683BC is not ported). */
+                    /* sub_08092B38: sound 0x70, death animation 3 and the
+                     * generic death in state 2. */
+                    aos_audio_play_song(0x70);
                     play_loop(enemy, kind->anims, 3, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -1316,8 +1317,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->ax = 0;
                     enemy->ay = 0x1000;
                 } else if (enemy->id == AOS_ENEMY_ZOMBIE_OFFICER) {
-                    /* sub_0809252C: death animation 2 and the generic death
-                     * in state 2 (sound 0x70; sub_080683BC is not ported). */
+                    /* sub_0809252C: sound 0x70, death animation 2 and the
+                     * generic death in state 2. */
+                    aos_audio_play_song(0x70);
                     play_loop(enemy, kind->anims, 2, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -2356,9 +2358,11 @@ static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollisio
         if (flags & 4) {
             g->vy = -g->vy;
             explode = ++g->timer > 1;
+            if (!explode) aos_audio_play_song(0x11B);
         }
         if (explode || (flags & 8)) {
             g->state = 2;
+            aos_audio_play_song(0x76);
             break;
         }
         if (outside_margins(kind, 2, (g->x >> 16) - cam_x, (g->y >> 16) - cam_y)) {
@@ -2458,6 +2462,7 @@ static void soldier_attack(AosEnemy *z, const AosSoma *soma, const AosAnimSet *a
         z->step = 1;
         break;
     case 1:
+        if (z->anim.frame == 2 && z->anim.tick == 0) aos_audio_play_song(0x85);
         if (z->cycle_done) soldier_walk_again(z, anims);
         break;
     case 0xA:
@@ -5245,6 +5250,7 @@ static void officer_attack(AosEnemy *z, const AosAnimSet *anims) {
         z->step = 1;
         return;
     }
+    if (z->anim.frame == 4 && z->anim.tick == 0) aos_audio_play_song(0x85);
     if (z->cycle_done) {
         play(z, anims, 0);
         z->state = z->step = 0;

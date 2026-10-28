@@ -18,6 +18,7 @@
 #include "aos_pickup.h"
 #include "aos_soul.h"
 #include "aos_skill_axe.h"
+#include "aos_skill_dagger.h"
 #include "aos_skill_merman.h"
 #include "aos_skill_shot.h"
 #include "aos_skill_spear.h"
@@ -122,9 +123,9 @@ static int enemy_bank(const AosEnemy *enemy) {
 }
 #define ENEMY_STATIC_FRAMES 10 /* single sprite frames of child entities per kind */
 /* The red soul skills' sprites (Enemy/skill_<name>). */
-enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_DURGA, SKILL_ARTS };
+enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
-                                                         "skill_shared", "skill_durga"};
+                                                         "skill_shared", "skill_blades"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -523,7 +524,7 @@ typedef struct {
 /* A red soul skill entity (EntityCreateInRange(2, 0x10)): SkillBatUse,
  * SkillSkullArcherUse's bow and its arrow sub_08028BC4 are ported. */
 enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, SKILL_AXE,
-       SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT };
+       SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER };
 
 typedef struct {
     bool alive, started;
@@ -542,6 +543,8 @@ typedef struct {
     AosAxeTrail trail;      /* SKILL_AXE_TRAIL */
     AosSpear spear;         /* SKILL_SPEAR */
     AosShot shot;           /* SKILL_SHOT */
+    AosDagger dagger;       /* SKILL_DAGGER, with its trail entity */
+    AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
     uint8_t parameter;      /* + 0x1E: the record's parameter */
 } AriaSkill;
@@ -554,6 +557,7 @@ typedef struct {
 #define SKILL_AXE_ROUTINE 0x08024275u
 #define SKILL_SPEAR_ROUTINE 0x08026009u
 #define SKILL_DURGA_ROUTINE 0x0802B809u
+#define SKILL_HARPY_ROUTINE 0x0802CC85u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -567,6 +571,7 @@ typedef struct {
     bool bone;                      /* resource 7 (Enemy/skill_bone) is loaded */
     const AosCollision *layer;      /* the room's BG1 collision */
     bool durga;                     /* resource 24's still frame 2 is loaded */
+    bool harpy;                     /* and its frames 1 and 3-5 */
     AosBox durga_attack;            /* that frame's attack box */
     const int *shared_ids;          /* resource 0's exported still frames */
     int shared_count;
@@ -615,6 +620,7 @@ static int cast_red_soul(void *context) {
                        static_index(souls->shared_ids, souls->shared_count, 0) >= 0
                    ? SKILL_SPEAR
                : routine == SKILL_DURGA_ROUTINE && souls->durga ? SKILL_SHOT
+               : routine == SKILL_HARPY_ROUTINE && souls->harpy ? SKILL_HARPY
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -625,6 +631,8 @@ static int cast_red_soul(void *context) {
     /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
     if (kind == SKILL_BAT)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
+    else if (kind == SKILL_HARPY)
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0x14, -0x1A);
     else if (kind == SKILL_SHOT) {
         skill->shot = aos_shot_create(souls->soma->x, souls->soma->y, souls->soma->facing_left);
         skill->x = skill->shot.x;
@@ -834,6 +842,42 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->spear.x;
             skill->y = skill->spear.y;
             break;
+        case SKILL_HARPY:
+            /* SkillHarpyUse: counted, then (same update) two sub_0802CAC0
+             * daggers from its position (sound 0xE6 and sub_08042A54(1,
+             * 0x14) are not played); deleted on its next update. */
+            if (skill->started) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->started = true;
+            souls->caster.active++;
+            for (int k = 0; k < AOS_HARPY_DAGGERS; ++k) {
+                AriaSkill *dagger = spawn_child(souls, SKILL_DAGGER);
+                if (!dagger) break;
+                dagger->soul = skill->soul;
+                dagger->dagger = aos_dagger_create(k, skill->x, skill->y);
+                dagger->dagger_trail = aos_dagger_trail_create(&dagger->dagger);
+                dagger->x = skill->x;
+                dagger->y = skill->y;
+                dagger->facing_left = dagger->dagger.facing_left;
+            }
+            break;
+        case SKILL_DAGGER: {
+            /* sub_0802CAC0, then its trail entity's sub_0802C944. */
+            skill->started = true;
+            skill->dagger.struck = skill->struck;
+            int mx = souls->margins ? souls->margins[4][0] : 16;
+            int my = souls->margins ? souls->margins[4][1] : 16;
+            if (!aos_dagger_update(&skill->dagger, souls->layer, souls->cam_x, souls->cam_y, mx,
+                                   my)) {
+                end_skill(souls, skill);
+                break;
+            }
+            aos_dagger_trail_update(&skill->dagger_trail, &skill->dagger);
+            skill->x = skill->dagger.x;
+            break;
+        }
         case SKILL_SHOT: {
             /* SkillDurgaUse: counted on its first update (sound 0xC7 and
              * sub_08042A54(1, 0x1E) are not played). */
@@ -929,6 +973,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_SHOT)
             box = souls->durga_attack;          /* the still frame's, sub_08042848 */
+        else if (skill->kind == SKILL_DAGGER)
+            box = (AosBox){-1, -1, 2, 2};      /* 0x0202FFFF */
         else if (skill->kind == SKILL_SPEAR_TIP)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
@@ -1247,6 +1293,12 @@ typedef struct {
     AosMoneyKind money[AOS_MONEY_KINDS];
     bool money_loaded;
 } AriaObjects;
+
+/* An art's exported still frame `id`, or NULL. */
+static const AriaFrame *blade_frame(const __typeof__(((AriaObjects *)0)->skills[0]) *art, int id) {
+    int index = static_index(art->static_ids, art->static_count, id);
+    return index < 0 ? NULL : &art->statics[index];
+}
 
 /* enemy_frames.tsv (boxes, death blink, margins) and enemies.tsv (stats). */
 static bool load_enemy_data(AriaObjects *objects) {
@@ -2535,8 +2587,11 @@ int main(int argc, char **argv) {
             souls.bat = objects_ok && bat->loaded ? &bat->set : NULL;
             souls.bow = objects_ok && archer->loaded && archer->static_count ? &archer->set : NULL;
             souls.bone = objects_ok && objects.skills[SKILL_ART_BONE].static_count;
-            souls.durga = objects_ok && objects.skills[SKILL_ART_DURGA].static_count;
-            souls.durga_attack = objects.skills[SKILL_ART_DURGA].static_attack[2];
+            const __typeof__(objects.skills[0]) *blades = &objects.skills[SKILL_ART_BLADES];
+            souls.durga = objects_ok && blade_frame(blades, 2);
+            souls.harpy = objects_ok && blade_frame(blades, AOS_DAGGER_FRAME) &&
+                          blade_frame(blades, 3) && blade_frame(blades, 4) && blade_frame(blades, 5);
+            souls.durga_attack = objects.skills[SKILL_ART_BLADES].static_attack[2];
             const __typeof__(objects.skills[0]) *merman = &objects.skills[SKILL_ART_SHARED];
             souls.shared_ids = merman->static_ids;
             souls.shared_count = objects_ok ? merman->static_count : 0;
@@ -2702,14 +2757,35 @@ int main(int argc, char **argv) {
             const __typeof__(objects.skills[0]) *shared = &objects.skills[SKILL_ART_SHARED];
             int still = static_index(shared->static_ids, shared->static_count,
                                      skill->kind == SKILL_SPEAR ? 0 : skill->parameter);
-            if (skill->kind == SKILL_SPEAR_TIP) continue;   /* not drawn */
+            if (skill->kind == SKILL_SPEAR_TIP || skill->kind == SKILL_HARPY) continue;
+            if (skill->kind == SKILL_DAGGER) {
+                /* sub_0802DC60: frames 3-5 at the history's entries 1-3
+                 * (the trail entity's own facing is the dagger's). */
+                for (int t = AOS_DAGGER_TRAIL_IMAGES - 1; t >= 0; --t) {
+                    const AriaFrame *image = blade_frame(&objects.skills[SKILL_ART_BLADES],
+                                                         AOS_DAGGER_TRAIL_FIRST_FRAME + t);
+                    if (!image || !image->texture) continue;
+                    int tx = skill->dagger_trail.history[t + 1][0];
+                    int ty = skill->dagger_trail.history[t + 1][1];
+                    float ix = skill->facing_left ? (float)(tx - image->offset_x) - image->w
+                                                  : (float)(tx + image->offset_x);
+                    SDL_FRect trail_rect = {ix - (float)cam_x, (float)(ty + image->offset_y - cam_y),
+                                            image->w, image->h};
+                    SDL_RenderTextureRotated(renderer, image->texture, NULL, &trail_rect, 0, NULL,
+                                             skill->facing_left ? SDL_FLIP_HORIZONTAL
+                                                                : SDL_FLIP_NONE);
+                }
+                if (skill->dagger.blinking && (step & 1)) continue;
+            }
             if (skill->kind == SKILL_SPEAR && skill->spear.blinking && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_ARROW ? &objects.skills[SKILL_ART_ARCHER].statics[0]
                 : skill->kind == SKILL_THROW ? &objects.skills[SKILL_ART_BONE].statics[0]
-                : skill->kind == SKILL_SHOT  ? &objects.skills[SKILL_ART_DURGA].statics[0]
+                : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
+                    ? blade_frame(&objects.skills[SKILL_ART_BLADES],
+                                  skill->kind == SKILL_SHOT ? 2 : AOS_DAGGER_FRAME)
                 : skill->kind == SKILL_AXE || skill->kind == SKILL_AXE_TRAIL ||
                         skill->kind == SKILL_SPEAR
                     ? (still < 0 ? NULL : &shared->statics[still])

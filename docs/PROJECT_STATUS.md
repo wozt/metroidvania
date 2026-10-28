@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0597 - Aria Harpy red soul
+
+- `src/runtime/aos_skill_dagger.c` ports the daggers of `SkillHarpyUse`
+  (`sub_0802CAC0`): one thrown each way at 5 pixels a frame with a 2 x 2
+  type-5 box, gone once it struck, blinking 16 frames against a wall, and
+  its three-image trail (`sub_0802C9E8`, `sub_0802C944`, `sub_0802DC60`).
+- Resource 24 is exported once as `Enemy/skill_blades` (the dagger, its
+  trail frames and Durga's sword).
+- A local run with soul 24 drew both daggers and their trails. Not
+  ported: the sounds; the trail lives inside the dagger's entity. Source-
+  derived and unit-tested, not emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0596 - Aria Durga red soul
 
 - `src/runtime/aos_skill_shot.c` ports `SkillDurgaUse`: a sword flying 4

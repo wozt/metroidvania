@@ -183,7 +183,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c
                src/runtime/aos_stats.c src/runtime/aos_pickup.c src/runtime/aos_hud.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
@@ -641,6 +641,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_skill_shot_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_skill_shot_tests)
     add_test(NAME aos_skill_shot COMMAND fusion_aos_skill_shot_tests)
+
+    add_executable(fusion_aos_skill_dagger_tests tests/test_aos_skill_dagger.c
+                   src/runtime/aos_skill_dagger.c src/runtime/aos_collision.c)
+    target_include_directories(fusion_aos_skill_dagger_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_skill_dagger_tests)
+    add_test(NAME aos_skill_dagger COMMAND fusion_aos_skill_dagger_tests)
 
     add_executable(fusion_aos_stats_tests tests/test_aos_stats.c src/runtime/aos_stats.c)
     target_include_directories(fusion_aos_stats_tests PRIVATE src/runtime)

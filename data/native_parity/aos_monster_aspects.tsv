@@ -1,5 +1,5 @@
 enemy	sprite	animations	sounds	loot	soul	soul_ref	notes
-axe_armor	ported	ported	partial	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: native IDs and timing use player and priority from the exported 495-entry song table; a standalone MP2K track decoder exists, but bank wiring, voices, samples, mixing and SDL output are absent.
+axe_armor	ported	ported	ported	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: its native sounds are requested and unit-tested: 0x86 when its axe is struck, 0x6F at the start of its death and 0x6E every 8 frames of it, 0xE3 when its soul is cast (SkillAxeArmorUse); a local run rendered each through the mixer (not listened to).
 bat	ported	ported	ported	n/a	ported	red:2	Soul: drops, is collected and casts (SkillBatUse). Sounds: its only native sound, 0x72 at the start of its death (sub_080AD5B8), is requested, unit-tested and mixed (a local run rendered it, not listened to).
 beam_skeleton	ported	ported	missing	n/a	partial	red:39	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 blue_crow	ported	ported	missing	n/a	partial	red:8	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
@@ -26,7 +26,7 @@ killer_fish	ported	partial	missing	ported	partial	red:7	Soul: drops and is colle
 lightning_doll	ported	ported	missing	n/a	partial	red:45	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 lubicant	ported	ported	missing	ported	partial	yellow:13	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
 medusa_head	ported	ported	missing	n/a	partial	blue:15	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
-merman	ported	ported	missing	n/a	ported	red:4	Soul: drops, is collected and casts (SkillMermanUse). Sounds: no Aria audio is ported.
+merman	ported	ported	ported	n/a	ported	red:4	Soul: drops, is collected and casts (SkillMermanUse). Sounds: its native sounds are requested and unit-tested: 0x7A with its shot (sub_080714A4) and 0x6E at its death (sub_080715B4); a local run rendered both through the mixer (not listened to).
 mimic	ported	ported	missing	n/a	partial	yellow:17	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
 needles	ported	ported	missing	ported	partial	red:26	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 nemesis	ported	ported	missing	n/a	partial	red:52	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.

@@ -1225,7 +1225,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
-                    /* sub_080715B4: animation 1, 40-frame falling death. */
+                    /* sub_080715B4: sound 0x6E, animation 1, 40-frame
+                     * falling death. */
+                    aos_audio_play_song(0x6E);
                     play_loop(enemy, kind->anims, 1, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -7095,6 +7097,8 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
             play_loop(e, kind->anims, 3, false);
             e->step = 1;
         } else if (e->step == 1 && e->cycle_done) {
+            /* sub_080714A4: sound 0x7A, then the shot. */
+            aos_audio_play_song(0x7A);
             merman_shot(e, kind, &report);
             e->step = 2;
         } else if (e->step == 2 && e->cycle_done) {

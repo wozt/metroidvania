@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0610 - Merman sounds; Axe Armor and Merman complete
+
+- The Merman requests 0x7A with its shot (`sub_080714A4`) and 0x6E at
+  its death (`sub_080715B4`); unit-tested.
+- The Axe Armor's four native sounds were already requested and tested
+  (0x86, 0x6F, 0x6E, and 0xE3 from its soul skill); local runs rendered
+  all of them through the mixer.
+- The monster matrix marks both sounds ported: 3 of 47 monsters are
+  complete (bat, Axe Armor, Merman). Not listened to or emulator-
+  compared. Zero Mission is unchanged.
+
 ## Patch 0609 - Bat and Fleaman death sounds; first complete monster
 
 - The bat (`sub_080AD5B8`) and the Fleaman (`sub_080C2388`) request their

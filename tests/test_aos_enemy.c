@@ -263,6 +263,7 @@ static void batch_enemy_tests(void) {
     merman.step = 0;
     AosEnemy merman_projectile = {0};
     bool got_projectile = false;
+    aos_audio_clear();
     for (int frame = 0; frame < 20 && !got_projectile; ++frame) {
         hit = aos_enemy_update(&merman, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                never_zero);
@@ -270,6 +271,8 @@ static void batch_enemy_tests(void) {
             assert(hit.child_count == 1 && hit.children[0].role == AOS_ROLE_MERMAN_SHOT);
             merman_projectile = hit.children[0];
             got_projectile = true;
+            /* sub_080714A4 plays 0x7A with the shot. */
+            assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x7A));
         }
     }
     assert(got_projectile && merman_projectile.anim.id == 6 && merman_projectile.vx == 0x20000);
@@ -283,6 +286,18 @@ static void batch_enemy_tests(void) {
     merman.ay = 0x2000;
     aos_enemy_update(&merman, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(merman.timer == 39 && merman.vy == 0x2000);
+    /* A killing hit plays its death sound 0x6E (sub_080715B4). */
+    AosEnemy doomed;
+    assert(aos_enemy_create(&doomed, AOS_ENEMY_MERMAN, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    AosSoulAttack blast = {{0, 0, 300, 300}, 999, 0, false};
+    aos_enemy_set_soul_attacks(&blast, 1);
+    aos_audio_clear();
+    for (int frame = 0; frame < 4 && !doomed.defeated; ++frame)
+        aos_enemy_update(&doomed, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(doomed.defeated && doomed.state == 2 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E));
 
     /* The two native aliases execute the same locomotion from equal state. */
     AosEnemy harpy, siren, gorgon, catoblepas;

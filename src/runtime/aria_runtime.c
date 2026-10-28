@@ -29,6 +29,7 @@
 #include "aos_skill_siren.h"
 #include "aos_skill_merman.h"
 #include "aos_skill_shot.h"
+#include "aos_skill_skull.h"
 #include "aos_skill_spear.h"
 #include "aos_skill_throw.h"
 #include "aos_hud.h"
@@ -206,11 +207,11 @@ static int enemy_bank(const AosEnemy *enemy) {
 #define ENEMY_STATIC_FRAMES 16 /* single sprite frames of child entities per kind */
 /* The red soul skills' sprites (Enemy/skill_<name>). */
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
-       SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ARTS };
+       SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
-                                                         "skill_flea"};
+                                                         "skill_flea", "skill_skull"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -655,7 +656,7 @@ static void homing_clear(void) {
 enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, SKILL_AXE,
        SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
-       SKILL_GHOST_SOUL, SKILL_SIREN };
+       SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL };
 
 typedef struct {
     bool alive, started;
@@ -680,6 +681,7 @@ typedef struct {
     AosFlea flea;           /* SKILL_FLEA */
     AosGhostSoul ghost;     /* SKILL_GHOST_SOUL */
     AosSirenSoul siren;     /* SKILL_SIREN */
+    AosSkull skull;         /* SKILL_SKULL */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
@@ -700,6 +702,7 @@ typedef struct {
 #define SKILL_FLEA_ROUTINE 0x080299A1u
 #define SKILL_GHOST_ROUTINE 0x0802A8D5u
 #define SKILL_SIREN_ROUTINE 0x08026369u
+#define SKILL_SKULL_ROUTINE 0x080289B5u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -724,6 +727,8 @@ typedef struct {
     const AosAnimSet *devil;        /* resource 21's sequence 0, NULL when missing */
     const AosAnimSet *crow;         /* resource 31, NULL when missing */
     const AosEnemyKind *crow_kind;  /* its frame boxes */
+    const AosAnimSet *skull;        /* resource 19, NULL when missing */
+    const AosEnemyKind *skull_kind; /* its frame boxes */
     const AosAnimSet *flea;         /* resource 20, NULL when missing */
     const AosEnemyKind *flea_kind;  /* its probes and frame boxes */
     const AosBox *flea_still_attack;   /* the attack boxes of its still frames */
@@ -788,6 +793,7 @@ static int cast_red_soul(void *context) {
                          static_index(souls->shared_ids, souls->shared_count, 2) >= 0 &&
                          static_index(souls->shared_ids, souls->shared_count, 3) >= 0
                    ? SKILL_SIREN
+               : routine == SKILL_SKULL_ROUTINE && souls->skull ? SKILL_SKULL
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -798,6 +804,10 @@ static int cast_red_soul(void *context) {
     /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
     if (kind == SKILL_BAT)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
+    else if (kind == SKILL_SKULL) {
+        skill->skull = aos_skull_create(souls->soma->facing_left);
+        skill->facing_left = skill->skull.facing_left;
+    }
     else if (kind == SKILL_GHOST)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x18);
     else if (kind == SKILL_SIREN) {
@@ -1149,6 +1159,24 @@ static void update_skills(AriaSouls *souls) {
             skill->facing_left = false;
             break;
         }
+        case SKILL_SKULL:
+            /* SkillBeamSkeletonUse: counted with sound 0x1A9 and sequence 0
+             * on its first update (sub_08042A54(1, 0x10) is not run). */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1A9);
+                aos_anim_start(&skill->anim, souls->skull, 0, false);
+            }
+            if (!aos_skull_update(&skill->skull, souls->soma->x, souls->soma->y,
+                                  skill->anim.frame, skill->anim.tick)) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (aos_anim_step(&skill->anim, souls->skull) == 3) aos_skull_end(&skill->skull);
+            skill->x = skill->skull.x;
+            skill->y = skill->skull.y;
+            break;
         case SKILL_CROW:
             /* sub_SkillBlueCrowUse: counted with sound 0xEE on its first
              * update, looping sequence 2 (sub_08042A54(1, 0x14) is not
@@ -1369,6 +1397,9 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
                       : (skill->anim.frame < AOS_ENEMY_MAX_FRAMES
                              ? souls->flea_kind->attack[AOS_FLEA_END_SEQUENCE][skill->anim.frame]
                              : (AosBox){0, 0, 0, 0});
+        else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
+                 skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
+            box = souls->skull_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_CROW && souls->crow_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->crow_kind->attack[AOS_CROW_SEQUENCE][skill->anim.frame];
@@ -3142,6 +3173,9 @@ int main(int argc, char **argv) {
                              : NULL;
             souls.flea_kind = souls.flea ? &flea->kind : NULL;
             souls.flea_still_attack = flea->static_attack;
+            const __typeof__(objects.skills[0]) *skull = &objects.skills[SKILL_ART_SKULL];
+            souls.skull = objects_ok && skull->loaded && skull->defs[0].count ? &skull->set : NULL;
+            souls.skull_kind = souls.skull ? &skull->kind : NULL;
             const __typeof__(objects.skills[0]) *crow = &objects.skills[SKILL_ART_CROW];
             souls.crow = objects_ok && crow->set.count > AOS_CROW_SEQUENCE &&
                                  crow->defs[AOS_CROW_SEQUENCE].count
@@ -3362,6 +3396,8 @@ int main(int argc, char **argv) {
                 : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
                     ? blade_frame(&objects.skills[SKILL_ART_BLADES],
                                   skill->kind == SKILL_SHOT ? 2 : AOS_DAGGER_FRAME)
+                : skill->kind == SKILL_SKULL
+                    ? &objects.skills[SKILL_ART_SKULL].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_CROW
                     ? &objects.skills[SKILL_ART_CROW].frames[AOS_CROW_SEQUENCE][skill->anim.frame]
                 : skill->kind == SKILL_FLEA

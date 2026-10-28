@@ -41,7 +41,6 @@ aos:asm:asm/code/code_080211F0.s:SkillAluraUneUse	SkillAluraUneUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillArachneUse	SkillArachneUse	abilities	name			asm_function		asm/code/code_080211F0.s	15671	0	15
 aos:asm:asm/code/code_080211F0.s:SkillBaloreUse	SkillBaloreUse	abilities	name			asm_function		asm/code/code_080211F0.s	22070	0	12
 aos:asm:asm/code/code_080211F0.s:SkillBasiliskUse	SkillBasiliskUse	abilities	name			asm_function		asm/code/code_080211F0.s	33951	0	0
-aos:asm:asm/code/code_080211F0.s:SkillBeamSkeletonUse	SkillBeamSkeletonUse	abilities	name			asm_function		asm/code/code_080211F0.s	15050	0	13
 aos:asm:asm/code/code_080211F0.s:SkillBigGolemUse	SkillBigGolemUse	abilities	name			asm_function		asm/code/code_080211F0.s	33111	0	13
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
 aos:asm:asm/code/code_080211F0.s:SkillBlackPantherUse	SkillBlackPantherUse	abilities	name			asm_function		asm/code/code_080211F0.s	26316	0	6
@@ -2734,9 +2733,7 @@ aos:c:src/code_08013960.c:sub_08013BCC	sub_08013BCC	unclassified		rooms	exclusiv
 aos:c:src/code_08013960.c:sub_08013C5C	sub_08013C5C	unclassified		rooms	exclusive_callees	c_function	0x08013C5C	src/code_08013960.c	228	2	3
 aos:c:src/code_08013960.c:sub_08013CF0	sub_08013CF0	unclassified		audio	exclusive_callees	c_function	0x08013CF0	src/code_08013960.c	258	37	1
 aos:c:src/code_08013960.c:sub_08013D30	sub_08013D30	unclassified		audio	exclusive_callees	c_function	0x08013D30	src/code_08013960.c	281	2	1
-aos:c:src/code_08013960.c:sub_08013D60	sub_08013D60	unclassified		audio	exclusive_callees	c_function	0x08013D60	src/code_08013960.c	305	19	1
 aos:c:src/code_08013960.c:sub_08013DA8	sub_08013DA8	unclassified		audio	exclusive_callees	c_function	0x08013DA8	src/code_08013960.c	339	5	1
-aos:c:src/code_08013960.c:sub_08013E18	sub_08013E18	unclassified		audio	exclusive_callees	c_function	0x08013E18	src/code_08013960.c	392	35	1
 aos:c:src/code_08013960.c:sub_08013E74	sub_08013E74	unclassified		audio	exclusive_callees	c_function	0x08013E74	src/code_08013960.c	419	2	1
 aos:c:src/code_08013960.c:sub_08013EAC	sub_08013EAC	unclassified		audio	exclusive_callees	c_function	0x08013EAC	src/code_08013960.c	442	0	1
 aos:c:src/code_08013960.c:sub_08013EEC	sub_08013EEC	unclassified		audio	exclusive_callees	c_function	0x08013EEC	src/code_08013960.c	466	8	2

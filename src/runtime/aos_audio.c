@@ -27,6 +27,39 @@ void aos_audio_set_sink(AosAudioSink sink, void *context) {
     g_context = context;
 }
 
+static uint16_t g_held[4];
+
+bool aos_audio_hold(uint16_t song) {
+    bool listed = false;
+    for (int slot = 3; slot >= 0; --slot) {
+        if (g_held[slot] == song) {
+            listed = true;
+            break;
+        }
+        if (g_held[slot] == 0) {
+            g_held[slot] = song;
+            break;
+        }
+    }
+    aos_audio_play_song(song);
+    return listed;
+}
+
+bool aos_audio_release(uint16_t song) {
+    bool listed = false;
+    for (int slot = 3; slot >= 0; --slot) {
+        if (g_held[slot] == song) {
+            g_held[slot] = 0;
+            listed = true;
+            break;
+        }
+    }
+    aos_audio_play_song((uint16_t)(song | AOS_STOP_SONG_FLAG));
+    return listed;
+}
+
+uint16_t aos_audio_held(int slot) { return slot >= 0 && slot < 4 ? g_held[slot] : 0; }
+
 void aos_audio_set_start_sink(AosAudioStartSink sink, void *context) {
     g_start_sink = sink;
     g_start_context = context;
@@ -112,6 +145,7 @@ bool aos_audio_song_info(size_t song, AosAudioSongInfo *info) {
 
 void aos_audio_reset(void) {
     memset(&g_state, 0, sizeof g_state);
+    memset(g_held, 0, sizeof g_held);
     g_state.current_song = -1;
     g_state.sound_mode = AOS_DEFAULT_SOUND_MODE;
     g_song_count = 0;

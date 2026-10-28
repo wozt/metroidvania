@@ -2,6 +2,15 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0621 - Beam Skeleton soul
+
+- `src/runtime/aos_skill_skull.c` ports `SkillBeamSkeletonUse`: a skull
+  held beside Soma fires its beam (sequence 0 of `Enemy/skill_skull`,
+  attacking with each frame's box), holding sound 0xCE from frame 10.
+- `aos_audio` gains the held-sound list of `sub_08013D60` /
+  `sub_08013E18`. The Beam Skeleton is complete: 13 of 47 monsters.
+  Not listened to or emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0620 - Ghost enemy and room producer
 
 - `EnemyGhostUpdate` now follows the native appearance gate and animation-1

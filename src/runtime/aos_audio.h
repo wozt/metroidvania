@@ -90,6 +90,16 @@ void aos_audio_play_song(uint16_t song);
 void aos_audio_volume_update(void);
 const AosAudioState *aos_audio_state(void);
 
+/* sub_08013D60: a held sound enters the 4-slot list unk_254C4 (scanned from
+ * the last slot; already listed or no free slot leaves the list as is) and
+ * plays. Returns whether it was already listed. */
+bool aos_audio_hold(uint16_t song);
+/* sub_08013E18: a held sound leaves the list and stops (PlaySong with
+ * STOP_SONG). Returns whether it was listed. */
+bool aos_audio_release(uint16_t song);
+/* The held list, slot 0 first (0 for an empty slot). */
+uint16_t aos_audio_held(int slot);
+
 void aos_audio_clear(void);
 int aos_audio_count(void);
 AosAudioRequest aos_audio_get(int index);

@@ -1436,6 +1436,7 @@ static void archer_tests(void) {
         }
         assert(a.state == 1 && a.anim.id == expected[volley]);
         /* Shooting does not need the player in range any more. */
+        aos_audio_clear();
         while (a.state == 1 && frames < 1000) {
             AosHitReport hit = aos_enemy_update(&a, &far_soma, &layer, &kind, NULL, NULL, 10, 4,
                                                 100, 0, never_zero);
@@ -1443,6 +1444,8 @@ static void archer_tests(void) {
             ++frames;
         }
         assert(arrows == (volley == 4 ? 3 : 1));
+        /* sub_080AF934: sound 0x85 with each arrow. */
+        assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == arrows);
         assert(first.role == AOS_ROLE_ARROW && first.static_frame == 25 && first.x == a.x &&
                first.y == a.y && first.combat.type == 0x0A && first.mirrored);
     }
@@ -1540,8 +1543,11 @@ static void archer_tests(void) {
     a.hp = 1;
     hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
     assert(hit.killed && a.state == 3 && !a.removed && a.away == 1);
+    aos_audio_clear();
     hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 0, never_zero);
     assert(a.removed && hit.child_count == 7);
+    /* sub_080AFB9C plays 0x6B as it shatters. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B));
     for (int i = 0; i < 7; ++i) {
         const AosEnemy *piece = &hit.children[i];
         assert(piece->role == AOS_ROLE_DEBRIS && piece->anim.id == 5 + i);
@@ -1556,6 +1562,7 @@ static void archer_tests(void) {
     AosEnemy bone = hit.children[0];
     int32_t rise = bone.y, top = bone.y;
     int falling = 0;
+    aos_audio_clear();
     while (!bone.removed && falling < 200) {
         hit = aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 100, 0,
                                never_zero);
@@ -1563,6 +1570,8 @@ static void archer_tests(void) {
         ++falling;
     }
     assert(bone.removed && top < rise && (bone.y >> 16) - 6 + 4 >= 160);
+    /* sub_0806C5AC plays 0x162 at the impact, once. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x162) == 1);
     /* The impact leaves a dust puff at the anchor (sub_08045CEC 4, row 6):
      * random() = 1 gives vy = 1 - 0x800 - 0x4000, vx = 1 - 0x1000 - vx. */
     assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_DUST);
@@ -2367,8 +2376,11 @@ static void beam_tests(void) {
     AosWeaponEntity weapon = {.active = true};
     b.state = 0;
     b.step = 1;
+    aos_audio_clear();
     hit = aos_enemy_update(&b, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0, always_zero);
     assert(hit.killed && b.state == 0xFF && b.hidden && hit.child_count == 7);
+    /* sub_080CB4F0's sound. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
     for (int i = 0; i < 7; ++i) {
         assert(hit.children[i].role == AOS_ROLE_DEBRIS && hit.children[i].vx > 0 &&
                hit.children[i].ay == 0x3000 && hit.children[i].static_frame >= 0x18 &&

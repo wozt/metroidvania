@@ -304,7 +304,8 @@ AosAudioRequest aos_audio_get(int index) {
 }
 
 int aos_audio_requested(AosAudioAction action, uint16_t value) {
+    int count = 0;
     for (int i = 0; i < g_count; ++i)
-        if (g_log[i].action == action && g_log[i].value == value) return 1;
-    return 0;
+        if (g_log[i].action == action && g_log[i].value == value) count++;
+    return count;
 }

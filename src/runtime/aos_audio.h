@@ -93,6 +93,7 @@ const AosAudioState *aos_audio_state(void);
 void aos_audio_clear(void);
 int aos_audio_count(void);
 AosAudioRequest aos_audio_get(int index);
+/* How many logged requests match (0 when none). */
 int aos_audio_requested(AosAudioAction action, uint16_t value);
 
 #endif /* AOS_AUDIO_H */

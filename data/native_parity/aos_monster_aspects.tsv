@@ -1,7 +1,7 @@
 enemy	sprite	animations	sounds	loot	soul	soul_ref	notes
 axe_armor	ported	ported	ported	ported	ported	red:5	Soul: drops, is collected and casts (SkillAxeArmorUse). Sounds: its native sounds are requested and unit-tested: 0x86 when its axe is struck, 0x6F at the start of its death and 0x6E every 8 frames of it, 0xE3 when its soul is cast (SkillAxeArmorUse); a local run rendered each through the mixer (not listened to).
 bat	ported	ported	ported	n/a	ported	red:2	Soul: drops, is collected and casts (SkillBatUse). Sounds: its only native sound, 0x72 at the start of its death (sub_080AD5B8), is requested, unit-tested and mixed (a local run rendered it, not listened to).
-beam_skeleton	ported	ported	missing	n/a	partial	red:39	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
+beam_skeleton	ported	ported	ported	n/a	partial	red:39	Soul: drops and is collected; its red skill routine is not ported. Sounds: its native sound 0x6B as it shatters (sub_080CB4F0) is requested and unit-tested, its bones land with 0x162 (sub_0806C5AC); a local run rendered both through the mixer (not listened to).
 blue_crow	ported	ported	missing	n/a	partial	red:8	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 bone_pillar	ported	partial	missing	ported	partial	blue:10	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
 buer	ported	partial	missing	n/a	partial	blue:4	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
@@ -37,7 +37,7 @@ rock_armor	ported	partial	missing	ported	partial	red:14	Soul: drops and is colle
 siren	ported	ported	missing	n/a	partial	red:11	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 skeleton	ported	partial	missing	n/a	ported	red:3	Soul: drops, is collected and casts (the shared throw routine (parameter 3)). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
 skeleton_knight	ported	ported	missing	ported	partial	yellow:22	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
-skull_archer	ported	ported	missing	n/a	ported	red:6	Soul: drops, is collected and casts (SkillSkullArcherUse). Sounds: no Aria audio is ported.
+skull_archer	ported	ported	ported	n/a	ported	red:6	Soul: drops, is collected and casts (SkillSkullArcherUse). Sounds: its native sounds are requested and unit-tested: 0x85 with each arrow (sub_080AF934), 0x6B as it shatters (sub_080AFB9C) and 0x162 when a piece lands (sub_0806C5AC); a local run rendered each through the mixer (not listened to).
 skull_millione	ported	ported	missing	ported	partial	red:40	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 tiny_devil	ported	ported	missing	ported	partial	red:12	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 valkyrie	ported	ported	missing	ported	partial	red:46	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.

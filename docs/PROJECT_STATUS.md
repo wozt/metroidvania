@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0611 - Skull Archer and Beam Skeleton sounds
+
+- The Skull Archer requests 0x85 with each arrow, 0x6B as it shatters
+  and its pieces 0x162 when they land (`sub_0806C5AC`, shared by every
+  debris piece); the Beam Skeleton requests 0x6B as it shatters. All
+  unit-tested (the audio log now counts matching requests) and rendered
+  by the mixer in local runs.
+- 4 of 47 monsters are complete (bat, Axe Armor, Merman, Skull Archer).
+  Not listened to or emulator-compared. Zero Mission is unchanged.
+
 ## Patch 0610 - Merman sounds; Axe Armor and Merman complete
 
 - The Merman requests 0x7A with its shot (`sub_080714A4`) and 0x6E at

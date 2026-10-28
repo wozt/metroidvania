@@ -1268,6 +1268,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->timer = 0x32;
                     enemy->hidden = true;
                     beam_shatter(enemy, soma, &report);
+                    aos_audio_play_song(0x6B);
                 } else if (enemy->id == AOS_ENEMY_SKULL_MILLIONE ||
                            enemy->id == AOS_ENEMY_CAGNAZZO || enemy->id == AOS_ENEMY_LUBICANT) {
                     /* sub_080B8004: state 3 (the palette bits are not
@@ -5669,7 +5670,9 @@ static void archer_shoot(AosEnemy *a, const AosEnemyKind *kind, AosHitReport *re
         unsigned v = a->volley < 4 ? a->volley : 0;
         if (a->shot < kind->volley_sizes[v] && a->shot < 8 &&
             kind->volleys[v][a->shot][0] == (int8_t)a->anim.frame && a->anim.tick == 0) {
+            /* The arrow entity is created, then sound 0x85. */
             report->children[report->child_count++] = make_arrow(a, kind->volleys[v][a->shot][1]);
+            aos_audio_play_song(0x85);
             a->shot++;
         }
         if (a->anim.flags & AOS_ANIM_ENDED) {
@@ -5768,7 +5771,7 @@ static AosEnemy make_debris(const AosEnemy *parent, const AosAnimSet *anims, uns
 /* sub_0806C5AC: a piece keeps 79/80 of vx, adds its accelerations (both
  * clamped to 8.0) and moves; it vanishes when the centre of its sprite's
  * last OAM component, 4 pixels lower (sub_0806C48C), is in a solid cell
- * (sub_080020A0; sound 0x162), leaving a dust puff of sub_08045CEC
+ * (sub_080020A0), playing sound 0x162 and leaving a dust puff of sub_08045CEC
  * (animation 4, row 6) at that centre: vy = -0.25 +/- 0x800 with ay = vy / 32,
  * vx = +/- 0x1000 - the piece's vx with ax = -vx / 64 (the random draws are
  * made only when the puff is created; its + 0x0F = 1 is not modelled). It
@@ -5802,6 +5805,7 @@ static void debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemy
             dust->vx = random_centred(random, 0x2000) - d->vx;
             dust->ax = -dust->vx / 64;
         }
+        aos_audio_play_song(0x162);
         d->removed = true;
         return;
     }
@@ -5809,10 +5813,11 @@ static void debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemy
     if ((uint16_t)(sx + 0x20) > 0x130 || (uint16_t)(sy + 0x20) > 0xE0) d->removed = true;
 }
 
-/* sub_080AFB9C: seven pieces (animations 5 to 11) fly away from the
+/* sub_080AFB9C: sound 0x6B, then seven pieces (animations 5 to 11) fly away from the
  * attacker at 0.5 to 2.4, rising at 0.5 to 3.5 with gravity 0x2000. */
 static void archer_shatter(const AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(void),
                            AosHitReport *report) {
+    aos_audio_play_song(0x6B);
     for (unsigned anim = 5; anim <= 11 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++anim) {
         AosEnemy d = make_debris(a, kind->anims, anim);
         d.vx = (int32_t)(((random() & 0xF) << 13) + 0x8000) * a->away;

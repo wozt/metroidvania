@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0596 - Aria Durga red soul
+
+- `src/runtime/aos_skill_shot.c` ports `SkillDurgaUse`: a sword flying 4
+  pixels a frame ahead from (8, -26), deleted as soon as it leaves the
+  screen margins 3.
+- The object export adds `Enemy/skill_durga` (resource 24 of 0x080E13BC)
+  and a `static_attack` row per exported still frame (the frame record's
+  attack box, which `sub_08042848` installs); the shot attacks with its
+  frame's (-16, -4, 32, 8).
+- A local run with soul 13 drew the flying sword. Not ported: its
+  sounds. Source-derived and unit-tested, not emulator-compared. Zero
+  Mission is unchanged.
+
 ## Patch 0595 - Aria Winged Skeleton red soul
 
 - `src/runtime/aos_skill_spear.c` ports `SkillWingedSkeletonUse`: the

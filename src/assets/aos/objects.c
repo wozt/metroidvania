@@ -180,6 +180,8 @@ static const EntitySpec entities[] = {
      * and drops (sequences 0, 6), the Winged Skeleton's spear (still frame
      * 0) and the Axe Armor's axe (still frame 6). */
     STATIC("skill_shared", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 2, 0, 6),
+    /* Resource 24 of 0x080E13BC: the Durga soul's shot (still frame 2). */
+    STATIC("skill_durga", 0x081D8124, 0x0820B3C4, 0, 0x082347BC, 1, 2),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     STATIC("skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 1, 0),
 };
@@ -700,7 +702,13 @@ static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
                                 error, error_size) &&
                   text_append(rows, "static_anchor\t%s\t%u\t%d\t%d\n",
                               entity->name, frame_id,
-                              rendered.anchor_x, rendered.anchor_y);
+                              rendered.anchor_x, rendered.anchor_y) &&
+                  /* The frame record's attack box (+ 8), which sub_08042848
+                   * installs for entities that use their still frame's. */
+                  text_append(rows, "static_attack\t%s\t%u\t%d\t%d\t%u\t%u\n",
+                              entity->name, frame_id, rendered.attack_x,
+                              rendered.attack_y, rendered.attack_width,
+                              rendered.attack_height);
         free(rendered.bmp);
     }
     free(sheet.data);

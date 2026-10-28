@@ -56,7 +56,6 @@ aos:asm:asm/code/code_080211F0.s:SkillDemonLordUse	SkillDemonLordUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillDevilManticoreSparksUpdate	SkillDevilManticoreSparksUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	27541	0	2
 aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	12290	0	13
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
-aos:asm:asm/code/code_080211F0.s:SkillDurgaUse	SkillDurgaUse	abilities	name			asm_function		asm/code/code_080211F0.s	20759	0	11
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
 aos:asm:asm/code/code_080211F0.s:SkillFishHeadUse	SkillFishHeadUse	abilities	name			asm_function		asm/code/code_080211F0.s	20174	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	21386	0	13
@@ -231,7 +230,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804277C	sub_0804277C	unclassified		technic
 aos:asm:asm/code/code_08040A38.s:sub_080427B8	sub_080427B8	enemies	referrers			asm_function	0x080427B8	asm/code/code_08040A38.s	2643	39	1
 aos:asm:asm/code/code_08040A38.s:sub_080427F4	sub_080427F4	unclassified		technical	exclusive_callees	asm_function	0x080427F4	asm/code/code_08040A38.s	2675	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08042828	sub_08042828	unclassified				asm_function	0x08042828	asm/code/code_08040A38.s	2703	7	0
-aos:asm:asm/code/code_08040A38.s:sub_08042848	sub_08042848	unclassified				asm_function	0x08042848	asm/code/code_08040A38.s	2722	106	0
 aos:asm:asm/code/code_08040A38.s:sub_080428B4	sub_080428B4	unclassified				asm_function	0x080428B4	asm/code/code_08040A38.s	2785	71	0
 aos:asm:asm/code/code_08040A38.s:sub_080428F0	sub_080428F0	unclassified				asm_function	0x080428F0	asm/code/code_08040A38.s	2820	57	0
 aos:asm:asm/code/code_08040A38.s:sub_08042920	sub_08042920	unclassified				asm_function	0x08042920	asm/code/code_08040A38.s	2848	0	1

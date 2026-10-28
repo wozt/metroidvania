@@ -1283,16 +1283,18 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 2;
                     enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) {
-                    /* sub_0806EBDC: death animation 2, 40 frames of state
-                     * 2 falling with + 0x54 = 0x1000 (sound 0x1CD). */
+                    /* sub_0806EBDC: sound 0x1CD, death animation 2, 40
+                     * frames of state 2 falling with + 0x54 = 0x1000. */
+                    aos_audio_play_song(0x1CD);
                     play_loop(enemy, kind->anims, 2, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->ax = 0;
                     enemy->ay = 0x1000;
                 } else if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA) {
-                    /* sub_080935E8: death animation 2 and the generic death
-                     * in state 2 (sound 0x1C3). */
+                    /* sub_080935E8: sound 0x1C3, death animation 2 and the
+                     * generic death in state 2. */
+                    aos_audio_play_song(0x1C3);
                     play_loop(enemy, kind->anims, 2, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -2632,6 +2634,7 @@ static void valkyrie_attack(AosEnemy *v, const AosSoma *soma, const AosAnimSet *
         accel_move(v, 0x30000);
         if (v->anim.frame <= 2) return;
         v->step = 3;
+        aos_audio_play_song(0x87);
         v->vx = v->mirrored ? 0x30000 : -0x30000;
         v->vy = 0x28000;
         v->ax = v->ay = 0;
@@ -4907,6 +4910,8 @@ static void curly_walk(AosEnemy *c, const AosSoma *soma, const AosCollision *lay
     } else if (start) {
         c->vx = 0;
     }
+    /* A step: sound 0x85 at the start of walk frame 4. */
+    if (frame == 4 && start) aos_audio_play_song(0x85);
     int result = walk_collide(c, layer, 0x10000, (int32_t)0xFFE00000, 0x80000, 8);
     if (c->step != 0 || !(result & 4)) return;
     int32_t ahead = (c->x >> 16) + (c->mirrored ? 1 : -1);
@@ -4936,6 +4941,10 @@ static void curly_attack(AosEnemy *c, const AosCollision *layer, const AosAnimSe
         c->vy = 0x10000;
         c->ay = 0x2800;
     }
+    /* Sound 0x85 at the start of attack frames 4, 7, 10 and 13. */
+    if (c->state == 1 && c->anim.tick == 0 &&
+        (c->anim.frame == 4 || c->anim.frame == 7 || c->anim.frame == 10 || c->anim.frame == 13))
+        aos_audio_play_song(0x85);
 }
 
 /* EnemyCurlyUpdate: inside the activity window, state 0 walks, 1 attacks,

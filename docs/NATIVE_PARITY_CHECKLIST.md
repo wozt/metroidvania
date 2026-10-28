@@ -1342,7 +1342,7 @@ Known divergences: The exact native gait table, slope and edge probes, particle 
 Next action: Refine the shared gait and collision probes when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP`.
 
-[+] **`aos.enemies.curly` — Curly.** Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.curly` — Curly.** Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its walk plays 0x85 at the start of frame 4, its attack at frames 4, 7, 10 and 13, its death 0x1C3 (unit-tested, Durga included).
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AC5C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1A0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D188`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyCreate`, `aos:asm:asm/code/code_08090914.s:EnemyCurlyUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093218`, `aos:asm:asm/code/code_08090914.s:sub_08093460`, `aos:asm:asm/code/code_08090914.s:sub_08093540`, `aos:asm:asm/code/code_08090914.s:sub_080935E8`, `aos:asm:asm/code/code_08090914.s:sub_08093674`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1372,7 +1372,7 @@ Known divergences: Sounds 0x6E, 0x7D and 0x127, the death's palette flash, sub_0
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)`.
 
-[+] **`aos.enemies.durga` — Durga (Curly's routines).** EnemyDurgaCreate and EnemyDurgaUpdate only call EnemyCurlyCreate and EnemyCurlyUpdate; sub_08093540 picks palette bank 0 for any id other than 0x2B. Durga therefore shares Curly's port with its own record stats and palette.
+[+] **`aos.enemies.durga` — Durga (Curly's routines).** EnemyDurgaCreate and EnemyDurgaUpdate only call EnemyCurlyCreate and EnemyCurlyUpdate; sub_08093540 picks palette bank 0 for any id other than 0x2B. Durga therefore shares Curly's port with its own record stats and palette. Curly's sounds apply: 0x85 for its steps and attack frames, 0x1C3 at its death (unit-tested).
 
 Native evidence: `aos:asm:asm/code/code_08090914.s:EnemyDurgaCreate`, `aos:asm:asm/code/code_08090914.s:EnemyDurgaUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1382,7 +1382,7 @@ Known divergences: As Curly: sounds, palette bits and sub_080683BC are not porte
 Next action: Follow Curly's open items.
 Evidence: in game: `aria area_02_room_019 (--spawn 250 184 --hp 9999): both Durgas pace toward Soma and attack in reach at frames 30 and 120`.
 
-[+] **`aos.enemies.erinys` — Erinys (the Valkyrie's routines).** EnemyErinysCreate and EnemyErinysUpdate only call the Valkyrie's routines; sub_0806EB34 gives it palette bank 1 and sub_0806EBDC's recoil is reserved to id 0x29, so Erinys keeps striking when struck.
+[+] **`aos.enemies.erinys` — Erinys (the Valkyrie's routines).** EnemyErinysCreate and EnemyErinysUpdate only call the Valkyrie's routines; sub_0806EB34 gives it palette bank 1 and sub_0806EBDC's recoil is reserved to id 0x29, so Erinys keeps striking when struck. The Valkyrie's sounds apply: 0x87 for its charge and 0x1CD at its death.
 
 Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyErinysCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyErinysUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1660,7 +1660,7 @@ Known divergences: Exact randomized acceleration rounding, the orb's affine angl
 Next action: Refine acceleration and the orb affine transform when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_024 (--spawn 160 159 --hp 9999): the aimed orb crosses its native room around frames 560..570 and deals 26 damage with no player input`.
 
-[+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported. Its charge plays 0x87 (sub_0806E8AC) and its death 0x1CD (sub_0806EBDC), unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyValkyrieCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyValkyrieUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_080689F8`, `aos:asm:asm/code/code_08060B98.s:sub_080696B0`, `aos:asm:asm/code/code_08060B98.s:sub_0806CEF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E7A8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E8AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806EA8C`, `aos:asm:asm/code/code_08060B98.s:sub_0806EB34`, `aos:asm:asm/code/code_08060B98.s:sub_0806EBDC`, `aos:asm:asm/code/code_08060B98.s:sub_0806ECA8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  

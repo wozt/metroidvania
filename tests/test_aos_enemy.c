@@ -1630,12 +1630,15 @@ static void curly_tests(void) {
     soma.x = AOS_FIXED(1000);
     bool turned = false;
     int32_t far = c.x;
+    aos_audio_clear();
     for (int i = 0; i < 300 && !turned; ++i) {
         aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         if (c.x > far) far = c.x;
         if (!c.mirrored) turned = true;
     }
     assert(turned && (far >> 16) <= 200 && (c.y >> 16) == 159);
+    /* sub_08093218: a step sound 0x85 at the start of walk frame 4. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) >= 1);
     /* Unhurt it ignores the player; hurt (hp below its record), step 1
      * faces him at each frame start. */
     assert(c.step == 0);
@@ -1655,6 +1658,7 @@ static void curly_tests(void) {
         ++frames;
     }
     assert(b.state == 1 && b.anim.id == 1);
+    aos_audio_clear();
     int32_t x0 = b.x;
     aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(b.vx == 0x10000 && b.x == x0 + 0x10000);
@@ -1664,6 +1668,9 @@ static void curly_tests(void) {
         ++frames;
     }
     assert(b.state == 0 && b.anim.id == 0 && frames == 17);
+    /* sub_08093460: 0x85 on attack frame 4 (this six-frame bite has no 7,
+     * 10 or 13). */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
 
     /* EnemyDurgaCreate / EnemyDurgaUpdate call Curly's routines. */
     AosEnemy d;
@@ -1673,6 +1680,14 @@ static void curly_tests(void) {
         aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     /* At the next walk frame start: 0.5 toward its facing. */
     assert(d.vx == (d.mirrored ? 0x8000 : -0x8000));
+    /* A killing hit: sub_080935E8's sound 0x1C3. */
+    AosSoulAttack curly_blast = {{0, 0, 300, 300}, 999, 0, false};
+    aos_enemy_set_soul_attacks(&curly_blast, 1);
+    aos_audio_clear();
+    for (int frame = 0; frame < 4 && !d.defeated; ++frame)
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(d.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, 0x1C3) == 1);
 }
 
 static void valkyrie_tests(void) {
@@ -1713,11 +1728,14 @@ static void valkyrie_tests(void) {
     assert(v.state == 1);
     /* The attack: frame 2 held 16 frames, then the 3.0 charge. */
     frames = 0;
+    aos_audio_clear();
     while (v.step < 3 && frames < 100) {
         aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         ++frames;
     }
     assert(v.step == 3 && v.vy > 0 && (v.vx == 0x30000 || v.vx == -0x30000 || v.vx > 0x28000));
+    /* sub_0806E8AC: the charge's sound 0x87. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) == 1);
     frames = 0;
     while (v.state == 1 && frames < 300) {
         aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
@@ -1765,9 +1783,12 @@ static void valkyrie_tests(void) {
     soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
     cam = (v.x >> 16) - 120;
     cam_y = (v.y >> 16) - 80;
+    aos_audio_clear();
     hit = aos_enemy_update(&v, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, cam_y,
                            always_zero);
     assert(hit.killed && v.state == 2 && v.anim.id == 2 && v.ay == 0x1000);
+    /* sub_0806EBDC's death sound. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1CD) == 1);
     int dying = 0;
     while (!v.removed && dying < 100) {
         aos_enemy_update(&v, &soma, &layer, &kind, NULL, NULL, 10, 4, cam, cam_y, always_zero);

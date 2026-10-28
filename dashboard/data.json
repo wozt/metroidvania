@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T16:33:41+00:00",
+ "generated_at": "2026-10-28T16:38:23+00:00",
  "git": {
-  "commit": "bd230bd",
+  "commit": "af7d8ab",
   "branch": "main",
   "dirty": true
  },
@@ -9447,7 +9447,7 @@
     "sub_0806D188",
     "sub_0806D54C"
    ],
-   "limitations": "Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are not ported; the special draw routine sub_0806CCE8 used in area 4 rooms 12 and 13 is not ported (the generic draw is used). Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are not ported; the special draw routine sub_0806CCE8 used in area 4 rooms 12 and 13 is not ported (the generic draw is used). Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its walk plays 0x85 at the start of frame 4, its attack at frames 4, 7, 10 and 13, its death 0x1C3 (unit-tested, Durga included).",
    "next_action": "Trace the area 4 draw routine sub_0806CCE8.",
    "evidence": {
     "unit_tests": [
@@ -9665,7 +9665,7 @@
     "EnemyDurgaCreate",
     "EnemyDurgaUpdate"
    ],
-   "limitations": "As Curly: sounds, palette bits and sub_080683BC are not ported. EnemyDurgaCreate and EnemyDurgaUpdate only call EnemyCurlyCreate and EnemyCurlyUpdate; sub_08093540 picks palette bank 0 for any id other than 0x2B. Durga therefore shares Curly's port with its own record stats and palette.",
+   "limitations": "As Curly: sounds, palette bits and sub_080683BC are not ported. EnemyDurgaCreate and EnemyDurgaUpdate only call EnemyCurlyCreate and EnemyCurlyUpdate; sub_08093540 picks palette bank 0 for any id other than 0x2B. Durga therefore shares Curly's port with its own record stats and palette. Curly's sounds apply: 0x85 for its steps and attack frames, 0x1C3 at its death (unit-tested).",
    "next_action": "Follow Curly's open items.",
    "evidence": {
     "unit_tests": [
@@ -9734,7 +9734,7 @@
     "EnemyErinysCreate",
     "EnemyErinysUpdate"
    ],
-   "limitations": "As the Valkyrie. EnemyErinysCreate and EnemyErinysUpdate only call the Valkyrie's routines; sub_0806EB34 gives it palette bank 1 and sub_0806EBDC's recoil is reserved to id 0x29, so Erinys keeps striking when struck.",
+   "limitations": "As the Valkyrie. EnemyErinysCreate and EnemyErinysUpdate only call the Valkyrie's routines; sub_0806EB34 gives it palette bank 1 and sub_0806EBDC's recoil is reserved to id 0x29, so Erinys keeps striking when struck. The Valkyrie's sounds apply: 0x87 for its charge and 0x1CD at its death.",
    "next_action": "Follow the Valkyrie's open items.",
    "evidence": {
     "unit_tests": [
@@ -11926,7 +11926,7 @@
     "sub_0806CEF8",
     "sub_080689F8"
    ],
-   "limitations": "Sounds 0x87 and 0x1CD, the palette bits, the tracking list of sub_08021924, sub_080683BC and the area 4 rooms 12-13 draw routine sub_0806CCE8 are not ported; a zero distance in sub_080696B0 (a division by zero natively) leaves it still. The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "Sounds 0x87 and 0x1CD, the palette bits, the tracking list of sub_08021924, sub_080683BC and the area 4 rooms 12-13 draw routine sub_0806CCE8 are not ported; a zero distance in sub_080696B0 (a division by zero natively) leaves it still. The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported. Its charge plays 0x87 (sub_0806E8AC) and its death 0x1CD (sub_0806EBDC), unit-tested.",
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
@@ -17574,6 +17574,12 @@
  },
  "timeline": [
   {
+   "commit": "af7d8ab",
+   "date": "2026-10-28",
+   "subject": "Play the Harpy's dive, feather and death sounds",
+   "scope": "project"
+  },
+  {
    "commit": "bd230bd",
    "date": "2026-10-28",
    "subject": "Play the Skull Archer and Beam Skeleton sounds",
@@ -18045,12 +18051,6 @@
    "commit": "3c56647",
    "date": "2026-10-26",
    "subject": "Run the first editor commands in a native backend",
-   "scope": "project"
-  },
-  {
-   "commit": "3e6e1e5",
-   "date": "2026-10-26",
-   "subject": "Remove uncalled Python tools and stale script references",
    "scope": "project"
   }
  ],
@@ -20816,11 +20816,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:13",
-       "notes": "Soul: drops, is collected and casts (SkillDurgaUse). Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and casts (SkillDurgaUse). Sounds: its native sounds, run through Curly's routines, are requested and unit-tested: 0x85 at the start of walk frame 4 (sub_08093218) and of attack frames 4, 7, 10 and 13 (sub_08093460), 0x1C3 at its death (sub_080935E8); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -21254,11 +21254,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "red:46",
-       "notes": "Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops and is collected; its red skill routine is not ported. Sounds: its native sounds, run through the Valkyrie's routines, are requested and unit-tested: 0x87 as its charge starts (sub_0806E8AC) and 0x1CD at its death (sub_0806EBDC); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -21293,11 +21293,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "blue:20",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: its native sounds, run through Curly's routines, are requested and unit-tested: 0x85 at the start of walk frame 4 (sub_08093218) and of attack frames 4, 7, 10 and 13 (sub_08093460), 0x1C3 at its death (sub_080935E8); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -22208,11 +22208,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "yellow:16",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds, run through the Valkyrie's routines, are requested and unit-tested: 0x87 as its charge starts (sub_0806E8AC) and 0x1CD at its death (sub_0806EBDC); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -22411,9 +22411,9 @@
       "missing": 0
      },
      "sounds": {
-      "ported": 6,
+      "ported": 10,
       "partial": 1,
-      "missing": 40
+      "missing": 36
      },
      "loot": {
       "ported": 26,
@@ -22425,7 +22425,7 @@
       "partial": 39,
       "missing": 0
      },
-     "complete": 4,
+     "complete": 5,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",

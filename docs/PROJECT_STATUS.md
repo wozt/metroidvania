@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0613 - Curly, Durga, Valkyrie and Erinys sounds
+
+- Curly's routines (Durga runs them too) request 0x85 at walk frame 4 and
+  attack frames 4, 7, 10 and 13, and 0x1C3 at death; the Valkyrie's
+  routines (Erinys too) request 0x87 when the charge starts and 0x1CD at
+  death. All unit-tested and rendered by the mixer in local runs.
+- Durga is complete: 5 of 47 monsters (bat, Axe Armor, Merman, Skull
+  Archer, Durga). Not listened to or emulator-compared. Zero Mission is
+  unchanged.
+
 ## Patch 0612 - Harpy sounds
 
 - The Harpy (and the Siren, which runs its routines) request 0x87 when

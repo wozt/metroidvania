@@ -745,6 +745,90 @@ static bool export_effect(const FusionRom *rom, FusionSpriteLibrary *library,
     return success;
 }
 
+/* The item icons of sub_0801232C: icon n (a record's + 0x2) is the 16 x 16
+ * block (n - 1) % 64 of sheet sUnk_084F1060[(n - 1) / 64] (0x081C5E00,
+ * 0x081C7E04, 0x081C9E08; eight per row), shown by the one-component frames
+ * of 0x080E10F0 at (-8, -16) on OBJ row + 0x3 (6 for every record), which
+ * sub_0800C5D8 fills with bank 2 of 0x082099FC. Each icon a record uses is
+ * exported as Icon/i<n>/anim_0. */
+static bool export_icons(const FusionRom *rom, FusionSpriteLibrary *library, char *error,
+                         size_t error_size) {
+    static const uint32_t sheets[3] = {0x081C5E00, 0x081C7E04, 0x081C9E08};
+    static const struct { uint32_t table, stride, count; } tables[3] = {
+        {0x08505B3C, 16, 32}, {WEAPON_STATS, 28, 59}, {ARMOR_STATS, 20, 45}};
+    bool used[193] = {false};
+    for (size_t table = 0; table < 3; ++table)
+        for (uint32_t index = 0; index < tables[table].count; ++index) {
+            const uint8_t *record = slice(rom, tables[table].table + index * tables[table].stride,
+                                          4, "item record", error, error_size);
+            if (!record) return false;
+            if (record[3] != 6) {
+                set_error(error, error_size, "item icon outside OBJ palette row 6");
+                return false;
+            }
+            if (record[2] >= 1 && record[2] <= 192) used[record[2]] = true;
+        }
+    const uint8_t *palette = load_palette(rom, 0x082099FC, 2, error, error_size);
+    if (!palette) return false;
+    TileSheet sheet[3] = {{0}};
+    bool success = true;
+    for (size_t s = 0; success && s < 3; ++s)
+        success = load_tile_sheet(rom, sheets[s], &sheet[s], error, error_size);
+    for (unsigned icon = 1; success && icon <= 192; ++icon) {
+        if (!used[icon]) continue;
+        const TileSheet *source = &sheet[(icon - 1) / 64];
+        unsigned slot = (icon - 1) % 64, origin_x = (slot % 8) * 16, origin_y = (slot / 8) * 16;
+        uint8_t rgba[16 * 16 * 4] = {0};
+        bool visible = false;
+        for (unsigned y = 0; y < 16; ++y)
+            for (unsigned x = 0; x < 16; ++x) {
+                size_t sx = origin_x + x, sy = origin_y + y;
+                size_t tile = sy / 8 * source->width_tiles + sx / 8;
+                if ((tile + 1) * TILE_BYTES > source->size) continue;
+                uint8_t packed = source->data[tile * TILE_BYTES + sy % 8 * 4 + sx % 8 / 2];
+                unsigned color_index = (packed >> (4 * (sx & 1))) & 15;
+                if (!color_index) continue;
+                uint16_t color = read_u16(palette + color_index * 2);
+                uint8_t *pixel = rgba + (y * 16 + x) * 4;
+                pixel[0] = expand5(color & 31);
+                pixel[1] = expand5((color >> 5) & 31);
+                pixel[2] = expand5((color >> 10) & 31);
+                pixel[3] = 255;
+                visible = true;
+            }
+        if (!visible) continue;
+        RenderedFrame rendered = {0};
+        char key[48];
+        snprintf(key, sizeof key, "Icon/i%u/anim_0", icon);
+        success = fusion_sprite_bmp32_crop(rgba, 16, 16, 8, 16, &rendered.bmp,
+                                           &rendered.bmp_size, &rendered.left, &rendered.top,
+                                           error, error_size) &&
+                  begin_and_add(library, key, 0, 1, &rendered, true, error, error_size);
+        free(rendered.bmp);
+    }
+    for (size_t s = 0; s < 3; ++s) free(sheet[s].data);
+    return success;
+}
+
+/* The icon each item, weapon and armor record shows (+ 0x2). */
+static bool append_item_icons(const FusionRom *rom, Text *icons, char *error,
+                              size_t error_size) {
+    static const struct { const char *kind; uint32_t table, stride, count; } tables[3] = {
+        {"item", 0x08505B3C, 16, 32}, {"weapon", WEAPON_STATS, 28, 59},
+        {"armor", ARMOR_STATS, 20, 45}};
+    if (!text_append(icons, "schema\tmetroidvania-aos-item-icons-v1\n"
+                            "# kind\tindex\ticon\n")) return false;
+    for (size_t table = 0; table < 3; ++table)
+        for (uint32_t index = 0; index < tables[table].count; ++index) {
+            const uint8_t *record = slice(rom, tables[table].table + index * tables[table].stride,
+                                          4, "item record", error, error_size);
+            if (!record || !text_append(icons, "%s\t%u\t%u\n", tables[table].kind, index,
+                                        record[2]))
+                return false;
+        }
+    return true;
+}
+
 static bool export_doors(const FusionRom *rom, FusionSpriteLibrary *library,
                          char *error, size_t error_size) {
     static const uint8_t frames[] = {0, 5};
@@ -946,7 +1030,8 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0};
+    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0},
+         item_icons = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
                                                    error_size) &&
@@ -966,6 +1051,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof effects / sizeof effects[0]; ++index)
         success = export_effect(rom, &library, &effects[index],
                                 error, error_size);
+    if (success) success = export_icons(rom, &library, error, error_size);
     if (success) success = append_global_metadata(rom, &rows, error, error_size) &&
                            append_enemy_stats(rom, &stats, error, error_size) &&
                            write_text_file(metadata_output, "enemy_frames.tsv",
@@ -981,7 +1067,10 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            append_red_souls(rom, &red_souls, error, error_size) &&
                            write_text_file(metadata_output, "red_souls.tsv",
                                            &red_souls, error, error_size) &&
-                           write_hud(rom, metadata_output, error, error_size);
+                           write_hud(rom, metadata_output, error, error_size) &&
+                           append_item_icons(rom, &item_icons, error, error_size) &&
+                           write_text_file(metadata_output, "item_icons.tsv",
+                                           &item_icons, error, error_size);
     FusionSpriteLibrarySummary library_summary = {0};
     if (success) success = fusion_sprite_library_finish(
         &library, &library_summary, error, error_size);
@@ -999,5 +1088,6 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(money.data);
     free(equipment.data);
     free(red_souls.data);
+    free(item_icons.data);
     return success;
 }

@@ -2,6 +2,17 @@
 
 Last updated: **2026-10-27**.
 
+## Patch 0589 - Aria item pickup icons
+
+- The object export writes the 132 item icons the item, weapon and armor
+  records use (`sub_0801232C`: block (n - 1) % 64 of the three icon sheets,
+  OBJ row 6 = bank 2 of 0x082099FC, frame (-8, -16) of 0x080E10F0) and the
+  record-to-icon table `metadata/item_icons.tsv` (task `aria_objects`
+  version 11).
+- The runtime draws item pickups with their icon; a local capture showed a
+  potion, a sword, an armor and a ring resting on the floor. The eight icon
+  VRAM slots are not modelled. Zero Mission is unchanged.
+
 ## Patch 0588 - Aria pickup sprites
 
 - The object export now writes the pickup sprites of the shared sheet

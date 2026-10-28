@@ -2777,10 +2777,8 @@ aos:c:src/code_08011DD0.c:sub_08012154	sub_08012154	environment	referrers			c_fu
 aos:c:src/code_08011DD0.c:sub_080121E0	sub_080121E0	unclassified				c_function	0x080121E0	src/code_08011DD0.c	365	2	0
 aos:c:src/code_08011DD0.c:sub_08012210	sub_08012210	unclassified				c_function	0x08012210	src/code_08011DD0.c	380	2	2
 aos:c:src/code_08011DD0.c:sub_08012294	sub_08012294	unclassified				c_function	0x08012294	src/code_08011DD0.c	399	2	1
-aos:c:src/code_08011DD0.c:sub_0801232C	sub_0801232C	unclassified				c_function	0x0801232C	src/code_08011DD0.c	428	4	1
 aos:c:src/code_08011DD0.c:sub_080123EC	sub_080123EC	unclassified		technical	exclusive_callees	c_function	0x080123EC	src/code_08011DD0.c	499	0	3
 aos:c:src/code_08011DD0.c:sub_080124A8	sub_080124A8	unclassified				c_function	0x080124A8	src/code_08011DD0.c	538	3	0
-aos:c:src/code_08011DD0.c:sub_080124F4	sub_080124F4	unclassified		technical	exclusive_callees	c_function	0x080124F4	src/code_08011DD0.c	552	3	1
 aos:c:src/code_08011DD0.c:sub_08012534	sub_08012534	unclassified		technical	exclusive_callees	c_function	0x08012534	src/code_08011DD0.c	572	4	1
 aos:c:src/code_08011DD0.c:sub_08012564	sub_08012564	unclassified				c_function	0x08012564	src/code_08011DD0.c	587	0	0
 aos:c:src/code_08011DD0.c:sub_0801257C	sub_0801257C	unclassified				c_function	0x0801257C	src/code_08011DD0.c	599	0	0

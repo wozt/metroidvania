@@ -48,6 +48,8 @@
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
+#define DEFAULT_ITEM_ICONS "assets/extracted/aria/metadata/item_icons.tsv"
+#define ITEM_ICONS 193     /* icon numbers 1-192 of sub_0801232C */
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
 /* The pickup sprites of the object export (coins 0-3, bags 4-6, hearts,
  * souls by type); item icons are not exported. */
@@ -892,6 +894,8 @@ typedef struct {
         AosAnimSet set;
     } effects[AOS_EFFECT_KINDS],    /* Effect/<effect_names[k]>/anim_N */
       pickup_arts[PICKUP_ARTS];     /* Effect/<pickup_art_names[k]>/anim_N */
+    AriaFrame icons[ITEM_ICONS];    /* Icon/i<n>/anim_0 */
+    uint8_t item_icon[3][59];       /* item, weapon, armor record -> icon */
     AosMoneyKind money[AOS_MONEY_KINDS];
     bool money_loaded;
 } AriaObjects;
@@ -1047,6 +1051,21 @@ static bool load_enemy_data(AriaObjects *objects) {
                                                          (uint16_t)experience};
     }
     fclose(f);
+    /* metadata/item_icons.tsv: the icon each item record shows. */
+    f = fopen(DEFAULT_ITEM_ICONS, "rb");
+    if (f) {
+        while (fgets(line, sizeof line, f)) {
+            char kind[16];
+            unsigned index, icon;
+            if (sscanf(line, "%15s\t%u\t%u", kind, &index, &icon) != 3 || index >= 59 ||
+                icon >= ITEM_ICONS)
+                continue;
+            int table = !strcmp(kind, "item") ? 0 : !strcmp(kind, "weapon") ? 1
+                        : !strcmp(kind, "armor") ? 2 : -1;
+            if (table >= 0) objects->item_icon[table][index] = (uint8_t)icon;
+        }
+        fclose(f);
+    }
     /* metadata/money.tsv (older exports lack it: money then never drops). */
     f = fopen(DEFAULT_MONEY, "rb");
     if (f) {
@@ -1242,6 +1261,14 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
                 art->loaded = true;
                 if (style + 1 > art->set.count) art->set.count = (uint16_t)(style + 1);
             }
+            continue;
+        }
+        int icon;
+        if (sscanf(line, "Icon/i%d/anim_0\t%d\t%d\t%d\t%d\t%511s", &icon, &frame, &ticks, &ox,
+                   &oy, frame_path) == 6) {
+            if (icon > 0 && icon < ITEM_ICONS && frame == 0 &&
+                !load_frame(&objects->icons[icon], frame_path, ox, oy, renderer))
+                ok = false;
             continue;
         }
         if (sscanf(line, "WoodenDoor/style_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame, &ticks,
@@ -2195,8 +2222,21 @@ int main(int argc, char **argv) {
          * shows on even frames (the native blink of + 0x0F is not traced). */
         for (size_t k = 0; objects_ok && k < room.pickup_count; ++k) {
             const AosPickup *pickup = &room.pickups[k];
+            if (pickup->blinking && (pickup->age & 1)) continue;
+            if (pickup->type >= AOS_PICKUP_ITEM && pickup->type <= AOS_PICKUP_ARMOR) {
+                /* sub_0801232C's icon on the frames of 0x080E10F0. */
+                unsigned icon = pickup->variant < 59
+                    ? objects.item_icon[pickup->type - AOS_PICKUP_ITEM][pickup->variant] : 0;
+                const AriaFrame *image = icon < ITEM_ICONS ? &objects.icons[icon] : NULL;
+                if (!image || !image->texture) continue;
+                SDL_FRect rect = {(float)((pickup->x >> 16) + image->offset_x - cam_x),
+                                  (float)((pickup->y >> 16) + image->offset_y - cam_y), image->w,
+                                  image->h};
+                SDL_RenderTexture(renderer, image->texture, NULL, &rect);
+                continue;
+            }
             int index = pickup_art(pickup);
-            if (index < 0 || (pickup->blinking && (pickup->age & 1))) continue;
+            if (index < 0) continue;
             const __typeof__(objects.pickup_arts[0]) *art = &objects.pickup_arts[index];
             unsigned total = 0, frame = 0;
             for (unsigned f = 0; f < art->def.count; ++f) total += art->ticks[f];

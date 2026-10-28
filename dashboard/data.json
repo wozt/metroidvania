@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-28T16:29:59+00:00",
+ "generated_at": "2026-10-28T16:33:41+00:00",
  "git": {
-  "commit": "b47b55d",
+  "commit": "bd230bd",
   "branch": "main",
   "dirty": true
  },
@@ -10328,7 +10328,7 @@
     "sub_0807642C",
     "sub_08076464"
    ],
-   "limitations": "Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds 0x87/0x89/0x8B/0x1C3, palette callbacks and rewards are not modelled. Random flight or volley selection, target approach and braking, the two-stage five-feather volley with native frames 8..12 and boxes, weapon-hit recoil, four-fragment falling death, combat and global inert state are connected; Siren shares the body path.",
+   "limitations": "Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds 0x87/0x89/0x8B/0x1C3, palette callbacks and rewards are not modelled. Sound 0x8B (the wing beats of sub_080756FC steps 1 and 10) is not played: that rising flight is not ported. Random flight or volley selection, target approach and braking, the two-stage five-feather volley with native frames 8..12 and boxes, weapon-hit recoil, four-fragment falling death, combat and global inert state are connected; Siren shares the body path. Its dive plays 0x87, each feather volley 0x89 and its death 0x1C3 (sub_0807594C, sub_08075CAC), unit-tested for the Harpy and the Siren.",
    "next_action": "Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
@@ -17574,6 +17574,12 @@
  },
  "timeline": [
   {
+   "commit": "bd230bd",
+   "date": "2026-10-28",
+   "subject": "Play the Skull Archer and Beam Skeleton sounds",
+   "scope": "project"
+  },
+  {
    "commit": "b47b55d",
    "date": "2026-10-28",
    "subject": "Play the Merman sounds; Axe Armor and Merman complete",
@@ -18045,12 +18051,6 @@
    "commit": "3e6e1e5",
    "date": "2026-10-26",
    "subject": "Remove uncalled Python tools and stale script references",
-   "scope": "project"
-  },
-  {
-   "commit": "424da37",
-   "date": "2026-10-26",
-   "subject": "Import the raw ROM blocks natively",
    "scope": "project"
   }
  ],
@@ -21539,11 +21539,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "partial",
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "red:24",
-       "notes": "Soul: drops, is collected and casts (SkillHarpyUse). Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and casts (SkillHarpyUse). Sounds: 0x87 as it dives, 0x89 after each feather volley (sub_0807594C) and 0x1C3 at its death (sub_08075CAC) are requested and unit-tested; the wing beats 0x8B of sub_080756FC are missing because that rising flight is not ported (the port bobs on a sine)."
       }
      },
      {
@@ -22412,8 +22412,8 @@
      },
      "sounds": {
       "ported": 6,
-      "partial": 0,
-      "missing": 41
+      "partial": 1,
+      "missing": 40
      },
      "loot": {
       "ported": 26,

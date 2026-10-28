@@ -1336,8 +1336,10 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN) {
-                    /* sub_08075CAC: animation 3 and a 40-frame falling
-                     * death, with four fragments emitted by its updater. */
+                    /* sub_08075CAC: sound 0x1C3, animation 3 and a 40-frame
+                     * falling death, with four fragments emitted by its
+                     * updater. */
+                    aos_audio_play_song(0x1C3);
                     play_loop(enemy, kind->anims, 3, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -6365,6 +6367,7 @@ static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
                 /* sub_0807594C steps 0..3: fly to Soma's X and 24 pixels
                  * above him, then brake back into the idle state. */
                 play_loop(e, kind->anims, 2, false);
+                aos_audio_play_song(0x87);
                 e->walk_timer = soma->x;
                 e->speed = soma->y - 0x180000;
                 e->step = 1;
@@ -6402,12 +6405,14 @@ static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
         } else if (e->step == 10 && ++e->timer > 3) {
             for (int i = 0; i < 3; ++i)
                 harpy_shot(e, e->id == AOS_ENEMY_SIREN ? i : i * 2, &report);
+            aos_audio_play_song(0x89);
             e->step = 11;
             e->timer = 0;
         } else if (e->step == 11 && ++e->timer > 7) {
             if (e->id == AOS_ENEMY_HARPY) {
                 harpy_shot(e, 1, &report);
                 harpy_shot(e, 3, &report);
+                aos_audio_play_song(0x89);
             }
             e->step = 12;
             e->timer = 0;

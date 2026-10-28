@@ -1459,12 +1459,12 @@ Known divergences: As the gargoyle.
 Next action: Follow the gargoyle's open items.
 Evidence: in game: `aria area_06_room_014 (--spawn 100 150 --hp 9999): the Gremlin chases Soma (frame 40)`.
 
-[+] **`aos.enemies.harpy` — Harpy.** Random flight or volley selection, target approach and braking, the two-stage five-feather volley with native frames 8..12 and boxes, weapon-hit recoil, four-fragment falling death, combat and global inert state are connected; Siren shares the body path.
+[+] **`aos.enemies.harpy` — Harpy.** Random flight or volley selection, target approach and braking, the two-stage five-feather volley with native frames 8..12 and boxes, weapon-hit recoil, four-fragment falling death, combat and global inert state are connected; Siren shares the body path. Its dive plays 0x87, each feather volley 0x89 and its death 0x1C3 (sub_0807594C, sub_08075CAC), unit-tested for the Harpy and the Siren.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyHarpyCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyHarpyUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080756FC`, `aos:asm:asm/code/code_080709D8.s:sub_0807594C`, `aos:asm:asm/code/code_080709D8.s:sub_08075BD8`, `aos:asm:asm/code/code_080709D8.s:sub_08075CAC`, `aos:asm:asm/code/code_080709D8.s:sub_08075D90`, `aos:asm:asm/code/code_080709D8.s:sub_08075E40`, `aos:asm:asm/code/code_080709D8.s:sub_08075EDC`, `aos:asm:asm/code/code_080709D8.s:sub_08076244`, `aos:asm:asm/code/code_080709D8.s:sub_0807628C`, `aos:asm:asm/code/code_080709D8.s:sub_08076320`, `aos:asm:asm/code/code_080709D8.s:sub_08076390`, `aos:asm:asm/code/code_080709D8.s:sub_080763DC`, `aos:asm:asm/code/code_080709D8.s:sub_0807642C`, `aos:asm:asm/code/code_080709D8.s:sub_08076464`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds 0x87/0x89/0x8B/0x1C3, palette callbacks and rewards are not modelled.  
+Known divergences: Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, sounds 0x87/0x89/0x8B/0x1C3, palette callbacks and rewards are not modelled. Sound 0x8B (the wing beats of sub_080756FC steps 1 and 10) is not played: that rising flight is not ported.  
 Next action: Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP`.
 

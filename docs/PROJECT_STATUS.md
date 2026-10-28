@@ -2,6 +2,14 @@
 
 Last updated: **2026-10-28**.
 
+## Patch 0612 - Harpy sounds
+
+- The Harpy (and the Siren, which runs its routines) request 0x87 when
+  diving, 0x89 after each feather volley and 0x1C3 at death; unit-tested.
+- The wing beats 0x8B are not played: the rising flight of
+  `sub_080756FC` they belong to is not ported, so the Harpy's sounds stay
+  partial on the monster matrix. Zero Mission is unchanged.
+
 ## Patch 0611 - Skull Archer and Beam Skeleton sounds
 
 - The Skull Archer requests 0x85 with each arrow, 0x6B as it shatters

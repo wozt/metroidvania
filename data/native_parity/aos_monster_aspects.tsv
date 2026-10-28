@@ -19,7 +19,7 @@ ghost_dancer	ported	ported	missing	ported	partial	yellow:34	Soul: drops and is c
 giant_ghost	ported	partial	missing	n/a	partial	blue:6	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).
 gorgon	ported	ported	missing	ported	partial	yellow:28	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
 gremlin	ported	ported	missing	n/a	partial	yellow:35	Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.
-harpy	ported	ported	missing	n/a	ported	red:24	Soul: drops, is collected and casts (SkillHarpyUse). Sounds: no Aria audio is ported.
+harpy	ported	ported	partial	n/a	ported	red:24	Soul: drops, is collected and casts (SkillHarpyUse). Sounds: 0x87 as it dives, 0x89 after each feather volley (sub_0807594C) and 0x1C3 at its death (sub_08075CAC) are requested and unit-tested; the wing beats 0x8B of sub_080756FC are missing because that rising flight is not ported (the port bobs on a sine).
 imp	ported	ported	missing	ported	partial	blue:22	Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.
 killer_doll	ported	ported	missing	n/a	partial	red:51	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported.
 killer_fish	ported	partial	missing	ported	partial	red:7	Soul: drops and is collected; its red skill routine is not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).

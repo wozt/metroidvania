@@ -79,7 +79,6 @@ aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillPersephoneUse	SkillPersephoneUse	abilities	name			asm_function		asm/code/code_080211F0.s	29857	0	12
 aos:asm:asm/code/code_080211F0.s:SkillRedMinotaurUse	SkillRedMinotaurUse	abilities	name			asm_function		asm/code/code_080211F0.s	11109	0	11
 aos:asm:asm/code/code_080211F0.s:SkillShadowKnightUse	SkillShadowKnightUse	abilities	name			asm_function		asm/code/code_080211F0.s	28459	0	13
-aos:asm:asm/code/code_080211F0.s:SkillSkullMillioneUse	SkillSkullMillioneUse	abilities	name			asm_function		asm/code/code_080211F0.s	19978	0	9
 aos:asm:asm/code/code_080211F0.s:SkillSkyFishUse	SkillSkyFishUse	abilities	name			asm_function		asm/code/code_080211F0.s	28016	0	15
 aos:asm:asm/code/code_080211F0.s:SkillSlimeUse	SkillSlimeUse	abilities	name			asm_function		asm/code/code_080211F0.s	23700	0	15
 aos:asm:asm/code/code_080211F0.s:SkillStudentWitchUse	SkillStudentWitchUse	abilities	name			asm_function		asm/code/code_080211F0.s	8328	0	14
@@ -103,7 +102,6 @@ aos:asm:asm/code/code_080211F0.s:sub_080286BC	sub_080286BC	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_080292B4	sub_080292B4	abilities	referrers			asm_function	0x080292B4	asm/code/code_080211F0.s	16151	0	10
 aos:asm:asm/code/code_080211F0.s:sub_08029568	sub_08029568	abilities	referrers			asm_function	0x08029568	asm/code/code_080211F0.s	16482	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802A330	sub_0802A330	abilities	referrers			asm_function	0x0802A330	asm/code/code_080211F0.s	18182	0	3
-aos:asm:asm/code/code_080211F0.s:sub_0802B028	sub_0802B028	abilities	referrers			asm_function	0x0802B028	asm/code/code_080211F0.s	19785	0	9
 aos:asm:asm/code/code_080211F0.s:sub_0802CD6C	sub_0802CD6C	abilities	referrers			asm_function	0x0802CD6C	asm/code/code_080211F0.s	23388	0	3
 aos:asm:asm/code/code_080211F0.s:sub_0802CE20	sub_0802CE20	abilities	referrers			asm_function	0x0802CE20	asm/code/code_080211F0.s	23484	1	7
 aos:asm:asm/code/code_080211F0.s:sub_0802D300	sub_0802D300	unclassified				asm_function	0x0802D300	asm/code/code_080211F0.s	24110	0	0

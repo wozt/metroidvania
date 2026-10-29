@@ -4503,6 +4503,8 @@ static void skull_dive(AosEnemy *e, const AosSoma *soma, const AosAnimSet *anims
             e->step = 3;
             e->vy = r->dive;
             e->ay = -0x2000;
+            aos_audio_play_song(0x87);
+            if (e->variant == 1) aos_audio_play_song(0x1BA);
         }
         return;
     case 3:
@@ -4556,6 +4558,7 @@ static void skull_die(AosEnemy *e, const AosEnemyKind *kind, int cam_x, int cam_
                       uint32_t (*random)(void), AosHitReport *report) {
     switch (e->step) {
     case 0:
+        aos_audio_play_song(0x1BC);
         play_loop(e, kind->anims, 2, false);
         e->step = 1;
         e->timer = 0x20;

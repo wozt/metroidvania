@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0628 - Skull Millione red soul and sounds
+
+- Ported `SkillSkullMillioneUse` and `sub_0802B028`: its invisible parent
+  follows Soma from 20 through 25 pixels ahead, requests sound 0xC9 and
+  creates three resource-7 children on alternate updates. Each child plays
+  sequence 0 with its exported per-frame type-5 attack box and releases its
+  counted soul slot after the animation or a margin-2 exit.
+- Connected the soul to the runtime caster, renderer and combat bridge, and
+  added the shared Skull Millione/Cagnazzo/Lubicant controller's missing
+  native sound requests: 0x87 when a dive begins, Cagnazzo's additional
+  0x1BA and 0x1BC when death begins. ROM-free
+  tests cover the parent emission, mirroring, cleanup and all three sound
+  requests. A local room 0/3 capture showed all three children in front of
+  Soma. Source-derived and unit-tested, not emulator-compared.
+- Skull Millione's five tracked aspects are now ported, raising completeness
+  to **17/47**. Zero Mission is unchanged.
+
 ## Patch 0627 - Ripper red soul target attachment
 
 - Completed `sub_0802D9BC` and `sub_080239E4`: a soul attack now reports

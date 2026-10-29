@@ -30,6 +30,7 @@
 #include "aos_skill_merman.h"
 #include "aos_skill_needles.h"
 #include "aos_skill_ripper.h"
+#include "aos_skill_millione.h"
 #include "aos_skill_shot.h"
 #include "aos_skill_skull.h"
 #include "aos_skill_valkyrie.h"
@@ -663,7 +664,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
-       SKILL_RIPPER };
+       SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD };
 
 typedef struct {
     bool alive, started;
@@ -692,6 +693,7 @@ typedef struct {
     AosValkyrie valkyrie;   /* SKILL_VALKYRIE */
     AosNeedles needles;     /* SKILL_NEEDLES */
     AosRipperSoul ripper;   /* SKILL_RIPPER */
+    AosMillioneSoul millione; /* SKILL_MILLIONE_EMITTER */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -717,6 +719,7 @@ typedef struct {
 #define SKILL_VALKYRIE_ROUTINE 0x08024CBDu
 #define SKILL_NEEDLES_ROUTINE 0x080280B1u
 #define SKILL_RIPPER_ROUTINE 0x08023A71u
+#define SKILL_MILLIONE_ROUTINE 0x0802B1B9u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -729,6 +732,7 @@ typedef struct {
     const AosThrowRecord *throws;   /* metadata/skill_throws.tsv, NULL when missing */
     bool bone;                      /* resource 7 (Enemy/skill_bone) is loaded */
     const AosEnemyKind *bone_kind;  /* its walker probes and still frames */
+    const AosAnimSet *millione;     /* resource 7, sequence 0 */
     const int *bone_ids;            /* its exported still frames */
     int bone_count;
     AosEffect *effects;             /* the room's shared effects */
@@ -816,6 +820,8 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_NEEDLES_ROUTINE && souls->needles ? SKILL_NEEDLES
                : routine == SKILL_RIPPER_ROUTINE && souls->ripper && record->parameter < 2
                    ? SKILL_RIPPER
+               : routine == SKILL_MILLIONE_ROUTINE && souls->millione
+                   ? SKILL_MILLIONE_EMITTER
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -842,6 +848,8 @@ static int cast_red_soul(void *context) {
         skill->x = skill->ripper.x;
         skill->y = skill->ripper.y;
         skill->facing_left = skill->ripper.facing_left;
+    } else if (kind == SKILL_MILLIONE_EMITTER) {
+        skill->millione = aos_millione_soul_create();
     } else if (kind == SKILL_VALKYRIE) {
         skill->valkyrie = aos_valkyrie_create(souls->soma->x, souls->soma->y,
                                               souls->soma->facing_left);
@@ -1272,6 +1280,46 @@ static void update_skills(AriaSouls *souls) {
             skill->y = skill->ripper.y;
             break;
         }
+        case SKILL_MILLIONE_EMITTER: {
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+            }
+            AosMillioneSpawn spawn;
+            bool alive = aos_millione_soul_update(&skill->millione, souls->soma->x,
+                                                   souls->soma->y,
+                                                   souls->soma->facing_left, &spawn);
+            skill->x = skill->millione.x;
+            skill->y = skill->millione.y;
+            skill->facing_left = skill->millione.facing_left;
+            if (spawn.created) {
+                AriaSkill *child = spawn_child(souls, SKILL_MILLIONE_CHILD);
+                if (child) {
+                    child->soul = skill->soul;
+                    child->x = spawn.x;
+                    child->y = spawn.y;
+                    child->facing_left = spawn.facing_left;
+                }
+            }
+            if (!alive || skill_outside(souls, skill, 3)) end_skill(souls, skill);
+            break;
+        }
+        case SKILL_MILLIONE_CHILD:
+            /* sub_0802B028: sequence 0 supplies both the visible frames
+             * and its changing type-5 attack box. sub_08023530 already
+             * counted this child when it was allocated. */
+            if (skill->state == 2) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (!skill->started) {
+                skill->started = true;
+                skill->state = 1;
+                aos_anim_start(&skill->anim, souls->millione, 0, false);
+            }
+            if (aos_anim_step(&skill->anim, souls->millione) == 3) skill->state = 2;
+            if (skill_outside(souls, skill, 2)) end_skill(souls, skill);
+            break;
         case SKILL_VALKYRIE: {
             /* SkillValkyrieUse: counted with sound 0x1AF and sequence 0 on
              * its first update (sub_08042A54(1, 0x3C) is not run). */
@@ -1543,6 +1591,9 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         else if (skill->kind == SKILL_RIPPER && skill->ripper.state == AOS_RIPPER_FLYING)
             box = skill->ripper.attached ? (AosBox){-10, -8, 20, 16} /* 0x1014F8F6 */
                                          : (AosBox){-1, -1, 2, 2};   /* 0x0202FFFF */
+        else if (skill->kind == SKILL_MILLIONE_CHILD && souls->bone_kind &&
+                 skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
+            box = souls->bone_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->valkyrie_kind->attack[0][skill->anim.frame];
@@ -3313,6 +3364,10 @@ int main(int argc, char **argv) {
             souls.bat = objects_ok && bat->loaded ? &bat->set : NULL;
             souls.bow = objects_ok && archer->loaded && archer->static_count ? &archer->set : NULL;
             souls.bone = objects_ok && objects.skills[SKILL_ART_BONE].static_count;
+            souls.millione = objects_ok && objects.skills[SKILL_ART_BONE].loaded &&
+                                      objects.skills[SKILL_ART_BONE].defs[0].count
+                                  ? &objects.skills[SKILL_ART_BONE].set
+                                  : NULL;
             const __typeof__(objects.skills[0]) *blades = &objects.skills[SKILL_ART_BLADES];
             souls.durga = objects_ok && blade_frame(blades, 2);
             const __typeof__(objects.skills[0]) *flea = &objects.skills[SKILL_ART_FLEA];
@@ -3530,7 +3585,7 @@ int main(int argc, char **argv) {
             int still = static_index(shared->static_ids, shared->static_count,
                                      skill->kind == SKILL_SPEAR ? 0 : skill->parameter);
             if (skill->kind == SKILL_SPEAR_TIP || skill->kind == SKILL_HARPY ||
-                skill->kind == SKILL_DEVIL)
+                skill->kind == SKILL_DEVIL || skill->kind == SKILL_MILLIONE_EMITTER)
                 continue;
             if (skill->kind == SKILL_NEEDLES && skill->needles.struck) {
                 /* sub_08028018: the four pieces, alternating by parity. */
@@ -3590,6 +3645,8 @@ int main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_NEEDLES].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_RIPPER
                     ? blade_frame(&objects.skills[SKILL_ART_RIPPER], skill->parameter)
+                : skill->kind == SKILL_MILLIONE_CHILD
+                    ? &objects.skills[SKILL_ART_BONE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_VALKYRIE
                     ? (skill->valkyrie.hidden
                            ? NULL

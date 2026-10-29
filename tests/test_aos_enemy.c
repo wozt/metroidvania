@@ -2295,6 +2295,7 @@ static void crusader_tests(void) {
 }
 
 static void skull_tests(void) {
+    aos_audio_clear();
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t bob[] = {10, 10, 13, 10}, dive[] = {5, 12, 10, 9, 5, 21, 2},
                          death[] = {200}, spin[] = {9, 9, 9, 9};
@@ -2355,6 +2356,7 @@ static void skull_tests(void) {
         ++frames;
     }
     assert(l.step == 3 && l.anim.frame == 4 && l.ay == -0x2000);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) == 1);
     int32_t top = l.y;
     frames = 0;
     while (l.state == 2 && frames < 200) {
@@ -2389,6 +2391,7 @@ static void skull_tests(void) {
         ++frames;
     }
     assert(blood == 3 && l.removed && frames > 33 + 40);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1BC) == 1);
 
     /* Cagnazzo circles the player for 64 frames (animation 3) before its
      * dive; Skull Millione has no fin. */
@@ -2409,6 +2412,12 @@ static void skull_tests(void) {
     assert(frames == 66 && c.step == 1);
     aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(c.step == 2 && c.anim.id == 1 && c.vy == -0x20000 + 0x1000);
+    frames = 0;
+    while (c.step == 2 && frames < 100) {
+        aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(c.step == 3 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x1BA) == 1);
     AosEnemy m;
     assert(aos_enemy_create(&m, AOS_ENEMY_SKULL_MILLIONE, 100, 60, 0, 0, &soma, &layer, &kind,
                             &stats));

@@ -259,7 +259,7 @@ static void test_bestiary(const FusionJson *data) {
     const FusionJson *aos_items = fusion_json_member(aos, "items");
     EXPECT(mzm_monsters->count >= 90, "mzm monsters");
     EXPECT(aos_monsters->count == 0x71, "aos monsters");
-    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 16,
+    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 17,
            "complete Aria monsters");
     const FusionJson *all[] = {mzm_monsters, mzm_items, aos_monsters, aos_items};
     for (size_t list = 0; list < 4; ++list)

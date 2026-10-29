@@ -2906,12 +2906,32 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                      aos_pause_entry_name((uint8_t)entry),
                      entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_EQUIP ||
                              entry == AOS_PAUSE_ITEM_USE ||
-                             entry == AOS_PAUSE_ABILITY
+                             entry == AOS_PAUSE_ABILITY || entry == AOS_PAUSE_CONFIG
                          ? ""
                          : "[pending]");
             debug_text(renderer, 4 + entry, line);
         }
         debug_text(renderer, 13, "A select  B/Start close");
+        return;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_CONFIG) {
+        static const uint8_t rows[AOS_BUTTON_ACTIONS] = {
+            AOS_BUTTON_ATTACK, AOS_BUTTON_JUMP, AOS_BUTTON_GUARDIAN, AOS_BUTTON_ABILITY,
+        };
+        debug_text(renderer, 0, "CONFIG - BUTTON ASSIGN");
+        for (int row = 0; row < AOS_BUTTON_ACTIONS; ++row) {
+            uint8_t action = rows[row];
+            snprintf(line, sizeof line, "%c %-10s %s",
+                     row == menu->config_cursor ? '>' : ' ',
+                     aos_button_config_action_name(action),
+                     aos_button_config_button_name(menu->config_buttons[action]));
+            debug_text(renderer, 3 + row * 2, line);
+        }
+        debug_text(renderer, 12, "A/Right next  Left previous");
+        debug_text(renderer, 13, "Select defaults");
+        debug_text(renderer, 14, "B apply/back  Start apply/close");
+        if (!aos_pause_config_unique(menu))
+            debug_text(renderer, 16, "Duplicate assignment - change before exit");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_ITEM_USE) {
@@ -3455,9 +3475,13 @@ int main(int argc, char **argv) {
     static AosStats progress;
     progress.character = has_active_save ? active_save.character : 0;
     aos_stats_init(&progress);
+    aos_button_config_default(&progress.buttons);
     if (has_active_save) {
         progress.experience = active_save.experience;
         progress.gold = active_save.gold;
+        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+            progress.buttons.action[action] =
+                aos_button_config_button(active_save.buttons[action]);
     }
     aos_stats_level_up(&progress);
     /* Equipment: the file's (sub_08014548's new-game set for older files),
@@ -3719,6 +3743,7 @@ int main(int argc, char **argv) {
                                          : player_buttons(&gamepad);
             if (capture_path && repeat > 0 && step % repeat == repeat - 1) held = 0;
             if (debug.open && !capture_path) held = 0;     /* a menu frame step */
+            bool forced_frame = forced.active;
             if (forced.active) held = forced.held;
             forced.active = false;
             aos_input_update(&aria_input, held);
@@ -3776,6 +3801,7 @@ int main(int argc, char **argv) {
                 printf("Pause hub opened\n");
             }
             if (soul_menu_event & AOS_SOUL_MENU_MOVED) aos_audio_play_song(0xF1);
+            if (soul_menu_event & AOS_SOUL_MENU_CONFIG_EDITED) aos_audio_play_song(0xF4);
             if (soul_menu_event & AOS_SOUL_MENU_ACCEPTED) aos_audio_play_song(0xF3);
             if (soul_menu_event & AOS_SOUL_MENU_BACK) aos_audio_play_song(0xF0);
             if (soul_menu_event & AOS_SOUL_MENU_ITEM_USED) {
@@ -3791,6 +3817,16 @@ int main(int argc, char **argv) {
                        progress.item_counts[soul_menu.last_item]);
             }
             if (soul_menu_event & AOS_SOUL_MENU_REFUSED) aos_audio_play_song(0xEF);
+            if (soul_menu_event & AOS_SOUL_MENU_CONFIG_APPLIED)
+                printf("Buttons: Attack %s, Jump %s, Ability %s, Guardian %s\n",
+                       aos_button_config_button_name(aos_button_config_index(
+                           progress.buttons.action[AOS_BUTTON_ATTACK])),
+                       aos_button_config_button_name(aos_button_config_index(
+                           progress.buttons.action[AOS_BUTTON_JUMP])),
+                       aos_button_config_button_name(aos_button_config_index(
+                           progress.buttons.action[AOS_BUTTON_ABILITY])),
+                       aos_button_config_button_name(aos_button_config_index(
+                           progress.buttons.action[AOS_BUTTON_GUARDIAN])));
             if (soul_menu_event & AOS_SOUL_MENU_UNAVAILABLE)
                 printf("Pause page pending: %s\n", aos_pause_entry_name(soul_menu.hub_cursor));
             if (soul_menu_event & AOS_SOUL_MENU_CHANGED) {
@@ -3812,8 +3848,15 @@ int main(int argc, char **argv) {
                 ++step;
                 continue;
             }
-            aos_soma_update(&soma, &layer, aria_input.player_held_input,
-                            aria_input.player_new_input);
+            uint16_t player_held = forced_frame
+                                       ? aria_input.player_held_input
+                                       : aos_button_config_remap(&progress.buttons,
+                                                                 aria_input.player_held_input);
+            uint16_t player_new = forced_frame
+                                      ? aria_input.player_new_input
+                                      : aos_button_config_remap(&progress.buttons,
+                                                                aria_input.player_new_input);
+            aos_soma_update(&soma, &layer, player_held, player_new);
             /* sub_0800DC70: the HUD chases the current values. */
             if (have_hud) aos_hud_update(&hud, soma.hp, soma.max_hp, progress.mp,
                                          (int16_t)progress.max_mp);
@@ -3952,6 +3995,9 @@ int main(int argc, char **argv) {
                     active_save.blue_soul = progress.blue_soul;
                     active_save.yellow_soul = progress.yellow_soul;
                     active_save.mp = progress.mp;
+                    for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+                        active_save.buttons[action] = aos_button_config_index(
+                            progress.buttons.action[action]);
                     memcpy(active_save.inventory, progress.item_counts,
                            sizeof progress.item_counts);
                     memcpy(active_save.inventory + AOS_SAVE_WEAPONS, progress.weapon_counts,

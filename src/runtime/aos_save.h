@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v7"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v8"
+#define AOS_SAVE_SCHEMA_V7 "metroidvania-aos-save-v7"
 #define AOS_SAVE_SCHEMA_V6 "metroidvania-aos-save-v6"
 #define AOS_SAVE_SCHEMA_V5 "metroidvania-aos-save-v5"
 #define AOS_SAVE_SCHEMA_V4 "metroidvania-aos-save-v4"
@@ -54,6 +55,9 @@ typedef struct {
      * means full (sub_08014548 starts at the maximum). */
     uint8_t red_soul, blue_soul, yellow_soul;
     int16_t mp;
+    /* Schema v8: native button table indices in attack, jump, ability,
+     * guardian order. Older files receive 1, 0, 3, 2 (B, A, L, R). */
+    uint8_t buttons[4];
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

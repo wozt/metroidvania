@@ -1,6 +1,29 @@
 # Project status
 
-Last updated: **2026-10-29**.
+Last updated: **2026-10-30**.
+
+## Patch 0638 - Native Aria button configuration
+
+- Added a host-neutral C11 controller for Aria's four configurable action
+  buttons. It uses the ROM table order A, B, R and L and the source's native
+  defaults: Attack on B, Jump on A, Ability on L and Guardian on R.
+- Connected Config as the fifth usable pause-hub page. Its source-derived
+  controller presents Attack, Jump, Guardian and Ability in native display
+  order, wraps the selected row and button, restores defaults with Select and
+  refuses to leave while any two actions share a physical button.
+- Applied valid assignments to Soma's actual input path while keeping pause
+  navigation on physical GBA buttons and native forced input semantic. The
+  SDL keyboard and gamepad bindings remain the physical host layer rather
+  than being rewritten by this page.
+- Extended portable saves to schema v8 for the four button-table indices.
+  Versions 1 through 7 remain readable and receive the native defaults;
+  invalid or duplicate v8 mappings are rejected by the existing checksummed,
+  atomic save path.
+- Added deterministic coverage for defaults, navigation, duplicate refusal,
+  reset, application, semantic input remapping, v8 round trips and v7
+  migration. This is source-derived and unit-tested, not emulator-compared;
+  the page still uses the diagnostic SDL text overlay instead of native
+  tilemaps, button glyphs, cursor OAM and transitions.
 
 ## Patch 0637 - ROM-derived Aria item-use menu
 

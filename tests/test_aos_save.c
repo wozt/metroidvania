@@ -26,6 +26,8 @@ int main(void) {
     assert(source.spawn_x == 0x78 && source.spawn_y == 0x8D &&
            source.hp == 320 && source.moves == 0x1F);
     assert(source.name[0] == 0x14 && source.name[3] == 2 && source.character == 0);
+    assert(source.buttons[0] == 1 && source.buttons[1] == 0 &&
+           source.buttons[2] == 3 && source.buttons[3] == 2);
     source.area = 7;
     source.room = 54;
     source.spawn_x = 120;
@@ -52,6 +54,10 @@ int main(void) {
     source.red_soul = 2;
     source.yellow_soul = 18;
     source.mp = 37;
+    source.buttons[0] = 2;
+    source.buttons[1] = 0;
+    source.buttons[2] = 3;
+    source.buttons[3] = 1;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -83,7 +89,8 @@ int main(void) {
     assert(fclose(legacy_file) == 0);
     assert(aos_save_load(legacy_path, &loaded, error, sizeof error));
     assert(loaded.slot == 1 && loaded.area == 2 && loaded.room == 3 &&
-           loaded.name[0] == 0x14 && loaded.character == 0);
+           loaded.name[0] == 0x14 && loaded.character == 0 &&
+           loaded.buttons[0] == 1 && loaded.buttons[3] == 2);
 
     /* A v2 file (no experience or gold) still loads, with both at zero. */
     const char *v2_path = "aos-save-test-v2.sav";
@@ -149,8 +156,38 @@ int main(void) {
         old.souls[3] = 7;
         assert(aos_save_load(v5_path, &old, error, sizeof error));
         assert(old.gold == 6 && old.inventory[AOS_SAVE_WEAPONS] == 2 && old.souls[3] == 0 &&
-               old.souls_collected == 0);
+               old.souls_collected == 0 && old.buttons[0] == 1 && old.buttons[3] == 2);
         assert(remove(v5_path) == 0);
+    }
+    /* A v7 file predating configurable-button persistence loads the native
+     * default B/A/L/R assignment. */
+    {
+        const char *v7_path = "aos-save-test-v7.sav";
+        char v7[1280], digits[AOS_SAVE_INVENTORY + 1], soul_hex[2 * AOS_SAVE_SOUL_BYTES + 1];
+        memset(digits, '0', AOS_SAVE_INVENTORY);
+        digits[AOS_SAVE_INVENTORY] = '\0';
+        digits[AOS_SAVE_WEAPONS] = digits[AOS_SAVE_ARMOR] = '1';
+        memset(soul_hex, '0', 2 * AOS_SAVE_SOUL_BYTES);
+        soul_hex[2 * AOS_SAVE_SOUL_BYTES] = '\0';
+        int v7_size = snprintf(v7, sizeof v7,
+                               AOS_SAVE_SCHEMA_V7 "\n"
+                               "slot=0\narea=0\nroom=0\nspawn_x=120\nspawn_y=141\n"
+                               "hp=320\nmax_hp=320\nmoves=31\nplay_frames=0\n"
+                               "name=20,16,14,2,0,0,0,0\ncharacter=0\nchallenge_flags=0\n"
+                               "experience=0\ngold=0\nweapon=0\narmor=0\naccessory=255\n"
+                               "inventory=%s\nsouls=%s\nsouls_collected=0\n"
+                               "souls_equipped=0,0,0\nmp=-1\n",
+                               digits, soul_hex);
+        v7_size += snprintf(v7 + v7_size, sizeof v7 - (size_t)v7_size, "checksum=%08x\n",
+                            test_checksum(v7, (size_t)v7_size));
+        FILE *v7_file = fopen(v7_path, "wb");
+        assert(v7_file && fwrite(v7, 1, (size_t)v7_size, v7_file) == (size_t)v7_size);
+        assert(fclose(v7_file) == 0);
+        AosSaveData old = {0};
+        assert(aos_save_load(v7_path, &old, error, sizeof error));
+        assert(old.buttons[0] == 1 && old.buttons[1] == 0 &&
+               old.buttons[2] == 3 && old.buttons[3] == 2);
+        assert(remove(v7_path) == 0);
     }
     /* The soul total stops at 999. */
     source.souls_collected = 1000;
@@ -161,6 +198,10 @@ int main(void) {
     source.inventory[4] = 10;
     assert(!aos_save_store(path, &source, error, sizeof error));
     source.inventory[4] = 0;
+
+    source.buttons[0] = source.buttons[1];
+    assert(!aos_save_store(path, &source, error, sizeof error));
+    source.buttons[0] = 2;
 
     source.slot = AOS_SAVE_SLOT_COUNT;
     assert(!aos_save_store(path, &source, error, sizeof error));

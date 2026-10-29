@@ -34,6 +34,7 @@ enum {
     AOS_SOUL_MENU_PAGE_ABILITY,
     AOS_SOUL_MENU_PAGE_EQUIP,
     AOS_SOUL_MENU_PAGE_ITEM_USE,
+    AOS_SOUL_MENU_PAGE_CONFIG,
     AOS_SOUL_MENU_PAGE_UNAVAILABLE,
 };
 
@@ -54,6 +55,8 @@ enum {
     AOS_SOUL_MENU_UNAVAILABLE = 64,
     AOS_SOUL_MENU_ITEM_USED = 128,
     AOS_SOUL_MENU_REFUSED = 256,
+    AOS_SOUL_MENU_CONFIG_EDITED = 512,
+    AOS_SOUL_MENU_CONFIG_APPLIED = 1024,
 };
 
 typedef struct {
@@ -77,17 +80,21 @@ typedef struct {
     bool equip_selecting;
     uint8_t item_cursor;
     uint8_t last_item;
+    uint8_t config_cursor;
+    uint8_t config_buttons[AOS_BUTTON_ACTIONS];
     /* Colour cursors are native equipped values: 0 None, then index + 1.
      * The ability cursor is its zero-based index. */
     uint8_t cursor[AOS_SOUL_MENU_CATEGORIES];
 } AosSoulMenu;
 
 /* START opens the seven-entry pause hub reconstructed from sub_08047764.
- * Soul Set, Equip, Item Use and Ability enter usable source-adapted pages; the
- * three unported pages enter an explicit unavailable page. Soul Set changes
- * colour and selects owned souls. Equip selects owned records for three
- * slots. Item Use applies ROM-exported effects to owned consumables. Ability
- * toggles owned abilities. B returns to the hub and START closes the menu.
+ * Soul Set, Equip, Item Use, Ability and Config enter usable source-adapted
+ * pages; the two unported pages enter an explicit unavailable page. Soul Set
+ * changes colour and selects owned souls. Equip selects owned records for
+ * three slots. Item Use applies ROM-exported effects to owned consumables.
+ * Ability toggles owned abilities. Config remaps the four native action
+ * buttons and refuses duplicate assignments. B returns to the hub and START
+ * closes the menu.
  * The return value is an AOS_SOUL_MENU_* event mask. */
 unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
                                const AosEquipmentTables *equipment,
@@ -122,5 +129,6 @@ int aos_item_choice_count(const AosStats *stats);
 uint8_t aos_item_choice_at(const AosStats *stats, int ordinal);
 bool aos_item_use(AosStats *stats, const AosItemUseRecord items[AOS_ITEM_RECORDS],
                   AosItemVitals *vitals, uint8_t item);
+bool aos_pause_config_unique(const AosSoulMenu *menu);
 
 #endif /* AOS_SOUL_MENU_H */

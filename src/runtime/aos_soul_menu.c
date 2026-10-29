@@ -70,6 +70,12 @@ static const char *const item_names[AOS_ITEM_RECORDS] = {
     "CASTLE MAP 1", "CASTLE MAP 2", "CASTLE MAP 3",
 };
 
+/* 0x08525510: the config screen presents Guardian before Ability although
+ * their fields are stored in the opposite order. */
+static const uint8_t config_rows[AOS_BUTTON_ACTIONS] = {
+    AOS_BUTTON_ATTACK, AOS_BUTTON_JUMP, AOS_BUTTON_GUARDIAN, AOS_BUTTON_ABILITY,
+};
+
 const char *aos_pause_entry_name(uint8_t entry) {
     return entry < AOS_PAUSE_ENTRIES ? pause_entry_names[entry] : "UNKNOWN";
 }
@@ -292,6 +298,16 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
         initialise_cursors(menu, stats);
         return AOS_SOUL_MENU_ACCEPTED;
     }
+    if (menu->hub_cursor == AOS_PAUSE_CONFIG) {
+        AosButtonConfig buttons = stats->buttons;
+        if (!aos_button_config_valid(&buttons)) aos_button_config_default(&buttons);
+        menu->page = AOS_SOUL_MENU_PAGE_CONFIG;
+        menu->config_cursor = 0;
+        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+            menu->config_buttons[action] =
+                aos_button_config_index(buttons.action[action]);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
     menu->page = AOS_SOUL_MENU_PAGE_UNAVAILABLE;
     return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
 }
@@ -400,6 +416,57 @@ static unsigned update_item_use(AosSoulMenu *menu, AosStats *stats,
     return AOS_SOUL_MENU_ITEM_USED;
 }
 
+bool aos_pause_config_unique(const AosSoulMenu *menu) {
+    uint8_t used = 0;
+    for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action) {
+        uint8_t index = menu->config_buttons[action];
+        if (index >= 4 || (used & (1u << index))) return false;
+        used |= (uint8_t)(1u << index);
+    }
+    return used == 0x0F;
+}
+
+static unsigned update_config(AosSoulMenu *menu, AosStats *stats,
+                              uint16_t new_input, uint16_t repeated_input) {
+    if (new_input & (AOS_KEY_START | AOS_KEY_B)) {
+        if (!aos_pause_config_unique(menu)) return AOS_SOUL_MENU_REFUSED;
+        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+            stats->buttons.action[action] =
+                aos_button_config_button(menu->config_buttons[action]);
+        if (new_input & AOS_KEY_START) {
+            menu->open = false;
+            return AOS_SOUL_MENU_CLOSED | AOS_SOUL_MENU_CONFIG_APPLIED;
+        }
+        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        return AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED;
+    }
+    if (repeated_input & AOS_KEY_UP) {
+        menu->config_cursor = (uint8_t)((menu->config_cursor + AOS_BUTTON_ACTIONS - 1) %
+                                        AOS_BUTTON_ACTIONS);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (repeated_input & AOS_KEY_DOWN) {
+        menu->config_cursor = (uint8_t)((menu->config_cursor + 1) % AOS_BUTTON_ACTIONS);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (new_input & AOS_KEY_SELECT) {
+        AosButtonConfig defaults;
+        aos_button_config_default(&defaults);
+        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+            menu->config_buttons[action] =
+                aos_button_config_index(defaults.action[action]);
+        return AOS_SOUL_MENU_CONFIG_EDITED;
+    }
+    int direction = repeated_input & (AOS_KEY_A | AOS_KEY_RIGHT) ? 1
+                    : repeated_input & AOS_KEY_LEFT              ? -1
+                                                                 : 0;
+    if (!direction) return 0;
+    uint8_t action = config_rows[menu->config_cursor];
+    menu->config_buttons[action] =
+        (uint8_t)((menu->config_buttons[action] + direction + 4) % 4);
+    return AOS_SOUL_MENU_CONFIG_EDITED;
+}
+
 unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
                                const AosEquipmentTables *equipment,
                                const AosItemUseRecord items[AOS_ITEM_RECORDS],
@@ -418,6 +485,8 @@ unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
         return update_equipment(menu, stats, equipment, new_input, repeated_input);
     if (menu->page == AOS_SOUL_MENU_PAGE_ITEM_USE)
         return update_item_use(menu, stats, items, vitals, new_input, repeated_input);
+    if (menu->page == AOS_SOUL_MENU_PAGE_CONFIG)
+        return update_config(menu, stats, new_input, repeated_input);
     if (new_input & AOS_KEY_START) {
         menu->open = false;
         return AOS_SOUL_MENU_CLOSED;

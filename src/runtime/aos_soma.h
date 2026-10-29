@@ -81,7 +81,8 @@ typedef enum {
     AOS_LANDING_HARD        /* state 4, vy > 6.25 or flag 0x80 */
 } AosLanding;
 
-/* Player-action aliases for the shared GBA input bits. */
+/* Fixed semantic action bits consumed by Soma. aos_button_config_remap turns
+ * the configured physical A/B/R/L assignment into these before this module. */
 enum {
     AOS_KEY_JUMP = AOS_KEY_A,         /* default of gEwramData + 0x1339A */
     AOS_KEY_ATTACK = AOS_KEY_B,       /* + 0x13398 */

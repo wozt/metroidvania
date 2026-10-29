@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "aos_button_config.h"
+
 /* The level fields of gEwramData->unk_1325C (include/structs/ewram.h) and
  * the bestiary bitset at 0x133A0. */
 enum { AOS_ITEM_RECORDS = 0x20 };
@@ -60,6 +62,7 @@ typedef struct {
     uint8_t red_soul, blue_soul, yellow_soul;
     int16_t mp;                  /* currentMP (0x1327C) */
     uint16_t status;             /* poison, curse and stone bits (0x13270) */
+    AosButtonConfig buttons;     /* attack, jump, ability, guardian (0x13398) */
 } AosStats;
 
 enum {

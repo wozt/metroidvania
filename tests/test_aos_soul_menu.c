@@ -16,6 +16,7 @@ int main(void) {
     stats.weapon = 0;
     stats.armor = 0;
     stats.accessory = AOS_EQUIPMENT_NONE;
+    aos_button_config_default(&stats.buttons);
     stats.weapon_counts[0] = stats.weapon_counts[7] = 1;
     stats.armor_counts[0] = stats.armor_counts[3] = stats.armor_counts[25] = 1;
     equipment.weapons[0].atk = 5;
@@ -170,6 +171,46 @@ int main(void) {
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK &&
            menu.page == AOS_SOUL_MENU_PAGE_HUB);
+
+    /* CONFIG stages native A/B/R/L indices, refuses duplicates and changes
+     * the semantic player controls only after a valid apply. */
+    menu.hub_cursor = AOS_PAUSE_CONFIG;
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_ACCEPTED);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_CONFIG && menu.config_cursor == 0);
+    assert(menu.config_buttons[AOS_BUTTON_ATTACK] == 1 &&
+           menu.config_buttons[AOS_BUTTON_JUMP] == 0 &&
+           menu.config_buttons[AOS_BUTTON_ABILITY] == 3 &&
+           menu.config_buttons[AOS_BUTTON_GUARDIAN] == 2);
+    assert(aos_button_config_remap(&stats.buttons, AOS_KEY_B | AOS_KEY_LEFT) ==
+           (AOS_KEY_B | AOS_KEY_LEFT));
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_RIGHT) ==
+           AOS_SOUL_MENU_CONFIG_EDITED);
+    assert(menu.config_buttons[AOS_BUTTON_ATTACK] == 2 &&
+           !aos_pause_config_unique(&menu));
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_REFUSED && menu.page == AOS_SOUL_MENU_PAGE_CONFIG);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
+    assert(menu.config_cursor == 2);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_LEFT) ==
+           AOS_SOUL_MENU_CONFIG_EDITED);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           (AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED));
+    assert(menu.page == AOS_SOUL_MENU_PAGE_HUB &&
+           stats.buttons.action[AOS_BUTTON_ATTACK] == AOS_KEY_R &&
+           stats.buttons.action[AOS_BUTTON_GUARDIAN] == AOS_KEY_B);
+    assert(aos_button_config_remap(&stats.buttons, AOS_KEY_R) == AOS_KEY_B);
+    assert(aos_button_config_remap(&stats.buttons, AOS_KEY_B) == AOS_KEY_R);
+
+    menu.hub_cursor = AOS_PAUSE_CONFIG;
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_SELECT,
+                                AOS_KEY_SELECT) == AOS_SOUL_MENU_CONFIG_EDITED);
+    assert(menu.config_buttons[AOS_BUTTON_ATTACK] == 1 &&
+           menu.config_buttons[AOS_BUTTON_GUARDIAN] == 2);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           (AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED));
 
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_CLOSED && !menu.open);

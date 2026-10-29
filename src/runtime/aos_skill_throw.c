@@ -59,10 +59,39 @@ static void roll(AosThrow *entity, const AosCollision *layer, const AosProbes *p
     }
 }
 
+/* Flag 2: the same sub_0806CAF8 step, but wall contact stops the stored
+ * speed instead of changing facing. Rock Armor (flag 0x10) bursts on its
+ * first landing; Waiter Skeleton (flag 0x400) rests there until timeout. */
+static void terrain(AosThrow *entity, const AosThrowRecord *record,
+                    const AosCollision *layer, const AosProbes *probes) {
+    AosEnemy *body = &entity->body;
+    body->x = entity->x;
+    body->y = entity->y;
+    body->vy = entity->vy;
+    body->ay = entity->gravity;
+    body->ax = 0;
+    body->mirrored = entity->facing_left;
+    int result = aos_enemy_probe_walk(body, layer, probes, -entity->roll_speed, 0);
+    entity->x = body->x;
+    entity->y = body->y;
+    entity->vx = body->vx;
+    entity->vy = body->vy;
+    if (result & 3) entity->roll_speed = 0;
+    if (!(result & 8)) return;
+    if (record->flags & AOS_THROW_LANDING_BURST) {
+        entity->landing_burst = true;
+        entity->state = 3;
+        aos_audio_play_song(0xD3);
+    }
+    if (record->flags & AOS_THROW_TIMEOUT) entity->roll_speed = 0;
+}
+
 bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
                             const AosCollision *layer, const AosProbes *probes, int cam_x,
                             int cam_y, int mx, int my) {
     entity->exploded = false;
+    entity->landing_burst = false;
+    entity->timeout_dust = false;
     switch (entity->state) {
     case 0:
         /* The 0x80 path takes an affine slot (sub_0803E654); the spin is
@@ -75,6 +104,8 @@ bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
         entity->gravity = record->gravity;
         entity->attacking = !(record->flags & 0x60);
         if (record->flags & 0x60) entity->timer = AOS_THROW_FUSE_FRAMES;
+        else if (record->flags & AOS_THROW_TIMEOUT) entity->timer = AOS_THROW_TIMEOUT_FRAMES;
+        entity->linked = record->flags & AOS_THROW_LINK;
         if (record->song) aos_audio_play_song(record->song);
         entity->state = 1;
         break;
@@ -86,8 +117,14 @@ bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
             entity->state = 2;
             entity->timer = 2;
             aos_audio_play_song(0xD7);
+        } else if ((record->flags & AOS_THROW_TIMEOUT) && --entity->timer <= 0x10) {
+            if (entity->timer == 0x10) entity->blinking = true;
+            if (entity->timer <= 0x0F && !(entity->timer & 1)) entity->timeout_dust = true;
+            if (entity->timer == 0) entity->state = 3;
         }
-        if ((record->flags & AOS_THROW_ROLL) && layer && probes) {
+        if ((record->flags & AOS_THROW_TERRAIN) && layer && probes) {
+            terrain(entity, record, layer, probes);
+        } else if ((record->flags & AOS_THROW_ROLL) && layer && probes) {
             roll(entity, layer, probes);
         } else {
             /* Neither terrain flag (2, 4): free flight; the x acceleration
@@ -108,7 +145,9 @@ bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
         if (entity->timer) entity->timer--;
         else entity->state = 3;
         break;
-    case 3: return false;
+    case 3:
+        entity->linked = false;
+        return false;
     default: break;
     }
     /* + 0x59 bit 2 was set by sub_08019478, so only the margins count. */

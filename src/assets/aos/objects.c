@@ -179,7 +179,7 @@ static const EntitySpec entities[] = {
     /* Resource 0 of 0x080E13BC, shared by several souls: the Merman's spout
      * and drops (sequences 0, 6), the Winged Skeleton's spear (still frame
      * 0), the Siren's notes (2-3) and the Axe Armor's axe (6). */
-    STATIC("skill_shared", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 4, 0, 2, 3, 6),
+    STATIC("skill_shared", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 5, 0, 2, 3, 6, 13),
     /* Resource 24 of 0x080E13BC: the Gladiator soul's frame 0 and walker
      * probes 0x084F13C8, the Harpy soul's dagger (still frame 1) and its
      * trail (3-5), and the Durga soul's sword (2). */
@@ -201,9 +201,11 @@ static const EntitySpec entities[] = {
     /* Resource 12 of 0x080E13BC: the Needles soul's urchin (sequence 0)
      * and its four burst pieces (still frames 0-3). */
     STATIC("skill_needles", 0x081D20F4, 0x0820B214, 0, 0x08232300, 4, 0, 1, 2, 3),
-    /* The two entries of 0x084F128C share their data and select still frame
-     * 0 (Evil Butcher) or 1 (Ripper). */
-    STATIC("skill_ripper", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0, 2, 0, 1),
+    /* The two entries of 0x084F128C select still frame 0 (Evil Butcher) or
+     * 1 (Ripper). Waiter Skeleton's shared throw uses the same resource's
+     * frame 11 and its distinct probe table 0x084F139C. */
+    {"skill_ripper", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0, 0x084F139C,
+     0, 0, 3, {0, 1, 11}},
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),
@@ -232,6 +234,10 @@ static const EffectSpec effects[] = {
     {"burst_15", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {15}, -1},
     /* sub_08045B44 type 0: still frame 0x36, OBJ row 6 (bank 2). */
     {"sparkle", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x36},
+    /* sub_08025540: the two randomly selected still frames of Rock Armor's
+     * four landing fragments, both on OBJ row 6 (palette bank 2). */
+    {"rock_fragment_0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x40},
+    {"rock_fragment_1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x41},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows

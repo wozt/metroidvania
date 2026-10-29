@@ -90,7 +90,6 @@ aos:asm:asm/code/code_080211F0.s:Skill_SkeletonKnight_Minotaur_Golem_Triton_Whit
 aos:asm:asm/code/code_080211F0.s:Skill_Undine_Skula_ZombieOfficer_IronGolem_DeadWarrior_PeepingEye_Succubus_FleshGolem_Tsuchinoko_Erinys_Mimic_ArcDemon_Use	Skill_Undine_Skula_ZombieOfficer_IronGolem_DeadWarrior_PeepingEye_Succubus_FleshGolem_Tsuchinoko_Erinys_Mimic_ArcDemon_Use	abilities	name			asm_function		asm/code/code_080211F0.s	34040	0	0
 aos:asm:asm/code/code_080211F0.s:Skill_Werejaguar_Weretiger_Use	Skill_Werejaguar_Weretiger_Use	abilities	name			asm_function		asm/code/code_080211F0.s	12635	0	11
 aos:asm:asm/code/code_080211F0.s:Skill_Witch_GiantGhost_Use	Skill_Witch_GiantGhost_Use	abilities	name			asm_function		asm/code/code_080211F0.s	28977	0	15
-aos:asm:asm/code/code_080211F0.s:sub_08025540	sub_08025540	abilities	referrers			asm_function	0x08025540	asm/code/code_080211F0.s	8562	1	4
 aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers			asm_function	0x08025620	asm/code/code_080211F0.s	8666	0	5
 aos:asm:asm/code/code_080211F0.s:sub_080256AC	sub_080256AC	abilities	referrers			asm_function	0x080256AC	asm/code/code_080211F0.s	8737	1	5
 aos:asm:asm/code/code_080211F0.s:sub_08026858	sub_08026858	abilities	referrers			asm_function	0x08026858	asm/code/code_080211F0.s	10924	0	5
@@ -120,7 +119,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802D900	sub_0802D900	unclassified		technic
 aos:asm:asm/code/code_080211F0.s:sub_0802DA14	sub_0802DA14	unclassified				asm_function	0x0802DA14	asm/code/code_080211F0.s	25055	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0802DA1C	sub_0802DA1C	abilities	referrers			asm_function	0x0802DA1C	asm/code/code_080211F0.s	25062	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DA5C	sub_0802DA5C	unclassified		technical	exclusive_callees	asm_function	0x0802DA5C	asm/code/code_080211F0.s	25094	0	1
-aos:asm:asm/code/code_080211F0.s:sub_0802DA98	sub_0802DA98	abilities	referrers			asm_function	0x0802DA98	asm/code/code_080211F0.s	25127	0	3
 aos:asm:asm/code/code_080211F0.s:sub_0802DAD4	sub_0802DAD4	abilities	referrers			asm_function	0x0802DAD4	asm/code/code_080211F0.s	25161	0	4
 aos:asm:asm/code/code_080211F0.s:sub_0802DB3C	sub_0802DB3C	abilities	referrers			asm_function	0x0802DB3C	asm/code/code_080211F0.s	25212	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DBD0	sub_0802DBD0	abilities	referrers			asm_function	0x0802DBD0	asm/code/code_080211F0.s	25292	0	1

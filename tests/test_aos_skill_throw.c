@@ -55,6 +55,12 @@ static void refused_tests(void) {
     assert(!aos_throw_supported(&other));
     other.flags = 0x0060;          /* the flash of 0x20 is not ported */
     assert(!aos_throw_supported(&other));
+    other.flags = AOS_THROW_TERRAIN | AOS_THROW_LANDING_BURST;
+    assert(aos_throw_supported(&other));
+    other.flags = AOS_THROW_TERRAIN | AOS_THROW_LINK | AOS_THROW_TIMEOUT;
+    assert(aos_throw_supported(&other));
+    other.flags |= 0x0200;         /* frame-derived attack box is not ported */
+    assert(!aos_throw_supported(&other));
 }
 
 /* Parameter 5's shape: a fused grenade rolling at 1.125, thrown up at 1.625. */
@@ -102,11 +108,69 @@ static void grenade_tests(void) {
     assert(turned && (w.x >> 16) < 128);
 }
 
+/* Parameters 0 and 1: Rock Armor's landing stone and Waiter Skeleton's
+ * timed food tray use the two flag-2 terrain paths. */
+static const AosThrowRecord rock = {0x10000, -0x24000, 0x2000, 0, 13, 0, 0, 0xE3,
+                                    AOS_THROW_TERRAIN | AOS_THROW_LANDING_BURST, 0, 0};
+static const AosThrowRecord waiter = {0x20000, -0x18000, 0x2000, 1, 11, 0, 0, 0xE5,
+                                      AOS_THROW_TERRAIN | AOS_THROW_LINK | AOS_THROW_TIMEOUT,
+                                      0, 0};
+static const AosProbes waiter_probes = {1, -6, 6, 4, {0}};
+
+static void terrain_throw_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    aos_audio_clear();
+    AosThrow r = aos_throw_create(100 << 16, 170 << 16, false);
+    assert(aos_throw_update_world(&r, &rock, &layer, &probes, 0, 0, 48, 48));
+    assert(r.state == 1 && r.attacking && r.roll_speed == 0x10000);
+    int frames = 0;
+    while (r.state == 1 && frames++ < 100)
+        assert(aos_throw_update_world(&r, &rock, &layer, &probes,
+                                      (r.x >> 16) - 120, (r.y >> 16) - 80, 48, 48));
+    assert(frames < 100 && r.state == 3 && r.landing_burst);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xE3) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xD3) == 1);
+    assert(!aos_throw_update_world(&r, &rock, &layer, &probes, 0, 0, 48, 48));
+
+    AosThrow w = aos_throw_create(100 << 16, 170 << 16, false);
+    assert(aos_throw_update_world(&w, &waiter, &layer, &waiter_probes, 0, 0, 48, 48));
+    assert(w.timer == AOS_THROW_TIMEOUT_FRAMES && w.linked && w.attacking);
+    int dust = 0;
+    for (int i = 0; i < AOS_THROW_TIMEOUT_FRAMES; ++i) {
+        assert(aos_throw_update_world(&w, &waiter, &layer, &waiter_probes,
+                                      (w.x >> 16) - 120, (w.y >> 16) - 80, 48, 48));
+        dust += w.timeout_dust;
+        if (i == AOS_THROW_TIMEOUT_FRAMES - 0x11) assert(w.blinking && w.timer == 0x10);
+    }
+    assert(w.state == 3 && w.timer == 0 && w.blinking && dust == 8);
+    assert(w.roll_speed == 0);
+    assert(!aos_throw_update_world(&w, &waiter, &layer, &waiter_probes, 0, 0, 48, 48));
+    assert(!w.linked);
+}
+
+static void landing_fragment_tests(void) {
+    static const uint8_t ticks[] = {1};
+    static const AosAnimDef def = {.count = 1, .durations = ticks};
+    static const AosAnimSet set = {&def, 1};
+    const AosEffectWorld world = {NULL, 0, 0, NULL, 0, 0};
+    AosEffect fragment = {.ballistic = true, .x = 100 << 16, .y = 100 << 16,
+                          .vx = 0x10000, .vy = -0x10000, .ay = 0x2000};
+    assert(aos_effect_update(&fragment, &set, NULL, &world));
+    assert(fragment.started && fragment.x == 101 << 16 &&
+           fragment.y == (100 << 16) - 0xE000 && fragment.vy == -0xE000);
+    fragment.x = 289 << 16; /* beyond 240 + margin 4 (48) */
+    fragment.vx = 0;
+    assert(!aos_effect_update(&fragment, &set, NULL, &world));
+}
+
 int main(void) {
     flight_tests();
     facing_left_tests();
     refused_tests();
     grenade_tests();
+    terrain_throw_tests();
+    landing_fragment_tests();
     puts("aos skill throw tests passed");
     return 0;
 }

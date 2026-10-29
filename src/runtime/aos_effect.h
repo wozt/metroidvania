@@ -47,7 +47,9 @@ enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
        AOS_EFFECT_DUST = 6, AOS_EFFECT_IMPACT = 7, AOS_EFFECT_CASING = 8,
        AOS_EFFECT_EMBER = 9, AOS_EFFECT_BURST_1 = 10, AOS_EFFECT_BURST_12 = 11,
-       AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_SPARKLE = 13, AOS_EFFECT_KINDS = 14 };
+       AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_SPARKLE = 13,
+       AOS_EFFECT_ROCK_FRAGMENT_0 = 14, AOS_EFFECT_ROCK_FRAGMENT_1 = 15,
+       AOS_EFFECT_KINDS = 16 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */
@@ -60,6 +62,7 @@ typedef struct {
     bool follow;            /* sub_080C9198: a spark held on the player */
     bool burst;             /* sub_08045E80 */
     bool timed;             /* sub_08045000 */
+    bool ballistic;         /* sub_0802DA98: acceleration, 8.0 clamps, margin 4 */
     uint8_t state;          /* + 0x0A of a casing: 1 falling, 2 bounced */
     int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
     uint8_t flags;          /* + 0x18 of a particle */

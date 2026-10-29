@@ -26,14 +26,20 @@ typedef struct {
 enum {
     AOS_THROW_RECORDS = 8,
     AOS_THROW_ANIMATED = 0x0001,
+    AOS_THROW_TERRAIN = 0x0002,     /* walks the terrain without rebounding */
     AOS_THROW_ROLL = 0x0004,        /* walks the terrain and bounces */
+    AOS_THROW_LINK = 0x0008,        /* temporarily occupies gEwramData + 0x13168 */
+    AOS_THROW_LANDING_BURST = 0x0010,
     AOS_THROW_FUSE = 0x0040,        /* explodes after 0x50 frames (0x20: with a flash) */
     AOS_THROW_SPIN = 0x0080,
-    /* The flags this port follows; the others (terrain probe 2, the flash
-     * 0x20, shards 0x100, frame boxes 0x200, timers 0x400, the 0x13168
-     * link 8, the landing 0x10) are refused. */
-    AOS_THROW_PORTED_FLAGS = AOS_THROW_SPIN | AOS_THROW_ROLL | AOS_THROW_FUSE,
+    AOS_THROW_TIMEOUT = 0x0400,     /* 200-frame grounded lifetime */
+    /* The flags this port follows; the flash 0x20, shards 0x100 and
+     * frame-derived boxes 0x200 remain refused. */
+    AOS_THROW_PORTED_FLAGS = AOS_THROW_TERRAIN | AOS_THROW_ROLL | AOS_THROW_LINK |
+                             AOS_THROW_LANDING_BURST | AOS_THROW_FUSE | AOS_THROW_SPIN |
+                             AOS_THROW_TIMEOUT,
     AOS_THROW_FUSE_FRAMES = 0x50,
+    AOS_THROW_TIMEOUT_FRAMES = 0xC8,
 };
 
 typedef struct {
@@ -51,6 +57,10 @@ typedef struct {
     bool attacking;         /* + 0x72 bit 1 clear */
     bool hidden;            /* + 0x58 bit 5 after the explosion */
     bool exploded;          /* the update that ran sub_08045A98(x, y, 0) */
+    bool landing_burst;     /* this update ran sub_08025540 */
+    bool timeout_dust;      /* this update ran sub_08045CEC(x, y, 4, 6) */
+    bool blinking;          /* + 0x0F after the timeout reaches 16 */
+    bool linked;            /* flag 8's temporary gEwramData + 0x13168 link */
     AosEnemy body;          /* the probe walker's view of a rolling throw */
 } AosThrow;
 
@@ -68,14 +78,17 @@ AosThrow aos_throw_create(int32_t soma_x, int32_t soma_y, bool facing_left);
  * on entry: its slot is released and the count drops). */
 bool aos_throw_update(AosThrow *entity, const AosThrowRecord *record, int cam_x, int cam_y,
                       int mx, int my);
-/* The same with the terrain a rolling throw (flag 4) walks: state 0 also
+/* The same with terrain walkers (flags 2 and 4): state 0 also
  * plays the record's song and arms a fused throw (flag 0x40: 0x50 frames,
  * its attack off); in state 1 the fuse counts down and at 0 explodes it
  * (`exploded`; sound 0xD7, its attack on, hidden, state 2 for 2 frames,
  * then state 4 for 16, then gone); a rolling throw steps the walker
  * sub_0806CAF8 (mode 0, the speed negated) with the gravity, turns at
  * walls and on a floor bounces at -vy / 2 with sound 0x11B when it fell
- * faster than 1.0, else stops rolling. */
+ * faster than 1.0, else stops rolling. Flag 2 stops at walls; flag 0x10
+ * emits `landing_burst`, plays 0xD3 and ends on its first floor; flag
+ * 0x400 lasts 200 frames, starts blinking at 16 and emits `timeout_dust`
+ * on its last eight even frames. */
 bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
                             const AosCollision *layer, const AosProbes *probes, int cam_x,
                             int cam_y, int mx, int my);

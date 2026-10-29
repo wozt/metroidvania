@@ -235,7 +235,9 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "dark_smoke", "fire", "spark",
                                                           "dust", "impact", "casing",
                                                           "ember", "burst_1", "burst_12",
-                                                          "burst_15", "sparkle"};
+                                                          "burst_15", "sparkle",
+                                                          "rock_fragment_0",
+                                                          "rock_fragment_1"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 
@@ -744,6 +746,7 @@ typedef struct {
     const AosThrowRecord *throws;   /* metadata/skill_throws.tsv, NULL when missing */
     bool bone;                      /* resource 7 (Enemy/skill_bone) is loaded */
     const AosEnemyKind *bone_kind;  /* its walker probes and still frames */
+    const AosEnemyKind *ripper_kind; /* resource 1 and probes 0x084F139C */
     const AosAnimSet *millione;     /* resource 7, sequence 0 */
     const AosAnimSet *fish_head;    /* resource 17, sequence 0 */
     const AosAnimSet *killer_fish;  /* resource 11, sequences 0-1 */
@@ -751,6 +754,8 @@ typedef struct {
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
     int bone_count;
+    const int *ripper_ids;
+    int ripper_count;
     AosEffect *effects;             /* the room's shared effects */
     size_t *effect_count;
     const AosEffect *burst;         /* burst list 0 of sub_08045A98 */
@@ -801,14 +806,23 @@ static int cast_red_soul(void *context) {
     if (!souls->records || souls->stats->red_soul >= AOS_RED_SOUL_RECORDS) return -1;
     const AosRedSoulRecord *record = &souls->records[souls->stats->red_soul];
     uint32_t routine = record->skill;
-    /* The shared throw routine is followed for the records whose flags are
-     * ported and whose graphics are exported (only the bone, resource 7). */
-    bool throwable = routine == SKILL_THROW_ROUTINE && souls->throws &&
-                     record->parameter < AOS_THROW_RECORDS &&
-                     aos_throw_supported(&souls->throws[record->parameter]) &&
-                     souls->throws[record->parameter].resource == 7 && souls->bone &&
-                     static_index(souls->bone_ids, souls->bone_count,
-                                  souls->throws[record->parameter].frame) >= 0;
+    /* The shared throw routine is followed when all of the selected record's
+     * flags and its resource-specific still frame are available. */
+    const AosThrowRecord *throw_record = souls->throws && record->parameter < AOS_THROW_RECORDS
+                                             ? &souls->throws[record->parameter]
+                                             : NULL;
+    bool throw_art = throw_record &&
+                     ((throw_record->resource == 0 &&
+                       static_index(souls->shared_ids, souls->shared_count,
+                                    throw_record->frame) >= 0) ||
+                      (throw_record->resource == 1 &&
+                       static_index(souls->ripper_ids, souls->ripper_count,
+                                    throw_record->frame) >= 0) ||
+                      (throw_record->resource == 7 && souls->bone &&
+                       static_index(souls->bone_ids, souls->bone_count,
+                                    throw_record->frame) >= 0));
+    bool throwable = routine == SKILL_THROW_ROUTINE && throw_record &&
+                     aos_throw_supported(throw_record) && throw_art;
     int kind = routine == SKILL_BAT_ROUTINE && souls->bat      ? SKILL_BAT
                : routine == SKILL_ARCHER_ROUTINE && souls->bow ? SKILL_BOW
                : throwable                                     ? SKILL_THROW
@@ -1022,8 +1036,10 @@ static void update_skills(AriaSouls *souls) {
             AosThrow *thrown = &skill->thrown;
             int mx = souls->margins ? souls->margins[4][0] : 16;
             int my = souls->margins ? souls->margins[4][1] : 16;
+            const AosEnemyKind *throw_kind = record->resource == 1 ? souls->ripper_kind
+                                                                   : souls->bone_kind;
             if (!aos_throw_update_world(thrown, record, souls->layer,
-                                        souls->bone_kind ? &souls->bone_kind->probes : NULL,
+                                        throw_kind ? &throw_kind->probes : NULL,
                                         souls->cam_x, souls->cam_y, mx, my)) {
                 end_skill(souls, skill);
                 break;
@@ -1036,6 +1052,32 @@ static void update_skills(AriaSouls *souls) {
                 piece.x = (int32_t)((uint32_t)(int16_t)((thrown->x >> 16) + (piece.x >> 16)) << 16);
                 piece.y = (int32_t)((uint32_t)(int16_t)((thrown->y >> 16) + (piece.y >> 16)) << 16);
                 souls->effects[(*souls->effect_count)++] = piece;
+            }
+            /* sub_08025540: four randomly selected static fragments. */
+            for (int k = 0; thrown->landing_burst && souls->effects && k < 4 &&
+                            *souls->effect_count < MAX_EFFECTS;
+                 ++k) {
+                AosEffect piece = {
+                    .kind = (uint8_t)(AOS_EFFECT_ROCK_FRAGMENT_0 + (aos_random() & 1)),
+                    .ballistic = true,
+                    .x = thrown->x + (int32_t)((aos_random() & 7) - 4) * 0x10000,
+                    .y = thrown->y + (int32_t)((aos_random() & 7) - 4) * 0x10000,
+                    .vx = (int32_t)(aos_random() & 0xFF) << 8,
+                    .ay = 0x2000};
+                if (aos_random() & 1) piece.vx = -piece.vx;
+                piece.vy = -0x10000 - ((int32_t)(aos_random() & 0xFF) << 8);
+                souls->effects[(*souls->effect_count)++] = piece;
+            }
+            /* Flag 0x400's last eight even frames call the standard
+             * animation-4, row-6 drifting dust helper. */
+            if (thrown->timeout_dust && souls->effects &&
+                *souls->effect_count < MAX_EFFECTS) {
+                souls->effects[(*souls->effect_count)++] = (AosEffect){
+                    .kind = AOS_EFFECT_DUST,
+                    .drift = true,
+                    .x = thrown->x + (int32_t)(aos_random() & 0x7FFFF) - 0x40000,
+                    .y = thrown->y + (int32_t)(aos_random() & 0x7FFFF) - 0x40000,
+                    .ay = (int32_t)(aos_random() & 0x3FF) - 0x1A00};
             }
             skill->x = thrown->x;
             skill->y = thrown->y;
@@ -3516,7 +3558,11 @@ int main(int argc, char **argv) {
                                 ? &needles->set
                                 : NULL;
             const __typeof__(objects.skills[0]) *ripper = &objects.skills[SKILL_ART_RIPPER];
-            souls.ripper = objects_ok && ripper->loaded && ripper->static_count == 2;
+            souls.ripper = objects_ok && ripper->loaded &&
+                           blade_frame(ripper, 0) && blade_frame(ripper, 1);
+            souls.ripper_kind = objects_ok ? &ripper->kind : NULL;
+            souls.ripper_ids = ripper->static_ids;
+            souls.ripper_count = objects_ok ? ripper->static_count : 0;
             const __typeof__(objects.skills[0]) *fish_head =
                 &objects.skills[SKILL_ART_FISH_HEAD];
             souls.fish_head = objects_ok && fish_head->loaded && fish_head->defs[0].count
@@ -3781,6 +3827,7 @@ int main(int argc, char **argv) {
                 continue;
             if (skill->kind == SKILL_KILLER_FISH && skill->killer_fish.hidden) continue;
             if (skill->kind == SKILL_RIPPER && skill->ripper.blink == 2 && (step & 1)) continue;
+            if (skill->kind == SKILL_THROW && skill->thrown.blinking && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
@@ -3788,7 +3835,12 @@ int main(int argc, char **argv) {
                 : skill->kind == SKILL_THROW
                     ? (skill->thrown.hidden
                            ? NULL
-                           : blade_frame(&objects.skills[SKILL_ART_BONE],
+                           : blade_frame(&objects.skills[
+                                             souls.throws[skill->parameter].resource == 0
+                                                 ? SKILL_ART_SHARED
+                                                 : souls.throws[skill->parameter].resource == 1
+                                                       ? SKILL_ART_RIPPER
+                                                       : SKILL_ART_BONE],
                                          souls.throws[skill->parameter].frame))
                 : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
                     ? blade_frame(&objects.skills[SKILL_ART_BLADES],

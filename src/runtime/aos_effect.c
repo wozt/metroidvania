@@ -54,6 +54,24 @@ static bool drift_update(AosEffect *e, const AosAnimSet *anims) {
 
 static void clamped_move(int32_t *pos, int32_t *v, int32_t a);
 
+/* sub_0802DA98, used by the four fragments of the Rock Armor soul's
+ * landing: both accelerated axes move with the normal 8.0 cap, and the
+ * entity ends outside screen-margin entry 4. Its art is a still frame. */
+static bool ballistic_update(AosEffect *e, const AosAnimSet *anims,
+                             const AosEffectWorld *world) {
+    if (!world || !anims) return false;
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, true)) return false;
+        e->anim.id = 0;
+        e->started = true;
+    }
+    clamped_move(&e->x, &e->vx, e->ax);
+    clamped_move(&e->y, &e->vy, e->ay);
+    int sx = (e->x >> 16) - world->cam_x, sy = (e->y >> 16) - world->cam_y;
+    /* Exported screen-margin entry 4 is (48, 48). */
+    return sx >= -48 && sx <= 48 + 0xF0 && sy >= -48 && sy <= 48 + 0xA0;
+}
+
 /* sub_08045000 state 1: the move, then the lifetime. */
 static bool timed_update(AosEffect *e, const AosAnimSet *anims) {
     if (!e->started) {
@@ -150,6 +168,7 @@ bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t
     if (effect->drift) return drift_update(effect, anims);
     if (effect->burst) return burst_update(effect, anims);
     if (effect->timed) return timed_update(effect, anims);
+    if (effect->ballistic) return ballistic_update(effect, anims, world);
     if (!effect->started) {
         /* State 0: the graphics set up, the animation played once. */
         aos_anim_start(&effect->anim, anims, 0, false);

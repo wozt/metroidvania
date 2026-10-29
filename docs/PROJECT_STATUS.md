@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0633 - Rock Armor and Waiter Skeleton red souls
+
+- Ported parameters 0 and 1 of
+  `Skill_Skeleton_ZombieSoldier_RockArmor_WaiterSkeleton_GiantSkeleton_BomberArmor_Use`.
+  Rock Armor's resource-0 stone now walks the native `0x084F1388` probes,
+  plays its cast and landing sounds, ends at its first floor contact and
+  creates four source-randomized ballistic fragments from native frames
+  0x40 and 0x41.
+- Waiter Skeleton's resource-1 tray now uses its distinct `0x084F139C`
+  probes, stops against walls and floors, keeps the native 200-frame linked
+  lifetime, starts blinking at 16 and emits animation-4 dust on its final
+  eight even frames before releasing the link. The still frames, probes and
+  fragment art are part of the native object export.
+- Added deterministic ROM-free tests for both terrain paths, timers, events,
+  sounds, link cleanup and ballistic fragment motion. The native object
+  golden set now guards 574 sequences, 1,855 frames and 1,200 runtime files.
+  Local room 0/3 captures showed Rock Armor's four landing fragments and
+  Waiter Skeleton's native tray with its final dust. Source-derived and
+  unit-tested, not emulator-compared. Rock Armor's soul aspect and both
+  detailed catalog entries are now ported; Rock Armor's enemy remains
+  partial because its AI and enemy sounds are incomplete.
+
 ## Patch 0632 - Killer Fish red soul
 
 - Ported `SkillKillerFishUse` with resource 11's native appearance and loop

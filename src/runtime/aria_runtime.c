@@ -2848,10 +2848,10 @@ static void debug_text(SDL_Renderer *renderer, int line, const char *text) {
     SDL_RenderDebugText(renderer, 2.0f, (float)(2 + line * 8), text);
 }
 
-/* Source-adapted first slice of sub_080473F4 / sub_08047764. Native tile,
- * icon, description and transition rendering remain separate future work. */
+/* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
+ * description and transition rendering remain separate future work. */
 static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
-                           const AosStats *stats) {
+                           const AosStats *stats, const AosSoma *soma) {
     if (!menu->open) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 7, 12, 24, 238);
@@ -2859,11 +2859,37 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
     SDL_RenderFillRect(renderer, &whole);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     char line[64];
+    if (menu->page == AOS_SOUL_MENU_PAGE_HUB) {
+        debug_text(renderer, 0, "STATUS");
+        snprintf(line, sizeof line, "LV %u   HP %d/%d   MP %d/%u", stats->level,
+                 soma->hp, soma->max_hp, stats->mp, stats->max_mp);
+        debug_text(renderer, 1, line);
+        snprintf(line, sizeof line, "ATK %d  DEF %d  GOLD %u", stats->atk, stats->def,
+                 stats->gold);
+        debug_text(renderer, 2, line);
+        for (int entry = 0; entry < AOS_PAUSE_ENTRIES; ++entry) {
+            snprintf(line, sizeof line, "%c %-10s %s", entry == menu->hub_cursor ? '>' : ' ',
+                     aos_pause_entry_name((uint8_t)entry),
+                     entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_ABILITY ? "" : "[pending]");
+            debug_text(renderer, 4 + entry, line);
+        }
+        debug_text(renderer, 13, "A select  B/Start close");
+        return;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_UNAVAILABLE) {
+        snprintf(line, sizeof line, "%s", aos_pause_entry_name(menu->hub_cursor));
+        debug_text(renderer, 0, line);
+        debug_text(renderer, 2, "This native page is not reconstructed yet.");
+        debug_text(renderer, 4, "B return  Start close");
+        return;
+    }
     snprintf(line, sizeof line, "SOUL EQUIPMENT  <%s>",
              aos_soul_menu_category_name(menu->category));
     debug_text(renderer, 0, line);
-    debug_text(renderer, 1, "L/R family  Up/Down select");
-    debug_text(renderer, 2, "A equip/toggle  B/Start close");
+    debug_text(renderer, 1, menu->page == AOS_SOUL_MENU_PAGE_SOUL_SET
+                                ? "L/R family  Up/Down select"
+                                : "ABILITY  Up/Down select");
+    debug_text(renderer, 2, "A equip/toggle  B back  Start close");
 
     int choices = aos_soul_menu_count(menu->category) +
                   (menu->category == AOS_SOUL_MENU_ABILITY ? 0 : 1);
@@ -3579,15 +3605,20 @@ int main(int argc, char **argv) {
                                            : 0;
             if (soul_menu_event & AOS_SOUL_MENU_OPENED) {
                 aos_audio_play_song(AOS_AUDIO_PAUSE);
-                printf("Soul equipment menu opened\n");
+                printf("Pause hub opened\n");
             }
+            if (soul_menu_event & AOS_SOUL_MENU_MOVED) aos_audio_play_song(0xF1);
+            if (soul_menu_event & AOS_SOUL_MENU_ACCEPTED) aos_audio_play_song(0xF3);
+            if (soul_menu_event & AOS_SOUL_MENU_BACK) aos_audio_play_song(0xF0);
+            if (soul_menu_event & AOS_SOUL_MENU_UNAVAILABLE)
+                printf("Pause page pending: %s\n", aos_pause_entry_name(soul_menu.hub_cursor));
             if (soul_menu_event & AOS_SOUL_MENU_CHANGED)
                 printf("Equipped souls: red %u, blue %u, yellow %u, abilities %02x%02x\n",
                        progress.red_soul, progress.blue_soul, progress.yellow_soul,
                        progress.abilities[1], progress.abilities[0]);
             if (soul_menu_event & AOS_SOUL_MENU_CLOSED) {
                 aos_audio_play_song(AOS_AUDIO_RESUME);
-                printf("Soul equipment menu closed\n");
+                printf("Pause hub closed\n");
             }
             if (soul_menu.open || soul_menu_event) {
                 ++step;
@@ -4103,7 +4134,7 @@ int main(int argc, char **argv) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
         }
-        draw_soul_menu(renderer, &soul_menu, &progress);
+        draw_soul_menu(renderer, &soul_menu, &progress, &soma);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

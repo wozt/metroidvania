@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0635 - Native-order Aria pause hub
+
+- Reconstructed the seven-entry controller topology of `sub_08047764` in
+  native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy.
+  START now opens this hub instead of jumping directly into soul equipment;
+  repeated Up/Down wraps all seven entries, A selects one, B returns from a
+  page, and B or START from the hub resumes gameplay. The runtime requests
+  the source menu sounds `0xF0`, `0xF1` and `0xF3` for back, movement and
+  acceptance.
+- Soul Set and Ability are now separate usable entries, matching the native
+  menu division. Soul Set cycles only the three coloured families while the
+  Ability page toggles the six owned ability souls. Equip, Item Use, Sleep,
+  Config and Enemy are deliberately presented as pending native pages rather
+  than opening invented interfaces.
+- Expanded the deterministic menu test with seven-entry wrapping, entry
+  names, unavailable-page routing, back navigation, separate Soul Set and
+  Ability paths, and closing from the hub. A reviewed local room 0/3 capture
+  showed the status summary, native-order entries and pending-page markers.
+  This remains source-adapted and unit-tested, not emulator-compared; native
+  portrait, tilemaps, icons, descriptions, cursor OAM and fades are not yet
+  rendered.
+
 ## Patch 0634 - In-game soul equipment menu
 
 - Added a ROM-free C11 controller for the first usable slice of

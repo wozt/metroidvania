@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-29T17:32:14+00:00",
+ "generated_at": "2026-10-29T17:38:55+00:00",
  "git": {
-  "commit": "74c2f78",
+  "commit": "6b9ecf4",
   "branch": "main",
   "dirty": true
  },
@@ -12994,7 +12994,7 @@
    "id": "aos.souls.equipment_menu",
    "area": "aos",
    "category": "menus",
-   "title": "Aria in-game soul equipment menu",
+   "title": "Aria pause hub and soul equipment menus",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -13016,10 +13016,14 @@
    "native_routines": [
     "sub_080473F4",
     "sub_08047764",
+    "sub_08048D84",
+    "sub_08048EA4",
+    "sub_0804BA18",
+    "sub_0804BB40",
     "sub_08032ADC"
    ],
-   "limitations": "The runtime opens the soul page directly with START instead of reproducing the native seven-entry pause hub. It uses an SDL diagnostic text overlay rather than native tilemaps, icons, descriptions, cursor OAM and fades. Pause audio is requested through the native command controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens a four-family inventory view. L/R selects red, blue, yellow or ability souls; repeated Up/Down skips unowned entries; A equips or removes coloured souls and toggles owned abilities; B or START closes it. Names, native inventory quantities and current equipment are displayed. The existing schema-v7 save bridge persists the result at the next save-room write. A local room 0/3 capture with Rock Armor owned showed the menu and its equipped marker. Source-adapted and unit-tested, not emulator-compared.",
-   "next_action": "Reconstruct the native pause hub, soul icons, descriptions, tilemaps, cursor OAM and transitions, then connect the remaining soul effects.",
+   "limitations": "The hub and its usable pages use an SDL diagnostic text overlay rather than native tilemaps, portrait, icons, descriptions, cursor OAM and fades. Equip, Item Use, Sleep, Config and Enemy are labelled but explicitly unavailable. Soul Set still uses L/R as a source-adapted colour shortcut instead of the native category transition. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters Soul Set and Ability or an explicit pending page for the other entries; B returns from a page and B or START from the hub resumes play. Soul Set equips or removes owned red, blue and yellow souls. Ability separately toggles owned ability souls. Names, native inventory quantities and current equipment are displayed, and the schema-v7 save bridge persists changes at the next save-room write. Local room 0/3 captures showed both the hub and Rock Armor's equipment row. Source-adapted and unit-tested, not emulator-compared.",
+   "next_action": "Reconstruct Equip and Item Use next, then the native hub and soul-page graphics, descriptions, cursor OAM and transitions.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul_menu.c",
@@ -13027,7 +13031,7 @@
      "tests/test_aos_save.c"
     ],
     "in_game_check": [
-     "aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the soul equipment overlay"
+     "aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the seven-entry hub; Soul Set opens the reviewed equipment overlay"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -18023,6 +18027,12 @@
  },
  "timeline": [
   {
+   "commit": "6b9ecf4",
+   "date": "2026-10-29",
+   "subject": "Add Aria soul equipment menu",
+   "scope": "project"
+  },
+  {
    "commit": "74c2f78",
    "date": "2026-10-29",
    "subject": "Port Rock Armor and Waiter Skeleton souls",
@@ -18495,12 +18505,6 @@
    "date": "2026-10-26",
    "subject": "Generate the dashboard and check generated documents natively",
    "scope": "project"
-  },
-  {
-   "commit": "abb18c0",
-   "date": "2026-10-26",
-   "subject": "Port the editor CLI test and the leak check to C",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -18561,9 +18565,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 637,
-    "routines_attached_to_features": 637,
-    "unassigned_routines": 2936,
+    "routines_cited_by_features": 641,
+    "routines_attached_to_features": 641,
+    "unassigned_routines": 2932,
     "call_edges": 14228
    }
   },

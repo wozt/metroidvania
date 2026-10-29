@@ -34,6 +34,13 @@ static const char *const ability_names[] = {
 };
 
 static const char *const category_names[] = {"RED", "BLUE", "YELLOW", "ABILITY"};
+static const char *const pause_entry_names[] = {
+    "SOUL SET", "EQUIP", "ITEM USE", "ABILITY", "SLEEP", "CONFIG", "ENEMY",
+};
+
+const char *aos_pause_entry_name(uint8_t entry) {
+    return entry < AOS_PAUSE_ENTRIES ? pause_entry_names[entry] : "UNKNOWN";
+}
 
 int aos_soul_menu_count(uint8_t category) {
     static const uint8_t counts[] = {55, 24, 35, 6};
@@ -107,29 +114,75 @@ static void initialise_cursors(AosSoulMenu *menu, const AosStats *stats) {
         move_cursor(menu, stats, 1);
 }
 
+static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
+                           uint16_t new_input, uint16_t repeated_input) {
+    if (new_input & (AOS_KEY_START | AOS_KEY_B)) {
+        menu->open = false;
+        return AOS_SOUL_MENU_CLOSED;
+    }
+    if (repeated_input & AOS_KEY_UP) {
+        menu->hub_cursor = (uint8_t)((menu->hub_cursor + AOS_PAUSE_ENTRIES - 1) %
+                                     AOS_PAUSE_ENTRIES);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (repeated_input & AOS_KEY_DOWN) {
+        menu->hub_cursor = (uint8_t)((menu->hub_cursor + 1) % AOS_PAUSE_ENTRIES);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (!(new_input & AOS_KEY_A)) return 0;
+    if (menu->hub_cursor == AOS_PAUSE_SOUL_SET) {
+        menu->page = AOS_SOUL_MENU_PAGE_SOUL_SET;
+        menu->category = AOS_SOUL_MENU_RED;
+        initialise_cursors(menu, stats);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (menu->hub_cursor == AOS_PAUSE_ABILITY) {
+        menu->page = AOS_SOUL_MENU_PAGE_ABILITY;
+        menu->category = AOS_SOUL_MENU_ABILITY;
+        initialise_cursors(menu, stats);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    menu->page = AOS_SOUL_MENU_PAGE_UNAVAILABLE;
+    return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
+}
+
 unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
                               uint16_t new_input, uint16_t repeated_input) {
     if (!menu->open) {
         if (!(new_input & AOS_KEY_START)) return 0;
         menu->open = true;
-        initialise_cursors(menu, stats);
+        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        if (menu->hub_cursor >= AOS_PAUSE_ENTRIES) menu->hub_cursor = AOS_PAUSE_SOUL_SET;
         return AOS_SOUL_MENU_OPENED;
     }
-    if (new_input & (AOS_KEY_START | AOS_KEY_B)) {
+    if (menu->page == AOS_SOUL_MENU_PAGE_HUB)
+        return update_hub(menu, stats, new_input, repeated_input);
+    if (new_input & AOS_KEY_START) {
         menu->open = false;
         return AOS_SOUL_MENU_CLOSED;
     }
-    if (new_input & AOS_KEY_L)
-        menu->category = (uint8_t)((menu->category + AOS_SOUL_MENU_CATEGORIES - 1) %
-                                   AOS_SOUL_MENU_CATEGORIES);
-    else if (new_input & AOS_KEY_R)
-        menu->category = (uint8_t)((menu->category + 1) % AOS_SOUL_MENU_CATEGORIES);
+    if (new_input & AOS_KEY_B) {
+        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        return AOS_SOUL_MENU_BACK;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_UNAVAILABLE) return 0;
+    if (menu->page == AOS_SOUL_MENU_PAGE_SOUL_SET && new_input & AOS_KEY_L)
+        menu->category = (uint8_t)((menu->category + AOS_SOUL_MENU_ABILITY - 1) %
+                                   AOS_SOUL_MENU_ABILITY);
+    else if (menu->page == AOS_SOUL_MENU_PAGE_SOUL_SET && new_input & AOS_KEY_R)
+        menu->category = (uint8_t)((menu->category + 1) % AOS_SOUL_MENU_ABILITY);
     if (new_input & (AOS_KEY_L | AOS_KEY_R)) {
         if (!available(menu, stats, menu->cursor[menu->category])) move_cursor(menu, stats, 1);
-        return 0;
+        return menu->page == AOS_SOUL_MENU_PAGE_SOUL_SET ? AOS_SOUL_MENU_MOVED : 0;
     }
-    if (repeated_input & AOS_KEY_UP) move_cursor(menu, stats, -1);
-    else if (repeated_input & AOS_KEY_DOWN) move_cursor(menu, stats, 1);
+    if (repeated_input & AOS_KEY_UP) {
+        move_cursor(menu, stats, -1);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (repeated_input & AOS_KEY_DOWN) {
+        move_cursor(menu, stats, 1);
+        return AOS_SOUL_MENU_MOVED;
+    }
     if (!(new_input & AOS_KEY_A) || !available(menu, stats, menu->cursor[menu->category])) return 0;
     if (menu->category == AOS_SOUL_MENU_ABILITY) {
         int index = menu->cursor[menu->category];

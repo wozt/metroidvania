@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 637 | 2936 |
+| Castlevania: Aria of Sorrow | 641 | 2932 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1147,15 +1147,15 @@ Dependencies: `aos.title.input_stage8`.
 Known divergences: Cursor and window state only: the 4-bpp tile blitters (sub_0803FF64, sub_08040048, sub_080402DC, sub_0804039C) and the cell erasers (sub_08040E90, sub_080410BC, through sub_08040F84 and sub_080411AC) are not ported; callbacks receive each glyph and cell position, and the frontend draws glyphs with the existing proportional-font renderer. Context B's font (metrics 0x080E2EC0) is not loaded, so only context A is drawn. The native print loop is unbounded; the port stops at the entry's end.  
 Next action: Port the tile blitters and cell erasers with VRAM tile output, load context B's font for the language menu, and move the file names and statistics onto this window.
 
-[~] **`aos.souls.equipment_menu` — Aria in-game soul equipment menu.** START freezes gameplay and opens a four-family inventory view. L/R selects red, blue, yellow or ability souls; repeated Up/Down skips unowned entries; A equips or removes coloured souls and toggles owned abilities; B or START closes it. Names, native inventory quantities and current equipment are displayed. The existing schema-v7 save bridge persists the result at the next save-room write. A local room 0/3 capture with Rock Armor owned showed the menu and its equipped marker. Source-adapted and unit-tested, not emulator-compared.
+[~] **`aos.souls.equipment_menu` — Aria pause hub and soul equipment menus.** START freezes gameplay and opens the seven-entry hub in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters Soul Set and Ability or an explicit pending page for the other entries; B returns from a page and B or START from the hub resumes play. Soul Set equips or removes owned red, blue and yellow souls. Ability separately toggles owned ability souls. Names, native inventory quantities and current equipment are displayed, and the schema-v7 save bridge persists changes at the next save-room write. Local room 0/3 captures showed both the hub and Rock Armor's equipment row. Source-adapted and unit-tested, not emulator-compared.
 
-Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080473F4`, `aos:asm:asm/code/code_08040A38.s:sub_08047764`, `aos:c:src/code_08032444.c:sub_08032ADC`.  
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080473F4`, `aos:asm:asm/code/code_08040A38.s:sub_08047764`, `aos:asm:asm/code/code_08040A38.s:sub_08048D84`, `aos:asm:asm/code/code_08040A38.s:sub_08048EA4`, `aos:asm:asm/code/code_08040A38.s:sub_0804BA18`, `aos:asm:asm/code/code_08040A38.s:sub_0804BB40`, `aos:c:src/code_08032444.c:sub_08032ADC`.  
 Local implementation: [`src/runtime/aos_soul_menu.c`](../src/runtime/aos_soul_menu.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_stats.c`](../src/runtime/aos_stats.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
 Tests: [`tests/test_aos_soul_menu.c`](../tests/test_aos_soul_menu.c), [`tests/test_aos_stats.c`](../tests/test_aos_stats.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
 Dependencies: `aos.souls.inventory_pickups`, `aos.saves.portable_slots`, `aos.input.gamepad`.  
-Known divergences: The runtime opens the soul page directly with START instead of reproducing the native seven-entry pause hub. It uses an SDL diagnostic text overlay rather than native tilemaps, icons, descriptions, cursor OAM and fades. Pause audio is requested through the native command controller, but the MP2K host is not emulator-compared.  
-Next action: Reconstruct the native pause hub, soul icons, descriptions, tilemaps, cursor OAM and transitions, then connect the remaining soul effects.
-Evidence: in game: `aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the soul equipment overlay`.
+Known divergences: The hub and its usable pages use an SDL diagnostic text overlay rather than native tilemaps, portrait, icons, descriptions, cursor OAM and fades. Equip, Item Use, Sleep, Config and Enemy are labelled but explicitly unavailable. Soul Set still uses L/R as a source-adapted colour shortcut instead of the native category transition. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared.  
+Next action: Reconstruct Equip and Item Use next, then the native hub and soul-page graphics, descriptions, cursor OAM and transitions.
+Evidence: in game: `aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the seven-entry hub; Soul Set opens the reviewed equipment overlay`.
 
 [~] **`aos.ui.hud` — Aria in-game HUD bars.** sub_0800DA50 sets BG0 (map base 28, scrolled 6 pixels up), the tiles of 0x0827B208 at tile 0x200 and palette rows 13-14 from 0x0820C428 (exported together as metadata/hud.bin), lays the frame of sub_0800DB78 (sUnk_080E0F74's two blocks) and draws both bars with sub_0800F138: eight tiles from cell (4, 1) for HP (tiles 0x200-0x208) and (4, 2) for MP (0x210-0x218), filled value * 100 / max * 64 / 100 pixels and at least one when positive. sub_0800DC70 moves the shown HP, MP and maxima two steps a frame toward the real values and redraws a bar that moved. The runtime draws it from Soma's HP and the current MP; a local capture showed the native frame, a full red HP bar and a green MP bar catching up after two bat casts. Source-derived and unit-tested, not emulator-compared.
 

@@ -69,6 +69,7 @@
 #define DEFAULT_ENEMY_FRAMES "assets/extracted/aria/metadata/enemy_frames.tsv"
 #define DEFAULT_ENEMY_STATS "assets/extracted/aria/metadata/enemies.tsv"
 #define DEFAULT_MONEY "assets/extracted/aria/metadata/money.tsv"
+#define DEFAULT_ITEM_USE "assets/extracted/aria/metadata/item_use.tsv"
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
@@ -2457,6 +2458,28 @@ static bool load_equipment(const char *path, AosEquipmentTables *tables) {
     return weapons == AOS_WEAPON_RECORDS && armor == AOS_ARMOR_RECORDS;
 }
 
+static bool load_item_use(const char *path, AosItemUseRecord items[AOS_ITEM_RECORDS]) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[256];
+    unsigned loaded = 0;
+    bool seen[AOS_ITEM_RECORDS] = {false};
+    while (fgets(line, sizeof line, f)) {
+        unsigned item, icon, effect, amount;
+        if (sscanf(line, "%u\t%u\t%u\t%u", &item, &icon, &effect, &amount) != 4 ||
+            item >= AOS_ITEM_RECORDS || icon > UINT8_MAX || effect > UINT8_MAX ||
+            amount > UINT16_MAX)
+            continue;
+        items[item] = (AosItemUseRecord){(uint8_t)icon, (uint8_t)effect, (uint16_t)amount};
+        if (!seen[item]) {
+            seen[item] = true;
+            loaded++;
+        }
+    }
+    fclose(f);
+    return loaded == AOS_ITEM_RECORDS;
+}
+
 static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Renderer *renderer) {
     SDL_Surface *surface = SDL_LoadBMP(path);
     if (!surface) return false;
@@ -2848,10 +2871,20 @@ static void debug_text(SDL_Renderer *renderer, int line, const char *text) {
     SDL_RenderDebugText(renderer, 2.0f, (float)(2 + line * 8), text);
 }
 
+static void item_effect_text(char *text, size_t size, const AosItemUseRecord *item) {
+    if (!item) snprintf(text, size, "Metadata unavailable");
+    else if (item->effect == 0) snprintf(text, size, "Restore %u HP", item->amount);
+    else if (item->effect == 1) snprintf(text, size, "Restore %u%% MP", item->amount);
+    else if (item->effect == 2) snprintf(text, size, "Cure status mask %u", item->amount);
+    else if (item->effect == 3) snprintf(text, size, "Lose %u HP", item->amount);
+    else snprintf(text, size, "Key item - cannot use");
+}
+
 /* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
  * description and transition rendering remain separate future work. */
 static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                            const AosStats *stats, const AosEquipmentTables *equipment,
+                           const AosItemUseRecord items[AOS_ITEM_RECORDS],
                            const AosSoma *soma) {
     if (!menu->open) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -2872,12 +2905,41 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
             snprintf(line, sizeof line, "%c %-10s %s", entry == menu->hub_cursor ? '>' : ' ',
                      aos_pause_entry_name((uint8_t)entry),
                      entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_EQUIP ||
+                             entry == AOS_PAUSE_ITEM_USE ||
                              entry == AOS_PAUSE_ABILITY
                          ? ""
                          : "[pending]");
             debug_text(renderer, 4 + entry, line);
         }
         debug_text(renderer, 13, "A select  B/Start close");
+        return;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_ITEM_USE) {
+        debug_text(renderer, 0, "ITEM USE");
+        int choices = aos_item_choice_count(stats);
+        int cursor = 0;
+        for (int ordinal = 0; ordinal < choices; ++ordinal)
+            if (aos_item_choice_at(stats, ordinal) == menu->item_cursor) cursor = ordinal;
+        int top = cursor - 5;
+        if (top > choices - 11) top = choices - 11;
+        if (top < 0) top = 0;
+        if (!choices) debug_text(renderer, 4, "No items owned");
+        for (int row = 0; row < 11 && top + row < choices; ++row) {
+            uint8_t item = aos_item_choice_at(stats, top + row);
+            snprintf(line, sizeof line, "%c %02u %-20s x%u", top + row == cursor ? '>' : ' ',
+                     item + 1, aos_item_name(item), stats->item_counts[item]);
+            debug_text(renderer, 2 + row, line);
+        }
+        snprintf(line, sizeof line, "HP %d/%d  MP %d/%u", soma->hp, soma->max_hp,
+                 stats->mp, stats->max_mp);
+        debug_text(renderer, 14, line);
+        item_effect_text(line, sizeof line,
+                         items && menu->item_cursor < AOS_ITEM_RECORDS
+                             ? &items[menu->item_cursor]
+                             : NULL);
+        debug_text(renderer, 15, line);
+        debug_text(renderer, 17, "A use  Up/Down select");
+        debug_text(renderer, 18, "B back  Start close");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_EQUIP) {
@@ -3431,6 +3493,10 @@ int main(int argc, char **argv) {
     }
     static AosEquipmentTables equipment;
     bool have_equipment = load_equipment(DEFAULT_EQUIPMENT, &equipment);
+    static AosItemUseRecord item_use[AOS_ITEM_RECORDS];
+    bool have_item_use = load_item_use(DEFAULT_ITEM_USE, item_use);
+    if (!have_item_use)
+        fprintf(stderr, "No item-use table: ./build/fusion_rebuild --task aria_objects\n");
     if (have_equipment) {
         aos_stats_refresh(&progress, &equipment);
         if (!atk_override) player_stats.atk = progress.atk;
@@ -3682,12 +3748,15 @@ int main(int argc, char **argv) {
             }
             if (!lifecycle.in_game_frame_requested) continue;
             uint8_t previous_weapon = progress.weapon;
+            AosItemVitals item_vitals = {soma.hp, soma.max_hp};
             unsigned soul_menu_event =
                 progress.character == 0
-                    ? aos_soul_menu_update(&soul_menu, &progress,
-                                           have_equipment ? &equipment : NULL,
-                                           aria_input.new_input, aria_input.repeated_input)
+                    ? aos_pause_menu_update(&soul_menu, &progress,
+                                            have_equipment ? &equipment : NULL,
+                                            have_item_use ? item_use : NULL, &item_vitals,
+                                            aria_input.new_input, aria_input.repeated_input)
                     : 0;
+            soma.hp = item_vitals.hp;
             if ((soul_menu_event & AOS_SOUL_MENU_CHANGED) &&
                 progress.weapon != previous_weapon &&
                 !reload_equipped_weapon(progress.weapon, &soma, &weapon_sprite,
@@ -3709,6 +3778,19 @@ int main(int argc, char **argv) {
             if (soul_menu_event & AOS_SOUL_MENU_MOVED) aos_audio_play_song(0xF1);
             if (soul_menu_event & AOS_SOUL_MENU_ACCEPTED) aos_audio_play_song(0xF3);
             if (soul_menu_event & AOS_SOUL_MENU_BACK) aos_audio_play_song(0xF0);
+            if (soul_menu_event & AOS_SOUL_MENU_ITEM_USED) {
+                if (item_use[soul_menu.last_item].effect == 3) {
+                    aos_audio_play_song(0x198);
+                    aos_audio_play_song(0xEF);
+                } else {
+                    aos_audio_play_song(0xF8);
+                }
+                printf("Used %s: HP %d/%d, MP %d/%u, remaining %u\n",
+                       aos_item_name(soul_menu.last_item), soma.hp, soma.max_hp,
+                       progress.mp, progress.max_mp,
+                       progress.item_counts[soul_menu.last_item]);
+            }
+            if (soul_menu_event & AOS_SOUL_MENU_REFUSED) aos_audio_play_song(0xEF);
             if (soul_menu_event & AOS_SOUL_MENU_UNAVAILABLE)
                 printf("Pause page pending: %s\n", aos_pause_entry_name(soul_menu.hub_cursor));
             if (soul_menu_event & AOS_SOUL_MENU_CHANGED) {
@@ -4241,7 +4323,8 @@ int main(int argc, char **argv) {
             }
         }
         draw_soul_menu(renderer, &soul_menu, &progress,
-                       have_equipment ? &equipment : NULL, &soma);
+                       have_equipment ? &equipment : NULL,
+                       have_item_use ? item_use : NULL, &soma);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

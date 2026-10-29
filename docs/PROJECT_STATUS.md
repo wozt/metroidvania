@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0637 - ROM-derived Aria item-use menu
+
+- Extended the C11 `aria_objects` export with all 32 records read by
+  `sub_0804B36C`. The private `metadata/item_use.tsv` carries each record's
+  icon, effect kind and amount, is a declared version-33 pipeline output and
+  is covered by the Aria native golden digest. No ROM-derived data is stored
+  in the repository.
+- Connected Item Use as the fourth usable pause-hub entry. It lists only
+  owned records, wraps with repeated Up/Down, identifies all 25 consumables
+  and seven key items by name, displays the selected effect and current HP
+  and MP, uses A and returns to the hub with B.
+- Ported the four usable branches of `sub_0804B36C`: fixed HP restoration,
+  MP restoration through the source's integer divisor, poison or curse mask
+  removal, and rotten-food damage floored at one HP. Full HP or MP, an absent
+  status and key items are refused without consuming anything. Successful
+  use decrements the schema-v7 inventory and updates runtime HP or MP
+  immediately.
+- Expanded deterministic pause-menu coverage across every effect kind,
+  refusal paths, inventory decrement, cursor repair after the last copy and
+  the identified names. A local room 0/3 run loaded the regenerated table
+  and showed Item Use enabled in the native-order hub. This is source-derived,
+  golden-tested and unit-tested, not emulator-compared: native item icons,
+  descriptions and menu graphics, gameplay status timers, rotten-food
+  immunity and key-item consumers remain incomplete.
+
 ## Patch 0636 - Usable Aria equipment menu
 
 - Connected the pause hub's Equip entry to a usable three-slot controller

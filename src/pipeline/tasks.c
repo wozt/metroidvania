@@ -85,6 +85,7 @@ static const char *const aria_object_outputs[] = {
     "assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv",
     "assets/extracted/aria/metadata/enemy_frames.tsv",
     "assets/extracted/aria/metadata/enemies.tsv",
+    "assets/extracted/aria/metadata/item_use.tsv",
 };
 static const char *const aria_sound_outputs[] = {
     "assets/extracted/aria/sound/runtime/song_table.tsv",
@@ -154,7 +155,7 @@ static const FusionRebuildTask tasks[] = {
      REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_soma_outputs),
      .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,
      .stamp_games = FUSION_REBUILD_STAMP_ARIA},
-    {.name = "aria_objects", .version = 32, .group = FUSION_REBUILD_GROUP_ASSETS,
+    {.name = "aria_objects", .version = 33, .group = FUSION_REBUILD_GROUP_ASSETS,
      DEPENDS(aria_asset_dependencies),
      REQUIRES(aria_requirements), PATHS(aria_native_inputs, aria_object_outputs),
      .validation = FUSION_REBUILD_VALIDATE_SPRITE_INDEX,

@@ -59,6 +59,7 @@ typedef struct {
      * 0 for none (0x13269-0x1326B). */
     uint8_t red_soul, blue_soul, yellow_soul;
     int16_t mp;                  /* currentMP (0x1327C) */
+    uint16_t status;             /* poison, curse and stone bits (0x13270) */
 } AosStats;
 
 enum {

@@ -4,6 +4,7 @@
 #define AOS_SOUL_MENU_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "aos_stats.h"
@@ -32,6 +33,7 @@ enum {
     AOS_SOUL_MENU_PAGE_SOUL_SET,
     AOS_SOUL_MENU_PAGE_ABILITY,
     AOS_SOUL_MENU_PAGE_EQUIP,
+    AOS_SOUL_MENU_PAGE_ITEM_USE,
     AOS_SOUL_MENU_PAGE_UNAVAILABLE,
 };
 
@@ -50,7 +52,20 @@ enum {
     AOS_SOUL_MENU_ACCEPTED = 16,
     AOS_SOUL_MENU_BACK = 32,
     AOS_SOUL_MENU_UNAVAILABLE = 64,
+    AOS_SOUL_MENU_ITEM_USED = 128,
+    AOS_SOUL_MENU_REFUSED = 256,
 };
+
+typedef struct {
+    uint8_t icon;
+    uint8_t effect;
+    uint16_t amount;
+} AosItemUseRecord;
+
+typedef struct {
+    int16_t hp;
+    int16_t max_hp;
+} AosItemVitals;
 
 typedef struct {
     bool open;
@@ -60,21 +75,34 @@ typedef struct {
     uint8_t equip_slot;
     uint8_t equip_choice;
     bool equip_selecting;
+    uint8_t item_cursor;
+    uint8_t last_item;
     /* Colour cursors are native equipped values: 0 None, then index + 1.
      * The ability cursor is its zero-based index. */
     uint8_t cursor[AOS_SOUL_MENU_CATEGORIES];
 } AosSoulMenu;
 
 /* START opens the seven-entry pause hub reconstructed from sub_08047764.
- * Soul Set, Equip and Ability enter their usable source-adapted pages; the
- * four unported pages enter an explicit unavailable page. In Soul Set, L/R
- * changes colour and Up/Down selects the next owned soul. Equip selects among
- * owned records for three slots. Ability uses Up/Down. A equips or toggles, B
- * returns to the hub and START closes the pause menu.
+ * Soul Set, Equip, Item Use and Ability enter usable source-adapted pages; the
+ * three unported pages enter an explicit unavailable page. Soul Set changes
+ * colour and selects owned souls. Equip selects owned records for three
+ * slots. Item Use applies ROM-exported effects to owned consumables. Ability
+ * toggles owned abilities. B returns to the hub and START closes the menu.
  * The return value is an AOS_SOUL_MENU_* event mask. */
-unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
-                              const AosEquipmentTables *equipment,
-                              uint16_t new_input, uint16_t repeated_input);
+unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
+                               const AosEquipmentTables *equipment,
+                               const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                               AosItemVitals *vitals,
+                               uint16_t new_input, uint16_t repeated_input);
+
+/* Compatibility entry for the soul/equipment-only controller tests and
+ * hosts that have not loaded item metadata. */
+static inline unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
+                                            const AosEquipmentTables *equipment,
+                                            uint16_t new_input, uint16_t repeated_input) {
+    return aos_pause_menu_update(menu, stats, equipment, NULL, NULL,
+                                 new_input, repeated_input);
+}
 
 int aos_soul_menu_count(uint8_t category);
 int aos_soul_menu_inventory_index(const AosSoulMenu *menu);
@@ -89,5 +117,10 @@ uint8_t aos_equipment_current(const AosStats *stats, uint8_t slot);
 int aos_equipment_choice_count(const AosStats *stats, uint8_t slot);
 uint8_t aos_equipment_choice_at(const AosStats *stats, uint8_t slot, int ordinal);
 uint8_t aos_equipment_quantity(const AosStats *stats, uint8_t slot, uint8_t item);
+const char *aos_item_name(uint8_t item);
+int aos_item_choice_count(const AosStats *stats);
+uint8_t aos_item_choice_at(const AosStats *stats, int ordinal);
+bool aos_item_use(AosStats *stats, const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                  AosItemVitals *vitals, uint8_t item);
 
 #endif /* AOS_SOUL_MENU_H */

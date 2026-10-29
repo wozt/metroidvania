@@ -61,6 +61,14 @@ static const char *const armor_names[AOS_ARMOR_RECORDS] = {
     "Tear Of Blood", "Lucky Charm", "Rare Ring", "Soul Eater Ring", "Rune Ring",
     "Sherman Ring", "Gold Ring", "Chaos Ring",
 };
+static const char *const item_names[AOS_ITEM_RECORDS] = {
+    "Potion", "High Potion", "Super Potion", "Meat Strip", "Tasty Meat", "Mind Up",
+    "High Mind Up", "Mana Prism", "Anti-Venom", "Uncurse Potion", "Potato Pancake",
+    "Beef Curry", "Ramen", "Cream Soda", "Cream Puff", "Milk", "Coffee", "Tea",
+    "Pudding", "Strawberry", "Melon", "Grapes", "Persimmon", "Rotten Meat",
+    "Spoiled Milk", "Skull Key", "Ancient Book 1", "Ancient Book 2", "Ancient Book 3",
+    "CASTLE MAP 1", "CASTLE MAP 2", "CASTLE MAP 3",
+};
 
 const char *aos_pause_entry_name(uint8_t entry) {
     return entry < AOS_PAUSE_ENTRIES ? pause_entry_names[entry] : "UNKNOWN";
@@ -120,6 +128,57 @@ uint8_t aos_equipment_choice_at(const AosStats *stats, uint8_t slot, int ordinal
     for (int item = first; item < limit; ++item)
         if (equipment_owned(stats, slot, (uint8_t)item) && --ordinal == 0) return (uint8_t)item;
     return AOS_EQUIPMENT_NONE;
+}
+
+const char *aos_item_name(uint8_t item) {
+    return item < AOS_ITEM_RECORDS ? item_names[item] : "Unknown";
+}
+
+int aos_item_choice_count(const AosStats *stats) {
+    int count = 0;
+    for (int item = 0; item < AOS_ITEM_RECORDS; ++item) count += stats->item_counts[item] != 0;
+    return count;
+}
+
+uint8_t aos_item_choice_at(const AosStats *stats, int ordinal) {
+    if (ordinal < 0) return AOS_EQUIPMENT_NONE;
+    for (int item = 0; item < AOS_ITEM_RECORDS; ++item)
+        if (stats->item_counts[item] && ordinal-- == 0) return (uint8_t)item;
+    return AOS_EQUIPMENT_NONE;
+}
+
+bool aos_item_use(AosStats *stats, const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                  AosItemVitals *vitals, uint8_t item) {
+    if (!items || !vitals || item >= AOS_ITEM_RECORDS || !stats->item_counts[item]) return false;
+    const AosItemUseRecord *record = &items[item];
+    switch (record->effect) {
+    case 0:
+        if (vitals->hp >= vitals->max_hp) return false;
+        vitals->hp = (int16_t)(vitals->hp + record->amount);
+        if (vitals->hp > vitals->max_hp) vitals->hp = vitals->max_hp;
+        break;
+    case 1: {
+        if (stats->mp >= (int16_t)stats->max_mp || !record->amount) return false;
+        int divisor = 100 / record->amount;
+        int recovery = divisor ? stats->max_mp / divisor : stats->max_mp;
+        if (!recovery) recovery = 1;
+        stats->mp = (int16_t)(stats->mp + recovery);
+        if (stats->mp > (int16_t)stats->max_mp) stats->mp = (int16_t)stats->max_mp;
+        break;
+    }
+    case 2:
+        if (!(stats->status & record->amount)) return false;
+        stats->status &= (uint16_t)~record->amount;
+        break;
+    case 3:
+        if (vitals->hp <= 1) return false;
+        vitals->hp = (int16_t)(vitals->hp - record->amount);
+        if (vitals->hp < 1) vitals->hp = 1;
+        break;
+    default: return false;
+    }
+    stats->item_counts[item]--;
+    return true;
 }
 
 int aos_soul_menu_count(uint8_t category) {
@@ -210,6 +269,11 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
         return AOS_SOUL_MENU_MOVED;
     }
     if (!(new_input & AOS_KEY_A)) return 0;
+    if (menu->hub_cursor == AOS_PAUSE_ITEM_USE) {
+        menu->page = AOS_SOUL_MENU_PAGE_ITEM_USE;
+        menu->item_cursor = aos_item_choice_at(stats, 0);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
     if (menu->hub_cursor == AOS_PAUSE_EQUIP) {
         menu->page = AOS_SOUL_MENU_PAGE_EQUIP;
         menu->equip_slot = AOS_EQUIP_WEAPON;
@@ -294,9 +358,53 @@ static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
     return AOS_SOUL_MENU_ACCEPTED | (changed ? AOS_SOUL_MENU_CHANGED : 0);
 }
 
-unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
-                              const AosEquipmentTables *equipment,
-                              uint16_t new_input, uint16_t repeated_input) {
+static void move_item_cursor(AosSoulMenu *menu, const AosStats *stats, int direction) {
+    int item = menu->item_cursor < AOS_ITEM_RECORDS
+                   ? menu->item_cursor
+                   : (direction > 0 ? AOS_ITEM_RECORDS - 1 : 0);
+    for (int tried = 0; tried < AOS_ITEM_RECORDS; ++tried) {
+        item = (item + direction + AOS_ITEM_RECORDS) % AOS_ITEM_RECORDS;
+        if (stats->item_counts[item]) {
+            menu->item_cursor = (uint8_t)item;
+            return;
+        }
+    }
+    menu->item_cursor = AOS_EQUIPMENT_NONE;
+}
+
+static unsigned update_item_use(AosSoulMenu *menu, AosStats *stats,
+                                const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                                AosItemVitals *vitals,
+                                uint16_t new_input, uint16_t repeated_input) {
+    if (new_input & AOS_KEY_START) {
+        menu->open = false;
+        return AOS_SOUL_MENU_CLOSED;
+    }
+    if (new_input & AOS_KEY_B) {
+        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        return AOS_SOUL_MENU_BACK;
+    }
+    if (repeated_input & AOS_KEY_UP) {
+        move_item_cursor(menu, stats, -1);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (repeated_input & AOS_KEY_DOWN) {
+        move_item_cursor(menu, stats, 1);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (!(new_input & AOS_KEY_A)) return 0;
+    uint8_t used = menu->item_cursor;
+    if (!aos_item_use(stats, items, vitals, used)) return AOS_SOUL_MENU_REFUSED;
+    menu->last_item = used;
+    if (!stats->item_counts[used]) move_item_cursor(menu, stats, 1);
+    return AOS_SOUL_MENU_ITEM_USED;
+}
+
+unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
+                               const AosEquipmentTables *equipment,
+                               const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                               AosItemVitals *vitals,
+                               uint16_t new_input, uint16_t repeated_input) {
     if (!menu->open) {
         if (!(new_input & AOS_KEY_START)) return 0;
         menu->open = true;
@@ -308,6 +416,8 @@ unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
         return update_hub(menu, stats, new_input, repeated_input);
     if (menu->page == AOS_SOUL_MENU_PAGE_EQUIP)
         return update_equipment(menu, stats, equipment, new_input, repeated_input);
+    if (menu->page == AOS_SOUL_MENU_PAGE_ITEM_USE)
+        return update_item_use(menu, stats, items, vitals, new_input, repeated_input);
     if (new_input & AOS_KEY_START) {
         menu->open = false;
         return AOS_SOUL_MENU_CLOSED;

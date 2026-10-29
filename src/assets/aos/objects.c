@@ -15,6 +15,7 @@ enum {
     GBA_BASE = 0x08000000,
     ENEMY_TABLE = 0x080E9644,
     MONEY_TABLE = 0x085250E4,
+    ITEM_STATS = 0x08505B3C,
     WEAPON_STATS = 0x08505D3C,
     ARMOR_STATS = 0x085063B0,
     RED_SOULS = 0x080E1598,
@@ -970,6 +971,24 @@ static bool append_money(const FusionRom *rom, Text *money, char *error, size_t 
     return true;
 }
 
+/* The 32 item records consumed by sub_0804B36C (0x08505B3C, 16 bytes):
+ * icon (+ 0x2), effect kind (+ 0x8) and its amount or status mask (+ 0xA).
+ * Kinds are fixed HP, proportional MP, status cure, harmful HP and key item. */
+static bool append_item_use(const FusionRom *rom, Text *items, char *error,
+                            size_t error_size) {
+    if (!text_append(items, "schema\tmetroidvania-aos-item-use-v1\n"
+                            "# item\ticon\teffect\tamount\n"))
+        return false;
+    for (uint32_t item = 0; item < 32; ++item) {
+        const uint8_t *record = slice(rom, ITEM_STATS + item * 16, 16, "item use record",
+                                      error, error_size);
+        if (!record || !text_append(items, "%u\t%u\t%u\t%u\n", item, record[2],
+                                    record[8], read_u16(record + 0xA)))
+            return false;
+    }
+    return true;
+}
+
 /* The equipment records sub_0804ACD4 reads: weapons (0x08505D3C, 59
  * records of 28 bytes) and armor/accessories (0x085063B0, 45 records of 20
  * bytes): ATK (+ 0xA), DEF (+ 0xB), STR, CON, INT, LCK (+ 0xC-0xF, signed)
@@ -1144,8 +1163,8 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0}, equipment = {0}, red_souls = {0}, skill_throws = {0}, bursts = {0},
-         item_icons = {0};
+    Text rows = {0}, stats = {0}, money = {0}, item_use = {0}, equipment = {0},
+         red_souls = {0}, skill_throws = {0}, bursts = {0}, item_icons = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
                                                    error_size) &&
@@ -1175,6 +1194,9 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            append_money(rom, &money, error, error_size) &&
                            write_text_file(metadata_output, "money.tsv",
                                            &money, error, error_size) &&
+                           append_item_use(rom, &item_use, error, error_size) &&
+                           write_text_file(metadata_output, "item_use.tsv",
+                                           &item_use, error, error_size) &&
                            append_equipment(rom, &equipment, error, error_size) &&
                            write_text_file(metadata_output, "equipment.tsv",
                                            &equipment, error, error_size) &&
@@ -1206,6 +1228,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(rows.data);
     free(stats.data);
     free(money.data);
+    free(item_use.data);
     free(equipment.data);
     free(red_souls.data);
     free(skill_throws.data);

@@ -11,6 +11,8 @@ int main(void) {
     AosEquipmentTables equipment = {0};
     stats.base[AOS_STAT_STR] = 10;
     stats.base[AOS_STAT_CON] = 10;
+    stats.max_mp = 80;
+    stats.mp = 10;
     stats.weapon = 0;
     stats.armor = 0;
     stats.accessory = AOS_EQUIPMENT_NONE;
@@ -125,6 +127,49 @@ int main(void) {
     assert(stats.accessory == 25 && stats.def == 21);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK && menu.page == AOS_SOUL_MENU_PAGE_HUB);
+
+    /* ITEM USE applies the four native effect kinds and never consumes keys. */
+    AosItemUseRecord items[AOS_ITEM_RECORDS] = {0};
+    AosItemVitals vitals = {100, 320};
+    items[0] = (AosItemUseRecord){1, 0, 100};
+    items[5] = (AosItemUseRecord){6, 1, 20};
+    items[8] = (AosItemUseRecord){9, 2, 1};
+    items[23] = (AosItemUseRecord){24, 3, 200};
+    items[25] = (AosItemUseRecord){26, 4, 0};
+    stats.item_counts[0] = 2;
+    stats.item_counts[5] = stats.item_counts[8] = 1;
+    stats.item_counts[23] = stats.item_counts[25] = 1;
+    stats.status = 1;
+    menu.hub_cursor = AOS_PAUSE_ITEM_USE;
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ACCEPTED);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_ITEM_USE && menu.item_cursor == 0);
+    assert(aos_item_choice_count(&stats) == 5 && !strcmp(aos_item_name(23), "Rotten Meat"));
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ITEM_USED);
+    assert(vitals.hp == 200 && stats.item_counts[0] == 1);
+    vitals.hp = vitals.max_hp;
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_REFUSED);
+    assert(stats.item_counts[0] == 1);
+
+    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals, 0, AOS_KEY_DOWN);
+    assert(menu.item_cursor == 5);
+    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                          AOS_KEY_A, AOS_KEY_A);
+    assert(stats.mp == 26 && !stats.item_counts[5] && menu.item_cursor == 8);
+    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                          AOS_KEY_A, AOS_KEY_A);
+    assert(stats.status == 0 && !stats.item_counts[8] && menu.item_cursor == 23);
+    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                          AOS_KEY_A, AOS_KEY_A);
+    assert(vitals.hp == 120 && !stats.item_counts[23] && menu.item_cursor == 25);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_REFUSED);
+    assert(stats.item_counts[25] == 1);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK &&
+           menu.page == AOS_SOUL_MENU_PAGE_HUB);
 
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_CLOSED && !menu.open);

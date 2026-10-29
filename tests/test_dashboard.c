@@ -312,7 +312,7 @@ static void test_bestiary(const FusionJson *data) {
                 const FusionJson *left = fusion_json_member(item, "id");
                 const FusionJson *right = fusion_json_member(&all[list]->items[other], "id");
                 bool duplicate = left->kind == right->kind &&
-                                 (left->kind == FUSION_JSON_INT
+                                 (left->kind == FUSION_JSON_NUMBER
                                       ? left->integer == right->integer
                                       : left->kind == FUSION_JSON_STRING &&
                                             !strcmp(left->string, right->string));
@@ -326,7 +326,7 @@ static void test_bestiary(const FusionJson *data) {
             const FusionJson *left = fusion_json_member(&mzm_monsters->items[actor], "id");
             const FusionJson *right = fusion_json_member(&mzm_items->items[item], "id");
             EXPECT(left->kind != right->kind ||
-                   (left->kind == FUSION_JSON_INT && left->integer != right->integer) ||
+                   (left->kind == FUSION_JSON_NUMBER && left->integer != right->integer) ||
                    (left->kind == FUSION_JSON_STRING && strcmp(left->string, right->string)),
                    "dashboard_catalog_cross_group_uniqueness: MZM actor/item overlap");
         }

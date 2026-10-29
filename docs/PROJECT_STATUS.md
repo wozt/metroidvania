@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0629 - Fish Head red soul
+
+- Ported `SkillFishHeadUse`: resource 17 sequence 0 is placed eight pixels
+  ahead of Soma and 26 pixels above him, requests sound 0xD8, starts at two
+  pixels per frame and accelerates horizontally by 1/16 pixel per frame to
+  the native eight-pixel-per-frame cap.
+- Connected red soul 29 to the caster, exported animation, renderer and
+  type-5 combat bridge with its constant 12 x 12 attack box. It is removed
+  on its first strike or when it leaves screen margin entry 2. ROM-free
+  tests cover both directions, acceleration, speed clamping, its one-shot
+  sound and both cleanup paths; a local room 0/3 capture showed the flame in
+  front of Soma. Source-derived and unit-tested, not emulator-compared.
+- Fish Head is not one of the 47 tracked runtime monsters, so monster
+  completeness remains **17/47**. Zero Mission is unchanged.
+
 ## Patch 0628 - Skull Millione red soul and sounds
 
 - Ported `SkillSkullMillioneUse` and `sub_0802B028`: its invisible parent

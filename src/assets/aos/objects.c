@@ -202,6 +202,8 @@ static const EntitySpec entities[] = {
     /* The two entries of 0x084F128C share their data and select still frame
      * 0 (Evil Butcher) or 1 (Ripper). */
     STATIC("skill_ripper", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0, 2, 0, 1),
+    /* Resource 17 of 0x080E13BC: Fish Head's accelerating sequence 0. */
+    ENTITY("skill_fish_head", 0x081D4908, 0x0820B2C8, 0, 0x082338A4),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

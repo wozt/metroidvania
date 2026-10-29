@@ -56,7 +56,6 @@ aos:asm:asm/code/code_080211F0.s:SkillDevilManticoreSparksUpdate	SkillDevilManti
 aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	12290	0	13
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
-aos:asm:asm/code/code_080211F0.s:SkillFishHeadUse	SkillFishHeadUse	abilities	name			asm_function		asm/code/code_080211F0.s	20174	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	21386	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUse	SkillFlameDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	16280	0	11
 aos:asm:asm/code/code_080211F0.s:SkillFlyingArmorUse	SkillFlyingArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	26120	0	9

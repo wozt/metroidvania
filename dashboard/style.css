@@ -134,6 +134,11 @@ details.group > summary .title { flex: 1; font-weight: 600; }
 .feature dt { color: var(--muted); }
 .feature dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 1px 9px; font-size: 0.75rem; border: 1px solid var(--line); background: var(--bg-sunken); white-space: nowrap; }
+
+.catalog-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 16px 0 22px; }
+.catalog-count { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raised); }
+.catalog-count strong { font-size: 1.35rem; color: var(--aria); }
+.catalog-count span { color: var(--muted); font-size: 0.85rem; }
 .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
 .badge.ok { color: var(--visor); }
 .badge.bad { color: var(--aria); }

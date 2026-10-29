@@ -190,11 +190,13 @@ unregistered work is not counted, and the git timeline is shown as history,
 not as evidence. `data.js` holds the same data as `data.json` so the page
 loads from `file://`.
 
-The *Monsters & items* tab lists every native monster and item of both games
-from tracked sources only (the pinned Zero Mission sprite enum and stats, the
-`mzm_sprite_family` switch and the `AOS_ENEMY` enum), marked done when the
-runtime has a ported AI for them; unidentified Aria enemies keep their native
-id, and "done" never means complete (sounds and unported states remain).
+The *Aria catalog* tab separates all 102 ordinary monsters, 11 bosses, 137
+normal-mode items and 120 souls (55 red, 24 blue, 35 yellow and 6 ability
+souls). `data/dashboard/aos_catalog.tsv` records their reviewed native IDs and
+names without graphics or ROM payloads. Each row keeps implementation status
+separate from discovery: naming an entry does not claim that its AI, item use
+or soul effect is ported. The 47 monsters currently implemented by the runtime
+also retain their five-aspect sprite, animation, sound, loot and soul matrix.
 
 ## Build and test
 

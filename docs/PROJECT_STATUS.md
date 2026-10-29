@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0631 - Complete Aria catalog dashboard
+
+- Added a reviewed native catalog for all 113 Aria enemy constructors,
+  separated into 102 ordinary monsters and the 11 campaign bosses. The
+  dashboard no longer shows opaque `Enemy 0xNN` placeholders; discovery and
+  implementation status remain separate facts.
+- Replaced the nine aggregate pickup-family rows with all 137 normal-mode
+  money, consumable, weapon, armor and accessory definitions, plus dedicated
+  tables for all 55 red, 24 blue, 35 yellow and 6 ability souls. Individual
+  soul status follows the monster-aspect registry and the explicitly ported
+  Fish Head and Gladiator effects.
+- Renamed the web view to *Aria catalog*, added its seven inventory counters
+  and kept the existing 47-monster five-aspect matrix above the detailed
+  lists. The catalog contains names and native IDs only, never graphics, ROM
+  text banks or extracted assets. A headless Chromium `file://` preview
+  rendered the new view successfully.
+
 ## Patch 0630 - Gladiator red soul
 
 - Ported `SkillGladiatorUse`: resource 24 frame 0 is thrown from Soma at

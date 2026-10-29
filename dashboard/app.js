@@ -292,12 +292,27 @@
   function bestiaryView() {
     const b = data.bestiary;
     if (!b || !b.games) return '<p class="notice">No bestiary data. Regenerate with <code>./build/fusion_dashboard</code>.</p>';
-    const games = ["mzm", "aos"].map((key) => {
-      const g = b.games[key];
-      return `<h2>${esc(g.title)}</h2>${g.aspects ? aspectTable(g) : ""}${bestiaryTable(g.monsters, "Monsters")}
-        ${g.items_note ? `<p class="muted">${esc(g.items_note)}</p>` : ""}${bestiaryTable(g.items, "Items")}`;
-    });
-    return `<p class="notice">${esc(b.method)}</p>${games.join("")}`;
+    const g = b.games.aos;
+    if (!g || !g.bosses || !g.souls)
+      return '<p class="notice">The detailed Aria catalog is missing. Regenerate the dashboard.</p>';
+    const groups = [
+      ["Monsters", g.monsters.length], ["Bosses", g.bosses.length], ["Items", g.items.length],
+      ["Red souls", g.souls.red.length], ["Blue souls", g.souls.blue.length],
+      ["Yellow souls", g.souls.yellow.length], ["Ability souls", g.souls.ability.length]
+    ];
+    return `<h2>Castlevania: Aria of Sorrow native catalog</h2>
+      <p class="notice">${esc(b.method)}</p>
+      <div class="catalog-summary">${groups.map(([name, count]) =>
+        `<div class="catalog-count"><strong>${count}</strong><span>${esc(name)}</span></div>`).join("")}</div>
+      ${aspectTable(g)}
+      ${bestiaryTable(g.monsters, "Monsters")}
+      ${bestiaryTable(g.bosses, "Bosses")}
+      ${g.items_note ? `<p class="muted">${esc(g.items_note)}</p>` : ""}
+      ${bestiaryTable(g.items, "Items")}
+      ${bestiaryTable(g.souls.red, "Red souls (offensive)")}
+      ${bestiaryTable(g.souls.blue, "Blue souls (guardian)")}
+      ${bestiaryTable(g.souls.yellow, "Yellow souls (passive)")}
+      ${bestiaryTable(g.souls.ability, "Ability souls (movement)")}`;
   }
 
   function inGameView() {

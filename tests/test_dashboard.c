@@ -256,13 +256,25 @@ static void test_bestiary(const FusionJson *data) {
     const FusionJson *mzm_monsters = fusion_json_member(mzm, "monsters");
     const FusionJson *mzm_items = fusion_json_member(mzm, "items");
     const FusionJson *aos_monsters = fusion_json_member(aos, "monsters");
+    const FusionJson *aos_bosses = fusion_json_member(aos, "bosses");
     const FusionJson *aos_items = fusion_json_member(aos, "items");
+    const FusionJson *aos_souls = fusion_json_member(aos, "souls");
+    const FusionJson *red_souls = fusion_json_member(aos_souls, "red");
+    const FusionJson *blue_souls = fusion_json_member(aos_souls, "blue");
+    const FusionJson *yellow_souls = fusion_json_member(aos_souls, "yellow");
+    const FusionJson *ability_souls = fusion_json_member(aos_souls, "ability");
     EXPECT(mzm_monsters->count >= 90, "mzm monsters");
-    EXPECT(aos_monsters->count == 0x71, "aos monsters");
+    EXPECT(aos_monsters->count == 0x71 - 11, "aos monsters");
+    EXPECT(aos_bosses->count == 11, "aos bosses");
+    EXPECT(aos_items->count == 137, "Aria items");
+    EXPECT(red_souls->count == 55 && blue_souls->count == 24 &&
+           yellow_souls->count == 35 && ability_souls->count == 6,
+           "Aria soul families");
     EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 17,
            "complete Aria monsters");
-    const FusionJson *all[] = {mzm_monsters, mzm_items, aos_monsters, aos_items};
-    for (size_t list = 0; list < 4; ++list)
+    const FusionJson *all[] = {mzm_monsters, mzm_items, aos_monsters, aos_bosses, aos_items,
+                               red_souls, blue_souls, yellow_souls, ability_souls};
+    for (size_t list = 0; list < COUNT(all); ++list)
         for (size_t index = 0; index < all[list]->count; ++index) {
             const FusionJson *item = &all[list]->items[index];
             EXPECT(is_status(text_of(item, "status")), "row status");
@@ -308,18 +320,34 @@ static void test_bestiary(const FusionJson *data) {
         } else if (!strcmp(status, "functional")) {
             ++working_count;
             EXPECT(known(name, working, COUNT(working)), "unexpected functional %s", name);
-        } else if (!strcmp(status, "not_started")) {
-            EXPECT(!strncmp(name, "Enemy 0x", 8), "unnamed %s", name);
-        }
+        } else if (!strcmp(status, "not_started"))
+            EXPECT(strncmp(name, "Enemy 0x", 8), "unnamed %s", name);
     }
     EXPECT(partial_count == COUNT(partial), "partial Aria count %zu", partial_count);
     EXPECT(working_count == COUNT(working), "functional Aria count %zu", working_count);
-    EXPECT(aos_items->count == COUNT(aria_item_families), "Aria item families");
+    static const char *const bosses[] = {"Creaking Skull", "Manticore", "Great Armor",
+        "Big Golem", "Headhunter", "Death", "Legion", "Balore", "Julius Belmont",
+        "Graham Jones", "Chaos"};
+    for (size_t index = 0; index < COUNT(bosses); ++index) {
+        const FusionJson *boss = row_named(aos_bosses, bosses[index]);
+        EXPECT(boss && !strcmp(text_of(boss, "status"), "not_started"),
+               "%s boss discovered", bosses[index]);
+    }
     for (size_t index = 0; index < aos_items->count; ++index)
-        /* Each family follows its pickup feature. */
         EXPECT(strcmp(text_of(&aos_items->items[index], "status"), "not_started") &&
                    *text_of(&aos_items->items[index], "feature"),
                "Aria item status");
+    EXPECT(row_named(aos_items, "Claimh Solais"), "named Aria weapon");
+    EXPECT(row_named(aos_monsters, "Fish Head"), "named unported Aria monster");
+    EXPECT(row_named(red_souls, "Bat") &&
+           !strcmp(text_of(row_named(red_souls, "Bat"), "status"), "functional"),
+           "ported Bat soul");
+    EXPECT(row_named(red_souls, "Killer Fish") &&
+           !strcmp(text_of(row_named(red_souls, "Killer Fish"), "status"), "partial"),
+           "partial Killer Fish soul");
+    EXPECT(row_named(red_souls, "Gladiator") &&
+           !strcmp(text_of(row_named(red_souls, "Gladiator"), "status"), "functional"),
+           "ported Gladiator soul");
 }
 
 static void test_engine_switch(void) {

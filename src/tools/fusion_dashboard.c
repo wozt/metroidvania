@@ -952,17 +952,6 @@ static const char *const mzm_family_annotations[][2] = {
     {"MZM_FAMILY_CHOZO_STATUE", "mzm.items.chozo_statues"},
     {"MZM_FAMILY_ITEM_SPRITE", "mzm.items.item_sprites"},
     {"MZM_FAMILY_IMAGO_LARVA_RIGHT_SIDE", "mzm.enemies.imago_larva"}};
-/* Aria pickup families and the parity annotation that covers each. */
-static const char *const aria_item_families[][3] = {
-    {"money", "Money pickups", "aos.items.money_pickups"},
-    {"consumable", "Consumable items", "aos.items.money_pickups"},
-    {"weapon", "Weapons", "aos.items.money_pickups"},
-    {"armor", "Armor", "aos.items.money_pickups"},
-    {"accessory", "Accessories", "aos.items.money_pickups"},
-    {"red_soul", "Red souls (offensive)", "aos.souls.red_soul_use"},
-    {"blue_soul", "Blue souls (guardian)", "aos.souls.inventory_pickups"},
-    {"yellow_soul", "Yellow souls (passive)", "aos.souls.inventory_pickups"},
-    {"ability_soul", "Ability souls (movement)", "aos.souls.inventory_pickups"}};
 static const char *const statue_items[][2] = {
     {"LONG", "Long Beam"},     {"ICE", "Ice Beam"},         {"WAVE", "Wave Beam"},
     {"BOMB", "Bombs"},         {"SPEEDBOOSTER", "Speed Booster"}, {"HIGH_JUMP", "High Jump"},
@@ -1151,6 +1140,112 @@ static bool load_aspects(FusionJson *aspects) {
     return ok;
 }
 
+typedef struct {
+    char enemies[0x71][96];
+    bool bosses[0x71];
+    FusionJson items;
+    FusionJson souls[4];
+} AosCatalog;
+
+static void free_aos_catalog(AosCatalog *catalog) {
+    fusion_json_free(&catalog->items);
+    for (size_t index = 0; index < COUNT(catalog->souls); ++index)
+        fusion_json_free(&catalog->souls[index]);
+}
+
+static int soul_group(const char *group) {
+    static const char *const names[] = {"red_soul", "blue_soul", "yellow_soul",
+                                        "ability_soul"};
+    for (size_t index = 0; index < COUNT(names); ++index)
+        if (!strcmp(group, names[index])) return (int)index;
+    return -1;
+}
+
+/* Reviewed native IDs and labels. The registry contains no graphics, text
+ * banks or other extracted payloads and keeps dashboard generation ROM-free. */
+static bool load_aos_catalog(AosCatalog *catalog) {
+    const char *relative = "data/dashboard/aos_catalog.tsv";
+    char *text = read_file(relative, NULL);
+    if (!text) return fail("cannot load %s", relative);
+    *catalog = (AosCatalog){.items = fusion_json_array()};
+    for (size_t index = 0; index < COUNT(catalog->souls); ++index)
+        catalog->souls[index] = fusion_json_array();
+    int number = 1, enemies = 0, bosses = 0, collectibles = 0;
+    bool seen[0x71] = {false}, ok = true;
+    for (char *line = text, *next; ok && line; line = next, ++number) {
+        next = strchr(line, '\n');
+        if (next) *next++ = '\0';
+        if (!*line) continue;
+        char *fields[6];
+        size_t count = split_tabs(line, fields, COUNT(fields));
+        if (number == 1) {
+            ok = count == 5 && !strcmp(fields[0], "group") &&
+                 !strcmp(fields[1], "native_id") && !strcmp(fields[2], "item_id") &&
+                 !strcmp(fields[3], "name") && !strcmp(fields[4], "implementation");
+            if (!ok) fail("%s: unexpected header", relative);
+            continue;
+        }
+        if (count != 5 || !*fields[3]) {
+            ok = fail("%s:%d: expected five catalog columns", relative, number);
+            break;
+        }
+        char *end = NULL;
+        long native = strtol(fields[1], &end, 16);
+        if (!*fields[1] || *end || native < 0 || native > 0xFF) {
+            ok = fail("%s:%d: invalid native id", relative, number);
+            break;
+        }
+        if (!strcmp(fields[0], "monster") || !strcmp(fields[0], "boss")) {
+            if (*fields[2] || strcmp(fields[4], "n/a") || native >= 0x71 || seen[native]) {
+                ok = fail("%s:%d: invalid or duplicate enemy id", relative, number);
+                break;
+            }
+            snprintf(catalog->enemies[native], sizeof catalog->enemies[native], "%s", fields[3]);
+            catalog->bosses[native] = !strcmp(fields[0], "boss");
+            seen[native] = true;
+            enemies++;
+            bosses += catalog->bosses[native];
+            continue;
+        }
+        long item = strtol(fields[2], &end, 10);
+        int soul = soul_group(fields[0]);
+        if (!*fields[2] || *end || item < 0 || item > 255 ||
+            (strcmp(fields[0], "item") && soul < 0) ||
+            (soul < 0 ? strcmp(fields[4], "n/a")
+                      : strcmp(fields[4], "ported") && strcmp(fields[4], "partial") &&
+                            strcmp(fields[4], "missing"))) {
+            ok = fail("%s:%d: invalid collectible row", relative, number);
+            break;
+        }
+        char id[32];
+        snprintf(id, sizeof id, "%02lX:%02lX", native, item);
+        FusionJson row = fusion_json_object();
+        put_string(&row, "id", id);
+        put_string(&row, "name", fields[3]);
+        put_string(&row, "implementation", fields[4]);
+        put_int(&row, "native_id", native);
+        put_int(&row, "item_id", item);
+        if (soul < 0) push(&catalog->items, row);
+        else push(&catalog->souls[soul], row);
+        collectibles++;
+    }
+    free(text);
+    if (ok && (enemies != 0x71 || bosses != 11 || collectibles != 257 ||
+               catalog->items.count != 137 || catalog->souls[0].count != 55 ||
+               catalog->souls[1].count != 24 || catalog->souls[2].count != 35 ||
+               catalog->souls[3].count != 6))
+        ok = fail("%s: expected 113 enemies, 11 bosses and 257 collectibles", relative);
+    if (!ok) free_aos_catalog(catalog);
+    return ok;
+}
+
+static const FusionJson *aspect_by_soul_ref(const FusionJson *aspects, const char *reference) {
+    for (size_t index = 0; index < aspects->count; ++index)
+        if (!strcmp(text_of(&aspects->items[index], "soul_ref"), reference))
+            return &aspects->items[index];
+    return NULL;
+}
+
 static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     FusionJson mapping, records;
     if (!sprite_annotations(annotations, &mapping)) return false;
@@ -1212,8 +1307,16 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         fusion_json_free(&items);
         return false;
     }
+    AosCatalog catalog;
+    if (!load_aos_catalog(&catalog)) {
+        fusion_json_free(&aspects);
+        fusion_json_free(&monsters);
+        fusion_json_free(&items);
+        return false;
+    }
     char *header = read_file("src/runtime/aos_enemy.h", NULL);
     if (!header) {
+        free_aos_catalog(&catalog);
         fusion_json_free(&aspects);
         return fail("cannot read src/runtime/aos_enemy.h");
     }
@@ -1236,7 +1339,7 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         while (isspace((unsigned char)*c)) ++c;
         if (c[0] != '0' || c[1] != 'x' || !isxdigit((unsigned char)c[2])) continue;
         long address = strtol(c + 2, NULL, 16);
-        char identifier[128], annotation[192], pretty[128];
+        char identifier[128], annotation[192];
         snprintf(identifier, sizeof identifier, "%.*s", (int)(name_end - name), name);
         snprintf(annotation, sizeof annotation, "aos.enemies.%s", identifier);
         for (char *letter = annotation; *letter; ++letter) *letter = (char)tolower((unsigned char)*letter);
@@ -1244,8 +1347,8 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
             ok = fail("AOS_ENEMY_%s: unknown parity annotation %s", identifier, annotation);
             break;
         }
-        prettify(identifier, pretty, sizeof pretty);
-        FusionJson row = bestiary_row(fusion_json_int(address), pretty, annotation, "", annotations);
+        FusionJson row = bestiary_row(fusion_json_int(address), catalog.enemies[address],
+                                      annotation, "", annotations);
         const FusionJson *aspect = fusion_json_member(&aspects, annotation + 12);
         if (!aspect) {
             ok = fail("AOS_ENEMY_%s: no row in data/native_parity/aos_monster_aspects.tsv",
@@ -1272,8 +1375,9 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     if (ok && listed != (int64_t)aspects.count)
         ok = fail("data/native_parity/aos_monster_aspects.tsv: %zu rows for %lld ported "
                   "enemies", aspects.count, (long long)listed);
-    fusion_json_free(&aspects);
     if (!ok) {
+        free_aos_catalog(&catalog);
+        fusion_json_free(&aspects);
         fusion_json_free(&monsters);
         fusion_json_free(&items);
         fusion_json_free(&aos_monsters);
@@ -1281,10 +1385,8 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     }
     for (int enemy = 0; enemy < 0x71; ++enemy) {
         if (ported[enemy]) continue;
-        char name[32];
-        snprintf(name, sizeof name, "Enemy 0x%02X", enemy);
-        push(&aos_monsters, bestiary_row(fusion_json_int(enemy), name, NULL,
-                                         "not identified without the ROM constructor table",
+        push(&aos_monsters, bestiary_row(fusion_json_int(enemy), catalog.enemies[enemy], NULL,
+                                         "Native constructor identified; runtime port not started",
                                          annotations));
     }
     for (size_t index = 1; index < aos_monsters.count; ++index) {
@@ -1297,11 +1399,58 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         }
         aos_monsters.items[position] = item;
     }
+    FusionJson aos_regular = fusion_json_array(), aos_bosses = fusion_json_array();
+    for (size_t index = 0; index < aos_monsters.count; ++index) {
+        const FusionJson *row = &aos_monsters.items[index];
+        int64_t id = fusion_json_member(row, "id")->integer;
+        push(catalog.bosses[id] ? &aos_bosses : &aos_regular, copy_of(row));
+    }
+    fusion_json_free(&aos_monsters);
+    aos_monsters = aos_regular;
+
     FusionJson aos_items = fusion_json_array();
-    for (size_t index = 0; index < COUNT(aria_item_families); ++index)
-        push(&aos_items, bestiary_row(fusion_json_string(aria_item_families[index][0]),
-                                      aria_item_families[index][1], aria_item_families[index][2],
-                                      "", annotations));
+    for (size_t index = 0; index < catalog.items.count; ++index) {
+        const FusionJson *source = &catalog.items.items[index];
+        int64_t native = fusion_json_member(source, "native_id")->integer;
+        const char *annotation = native == 3 || native == 4
+                                     ? "aos.progression.equipment_stats"
+                                     : "aos.items.money_pickups";
+        push(&aos_items, bestiary_row(copy_of(fusion_json_member(source, "id")),
+                                      text_of(source, "name"), annotation, "", annotations));
+    }
+    static const char *const soul_keys[] = {"red", "blue", "yellow", "ability"};
+    static const char *const soul_annotations[] = {
+        "aos.souls.red_soul_use", "aos.souls.inventory_pickups",
+        "aos.souls.inventory_pickups", "aos.souls.inventory_pickups"};
+    FusionJson aos_souls = fusion_json_object();
+    for (size_t group = 0; group < COUNT(soul_keys); ++group) {
+        FusionJson rows = fusion_json_array();
+        for (size_t index = 0; index < catalog.souls[group].count; ++index) {
+            const FusionJson *source = &catalog.souls[group].items[index];
+            FusionJson row = bestiary_row(copy_of(fusion_json_member(source, "id")),
+                                           text_of(source, "name"), soul_annotations[group],
+                                           "", annotations);
+            char reference[32];
+            snprintf(reference, sizeof reference, "%s:%lld", soul_keys[group],
+                     (long long)fusion_json_member(source, "item_id")->integer);
+            const char *value = text_of(source, "implementation");
+            put_string(&row, "status", !strcmp(value, "ported") ? "functional"
+                                       : !strcmp(value, "partial") ? "partial"
+                                                                    : "not_started");
+            const FusionJson *aspect = aspect_by_soul_ref(&aspects, reference);
+            if (aspect) {
+                put_string(&row, "note", text_of(aspect, "notes"));
+            } else {
+                put_string(&row, "note", !strcmp(value, "ported")
+                                             ? "Native soul effect is ported and tracked by the red-soul runtime"
+                                             : "Native soul identified; effect not tracked as ported");
+            }
+            push(&rows, row);
+        }
+        put(&aos_souls, soul_keys[group], rows);
+    }
+    free_aos_catalog(&catalog);
+    fusion_json_free(&aspects);
     /* Tanks are Clipdata (BgClipCheckTouchingTransitionOrTank), not sprites. */
     static const char *const tanks[][2] = {{"tank_energy", "Energy Tank"},
                                            {"tank_missile", "Missile Tank"},
@@ -1320,6 +1469,7 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                "(Clipdata, not sprites).");
     put_string(&aos, "title", "Castlevania: Aria of Sorrow");
     put(&aos, "monsters", aos_monsters);
+    put(&aos, "bosses", aos_bosses);
     FusionJson summary = fusion_json_object();
     for (size_t index = 0; index < 5; ++index) {
         FusionJson entry = fusion_json_object();
@@ -1337,6 +1487,11 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                "means implemented from the native routines, unit-tested and seen in a local run; "
                "not emulator-compared. A monster is complete when every aspect is ported or n/a.");
     put(&aos, "items", aos_items);
+    put(&aos, "souls", aos_souls);
+    put_string(&aos, "items_note",
+               "All 137 normal-mode money, consumable, weapon, armor and accessory records are "
+               "listed individually; Hard Mode and All Souls placements reuse these native "
+               "definitions.");
     put(&games, "mzm", mzm);
     put(&games, "aos", aos);
     *result = fusion_json_object();
@@ -1344,7 +1499,8 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                "A row's status is its parity annotation's: 'partial' means a ported AI, "
                "'functional' adds unit tests and a recorded in-game check, 'validated' requires "
                "an emulator comparison; sprites without a ported AI are not started. Names come "
-               "from the pinned sources only; unidentified Aria enemies keep their native id.");
+               "from the reviewed native catalogs; all 113 Aria constructors and all 257 normal "
+               "collectible definitions are named without embedding ROM assets.");
     put(result, "games", games);
     return true;
 }

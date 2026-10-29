@@ -1,0 +1,371 @@
+group	native_id	item_id	name	implementation
+monster	00		Bat	n/a
+monster	01		Zombie	n/a
+monster	02		Skeleton	n/a
+monster	03		Merman	n/a
+monster	04		Axe Armor	n/a
+monster	05		Skull Archer	n/a
+monster	06		Peeping Eye	n/a
+monster	07		Killer Fish	n/a
+monster	08		Bone Pillar	n/a
+monster	09		Blue Crow	n/a
+monster	0A		Buer	n/a
+monster	0B		White Dragon	n/a
+monster	0C		Zombie Soldier	n/a
+monster	0D		Skeleton Knight	n/a
+monster	0E		Ghost	n/a
+monster	0F		Siren	n/a
+monster	10		Tiny Devil	n/a
+monster	11		Durga	n/a
+monster	12		Rock Armor	n/a
+monster	13		Giant Ghost	n/a
+monster	14		Winged Skeleton	n/a
+monster	15		Minotaur	n/a
+monster	16		Student Witch	n/a
+monster	17		Arachne	n/a
+monster	18		Fleaman	n/a
+monster	19		Evil Butcher	n/a
+monster	1A		Quezlcoatl	n/a
+monster	1B		Ectoplasm	n/a
+monster	1C		Catoblepas	n/a
+monster	1D		Ghost Dancer	n/a
+monster	1E		Waiter Skeleton	n/a
+monster	1F		Killer Doll	n/a
+monster	20		Zombie Officer	n/a
+boss	21		Creaking Skull	n/a
+monster	22		Wooden Golem	n/a
+monster	23		Tsuchinoko	n/a
+monster	24		Persephone	n/a
+monster	25		Lilith	n/a
+monster	26		Nemesis	n/a
+monster	27		Kyoma Demon	n/a
+monster	28		Chronomage	n/a
+monster	29		Valkyrie	n/a
+monster	2A		Witch	n/a
+monster	2B		Curly	n/a
+monster	2C		Altair	n/a
+monster	2D		Red Crow	n/a
+monster	2E		Cockatrice	n/a
+monster	2F		Dead Warrior	n/a
+monster	30		Devil	n/a
+monster	31		Imp	n/a
+monster	32		Werewolf	n/a
+monster	33		Gorgon	n/a
+monster	34		Disc Armor	n/a
+monster	35		Golem	n/a
+boss	36		Manticore	n/a
+monster	37		Gremlin	n/a
+monster	38		Harpy	n/a
+monster	39		Medusa Head	n/a
+monster	3A		Bomber Armor	n/a
+monster	3B		Lightning Doll	n/a
+boss	3C		Great Armor	n/a
+monster	3D		Une	n/a
+monster	3E		Giant Worm	n/a
+monster	3F		Needles	n/a
+monster	40		Man Eater	n/a
+monster	41		Fish Head	n/a
+monster	42		Nightmare	n/a
+monster	43		Triton	n/a
+monster	44		Slime	n/a
+boss	45		Big Golem	n/a
+monster	46		Dryad	n/a
+monster	47		Poison Worm	n/a
+monster	48		Arc Demon	n/a
+monster	49		Cagnazzo	n/a
+monster	4A		Ripper	n/a
+monster	4B		Werejaguar	n/a
+monster	4C		Ukoback	n/a
+monster	4D		Alura Une	n/a
+monster	4E		Biphron	n/a
+monster	4F		Mandragora	n/a
+monster	50		Flesh Golem	n/a
+monster	51		Sky Fish	n/a
+monster	52		Dead Crusader	n/a
+monster	53		Kicker Skeleton	n/a
+monster	54		Weretiger	n/a
+monster	55		Killer Mantle	n/a
+monster	56		Mudman	n/a
+monster	57		Gargoyle	n/a
+monster	58		Red Minotaur	n/a
+monster	59		Beam Skeleton	n/a
+monster	5A		Alastor	n/a
+monster	5B		Skull Millione	n/a
+monster	5C		Giant Skeleton	n/a
+monster	5D		Gladiator	n/a
+monster	5E		Bael	n/a
+monster	5F		Succubus	n/a
+monster	60		Mimic	n/a
+monster	61		Stolas	n/a
+monster	62		Erinys	n/a
+monster	63		Lubicant	n/a
+monster	64		Basilisk	n/a
+monster	65		Iron Golem	n/a
+monster	66		Demon Lord	n/a
+monster	67		Final Guard	n/a
+monster	68		Flame Demon	n/a
+monster	69		Shadow Knight	n/a
+boss	6A		Headhunter	n/a
+boss	6B		Death	n/a
+boss	6C		Legion	n/a
+boss	6D		Balore	n/a
+boss	6E		Julius Belmont	n/a
+boss	6F		Graham Jones	n/a
+boss	70		Chaos	n/a
+item	01	0	Money pickup	n/a
+item	02	0	Potion	n/a
+item	02	1	High Potion	n/a
+item	02	2	Super Potion	n/a
+item	02	3	Meat Strip	n/a
+item	02	4	Tasty Meat	n/a
+item	02	5	Mind Up	n/a
+item	02	6	High Mind Up	n/a
+item	02	7	Mana Prism	n/a
+item	02	8	Anti-Venom	n/a
+item	02	9	Uncurse Potion	n/a
+item	02	10	Potato Pancake	n/a
+item	02	11	Beef Curry	n/a
+item	02	12	Ramen	n/a
+item	02	13	Cream Soda	n/a
+item	02	14	Cream Puff	n/a
+item	02	15	Milk	n/a
+item	02	16	Coffee	n/a
+item	02	17	Tea	n/a
+item	02	18	Pudding	n/a
+item	02	19	Strawberry	n/a
+item	02	20	Melon	n/a
+item	02	21	Grapes	n/a
+item	02	22	Persimmon	n/a
+item	02	23	Rotten Meat	n/a
+item	02	24	Spoiled Milk	n/a
+item	02	25	Skull Key	n/a
+item	02	26	Ancient Book 1	n/a
+item	02	27	Ancient Book 2	n/a
+item	02	28	Ancient Book 3	n/a
+item	02	29	CASTLE MAP 1	n/a
+item	02	30	CASTLE MAP 2	n/a
+item	02	31	CASTLE MAP 3	n/a
+item	03	0	Knife	n/a
+item	03	1	Baselard	n/a
+item	03	2	Combat Knife	n/a
+item	03	3	Short Sword	n/a
+item	03	4	Bastard Sword	n/a
+item	03	5	Whip Sword	n/a
+item	03	6	Gladius	n/a
+item	03	7	Gram	n/a
+item	03	8	Milican's Sword	n/a
+item	03	9	Hrunting	n/a
+item	03	10	Mystletain	n/a
+item	03	11	Rahab's Sword	n/a
+item	03	12	Durandal	n/a
+item	03	13	Laevatain	n/a
+item	03	14	Burtgang	n/a
+item	03	15	Kaladbolg	n/a
+item	03	16	Vjaya	n/a
+item	03	17	Balmung	n/a
+item	03	18	Broadsword	n/a
+item	03	19	Scimitar	n/a
+item	03	20	Claymore	n/a
+item	03	21	Great Sword	n/a
+item	03	22	Joyeuse	n/a
+item	03	23	Dainslef	n/a
+item	03	24	Ascalon	n/a
+item	03	25	Claimh Solais	n/a
+item	03	26	Final Sword	n/a
+item	03	27	Bamboo Sword	n/a
+item	03	28	Katana	n/a
+item	03	29	Osafune	n/a
+item	03	30	Onikiri	n/a
+item	03	31	Kunitsuna	n/a
+item	03	32	Yasutsuna	n/a
+item	03	33	Muramasa	n/a
+item	03	34	Hammer	n/a
+item	03	35	Warhammer	n/a
+item	03	36	Excalibur	n/a
+item	03	37	Tallhammer	n/a
+item	03	38	Battle Axe	n/a
+item	03	39	Death's Sickle	n/a
+item	03	40	Rapier	n/a
+item	03	41	Estoc	n/a
+item	03	42	Cutall	n/a
+item	03	43	Spear	n/a
+item	03	44	Trident	n/a
+item	03	45	Lance	n/a
+item	03	46	Partizan	n/a
+item	03	47	Gabolg	n/a
+item	03	48	Gungner	n/a
+item	03	49	Ronginus' Spear	n/a
+item	03	50	Cestus	n/a
+item	03	51	Kaiser Knuckle	n/a
+item	03	52	Mach Punch	n/a
+item	03	53	Whip Knuckle	n/a
+item	03	54	Poison Fist	n/a
+item	03	55	Handgun	n/a
+item	03	56	Silver Gun	n/a
+item	03	57	Positron Rifle	n/a
+item	03	58	Valmanway	n/a
+item	04	0	Casual Clothes	n/a
+item	04	1	Cloth Tunic	n/a
+item	04	2	Gym Clothes	n/a
+item	04	3	War Fatigues	n/a
+item	04	4	Ninja Suit	n/a
+item	04	5	Soldier Uniform	n/a
+item	04	6	Pitch Black Suit	n/a
+item	04	7	Olrox's Suit	n/a
+item	04	8	Dracula's Tunic	n/a
+item	04	9	Leather Plate	n/a
+item	04	10	Copper Plate	n/a
+item	04	11	Iron Plate	n/a
+item	04	12	Steel Plate	n/a
+item	04	13	Silver Plate	n/a
+item	04	14	Gold Plate	n/a
+item	04	15	Eversing	n/a
+item	04	16	Samurai Armor	n/a
+item	04	17	Silk Robe	n/a
+item	04	18	Elfin Robe	n/a
+item	04	19	Death's Robe	n/a
+item	04	20	Demon's Mail	n/a
+item	04	21	Armor of Fire	n/a
+item	04	22	Armor of Water	n/a
+item	04	23	Blocking Mail	n/a
+item	04	24	Army Jacket	n/a
+item	04	25	Cape	n/a
+item	04	26	Crimson Cloak	n/a
+item	04	27	Black Cloak	n/a
+item	04	28	Pendant	n/a
+item	04	29	Heart Pendant	n/a
+item	04	30	Scarf	n/a
+item	04	31	Red Scarf	n/a
+item	04	32	Ancient Belt	n/a
+item	04	33	Black Belt	n/a
+item	04	34	Skull Necklace	n/a
+item	04	35	Flame Necklace	n/a
+item	04	36	Satan's Ring	n/a
+item	04	37	Tear Of Blood	n/a
+item	04	38	Lucky Charm	n/a
+item	04	39	Rare Ring	n/a
+item	04	40	Soul Eater Ring	n/a
+item	04	41	Rune Ring	n/a
+item	04	42	Sherman Ring	n/a
+item	04	43	Gold Ring	n/a
+item	04	44	Chaos Ring	n/a
+red_soul	05	1	Winged Skeleton	ported
+red_soul	05	2	Bat	ported
+red_soul	05	3	Skeleton	ported
+red_soul	05	4	Merman	ported
+red_soul	05	5	Axe Armor	ported
+red_soul	05	6	Skull Archer	ported
+red_soul	05	7	Killer Fish	partial
+red_soul	05	8	Blue Crow	ported
+red_soul	05	9	Zombie Soldier	ported
+red_soul	05	10	Ghost	ported
+red_soul	05	11	Siren	ported
+red_soul	05	12	Tiny Devil	ported
+red_soul	05	13	Durga	ported
+red_soul	05	14	Rock Armor	partial
+red_soul	05	15	Student Witch	missing
+red_soul	05	16	Arachne	missing
+red_soul	05	17	Fleaman	ported
+red_soul	05	18	Evil Butcher	missing
+red_soul	05	19	Waiter Skeleton	missing
+red_soul	05	20	Altair	missing
+red_soul	05	21	Mudman	missing
+red_soul	05	22	Cockatrice	missing
+red_soul	05	23	Werewolf	missing
+red_soul	05	24	Harpy	ported
+red_soul	05	25	Une	missing
+red_soul	05	26	Needles	ported
+red_soul	05	27	Man-Eater	missing
+red_soul	05	28	Ukoback	missing
+red_soul	05	29	Fish Head	ported
+red_soul	05	30	Disc Armor	missing
+red_soul	05	31	Nightmare	missing
+red_soul	05	32	Slime	missing
+red_soul	05	33	Dryad	missing
+red_soul	05	34	Ripper	ported
+red_soul	05	35	Werejaguar	missing
+red_soul	05	36	Weretiger	missing
+red_soul	05	37	Biphron	missing
+red_soul	05	38	Mandragora	missing
+red_soul	05	39	Beam Skeleton	ported
+red_soul	05	40	Skull Millione	ported
+red_soul	05	41	Giant Skeleton	missing
+red_soul	05	42	Gladiator	ported
+red_soul	05	43	Demon Lord	missing
+red_soul	05	44	Flame Demon	missing
+red_soul	05	45	Lightning Doll	partial
+red_soul	05	46	Valkyrie	ported
+red_soul	05	47	Bomber Armor	missing
+red_soul	05	48	Red Minotaur	missing
+red_soul	05	49	Legion	missing
+red_soul	05	50	Balore	missing
+red_soul	05	51	Killer Doll	partial
+red_soul	05	52	Nemesis	partial
+red_soul	05	53	Killer Mantle	missing
+red_soul	05	54	Kyoma Demon	missing
+red_soul	05	55	Chronomage	missing
+blue_soul	06	1	Flying Armor	missing
+blue_soul	06	2	Giant Bat	missing
+blue_soul	06	3	Black Panther	missing
+blue_soul	06	4	Buer	partial
+blue_soul	06	5	Witch	missing
+blue_soul	06	6	Giant Ghost	partial
+blue_soul	06	7	Final Guard	missing
+blue_soul	06	8	Great Armor	missing
+blue_soul	06	9	Catoblepas	partial
+blue_soul	06	10	Bone Pillar	partial
+blue_soul	06	11	Cagnazzo	partial
+blue_soul	06	12	Big Golem	missing
+blue_soul	06	13	Shadow Knight	missing
+blue_soul	06	14	Creaking Skull	missing
+blue_soul	06	15	Medusa Head	partial
+blue_soul	06	16	Persephone	missing
+blue_soul	06	17	Alura Une	missing
+blue_soul	06	18	Devil	missing
+blue_soul	06	19	Manticore	missing
+blue_soul	06	20	Curly	partial
+blue_soul	06	21	Sky Fish	missing
+blue_soul	06	22	Imp	partial
+blue_soul	06	23	Alastor	missing
+blue_soul	06	24	Death	missing
+yellow_soul	07	1	Undine	missing
+yellow_soul	07	2	Skula	missing
+yellow_soul	07	3	Zombie Officer	partial
+yellow_soul	07	4	Iron Golem	missing
+yellow_soul	07	5	Dead Warrior	partial
+yellow_soul	07	6	Peeping Eye	partial
+yellow_soul	07	7	Succubus	missing
+yellow_soul	07	8	Flesh Golem	missing
+yellow_soul	07	9	Tsuchinoko	missing
+yellow_soul	07	10	Giant Worm	missing
+yellow_soul	07	11	Wooden Golem	missing
+yellow_soul	07	12	Zombie	partial
+yellow_soul	07	13	Lubicant	partial
+yellow_soul	07	14	Headhunter	missing
+yellow_soul	07	15	Basilisk	missing
+yellow_soul	07	16	Erinys	partial
+yellow_soul	07	17	Mimic	partial
+yellow_soul	07	18	Arc Demon	missing
+yellow_soul	07	19	Poison Worm	missing
+yellow_soul	07	20	Ectoplasm	missing
+yellow_soul	07	21	Gargoyle	partial
+yellow_soul	07	22	Skeleton Knight	partial
+yellow_soul	07	23	Minotaur	missing
+yellow_soul	07	24	Golem	missing
+yellow_soul	07	25	Triton	missing
+yellow_soul	07	26	White Dragon	partial
+yellow_soul	07	27	Quezlcoatl	missing
+yellow_soul	07	28	Gorgon	partial
+yellow_soul	07	29	Dead Crusader	partial
+yellow_soul	07	30	Red Crow	partial
+yellow_soul	07	31	Lilith	missing
+yellow_soul	07	32	Bael	missing
+yellow_soul	07	33	Stolas	missing
+yellow_soul	07	34	Ghost Dancer	partial
+yellow_soul	07	35	Gremlin	partial
+ability_soul	08	0	Grave Keeper	missing
+ability_soul	08	1	Skeleton Blaze	missing
+ability_soul	08	2	Malphas	missing
+ability_soul	08	3	Kicker Skeleton	missing
+ability_soul	08	4	Hippogryph	missing
+ability_soul	08	5	Galamoth	missing

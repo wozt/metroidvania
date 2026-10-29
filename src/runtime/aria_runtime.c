@@ -25,6 +25,7 @@
 #include "aos_skill_dagger.h"
 #include "aos_skill_flea.h"
 #include "aos_skill_fish_head.h"
+#include "aos_skill_gladiator.h"
 #include "aos_skill_devil.h"
 #include "aos_skill_ghost.h"
 #include "aos_skill_siren.h"
@@ -665,7 +666,8 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_AXE_TRAIL, SKILL_SPEAR, SKILL_SPEAR_TIP, SKILL_SHOT, SKILL_HARPY, SKILL_DAGGER,
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
-       SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD };
+       SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
+       SKILL_GLADIATOR };
 
 typedef struct {
     bool alive, started;
@@ -696,6 +698,7 @@ typedef struct {
     AosRipperSoul ripper;   /* SKILL_RIPPER */
     AosMillioneSoul millione; /* SKILL_MILLIONE_EMITTER */
     AosFishHeadSoul fish_head; /* SKILL_FISH_HEAD */
+    AosGladiatorSoul gladiator; /* SKILL_GLADIATOR */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -723,6 +726,7 @@ typedef struct {
 #define SKILL_RIPPER_ROUTINE 0x08023A71u
 #define SKILL_MILLIONE_ROUTINE 0x0802B1B9u
 #define SKILL_FISH_HEAD_ROUTINE 0x0802B351u
+#define SKILL_GLADIATOR_ROUTINE 0x0802B4C9u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -737,6 +741,8 @@ typedef struct {
     const AosEnemyKind *bone_kind;  /* its walker probes and still frames */
     const AosAnimSet *millione;     /* resource 7, sequence 0 */
     const AosAnimSet *fish_head;    /* resource 17, sequence 0 */
+    const AosAnimSet *gladiator;    /* resource 24, sequence/frame 0 */
+    const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
     int bone_count;
     AosEffect *effects;             /* the room's shared effects */
@@ -828,6 +834,9 @@ static int cast_red_soul(void *context) {
                    ? SKILL_MILLIONE_EMITTER
                : routine == SKILL_FISH_HEAD_ROUTINE && souls->fish_head
                    ? SKILL_FISH_HEAD
+               : routine == SKILL_GLADIATOR_ROUTINE && souls->gladiator &&
+                         souls->gladiator_kind && souls->gladiator_kind->probes.count
+                   ? SKILL_GLADIATOR
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
@@ -862,6 +871,12 @@ static int cast_red_soul(void *context) {
         skill->x = skill->fish_head.x;
         skill->y = skill->fish_head.y;
         skill->facing_left = skill->fish_head.facing_left;
+    } else if (kind == SKILL_GLADIATOR) {
+        skill->gladiator = aos_gladiator_soul_create(souls->soma->x, souls->soma->y,
+                                                     souls->soma->facing_left);
+        skill->x = skill->gladiator.body.x;
+        skill->y = skill->gladiator.body.y;
+        skill->facing_left = skill->gladiator.facing_left;
     } else if (kind == SKILL_VALKYRIE) {
         skill->valkyrie = aos_valkyrie_create(souls->soma->x, souls->soma->y,
                                               souls->soma->facing_left);
@@ -1351,6 +1366,30 @@ static void update_skills(AriaSouls *souls) {
             aos_anim_step(&skill->anim, souls->fish_head);
             break;
         }
+        case SKILL_GLADIATOR: {
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_anim_start(&skill->anim, souls->gladiator, 0, true);
+            }
+            AosGladiatorDust dust;
+            int mx = souls->margins ? souls->margins[3][0] : 16;
+            int my = souls->margins ? souls->margins[3][1] : 16;
+            bool alive = aos_gladiator_soul_update(
+                &skill->gladiator, souls->layer, &souls->gladiator_kind->probes,
+                aos_random, souls->cam_x, souls->cam_y, mx, my, &dust);
+            if (dust.spawn && souls->effects && *souls->effect_count < MAX_EFFECTS)
+                souls->effects[(*souls->effect_count)++] = (AosEffect){
+                    .kind = AOS_EFFECT_FLAME, .drift = true, .x = dust.x, .y = dust.y};
+            if (!alive) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->gladiator.body.x;
+            skill->y = skill->gladiator.body.y;
+            aos_anim_step(&skill->anim, souls->gladiator);
+            break;
+        }
         case SKILL_VALKYRIE: {
             /* SkillValkyrieUse: counted with sound 0x1AF and sequence 0 on
              * its first update (sub_08042A54(1, 0x3C) is not run). */
@@ -1627,6 +1666,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = souls->bone_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_FISH_HEAD)
             box = (AosBox){-6, -6, 12, 12};    /* 0x0C0CFAFA */
+        else if (skill->kind == SKILL_GLADIATOR)
+            box = (AosBox){-16, -16, 32, 32};  /* 0x2020F0F0 */
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->valkyrie_kind->attack[0][skill->anim.frame];
@@ -3422,6 +3463,10 @@ int main(int argc, char **argv) {
             souls.fish_head = objects_ok && fish_head->loaded && fish_head->defs[0].count
                                   ? &fish_head->set
                                   : NULL;
+            souls.gladiator = objects_ok && blades->loaded && blades->defs[0].count
+                                  ? &blades->set
+                                  : NULL;
+            souls.gladiator_kind = souls.gladiator ? &blades->kind : NULL;
             const __typeof__(objects.skills[0]) *valkyrie = &objects.skills[SKILL_ART_VALKYRIE];
             souls.valkyrie = objects_ok && valkyrie->loaded && valkyrie->defs[0].count
                                  ? &valkyrie->set
@@ -3666,6 +3711,8 @@ int main(int argc, char **argv) {
             if (skill->kind == SKILL_SPEAR && skill->spear.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_FLEA && skill->flea.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_VALKYRIE && skill->valkyrie.blinking && (step & 1)) continue;
+            if (skill->kind == SKILL_GLADIATOR && skill->gladiator.blinking && (step & 1))
+                continue;
             if (skill->kind == SKILL_RIPPER && skill->ripper.blink == 2 && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
@@ -3687,6 +3734,8 @@ int main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_BONE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_FISH_HEAD
                     ? &objects.skills[SKILL_ART_FISH_HEAD].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_GLADIATOR
+                    ? &objects.skills[SKILL_ART_BLADES].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_VALKYRIE
                     ? (skill->valkyrie.hidden
                            ? NULL
@@ -3732,6 +3781,8 @@ int main(int argc, char **argv) {
                                ? (uint16_t)skill->trail.angle * 360.0 / 65536.0
                            : skill->kind == SKILL_RIPPER
                                ? (uint16_t)skill->ripper.angle * 360.0 / 65536.0
+                           : skill->kind == SKILL_GLADIATOR
+                               ? skill->gladiator.angle * 360.0 / 65536.0
                                : 0;
             /* The afterimages are semi-transparent objects (+ 0x5A mode 1);
              * the blend weights in force are not traced: half here. */

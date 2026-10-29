@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0630 - Gladiator red soul
+
+- Ported `SkillGladiatorUse`: resource 24 frame 0 is thrown from Soma at
+  two pixels per frame and 2.5 pixels upward, follows the native
+  `0x084F13C8` collision probes with 1/8 gravity, slows by 1/128 pixel per
+  frame, adjusts on slopes and rebounds from walls at half speed.
+- Connected red soul 42 to the caster, rotating renderer, constant 32 x 32
+  type-5 attack and shared effects. It requests sound 0xC5 at creation and
+  0x15F on wall or ground impacts, then blinks for 16 frames and creates
+  five animation-0 particles before releasing its slot. ROM-free tests
+  cover mirroring, flight, landing, wall rebound, rotation, sounds and the
+  complete ending; a local room 0/3 capture showed the rotating shield in
+  front of Soma. Source-derived and unit-tested, not emulator-compared.
+- Gladiator is not one of the 47 tracked runtime monsters, so monster
+  completeness remains **17/47**. Zero Mission is unchanged.
+
 ## Patch 0629 - Fish Head red soul
 
 - Ported `SkillFishHeadUse`: resource 17 sequence 0 is placed eight pixels

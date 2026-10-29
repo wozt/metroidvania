@@ -26,12 +26,31 @@ AosRipperSoul aos_ripper_soul_create(int32_t soma_x, int32_t soma_y,
 }
 
 bool aos_ripper_soul_update(AosRipperSoul *soul, int16_t wall_delta_pixels,
-                            bool outside) {
+                            bool outside, const AosRipperTarget *target) {
     if (!soul || soul->state == AOS_RIPPER_REMOVED) return false;
     if (!soul->started) {
         /* Source state 0: after successful art and palette initialization. */
         soul->started = true;
         aos_audio_play_song(0xE6);
+    }
+    if (soul->state == AOS_RIPPER_FLYING && soul->attached) {
+        /* Skill_EvilButcher_Ripper_Use state 1 with sub_080239E4 alive:
+         * variant 0 ends immediately; variant 1 follows the struck enemy
+         * until its post-incremented helper age passes 20. */
+        if (outside || !target || !target->active || target->defeated || soul->variant == 0 ||
+            soul->attached_age++ > 20) {
+            soul->state = AOS_RIPPER_REMOVED;
+            return false;
+        }
+        soul->x = add32(target->x, soul->target_dx);
+        soul->y = add32(target->y, soul->target_dy);
+        if (soul->timer == 0) {
+            soul->state = AOS_RIPPER_FADING;
+            soul->timer = 15;
+        } else {
+            --soul->timer;
+        }
+        return true;
     }
     if (soul->state == AOS_RIPPER_FLYING) {
         soul->x = add32(soul->x, soul->vx);
@@ -71,4 +90,14 @@ bool aos_ripper_soul_update(AosRipperSoul *soul, int16_t wall_delta_pixels,
     }
     soul->state = AOS_RIPPER_REMOVED;
     return false;
+}
+
+void aos_ripper_soul_attach(AosRipperSoul *soul, int32_t target_x,
+                            int32_t target_y) {
+    if (!soul || soul->state != AOS_RIPPER_FLYING || soul->attached) return;
+    soul->attached = true;
+    soul->attached_age = 0;
+    soul->timer = 0x78;
+    soul->target_dx = (int32_t)((uint32_t)soul->x - (uint32_t)target_x);
+    soul->target_dy = (int32_t)((uint32_t)soul->y - (uint32_t)target_y);
 }

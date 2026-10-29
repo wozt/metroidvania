@@ -122,7 +122,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802D750	sub_0802D750	unclassified		technic
 aos:asm:asm/code/code_080211F0.s:sub_0802D7CC	sub_0802D7CC	unclassified		technical	exclusive_callees	asm_function	0x0802D7CC	asm/code/code_080211F0.s	24766	0	5
 aos:asm:asm/code/code_080211F0.s:sub_0802D880	sub_0802D880	unclassified		technical	exclusive_callees	asm_function	0x0802D880	asm/code/code_080211F0.s	24852	0	2
 aos:asm:asm/code/code_080211F0.s:sub_0802D900	sub_0802D900	unclassified		technical	exclusive_callees	asm_function	0x0802D900	asm/code/code_080211F0.s	24916	0	4
-aos:asm:asm/code/code_080211F0.s:sub_0802D9BC	sub_0802D9BC	abilities	referrers			asm_function	0x0802D9BC	asm/code/code_080211F0.s	25009	0	2
 aos:asm:asm/code/code_080211F0.s:sub_0802DA14	sub_0802DA14	unclassified				asm_function	0x0802DA14	asm/code/code_080211F0.s	25055	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0802DA1C	sub_0802DA1C	abilities	referrers			asm_function	0x0802DA1C	asm/code/code_080211F0.s	25062	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DA5C	sub_0802DA5C	unclassified		technical	exclusive_callees	asm_function	0x0802DA5C	asm/code/code_080211F0.s	25094	0	1
@@ -2214,7 +2213,6 @@ aos:c:src/code/code_080211F0.c:sub_08023724	sub_08023724	abilities	referrers			c
 aos:c:src/code/code_080211F0.c:sub_08023724_inline_0	sub_08023724_inline_0	abilities	referrers			c_function		src/code/code_080211F0.c	2178	1	0
 aos:c:src/code/code_080211F0.c:sub_0802383C	sub_0802383C	abilities	referrers			c_function	0x0802383C	src/code/code_080211F0.c	2254	3	6
 aos:c:src/code/code_080211F0.c:sub_0802393C	sub_0802393C	abilities	referrers			c_function	0x0802393C	src/code/code_080211F0.c	2307	2	3
-aos:c:src/code/code_080211F0.c:sub_080239E4	sub_080239E4	abilities	referrers			c_function	0x080239E4	src/code/code_080211F0.c	2345	0	1
 aos:c:src/code/code_080211F0.c:sub_08023E50	sub_08023E50	unclassified		technical	exclusive_callees	c_function	0x08023E50	src/code/code_080211F0.c	2592	0	11
 aos:c:src/code/code_080211F0.c:sub_08024530	sub_08024530	unclassified		technical	exclusive_callees	c_function	0x08024530	src/code/code_080211F0.c	2883	0	15
 aos:c:src/code/code_080211F0.c:sub_08024530_inline_0	sub_08024530_inline_0	unclassified				c_function		src/code/code_080211F0.c	2858	1	0

@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0627 - Ripper red soul target attachment
+
+- Completed `sub_0802D9BC` and `sub_080239E4`: a soul attack now reports
+  the exact enemy it struck, the first Ripper hit records its relative
+  offset, expands the attack from 2 x 2 to 20 x 16, follows that live target
+  and observes its defeated state. Variant 0 ends on the next update;
+  variant 1 remains attached through the native post-incremented 22-update
+  lifetime before releasing its active red-soul slot.
+- ROM-free tests cover target reporting, relative motion, both variants,
+  timeout and defeated-target cleanup. A local hitbox run in area 7 room 55
+  showed variant 1 attach and kill a Ripper with three 33-damage hits.
+  Source-derived and unit-tested, not emulator-compared. Completeness remains
+  **16/47**; Zero Mission is unchanged.
+
 ## Patch 0626 - Ripper red soul runtime integration
 
 - Exported the two native `0x084F128C` blade variants from their shared

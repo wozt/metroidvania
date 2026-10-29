@@ -274,13 +274,14 @@ uint16_t aos_arctan2(int16_t x, int16_t y);
 void aos_enemy_set_flag_8e_40(bool set);
 /* A red soul skill's attack this frame: its world rectangle (inclusive),
  * the power of sub_08021530(5) and the elements of its record (+ 0xC);
- * `struck` is set when an enemy took it (the skill's hit callback, as
- * sub_0802DB84 for the arrow). */
+ * `struck` and `target` are set when an enemy took it (the skill's hit
+ * callback, as sub_0802DB84 for the arrow and sub_0802D9BC for Ripper). */
 typedef struct {
     AosRect rect;
     int power;
     uint16_t elements;
     bool struck;
+    AosEnemy *target;
 } AosSoulAttack;
 
 /* The soul attacks the next enemy updates test after the weapon (type 5

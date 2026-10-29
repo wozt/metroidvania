@@ -1134,6 +1134,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             struck = true;
             attacker = AOS_TYPE_SOUL;
             attack->struck = true;
+            attack->target = enemy;
             power = attack->power;
             elements = attack->elements;
         }

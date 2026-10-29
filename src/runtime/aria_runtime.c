@@ -692,6 +692,7 @@ typedef struct {
     AosValkyrie valkyrie;   /* SKILL_VALKYRIE */
     AosNeedles needles;     /* SKILL_NEEDLES */
     AosRipperSoul ripper;   /* SKILL_RIPPER */
+    AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
     int parent;             /* + 0x14: a child's parent slot */
@@ -1238,20 +1239,32 @@ static void update_skills(AriaSouls *souls) {
             int16_t wall = 0;
             bool outside = false;
             if (skill->ripper.state == AOS_RIPPER_FLYING) {
-                int32_t next_x = (int32_t)((uint32_t)skill->ripper.x +
-                                           (uint32_t)skill->ripper.vx);
-                int x = next_x >> 16, y = skill->ripper.y >> 16;
-                if (souls->layer)
-                    wall = skill->ripper.facing_left
-                               ? (int16_t)aos_wall_push_right(souls->layer, x - 6, y)
-                               : (int16_t)aos_wall_push_left(souls->layer, x + 6, y);
+                int32_t tested_x = skill->ripper.x;
+                if (!skill->ripper.attached) {
+                    tested_x = (int32_t)((uint32_t)tested_x + (uint32_t)skill->ripper.vx);
+                    int x = tested_x >> 16, y = skill->ripper.y >> 16;
+                    if (souls->layer)
+                        wall = skill->ripper.facing_left
+                                   ? (int16_t)aos_wall_push_right(souls->layer, x - 6, y)
+                                   : (int16_t)aos_wall_push_left(souls->layer, x + 6, y);
+                }
                 int mx = souls->margins ? souls->margins[4][0] : 16;
                 int my = souls->margins ? souls->margins[4][1] : 16;
-                int sx = (next_x >> 16) - souls->cam_x;
+                int sx = (tested_x >> 16) - souls->cam_x;
                 int sy = (skill->ripper.y >> 16) - souls->cam_y;
                 outside = sx < -mx || sx > mx + 0xF0 || sy < -my || sy > my + 0xA0;
             }
-            if (!aos_ripper_soul_update(&skill->ripper, wall, outside)) {
+            AosRipperTarget target = {0};
+            const AosRipperTarget *target_ptr = NULL;
+            if (skill->ripper_target) {
+                target = (AosRipperTarget){.x = skill->ripper_target->x,
+                                           .y = skill->ripper_target->y,
+                                           .active = !skill->ripper_target->removed,
+                                           .defeated = skill->ripper_target->defeated ||
+                                                       skill->ripper_target->hp <= 0};
+                target_ptr = &target;
+            }
+            if (!aos_ripper_soul_update(&skill->ripper, wall, outside, target_ptr)) {
                 end_skill(souls, skill);
                 break;
             }
@@ -1528,7 +1541,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         else if (skill->kind == SKILL_NEEDLES && skill->needles.state != 3)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_RIPPER && skill->ripper.state == AOS_RIPPER_FLYING)
-            box = (AosBox){-1, -1, 2, 2};      /* 0x0202FFFF */
+            box = skill->ripper.attached ? (AosBox){-10, -8, 20, 16} /* 0x1014F8F6 */
+                                         : (AosBox){-1, -1, 2, 2};   /* 0x0202FFFF */
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->valkyrie_kind->attack[0][skill->anim.frame];
@@ -1552,7 +1566,7 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         owners[count] = skill;
         attacks[count++] = (AosSoulAttack){
             aos_entity_rect(box, skill->x >> 16, skill->y >> 16, skill->facing_left, false),
-            aos_red_soul_power(souls->stats, record, false), record->elements, false};
+            aos_red_soul_power(souls->stats, record, false), record->elements, false, NULL};
     }
     return count;
 }
@@ -3443,7 +3457,15 @@ int main(int argc, char **argv) {
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
             for (int k = 0; k < attack_count; ++k)
-                if (attacks[k].struck) owners[k]->struck = true;
+                if (attacks[k].struck) {
+                    owners[k]->struck = true;
+                    if (owners[k]->kind == SKILL_RIPPER && !owners[k]->ripper.attached &&
+                        attacks[k].target) {
+                        owners[k]->ripper_target = attacks[k].target;
+                        aos_ripper_soul_attach(&owners[k]->ripper, attacks[k].target->x,
+                                               attacks[k].target->y);
+                    }
+                }
         }
 
         int sx = soma.x >> 16, sy = soma.y >> 16;

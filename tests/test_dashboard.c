@@ -343,8 +343,8 @@ static void test_bestiary(const FusionJson *data) {
            !strcmp(text_of(row_named(red_souls, "Bat"), "status"), "functional"),
            "ported Bat soul");
     EXPECT(row_named(red_souls, "Killer Fish") &&
-           !strcmp(text_of(row_named(red_souls, "Killer Fish"), "status"), "partial"),
-           "partial Killer Fish soul");
+           !strcmp(text_of(row_named(red_souls, "Killer Fish"), "status"), "functional"),
+           "ported Killer Fish soul");
     EXPECT(row_named(red_souls, "Gladiator") &&
            !strcmp(text_of(row_named(red_souls, "Gladiator"), "status"), "functional"),
            "ported Gladiator soul");

@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0632 - Killer Fish red soul
+
+- Ported `SkillKillerFishUse` with resource 11's native appearance and loop
+  animations, its 48 x 32 type-5 attack, initial backward-facing placement
+  and sounds 0x19C, 0x1AD, 0xDB and 0xDA.
+- Reconstructed both environmental branches. Outside bit-3 water collision,
+  the fish halves its horizontal speed, jumps, falls with gravity and emits
+  an impact every fourth update. In water it selects the nearest homing-list
+  target once, follows the source-derived `sub_08069CF4` collision motion,
+  aligns to the water boundary and ends against a wall or outside margin 4.
+- Added deterministic ROM-free tests for placement, animation gating, target
+  selection, swimming, falling, particles, collision and delayed deletion.
+  The native object golden set now guards 570 sequences, 1,851 frames and
+  1,196 runtime files. A local area 0 room 16 capture showed the soul
+  swimming in the water in front of Soma. Source-derived and unit-tested,
+  not emulator-compared. Killer Fish's soul aspect is ported, while the
+  monster remains partial because its enemy AI and sounds are incomplete.
+
 ## Patch 0631 - Complete Aria catalog dashboard
 
 - Added a reviewed native catalog for all 113 Aria enemy constructors,

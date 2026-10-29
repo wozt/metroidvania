@@ -25,6 +25,7 @@
 #include "aos_skill_dagger.h"
 #include "aos_skill_flea.h"
 #include "aos_skill_fish_head.h"
+#include "aos_skill_killer_fish.h"
 #include "aos_skill_gladiator.h"
 #include "aos_skill_devil.h"
 #include "aos_skill_ghost.h"
@@ -214,13 +215,15 @@ static int enemy_bank(const AosEnemy *enemy) {
 /* The red soul skills' sprites (Enemy/skill_<name>). */
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
-       SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_FISH_HEAD, SKILL_ARTS };
+       SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
+       SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
                                                          "skill_flea", "skill_skull",
                                                          "skill_valkyrie", "skill_needles",
-                                                         "skill_ripper", "skill_fish_head"};
+                                                         "skill_ripper", "skill_killer_fish",
+                                                         "skill_fish_head"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -667,7 +670,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
-       SKILL_GLADIATOR };
+       SKILL_KILLER_FISH, SKILL_GLADIATOR };
 
 typedef struct {
     bool alive, started;
@@ -698,6 +701,7 @@ typedef struct {
     AosRipperSoul ripper;   /* SKILL_RIPPER */
     AosMillioneSoul millione; /* SKILL_MILLIONE_EMITTER */
     AosFishHeadSoul fish_head; /* SKILL_FISH_HEAD */
+    AosKillerFishSoul killer_fish; /* SKILL_KILLER_FISH */
     AosGladiatorSoul gladiator; /* SKILL_GLADIATOR */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -726,6 +730,7 @@ typedef struct {
 #define SKILL_RIPPER_ROUTINE 0x08023A71u
 #define SKILL_MILLIONE_ROUTINE 0x0802B1B9u
 #define SKILL_FISH_HEAD_ROUTINE 0x0802B351u
+#define SKILL_KILLER_FISH_ROUTINE 0x08027C59u
 #define SKILL_GLADIATOR_ROUTINE 0x0802B4C9u
 
 /* What a cast needs: the soul state and where its entity goes. */
@@ -741,6 +746,7 @@ typedef struct {
     const AosEnemyKind *bone_kind;  /* its walker probes and still frames */
     const AosAnimSet *millione;     /* resource 7, sequence 0 */
     const AosAnimSet *fish_head;    /* resource 17, sequence 0 */
+    const AosAnimSet *killer_fish;  /* resource 11, sequences 0-1 */
     const AosAnimSet *gladiator;    /* resource 24, sequence/frame 0 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -834,6 +840,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_MILLIONE_EMITTER
                : routine == SKILL_FISH_HEAD_ROUTINE && souls->fish_head
                    ? SKILL_FISH_HEAD
+               : routine == SKILL_KILLER_FISH_ROUTINE && souls->killer_fish
+                   ? SKILL_KILLER_FISH
                : routine == SKILL_GLADIATOR_ROUTINE && souls->gladiator &&
                          souls->gladiator_kind && souls->gladiator_kind->probes.count
                    ? SKILL_GLADIATOR
@@ -871,6 +879,12 @@ static int cast_red_soul(void *context) {
         skill->x = skill->fish_head.x;
         skill->y = skill->fish_head.y;
         skill->facing_left = skill->fish_head.facing_left;
+    } else if (kind == SKILL_KILLER_FISH) {
+        skill->killer_fish = aos_killer_fish_soul_create(
+            souls->soma->x, souls->soma->y, souls->soma->facing_left);
+        skill->x = skill->killer_fish.x;
+        skill->y = skill->killer_fish.y;
+        skill->facing_left = skill->killer_fish.facing_left;
     } else if (kind == SKILL_GLADIATOR) {
         skill->gladiator = aos_gladiator_soul_create(souls->soma->x, souls->soma->y,
                                                      souls->soma->facing_left);
@@ -1366,6 +1380,48 @@ static void update_skills(AriaSouls *souls) {
             aos_anim_step(&skill->anim, souls->fish_head);
             break;
         }
+        case SKILL_KILLER_FISH: {
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_anim_start(&skill->anim, souls->killer_fish, 1, false);
+            }
+            AosKillerFishTarget targets[4] = {{0}};
+            for (int slot = 0; slot < 4; ++slot) {
+                int index = homing.index[slot];
+                if (index < 0 || !homing_room ||
+                    (size_t)index >= homing_room->entity_count)
+                    continue;
+                const AriaEntity *entity = &homing_room->entities[index];
+                targets[slot] = (AosKillerFishTarget){
+                    entity->spawned && !entity->enemy.removed,
+                    entity->enemy.x, entity->enemy.y};
+            }
+            uint8_t old_state = skill->killer_fish.state;
+            AosKillerFishEffect effect;
+            int mx = souls->margins ? souls->margins[4][0] : 16;
+            int my = souls->margins ? souls->margins[4][1] : 16;
+            bool alive = aos_killer_fish_soul_update(
+                &skill->killer_fish, souls->layer, targets, 4,
+                (skill->anim.flags & AOS_ANIM_ENDED) != 0, aos_random,
+                souls->cam_x, souls->cam_y, mx, my, &effect);
+            if (old_state == AOS_KILLER_FISH_APPEARING &&
+                skill->killer_fish.state != AOS_KILLER_FISH_APPEARING)
+                aos_anim_start(&skill->anim, souls->killer_fish, 0, true);
+            if (effect.spawn && souls->effects && *souls->effect_count < MAX_EFFECTS)
+                souls->effects[(*souls->effect_count)++] = (AosEffect){
+                    .kind = AOS_EFFECT_IMPACT, .drift = true,
+                    .x = effect.x, .y = effect.y};
+            if (!alive) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->killer_fish.x;
+            skill->y = skill->killer_fish.y;
+            skill->facing_left = skill->killer_fish.facing_left;
+            aos_anim_step(&skill->anim, souls->killer_fish);
+            break;
+        }
         case SKILL_GLADIATOR: {
             if (!skill->started) {
                 skill->started = true;
@@ -1666,6 +1722,9 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = souls->bone_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_FISH_HEAD)
             box = (AosBox){-6, -6, 12, 12};    /* 0x0C0CFAFA */
+        else if (skill->kind == SKILL_KILLER_FISH &&
+                 skill->killer_fish.state != AOS_KILLER_FISH_ENDING)
+            box = (AosBox){-24, -16, 48, 32};  /* 0x2030F0E8 */
         else if (skill->kind == SKILL_GLADIATOR)
             box = (AosBox){-16, -16, 32, 32};  /* 0x2020F0F0 */
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
@@ -3463,6 +3522,13 @@ int main(int argc, char **argv) {
             souls.fish_head = objects_ok && fish_head->loaded && fish_head->defs[0].count
                                   ? &fish_head->set
                                   : NULL;
+            const __typeof__(objects.skills[0]) *killer_fish =
+                &objects.skills[SKILL_ART_KILLER_FISH];
+            souls.killer_fish = objects_ok && killer_fish->loaded &&
+                                        killer_fish->set.count > 1 &&
+                                        killer_fish->defs[0].count && killer_fish->defs[1].count
+                                    ? &killer_fish->set
+                                    : NULL;
             souls.gladiator = objects_ok && blades->loaded && blades->defs[0].count
                                   ? &blades->set
                                   : NULL;
@@ -3713,6 +3779,7 @@ int main(int argc, char **argv) {
             if (skill->kind == SKILL_VALKYRIE && skill->valkyrie.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_GLADIATOR && skill->gladiator.blinking && (step & 1))
                 continue;
+            if (skill->kind == SKILL_KILLER_FISH && skill->killer_fish.hidden) continue;
             if (skill->kind == SKILL_RIPPER && skill->ripper.blink == 2 && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
@@ -3734,6 +3801,9 @@ int main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_BONE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_FISH_HEAD
                     ? &objects.skills[SKILL_ART_FISH_HEAD].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_KILLER_FISH
+                    ? &objects.skills[SKILL_ART_KILLER_FISH]
+                           .frames[skill->anim.id][skill->anim.frame]
                 : skill->kind == SKILL_GLADIATOR
                     ? &objects.skills[SKILL_ART_BLADES].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_VALKYRIE
@@ -3787,8 +3857,14 @@ int main(int argc, char **argv) {
             /* The afterimages are semi-transparent objects (+ 0x5A mode 1);
              * the blend weights in force are not traced: half here. */
             if (skill->kind == SKILL_AXE_TRAIL) SDL_SetTextureAlphaMod(art->texture, 128);
-            SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, angle, NULL,
-                                     skill->facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+            bool vertical_flip = skill->kind == SKILL_KILLER_FISH &&
+                                 skill->killer_fish.vertical_flip;
+            if (vertical_flip)
+                rect.y = (float)(py - art->offset_y - cam_y) - art->h;
+            SDL_FlipMode flip = (SDL_FlipMode)(
+                (skill->facing_left ? SDL_FLIP_HORIZONTAL : 0) |
+                (vertical_flip ? SDL_FLIP_VERTICAL : 0));
+            SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, angle, NULL, flip);
             if (skill->kind == SKILL_AXE_TRAIL) SDL_SetTextureAlphaMod(art->texture, 255);
         }
         if (show_hitboxes) {

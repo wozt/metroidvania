@@ -363,7 +363,8 @@ in `aos_main_menu.c`, including PLAY/CREATE/LOAD, COPY and DELETE, their
 confirmation controllers, special completed-file positions and final direct
 load/intro fades. The same state owns the native eight-character name editor
 and its return/intro results. `aos_menu_save_bridge.c` consumes the typed
-regular-file operations and persists them through portable save schema v2;
+regular-file and one-use quicksave operations and persists them through
+portable save schema v8;
 the host waits for the native destination fade and, for a new file, runs the
 seven-stage `GameModeIntroCutsceneUpdate` controller in
 `aos_intro_cutscene.c` before starting the separate room-runtime process at
@@ -384,8 +385,9 @@ scroll and draws nonzero pixels with native palette row 15.
 banks and all three block maps in memory, reuses the asset library's bounded
 tilemap expansion and RGBA renderer, and exposes the three planes to SDL. The
 host wraps and scrolls them in BG3-to-BG1 priority order. Actor OAM, animation
-resources, affine/alpha composition and songs are not connected, and
-quicksaves plus completed-file metadata remain open.
+resources, affine/alpha composition and songs are not connected. Portable
+one-use quicksave companions are connected to the native odd menu positions;
+completed-file metadata remains open.
 `aos_rom_graphics.c` provides the shared bounded raw/compressed descriptor and
 palette loader. `aos_main_menu_graphics.c` uses it to reconstruct the native
 base, PLAY, COPY, DELETE and name-entry background planes in all three

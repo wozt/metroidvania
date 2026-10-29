@@ -348,8 +348,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804B2C0	sub_0804B2C0	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_0804B34C	sub_0804B34C	unclassified				asm_function	0x0804B34C	asm/code/code_08040A38.s	20315	0	3
 aos:asm:asm/code/code_08040A38.s:sub_0804BCA0	sub_0804BCA0	unclassified		inventory	exclusive_callees	asm_function	0x0804BCA0	asm/code/code_08040A38.s	21489	1	3
 aos:asm:asm/code/code_08040A38.s:sub_0804BCDC	sub_0804BCDC	unclassified		inventory	exclusive_callees	asm_function	0x0804BCDC	asm/code/code_08040A38.s	21519	1	3
-aos:asm:asm/code/code_08040A38.s:sub_0804BD38	sub_0804BD38	unclassified				asm_function	0x0804BD38	asm/code/code_08040A38.s	21568	0	6
-aos:asm:asm/code/code_08040A38.s:sub_0804BE0C	sub_0804BE0C	unclassified		saves	exclusive_callees	asm_function	0x0804BE0C	asm/code/code_08040A38.s	21664	0	7
 aos:asm:asm/code/code_08040A38.s:sub_0804C404	sub_0804C404	unclassified		technical	exclusive_callees	asm_function	0x0804C404	asm/code/code_08040A38.s	22409	0	6
 aos:asm:asm/code/code_08040A38.s:sub_0804C54C	sub_0804C54C	unclassified		inventory	exclusive_callees	asm_function	0x0804C54C	asm/code/code_08040A38.s	22553	0	7
 aos:asm:asm/code/code_08040A38.s:sub_0804C668	sub_0804C668	unclassified		technical	exclusive_callees	asm_function	0x0804C668	asm/code/code_08040A38.s	22706	2	11
@@ -2555,7 +2553,6 @@ aos:c:src/code_0800B700.c:sub_0800C5D8	sub_0800C5D8	unclassified		technical	excl
 aos:c:src/code_0800B700.c:sub_0800C6F8	sub_0800C6F8	unclassified				c_function	0x0800C6F8	src/code_0800B700.c	1295	1	1
 aos:c:src/code_0800B700.c:sub_0800C72C	sub_0800C72C	unclassified				c_function	0x0800C72C	src/code_0800B700.c	1313	1	2
 aos:c:src/code_0800B700.c:sub_0800C778	sub_0800C778	unclassified				c_function	0x0800C778	src/code_0800B700.c	1335	6	0
-aos:c:src/code_0800B700.c:sub_0800C7A4	sub_0800C7A4	unclassified				c_function	0x0800C7A4	src/code_0800B700.c	1351	4	12
 aos:c:src/code_0800B700.c:sub_0800CA40	sub_0800CA40	unclassified		technical	exclusive_callees	c_function	0x0800CA40	src/code_0800B700.c	1463	4	3
 aos:c:src/code_0800B700.c:sub_0800CA98	sub_0800CA98	unclassified				c_function	0x0800CA98	src/code_0800B700.c	1487	1	3
 aos:c:src/code_0800CB00.c:NONMATCH	NONMATCH	unclassified				c_function		src/code_0800CB00.c	1489	0	12
@@ -2672,7 +2669,6 @@ aos:c:src/code_08012744.c:sub_08013038	sub_08013038	unclassified				c_function	0
 aos:c:src/code_08012744.c:sub_08013164	sub_08013164	unclassified				c_function	0x08013164	src/code_08012744.c	380	1	8
 aos:c:src/code_08012744.c:sub_08013404	sub_08013404	menus	referrers			c_function	0x08013404	src/code_08012744.c	461	1	5
 aos:c:src/code_08012744.c:sub_0801352C	sub_0801352C	unclassified		saves	exclusive_callees	c_function	0x0801325C	src/code_08012744.c	524	0	2
-aos:c:src/code_08012744.c:sub_080135C0	sub_080135C0	unclassified		technical	exclusive_callees	c_function	0x080135C0	src/code_08012744.c	544	3	1
 aos:c:src/code_08012744.c:sub_080135C0_inline	sub_080135C0_inline	unclassified		technical	exclusive_callees	c_function		src/code_08012744.c	30	1	1
 aos:c:src/code_08012744.c:sub_08013700	sub_08013700	unclassified		saves	exclusive_callees	c_function	0x08013700	src/code_08012744.c	612	13	2
 aos:c:src/code_08012744.c:sub_08013700_inline	sub_08013700_inline	unclassified		saves	exclusive_callees	c_function		src/code_08012744.c	76	5	2

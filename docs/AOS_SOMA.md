@@ -64,9 +64,9 @@ idle INTRO_CUTSCENE override. The lifecycle owns the main-menu operation
 selector, entry/return fades and all three selected-operation controllers.
 PLAY preserves the native three file/quicksave pairs, completed-file special
 positions, optional mode choice and direct load/intro results; COPY and DELETE
-preserve their native confirmation paths. The portable adapter currently maps
-only the three even, regular-file positions because its schema has no
-quicksave or completed-file metadata. Newly created regular files pass through
+preserve their native confirmation paths. The portable adapter maps the three
+even positions to regular files and each odd position to a one-use quicksave
+companion; completed-file metadata remains absent. Newly created regular files pass through
 the native eight-character name controller, including its grid navigation,
 edit operations, default SOMA name and the JULIUS, NOUSE and NOSOUL codes.
 The lifecycle now also runs `GameModeIntroCutsceneUpdate` before starting a
@@ -100,20 +100,22 @@ build/fusion_aria_title_preview \
 ```
 
 `aos_save.c` deliberately uses the small, checksummed
-`metroidvania-aos-save-v2` text schema instead of claiming compatibility with
-the original six 0x47C-byte SRAM records. It still reads v1 files, while v2
-adds the encoded player name, selected character and challenge flags. The
-runtime accepts `--save FILE` and restores the room, optional spawn, HP and the
-currently exposed movement mask. The native room exporter emits schema
-version 4's global-map save and warp bits. New v2 files record the native
-first-room player position rather than using the earlier diagnostic floor
-search. Runtime compatibility also
+`metroidvania-aos-save-v8` text schema instead of claiming compatibility with
+the original six 0x47C-byte SRAM records. It reads every earlier portable
+version and stores the encoded player identity, room and spawn, vitals,
+movement, experience, gold, equipment, inventory, souls, MP and configurable
+buttons. The runtime accepts `--save FILE` and restores that state. New files
+record the native first-room player position rather than using the earlier
+diagnostic floor search. Runtime compatibility also
 recognizes the native room object `0x1C` in older exports. Holding Up inside
 Object1C's verified rectangle (`x=104..136`, `y=128..183`) restores HP and
 atomically updates the selected portable file with the current room, spawn and
-play time. The native healing animation, Yes/No question, object graphics,
-audio, inventory, equipment, souls, event flags, map state, quicksaves,
-completed-file metadata and SRAM layout remain open reconstruction work.
+play time. Sleep creates a companion quicksave from the same state, follows
+the source-timed fade, and returns to the frontend. Selecting its odd entry
+loads and consumes it once while subsequent saves target the regular file;
+copy and delete clear the companion. The native healing animation, save-room
+Yes/No question, object graphics, event flags, map state, completed-file
+metadata and SRAM layout remain open reconstruction work.
 
 ## Explicitly unresolved
 

@@ -63,5 +63,8 @@ typedef struct {
 void aos_save_init_new(AosSaveData *save, unsigned slot);
 bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t error_size);
 bool aos_save_store(const char *path, const AosSaveData *save, char *error, size_t error_size);
+/* Portable companion for the native odd SRAM slot: `file.sav` becomes
+ * `file.quick.sav`; paths without that suffix receive `.quick`. */
+bool aos_save_quick_path(char *out, size_t size, const char *regular_path);
 
 #endif

@@ -15,15 +15,19 @@ typedef enum {
 } AosPortableStart;
 
 /* Host-side mapping between the native six-entry file/quicksave controller
- * and the three portable save files. Odd native quicksave entries currently
- * have no portable counterpart. */
+ * and three regular files plus their one-use portable companions. */
 typedef struct {
     AosSaveData slots[AOS_SAVE_SLOT_COUNT];
+    AosSaveData quicks[AOS_SAVE_SLOT_COUNT];
     bool present[AOS_SAVE_SLOT_COUNT];
+    bool quick_present[AOS_SAVE_SLOT_COUNT];
     int8_t pending_slot;
     int8_t launch_slot;
     uint8_t changed_mask;
     uint8_t removed_mask;
+    uint8_t removed_quick_mask;
+    uint8_t consumed_quick_mask;
+    bool launch_quick;
     AosPortableStart start;
 } AosMenuSaveBridge;
 

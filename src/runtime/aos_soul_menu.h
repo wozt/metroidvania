@@ -34,6 +34,7 @@ enum {
     AOS_SOUL_MENU_PAGE_ABILITY,
     AOS_SOUL_MENU_PAGE_EQUIP,
     AOS_SOUL_MENU_PAGE_ITEM_USE,
+    AOS_SOUL_MENU_PAGE_SLEEP,
     AOS_SOUL_MENU_PAGE_CONFIG,
     AOS_SOUL_MENU_PAGE_UNAVAILABLE,
 };
@@ -57,6 +58,14 @@ enum {
     AOS_SOUL_MENU_REFUSED = 256,
     AOS_SOUL_MENU_CONFIG_EDITED = 512,
     AOS_SOUL_MENU_CONFIG_APPLIED = 1024,
+    AOS_SOUL_MENU_SLEEP_SAVE_REQUESTED = 2048,
+    AOS_SOUL_MENU_SLEEP_FINISHED = 4096,
+};
+
+enum {
+    AOS_SLEEP_CONFIRM,
+    AOS_SLEEP_WAIT_SAVE,
+    AOS_SLEEP_FADING,
 };
 
 typedef struct {
@@ -82,19 +91,24 @@ typedef struct {
     uint8_t last_item;
     uint8_t config_cursor;
     uint8_t config_buttons[AOS_BUTTON_ACTIONS];
+    bool sleep_available;
+    uint8_t sleep_choice; /* 0 Yes, 1 No, as in sub_0804BD38. */
+    uint8_t sleep_stage;
+    uint8_t sleep_timer;
     /* Colour cursors are native equipped values: 0 None, then index + 1.
      * The ability cursor is its zero-based index. */
     uint8_t cursor[AOS_SOUL_MENU_CATEGORIES];
 } AosSoulMenu;
 
 /* START opens the seven-entry pause hub reconstructed from sub_08047764.
- * Soul Set, Equip, Item Use, Ability and Config enter usable source-adapted
- * pages; the two unported pages enter an explicit unavailable page. Soul Set
+ * Soul Set, Equip, Item Use, Ability, Sleep and Config enter usable
+ * source-adapted pages; Enemy enters an explicit unavailable page. Soul Set
  * changes colour and selects owned souls. Equip selects owned records for
  * three slots. Item Use applies ROM-exported effects to owned consumables.
- * Ability toggles owned abilities. Config remaps the four native action
- * buttons and refuses duplicate assignments. B returns to the hub and START
- * closes the menu.
+ * Ability toggles owned abilities. Sleep requests a one-use quicksave and
+ * runs the source fade after its host result. Config remaps the four native
+ * action buttons and refuses duplicate assignments. B returns to the hub and
+ * START closes pages that accept it.
  * The return value is an AOS_SOUL_MENU_* event mask. */
 unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
                                const AosEquipmentTables *equipment,
@@ -130,5 +144,6 @@ uint8_t aos_item_choice_at(const AosStats *stats, int ordinal);
 bool aos_item_use(AosStats *stats, const AosItemUseRecord items[AOS_ITEM_RECORDS],
                   AosItemVitals *vitals, uint8_t item);
 bool aos_pause_config_unique(const AosSoulMenu *menu);
+void aos_pause_sleep_result(AosSoulMenu *menu, bool saved);
 
 #endif /* AOS_SOUL_MENU_H */

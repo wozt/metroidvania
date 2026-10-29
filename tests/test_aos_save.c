@@ -19,6 +19,12 @@ int main(void) {
     const char *bad_path = "aos-save-test-bad.sav";
     const char *legacy_path = "aos-save-test-v1.sav";
     char error[160];
+    char quick_path[64];
+    assert(aos_save_quick_path(quick_path, sizeof quick_path, "aria-slot-1.sav") &&
+           !strcmp(quick_path, "aria-slot-1.quick.sav"));
+    assert(aos_save_quick_path(quick_path, sizeof quick_path, "portable") &&
+           !strcmp(quick_path, "portable.quick"));
+    assert(!aos_save_quick_path(quick_path, 8, "aria-slot-1.sav"));
 
     AosSaveData source;
     aos_save_init_new(&source, 2);

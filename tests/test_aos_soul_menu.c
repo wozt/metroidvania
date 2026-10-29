@@ -33,6 +33,7 @@ int main(void) {
     stats.red_soul = 2;
 
     AosSoulMenu menu = {0};
+    menu.sleep_available = true;
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_OPENED);
     assert(menu.open && menu.page == AOS_SOUL_MENU_PAGE_HUB && menu.hub_cursor == 0);
@@ -211,6 +212,30 @@ int main(void) {
            menu.config_buttons[AOS_BUTTON_GUARDIAN] == 2);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            (AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED));
+
+    /* SLEEP defaults to No, waits for the host quicksave result and follows
+     * the native 64-frame darkening plus 33-frame reset tail. */
+    menu.hub_cursor = AOS_PAUSE_SLEEP;
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_ACCEPTED);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_SLEEP && menu.sleep_choice == 1 &&
+           menu.sleep_stage == AOS_SLEEP_CONFIRM);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_LEFT) ==
+           AOS_SOUL_MENU_MOVED && menu.sleep_choice == 0);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_SLEEP_SAVE_REQUESTED && menu.sleep_stage == AOS_SLEEP_WAIT_SAVE);
+    aos_pause_sleep_result(&menu, false);
+    assert(menu.sleep_stage == AOS_SLEEP_CONFIRM && menu.sleep_choice == 1);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_RIGHT);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_SLEEP_SAVE_REQUESTED);
+    aos_pause_sleep_result(&menu, true);
+    assert(menu.sleep_stage == AOS_SLEEP_FADING && menu.sleep_timer == 0);
+    for (int frame = 0; frame < 96; ++frame)
+        assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, 0) == 0);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, 0) ==
+           AOS_SOUL_MENU_SLEEP_FINISHED);
+    menu.page = AOS_SOUL_MENU_PAGE_HUB;
 
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_CLOSED && !menu.open);

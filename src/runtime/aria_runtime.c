@@ -50,6 +50,7 @@
 #include "aos_input.h"
 
 #include <SDL3/SDL.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2430,6 +2431,35 @@ static void souls_to_save(AosSaveData *save, const AosStats *stats) {
     save->souls_collected = stats->souls_collected;
 }
 
+static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
+                            const AosSoma *soma, const AosStats *progress) {
+    save->area = (uint8_t)room->area;
+    save->room = (uint16_t)room->number;
+    save->spawn_x = (int16_t)(soma->x >> 16);
+    save->spawn_y = (int16_t)(soma->y >> 16);
+    save->hp = soma->hp;
+    save->max_hp = soma->max_hp;
+    save->moves = soma->moves;
+    save->experience = progress->experience;
+    save->gold = progress->gold;
+    save->weapon = progress->weapon;
+    save->armor = progress->armor;
+    save->accessory = progress->accessory;
+    save->red_soul = progress->red_soul;
+    save->blue_soul = progress->blue_soul;
+    save->yellow_soul = progress->yellow_soul;
+    save->mp = progress->mp;
+    for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+        save->buttons[action] = aos_button_config_index(
+            progress->buttons.action[action]);
+    memcpy(save->inventory, progress->item_counts, sizeof progress->item_counts);
+    memcpy(save->inventory + AOS_SAVE_WEAPONS, progress->weapon_counts,
+           sizeof progress->weapon_counts);
+    memcpy(save->inventory + AOS_SAVE_ARMOR, progress->armor_counts,
+           sizeof progress->armor_counts);
+    souls_to_save(save, progress);
+}
+
 static bool load_equipment(const char *path, AosEquipmentTables *tables) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
@@ -2906,7 +2936,8 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                      aos_pause_entry_name((uint8_t)entry),
                      entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_EQUIP ||
                              entry == AOS_PAUSE_ITEM_USE ||
-                             entry == AOS_PAUSE_ABILITY || entry == AOS_PAUSE_CONFIG
+                             entry == AOS_PAUSE_ABILITY || entry == AOS_PAUSE_SLEEP ||
+                             entry == AOS_PAUSE_CONFIG
                          ? ""
                          : "[pending]");
             debug_text(renderer, 4 + entry, line);
@@ -2932,6 +2963,29 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
         debug_text(renderer, 14, "B apply/back  Start apply/close");
         if (!aos_pause_config_unique(menu))
             debug_text(renderer, 16, "Duplicate assignment - change before exit");
+        return;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_SLEEP) {
+        debug_text(renderer, 0, "SLEEP");
+        if (!menu->sleep_available) {
+            debug_text(renderer, 3, "No file slot is active.");
+            debug_text(renderer, 5, "A/B return");
+        } else if (menu->sleep_stage == AOS_SLEEP_WAIT_SAVE) {
+            debug_text(renderer, 4, "Writing quicksave...");
+        } else if (menu->sleep_stage == AOS_SLEEP_FADING) {
+            debug_text(renderer, 4, "Quicksave complete");
+        } else {
+            debug_text(renderer, 3, "Create a one-use quicksave?");
+            debug_text(renderer, 6,
+                       menu->sleep_choice == 0 ? "> YES      NO" : "  YES    > NO");
+            debug_text(renderer, 9, "Left/Right choose  A confirm");
+            debug_text(renderer, 10, "B return");
+        }
+        if (menu->sleep_stage == AOS_SLEEP_FADING) {
+            unsigned fade = menu->sleep_timer < 64 ? menu->sleep_timer : 64;
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, (uint8_t)(fade * 255 / 64));
+            SDL_RenderFillRect(renderer, &whole);
+        }
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_ITEM_USE) {
@@ -3222,7 +3276,8 @@ static bool reload_equipped_weapon(uint8_t item, AosSoma *soma,
 
 static void usage(const char *name) {
     fprintf(stderr,
-            "Usage: %s [--check] [--save slot.sav] [--library index.tsv]\n"
+            "Usage: %s [--check] [--save slot.sav] [--save-target slot.sav]"
+            " [--consume-save] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--red-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
@@ -3238,7 +3293,8 @@ int main(int argc, char **argv) {
     const char *audio_wav_path = NULL;
     long start_song = -1;
     bool mute = false;
-    const char *weapon_name = "none", *save_path = NULL;
+    const char *weapon_name = "none", *load_save_path = NULL, *save_path = NULL;
+    bool consume_save = false;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
     /* Move ownership is still a diagnostic mask; the soul inventories are
@@ -3267,7 +3323,9 @@ int main(int argc, char **argv) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
         else if (!strcmp(argv[i], "--audit-transitions")) return audit_transitions();
-        else if (!strcmp(argv[i], "--save") && i + 1 < argc) save_path = argv[++i];
+        else if (!strcmp(argv[i], "--save") && i + 1 < argc) load_save_path = argv[++i];
+        else if (!strcmp(argv[i], "--save-target") && i + 1 < argc) save_path = argv[++i];
+        else if (!strcmp(argv[i], "--consume-save")) consume_save = true;
         else if (!strcmp(argv[i], "--library") && i + 1 < argc) library_path = argv[++i];
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
@@ -3333,10 +3391,16 @@ int main(int argc, char **argv) {
         else { usage(argv[0]); return 2; }
         if (end && *end) { usage(argv[0]); return 2; }
     }
-    if (save_path) {
+    if (!save_path) save_path = load_save_path;
+    if (load_save_path) {
         char error[256];
-        if (!aos_save_load(save_path, &active_save, error, sizeof error)) {
+        if (!aos_save_load(load_save_path, &active_save, error, sizeof error)) {
             fprintf(stderr, "Cannot load Aria save: %s\n", error);
+            return 1;
+        }
+        if (consume_save && remove(load_save_path) != 0 && errno != ENOENT) {
+            fprintf(stderr, "Cannot consume Aria quicksave %s: %s\n",
+                    load_save_path, strerror(errno));
             return 1;
         }
         has_active_save = true;
@@ -3774,6 +3838,7 @@ int main(int argc, char **argv) {
             if (!lifecycle.in_game_frame_requested) continue;
             uint8_t previous_weapon = progress.weapon;
             AosItemVitals item_vitals = {soma.hp, soma.max_hp};
+            soul_menu.sleep_available = has_active_save;
             unsigned soul_menu_event =
                 progress.character == 0
                     ? aos_pause_menu_update(&soul_menu, &progress,
@@ -3827,6 +3892,37 @@ int main(int argc, char **argv) {
                            progress.buttons.action[AOS_BUTTON_ABILITY])),
                        aos_button_config_button_name(aos_button_config_index(
                            progress.buttons.action[AOS_BUTTON_GUARDIAN])));
+            if (soul_menu_event & AOS_SOUL_MENU_SLEEP_SAVE_REQUESTED) {
+                char quick_path[1024], error[256];
+                bool saved = has_active_save && save_path &&
+                    aos_save_quick_path(quick_path, sizeof quick_path, save_path);
+                if (saved) {
+                    runtime_to_save(&active_save, &room, &soma, &progress);
+                    saved = aos_save_store(quick_path, &active_save, error, sizeof error);
+                } else {
+                    snprintf(error, sizeof error, "no active file slot");
+                }
+                aos_pause_sleep_result(&soul_menu, saved);
+                if (saved) {
+                    aos_audio_play_song(0x1010);
+                    printf("Created one-use Aria quicksave for file %u (frame %ld)\n",
+                           active_save.slot + 1u, step);
+                } else {
+                    aos_audio_play_song(0xEF);
+                    fprintf(stderr, "Cannot write Aria quicksave: %s\n", error);
+                }
+            }
+            if (soul_menu_event & AOS_SOUL_MENU_SLEEP_FINISHED) {
+                printf("Sleep reset completed (frame %ld)\n", step);
+                if (frontend_command[0]) {
+                    SDL_Process *process = SDL_CreateProcess(frontend_command, false);
+                    if (process) SDL_DestroyProcess(process);
+                    else fprintf(stderr, "Cannot return to the frontend: %s\n",
+                                 SDL_GetError());
+                }
+                running = false;
+                break;
+            }
             if (soul_menu_event & AOS_SOUL_MENU_UNAVAILABLE)
                 printf("Pause page pending: %s\n", aos_pause_entry_name(soul_menu.hub_cursor));
             if (soul_menu_event & AOS_SOUL_MENU_CHANGED) {
@@ -3979,32 +4075,7 @@ int main(int argc, char **argv) {
                 soma.hp = soma.max_hp;
                 player_stats.hp = soma.hp;
                 if (has_active_save) {
-                    active_save.area = (uint8_t)room.area;
-                    active_save.room = (uint16_t)room.number;
-                    active_save.spawn_x = (int16_t)(soma.x >> 16);
-                    active_save.spawn_y = (int16_t)(soma.y >> 16);
-                    active_save.hp = soma.hp;
-                    active_save.max_hp = soma.max_hp;
-                    active_save.moves = soma.moves;
-                    active_save.experience = progress.experience;
-                    active_save.gold = progress.gold;
-                    active_save.weapon = progress.weapon;
-                    active_save.armor = progress.armor;
-                    active_save.accessory = progress.accessory;
-                    active_save.red_soul = progress.red_soul;
-                    active_save.blue_soul = progress.blue_soul;
-                    active_save.yellow_soul = progress.yellow_soul;
-                    active_save.mp = progress.mp;
-                    for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
-                        active_save.buttons[action] = aos_button_config_index(
-                            progress.buttons.action[action]);
-                    memcpy(active_save.inventory, progress.item_counts,
-                           sizeof progress.item_counts);
-                    memcpy(active_save.inventory + AOS_SAVE_WEAPONS, progress.weapon_counts,
-                           sizeof progress.weapon_counts);
-                    memcpy(active_save.inventory + AOS_SAVE_ARMOR, progress.armor_counts,
-                           sizeof progress.armor_counts);
-                    souls_to_save(&active_save, &progress);
+                    runtime_to_save(&active_save, &room, &soma, &progress);
                     char error[256];
                     if (aos_save_store(save_path, &active_save, error, sizeof error))
                         printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",

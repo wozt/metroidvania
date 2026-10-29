@@ -42,7 +42,8 @@ static uint16_t keymask(const bool *keys) {
 }
 
 static bool persist_bridge(AosMenuSaveBridge *bridge,
-                           SlotView slots[AOS_SAVE_SLOT_COUNT], char *error,
+                           SlotView slots[AOS_SAVE_SLOT_COUNT],
+                           SlotView quicks[AOS_SAVE_SLOT_COUNT], char *error,
                            size_t error_size) {
     for (unsigned slot = 0; slot < AOS_SAVE_SLOT_COUNT; ++slot) {
         if (bridge->removed_mask & (1u << slot)) {
@@ -54,8 +55,16 @@ static bool persist_bridge(AosMenuSaveBridge *bridge,
         if ((bridge->changed_mask & (1u << slot)) &&
             !aos_save_store(slots[slot].path, &bridge->slots[slot], error, error_size))
             return false;
+        if (bridge->removed_quick_mask & (1u << slot)) {
+            if (remove(quicks[slot].path) != 0 && errno != ENOENT) {
+                snprintf(error, error_size, "DELETE FAILED: %.80s", quicks[slot].path);
+                return false;
+            }
+        }
         slots[slot].present = bridge->present[slot];
         slots[slot].data = bridge->slots[slot];
+        quicks[slot].present = bridge->quick_present[slot];
+        quicks[slot].data = bridge->quicks[slot];
     }
     return true;
 }
@@ -69,7 +78,8 @@ static void display_name(char out[9], const uint8_t encoded[8]) {
     out[8] = '\0';
 }
 
-static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT], const char *directory) {
+static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT],
+                       SlotView quicks[AOS_SAVE_SLOT_COUNT], const char *directory) {
     for (unsigned i = 0; i < AOS_SAVE_SLOT_COUNT; ++i) {
         int used = snprintf(slots[i].path, sizeof slots[i].path, "%s%saria-slot-%u.sav",
                             directory, directory[strlen(directory) - 1] == '/' ? "" : "/",
@@ -77,6 +87,10 @@ static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT], const char *director
         if (used < 0 || (size_t)used >= sizeof slots[i].path) return false;
         slots[i].present = aos_save_load(slots[i].path, &slots[i].data, NULL, 0) &&
                            slots[i].data.slot == i;
+        if (!aos_save_quick_path(quicks[i].path, sizeof quicks[i].path, slots[i].path))
+            return false;
+        quicks[i].present = aos_save_load(quicks[i].path, &quicks[i].data, NULL, 0) &&
+                            quicks[i].data.slot == i;
     }
     return true;
 }
@@ -86,13 +100,19 @@ static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT], const char *director
 static int frontend_argc;
 static char **frontend_argv;
 
-static bool launch_runtime(const char *runtime, const char *save_path,
+static bool launch_runtime(const char *runtime, const char *load_path,
+                           const char *save_path, bool consume_save,
                            char *error, size_t error_size) {
     const char *arguments[64];
     int count = 0;
     arguments[count++] = runtime;
     arguments[count++] = "--save";
-    arguments[count++] = save_path;
+    arguments[count++] = load_path;
+    if (strcmp(load_path, save_path)) {
+        arguments[count++] = "--save-target";
+        arguments[count++] = save_path;
+    }
+    if (consume_save) arguments[count++] = "--consume-save";
     arguments[count++] = "--frontend";
     arguments[count++] = frontend_argv[0];
     for (int i = 1; i < frontend_argc && count + 3 < 64; ++i) {
@@ -383,7 +403,9 @@ int main(int argc, char **argv) {
         return 2;
     }
     SlotView slots[AOS_SAVE_SLOT_COUNT] = {0};
-    if (!save_directory || !*save_directory || !slot_paths(slots, save_directory)) {
+    SlotView quicks[AOS_SAVE_SLOT_COUNT] = {0};
+    if (!save_directory || !*save_directory ||
+        !slot_paths(slots, quicks, save_directory)) {
         fprintf(stderr, "Cannot prepare Aria save slots\n");
         SDL_free(preference_path);
         SDL_Quit();
@@ -489,6 +511,8 @@ int main(int argc, char **argv) {
     for (unsigned i = 0; i < AOS_SAVE_SLOT_COUNT; ++i) {
         save_bridge.present[i] = slots[i].present;
         save_bridge.slots[i] = slots[i].data;
+        save_bridge.quick_present[i] = quicks[i].present;
+        save_bridge.quicks[i] = quicks[i].data;
     }
     aos_menu_save_bridge_sync(&save_bridge, &lifecycle.main_menu);
     bool running = true;
@@ -496,6 +520,7 @@ int main(int argc, char **argv) {
     uint64_t next_frame = SDL_GetTicksNS();
     char launch_error[128] = "";
     int pending_launch_slot = -1;
+    bool pending_launch_quick = false;
     AosPortableStart pending_start = AOS_PORTABLE_START_NONE;
     while (running) {
         SDL_Event event;
@@ -576,14 +601,17 @@ int main(int argc, char **argv) {
         if (!aos_menu_save_bridge_consume(&save_bridge, &lifecycle.main_menu)) {
             snprintf(launch_error, sizeof launch_error, "INVALID SLOT OPERATION");
         } else {
-            if ((save_bridge.changed_mask || save_bridge.removed_mask) &&
-                !persist_bridge(&save_bridge, slots, launch_error,
+            if ((save_bridge.changed_mask || save_bridge.removed_mask ||
+                 save_bridge.removed_quick_mask) &&
+                !persist_bridge(&save_bridge, slots, quicks, launch_error,
                                 sizeof launch_error)) {
                 pending_launch_slot = -1;
+                pending_launch_quick = false;
                 pending_start = AOS_PORTABLE_START_NONE;
             }
             if (save_bridge.start != AOS_PORTABLE_START_NONE) {
                 pending_launch_slot = save_bridge.launch_slot;
+                pending_launch_quick = save_bridge.launch_quick;
                 pending_start = save_bridge.start;
             }
         }
@@ -591,10 +619,23 @@ int main(int argc, char **argv) {
          * the native introduction controller and launch only at its handoff. */
         bool destination_ready = pending_start != AOS_PORTABLE_START_NONE &&
                                  lifecycle.game_mode.mode == AOS_MODE_IN_GAME;
-        if (destination_ready && pending_launch_slot >= 0 &&
-            launch_runtime(runtime_path, slots[pending_launch_slot].path,
-                           launch_error, sizeof launch_error)) {
-            running = false;
+        if (destination_ready && pending_launch_slot >= 0) {
+            const char *load_path = pending_launch_quick
+                                        ? quicks[pending_launch_slot].path
+                                        : slots[pending_launch_slot].path;
+            if (launch_runtime(runtime_path, load_path,
+                               slots[pending_launch_slot].path,
+                               pending_launch_quick, launch_error,
+                               sizeof launch_error)) {
+                running = false;
+            } else if (pending_launch_quick) {
+                save_bridge.quick_present[pending_launch_slot] = true;
+                quicks[pending_launch_slot].present = true;
+                aos_menu_save_bridge_sync(&save_bridge, &lifecycle.main_menu);
+                pending_launch_slot = -1;
+                pending_launch_quick = false;
+                pending_start = AOS_PORTABLE_START_NONE;
+            }
         }
         if (!running) break;
         SDL_SetRenderDrawColor(renderer, 18, 14, 28, 255);
@@ -725,9 +766,9 @@ int main(int argc, char **argv) {
                     if (slots[i].present) {
                         char name[9];
                         display_name(name, slots[i].data.name);
-                        snprintf(line, sizeof line, "FILE %u %.8s A%02u R%03u HP%d", i + 1,
+                        snprintf(line, sizeof line, "FILE %u %.8s A%02u R%03u HP%d%s", i + 1,
                                  name, slots[i].data.area, slots[i].data.room,
-                                 slots[i].data.hp);
+                                 slots[i].data.hp, quicks[i].present ? " QUICK" : "");
                     } else {
                         snprintf(line, sizeof line, "FILE %u  EMPTY", i + 1);
                     }

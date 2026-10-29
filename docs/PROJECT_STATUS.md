@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0639 - Aria Sleep and one-use quicksaves
+
+- Ported the observable controller path of `sub_0804BD38` and
+  `sub_0804BE0C`: Sleep defaults to No, Left/Right selects, B or No returns,
+  and Yes waits for the host save result before the 64-frame darkening and
+  33-frame reset tail. The page remains partial because its native tilemap,
+  cursor OAM, palette path and several global refusal flags are not modelled.
+- Added a shared runtime snapshot path for save rooms and Sleep. A successful
+  Sleep records the current room and Soma position, vitals, movement,
+  progression, equipment, inventories, souls, MP and button configuration in
+  a checksummed companion file and requests native song `0x1010`.
+- Connected those companions to the native odd file positions. The frontend
+  marks available quicksaves, loads one with an explicit regular persistence
+  target and consumes it once; copy and delete remove the destination's
+  companion. The portable format remains intentionally separate from the
+  original six-record SRAM layout.
+- Added deterministic coverage for quick-path naming, default-No navigation,
+  failed and successful host results, the 97-frame completion, odd-position
+  selection, one-use consumption and companion cleanup. This is
+  source-derived and unit-tested, not emulator-compared.
+
 ## Patch 0638 - Native Aria button configuration
 
 - Added a host-neutral C11 controller for Aria's four configurable action

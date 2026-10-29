@@ -444,3 +444,13 @@ bool aos_save_store(const char *path, const AosSaveData *save, char *error, size
     if (error && error_size) error[0] = '\0';
     return true;
 }
+
+bool aos_save_quick_path(char *out, size_t size, const char *regular_path) {
+    if (!out || !size || !regular_path) return false;
+    size_t length = strlen(regular_path);
+    bool has_suffix = length >= 4 && !strcmp(regular_path + length - 4, ".sav");
+    int used = has_suffix
+                   ? snprintf(out, size, "%.*s.quick.sav", (int)(length - 4), regular_path)
+                   : snprintf(out, size, "%s.quick", regular_path);
+    return used >= 0 && (size_t)used < size;
+}

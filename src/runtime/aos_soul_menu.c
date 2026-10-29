@@ -298,6 +298,13 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
         initialise_cursors(menu, stats);
         return AOS_SOUL_MENU_ACCEPTED;
     }
+    if (menu->hub_cursor == AOS_PAUSE_SLEEP) {
+        menu->page = AOS_SOUL_MENU_PAGE_SLEEP;
+        menu->sleep_choice = 1;
+        menu->sleep_stage = AOS_SLEEP_CONFIRM;
+        menu->sleep_timer = 0;
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
     if (menu->hub_cursor == AOS_PAUSE_CONFIG) {
         AosButtonConfig buttons = stats->buttons;
         if (!aos_button_config_valid(&buttons)) aos_button_config_default(&buttons);
@@ -426,6 +433,45 @@ bool aos_pause_config_unique(const AosSoulMenu *menu) {
     return used == 0x0F;
 }
 
+void aos_pause_sleep_result(AosSoulMenu *menu, bool saved) {
+    if (!menu || menu->page != AOS_SOUL_MENU_PAGE_SLEEP ||
+        menu->sleep_stage != AOS_SLEEP_WAIT_SAVE)
+        return;
+    menu->sleep_stage = saved ? AOS_SLEEP_FADING : AOS_SLEEP_CONFIRM;
+    menu->sleep_choice = 1;
+    menu->sleep_timer = 0;
+}
+
+static unsigned update_sleep(AosSoulMenu *menu, uint16_t new_input,
+                             uint16_t repeated_input) {
+    if (menu->sleep_stage == AOS_SLEEP_WAIT_SAVE) return 0;
+    if (menu->sleep_stage == AOS_SLEEP_FADING) {
+        if (menu->sleep_timer < 97) menu->sleep_timer++;
+        return menu->sleep_timer == 97 ? AOS_SOUL_MENU_SLEEP_FINISHED : 0;
+    }
+    if (!menu->sleep_available) {
+        if (new_input & (AOS_KEY_A | AOS_KEY_B)) {
+            menu->page = AOS_SOUL_MENU_PAGE_HUB;
+            return AOS_SOUL_MENU_BACK;
+        }
+        return 0;
+    }
+    if (new_input & AOS_KEY_B ||
+        ((new_input & AOS_KEY_A) && menu->sleep_choice != 0)) {
+        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        return AOS_SOUL_MENU_BACK;
+    }
+    if (repeated_input & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) {
+        menu->sleep_choice ^= 1;
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if ((new_input & AOS_KEY_A) && menu->sleep_choice == 0) {
+        menu->sleep_stage = AOS_SLEEP_WAIT_SAVE;
+        return AOS_SOUL_MENU_SLEEP_SAVE_REQUESTED;
+    }
+    return 0;
+}
+
 static unsigned update_config(AosSoulMenu *menu, AosStats *stats,
                               uint16_t new_input, uint16_t repeated_input) {
     if (new_input & (AOS_KEY_START | AOS_KEY_B)) {
@@ -485,6 +531,8 @@ unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
         return update_equipment(menu, stats, equipment, new_input, repeated_input);
     if (menu->page == AOS_SOUL_MENU_PAGE_ITEM_USE)
         return update_item_use(menu, stats, items, vitals, new_input, repeated_input);
+    if (menu->page == AOS_SOUL_MENU_PAGE_SLEEP)
+        return update_sleep(menu, new_input, repeated_input);
     if (menu->page == AOS_SOUL_MENU_PAGE_CONFIG)
         return update_config(menu, stats, new_input, repeated_input);
     if (new_input & AOS_KEY_START) {

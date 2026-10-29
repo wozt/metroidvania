@@ -16,15 +16,21 @@ void aos_menu_save_bridge_sync(AosMenuSaveBridge *bridge, AosMainMenu *menu) {
     menu->special_slot_mask = 0;
     menu->slot_mode_choice_mask = 0;
     menu->slot_intro_mask = 0;
-    for (unsigned slot = 0; slot < AOS_SAVE_SLOT_COUNT; ++slot)
+    for (unsigned slot = 0; slot < AOS_SAVE_SLOT_COUNT; ++slot) {
         if (bridge->present[slot])
             menu->slot_present_mask |= (uint8_t)(1u << (slot * 2));
+        if (bridge->quick_present[slot])
+            menu->slot_present_mask |= (uint8_t)(1u << (slot * 2 + 1));
+    }
 }
 
 bool aos_menu_save_bridge_consume(AosMenuSaveBridge *bridge, AosMainMenu *menu) {
     bridge->changed_mask = 0;
     bridge->removed_mask = 0;
+    bridge->removed_quick_mask = 0;
+    bridge->consumed_quick_mask = 0;
     bridge->launch_slot = -1;
+    bridge->launch_quick = false;
     bridge->start = AOS_PORTABLE_START_NONE;
 
     /* These are one-frame controller outputs. A mode transition means the
@@ -35,6 +41,8 @@ bool aos_menu_save_bridge_consume(AosMenuSaveBridge *bridge, AosMainMenu *menu) 
     bool name_committed = menu->name_committed;
     bool load_game_requested = menu->load_game_requested;
     bool intro_requested = menu->intro_requested;
+    bool quick_load_requested = load_game_requested &&
+        (delete_slots_mask & 0x2Au) != 0;
     menu->load_slot_requested = false;
     menu->copy_slots_requested = false;
     menu->delete_slots_mask = 0;
@@ -56,13 +64,25 @@ bool aos_menu_save_bridge_consume(AosMenuSaveBridge *bridge, AosMainMenu *menu) 
         bridge->slots[destination].slot = (uint8_t)destination;
         bridge->present[destination] = true;
         bridge->changed_mask |= (uint8_t)(1u << destination);
+        if (bridge->quick_present[destination]) {
+            bridge->quick_present[destination] = false;
+            bridge->removed_quick_mask |= (uint8_t)(1u << destination);
+        }
     }
 
     for (unsigned slot = 0; slot < AOS_SAVE_SLOT_COUNT; ++slot) {
-        if (!(delete_slots_mask & (1u << (slot * 2)))) continue;
-        bridge->present[slot] = false;
-        bridge->removed_mask |= (uint8_t)(1u << slot);
-        if (bridge->pending_slot == (int8_t)slot) bridge->pending_slot = -1;
+        if (delete_slots_mask & (1u << (slot * 2))) {
+            bridge->present[slot] = false;
+            bridge->removed_mask |= (uint8_t)(1u << slot);
+            if (bridge->pending_slot == (int8_t)slot) bridge->pending_slot = -1;
+        }
+        if (delete_slots_mask & (1u << (slot * 2 + 1))) {
+            bool was_present = bridge->quick_present[slot];
+            bridge->quick_present[slot] = false;
+            if (quick_load_requested && was_present)
+                bridge->consumed_quick_mask |= (uint8_t)(1u << slot);
+            else bridge->removed_quick_mask |= (uint8_t)(1u << slot);
+        }
     }
 
     if (name_committed) {
@@ -78,9 +98,13 @@ bool aos_menu_save_bridge_consume(AosMenuSaveBridge *bridge, AosMainMenu *menu) 
     }
 
     if (load_game_requested || intro_requested) {
-        if (bridge->pending_slot < 0 ||
-            !bridge->present[(unsigned)bridge->pending_slot])
+        if (bridge->pending_slot < 0)
             return false;
+        unsigned slot = (unsigned)bridge->pending_slot;
+        if (quick_load_requested) {
+            if (!(bridge->consumed_quick_mask & (1u << slot))) return false;
+            bridge->launch_quick = true;
+        } else if (!bridge->present[slot]) return false;
         bridge->launch_slot = bridge->pending_slot;
         bridge->start = intro_requested ? AOS_PORTABLE_START_INTRO
                                         : AOS_PORTABLE_START_GAME;

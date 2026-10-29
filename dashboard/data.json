@@ -1,10 +1,10 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-29T23:24:05+00:00",
+ "generated_at": "2026-10-29T23:43:48+00:00",
  "git": {
-  "commit": "53c7588",
+  "commit": "eab41e2",
   "branch": "main",
-  "dirty": true
+  "dirty": false
  },
  "areas": [
   {
@@ -15051,7 +15051,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The dashboard separates declared implementation status, tests observed in the generating run, manual in-game checks, emulator comparisons and playthroughs. Feature percentages cover registered features only. The dedicated Aria catalog names all 113 enemies, separates its 11 bosses, and lists all 137 normal-mode items and 120 souls; catalog discovery is not implementation or native-fidelity evidence.",
+   "limitations": "The dashboard separates declared implementation status, tests observed in the generating run, manual in-game checks, emulator comparisons and playthroughs. Feature percentages cover registered features only. The dedicated Aria catalog names all 113 enemies, separates its 11 bosses, and lists all 137 normal-mode items and 120 souls; catalog discovery is not implementation or native-fidelity evidence. The catalog previews for both games read native-generated coverage; Zero Mission actor/item totals, Aria monster/boss/item/soul families, five monster aspects and cross-category uniqueness are checked without duplicating detail rows in the game views.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -18515,6 +18515,24 @@
  },
  "timeline": [
   {
+   "commit": "eab41e2",
+   "date": "2026-10-30",
+   "subject": "Dashboard: preserve both native catalogs, de-duplicate area views and audit sections",
+   "scope": "project"
+  },
+  {
+   "commit": "4dff183",
+   "date": "2026-10-30",
+   "subject": "unfinished job of codex",
+   "scope": "project"
+  },
+  {
+   "commit": "9000692",
+   "date": "2026-10-30",
+   "subject": "Add usable Aria Enemy bestiary",
+   "scope": "project"
+  },
+  {
    "commit": "53c7588",
    "date": "2026-10-30",
    "subject": "Add Aria Sleep quicksaves",
@@ -18975,24 +18993,6 @@
    "date": "2026-10-26",
    "subject": "Port Aria copy and delete menu controllers",
    "scope": "project"
-  },
-  {
-   "commit": "3c9dda5",
-   "date": "2026-10-26",
-   "subject": "Port Aria main menu entry controller",
-   "scope": "project"
-  },
-  {
-   "commit": "f39c4fc",
-   "date": "2026-10-26",
-   "subject": "Complete Aria title destination handoff",
-   "scope": "project"
-  },
-  {
-   "commit": "0e34f1a",
-   "date": "2026-10-26",
-   "subject": "Connect Aria native game lifecycle",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19066,10 +19066,30 @@
   ]
  },
  "bestiary": {
-  "method": "A row's status is its parity annotation's: 'partial' means a ported AI, 'functional' adds unit tests and a recorded in-game check, 'validated' requires an emulator comparison; sprites without a ported AI are not started. Names come from the reviewed native catalogs; all 113 Aria constructors and all 257 normal collectible definitions are named without embedding ROM assets.",
+  "method": "Every table and percentage below is regenerated from the native object catalogs, the parity annotations and the Aria aspect registry. A row is complete only at functional, faithful or validated status; partial rows are implemented but do not count as complete. Zero Mission lists every catalogued enemy actor and every collectible kind tracked by the reconstruction. Aria names all 113 constructors, 11 campaign bosses and 257 normal collectible definitions without embedding ROM assets.",
   "games": {
    "mzm": {
     "title": "Metroid: Zero Mission",
+    "coverage": {
+     "monsters": {
+      "total": 96,
+      "implemented": 96,
+      "functional_or_better": 96,
+      "functional_or_better_percent": 100,
+      "by_status": {
+       "functional": 96
+      }
+     },
+     "items": {
+      "total": 24,
+      "implemented": 24,
+      "functional_or_better": 24,
+      "functional_or_better_percent": 100,
+      "by_status": {
+       "functional": 24
+      }
+     }
+    },
     "monsters": [
      {
       "id": 18,
@@ -21274,6 +21294,77 @@
    },
    "aos": {
     "title": "Castlevania: Aria of Sorrow",
+    "coverage": {
+     "monsters": {
+      "total": 102,
+      "implemented": 47,
+      "functional_or_better": 38,
+      "functional_or_better_percent": 37,
+      "by_status": {
+       "functional": 38,
+       "partial": 9,
+       "not_started": 55
+      }
+     },
+     "bosses": {
+      "total": 11,
+      "implemented": 0,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "not_started": 11
+      }
+     },
+     "items": {
+      "total": 137,
+      "implemented": 137,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "partial": 137
+      }
+     },
+     "red_souls": {
+      "total": 55,
+      "implemented": 27,
+      "functional_or_better": 24,
+      "functional_or_better_percent": 43,
+      "by_status": {
+       "functional": 24,
+       "not_started": 28,
+       "partial": 3
+      }
+     },
+     "blue_souls": {
+      "total": 24,
+      "implemented": 8,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "not_started": 16,
+       "partial": 8
+      }
+     },
+     "yellow_souls": {
+      "total": 35,
+      "implemented": 15,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "not_started": 20,
+       "partial": 15
+      }
+     },
+     "ability_souls": {
+      "total": 6,
+      "implemented": 0,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "not_started": 6
+      }
+     }
+    },
     "monsters": [
      {
       "id": 0,

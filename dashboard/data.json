@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-29T23:43:48+00:00",
+ "generated_at": "2026-10-29T23:48:53+00:00",
  "git": {
-  "commit": "eab41e2",
+  "commit": "1438b61",
   "branch": "main",
   "dirty": false
  },
@@ -18515,6 +18515,18 @@
  },
  "timeline": [
   {
+   "commit": "1438b61",
+   "date": "2026-10-30",
+   "subject": "Fix dashboard tests using the native FusionJson number kind",
+   "scope": "project"
+  },
+  {
+   "commit": "01a3070",
+   "date": "2026-10-30",
+   "subject": "meh",
+   "scope": "project"
+  },
+  {
    "commit": "eab41e2",
    "date": "2026-10-30",
    "subject": "Dashboard: preserve both native catalogs, de-duplicate area views and audit sections",
@@ -18980,18 +18992,6 @@
    "commit": "bd10d70",
    "date": "2026-10-27",
    "subject": "Port Aria native name entry controller",
-   "scope": "project"
-  },
-  {
-   "commit": "cd8ea82",
-   "date": "2026-10-26",
-   "subject": "Port Aria play and load menu controller",
-   "scope": "project"
-  },
-  {
-   "commit": "72bc06f",
-   "date": "2026-10-26",
-   "subject": "Port Aria copy and delete menu controllers",
    "scope": "project"
   }
  ],

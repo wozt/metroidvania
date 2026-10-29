@@ -2,6 +2,30 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0636 - Usable Aria equipment menu
+
+- Connected the pause hub's Equip entry to a usable three-slot controller
+  derived from `sub_0804A95C`, `sub_0804AAF0` and `sub_0804AFD4`. Up/Down
+  selects weapon, armor or accessory, A opens the slot's owned inventory,
+  the inventory wraps through `None` and every owned compatible record, A
+  equips the choice, and B cancels the list or returns to the pause hub.
+- Identified all 59 weapons, 25 armor pieces and 20 accessories by name in
+  the ROM-free controller. The overlay shows the equipped records and
+  derived STR, CON, INT, LCK, ATK and DEF; its selection list reports owned
+  quantities and previews the chosen record's ATK and DEF through the same
+  `aos_stats_refresh` path used by gameplay.
+- Equipment changes now update combat's derived ATK and DEF immediately.
+  Weapon changes also discard the previous weapon entity and load the newly
+  selected exported behavior and available sprite sequence. The three
+  equipment IDs already persist through schema-v7 save-room writes.
+- Expanded the deterministic pause-menu test across all three slot types,
+  owned-only filtering, `None`, native equipment names and derived-stat
+  refresh. A reviewed local room 0/3 capture shows Equip enabled in the
+  native-order hub. This is source-adapted and unit-tested, not
+  emulator-compared: the native equipment tilemaps, icons, descriptions,
+  cursor OAM and transitions are still absent, as are record-specific armor
+  and accessory effects and some weapon entity classes.
+
 ## Patch 0635 - Native-order Aria pause hub
 
 - Reconstructed the seven-entry controller topology of `sub_08047764` in

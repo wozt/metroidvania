@@ -37,9 +37,89 @@ static const char *const category_names[] = {"RED", "BLUE", "YELLOW", "ABILITY"}
 static const char *const pause_entry_names[] = {
     "SOUL SET", "EQUIP", "ITEM USE", "ABILITY", "SLEEP", "CONFIG", "ENEMY",
 };
+static const char *const equipment_slot_names[] = {"WEAPON", "ARMOR", "ACCESSORY"};
+static const char *const weapon_names[AOS_WEAPON_RECORDS] = {
+    "Knife", "Baselard", "Combat Knife", "Short Sword", "Bastard Sword", "Whip Sword",
+    "Gladius", "Gram", "Milican's Sword", "Hrunting", "Mystletain", "Rahab's Sword",
+    "Durandal", "Laevatain", "Burtgang", "Kaladbolg", "Vjaya", "Balmung", "Broadsword",
+    "Scimitar", "Claymore", "Great Sword", "Joyeuse", "Dainslef", "Ascalon",
+    "Claimh Solais", "Final Sword", "Bamboo Sword", "Katana", "Osafune", "Onikiri",
+    "Kunitsuna", "Yasutsuna", "Muramasa", "Hammer", "Warhammer", "Excalibur",
+    "Tallhammer", "Battle Axe", "Death's Sickle", "Rapier", "Estoc", "Cutall", "Spear",
+    "Trident", "Lance", "Partizan", "Gabolg", "Gungner", "Ronginus' Spear", "Cestus",
+    "Kaiser Knuckle", "Mach Punch", "Whip Knuckle", "Poison Fist", "Handgun", "Silver Gun",
+    "Positron Rifle", "Valmanway",
+};
+static const char *const armor_names[AOS_ARMOR_RECORDS] = {
+    "Casual Clothes", "Cloth Tunic", "Gym Clothes", "War Fatigues", "Ninja Suit",
+    "Soldier Uniform", "Pitch Black Suit", "Olrox's Suit", "Dracula's Tunic", "Leather Plate",
+    "Copper Plate", "Iron Plate", "Steel Plate", "Silver Plate", "Gold Plate", "Eversing",
+    "Samurai Armor", "Silk Robe", "Elfin Robe", "Death's Robe", "Demon's Mail",
+    "Armor of Fire", "Armor of Water", "Blocking Mail", "Army Jacket", "Cape",
+    "Crimson Cloak", "Black Cloak", "Pendant", "Heart Pendant", "Scarf", "Red Scarf",
+    "Ancient Belt", "Black Belt", "Skull Necklace", "Flame Necklace", "Satan's Ring",
+    "Tear Of Blood", "Lucky Charm", "Rare Ring", "Soul Eater Ring", "Rune Ring",
+    "Sherman Ring", "Gold Ring", "Chaos Ring",
+};
 
 const char *aos_pause_entry_name(uint8_t entry) {
     return entry < AOS_PAUSE_ENTRIES ? pause_entry_names[entry] : "UNKNOWN";
+}
+
+const char *aos_equipment_slot_name(uint8_t slot) {
+    return slot < AOS_EQUIP_SLOTS ? equipment_slot_names[slot] : "UNKNOWN";
+}
+
+const char *aos_equipment_name(uint8_t slot, uint8_t item) {
+    if (item == AOS_EQUIPMENT_NONE) return "None";
+    if (slot == AOS_EQUIP_WEAPON)
+        return item < AOS_WEAPON_RECORDS ? weapon_names[item] : "Unknown";
+    return slot < AOS_EQUIP_SLOTS && item < AOS_ARMOR_RECORDS ? armor_names[item] : "Unknown";
+}
+
+uint8_t aos_equipment_current(const AosStats *stats, uint8_t slot) {
+    if (slot == AOS_EQUIP_WEAPON) return stats->weapon;
+    if (slot == AOS_EQUIP_ARMOR) return stats->armor;
+    if (slot == AOS_EQUIP_ACCESSORY) return stats->accessory;
+    return AOS_EQUIPMENT_NONE;
+}
+
+static bool equipment_owned(const AosStats *stats, uint8_t slot, uint8_t item) {
+    if (slot == AOS_EQUIP_WEAPON)
+        return item < AOS_WEAPON_RECORDS && stats->weapon_counts[item] != 0;
+    if (slot == AOS_EQUIP_ARMOR)
+        return item < 25 && stats->armor_counts[item] != 0;
+    return slot == AOS_EQUIP_ACCESSORY && item >= 25 && item < AOS_ARMOR_RECORDS &&
+           stats->armor_counts[item] != 0;
+}
+
+uint8_t aos_equipment_quantity(const AosStats *stats, uint8_t slot, uint8_t item) {
+    if (item == AOS_EQUIPMENT_NONE) return 0;
+    if (!equipment_owned(stats, slot, item)) return 0;
+    return slot == AOS_EQUIP_WEAPON ? stats->weapon_counts[item] : stats->armor_counts[item];
+}
+
+int aos_equipment_choice_count(const AosStats *stats, uint8_t slot) {
+    int count = 1;
+    int first = slot == AOS_EQUIP_ACCESSORY ? 25 : 0;
+    int limit = slot == AOS_EQUIP_WEAPON ? AOS_WEAPON_RECORDS
+                : slot == AOS_EQUIP_ARMOR ? 25
+                : slot == AOS_EQUIP_ACCESSORY ? AOS_ARMOR_RECORDS
+                                             : 0;
+    for (int item = first; item < limit; ++item) count += equipment_owned(stats, slot, item);
+    return count;
+}
+
+uint8_t aos_equipment_choice_at(const AosStats *stats, uint8_t slot, int ordinal) {
+    if (ordinal <= 0) return AOS_EQUIPMENT_NONE;
+    int first = slot == AOS_EQUIP_ACCESSORY ? 25 : 0;
+    int limit = slot == AOS_EQUIP_WEAPON ? AOS_WEAPON_RECORDS
+                : slot == AOS_EQUIP_ARMOR ? 25
+                : slot == AOS_EQUIP_ACCESSORY ? AOS_ARMOR_RECORDS
+                                             : 0;
+    for (int item = first; item < limit; ++item)
+        if (equipment_owned(stats, slot, (uint8_t)item) && --ordinal == 0) return (uint8_t)item;
+    return AOS_EQUIPMENT_NONE;
 }
 
 int aos_soul_menu_count(uint8_t category) {
@@ -130,6 +210,12 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
         return AOS_SOUL_MENU_MOVED;
     }
     if (!(new_input & AOS_KEY_A)) return 0;
+    if (menu->hub_cursor == AOS_PAUSE_EQUIP) {
+        menu->page = AOS_SOUL_MENU_PAGE_EQUIP;
+        menu->equip_slot = AOS_EQUIP_WEAPON;
+        menu->equip_selecting = false;
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
     if (menu->hub_cursor == AOS_PAUSE_SOUL_SET) {
         menu->page = AOS_SOUL_MENU_PAGE_SOUL_SET;
         menu->category = AOS_SOUL_MENU_RED;
@@ -146,7 +232,70 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
     return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
 }
 
+static int equipment_ordinal(const AosStats *stats, uint8_t slot, uint8_t item) {
+    int count = aos_equipment_choice_count(stats, slot);
+    for (int ordinal = 0; ordinal < count; ++ordinal)
+        if (aos_equipment_choice_at(stats, slot, ordinal) == item) return ordinal;
+    return 0;
+}
+
+static void move_equipment_choice(AosSoulMenu *menu, const AosStats *stats, int direction) {
+    int count = aos_equipment_choice_count(stats, menu->equip_slot);
+    int ordinal = equipment_ordinal(stats, menu->equip_slot, menu->equip_choice);
+    ordinal = (ordinal + direction + count) % count;
+    menu->equip_choice = aos_equipment_choice_at(stats, menu->equip_slot, ordinal);
+}
+
+static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
+                                 const AosEquipmentTables *equipment,
+                                 uint16_t new_input, uint16_t repeated_input) {
+    if (new_input & AOS_KEY_START) {
+        menu->open = false;
+        return AOS_SOUL_MENU_CLOSED;
+    }
+    if (new_input & AOS_KEY_B) {
+        if (menu->equip_selecting) menu->equip_selecting = false;
+        else menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        return AOS_SOUL_MENU_BACK;
+    }
+    if (!menu->equip_selecting) {
+        if (repeated_input & AOS_KEY_UP) {
+            menu->equip_slot = (uint8_t)((menu->equip_slot + AOS_EQUIP_SLOTS - 1) %
+                                         AOS_EQUIP_SLOTS);
+            return AOS_SOUL_MENU_MOVED;
+        }
+        if (repeated_input & AOS_KEY_DOWN) {
+            menu->equip_slot = (uint8_t)((menu->equip_slot + 1) % AOS_EQUIP_SLOTS);
+            return AOS_SOUL_MENU_MOVED;
+        }
+        if (!(new_input & AOS_KEY_A)) return 0;
+        menu->equip_choice = aos_equipment_current(stats, menu->equip_slot);
+        if (!equipment_owned(stats, menu->equip_slot, menu->equip_choice))
+            menu->equip_choice = AOS_EQUIPMENT_NONE;
+        menu->equip_selecting = true;
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (repeated_input & AOS_KEY_UP) {
+        move_equipment_choice(menu, stats, -1);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (repeated_input & AOS_KEY_DOWN) {
+        move_equipment_choice(menu, stats, 1);
+        return AOS_SOUL_MENU_MOVED;
+    }
+    if (!(new_input & AOS_KEY_A)) return 0;
+    uint8_t *equipped = menu->equip_slot == AOS_EQUIP_WEAPON ? &stats->weapon
+                        : menu->equip_slot == AOS_EQUIP_ARMOR ? &stats->armor
+                                                              : &stats->accessory;
+    bool changed = *equipped != menu->equip_choice;
+    *equipped = menu->equip_choice;
+    if (equipment) aos_stats_refresh(stats, equipment);
+    menu->equip_selecting = false;
+    return AOS_SOUL_MENU_ACCEPTED | (changed ? AOS_SOUL_MENU_CHANGED : 0);
+}
+
 unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
+                              const AosEquipmentTables *equipment,
                               uint16_t new_input, uint16_t repeated_input) {
     if (!menu->open) {
         if (!(new_input & AOS_KEY_START)) return 0;
@@ -157,6 +306,8 @@ unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_HUB)
         return update_hub(menu, stats, new_input, repeated_input);
+    if (menu->page == AOS_SOUL_MENU_PAGE_EQUIP)
+        return update_equipment(menu, stats, equipment, new_input, repeated_input);
     if (new_input & AOS_KEY_START) {
         menu->open = false;
         return AOS_SOUL_MENU_CLOSED;

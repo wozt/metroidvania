@@ -31,7 +31,15 @@ enum {
     AOS_SOUL_MENU_PAGE_HUB,
     AOS_SOUL_MENU_PAGE_SOUL_SET,
     AOS_SOUL_MENU_PAGE_ABILITY,
+    AOS_SOUL_MENU_PAGE_EQUIP,
     AOS_SOUL_MENU_PAGE_UNAVAILABLE,
+};
+
+enum {
+    AOS_EQUIP_WEAPON,
+    AOS_EQUIP_ARMOR,
+    AOS_EQUIP_ACCESSORY,
+    AOS_EQUIP_SLOTS,
 };
 
 enum {
@@ -49,18 +57,23 @@ typedef struct {
     uint8_t page;
     uint8_t hub_cursor;
     uint8_t category;
+    uint8_t equip_slot;
+    uint8_t equip_choice;
+    bool equip_selecting;
     /* Colour cursors are native equipped values: 0 None, then index + 1.
      * The ability cursor is its zero-based index. */
     uint8_t cursor[AOS_SOUL_MENU_CATEGORIES];
 } AosSoulMenu;
 
 /* START opens the seven-entry pause hub reconstructed from sub_08047764.
- * Soul Set and Ability enter their usable source-adapted pages; the five
- * unported pages enter an explicit unavailable page. In Soul Set, L/R changes
- * colour and Up/Down selects the next owned soul. Ability uses Up/Down. A
- * equips or toggles, B returns to the hub and START closes the pause menu.
+ * Soul Set, Equip and Ability enter their usable source-adapted pages; the
+ * four unported pages enter an explicit unavailable page. In Soul Set, L/R
+ * changes colour and Up/Down selects the next owned soul. Equip selects among
+ * owned records for three slots. Ability uses Up/Down. A equips or toggles, B
+ * returns to the hub and START closes the pause menu.
  * The return value is an AOS_SOUL_MENU_* event mask. */
 unsigned aos_soul_menu_update(AosSoulMenu *menu, AosStats *stats,
+                              const AosEquipmentTables *equipment,
                               uint16_t new_input, uint16_t repeated_input);
 
 int aos_soul_menu_count(uint8_t category);
@@ -70,5 +83,11 @@ bool aos_soul_menu_enabled(const AosSoulMenu *menu, const AosStats *stats);
 const char *aos_soul_menu_category_name(uint8_t category);
 const char *aos_soul_menu_name(uint8_t category, uint8_t cursor);
 const char *aos_pause_entry_name(uint8_t entry);
+const char *aos_equipment_slot_name(uint8_t slot);
+const char *aos_equipment_name(uint8_t slot, uint8_t item);
+uint8_t aos_equipment_current(const AosStats *stats, uint8_t slot);
+int aos_equipment_choice_count(const AosStats *stats, uint8_t slot);
+uint8_t aos_equipment_choice_at(const AosStats *stats, uint8_t slot, int ordinal);
+uint8_t aos_equipment_quantity(const AosStats *stats, uint8_t slot, uint8_t item);
 
 #endif /* AOS_SOUL_MENU_H */

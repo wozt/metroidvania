@@ -8,6 +8,20 @@
 
 int main(void) {
     AosStats stats = {0};
+    AosEquipmentTables equipment = {0};
+    stats.base[AOS_STAT_STR] = 10;
+    stats.base[AOS_STAT_CON] = 10;
+    stats.weapon = 0;
+    stats.armor = 0;
+    stats.accessory = AOS_EQUIPMENT_NONE;
+    stats.weapon_counts[0] = stats.weapon_counts[7] = 1;
+    stats.armor_counts[0] = stats.armor_counts[3] = stats.armor_counts[25] = 1;
+    equipment.weapons[0].atk = 5;
+    equipment.weapons[7].atk = 38;
+    equipment.armor[0].def = 5;
+    equipment.armor[3].def = 15;
+    equipment.armor[25].def = 1;
+    aos_stats_refresh(&stats, &equipment);
     aos_souls_add(&stats, AOS_SOUL_RED, 1, 1);      /* Bat, native ID 2 */
     aos_souls_add(&stats, AOS_SOUL_RED, 13, 2);     /* Rock Armor, ID 14 */
     aos_souls_add(&stats, AOS_SOUL_BLUE, 3, 1);     /* Buer, ID 4 */
@@ -16,22 +30,24 @@ int main(void) {
     stats.red_soul = 2;
 
     AosSoulMenu menu = {0};
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_START, AOS_KEY_START) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_OPENED);
     assert(menu.open && menu.page == AOS_SOUL_MENU_PAGE_HUB && menu.hub_cursor == 0);
     assert(!strcmp(aos_pause_entry_name(0), "SOUL SET"));
     assert(!strcmp(aos_pause_entry_name(6), "ENEMY"));
 
     /* The hub wraps exactly seven native entries and exposes unavailable pages. */
-    assert(aos_soul_menu_update(&menu, &stats, 0, AOS_KEY_UP) == AOS_SOUL_MENU_MOVED);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP) ==
+           AOS_SOUL_MENU_MOVED);
     assert(menu.hub_cursor == AOS_PAUSE_ENEMY);
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE));
     assert(menu.page == AOS_SOUL_MENU_PAGE_UNAVAILABLE);
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK);
     assert(menu.page == AOS_SOUL_MENU_PAGE_HUB && menu.open);
     menu.hub_cursor = AOS_PAUSE_SOUL_SET;
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
     assert(menu.page == AOS_SOUL_MENU_PAGE_SOUL_SET && menu.category == AOS_SOUL_MENU_RED &&
            menu.cursor[0] == 2);
@@ -39,42 +55,78 @@ int main(void) {
     assert(aos_soul_menu_quantity(&menu, &stats) == 1 && aos_soul_menu_enabled(&menu, &stats));
 
     /* Down skips every unowned red soul and reaches Rock Armor. */
-    aos_soul_menu_update(&menu, &stats, 0, AOS_KEY_DOWN);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
     assert(menu.cursor[0] == 14 && aos_soul_menu_quantity(&menu, &stats) == 2);
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_CHANGED);
     assert(stats.red_soul == 14 && aos_soul_menu_enabled(&menu, &stats));
-    aos_soul_menu_update(&menu, &stats, 0, AOS_KEY_UP);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP);
     assert(menu.cursor[0] == 2);
-    aos_soul_menu_update(&menu, &stats, 0, AOS_KEY_UP);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP);
     assert(menu.cursor[0] == 0 && !strcmp(aos_soul_menu_name(0, 0), "None"));
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_CHANGED && stats.red_soul == 0);
 
-    aos_soul_menu_update(&menu, &stats, AOS_KEY_R, AOS_KEY_R);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_R, AOS_KEY_R);
     assert(menu.category == AOS_SOUL_MENU_BLUE && menu.cursor[1] == 0);
-    aos_soul_menu_update(&menu, &stats, 0, AOS_KEY_DOWN);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
     assert(menu.cursor[1] == 4);
-    aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
     assert(stats.blue_soul == 4);
-    aos_soul_menu_update(&menu, &stats, AOS_KEY_R, AOS_KEY_R);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_R, AOS_KEY_R);
     assert(menu.category == AOS_SOUL_MENU_YELLOW && menu.cursor[2] == 0);
-    aos_soul_menu_update(&menu, &stats, 0, AOS_KEY_DOWN);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
     assert(menu.cursor[2] == 6);
     /* Ability is the hub's separate native entry, not a fourth Soul Set family. */
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK);
     menu.hub_cursor = AOS_PAUSE_ABILITY;
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
     assert(menu.page == AOS_SOUL_MENU_PAGE_ABILITY && menu.category == AOS_SOUL_MENU_ABILITY &&
            menu.cursor[3] == 2);
     assert(!aos_soul_menu_enabled(&menu, &stats));
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_A, AOS_KEY_A) ==
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_CHANGED && aos_soul_menu_enabled(&menu, &stats));
 
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK);
     assert(menu.open && menu.page == AOS_SOUL_MENU_PAGE_HUB);
-    assert(aos_soul_menu_update(&menu, &stats, AOS_KEY_START, AOS_KEY_START) ==
+
+    /* EQUIP exposes only owned records, previews names and refreshes derived stats. */
+    menu.hub_cursor = AOS_PAUSE_EQUIP;
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_ACCEPTED);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_EQUIP && menu.equip_slot == AOS_EQUIP_WEAPON);
+    assert(!strcmp(aos_equipment_name(AOS_EQUIP_WEAPON, 7), "Gram"));
+    assert(aos_equipment_choice_count(&stats, AOS_EQUIP_WEAPON) == 3);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_ACCEPTED && menu.equip_selecting);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN) ==
+           AOS_SOUL_MENU_MOVED && menu.equip_choice == 7);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_CHANGED));
+    assert(stats.weapon == 7 && stats.atk == 48 && !menu.equip_selecting);
+
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
+    assert(menu.equip_slot == AOS_EQUIP_ARMOR);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
+    assert(menu.equip_choice == 3);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    assert(stats.armor == 3 && stats.def == 20);
+
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
+    assert(menu.equip_slot == AOS_EQUIP_ACCESSORY);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
+    assert(menu.equip_choice == 25 && aos_equipment_quantity(&stats, AOS_EQUIP_ACCESSORY, 25) == 1);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    assert(stats.accessory == 25 && stats.def == 21);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK && menu.page == AOS_SOUL_MENU_PAGE_HUB);
+
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_CLOSED && !menu.open);
     puts("aos soul menu tests passed");
     return 0;

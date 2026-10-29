@@ -2851,7 +2851,8 @@ static void debug_text(SDL_Renderer *renderer, int line, const char *text) {
 /* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
  * description and transition rendering remain separate future work. */
 static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
-                           const AosStats *stats, const AosSoma *soma) {
+                           const AosStats *stats, const AosEquipmentTables *equipment,
+                           const AosSoma *soma) {
     if (!menu->open) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 7, 12, 24, 238);
@@ -2870,10 +2871,66 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
         for (int entry = 0; entry < AOS_PAUSE_ENTRIES; ++entry) {
             snprintf(line, sizeof line, "%c %-10s %s", entry == menu->hub_cursor ? '>' : ' ',
                      aos_pause_entry_name((uint8_t)entry),
-                     entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_ABILITY ? "" : "[pending]");
+                     entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_EQUIP ||
+                             entry == AOS_PAUSE_ABILITY
+                         ? ""
+                         : "[pending]");
             debug_text(renderer, 4 + entry, line);
         }
         debug_text(renderer, 13, "A select  B/Start close");
+        return;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_EQUIP) {
+        debug_text(renderer, 0, menu->equip_selecting ? "EQUIP - SELECT" : "EQUIP");
+        if (!menu->equip_selecting) {
+            for (int slot = 0; slot < AOS_EQUIP_SLOTS; ++slot) {
+                uint8_t item = aos_equipment_current(stats, (uint8_t)slot);
+                snprintf(line, sizeof line, "%c %-9s %-20s",
+                         slot == menu->equip_slot ? '>' : ' ',
+                         aos_equipment_slot_name((uint8_t)slot),
+                         aos_equipment_name((uint8_t)slot, item));
+                debug_text(renderer, 2 + slot, line);
+            }
+            snprintf(line, sizeof line, "ATK %d  DEF %d", stats->atk, stats->def);
+            debug_text(renderer, 7, line);
+            snprintf(line, sizeof line, "STR %d CON %d INT %d LCK %d",
+                     stats->current[AOS_STAT_STR], stats->current[AOS_STAT_CON],
+                     stats->current[AOS_STAT_INT], stats->current[AOS_STAT_LCK]);
+            debug_text(renderer, 8, line);
+            debug_text(renderer, 11, "Up/Down slot  A choose");
+            debug_text(renderer, 12, "B back  Start close");
+            return;
+        }
+        snprintf(line, sizeof line, "%s", aos_equipment_slot_name(menu->equip_slot));
+        debug_text(renderer, 1, line);
+        int choices = aos_equipment_choice_count(stats, menu->equip_slot);
+        int cursor = 0;
+        for (int ordinal = 0; ordinal < choices; ++ordinal)
+            if (aos_equipment_choice_at(stats, menu->equip_slot, ordinal) == menu->equip_choice)
+                cursor = ordinal;
+        int top = cursor - 5;
+        if (top > choices - 11) top = choices - 11;
+        if (top < 0) top = 0;
+        for (int row = 0; row < 11 && top + row < choices; ++row) {
+            uint8_t item = aos_equipment_choice_at(stats, menu->equip_slot, top + row);
+            snprintf(line, sizeof line, "%c %02u %-20s x%u", top + row == cursor ? '>' : ' ',
+                     item == AOS_EQUIPMENT_NONE ? 0 : item + 1,
+                     aos_equipment_name(menu->equip_slot, item),
+                     aos_equipment_quantity(stats, menu->equip_slot, item));
+            debug_text(renderer, 3 + row, line);
+        }
+        if (equipment) {
+            AosStats preview = *stats;
+            uint8_t *slot = menu->equip_slot == AOS_EQUIP_WEAPON ? &preview.weapon
+                            : menu->equip_slot == AOS_EQUIP_ARMOR ? &preview.armor
+                                                                  : &preview.accessory;
+            *slot = menu->equip_choice;
+            aos_stats_refresh(&preview, equipment);
+            snprintf(line, sizeof line, "ATK %d>%d DEF %d>%d", stats->atk, preview.atk,
+                     stats->def, preview.def);
+            debug_text(renderer, 14, line);
+        }
+        debug_text(renderer, 16, "A equip  B cancel  Start close");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_UNAVAILABLE) {
@@ -3053,6 +3110,32 @@ static bool load_weapon_sprite(const char *name, AriaWeaponSprite *out, SDL_Rend
 static void free_weapon_sprite(AriaWeaponSprite *sprite) {
     for (int i = 0; i < sprite->count; ++i)
         if (sprite->frames[i].texture) SDL_DestroyTexture(sprite->frames[i].texture);
+}
+
+/* Apply the equipment menu's weapon choice to the same runtime objects used
+ * at launch. A missing sprite keeps the record equipped but disables its
+ * still-unported weapon entity instead of retaining the previous art. */
+static bool reload_equipped_weapon(uint8_t item, AosSoma *soma,
+                                   AriaWeaponSprite *sprite, bool *loaded,
+                                   AosWeaponEntity *entity, AriaCombat *combat,
+                                   SDL_Renderer *renderer) {
+    char name[8];
+    if (item == AOS_EQUIPMENT_NONE) snprintf(name, sizeof name, "none");
+    else snprintf(name, sizeof name, "%u", item);
+    AosWeapon weapon;
+    if (!load_weapon(DEFAULT_WEAPONS, name, &weapon)) return false;
+    free_weapon_sprite(sprite);
+    *sprite = (AriaWeaponSprite){0};
+    *entity = (AosWeaponEntity){0};
+    soma->weapon = weapon;
+    *loaded = weapon.weapon_class <= 4 && load_weapon_sprite(name, sprite, renderer);
+    if (!*loaded) {
+        free_weapon_sprite(sprite);
+        *sprite = (AriaWeaponSprite){0};
+    }
+    combat->weapon = entity;
+    combat->weapon_frames = *loaded ? &sprite->data : NULL;
+    return true;
 }
 
 static void usage(const char *name) {
@@ -3598,11 +3681,27 @@ int main(int argc, char **argv) {
                 wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;
-            unsigned soul_menu_event = progress.character == 0
-                                           ? aos_soul_menu_update(&soul_menu, &progress,
-                                                                  aria_input.new_input,
-                                                                  aria_input.repeated_input)
-                                           : 0;
+            uint8_t previous_weapon = progress.weapon;
+            unsigned soul_menu_event =
+                progress.character == 0
+                    ? aos_soul_menu_update(&soul_menu, &progress,
+                                           have_equipment ? &equipment : NULL,
+                                           aria_input.new_input, aria_input.repeated_input)
+                    : 0;
+            if ((soul_menu_event & AOS_SOUL_MENU_CHANGED) &&
+                progress.weapon != previous_weapon &&
+                !reload_equipped_weapon(progress.weapon, &soma, &weapon_sprite,
+                                        &weapon_loaded, &weapon_entity, &combat, renderer)) {
+                fprintf(stderr, "Cannot load equipped weapon %u; keeping %u\n",
+                        progress.weapon, previous_weapon);
+                progress.weapon = previous_weapon;
+                if (have_equipment) aos_stats_refresh(&progress, &equipment);
+            }
+            if ((soul_menu_event & AOS_SOUL_MENU_CHANGED) &&
+                soul_menu.hub_cursor == AOS_PAUSE_EQUIP) {
+                if (combat.derive_atk) player_stats.atk = progress.atk;
+                if (combat.derive_def) player_stats.def = progress.def;
+            }
             if (soul_menu_event & AOS_SOUL_MENU_OPENED) {
                 aos_audio_play_song(AOS_AUDIO_PAUSE);
                 printf("Pause hub opened\n");
@@ -3612,10 +3711,17 @@ int main(int argc, char **argv) {
             if (soul_menu_event & AOS_SOUL_MENU_BACK) aos_audio_play_song(0xF0);
             if (soul_menu_event & AOS_SOUL_MENU_UNAVAILABLE)
                 printf("Pause page pending: %s\n", aos_pause_entry_name(soul_menu.hub_cursor));
-            if (soul_menu_event & AOS_SOUL_MENU_CHANGED)
-                printf("Equipped souls: red %u, blue %u, yellow %u, abilities %02x%02x\n",
-                       progress.red_soul, progress.blue_soul, progress.yellow_soul,
-                       progress.abilities[1], progress.abilities[0]);
+            if (soul_menu_event & AOS_SOUL_MENU_CHANGED) {
+                if (soul_menu.page == AOS_SOUL_MENU_PAGE_EQUIP ||
+                    soul_menu.hub_cursor == AOS_PAUSE_EQUIP)
+                    printf("Equipment: weapon %u, armor %u, accessory %u, ATK %d, DEF %d\n",
+                           progress.weapon, progress.armor, progress.accessory,
+                           progress.atk, progress.def);
+                else
+                    printf("Equipped souls: red %u, blue %u, yellow %u, abilities %02x%02x\n",
+                           progress.red_soul, progress.blue_soul, progress.yellow_soul,
+                           progress.abilities[1], progress.abilities[0]);
+            }
             if (soul_menu_event & AOS_SOUL_MENU_CLOSED) {
                 aos_audio_play_song(AOS_AUDIO_RESUME);
                 printf("Pause hub closed\n");
@@ -4134,7 +4240,8 @@ int main(int argc, char **argv) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
         }
-        draw_soul_menu(renderer, &soul_menu, &progress, &soma);
+        draw_soul_menu(renderer, &soul_menu, &progress,
+                       have_equipment ? &equipment : NULL, &soma);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

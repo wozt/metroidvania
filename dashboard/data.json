@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-29T17:38:55+00:00",
+ "generated_at": "2026-10-29T18:09:49+00:00",
  "git": {
-  "commit": "6b9ecf4",
+  "commit": "295c83f",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 207,
+   "total": 208,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 50,
+    "partial": 51,
     "functional": 146,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 146,
-   "functional_or_better_percent": 70.5,
-   "with_passing_tests": 194,
-   "with_passing_tests_percent": 93.7,
+   "functional_or_better_percent": 70.2,
+   "with_passing_tests": 195,
+   "with_passing_tests_percent": 93.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -253,6 +253,7 @@
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
     "aos.items.money_pickups",
+    "aos.menus.equipment",
     "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
@@ -441,11 +442,11 @@
    "areas": [
     "aos"
    ],
-   "total": 66,
+   "total": 67,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 26,
+    "partial": 27,
     "functional": 40,
     "faithful": 0,
     "validated": 0,
@@ -453,8 +454,8 @@
     "unknown": 0
    },
    "functional_or_better": 40,
-   "functional_or_better_percent": 60.6,
-   "with_passing_tests": 66,
+   "functional_or_better_percent": 59.7,
+   "with_passing_tests": 67,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -510,6 +511,7 @@
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
     "aos.items.money_pickups",
+    "aos.menus.equipment",
     "aos.menus.menu_bg0",
     "aos.menus.text_window",
     "aos.player.soma_controller",
@@ -12558,6 +12560,110 @@
    }
   },
   {
+   "id": "aos.menus.equipment",
+   "area": "aos",
+   "category": "menus",
+   "title": "Aria equipment menu",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_soul_menu.c",
+    "src/runtime/aria_runtime.c",
+    "src/runtime/aos_stats.c",
+    "src/runtime/aos_weapon.c",
+    "src/runtime/aos_save.c"
+   ],
+   "tests": [
+    "tests/test_aos_soul_menu.c",
+    "tests/test_aos_stats.c",
+    "tests/test_aos_weapon.c",
+    "tests/test_aos_save.c"
+   ],
+   "dependencies": [
+    "aos.souls.equipment_menu",
+    "aos.progression.equipment_stats",
+    "aos.items.money_pickups",
+    "aos.weapons.weapon_entity",
+    "aos.saves.portable_slots"
+   ],
+   "native_routines": [
+    "sub_0804A95C",
+    "sub_0804AAF0",
+    "sub_0804A120",
+    "sub_0804A2A4",
+    "sub_0804A700",
+    "sub_0804AED4",
+    "sub_0804AFD4",
+    "sub_0804B26C"
+   ],
+   "limitations": "The page uses a diagnostic SDL overlay instead of native text tiles, icons, description records, cursor OAM and transitions. Its owned-item scan is complete but does not reproduce the native four-entry recent-item caches. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. All 59 weapons, 25 armor pieces and 20 accessories have identified English names. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-adapted and unit-tested, not emulator-compared.",
+   "next_action": "Render the native equipment resources and descriptions, complete all weapon entity classes, then port resistance and record-specific accessory effects.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_soul_menu.c",
+     "tests/test_aos_stats.c",
+     "tests/test_aos_weapon.c",
+     "tests/test_aos_save.c"
+    ],
+    "in_game_check": [
+     "aria area_00_room_003: reviewed capture shows Equip enabled in the seven-entry hub; deterministic controller tests cover owned lists and all three slot changes"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soul_menu.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_stats.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_stats"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_weapon.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_weapon"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-29"
+   }
+  },
+  {
    "id": "aos.menus.menu_bg0",
    "area": "aos",
    "category": "menus",
@@ -12788,8 +12894,8 @@
     "sub_08021F84",
     "sub_0804B314"
    ],
-   "limitations": "Only the three equipped records are summed (sub_0804ACD4's preview override, used by the equipment menu, is not modelled) and an index past its table counts as nothing. There is no inventory or equipment menu yet, so equipment changes only through the file or --weapon; armor and accessories have no other effect than their records (no accessory-specific behaviour such as MP regeneration). The resistance word is computed but not yet applied to damage, and the effective INT and LCK are not used. sub_0804ACD4 sums the weapon record (0x08505D3C, 59 x 28 bytes) and the armor and accessory records (0x085063B0, 45 x 20 bytes): ATK, DEF, the signed STR, CON, INT, LCK and, for armor and accessory only, the ORed resistances; sub_0804AD9C adds the base stats and sub_08021FA4 / sub_08021C44 give currentATK = STR + equipment ATK and currentDEF = CON / 2 + equipment DEF, at least 0. The object export writes both tables as metadata/equipment.tsv. Portable saves (schema v4) keep the weapon, armor and accessory, older files taking sub_08014548's new-game set (weapon 0, armor 0, no accessory); the runtime equips them, derives ATK and DEF at load and after every level up, and a new file starts at ATK 15 and DEF 11 (local runtime check; level 5 gives 19 and 13). --atk and --def remain overrides. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the inventories and the equipment menu, apply the resistances and the accessory effects, then the souls.",
+   "limitations": "The equipment preview uses a copied AosStats plus aos_stats_refresh rather than sub_0804ACD4's native scratch records and icon entities. Armor and accessories still have no record-specific behaviour such as MP regeneration. The resistance word is computed but not yet applied to damage, and effective INT and LCK are only displayed. sub_0804ACD4 sums the weapon record (0x08505D3C, 59 x 28 bytes) and the armor and accessory records (0x085063B0, 45 x 20 bytes): ATK, DEF, the signed STR, CON, INT, LCK and, for armor and accessory only, the ORed resistances; sub_0804AD9C adds the base stats and sub_08021FA4 / sub_08021C44 give currentATK = STR + equipment ATK and currentDEF = CON / 2 + equipment DEF, at least 0. The object export writes both tables as metadata/equipment.tsv. Portable saves (schema v4) keep all three slots. The runtime derives ATK and DEF at load, after level ups and after equipment-menu changes; combat reads the refreshed values immediately unless --atk or --def overrides them. The menu's weapon choice also reloads the exported weapon record and available entity art. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Apply resistances and record-specific accessory effects, then complete the remaining weapon classes and native equipment graphics.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_stats.c",
@@ -13022,8 +13128,8 @@
     "sub_0804BB40",
     "sub_08032ADC"
    ],
-   "limitations": "The hub and its usable pages use an SDL diagnostic text overlay rather than native tilemaps, portrait, icons, descriptions, cursor OAM and fades. Equip, Item Use, Sleep, Config and Enemy are labelled but explicitly unavailable. Soul Set still uses L/R as a source-adapted colour shortcut instead of the native category transition. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters Soul Set and Ability or an explicit pending page for the other entries; B returns from a page and B or START from the hub resumes play. Soul Set equips or removes owned red, blue and yellow souls. Ability separately toggles owned ability souls. Names, native inventory quantities and current equipment are displayed, and the schema-v7 save bridge persists changes at the next save-room write. Local room 0/3 captures showed both the hub and Rock Armor's equipment row. Source-adapted and unit-tested, not emulator-compared.",
-   "next_action": "Reconstruct Equip and Item Use next, then the native hub and soul-page graphics, descriptions, cursor OAM and transitions.",
+   "limitations": "The hub and its usable pages use an SDL diagnostic text overlay rather than native tilemaps, portrait, icons, descriptions, cursor OAM and fades. Item Use, Sleep, Config and Enemy are labelled but explicitly unavailable. Soul Set still uses L/R as a source-adapted colour shortcut instead of the native category transition. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters Soul Set, Equip and Ability or an explicit pending page for the other entries; B returns from a page and B or START from the hub resumes play. Soul Set equips or removes owned red, blue and yellow souls. Ability separately toggles owned ability souls. Equip changes all three equipment slots through their owned inventories. The schema-v7 save bridge persists changes at the next save-room write. Local room 0/3 captures showed the hub with all three usable entries and Rock Armor's soul row. Source-adapted and unit-tested, not emulator-compared.",
+   "next_action": "Reconstruct Item Use next, then the native hub and page graphics, descriptions, cursor OAM and transitions.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul_menu.c",
@@ -18027,6 +18133,12 @@
  },
  "timeline": [
   {
+   "commit": "295c83f",
+   "date": "2026-10-29",
+   "subject": "Add native-order Aria pause hub",
+   "scope": "project"
+  },
+  {
    "commit": "6b9ecf4",
    "date": "2026-10-29",
    "subject": "Add Aria soul equipment menu",
@@ -18499,12 +18611,6 @@
    "date": "2026-10-26",
    "subject": "Write the native inventory natively and remove the last Python",
    "scope": "project"
-  },
-  {
-   "commit": "1e97195",
-   "date": "2026-10-26",
-   "subject": "Generate the dashboard and check generated documents natively",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -18565,9 +18671,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 641,
-    "routines_attached_to_features": 641,
-    "unassigned_routines": 2932,
+    "routines_cited_by_features": 649,
+    "routines_attached_to_features": 649,
+    "unassigned_routines": 2924,
     "call_edges": 14228
    }
   },

@@ -1001,6 +1001,32 @@ static FusionJson bestiary_row(FusionJson id, const char *name, const char *anno
     return row;
 }
 
+/* A catalog percentage is intentionally stricter than "has an implementation
+ * status": only functional, faithful or validated rows count as complete. */
+static FusionJson catalog_coverage(const FusionJson *rows) {
+    FusionJson coverage = fusion_json_object(), by_status = fusion_json_object();
+    int64_t implemented = 0, complete = 0;
+    for (size_t index = 0; index < rows->count; ++index) {
+        const char *status = text_of(&rows->items[index], "status");
+        FusionJson *count = fusion_json_member_mut(&by_status, status);
+        if (count) count->integer++;
+        else put_int(&by_status, status, 1);
+        bool started = !strcmp(status, "partial") || !strcmp(status, "functional") ||
+                       !strcmp(status, "faithful") || !strcmp(status, "validated");
+        bool finished = !strcmp(status, "functional") || !strcmp(status, "faithful") ||
+                        !strcmp(status, "validated");
+        implemented += started;
+        complete += finished;
+    }
+    put_int(&coverage, "total", (int64_t)rows->count);
+    put_int(&coverage, "implemented", implemented);
+    put_int(&coverage, "functional_or_better", complete);
+    put_int(&coverage, "functional_or_better_percent",
+            rows->count ? complete * 100 / (int64_t)rows->count : 0);
+    put(&coverage, "by_status", by_status);
+    return coverage;
+}
+
 /* _mzm_sprite_annotations(): each MZM_PSPRITE of mzm_sprite_family's primary
  * switch mapped to its family's parity annotation. */
 static bool sprite_annotations_of(const char *source, const FusionJson *annotations,
@@ -1460,7 +1486,11 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         push(&items, bestiary_row(fusion_json_string(tanks[index][0]), tanks[index][1],
                                   "mzm.items.tanks", "", annotations));
     FusionJson mzm = fusion_json_object(), aos = fusion_json_object(), games = fusion_json_object();
+    FusionJson mzm_coverage = fusion_json_object();
+    put(&mzm_coverage, "monsters", catalog_coverage(&monsters));
+    put(&mzm_coverage, "items", catalog_coverage(&items));
     put_string(&mzm, "title", "Metroid: Zero Mission");
+    put(&mzm, "coverage", mzm_coverage);
     put(&mzm, "monsters", monsters);
     put(&mzm, "items", items);
     put_string(&mzm, "items_note",
@@ -1468,6 +1498,19 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                "native enum, the ability items of the Chozo statues and the four tank kinds "
                "(Clipdata, not sprites).");
     put_string(&aos, "title", "Castlevania: Aria of Sorrow");
+    FusionJson aos_coverage = fusion_json_object();
+    put(&aos_coverage, "monsters", catalog_coverage(&aos_monsters));
+    put(&aos_coverage, "bosses", catalog_coverage(&aos_bosses));
+    put(&aos_coverage, "items", catalog_coverage(&aos_items));
+    put(&aos_coverage, "red_souls",
+        catalog_coverage(fusion_json_member(&aos_souls, "red")));
+    put(&aos_coverage, "blue_souls",
+        catalog_coverage(fusion_json_member(&aos_souls, "blue")));
+    put(&aos_coverage, "yellow_souls",
+        catalog_coverage(fusion_json_member(&aos_souls, "yellow")));
+    put(&aos_coverage, "ability_souls",
+        catalog_coverage(fusion_json_member(&aos_souls, "ability")));
+    put(&aos, "coverage", aos_coverage);
     put(&aos, "monsters", aos_monsters);
     put(&aos, "bosses", aos_bosses);
     FusionJson summary = fusion_json_object();
@@ -1496,11 +1539,13 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     put(&games, "aos", aos);
     *result = fusion_json_object();
     put_string(result, "method",
-               "A row's status is its parity annotation's: 'partial' means a ported AI, "
-               "'functional' adds unit tests and a recorded in-game check, 'validated' requires "
-               "an emulator comparison; sprites without a ported AI are not started. Names come "
-               "from the reviewed native catalogs; all 113 Aria constructors and all 257 normal "
-               "collectible definitions are named without embedding ROM assets.");
+               "Every table and percentage below is regenerated from the native object catalogs, "
+               "the parity annotations and the Aria aspect registry. A row is complete only at "
+               "functional, faithful or validated status; partial rows are implemented but do "
+               "not count as complete. Zero Mission lists every catalogued enemy actor and every "
+               "collectible kind tracked by the reconstruction. Aria names all 113 constructors, "
+               "11 campaign bosses and 257 normal collectible definitions without embedding ROM "
+               "assets.");
     put(result, "games", games);
     return true;
 }

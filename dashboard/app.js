@@ -249,21 +249,31 @@
       (${warnings} with warnings).</p>${featureGroups(flagged, false)}`;
   }
 
-  function bestiaryTable(rows, kind) {
+  function coverageCards(groups) {
+    return `<div class="catalog-summary">${groups.map(([name, coverage, tone]) =>
+      `<div class="catalog-count ${esc(tone || "")}"><strong>${coverage.functional_or_better_percent}%</strong><span>${esc(name)} · ${coverage.functional_or_better}/${coverage.total} functional+</span></div>`
+    ).join("")}</div>`;
+  }
+
+  function bestiaryTable(rows, kind, coverage, aspects) {
     const q = state.query;
     const visible = rows.filter((row) =>
       (!state.statuses.size || state.statuses.has(row.status)) &&
-      (!q || (row.name + " " + (row.note || "") + " " + (row.feature || "")).toLowerCase().includes(q)));
-    const implemented = rows.filter((row) =>
-      ["partial", "functional", "faithful", "validated"].includes(row.status)).length;
-    return `<h3>${esc(kind)} <span class="muted">${implemented}/${rows.length} with an implementation status</span></h3>
-      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th><th>Evidence</th><th>Note</th></tr></thead><tbody>
+      (!q || (row.name + " " + (row.note || "") + " " + (row.feature || "") + " " +
+        (row.aspects ? row.aspects.notes + " " + row.aspects.soul_ref : "")).toLowerCase().includes(q)));
+    const aspectHeaders = aspects ? `${aspectNames.map((name) => `<th>${esc(name)}</th>`).join("")}<th>Soul reference</th>` : "";
+    const columns = aspects ? 11 : 5;
+    return `<details class="group catalog-group" open>
+      <summary><span class="title">${esc(kind)}</span><span class="muted">${coverage.functional_or_better}/${coverage.total} functional+ · ${coverage.functional_or_better_percent}%</span></summary>
+      <div class="catalog-distribution">${stackBar(coverage.by_status, coverage.total)}${legend(coverage.by_status)}</div>
+      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th>${aspectHeaders}<th>Evidence</th><th>Note</th></tr></thead><tbody>
       ${visible.map((row) => {
         const feature = row.feature ? data.features.find((item) => item.id === row.feature) : null;
-        return `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}${row.feature ? `<br><code class="muted">${esc(row.feature)}</code>` : ""}</td><td>${statusBadge(row.status)}</td><td>${evidenceBadges(row.evidence, feature && feature.verification)}</td><td class="muted">${esc(row.note || "")}</td></tr>`;
+        const aspectCells = aspects ? `${aspectNames.map((name) => `<td>${row.aspects ? aspectBadge(row.aspects[name]) : '<span class="muted">—</span>'}</td>`).join("")}<td>${row.aspects ? `<code>${esc(row.aspects.soul_ref)}</code>` : '<span class="muted">—</span>'}</td>` : "";
+        return `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}${row.feature ? `<br><code class="muted">${esc(row.feature)}</code>` : ""}</td><td>${statusBadge(row.status)}</td>${aspectCells}<td>${evidenceBadges(row.evidence, feature && feature.verification)}</td><td class="muted">${esc(row.note || "")}</td></tr>`;
       }).join("") ||
-      '<tr><td colspan="5" class="muted">No match.</td></tr>'}
-      </tbody></table></div>`;
+      `<tr><td colspan="${columns}" class="muted">No match.</td></tr>`}
+      </tbody></table></div></details>`;
   }
 
   /* The per-monster aspects (sprite, animations, sounds, loot, soul). */
@@ -274,45 +284,50 @@
     return `<span class="badge ${kind}">${esc(value)}</span>`;
   }
 
-  function aspectTable(g) {
+  function aspectOverview(g) {
     const s = g.aspects;
-    const q = state.query;
-    const rows = g.monsters.filter((row) => row.aspects &&
-      (!q || (row.name + " " + row.aspects.notes + " " + row.aspects.soul_ref).toLowerCase().includes(q)));
     const totals = aspectNames.map((name) =>
       `<li><strong>${esc(name)}</strong> ${s[name].ported} ported · ${s[name].partial} partial · ${s[name].missing} missing</li>`).join("");
-    return `<h3>Monster completeness <span class="muted">${s.complete}/${s.monsters} complete</span></h3>
-      <p class="muted">${esc(g.aspects_note)}</p><ul class="aspect-totals">${totals}</ul>
-      <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th>${aspectNames.map((name) => `<th>${esc(name)}</th>`).join("")}<th>Soul</th><th>Notes</th></tr></thead><tbody>
-      ${rows.map((row) => `<tr><td><code>0x${row.id.toString(16).toUpperCase().padStart(2, "0")}</code></td><td>${esc(row.name)}</td>${aspectNames.map((name) => `<td>${aspectBadge(row.aspects[name])}</td>`).join("")}<td><code>${esc(row.aspects.soul_ref)}</code></td><td class="muted">${esc(row.aspects.notes)}</td></tr>`).join("") ||
-      '<tr><td colspan="9" class="muted">No match.</td></tr>'}
-      </tbody></table></div>`;
+    return `<h3>Five-aspect monster completion <span class="muted">${s.complete}/${s.monsters} complete</span></h3>
+      <p class="muted">${esc(g.aspects_note)} The aspect columns are included directly in the Monsters table below; monsters are not repeated in a second table.</p>
+      <ul class="aspect-totals">${totals}</ul>`;
   }
 
   function bestiaryView() {
     const b = data.bestiary;
     if (!b || !b.games) return '<p class="notice">No bestiary data. Regenerate with <code>./build/fusion_dashboard</code>.</p>';
-    const g = b.games.aos;
-    if (!g || !g.bosses || !g.souls)
-      return '<p class="notice">The detailed Aria catalog is missing. Regenerate the dashboard.</p>';
-    const groups = [
-      ["Monsters", g.monsters.length], ["Bosses", g.bosses.length], ["Items", g.items.length],
-      ["Red souls", g.souls.red.length], ["Blue souls", g.souls.blue.length],
-      ["Yellow souls", g.souls.yellow.length], ["Ability souls", g.souls.ability.length]
-    ];
-    return `<h2>Castlevania: Aria of Sorrow native catalog</h2>
+    const m = b.games.mzm, g = b.games.aos;
+    if (!m || !m.coverage || !g || !g.coverage || !g.bosses || !g.souls)
+      return '<p class="notice">The detailed game catalogs are missing. Regenerate the dashboard.</p>';
+    return `<h2>Native monsters, bosses, items and souls</h2>
       <p class="notice">${esc(b.method)}</p>
-      <div class="catalog-summary">${groups.map(([name, count]) =>
-        `<div class="catalog-count"><strong>${count}</strong><span>${esc(name)}</span></div>`).join("")}</div>
-      ${aspectTable(g)}
-      ${bestiaryTable(g.monsters, "Monsters")}
-      ${bestiaryTable(g.bosses, "Bosses")}
-      ${g.items_note ? `<p class="muted">${esc(g.items_note)}</p>` : ""}
-      ${bestiaryTable(g.items, "Items")}
-      ${bestiaryTable(g.souls.red, "Red souls (offensive)")}
-      ${bestiaryTable(g.souls.blue, "Blue souls (guardian)")}
-      ${bestiaryTable(g.souls.yellow, "Yellow souls (passive)")}
-      ${bestiaryTable(g.souls.ability, "Ability souls (movement)")}`;
+      <section class="catalog-game catalog-mzm"><h2>${esc(m.title)}</h2>
+        ${coverageCards([
+          ["Enemy and boss actors", m.coverage.monsters, "mzm"],
+          ["Items and pickups", m.coverage.items, "mzm"]
+        ])}
+        <p class="muted">${esc(m.items_note)}</p>
+        ${bestiaryTable(m.monsters, "Enemy and boss actors", m.coverage.monsters, false)}
+        ${bestiaryTable(m.items, "Items and pickups", m.coverage.items, false)}
+      </section>
+      <section class="catalog-game catalog-aos"><h2>${esc(g.title)}</h2>
+        ${coverageCards([
+          ["Monsters", g.coverage.monsters, "aos"], ["Bosses", g.coverage.bosses, "aos"],
+          ["Items", g.coverage.items, "aos"], ["Red souls", g.coverage.red_souls, "aos"],
+          ["Blue souls", g.coverage.blue_souls, "aos"],
+          ["Yellow souls", g.coverage.yellow_souls, "aos"],
+          ["Ability souls", g.coverage.ability_souls, "aos"]
+        ])}
+        ${aspectOverview(g)}
+        ${bestiaryTable(g.monsters, "Monsters", g.coverage.monsters, true)}
+        ${bestiaryTable(g.bosses, "Bosses", g.coverage.bosses, false)}
+        <p class="muted">${esc(g.items_note)}</p>
+        ${bestiaryTable(g.items, "Items", g.coverage.items, false)}
+        ${bestiaryTable(g.souls.red, "Red souls (offensive)", g.coverage.red_souls, false)}
+        ${bestiaryTable(g.souls.blue, "Blue souls (guardian)", g.coverage.blue_souls, false)}
+        ${bestiaryTable(g.souls.yellow, "Yellow souls (passive)", g.coverage.yellow_souls, false)}
+        ${bestiaryTable(g.souls.ability, "Ability souls (movement)", g.coverage.ability_souls, false)}
+      </section>`;
   }
 
   function inGameView() {

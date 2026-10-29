@@ -138,7 +138,16 @@ details.group > summary .title { flex: 1; font-weight: 600; }
 .catalog-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 16px 0 22px; }
 .catalog-count { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raised); }
 .catalog-count strong { font-size: 1.35rem; color: var(--aria); }
+.catalog-count.mzm strong { color: var(--metroid); }
+.catalog-count.aos strong { color: var(--aria); }
 .catalog-count span { color: var(--muted); font-size: 0.85rem; }
+.catalog-game { margin: 26px 0 38px; padding-top: 8px; border-top: 2px solid var(--line); }
+.catalog-game > h2 { margin-bottom: 4px; }
+.catalog-mzm { border-top-color: color-mix(in srgb, var(--metroid) 55%, var(--line)); }
+.catalog-aos { border-top-color: color-mix(in srgb, var(--aria) 55%, var(--line)); }
+.catalog-group { margin: 14px 0 !important; }
+.catalog-distribution { padding: 0 14px 10px; }
+.catalog-group .table-wrap { border-width: 1px 0 0; border-radius: 0 0 var(--radius) var(--radius); }
 .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
 .badge.ok { color: var(--visor); }
 .badge.bad { color: var(--aria); }

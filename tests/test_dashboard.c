@@ -265,7 +265,10 @@ static void test_bestiary(const FusionJson *data) {
     const FusionJson *blue_souls = fusion_json_member(aos_souls, "blue");
     const FusionJson *yellow_souls = fusion_json_member(aos_souls, "yellow");
     const FusionJson *ability_souls = fusion_json_member(aos_souls, "ability");
-    EXPECT(mzm_monsters->count >= 90, "mzm monsters");
+    const FusionJson *mzm_coverage = fusion_json_member(mzm, "coverage");
+    const FusionJson *aos_coverage = fusion_json_member(aos, "coverage");
+    EXPECT(mzm_monsters->count == 96, "exhaustive MZM enemy actors");
+    EXPECT(mzm_items->count == 24, "exhaustive MZM items");
     EXPECT(aos_monsters->count == 0x71 - 11, "aos monsters");
     EXPECT(aos_bosses->count == 11, "aos bosses");
     EXPECT(aos_items->count == 137, "Aria items");
@@ -274,6 +277,25 @@ static void test_bestiary(const FusionJson *data) {
            "Aria soul families");
     EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 17,
            "complete Aria monsters");
+    const FusionJson *mzm_monster_coverage = fusion_json_member(mzm_coverage, "monsters");
+    const FusionJson *mzm_item_coverage = fusion_json_member(mzm_coverage, "items");
+    EXPECT(integer_at(mzm_monster_coverage, "total") == (int64_t)mzm_monsters->count &&
+           integer_at(mzm_monster_coverage, "functional_or_better") == 96 &&
+           integer_at(mzm_monster_coverage, "functional_or_better_percent") == 100,
+           "MZM monster completion");
+    EXPECT(integer_at(mzm_item_coverage, "total") == (int64_t)mzm_items->count &&
+           integer_at(mzm_item_coverage, "functional_or_better") == 24 &&
+           integer_at(mzm_item_coverage, "functional_or_better_percent") == 100,
+           "MZM item completion");
+    EXPECT(integer_at(fusion_json_member(aos_coverage, "monsters"), "total") ==
+               (int64_t)aos_monsters->count &&
+           integer_at(fusion_json_member(aos_coverage, "bosses"), "total") == 11 &&
+           integer_at(fusion_json_member(aos_coverage, "items"), "total") == 137 &&
+           integer_at(fusion_json_member(aos_coverage, "red_souls"), "total") == 55 &&
+           integer_at(fusion_json_member(aos_coverage, "blue_souls"), "total") == 24 &&
+           integer_at(fusion_json_member(aos_coverage, "yellow_souls"), "total") == 35 &&
+           integer_at(fusion_json_member(aos_coverage, "ability_souls"), "total") == 6,
+           "Aria catalog coverage totals");
     const FusionJson *all[] = {mzm_monsters, mzm_items, aos_monsters, aos_bosses, aos_items,
                                red_souls, blue_souls, yellow_souls, ability_souls};
     for (size_t list = 0; list < COUNT(all); ++list)
@@ -286,7 +308,22 @@ static void test_bestiary(const FusionJson *data) {
                    fusion_json_member(evidence_value, "in_game_check") &&
                    fusion_json_member(evidence_value, "emulator_compared") &&
                    fusion_json_member(evidence_value, "played_through"), "row evidence");
+            for (size_t other = index + 1; other < all[list]->count; ++other) {
+                const FusionJson *left = fusion_json_member(item, "id");
+                const FusionJson *right = fusion_json_member(&all[list]->items[other], "id");
+                bool duplicate = left->kind == right->kind &&
+                                 (left->kind == FUSION_JSON_INT
+                                      ? left->integer == right->integer
+                                      : left->kind == FUSION_JSON_STRING &&
+                                            !strcmp(left->string, right->string));
+                EXPECT(!duplicate, "duplicate catalog id");
+            }
         }
+    for (size_t monster = 0; monster < aos_monsters->count; ++monster)
+        for (size_t boss = 0; boss < aos_bosses->count; ++boss)
+            EXPECT(fusion_json_member(&aos_monsters->items[monster], "id")->integer !=
+                       fusion_json_member(&aos_bosses->items[boss], "id")->integer,
+                   "Aria monster duplicated as boss");
     static const char *const done[] = {"Zoomer Yellow", "Sidehopper", "Mother Brain", "Acid Worm",
                                        "Tangle Vine Red Garuta", "Crocomire", "Gekitai Machine"};
     for (size_t index = 0; index < COUNT(done); ++index) {
@@ -470,6 +507,11 @@ static void test_static_page(void) {
     EXPECT(!strstr(app, "fetch(") && !strstr(app, "XMLHttpRequest"), "network access");
     EXPECT(strstr(app, "location.protocol === \"file:\"") != NULL, "file protocol");
     EXPECT(strstr(app, "https://github.com/wozt/metroidvania") != NULL, "repository link");
+    EXPECT(strstr(html, "Monsters &amp; items") != NULL, "combined catalog tab");
+    EXPECT(strstr(app, "b.games.mzm") != NULL && strstr(app, "b.games.aos") != NULL,
+           "both game catalogs rendered");
+    EXPECT(strstr(app, "monsters are not repeated in a second table") != NULL,
+           "deduplicated Aria monster view");
     static const char *const paths[] = {"docs/PROJECT_STATUS.md", "docs/NATIVE_PARITY_CHECKLIST.md",
                                         "data/native_parity/annotations.tsv"};
     for (size_t index = 0; index < 3; ++index) {

@@ -31,6 +31,8 @@ int main(void) {
     aos_souls_add(&stats, AOS_SOUL_YELLOW, 5, 1);   /* Peeping Eye, ID 6 */
     aos_souls_add(&stats, AOS_SOUL_ABILITY, 2, 1);  /* Malphas */
     stats.red_soul = 2;
+    stats.defeated[0] = (1u << 0) | (1u << 4);
+    stats.defeated[1] = 1u << (33 - 32);
 
     AosSoulMenu menu = {0};
     menu.sleep_available = true;
@@ -40,13 +42,35 @@ int main(void) {
     assert(!strcmp(aos_pause_entry_name(0), "SOUL SET"));
     assert(!strcmp(aos_pause_entry_name(6), "ENEMY"));
 
-    /* The hub wraps exactly seven native entries and exposes unavailable pages. */
+    /* The hub wraps exactly seven native entries. Enemy lists only defeated
+     * records and refuses an undiscovered detail page. */
     assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP) ==
            AOS_SOUL_MENU_MOVED);
     assert(menu.hub_cursor == AOS_PAUSE_ENEMY);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
-           (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE));
-    assert(menu.page == AOS_SOUL_MENU_PAGE_UNAVAILABLE);
+           AOS_SOUL_MENU_ACCEPTED);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_ENEMY && menu.enemy.cursor == 0 &&
+           aos_bestiary_discovered_count(&stats) == 3 &&
+           !strcmp(aos_bestiary_name(0), "Bat") && aos_bestiary_is_boss(33));
+    assert(!strcmp(aos_bestiary_name(112), "Chaos") && !aos_bestiary_name(113) &&
+           aos_bestiary_is_boss(112));
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_LEFT) ==
+           AOS_SOUL_MENU_MOVED && menu.enemy.cursor == 111 && menu.enemy.top == 110);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_RIGHT) ==
+           AOS_SOUL_MENU_MOVED && menu.enemy.cursor == 0 && menu.enemy.top == 0);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_RIGHT) ==
+           AOS_SOUL_MENU_MOVED && menu.enemy.cursor == 1);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_REFUSED && !menu.enemy.detail);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_LEFT);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           AOS_SOUL_MENU_ACCEPTED && menu.enemy.detail);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_RIGHT) ==
+           AOS_SOUL_MENU_MOVED && menu.enemy.cursor == 4);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN) ==
+           AOS_SOUL_MENU_MOVED && menu.enemy.soul_view);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK && !menu.enemy.detail && menu.page == AOS_SOUL_MENU_PAGE_ENEMY);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK);
     assert(menu.page == AOS_SOUL_MENU_PAGE_HUB && menu.open);

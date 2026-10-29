@@ -2,6 +2,28 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0640 - Usable Aria Enemy bestiary
+
+- Connected the pause hub's final `Enemy` entry to a source-adapted controller
+  derived from `sub_0804C404`, `sub_0804C54C`, `sub_0804C668` and the native
+  detail routines. Its two-column pages cover the source's 0x70 visible
+  records, wrap by entry or page, conceal undefeated records and open details
+  only after an enemy has been defeated.
+- Identified every catalog record and the eleven boss records. The diagnostic
+  detail page reads the exported native enemy table for HP, experience,
+  attack, defence, weaknesses and resistances; it resolves common and rare
+  drop IDs to their English item names, marks observed drops and conceals an
+  unowned soul. Chaos remains catalog record 0x70 but is outside the source
+  page's 0x70-entry range.
+- Extended portable saves to schema v9. Runtime snapshots now preserve the
+  four bestiary words and both four-word drop-discovery sets; v1-v8 files
+  remain readable and initialize those fields empty.
+- Added deterministic coverage for discovery counts, unknown-entry refusal,
+  detail navigation, boss classification, soul-detail toggling and v8-to-v9
+  save migration. This is source-derived and unit-tested, not
+  emulator-compared; native tilemaps, icons, animated enemy previews,
+  localized descriptions and exact transitions remain incomplete.
+
 ## Patch 0639 - Aria Sleep and one-use quicksaves
 
 - Ported the observable controller path of `sub_0804BD38` and

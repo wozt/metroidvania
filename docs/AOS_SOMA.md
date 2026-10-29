@@ -100,11 +100,12 @@ build/fusion_aria_title_preview \
 ```
 
 `aos_save.c` deliberately uses the small, checksummed
-`metroidvania-aos-save-v8` text schema instead of claiming compatibility with
+`metroidvania-aos-save-v9` text schema instead of claiming compatibility with
 the original six 0x47C-byte SRAM records. It reads every earlier portable
 version and stores the encoded player identity, room and spawn, vitals,
 movement, experience, gold, equipment, inventory, souls, MP and configurable
-buttons. The runtime accepts `--save FILE` and restores that state. New files
+buttons, plus bestiary and common/rare drop-discovery bitsets. The runtime
+accepts `--save FILE` and restores that state. New files
 record the native first-room player position rather than using the earlier
 diagnostic floor search. Runtime compatibility also
 recognizes the native room object `0x1C` in older exports. Holding Up inside
@@ -116,6 +117,19 @@ loads and consumes it once while subsequent saves target the regular file;
 copy and delete clear the companion. The native healing animation, save-room
 Yes/No question, object graphics, event flags, map state, completed-file
 metadata and SRAM layout remain open reconstruction work.
+
+The pause hub's `Enemy` entry now runs a host-neutral controller adapted from
+`sub_0804C404`, `sub_0804C54C`, `sub_0804C668` and the detail routines through
+`sub_0804D73C`. It presents the source's 0x70 visible records as two-column,
+ten-entry pages, hides undefeated names and refuses their details. Known
+records show identified English names, boss classification and the exported
+HP, experience, attack, defence, weakness, resistance, item-drop and soul
+fields. Common and rare IDs resolve to the same item, weapon and armor names
+as the inventory pages; their discovery stars and the defeated bits persist
+through schema v9. Catalog record 0x70 (Chaos) remains outside that source
+page range. Rendering is still a diagnostic overlay: native tiles, icons,
+animated previews, localized descriptions and exact transitions are not yet
+ported or emulator-compared.
 
 ## Explicitly unresolved
 

@@ -246,7 +246,9 @@ static void test_output(const FusionJson *data) {
     for (const char *c = report ? report : ""; *c; ++c) rows += *c == '\n';
     free(report);
     EXPECT(aos && integer_at(aos, "unassigned_routines") == rows - 1, "unassigned rows");
-    EXPECT(rows - 1 > 2900, "unassigned report size");
+    /* Keep this as a corruption guard, not a ceiling on native progress: each
+     * newly attached feature legitimately shrinks the report. */
+    EXPECT(rows - 1 > 2500, "unassigned report size");
     EXPECT(!fusion_json_member(fusion_json_member(data, "tests"), "ran")->boolean, "tests not run");
 }
 

@@ -64,6 +64,10 @@ int main(void) {
     source.buttons[1] = 0;
     source.buttons[2] = 3;
     source.buttons[3] = 1;
+    source.defeated[0] = (1u << 0) | (1u << 31);
+    source.defeated[3] = 1u << (111 - 96);
+    source.dropped[0][1] = 1u << (33 - 32);
+    source.dropped[1][2] = 1u << (65 - 64);
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -194,6 +198,36 @@ int main(void) {
         assert(old.buttons[0] == 1 && old.buttons[1] == 0 &&
                old.buttons[2] == 3 && old.buttons[3] == 2);
         assert(remove(v7_path) == 0);
+    }
+    /* A v8 file predating bestiary persistence retains its buttons and starts
+     * with empty defeated/common/rare bitsets. */
+    {
+        const char *v8_path = "aos-save-test-v8.sav";
+        char v8[1280], digits[AOS_SAVE_INVENTORY + 1], soul_hex[2 * AOS_SAVE_SOUL_BYTES + 1];
+        memset(digits, '0', AOS_SAVE_INVENTORY);
+        digits[AOS_SAVE_INVENTORY] = '\0';
+        digits[AOS_SAVE_WEAPONS] = digits[AOS_SAVE_ARMOR] = '1';
+        memset(soul_hex, '0', 2 * AOS_SAVE_SOUL_BYTES);
+        soul_hex[2 * AOS_SAVE_SOUL_BYTES] = '\0';
+        int v8_size = snprintf(v8, sizeof v8,
+                               AOS_SAVE_SCHEMA_V8 "\n"
+                               "slot=0\narea=0\nroom=0\nspawn_x=120\nspawn_y=141\n"
+                               "hp=320\nmax_hp=320\nmoves=31\nplay_frames=0\n"
+                               "name=20,16,14,2,0,0,0,0\ncharacter=0\nchallenge_flags=0\n"
+                               "experience=0\ngold=0\nweapon=0\narmor=0\naccessory=255\n"
+                               "inventory=%s\nsouls=%s\nsouls_collected=0\n"
+                               "souls_equipped=0,0,0\nmp=-1\nbuttons=2,0,3,1\n",
+                               digits, soul_hex);
+        v8_size += snprintf(v8 + v8_size, sizeof v8 - (size_t)v8_size, "checksum=%08x\n",
+                            test_checksum(v8, (size_t)v8_size));
+        FILE *v8_file = fopen(v8_path, "wb");
+        assert(v8_file && fwrite(v8, 1, (size_t)v8_size, v8_file) == (size_t)v8_size);
+        assert(fclose(v8_file) == 0);
+        AosSaveData old = {0};
+        assert(aos_save_load(v8_path, &old, error, sizeof error));
+        assert(old.buttons[0] == 2 && old.buttons[3] == 1 && old.defeated[0] == 0 &&
+               old.defeated[3] == 0 && old.dropped[0][1] == 0 && old.dropped[1][2] == 0);
+        assert(remove(v8_path) == 0);
     }
     /* The soul total stops at 999. */
     source.souls_collected = 1000;

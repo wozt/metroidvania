@@ -89,7 +89,7 @@ static const char *const pickup_art_names[PICKUP_ARTS] = {
     "coin0", "coin1", "coin2", "coin3", "bag4", "bag5", "bag6", "heart_small", "heart_big",
     "soul0", "soul1", "soul2", "soul3"};
 #define DOOR_STYLES 2
-#define ENEMY_KINDS 100
+#define ENEMY_KINDS AOS_BESTIARY_NATIVE_RECORDS
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
                                                      [2] = "skeleton",
                                                      [3] = "merman",
@@ -2442,6 +2442,8 @@ static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
     save->moves = soma->moves;
     save->experience = progress->experience;
     save->gold = progress->gold;
+    memcpy(save->defeated, progress->defeated, sizeof save->defeated);
+    memcpy(save->dropped, progress->dropped, sizeof save->dropped);
     save->weapon = progress->weapon;
     save->armor = progress->armor;
     save->accessory = progress->accessory;
@@ -2910,12 +2912,22 @@ static void item_effect_text(char *text, size_t size, const AosItemUseRecord *it
     else snprintf(text, size, "Key item - cannot use");
 }
 
+static const char *drop_item_name(uint16_t id) {
+    uint8_t category, index;
+    if (!id) return "None";
+    if (!aos_item_decode(id, &category, &index)) return "Unknown";
+    if (category == AOS_PICKUP_ITEM) return aos_item_name(index);
+    if (category == AOS_PICKUP_WEAPON) return aos_equipment_name(AOS_EQUIP_WEAPON, index);
+    if (category == AOS_PICKUP_ARMOR) return aos_equipment_name(AOS_EQUIP_ARMOR, index);
+    return "Unknown";
+}
+
 /* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
  * description and transition rendering remain separate future work. */
 static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                            const AosStats *stats, const AosEquipmentTables *equipment,
                            const AosItemUseRecord items[AOS_ITEM_RECORDS],
-                           const AosSoma *soma) {
+                           const AosSoma *soma, const AriaObjects *objects) {
     if (!menu->open) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 7, 12, 24, 238);
@@ -2937,12 +2949,76 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                      entry == AOS_PAUSE_SOUL_SET || entry == AOS_PAUSE_EQUIP ||
                              entry == AOS_PAUSE_ITEM_USE ||
                              entry == AOS_PAUSE_ABILITY || entry == AOS_PAUSE_SLEEP ||
-                             entry == AOS_PAUSE_CONFIG
+                             entry == AOS_PAUSE_CONFIG || entry == AOS_PAUSE_ENEMY
                          ? ""
                          : "[pending]");
             debug_text(renderer, 4 + entry, line);
         }
         debug_text(renderer, 13, "A select  B/Start close");
+        return;
+    }
+    if (menu->page == AOS_SOUL_MENU_PAGE_ENEMY) {
+        uint8_t enemy = menu->enemy.cursor;
+        if (!menu->enemy.detail) {
+            unsigned discovered = aos_bestiary_discovered_count(stats);
+            snprintf(line, sizeof line, "ENEMY  %u/%u DISCOVERED", discovered,
+                     AOS_BESTIARY_MENU_RECORDS);
+            debug_text(renderer, 0, line);
+            for (int row = 0; row < AOS_BESTIARY_PAGE_RECORDS / 2; ++row) {
+                unsigned left = menu->enemy.top + (unsigned)row * 2;
+                unsigned right = left + 1;
+                if (left >= AOS_BESTIARY_MENU_RECORDS) break;
+                const char *left_name = aos_stats_enemy_defeated(stats, (uint8_t)left)
+                                            ? aos_bestiary_name((uint8_t)left)
+                                            : "---------";
+                const char *right_name = right < AOS_BESTIARY_MENU_RECORDS &&
+                                                  aos_stats_enemy_defeated(stats, (uint8_t)right)
+                                             ? aos_bestiary_name((uint8_t)right)
+                                             : "---------";
+                if (right < AOS_BESTIARY_MENU_RECORDS)
+                    snprintf(line, sizeof line, "%c%03u %-9.9s %c%03u %-9.9s",
+                             left == enemy ? '>' : ' ', left + 1, left_name,
+                             right == enemy ? '>' : ' ', right + 1, right_name);
+                else
+                    snprintf(line, sizeof line, "%c%03u %-9.9s",
+                             left == enemy ? '>' : ' ', left + 1, left_name);
+                debug_text(renderer, 2 + row * 2, line);
+            }
+            debug_text(renderer, 14, "D-pad move  L/R page  A details");
+            debug_text(renderer, 15, "B back  Start close");
+            return;
+        }
+        const AosEnemyStats *record = &objects->enemies[enemy].stats;
+        const AosEnemyDrops *drops = &objects->enemies[enemy].drops;
+        snprintf(line, sizeof line, "#%03u %s%s", enemy + 1,
+                 aos_bestiary_name(enemy), aos_bestiary_is_boss(enemy) ? " [BOSS]" : "");
+        debug_text(renderer, 0, line);
+        snprintf(line, sizeof line, "HP %d   EXP %u", record->hp, record->experience);
+        debug_text(renderer, 2, line);
+        snprintf(line, sizeof line, "ATK %u   DEF %u", record->contact, record->defence);
+        debug_text(renderer, 3, line);
+        snprintf(line, sizeof line, "WEAK %04X   RESIST %04X", record->weak, record->resist);
+        debug_text(renderer, 4, line);
+        snprintf(line, sizeof line, "COMMON %-19s %s", drop_item_name(drops->common_item),
+                 stats->dropped[0][enemy >> 5] & (1u << (enemy & 31)) ? "*" : "");
+        debug_text(renderer, 6, line);
+        snprintf(line, sizeof line, "RARE   %-19s %s", drop_item_name(drops->rare_item),
+                 stats->dropped[1][enemy >> 5] & (1u << (enemy & 31)) ? "*" : "");
+        debug_text(renderer, 7, line);
+        bool has_soul = drops->soul_index != 0;
+        bool owns_soul = has_soul &&
+            aos_souls_total(stats, drops->soul_type, drops->soul_index - 1) != 0;
+        if (!has_soul) {
+            debug_text(renderer, 9, "SOUL NONE");
+        } else if (!owns_soul) {
+            debug_text(renderer, 9, "SOUL ???");
+        } else {
+            snprintf(line, sizeof line, "SOUL TYPE %u  ID %u%s", drops->soul_type,
+                     drops->soul_index, menu->enemy.soul_view ? " [DETAIL]" : "");
+            debug_text(renderer, 9, line);
+        }
+        debug_text(renderer, 12, "Left/Right previous/next known");
+        debug_text(renderer, 13, "Up/Down soul view  B list");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_CONFIG) {
@@ -3543,6 +3619,8 @@ int main(int argc, char **argv) {
     if (has_active_save) {
         progress.experience = active_save.experience;
         progress.gold = active_save.gold;
+        memcpy(progress.defeated, active_save.defeated, sizeof progress.defeated);
+        memcpy(progress.dropped, active_save.dropped, sizeof progress.dropped);
         for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
             progress.buttons.action[action] =
                 aos_button_config_button(active_save.buttons[action]);
@@ -4441,7 +4519,7 @@ int main(int argc, char **argv) {
         }
         draw_soul_menu(renderer, &soul_menu, &progress,
                        have_equipment ? &equipment : NULL,
-                       have_item_use ? item_use : NULL, &soma);
+                       have_item_use ? item_use : NULL, &soma, &objects);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

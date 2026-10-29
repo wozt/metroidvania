@@ -315,6 +315,11 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
                 aos_button_config_index(buttons.action[action]);
         return AOS_SOUL_MENU_ACCEPTED;
     }
+    if (menu->hub_cursor == AOS_PAUSE_ENEMY) {
+        menu->page = AOS_SOUL_MENU_PAGE_ENEMY;
+        aos_bestiary_init(&menu->enemy);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
     menu->page = AOS_SOUL_MENU_PAGE_UNAVAILABLE;
     return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
 }
@@ -513,6 +518,24 @@ static unsigned update_config(AosSoulMenu *menu, AosStats *stats,
     return AOS_SOUL_MENU_CONFIG_EDITED;
 }
 
+static unsigned update_enemy(AosSoulMenu *menu, const AosStats *stats,
+                             uint16_t new_input, uint16_t repeated_input) {
+    if (new_input & AOS_KEY_START) {
+        menu->open = false;
+        return AOS_SOUL_MENU_CLOSED;
+    }
+    bool was_detail = menu->enemy.detail;
+    unsigned event = aos_bestiary_update(&menu->enemy, stats, new_input, repeated_input);
+    if (event == AOS_BESTIARY_MOVED) return AOS_SOUL_MENU_MOVED;
+    if (event == AOS_BESTIARY_ACCEPTED) return AOS_SOUL_MENU_ACCEPTED;
+    if (event == AOS_BESTIARY_REFUSED) return AOS_SOUL_MENU_REFUSED;
+    if (event == AOS_BESTIARY_BACK) {
+        if (!was_detail) menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        return AOS_SOUL_MENU_BACK;
+    }
+    return 0;
+}
+
 unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
                                const AosEquipmentTables *equipment,
                                const AosItemUseRecord items[AOS_ITEM_RECORDS],
@@ -535,6 +558,8 @@ unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
         return update_sleep(menu, new_input, repeated_input);
     if (menu->page == AOS_SOUL_MENU_PAGE_CONFIG)
         return update_config(menu, stats, new_input, repeated_input);
+    if (menu->page == AOS_SOUL_MENU_PAGE_ENEMY)
+        return update_enemy(menu, stats, new_input, repeated_input);
     if (new_input & AOS_KEY_START) {
         menu->open = false;
         return AOS_SOUL_MENU_CLOSED;

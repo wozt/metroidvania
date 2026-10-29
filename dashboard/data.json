@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-29T23:11:37+00:00",
+ "generated_at": "2026-10-29T23:24:05+00:00",
  "git": {
-  "commit": "1c6bf06",
+  "commit": "53c7588",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 211,
+   "total": 212,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 54,
+    "partial": 55,
     "functional": 146,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 146,
-   "functional_or_better_percent": 69.2,
-   "with_passing_tests": 198,
-   "with_passing_tests_percent": 93.8,
+   "functional_or_better_percent": 68.9,
+   "with_passing_tests": 199,
+   "with_passing_tests_percent": 93.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -254,6 +254,7 @@
     "aos.input.gamepad",
     "aos.items.money_pickups",
     "aos.menus.config",
+    "aos.menus.enemy",
     "aos.menus.equipment",
     "aos.menus.item_use",
     "aos.menus.menu_bg0",
@@ -445,11 +446,11 @@
    "areas": [
     "aos"
    ],
-   "total": 70,
+   "total": 71,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 30,
+    "partial": 31,
     "functional": 40,
     "faithful": 0,
     "validated": 0,
@@ -457,8 +458,8 @@
     "unknown": 0
    },
    "functional_or_better": 40,
-   "functional_or_better_percent": 57.1,
-   "with_passing_tests": 70,
+   "functional_or_better_percent": 56.3,
+   "with_passing_tests": 71,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -515,6 +516,7 @@
     "aos.input.gamepad",
     "aos.items.money_pickups",
     "aos.menus.config",
+    "aos.menus.enemy",
     "aos.menus.equipment",
     "aos.menus.item_use",
     "aos.menus.menu_bg0",
@@ -12640,6 +12642,103 @@
    }
   },
   {
+   "id": "aos.menus.enemy",
+   "area": "aos",
+   "category": "menus",
+   "title": "Aria Enemy bestiary",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_bestiary.c",
+    "src/runtime/aos_soul_menu.c",
+    "src/runtime/aria_runtime.c",
+    "src/runtime/aos_stats.c",
+    "src/runtime/aos_save.c"
+   ],
+   "tests": [
+    "tests/test_aos_soul_menu.c",
+    "tests/test_aos_stats.c",
+    "tests/test_aos_save.c"
+   ],
+   "dependencies": [
+    "aos.souls.equipment_menu",
+    "aos.progression.experience",
+    "aos.items.money_pickups",
+    "aos.saves.portable_slots"
+   ],
+   "native_routines": [
+    "sub_0804C404",
+    "sub_0804C54C",
+    "sub_0804C668",
+    "sub_0804C770",
+    "sub_0804C8A4",
+    "sub_0804C968",
+    "sub_0804CA18",
+    "sub_0804CA9C",
+    "sub_0804CDF4",
+    "sub_0804CFE8",
+    "sub_0804D0D0",
+    "sub_0804D1DC",
+    "sub_0804D2C8",
+    "sub_0804D73C"
+   ],
+   "limitations": "The SDL page uses diagnostic text instead of native tilemaps, icons, localized descriptions, cursor OAM, animated enemy previews and transitions. Its input and layout are source-adapted and unit-tested but not emulator-compared. Soul detail is limited to ownership, type and index. The source controller exposes 0x70 entries, so catalog record 0x70 Chaos is not shown. Enemy opens the source-sized 112-record list as two-column pages. Undefeated names and details stay hidden; known records expose identified English names, boss classification, HP, experience, attack, defence, weakness, resistance, named common and rare drops with their discovery flags, and soul ownership. Runtime defeat and item-drop bits persist through schema-v9 portable saves. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Render the native page resources, item and soul icons, animated enemy preview and localized descriptions, then compare navigation and transitions against an emulator capture.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_soul_menu.c",
+     "tests/test_aos_stats.c",
+     "tests/test_aos_save.c"
+    ],
+    "in_game_check": [
+     "Controller and persistence covered by deterministic tests; no reviewed in-game capture yet"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soul_menu.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_stats.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_stats"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_save.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-10-29"
+   }
+  },
+  {
    "id": "aos.menus.equipment",
    "area": "aos",
    "category": "menus",
@@ -13226,14 +13325,16 @@
     "sub_08033E6C",
     "sub_080683BC"
    ],
-   "limitations": "sub_080683BC is ported for its experience reward and its drop decision, but the pickups it creates (sub_0804459C souls, sub_08044054 items, sub_08043F70 and sub_08043C10, entities 0x49-0xCF) are not, so a drop is only reported; the two pickups are named by routine because their contents are not traced. The runtime has no equipment or soul inventory yet: it passes the equipped accessory, the effective LCK and whether the soul is held, but the 0xA1 flag as clear, and gEwramData + 0x4CC as 0. The item bitsets (0x133B0, 0x133C0) and the bestiary are not saved. The level-up display sub_080455BC, the equipment refresh sub_0804AD9C and the walking-experience accessory path of sub_0801B0D8 are not ported. Levels raise Soma's maximum HP but MP, STR, CON, INT and LCK are not yet used by combat. sub_08045F9C (a candle's drop) creates the sub_08043C10 pickup unless MP is full, which identifies it as the MP heart (ported with aos.items.money_pickups). sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables (every fourth level gains a single INT point), sub_08033E10, sub_08033E38 and sub_08033E6C. The experience part of sub_080683BC grants an enemy record's u16 at 0x10 once per entity (its + 0x3E guard), marks the 0x133A0 bestiary bit, applies the 0x133 / 256 bonus flag and the 99999999 cap, and levels up; Julius and the mode bits skip it. Its drop part rolls, with the same random draws in the same order, the soul (rarity * 8 - (LCK / 16 - 32), at least 16; thresholds 3, 6 unowned, 7 with the 0xA1 flag, +8 with accessory 0x28), then unless the ground type blocks it the rare (below 0x40, 0x60 with 0x27) or common item (rate * 4 - (LCK / 16 - 16); 4, 8 with 0x27) with its item bitset, then for records with an item the sub_08043F70 pickup (bits 3-12 <= 7, 0x3F and +3 with 0x2B) or the sub_08043C10 pickup (bits 4-13 <= 7, 0x3F with 0x1D). The enemy-stats export (schema v3) now carries the experience and drop fields and the runtime rewards each enemy it reports killed, raising maximum HP on a level up and drawing its drop in the native order; a v3 save with 700 experience starts at level 5 with 368 maximum HP (local runtime check). Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the pickup entities (souls, items and the two pickups) with their collection, then the soul and item inventories, equipment and the derived stats of sub_0804AD9C.",
+   "limitations": "sub_080683BC is ported for its experience reward and drop decision, but the 0xA1 soul-chance flag and gEwramData + 0x4CC mode remain clear in the runtime. The level-up display sub_080455BC and the walking-experience accessory path of sub_0801B0D8 are not ported. Enemy rewards are connected only for reconstructed enemy entities. Bestiary and common/rare discovery words use a ROM-free portable representation rather than native SRAM. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables, sub_08033E10, sub_08033E38 and sub_08033E6C are ported. The experience part of sub_080683BC grants each enemy record's reward once, marks its bestiary bit, applies the bonus flag and cap, and levels up; its drop part preserves the native soul, item and fallback-pickup decision order. The runtime creates and collects the resulting soul, item, money or MP-heart entities, records common and rare discovery bits, and schema-v9 saves preserve all three discovery sets. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the level-up display, the walking-experience accessory path and the remaining drop-context flags, then compare reward sequences against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_stats.c",
      "tests/test_aos_save.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "Runtime enemy defeats exercise rewards; no new reviewed capture for schema v9"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -13302,7 +13403,7 @@
     "Object1CUpdate",
     "sub_08068AD4"
    ],
-   "limitations": "The ROM-free v8 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 to v7 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask, play time, experience, gold, equipment, inventory counts, soul inventories, enabled abilities, the soul total, equipped souls, current MP and action-button assignments are represented; the level and its stats are rebuilt from experience. Completed-file metadata, event and map state, native healing animation, save question and native SRAM serialization remain absent. Portable quicksaves use companion files rather than the original odd 0x47C-byte SRAM records. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Sleep snapshots the same state to a companion quicksave, exposes it at the native odd menu position, consumes it on load and resumes persistence through the regular file. Copy and delete remove the destination companion. Source-derived and unit-tested, not emulator-compared. Schema v3 adds experience and gold, v4 equipment, v5 inventory counts, v6 soul inventories, enabled abilities and totalNbrSoulsCollected, and v7 equipped souls and currentMP. Schema v8 persists the four action-button table indices; older files receive the native B, A, L, R defaults.",
+   "limitations": "The ROM-free v9 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1 to v8 host files remain readable. Only three regular files, encoded name, character, challenge flags, room, spawn, HP, movement mask, play time, experience, gold, equipment, inventory counts, soul inventories, enabled abilities, the soul total, equipped souls, current MP, action-button assignments, bestiary bits and common/rare drop-discovery bits are represented; the level and its stats are rebuilt from experience. Completed-file metadata, event and map state, native healing animation, save question and native SRAM serialization remain absent. Portable quicksaves use companion files rather than the original odd 0x47C-byte SRAM records. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the introduction. Save-room interaction restores HP and updates that file. Sleep snapshots the same state to a companion quicksave, exposes it at the native odd menu position, consumes it on load and resumes persistence through the regular file. Copy and delete remove the destination companion. Source-derived and unit-tested, not emulator-compared. Schema v3 adds experience and gold, v4 equipment, v5 inventory counts, v6 soul inventories, enabled abilities and totalNbrSoulsCollected, v7 equipped souls and currentMP, and v8 the four action-button table indices. Schema v9 persists the bestiary and common/rare drop-discovery words; v1-v8 files initialize them empty.",
    "next_action": "Add the remaining progression and completed-file fields, then reconstruct native SRAM serialization behavior.",
    "evidence": {
     "unit_tests": [
@@ -13310,7 +13411,9 @@
      "tests/test_aos_save_room.c",
      "tests/test_aos_menu_save_bridge.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "Portable v9 round trip and v8 migration covered by deterministic tests; no reviewed capture yet"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -13365,6 +13468,7 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_soul_menu.c",
+    "src/runtime/aos_bestiary.c",
     "src/runtime/aos_button_config.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos_stats.c",
@@ -13390,10 +13494,24 @@
     "sub_08032ADC",
     "sub_0804BF8C",
     "sub_0804C05C",
-    "sub_0804C3C8"
+    "sub_0804C3C8",
+    "sub_0804C404",
+    "sub_0804C54C",
+    "sub_0804C668",
+    "sub_0804C770",
+    "sub_0804C8A4",
+    "sub_0804C968",
+    "sub_0804CA18",
+    "sub_0804CA9C",
+    "sub_0804CDF4",
+    "sub_0804CFE8",
+    "sub_0804D0D0",
+    "sub_0804D1DC",
+    "sub_0804D2C8",
+    "sub_0804D73C"
    ],
-   "limitations": "The hub and its usable pages use an SDL diagnostic text overlay rather than native tilemaps, portrait, icons, descriptions, cursor OAM and fades. Enemy is labelled but explicitly unavailable. Sleep uses a diagnostic confirmation and fade rather than the native tilemap, cursor OAM and palette path. Soul Set still uses L/R as a source-adapted colour shortcut instead of the native category transition. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters the six usable pages or the explicit pending Enemy page; B returns from a page and B or START from the hub resumes play. Soul Set equips owned coloured souls, Equip changes all three equipment slots, Item Use consumes owned usable items, Ability toggles owned ability souls and Config applies unique action-button assignments. Sleep creates a one-use quicksave from the current runtime state and returns through the frontend after its source-timed fade. The schema-v8 save bridge persists inventories, selections and button mappings at the next save-room write. Local room 0/3 captures showed the hub and its first four usable entries; Config is source-derived and unit-tested without an emulator comparison.",
-   "next_action": "Reconstruct the native hub and page graphics, descriptions, cursor OAM and transitions, then compare Sleep against an emulator.",
+   "limitations": "The hub and its usable pages use an SDL diagnostic text overlay rather than native tilemaps, portrait, icons, descriptions, cursor OAM and fades. Enemy lacks native tiles, icons, localized descriptions, animated previews and exact transitions; its controller is source-adapted and not emulator-compared. Sleep uses a diagnostic confirmation and fade rather than the native tilemap, cursor OAM and palette path. Soul Set still uses L/R as a source-adapted colour shortcut instead of the native category transition. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters all seven usable pages; B returns from a page and B or START from the hub resumes play. Soul Set equips owned coloured souls, Equip changes all three equipment slots, Item Use consumes owned usable items, Ability toggles owned ability souls and Config applies unique action-button assignments. Sleep creates a one-use quicksave from the current runtime state and returns through the frontend after its source-timed fade. Enemy lists the source's 112 visible records, gates details on defeat and shows exported combat, drop and soul facts. The schema-v9 save bridge persists inventories, selections, button mappings, bestiary and drop discoveries at the next save-room write. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Reconstruct the native hub and page graphics, descriptions, icons, cursor OAM and transitions, then compare Sleep and Enemy against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul_menu.c",
@@ -15945,7 +16063,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed file operations onto three checksummed portable files and one-use quicksave companions, and launches the room runtime only after the native gameplay handoff. With --rom it verifies the user's Aria image, renders all five native main-menu background layouts in three languages, and renders the introduction's language banks, proportional font, palette, character banks and scrolling block maps directly from memory without exporting ROM bytes. Dynamic menu entity/OAM text, file statistics, cursor art and native title artwork remain absent, as do the introduction actors' OAM, animation frames, affine transforms and alpha composition. Completed-file metadata, events and map state remain open; portable quicksaves use companion files instead of native SRAM.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and introduction controllers, maps typed file operations onto three checksummed portable files and one-use quicksave companions, and launches the room runtime only after the native gameplay handoff. With --rom it verifies the user's Aria image, renders all five native main-menu background layouts in three languages, and renders the introduction's language banks, proportional font, palette, character banks and scrolling block maps directly from memory without exporting ROM bytes. Portable schema v9 preserves runtime progression, inventory, souls, action buttons, bestiary discoveries and common/rare drop discoveries. Dynamic menu entity/OAM text, file statistics, cursor art and native title artwork remain absent, as do the introduction actors' OAM, animation frames, affine transforms and alpha composition. Completed-file metadata, events and map state remain open; portable quicksaves use companion files instead of native SRAM.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15964,7 +16082,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-27",
+   "last_validated": "2026-10-30",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -16551,7 +16669,7 @@
     "assets.aria_frontend_save_0478"
    ],
    "native_routines": [],
-   "limitations": "The native room exporter carries the global-map save/warp bits in schema v4, while runtime v3 exports remain compatible and detect object 0x1C. Up inside the native Object1C rectangle restores HP and writes room, spawn, HP, moves and play time to the selected portable slot. Native healing animation, Yes/No prompt, object art, sounds, inventory, souls, event/map state and SRAM parity remain open.",
+   "limitations": "The native room exporter carries the global-map save/warp bits in schema v4, while runtime v3 exports remain compatible and detect object 0x1C. Up inside the native Object1C rectangle restores HP and writes a schema-v9 snapshot of room, spawn, vitals, movement, progression, equipment, inventories, souls, button configuration, bestiary and common/rare drop discoveries to the selected portable slot. Native healing animation, Yes/No prompt, object art, event/map state and SRAM parity remain open.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16563,7 +16681,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-25",
+   "last_validated": "2026-10-30",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -18397,6 +18515,12 @@
  },
  "timeline": [
   {
+   "commit": "53c7588",
+   "date": "2026-10-30",
+   "subject": "Add Aria Sleep quicksaves",
+   "scope": "project"
+  },
+  {
    "commit": "1c6bf06",
    "date": "2026-10-30",
    "subject": "Add native Aria button configuration",
@@ -18869,12 +18993,6 @@
    "date": "2026-10-26",
    "subject": "Connect Aria native game lifecycle",
    "scope": "project"
-  },
-  {
-   "commit": "6006762",
-   "date": "2026-10-26",
-   "subject": "Port Aria startup logo controllers",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -18935,9 +19053,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 666,
-    "routines_attached_to_features": 666,
-    "unassigned_routines": 2907,
+    "routines_cited_by_features": 680,
+    "routines_attached_to_features": 680,
+    "unassigned_routines": 2893,
     "call_edges": 14228
    }
   },

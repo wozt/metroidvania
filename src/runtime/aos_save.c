@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { AOS_SAVE_TEXT_MAX = 1280 };
+enum { AOS_SAVE_TEXT_MAX = 1536 };
 
 static void set_error(char *out, size_t size, const char *format, ...) {
     if (!out || size == 0) return;
@@ -130,12 +130,27 @@ static int payload_v7(char *out, size_t size, const AosSaveData *save) {
     return used;
 }
 
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v8(char *out, size_t size, const AosSaveData *save) {
     int used = payload_v7(out, size, save);
     if (used < 0 || (size_t)used + 32 >= size) return -1;
-    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    memcpy(out, AOS_SAVE_SCHEMA_V8, sizeof AOS_SAVE_SCHEMA_V8 - 1);
     used += snprintf(out + used, size - (size_t)used, "buttons=%u,%u,%u,%u\n",
                      save->buttons[0], save->buttons[1], save->buttons[2], save->buttons[3]);
+    return used;
+}
+
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    int used = payload_v8(out, size, save);
+    if (used < 0 || (size_t)used + 192 >= size) return -1;
+    memcpy(out, AOS_SAVE_SCHEMA, sizeof AOS_SAVE_SCHEMA - 1);
+    used += snprintf(out + used, size - (size_t)used,
+                     "bestiary=%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 "\n"
+                     "drops=%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32
+                     ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 "\n",
+                     save->defeated[0], save->defeated[1], save->defeated[2],
+                     save->defeated[3], save->dropped[0][0], save->dropped[0][1],
+                     save->dropped[0][2], save->dropped[0][3], save->dropped[1][0],
+                     save->dropped[1][1], save->dropped[1][2], save->dropped[1][3]);
     return used;
 }
 
@@ -196,11 +211,14 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
     bool v5 = strncmp(text, AOS_SAVE_SCHEMA_V5 "\n", sizeof(AOS_SAVE_SCHEMA_V5)) == 0;
     bool v6 = strncmp(text, AOS_SAVE_SCHEMA_V6 "\n", sizeof(AOS_SAVE_SCHEMA_V6)) == 0;
     bool v7 = strncmp(text, AOS_SAVE_SCHEMA_V7 "\n", sizeof(AOS_SAVE_SCHEMA_V7)) == 0;
+    bool v8 = strncmp(text, AOS_SAVE_SCHEMA_V8 "\n", sizeof(AOS_SAVE_SCHEMA_V8)) == 0;
+    bool v9 = strncmp(text, AOS_SAVE_SCHEMA "\n", sizeof(AOS_SAVE_SCHEMA)) == 0;
     unsigned red = 0, blue = 0, yellow = 0;
     unsigned buttons[4] = {1, 0, 3, 2};
     int mp = -1;
     char souls[2 * AOS_SAVE_SOUL_BYTES + 1] = {0};
     unsigned souls_collected = 0;
+    uint32_t defeated[4] = {0}, dropped[2][4] = {{0}};
     char inventory[AOS_SAVE_INVENTORY + 1] = {0};
     int matched;
     if (legacy) {
@@ -251,7 +269,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          &name[4], &name[5], &name[6], &name[7], &character,
                          &challenge_flags, &experience, &gold, &weapon, &armor, &accessory,
                          &expected, &consumed);
-    } else if (v5 || v6 || v7 || strncmp(text, AOS_SAVE_SCHEMA "\n", sizeof(AOS_SAVE_SCHEMA)) == 0) {
+    } else if (v5 || v6 || v7 || v8 || v9) {
         /* v5 and v6 share the fields up to the inventory. */
         matched = sscanf(text,
                          "%*[^\n]\n"
@@ -278,7 +296,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                                       "\nsouls_equipped=%u,%u,%u\nmp=%d"
                                       "\nchecksum=%" SCNx32 "\n%n",
                      souls, &souls_collected, &red, &blue, &yellow, &mp, &expected, &tail)
-            : consumed > 0 && !v5
+            : consumed > 0 && v8
             ? sscanf(text + consumed, "souls=%246[0-9a-f]\nsouls_collected=%u"
                                       "\nsouls_equipped=%u,%u,%u\nmp=%d"
                                       "\nbuttons=%u,%u,%u,%u"
@@ -286,9 +304,23 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                      souls, &souls_collected, &red, &blue, &yellow, &mp,
                      &buttons[0], &buttons[1], &buttons[2], &buttons[3],
                      &expected, &tail)
+            : consumed > 0 && v9
+            ? sscanf(text + consumed, "souls=%246[0-9a-f]\nsouls_collected=%u"
+                                      "\nsouls_equipped=%u,%u,%u\nmp=%d"
+                                      "\nbuttons=%u,%u,%u,%u"
+                                      "\nbestiary=%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      "\ndrops=%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      ",%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      "\nchecksum=%" SCNx32 "\n%n",
+                     souls, &souls_collected, &red, &blue, &yellow, &mp,
+                     &buttons[0], &buttons[1], &buttons[2], &buttons[3],
+                     &defeated[0], &defeated[1], &defeated[2], &defeated[3],
+                     &dropped[0][0], &dropped[0][1], &dropped[0][2], &dropped[0][3],
+                     &dropped[1][0], &dropped[1][1], &dropped[1][2], &dropped[1][3],
+                     &expected, &tail)
             : consumed > 0 ? sscanf(text + consumed, "checksum=%" SCNx32 "\n%n", &expected, &tail)
                            : 0;
-        if (read == (v5 ? 1 : v6 ? 3 : v7 ? 7 : 11) && tail > 0) {
+        if (read == (v5 ? 1 : v6 ? 3 : v7 ? 7 : v8 ? 11 : 23) && tail > 0) {
             matched += read;
             consumed += tail;
         } else {
@@ -297,7 +329,8 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
     } else {
         matched = 0;
     }
-    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : v4 ? 25 : v5 ? 26 : v6 ? 28 : v7 ? 32 : 36;
+    int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : v4 ? 25 : v5 ? 26
+                           : v6 ? 28 : v7 ? 32 : v8 ? 36 : 48;
     if (expected_matches >= 26 && matched == expected_matches &&
         (strlen(inventory) != AOS_SAVE_INVENTORY ||
          (!v5 && strlen(souls) != 2 * AOS_SAVE_SOUL_BYTES))) {
@@ -381,6 +414,10 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                 parsed.buttons[i] = (uint8_t)buttons[i];
             }
         }
+        if (v9) {
+            memcpy(parsed.defeated, defeated, sizeof defeated);
+            memcpy(parsed.dropped, dropped, sizeof dropped);
+        }
     }
     char canonical[AOS_SAVE_TEXT_MAX];
     int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
@@ -390,6 +427,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          : v5   ? payload_v5(canonical, sizeof canonical, &parsed)
                          : v6   ? payload_v6(canonical, sizeof canonical, &parsed)
                          : v7   ? payload_v7(canonical, sizeof canonical, &parsed)
+                         : v8   ? payload_v8(canonical, sizeof canonical, &parsed)
                                 : payload(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||
         checksum(canonical, (size_t)canonical_size) != expected) {

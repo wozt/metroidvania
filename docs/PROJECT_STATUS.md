@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-29**.
 
+## Patch 0634 - In-game soul equipment menu
+
+- Added a ROM-free C11 controller for the first usable slice of
+  `sub_080473F4` / `sub_08047764`. START now freezes gameplay and opens a
+  four-family soul inventory; L/R changes family, repeated Up/Down skips
+  unowned entries, A equips or removes red, blue and yellow souls or toggles
+  an owned ability, and B or START resumes play.
+- The runtime overlay names all 55 red, 24 blue, 35 yellow and 6 ability
+  souls and shows native two-group inventory quantities plus the current
+  equipment state. Diagnostic `--red-soul` launches now also grant that soul
+  locally so the same menu path can be reviewed. Equipment and ability bits
+  already flow into schema-v7 saves at the next save-room write.
+- Added deterministic tests for opening, closing, family navigation,
+  skipping unavailable entries, None, all three equipped colours and
+  ability toggles. A local room 0/3 capture showed Rock Armor selected and
+  owned. This is source-adapted and unit-tested, not emulator-compared: it
+  opens the soul page directly and still uses an SDL text overlay instead of
+  the native seven-entry pause hub, tilemaps, icons, descriptions, cursor
+  OAM and transitions.
+
 ## Patch 0633 - Rock Armor and Waiter Skeleton red souls
 
 - Ported parameters 0 and 1 of

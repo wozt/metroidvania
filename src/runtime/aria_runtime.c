@@ -20,6 +20,7 @@
 #include "aos_stats.h"
 #include "aos_pickup.h"
 #include "aos_soul.h"
+#include "aos_soul_menu.h"
 #include "aos_skill_axe.h"
 #include "aos_skill_crow.h"
 #include "aos_skill_dagger.h"
@@ -2847,6 +2848,43 @@ static void debug_text(SDL_Renderer *renderer, int line, const char *text) {
     SDL_RenderDebugText(renderer, 2.0f, (float)(2 + line * 8), text);
 }
 
+/* Source-adapted first slice of sub_080473F4 / sub_08047764. Native tile,
+ * icon, description and transition rendering remain separate future work. */
+static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
+                           const AosStats *stats) {
+    if (!menu->open) return;
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 7, 12, 24, 238);
+    SDL_FRect whole = {0, 0, VIEW_W, VIEW_H};
+    SDL_RenderFillRect(renderer, &whole);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    char line[64];
+    snprintf(line, sizeof line, "SOUL EQUIPMENT  <%s>",
+             aos_soul_menu_category_name(menu->category));
+    debug_text(renderer, 0, line);
+    debug_text(renderer, 1, "L/R family  Up/Down select");
+    debug_text(renderer, 2, "A equip/toggle  B/Start close");
+
+    int choices = aos_soul_menu_count(menu->category) +
+                  (menu->category == AOS_SOUL_MENU_ABILITY ? 0 : 1);
+    int cursor = menu->cursor[menu->category];
+    int top = cursor - 6;
+    if (top > choices - 13) top = choices - 13;
+    if (top < 0) top = 0;
+    for (int row = 0; row < 13 && top + row < choices; ++row) {
+        AosSoulMenu item = *menu;
+        item.cursor[item.category] = (uint8_t)(top + row);
+        int index = aos_soul_menu_inventory_index(&item);
+        uint8_t quantity = aos_soul_menu_quantity(&item, stats);
+        bool enabled = aos_soul_menu_enabled(&item, stats);
+        snprintf(line, sizeof line, "%c%c %2d %-18s x%u",
+                 top + row == cursor ? '>' : ' ', enabled ? '*' : ' ',
+                 index < 0 ? 0 : index + 1,
+                 aos_soul_menu_name(item.category, item.cursor[item.category]), quantity);
+        debug_text(renderer, 4 + row, line);
+    }
+}
+
 static void draw_debug(SDL_Renderer *renderer, const DebugMenu *menu, bool paused,
                        const AriaRoom *room, const AosSoma *soma, long step) {
     if (!menu->open && !paused) return;
@@ -3012,14 +3050,15 @@ int main(int argc, char **argv) {
     const char *weapon_name = "none", *save_path = NULL;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
-    /* No soul inventory yet: every ported ability move is enabled. */
+    /* Move ownership is still a diagnostic mask; the soul inventories are
+     * loaded independently below and drive the in-game soul menu. */
     unsigned long moves = AOS_MOVE_BACKDASH | AOS_MOVE_SLIDE | AOS_MOVE_AIR_JUMP |
                           AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
     int spawn_x = -1, spawn_y = -1;
     bool check = false, show_hitboxes = false, debug_at_start = false;
     bool hp_override = false, moves_override = false, spawn_override = false;
     bool atk_override = false, def_override = false, weapon_override = false;
-    long red_soul_override = -1;   /* --red-soul: equippedRedSoul (no soul menu yet) */
+    long red_soul_override = -1;   /* --red-soul: equippedRedSoul diagnostic override */
     /* --frontend FILE and --frontend-arg ARG...: the frontend to return to
      * with --game-over once Soma's death fade has ended. */
     const char *frontend_command[64] = {NULL};
@@ -3302,8 +3341,13 @@ int main(int argc, char **argv) {
         player_stats.max_hp = progress.max_hp;
         if (player_stats.hp > player_stats.max_hp) player_stats.hp = player_stats.max_hp;
     }
-    if (red_soul_override >= 0 && red_soul_override < AOS_RED_SOUL_RECORDS)
+    if (red_soul_override >= 0 && red_soul_override < AOS_RED_SOUL_RECORDS) {
         progress.red_soul = (uint8_t)red_soul_override;
+        /* A diagnostic equip behaves like an owned soul in the menu. */
+        if (red_soul_override > 0 &&
+            !aos_souls_total(&progress, AOS_SOUL_RED, red_soul_override - 1))
+            aos_souls_add(&progress, AOS_SOUL_RED, red_soul_override - 1, 1);
+    }
     /* currentMP: the file's, full for a new or older file (sub_08014548). */
     progress.mp = has_active_save && active_save.mp >= 0 ? active_save.mp
                                                          : (int16_t)progress.max_mp;
@@ -3386,6 +3430,7 @@ int main(int argc, char **argv) {
     /* The debug menu's view of the engine state. */
     static DebugMenu debug;
     bool paused = false, step_once = false, chord_before = false;
+    AosSoulMenu soul_menu = {0};
     bool debug_moves[5] = {false};
     int debug_hp = soma.hp, debug_max_hp = soma.max_hp, debug_enemy = 0;
     int debug_area = room.area, debug_room = room.number;
@@ -3527,6 +3572,27 @@ int main(int argc, char **argv) {
                 wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;
+            unsigned soul_menu_event = progress.character == 0
+                                           ? aos_soul_menu_update(&soul_menu, &progress,
+                                                                  aria_input.new_input,
+                                                                  aria_input.repeated_input)
+                                           : 0;
+            if (soul_menu_event & AOS_SOUL_MENU_OPENED) {
+                aos_audio_play_song(AOS_AUDIO_PAUSE);
+                printf("Soul equipment menu opened\n");
+            }
+            if (soul_menu_event & AOS_SOUL_MENU_CHANGED)
+                printf("Equipped souls: red %u, blue %u, yellow %u, abilities %02x%02x\n",
+                       progress.red_soul, progress.blue_soul, progress.yellow_soul,
+                       progress.abilities[1], progress.abilities[0]);
+            if (soul_menu_event & AOS_SOUL_MENU_CLOSED) {
+                aos_audio_play_song(AOS_AUDIO_RESUME);
+                printf("Soul equipment menu closed\n");
+            }
+            if (soul_menu.open || soul_menu_event) {
+                ++step;
+                continue;
+            }
             aos_soma_update(&soma, &layer, aria_input.player_held_input,
                             aria_input.player_new_input);
             /* sub_0800DC70: the HUD chases the current values. */
@@ -4037,6 +4103,7 @@ int main(int argc, char **argv) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
         }
+        draw_soul_menu(renderer, &soul_menu, &progress);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

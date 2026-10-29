@@ -319,6 +319,28 @@ static void test_bestiary(const FusionJson *data) {
                 EXPECT(!duplicate, "duplicate catalog id");
             }
         }
+    /* Cross-category identity checks prevent a row being counted twice.
+     * Different games use different native ID namespaces by design. */
+    for (size_t actor = 0; actor < mzm_monsters->count; ++actor)
+        for (size_t item = 0; item < mzm_items->count; ++item) {
+            const FusionJson *left = fusion_json_member(&mzm_monsters->items[actor], "id");
+            const FusionJson *right = fusion_json_member(&mzm_items->items[item], "id");
+            EXPECT(left->kind != right->kind ||
+                   (left->kind == FUSION_JSON_INT && left->integer != right->integer) ||
+                   (left->kind == FUSION_JSON_STRING && strcmp(left->string, right->string)),
+                   "dashboard_catalog_cross_group_uniqueness: MZM actor/item overlap");
+        }
+    const FusionJson *const collectible_groups[] = {aos_items, red_souls, blue_souls,
+                                                     yellow_souls, ability_souls};
+    for (size_t group = 0; group < COUNT(collectible_groups); ++group)
+        for (size_t next = group + 1; next < COUNT(collectible_groups); ++next)
+            for (size_t i = 0; i < collectible_groups[group]->count; ++i)
+                for (size_t j = 0; j < collectible_groups[next]->count; ++j) {
+                    const char *left = text_of(&collectible_groups[group]->items[i], "id");
+                    const char *right = text_of(&collectible_groups[next]->items[j], "id");
+                    EXPECT(strcmp(left, right),
+                           "dashboard_catalog_cross_group_uniqueness: Aria collectible %s", left);
+                }
     for (size_t monster = 0; monster < aos_monsters->count; ++monster)
         for (size_t boss = 0; boss < aos_bosses->count; ++boss)
             EXPECT(fusion_json_member(&aos_monsters->items[monster], "id")->integer !=
@@ -512,6 +534,16 @@ static void test_static_page(void) {
            "both game catalogs rendered");
     EXPECT(strstr(app, "monsters are not repeated in a second table") != NULL,
            "deduplicated Aria monster view");
+    EXPECT(strstr(app, "function catalogSnapshot(game)") != NULL &&
+           strstr(app, "catalogSnapshot(\"mzm\")") != NULL &&
+           strstr(app, "catalogSnapshot(\"aos\")") != NULL,
+           "generated Zero Mission and Aria catalog previews");
+    EXPECT(strstr(app, "indicatorCard(indicator, false)") != NULL,
+           "no duplicate feature cards in area view");
+    EXPECT(strstr(app, "bestiaryTable(g.bosses, \"Bosses\", g.coverage.bosses, true)") != NULL,
+           "bosses share the five-aspect monster table");
+    EXPECT(strstr(app, "data-open-view=\"bestiary\"") != NULL,
+           "canonical bestiary navigation");
     static const char *const paths[] = {"docs/PROJECT_STATUS.md", "docs/NATIVE_PARITY_CHECKLIST.md",
                                         "data/native_parity/annotations.tsv"};
     for (size_t index = 0; index < 3; ++index) {

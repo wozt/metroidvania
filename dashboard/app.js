@@ -146,7 +146,7 @@
     }).join("");
   }
 
-  function indicatorCard(indicator) {
+  function indicatorCard(indicator, includeFeatures = true) {
     const cls = indicator.id === "mzm" ? "mzm" : indicator.id === "aos" ? "aos" : indicator.id === "global" ? "global" : "";
     const features = data.features.filter((f) => indicator.features.includes(f.id) && matches(f));
     return `<div class="card ${cls}">
@@ -154,8 +154,8 @@
       ${metric("Functional or better", indicator.functional_or_better_percent, indicator.functional_or_better, indicator.total, "working")}
       ${metric("With passing tests", indicator.with_passing_tests_percent, indicator.with_passing_tests, indicator.total, "tested")}
       ${stackBar(indicator.by_status, indicator.total)}${legend(indicator.by_status)}
-      <details class="group" style="margin:10px 0 0"><summary><span class="title">Features</span><span class="muted">${features.length}</span></summary>
-        ${features.map(featureCard).join("") || '<p class="feature muted">No match.</p>'}</details>
+      ${includeFeatures ? `<details class="group" style="margin:10px 0 0"><summary><span class="title">Features</span><span class="muted">${features.length}</span></summary>
+        ${features.map(featureCard).join("") || '<p class="feature muted">No match.</p>'}</details>` : ""}
     </div>`;
   }
 
@@ -193,6 +193,27 @@
     return `<h2>Native source inventory</h2><div class="grid">${cards.join("")}</div>`;
   }
 
+  /* Catalog navigation (one canonical list per game and category).
+   * All counts come from the native C generator; detail rows are rendered only
+   * by bestiaryView(), never duplicated across Overview and game tabs. */
+  function catalogSnapshot(game) {
+    const catalog = data.bestiary && data.bestiary.games && data.bestiary.games[game];
+    if (!catalog || !catalog.coverage) return "";
+    const sections = game === "mzm" ? [
+      ["Enemy and boss actors", "monsters"], ["Items and pickups", "items"]
+    ] : [
+      ["Monsters", "monsters"], ["Bosses", "bosses"], ["Items", "items"],
+      ["Red souls", "red_souls"], ["Blue souls", "blue_souls"],
+      ["Yellow souls", "yellow_souls"], ["Ability souls", "ability_souls"]
+    ];
+    const categories = sections.filter(([, key]) => catalog.coverage[key]);
+    return `<section class="catalog-preview catalog-${esc(game)}">
+      <div class="catalog-preview-heading"><h3>${esc(catalog.title)}</h3>
+      <a href="#bestiary" data-open-view="bestiary">Browse complete catalogs</a></div>
+      ${coverageCards(categories.map(([label, key]) => [label, catalog.coverage[key], game]))}
+    </section>`;
+  }
+
   function overview() {
     const indicators = data.indicators.map(indicatorCard).join("");
     return `<p class="notice">${esc(data.method)}</p>
@@ -200,6 +221,9 @@
       “Tests declared” only means a test is registered; “Tests passed” means it passed during this
       dashboard generation. In-game checks are recorded manual observations. Emulator comparison
       and playthrough are independent evidence.</p>
+      <h2>Native catalog coverage</h2>
+      <p class="muted">Auto-generated from the native C catalog and parity registries. Catalog completion is not the same as engine or game completion; details are shown once in Monsters &amp; items.</p>
+      ${catalogSnapshot("mzm")}${catalogSnapshot("aos")}
       <h2>Indicators</h2><div class="grid">${indicators}${testsIndicator()}</div>
       ${inventoryPanel()}`;
   }
@@ -208,7 +232,8 @@
     const all = data.features.filter((f) => f.area === area);
     const indicator = data.indicators.find((i) => i.areas.length === 1 && i.areas[0] === area);
     const visible = all.filter(matches);
-    return `<div class="grid">${indicator ? indicatorCard(indicator) : ""}</div>
+    return `${area === "mzm" || area === "aos" ? catalogSnapshot(area) : ""}
+      <div class="grid">${indicator ? indicatorCard(indicator, false) : ""}</div>
       <h2>${esc(areaTitle(area))}</h2>${featureGroups(visible, true)}`;
   }
 
@@ -320,7 +345,7 @@
         ])}
         ${aspectOverview(g)}
         ${bestiaryTable(g.monsters, "Monsters", g.coverage.monsters, true)}
-        ${bestiaryTable(g.bosses, "Bosses", g.coverage.bosses, false)}
+        ${bestiaryTable(g.bosses, "Bosses", g.coverage.bosses, true)}
         <p class="muted">${esc(g.items_note)}</p>
         ${bestiaryTable(g.items, "Items", g.coverage.items, false)}
         ${bestiaryTable(g.souls.red, "Red souls (offensive)", g.coverage.red_souls, false)}
@@ -373,6 +398,15 @@
       render();
     });
     search.addEventListener("input", () => { state.query = search.value.trim().toLowerCase(); render(); });
+    view.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-open-view]");
+      if (!link) return;
+      const button = document.querySelector(`#tabs button[data-view="${link.dataset.openView}"]`);
+      if (!button) return;
+      event.preventDefault();
+      button.click();
+      window.scrollTo(0, 0);
+    });
     document.getElementById("tabs").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-view]");
       if (!button) return;

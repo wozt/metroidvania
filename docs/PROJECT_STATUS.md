@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0641 - Generated catalog navigation and cross-section audit
+
+- The overview and individual game tabs now expose native-generated catalog
+  completion counters and link to the single authoritative bestiary tables.
+  Zero Mission's 96 actors and 24 collectibles retain their source-derived
+  coverage; no completion value is entered manually in the website.
+- The detailed catalogs remain one canonical view per category for both games.
+  Aria monsters and bosses use the same five-aspect rendering; section links
+  avoid duplicating the native feature lists inside game indicators.
+- The ROM-free dashboard test now checks that MZM actor/item IDs and the five
+  Aria collectible ID families do not overlap. The existing exact catalog
+  counts, coverage checks, offline HTML test, generator consistency check and
+  full CTest suite remain authoritative.
+- This patch changes presentation and audit checks, not runtime parity or the
+  implementation status of any game system. Data files are still regenerated
+  by the native C dashboard tool, never hand-maintained.
+
 ## Patch 0640 - Usable Aria Enemy bestiary
 
 - Connected the pause hub's final `Enemy` entry to a source-adapted controller

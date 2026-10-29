@@ -135,6 +135,12 @@ details.group > summary .title { flex: 1; font-weight: 600; }
 .feature dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 1px 9px; font-size: 0.75rem; border: 1px solid var(--line); background: var(--bg-sunken); white-space: nowrap; }
 
+/* Catalog previews reuse generated counts; the full record tables live in one tab. */
+.catalog-preview { margin: 12px 0 18px; padding: 12px 14px 0; border: 1px solid var(--line); border-radius: var(--radius); }
+.catalog-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.catalog-preview-heading h3 { margin: 0; }
+.catalog-preview-heading a { font-size: .9rem; }
+.catalog-preview .catalog-summary { margin: 10px 0 12px; }
 .catalog-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 16px 0 22px; }
 .catalog-count { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-raised); }
 .catalog-count strong { font-size: 1.35rem; color: var(--aria); }

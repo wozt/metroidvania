@@ -642,7 +642,19 @@ static void test_run_tests(void) {
     remove_directory(directory);
 }
 
+/* The full-suite limit is explicit, predictable and cannot inject shell text. */
+static void test_parallel_jobs(void) {
+    EXPECT(ctest_parallel_jobs(NULL) == 4, "default CTest parallelism");
+    EXPECT(ctest_parallel_jobs("") == 4, "empty CTest parallelism");
+    EXPECT(ctest_parallel_jobs("1") == 1, "serial CTest override");
+    EXPECT(ctest_parallel_jobs("8") == 8, "maximum CTest parallelism");
+    EXPECT(ctest_parallel_jobs("0") == 4, "reject zero jobs");
+    EXPECT(ctest_parallel_jobs("9") == 4, "reject excessive jobs");
+    EXPECT(ctest_parallel_jobs("2; echo bad") == 4, "reject shell syntax");
+}
+
 int main(void) {
+    test_parallel_jobs();
     test_registry();
     test_indicators();
     test_verification();

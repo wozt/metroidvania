@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-30T01:35:04+00:00",
+ "generated_at": "2026-10-30T01:58:43+00:00",
  "git": {
-  "commit": "f200619",
+  "commit": "1d0e4b3",
   "branch": "main",
   "dirty": true
  },
@@ -10120,8 +10120,8 @@
     "sub_0807DBB4",
     "sub_0807DE14"
    ],
-   "limitations": "The three linked visual children, palette script, fade and attack states are not ported. The native sheet, palette, frame descriptor and homing-plus-hover controller are connected. Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete.",
-   "next_action": "Port the three children and palette/fade behavior.",
+   "limitations": "The native multi-entity visuals, palette fade and complete attacks are still absent. The requested death sound is not mixed to audio output. The lethal callback now requests 0x6B, starts animation 5 and enters the source-derived 90-frame death countdown. Shared XP, loot and blue:6 soul drops remain connected through the host reward path.",
+   "next_action": "Port the three native death effects, visual children and remaining attack/fade states.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
@@ -15044,14 +15044,16 @@
     "dashboard/index.html",
     "dashboard/app.js",
     "dashboard/style.css",
-    "data/dashboard/aos_catalog.tsv"
+    "data/dashboard/aos_catalog.tsv",
+    "scripts/test_scopes.sh",
+    "docs/TEST_SCOPES.md"
    ],
    "tests": [
     "tests/test_dashboard.c"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The dashboard separates declared implementation status, tests observed in the generating run, manual in-game checks, emulator comparisons and playthroughs. Feature percentages cover registered features only. The dedicated Aria catalog names all 113 enemies, separates its 11 bosses, and lists all 137 normal-mode items and 120 souls; catalog discovery is not implementation or native-fidelity evidence. The catalog previews for both games read native-generated coverage; Zero Mission actor/item totals, Aria monster/boss/item/soul families, five monster aspects and cross-category uniqueness are checked without duplicating detail rows in the game views.",
+   "limitations": "The dashboard separates declared implementation status, tests observed in the generating run, manual in-game checks, emulator comparisons and playthroughs. Feature percentages cover registered features only. The dedicated Aria catalog names all 113 enemies, separates its 11 bosses, and lists all 137 normal-mode items and 120 souls; catalog discovery is not implementation or native-fidelity evidence. The catalog previews for both games read native-generated coverage; Zero Mission actor/item totals, Aria monster/boss/item/soul families, five monster aspects and cross-category uniqueness are checked without duplicating detail rows in the game views. Full-suite CTest runs use bounded parallel workers with FUSION_CTEST_JOBS (default four, maximum eight); scoped enemy, Aria, MZM and dashboard commands avoid full ROM tests during edits. The complete dashboard test run remains mandatory once per cycle.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15061,7 +15063,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-29",
+   "last_validated": "2026-10-30",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -18515,6 +18517,12 @@
  },
  "timeline": [
   {
+   "commit": "1d0e4b3",
+   "date": "2026-10-30",
+   "subject": "Advance Aria partial enemies with native Skeleton bone and linked collision handling",
+   "scope": "project"
+  },
+  {
    "commit": "f200619",
    "date": "2026-10-30",
    "subject": "new site",
@@ -18986,12 +18994,6 @@
    "commit": "172bbdd",
    "date": "2026-10-27",
    "subject": "Port Aria opening introduction controller",
-   "scope": "project"
-  },
-  {
-   "commit": "d08cc9e",
-   "date": "2026-10-27",
-   "subject": "Connect Aria native menu to portable saves",
    "scope": "project"
   }
  ],
@@ -21902,11 +21904,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "partial",
-       "sounds": "missing",
+       "sounds": "partial",
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "blue:6",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete."
+       "notes": "Native Giant Ghost lethal hit now requests song 0x6B and starts animation 5 for 90 frames; this is tested ROM-free but Aria's audio output remains inaudible. Native extra death effects, palette fade and its blue:6 soul ability are still missing."
       }
      },
      {
@@ -23446,8 +23448,8 @@
      },
      "sounds": {
       "ported": 24,
-      "partial": 1,
-      "missing": 22
+      "partial": 2,
+      "missing": 21
      },
      "loot": {
       "ported": 26,
@@ -27857,7 +27859,7 @@
        "id": "06:06",
        "name": "Giant Ghost",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete.",
+       "note": "Native Giant Ghost lethal hit now requests song 0x6B and starts animation 5 for 90 frames; this is tested ROM-free but Aria's audio output remains inaudible. Native extra death effects, palette fade and its blue:6 soul ability are still missing.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

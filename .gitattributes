@@ -1,0 +1,4 @@
+# Fixed-width TSV rows intentionally end in empty tab-separated fields.
+data/native_parity/annotations.tsv whitespace=-blank-at-eol
+# Generated Markdown uses two trailing spaces for explicit line breaks.
+docs/NATIVE_PARITY_CHECKLIST.md whitespace=-blank-at-eol

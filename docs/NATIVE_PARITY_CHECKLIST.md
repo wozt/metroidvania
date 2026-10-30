@@ -1492,13 +1492,13 @@ Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the roo
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
 
-[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The native sheet, palette, frame descriptor and homing-plus-hover controller are connected. Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete.
+[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The lethal callback now requests 0x6B, starts animation 5 and enters the source-derived 90-frame death countdown. Shared XP, loot and blue:6 soul drops remain connected through the host reward path.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: The three linked visual children, palette script, fade and attack states are not ported.  
-Next action: Port the three children and palette/fade behavior.
+Known divergences: The native multi-entity visuals, palette fade and complete attacks are still absent. The requested death sound is not mixed to audio output.  
+Next action: Port the three native death effects, visual children and remaining attack/fade states.
 Evidence: in game: `aria area_01_room_008: Giant Ghost record at x 160, y 224`.
 
 [+] **`aos.enemies.gorgon` — Gorgon.** Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path.

@@ -104,6 +104,48 @@ static void skeleton_bone_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* The GBA Giant Ghost's lethal-hit callback uses song 0x6B,
+ * animation 5 and 0x5A death frames. This is ROM-free: no private assets. */
+static void giant_ghost_death_cue_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2, 2, 2};
+    const AosAnimDef defs[6] = {
+        {3, ticks}, {3, ticks}, {3, ticks},
+        {3, ticks}, {3, ticks}, {3, ticks}
+    };
+    const AosAnimSet anims = {defs, 6};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    for (int a = 0; a < 6; ++a)
+        for (int f = 0; f < 3; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 12, 2, 0, 0, 4};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(120), NULL);
+    AosEnemy ghost;
+    assert(aos_enemy_create(&ghost, AOS_ENEMY_GIANT_GHOST, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    AosSoulAttack hitbox = {{0, 0, 255, 200}, 255, 0, false, NULL};
+    aos_enemy_set_soul_attacks(&hitbox, 1);
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&ghost, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(hit.killed && ghost.defeated);
+    assert(ghost.state == 2 && ghost.timer == 0x5A && ghost.anim.id == 5);
+    assert(ghost.combat.attack_off && ghost.combat.hurt_off);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    aos_audio_clear();
+    for (int frame = 0; frame < 90; ++frame) {
+        assert(!ghost.removed);
+        aos_enemy_update(&ghost, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, always_zero);
+    }
+    assert(ghost.removed && !aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B));
+    memset(cells, 0, sizeof cells);
+}
+
 static void early_enemy_batch_tests(void) {
     assert(AOS_ENEMY_SKELETON == 0x02 && AOS_ENEMY_PEEPING_EYE == 0x06 &&
            AOS_ENEMY_KILLER_FISH == 0x07 && AOS_ENEMY_BONE_PILLAR == 0x08 &&
@@ -3607,6 +3649,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    giant_ghost_death_cue_tests();
     skeleton_bone_tests();
     soul_attack_tests();
     death_sound_tests();

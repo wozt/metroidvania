@@ -1216,10 +1216,6 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 2;
                     enemy->step = 0;
                     enemy->timer = 0x28;
-                } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
-                           enemy->role == AOS_ROLE_ENEMY) {
-                    enemy->state = 2;
-                    enemy->timer = 0x28;
                 } else if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */
                     enemy->state = 3;
@@ -1266,6 +1262,17 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->step = 0;
                     enemy->vx = enemy->ax = enemy->vy = 0;
                     enemy->ay = 0x2000;
+                } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* Native Giant Ghost lethal hit: song 0x6B, animation
+                     * 5 and 90 frames of state-2 disappearing visuals.
+                     * Its three separate native death effects remain open. */
+                    aos_audio_play_song(0x6B);
+                    play_loop(enemy, kind->anims, 5, false);
+                    enemy->timer = 0x5A;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->combat.attack_off = enemy->combat.hurt_off = true;
                 } else if (enemy->id == AOS_ENEMY_GHOST) {
                     /* sub_0808A0C8: a lethal hit plays 0x6E. The native
                      * palette fade and producer accounting remain open. */
@@ -7594,9 +7601,9 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     }
     if (e->defeated) {
         if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
-            /* EnemyGiantGhostUpdate state 2: blinking death tail. This
-             * uses a deterministic alternating hide until the complete
-             * native palette/fade sequence can be imported. */
+            /* EnemyGiantGhostUpdate state 2: the native 90-frame
+             * death countdown. Blink approximates sub_0806D518; exact
+             * palette and three generated death children remain pending. */
             e->hidden = (e->timer & 1u) != 0;
             if (e->timer && --e->timer == 0) e->removed = true;
         } else generic_death(e, kind, random, &report);

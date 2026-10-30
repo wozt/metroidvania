@@ -582,10 +582,21 @@ static FusionJson cmake_tests(void) {
     return tests;
 }
 
-/* run_ctest(): every CTest test. */
+/* Full-run concurrency is bounded to avoid exhausting RAM while the ROM
+ * digests and native renderers run. Non-numeric overrides fail back to 4. */
+static int ctest_parallel_jobs(const char *setting) {
+    if (!setting || !*setting) return 4;
+    char *end;
+    long jobs = strtol(setting, &end, 10);
+    return *end || jobs < 1 || jobs > 8 ? 4 : (int)jobs;
+}
+
+/* run_ctest(): every CTest test exactly once, with bounded parallelism. */
 static FusionJson default_run_ctest(const char *build) {
     char command[8192];
-    snprintf(command, sizeof command, "ctest --test-dir '%s' 2>/dev/null", build);
+    int jobs = ctest_parallel_jobs(getenv("FUSION_CTEST_JOBS"));
+    snprintf(command, sizeof command,
+             "ctest --test-dir '%s' --parallel %d 2>/dev/null", build, jobs);
     char *output = capture(command, NULL);
     FusionJson outcomes = fusion_json_object();
     /* Test\s+#\d+:\s+([\w-]+)\s+\.+\s*(\*{0,3}\s*\w[^\n]*?)\s+[\d.]+ sec */
@@ -2043,11 +2054,14 @@ int main(int argc, char **argv) {
                summary ? (long long)fusion_json_member(summary, "other")->integer : 0LL);
         fflush(stdout);
         const FusionJson *ctest = fusion_json_member(tests, "ctest");
-        for (size_t index = 0; index < ctest->count; ++index)
-            if (!strcmp(text_of(&ctest->items[index], "outcome"), "failed")) {
-                fprintf(stderr, "Failed test: %s\n", text_of(&ctest->items[index], "name"));
+        for (size_t index = 0; index < ctest->count; ++index) {
+            const char *outcome = text_of(&ctest->items[index], "outcome");
+            if (strcmp(outcome, "passed")) {
+                fprintf(stderr, "Test did not pass: %s (%s)\n",
+                        text_of(&ctest->items[index], "name"), outcome);
                 result = 1;
             }
+        }
     }
     fusion_json_free(&data);
     return result;

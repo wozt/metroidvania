@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0643 - Scoped parallel CTest and Giant Ghost death cues
+
+- The dashboard's complete CTest pass now runs with bounded parallelism
+  (four workers by default, `FUSION_CTEST_JOBS=1..8` to override); missing,
+  skipped or failed outcomes prevent the installer from completing successfully.
+- Added `scripts/test_scopes.sh` and `docs/TEST_SCOPES.md` with enemy, Aria,
+  MZM and dashboard test subsets for short edit loops. Full tests still run
+  once before committing, not on every intermediate change.
+- Ported the GBA Giant Ghost lethal callback's song 0x6B request,
+  animation 5 and 0x5A-frame countdown. Added a ROM-free kill/death test.
+  The shared reward/drop path is unchanged, so XP, items and soul ownership
+  are still granted once by the room host.
+- Giant Ghost remains partial: three native death effects, palette/visual
+  fidelity, attack states and its blue soul's ability remain unimplemented;
+  Aria audio output remains unavailable. No compatibility claim is inferred
+  from the CTest results alone.
+
 ## Patch 0642 - Aria Skeleton native bone throw (direct C patch)
 
 - Added Skeleton's own bone entity, emitted once when native attack animation 4 reaches frame 2. Its sprite IDs 0x12/0x1B, initial launch offsets and fixed-point motion, 8x8 hurtbox / 2x2 attack box, and throw sound IDs 0x88/0x89 come from the cvaos GBA routines `sub_080C39F4` and `sub_080C3BD8`.

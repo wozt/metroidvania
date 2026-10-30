@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0656 - Buer native rolling linked-fire facing synchronization
+
+- Ported the bounded linked-fire-facing write at the end of
+  cvaos `sub_080CC20C`: rolling Buer derives the linked sprite's bit 0x40
+  from its signed horizontal speed (zero or positive faces right).
+- Applied the write to state 1 and state-2 idle only. The attack timer's
+  transition is handled separately, so state-2 attack/recovery retain the
+  linked fire's independent orientation and action-window flip.
+- Corrected patch 0655's idle-facing test fixture to use real signed
+  rolling speeds instead of an impossible stationary left-facing setup.
+  Added ROM-free regressions for both directions, zero speed, provisional
+  edge reversal, idle synchronization and no attack/recovery clobber.
+- Native `sub_080CC20C` collision probes, exact rolling friction, flame
+  projectiles/visuals, linked damage and game audio fidelity are still open.
+  All parity statuses remain partial; no proprietary input or golden
+  verification cache is modified by this patch.
+
 ## Patch 0655 - Buer native idle facing-gated wake-up
 
 - Ported the unimplemented `sub_080CBAEC` state-2 idle proximity branch:

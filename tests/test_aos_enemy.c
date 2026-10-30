@@ -379,10 +379,11 @@ static void buer_idle_directional_wakeup_tests(void) {
         buer.x = AOS_FIXED(100);
         buer.y = AOS_FIXED(buer.home);
         buer.phase = 0;
-        buer.vx = 0;
+        buer.vx = side ? 0x18000 : -0x18000;
         buer.state = 2;
         buer.step = buer.substep = buer.timer = 0;
-        buer.buer_fire_mirrored = side != 0;
+        /* The live rolling update must rederive this orientation. */
+        buer.buer_fire_mirrored = side == 0;
         soma.x = buer.x + (side ? AOS_FIXED(96) : -AOS_FIXED(96));
         soma.y = buer.y + AOS_FIXED(24);
         aos_enemy_update(&buer, &soma, &layer, &kind,
@@ -437,6 +438,82 @@ static void buer_idle_directional_wakeup_tests(void) {
         assert(script_at == 1 && buer.timer == 0);
         assert(buer.step == (parity ? 1 : 2) && buer.substep == 0);
     }
+    memset(cells, 0, sizeof cells);
+}
+
+/* sub_080CC20C: the linked fire's orientation follows the horizontal
+ * velocity on rolling ticks, not the parent's player-facing mirror bit.
+ * State-2 attack and recovery preserve the separately animated fire bit. */
+static void buer_rolling_fire_sign_sync_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    assert(buer.state == 1);
+    /* Keep the original room probe (Y+92) inside the one-screen height.
+     * The floor-snap constructor otherwise starts below this test room. */
+    buer.home = 60;
+    buer.y = AOS_FIXED(60);
+
+    /* A left-moving state-1 Buer forces the linked sprite left even if
+     * the parent faces Soma to the right. Zero velocity faces right. */
+    buer.vx = -0x18000;
+    buer.buer_fire_mirrored = true;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.state == 1 && buer.vx < 0);
+    assert(buer.mirrored && !buer.buer_fire_mirrored);
+    buer.vx = 0;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.buer_fire_mirrored);
+
+    /* When the provisional movement controller reverses at the edge,
+     * orientation reflects the resulting signed speed, not its old sign. */
+    buer.x = AOS_FIXED(buer.home_right);
+    buer.vx = 0x18000;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.state == 1 && buer.vx < 0 && !buer.buer_fire_mirrored);
+
+    /* Native state-2 idle executes the same rolling-facing callback. */
+    buer.x = AOS_FIXED(100);
+    buer.state = 2;
+    buer.step = 0;
+    buer.timer = 4;
+    buer.vx = -0x18000;
+    buer.buer_fire_mirrored = true;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 0 && buer.timer == 5);
+    assert(buer.vx < 0 && !buer.buer_fire_mirrored);
+
+    /* Native state-2 step 2 and step 1 do not call sub_080CC20C. A
+     * different parent velocity must NOT overwrite the linked fire bit. */
+    buer.vx = 0x18000;
+    buer.buer_fire_mirrored = false;
+    buer.step = 2;
+    buer.substep = 2;
+    buer.timer = 5;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 2 && buer.timer == 4);
+    assert(!buer.buer_fire_mirrored);
+    buer.step = 1;
+    buer.substep = 2;
+    buer.timer = 12;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 1 && buer.timer == 11);
+    assert(!buer.buer_fire_mirrored);
     memset(cells, 0, sizeof cells);
 }
 
@@ -4341,6 +4418,7 @@ int main(void) {
     buer_linked_fire_facing_tests();
     buer_near_player_attack_tests();
     buer_idle_directional_wakeup_tests();
+    buer_rolling_fire_sign_sync_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

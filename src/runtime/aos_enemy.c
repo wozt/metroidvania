@@ -7483,6 +7483,11 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
                                uint32_t (*random)(void)) {
     if (e->state != 2) return;
     if (e->step == 0) {
+        /* sub_080CC20C is run immediately before the source idle branch:
+         * it writes the linked fire's facing from the rolling speed's sign.
+         * The native probe/friction changes to that speed are still pending;
+         * do not reuse a stale attack-window facing for the wake-up test. */
+        e->buer_fire_mirrored = e->vx >= 0;
         /* sub_080CBAEC/_080CBB2E: an idle Buer notices Soma in the
          * inclusive 192x48 window only on the linked fire's facing side.
          * sub_0806BBC4 returns +1 for Soma right, -1 for left, 0 aligned.
@@ -7923,9 +7928,19 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     case AOS_ENEMY_BONE_PILLAR:
         face_player(e, soma);
         break;
-    case AOS_ENEMY_BUER:
+    case AOS_ENEMY_BUER: {
+        /* sub_080CC458 / sub_080CBAEC: only state 1 and the state-2
+         * idle step execute sub_080CC20C's rolling-facing update. Capture
+         * that condition before the timer can enter the attack step. */
+        bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
         buer_attack_timing(e, soma, random);
         buer_controller(e, soma);
+        if (rolling) {
+            /* sub_080CC20C's final +0x58 bit-0x40 write uses velocity
+             * after movement. Do not overwrite the linked independent bit
+             * during attack windows, recovery, or the timed death. */
+            e->buer_fire_mirrored = e->vx >= 0;
+        }
         if (e->state == 1 && buer_room_probe_outside(e, layer)) {
             /* sub_080CC458: only the state and two sub-states clear.
              * The original does not zero +0x0D (the 8-bit timer). */
@@ -7934,6 +7949,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
             e->substep = 0;
         }
         break;
+    }
     case AOS_ENEMY_WHITE_DRAGON:
         if (e->state == 3) {
             /* EnemyWhiteDragonUpdate state 3 -> sub_08076ED8: retain the

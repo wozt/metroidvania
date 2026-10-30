@@ -146,6 +146,79 @@ static void giant_ghost_death_cue_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Peeping Eye sub_080882D2/sub_08088478: exactly three target draws,
+ * symmetric 0x800 axis acceleration and no return-to-home teleport. */
+static void peeping_eye_native_steering_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[1] = {{2, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 4};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
+    AosEnemy eye;
+    assert(aos_enemy_create(&eye, AOS_ENEMY_PEEPING_EYE, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    eye.helper_spawned = true;
+    eye.x = AOS_FIXED(100);
+    eye.y = AOS_FIXED(100);
+    eye.home = 140;
+    eye.step = 2;
+    eye.timer = 73;
+    const uint32_t target_draws[] = {0, 1, 0, 0xFF};
+    script = target_draws;
+    script_at = 0;
+    aos_enemy_update(&eye, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(script_at == 3 && eye.step == 3 && eye.timer == 0);
+    assert(eye.target_x == AOS_FIXED(164) && eye.target_y == AOS_FIXED(68));
+    assert(eye.y == AOS_FIXED(100));
+
+    eye.target_x = eye.x + AOS_FIXED(20);
+    eye.target_y = eye.y - AOS_FIXED(20);
+    eye.vx = eye.vy = 0;
+    aos_enemy_update(&eye, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.ax == 0x800 && eye.ay == -0x800);
+    assert(eye.vx == 0x800 && eye.vy == -0x800);
+
+    eye.target_x = eye.x - AOS_FIXED(20);
+    eye.target_y = eye.y + AOS_FIXED(20);
+    eye.vx = eye.vy = 0;
+    aos_enemy_update(&eye, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.ax == -0x800 && eye.ay == 0x800);
+    assert(eye.vx == -0x800 && eye.vy == 0x800);
+
+    eye.step = 3;
+    eye.timer = 0;
+    eye.vx = eye.vy = 0;
+    eye.target_x = eye.x + AOS_FIXED(3);
+    eye.target_y = eye.y - AOS_FIXED(3);
+    int32_t y_before = eye.y;
+    aos_enemy_update(&eye, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 2 && eye.y == y_before);
+
+    eye.step = 0;
+    eye.phase = 0x2000;
+    y_before = eye.y;
+    aos_enemy_update(&eye, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 0 && eye.y == y_before);
+
+    eye.step = 3;
+    eye.timer = 120;
+    eye.target_x = eye.x + AOS_FIXED(80);
+    eye.target_y = eye.y - AOS_FIXED(80);
+    eye.vx = eye.vy = 0;
+    aos_enemy_update(&eye, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 2); /* 120-frame native timeout */
+    memset(cells, 0, sizeof cells);
+}
+
 static void early_enemy_batch_tests(void) {
     assert(AOS_ENEMY_SKELETON == 0x02 && AOS_ENEMY_PEEPING_EYE == 0x06 &&
            AOS_ENEMY_KILLER_FISH == 0x07 && AOS_ENEMY_BONE_PILLAR == 0x08 &&
@@ -3649,6 +3722,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    peeping_eye_native_steering_tests();
     giant_ghost_death_cue_tests();
     skeleton_bone_tests();
     soul_attack_tests();

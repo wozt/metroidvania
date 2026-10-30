@@ -7373,16 +7373,20 @@ static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma,
         e->target_y = e->y - AOS_FIXED(32) - (int32_t)(random() % AOS_FIXED(48));
         e->vx = e->vy = 0;
         e->phase = (uint16_t)(e->phase + 0x200);
-        e->timer = (uint8_t)(random() & 0x3F);
+        /* sub_080882D2 resets the 0x0D movement timeout on entry.
+         * Random & 0x3F belongs to the separate 0x1B sprite-table timer,
+         * not to this 120-frame steering timeout. */
+        e->timer = 0;
         e->step = 3;
     } else if (e->step == 3) {
-        /* sub_08088168 damps both axes by 31/32, accelerates only while the
-         * target is more than four pixels away, and caps the result at two
-         * pixels per frame. Its state-3 visual variant table is still open. */
+        /* sub_08088478 selects -0x800/0/+0x800 per axis outside the
+         * four-pixel dead zone, then damps both velocities by 31/32 and
+         * caps them to +/-0x20000. The old positive 0x8000 was tenfold
+         * too high and made right/down movement direction-dependent. */
         int32_t dx = e->target_x - e->x;
         int32_t dy = e->target_y - e->y;
-        e->ax = dx > AOS_FIXED(4) ? 0x8000 : dx < -AOS_FIXED(4) ? -0x800 : 0;
-        e->ay = dy > AOS_FIXED(4) ? 0x8000 : dy < -AOS_FIXED(4) ? -0x800 : 0;
+        e->ax = dx > AOS_FIXED(4) ? 0x800 : dx < -AOS_FIXED(4) ? -0x800 : 0;
+        e->ay = dy > AOS_FIXED(4) ? 0x800 : dy < -AOS_FIXED(4) ? -0x800 : 0;
         e->vx = e->vx * 31 / 32 + e->ax;
         e->vy = e->vy * 31 / 32 + e->ay;
         if (e->vx > 0x20000) e->vx = 0x20000;
@@ -7401,7 +7405,9 @@ static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma,
     } else {
         e->phase = (uint16_t)(e->phase + 0x180);
     }
-    if (e->step != 3) e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 32;
+    /* The native state machine never snaps the entity back to its
+     * spawn height on arrival or while waiting. 'phase' remains available
+     * for linked polar sprites, not for parent-position oscillation. */
     face_player(e, soma);
 }
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-30T01:58:43+00:00",
+ "generated_at": "2026-10-30T02:12:02+00:00",
  "git": {
-  "commit": "1d0e4b3",
+  "commit": "6e21640",
   "branch": "main",
   "dirty": true
  },
@@ -11202,7 +11202,7 @@
     "sub_08088E08",
     "sub_08088D28"
    ],
-   "limitations": "The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported. The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames. Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete.",
+   "limitations": "The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported. The Peeping Eye's 40-frame entry, three-draw upper-side target selection and symmetric +/-0x800 steering acceleration are source-aligned and covered by ROM-free tests. Movement now resets its 120-frame timeout at the correct state transition and preserves its vertical position between targets. The visual variant ROM table, ceiling probes, linked callbacks and yellow:6 soul effect remain incomplete.",
    "next_action": "Trace the state-3 visual variant selection and ceiling probe.",
    "evidence": {
     "unit_tests": [
@@ -16440,7 +16440,7 @@
     "assets.aria_peeping_eye_timed_entry_0475"
    ],
    "native_routines": [],
-   "limitations": "The Peeping Eye now picks its traced 64..112-pixel sideways, 32..80-pixel upward target and steers with native damping, tolerance, speed cap and timeout. The state-3 visual variant table, probes, damage callbacks, fades, sounds and rewards remain open.",
+   "limitations": "The Peeping Eye's 64..112-pixel random sideways and 32..80-pixel upward targets now consume exactly three RNG values. Its steering uses symmetric +/-0x800 acceleration with 31/32 damping, a two-pixel-per-frame velocity cap, a fresh 120-frame timeout and preserved height between targets. The ROM visual variant table, ceiling probes, hit callbacks, fades, sounds and reward parity remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -18517,6 +18517,12 @@
  },
  "timeline": [
   {
+   "commit": "6e21640",
+   "date": "2026-10-30",
+   "subject": "Complete Aria Giant Ghost death and scoped CTest workflow",
+   "scope": "project"
+  },
+  {
    "commit": "1d0e4b3",
    "date": "2026-10-30",
    "subject": "Advance Aria partial enemies with native Skeleton bone and linked collision handling",
@@ -18988,12 +18994,6 @@
    "commit": "537bf5d",
    "date": "2026-10-27",
    "subject": "Port Aria introduction entity controllers",
-   "scope": "project"
-  },
-  {
-   "commit": "172bbdd",
-   "date": "2026-10-27",
-   "subject": "Port Aria opening introduction controller",
    "scope": "project"
   }
  ],
@@ -21557,7 +21557,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "yellow:6",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete."
+       "notes": "The parent target motion now uses native symmetric 0x800 acceleration, exactly three random target draws, a fresh 120-frame timeout and no home-height snap. The two overlays and six polar linked sprites remain partial; native ROM variant selection, ceiling checks, visual damage callbacks and yellow soul ability remain open. Aria native audio output is still unavailable."
       }
      },
      {
@@ -28245,7 +28245,7 @@
        "id": "07:06",
        "name": "Peeping Eye",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete.",
+       "note": "The parent target motion now uses native symmetric 0x800 acceleration, exactly three random target draws, a fresh 120-frame timeout and no home-height snap. The two overlays and six polar linked sprites remain partial; native ROM variant selection, ceiling checks, visual damage callbacks and yellow soul ability remain open. Aria native audio output is still unavailable.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

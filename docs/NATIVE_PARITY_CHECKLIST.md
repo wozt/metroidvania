@@ -1623,7 +1623,7 @@ Known divergences: The four direct OAM records and collision boxes are ported; t
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
-[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames. Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete.
+[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The Peeping Eye's 40-frame entry, three-draw upper-side target selection and symmetric +/-0x800 steering acceleration are source-aligned and covered by ROM-free tests. Movement now resets its 120-frame timeout at the correct state transition and preserves its vertical position between targets. The visual variant ROM table, ceiling probes, linked callbacks and yellow:6 soul effect remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  

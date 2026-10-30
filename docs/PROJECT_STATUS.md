@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0644 - Aria Peeping Eye native steering corrections
+
+- Compared sub_080882D2 and sub_08088478 against cvaos's original GBA
+  disassembly. The Peeping Eye now consumes only the three native random
+  target draws and resets its movement timeout to zero on entering state 3.
+- Fixed a direction-dependent acceleration error: the GBA uses +0x800 and
+  -0x800 for both axes; the older positive branch used +0x8000. Retained
+  the 31/32 damping, native 0x20000 velocity cap and four-pixel tolerance.
+- Removed the artificial parent-Y snap to the spawn height on arrival and
+  during idle. Added ROM-free regressions for the RNG draw count, X/Y sign
+  symmetry, movement timeout, and retained height across state changes.
+- The native Peeping Eye visual-mode ROM tables, ceiling probes, complete
+  linked attacks and yellow-soul effects remain unported; no parity status
+  has been upgraded without evidence. Run only aos_enemy while iterating;
+  the complete parallel CTest suite is still required once before commit.
+
 ## Patch 0643 - Scoped parallel CTest and Giant Ghost death cues
 
 - The dashboard's complete CTest pass now runs with bounded parallelism

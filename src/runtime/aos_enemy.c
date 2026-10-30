@@ -7760,8 +7760,35 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
         e->x = original_x;
 }
 
+/* Patch 0663: only the proven flat-floor slice of Buer's mode-6 Y contact.
+ * sub_0806C828 integrates gravity and pushes up on floor penetration;
+ * sub_0806CAF8(mode 6) restores its previous Y when no ground flag 8
+ * exists. Native gravity, ceilings, slopes and the multi-point collision
+ * table are still open, so do not introduce artificial falling/bobbing.
+ * At a confirmed axis-aligned flat floor, remove at most the shallow
+ * penetration of the +24-pixel lower sample, retaining fixed-point X. */
+static void buer_state_two_idle_vertical_step(AosEnemy *e,
+                                              const AosCollision *layer) {
+    if (!layer || !layer->cells || layer->width_screens <= 0 ||
+        layer->height_screens <= 0 || e->vy < 0) return;
+    const int x = e->x >> 16;
+    const int foot_y = (e->y >> 16) + 24;
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    if (x < 0 || x >= width || foot_y < 0 || foot_y >= height) return;
+    const uint8_t ground = aos_collision_cell(layer, x, foot_y);
+    if ((ground & 3u) != 3u || (ground & 0xC0u) != 0u ||
+        aos_floor_depth(layer, x, foot_y, 0, false) >= 0) return;
+    /* A full flat 8-pixel tile has its top at foot_y rounded downward.
+     * Keep this conservative correction out of unsupported slopes. */
+    e->y = AOS_FIXED(foot_y & ~7) - AOS_FIXED(24);
+}
+
 static void buer_controller(AosEnemy *e, const AosSoma *soma,
-                            bool provisional_horizontal) {
+                            bool provisional_horizontal,
+                            bool provisional_vertical) {
     face_player(e, soma);
     if (provisional_horizontal) {
         e->x += e->vx;
@@ -7771,7 +7798,8 @@ static void buer_controller(AosEnemy *e, const AosSoma *soma,
         }
     }
     e->phase = (uint16_t)(e->phase + 0x400);
-    e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
+    if (provisional_vertical)
+        e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
 }
 
 static void rock_armor_controller(AosEnemy *e, const AosSoma *soma) {
@@ -8124,10 +8152,14 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         /* Mode 2/6 translates X from pre-contact spin. Idle mode 6
          * rolls X back without confirmed ground, before the attack gate. */
         if (state_one) buer_state_one_horizontal_step(e, layer);
-        if (state_two_idle) buer_state_two_idle_horizontal_step(e, layer);
+        if (state_two_idle) {
+            buer_state_two_idle_horizontal_step(e, layer);
+            buer_state_two_idle_vertical_step(e, layer);
+        }
         if (rolling) buer_rolling_angular_step(e, layer);
         buer_attack_timing(e, soma, random);
-        buer_controller(e, soma, !rolling);
+        /* Idle mode six has no provisional vertical sine motion. */
+        buer_controller(e, soma, !rolling, !state_two_idle);
         if (rolling) {
             /* sub_080CC20C writes the linked +0x58 facing from the
              * final angular velocity at +0x18, after damping/reversal.

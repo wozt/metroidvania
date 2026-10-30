@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0663 - Buer bounded state-two idle vertical contact
+
+- Added a conservative flat-floor contact adjustment for mode-six state-two
+  idle: the +24 lower probe snaps shallow flat-solid penetration to the tile
+  top, without treating a slope, room exterior or ascending movement as a
+  supported floor-contact result.
+- Suppressed the provisional sine-based vertical bob ONLY while Buer is in
+  state-two idle. Without confirmed ground it retains its prior Y (bounded
+  native mode-six no-ground rollback); attack and recovery still use their
+  prior controller. Horizontal and angular work from 0660-0662 is unchanged.
+- Added ROM-free tests for penetration correction, stable floor contact,
+  absence of ground, slope and upward-motion exclusions, attack isolation
+  and idle timer continuity.
+- This does NOT implement source +0x54 gravity, +0x4C vertical velocity,
+  ceiling response, multi-point 0x08528B64 probes or full native animation.
+  All feature statuses remain partial; no private data or ROM is included.
+
 ## Patch 0662 - Buer bounded state-two idle mode-six translation
 
 - Ported the limited horizontal part of native `sub_080CC20C` / `sub_0806CAF8`

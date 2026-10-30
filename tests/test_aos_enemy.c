@@ -1024,6 +1024,80 @@ static void buer_state_two_idle_horizontal_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0663: bounded vertical rollback in state-two idle mode 6.
+ * Only shallow penetration in a confirmed flat floor is corrected. */
+static void buer_state_two_idle_vertical_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(e.state == 2 && e.step == 0);
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(137) + 0x2345;
+    e.home = 40; /* Prove idle does not inherit the provisional sine bob. */
+    e.spin = 0;
+    e.vx = 0;
+    e.timer = 5;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 0 && e.timer == 6);
+    assert(e.y == AOS_FIXED(136)); /* Floor top 160 minus 24. */
+    assert(e.x == AOS_FIXED(100));
+
+    /* A pre-aligned grounded Buer remains at the exact floor contact. */
+    e.y = AOS_FIXED(136);
+    e.spin = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(136));
+
+    /* With no contact, the mode-six rollback holds Y; it does not bob
+     * toward the independently stored provisional home position. */
+    e.y = AOS_FIXED(60) + 0x4567;
+    e.home = 140;
+    e.spin = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(60) + 0x4567);
+
+    /* Neither slope geometry nor upward motion may be classified as a
+     * supported flat-floor correction in this bounded implementation. */
+    cells[20 * W + 12] = 0x41;
+    e.y = AOS_FIXED(137) + 0x1234;
+    e.spin = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(137) + 0x1234);
+    cells[20 * W + 12] = 0x03;
+    e.vy = -0x4000;
+    e.spin = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(137) + 0x1234);
+    e.vy = 0;
+
+    /* Active attacks retain their own provisional controller until
+     * the original native attack choreography is reconstructed. */
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.y = AOS_FIXED(70);
+    e.home = 136;
+    e.spin = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert((e.y >> 16) > 120 && e.spin == 0);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_timing_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -4931,6 +5005,7 @@ int main(void) {
     buer_floor_slope_angular_impulse_tests();
     buer_state_one_horizontal_tests();
     buer_state_two_idle_horizontal_tests();
+    buer_state_two_idle_vertical_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

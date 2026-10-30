@@ -20,6 +20,65 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+/* sub_080CBAEC: Buer state-2 has a 255-count entry trigger and a
+ * 32..63-tick random attack window. Native linked sprite/probe behavior
+ * remains separate; this test only checks reproducible state/RNG timing. */
+static void buer_attack_timing_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[] = {{2, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(buer.state == 2 && buer.step == 0 && buer.substep == 0);
+    /* The initial phase consumes RNG only at the 0xFF boundary. */
+    const uint32_t draws[] = {0, 15, 0};
+    script = draws;
+    script_at = 0;
+    buer.timer = 0xFD;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.timer == 0xFE && buer.step == 0 && script_at == 0);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.timer == 0 && buer.step == 2 && buer.substep == 0 && script_at == 1);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.step == 2 && buer.substep == 2 && buer.timer == 46 && script_at == 2);
+    for (int frame = 0; frame < 47; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.step == 0 && buer.substep == 0 && buer.timer == 0);
+    assert(script_at == 3);
+
+    /* An odd random draw at expiry starts another window, without
+     * returning to the initial long idle phase. */
+    const uint32_t retry[] = {31, 1, 31};
+    script = retry;
+    script_at = 0;
+    buer.state = 2;
+    buer.step = 2;
+    buer.substep = 0;
+    buer.timer = 0;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.step == 2 && buer.substep == 2 && buer.timer == 62 && script_at == 1);
+    for (int frame = 0; frame < 63; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.step == 2 && buer.substep == 0 && buer.timer == 0xFF && script_at == 2);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(buer.step == 2 && buer.substep == 2 && buer.timer == 62 && script_at == 3);
+    memset(cells, 0, sizeof cells);
+}
+
 /* Buer's GBA sub_080CC514 / sub_080CBEA4: lethal hit enters
  * state 3, step 0; its updater starts sound 0x6E and a 96-frame stage,
  * followed by a 128-frame stage with 20-frame interval sound cues. */
@@ -3859,6 +3918,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();

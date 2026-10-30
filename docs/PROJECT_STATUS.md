@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0649 - Buer native state-2 attack timing
+
+- Ported the bounded step/timer transitions of `sub_080CBAEC`: a byte timer
+  reaching 0xFF triggers an RNG decision, and state-2 step 2 begins a
+  32..63-frame action window whose first tick occurs immediately.
+- On the window counter's underflow, the native even/odd RNG branch either
+  restarts the idle step or schedules another window. A ROM-free test checks
+  both branches, precise countdown boundaries and RNG draw counts.
+- Retained the existing partial Buer movement/linked collision controller;
+  the original linked-owner facing, range probes, flame attacks and visuals
+  have not been claimed as reconstructed. No completion status was upgraded.
+- Cache inputs and golden scripts remain unchanged; the full CTest run is
+  still required once, with `time -p` applied to the slow commands.
+
 ## Patch 0648 - Buer native death entry and timed stages
 
 - Reconstructed the source-derived lethal callback of `sub_080CC514` and

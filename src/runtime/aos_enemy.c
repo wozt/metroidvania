@@ -7427,6 +7427,46 @@ static void white_dragon_controller(AosEnemy *e, const AosSoma *soma) {
     e->x += toward_facing(e, 0x2000);
 }
 
+/* EnemyBuerUpdate state 2 -> sub_080CBAEC: step 0 waits for the
+ * unsigned 8-bit timer to reach 0xFF, then an even RNG draw enters step 2.
+ * Step 2 selects a 32..63-frame attack window, prepares the linked owner's
+ * facing (not yet represented), and decrements the window on the same frame.
+ * On underflow a second random parity draw either returns to step 0 or
+ * retries the window. sub_0806E29C's proximity/linked facing, the native
+ * sub_080CC20C probe and flame attack remain unported. */
+static void buer_attack_timing(AosEnemy *e, uint32_t (*random)(void)) {
+    if (e->state != 2) return;
+    if (e->step == 0) {
+        ++e->timer;
+        if (e->timer != 0xFF) return;
+        e->timer = 0;
+        if ((random() & 1u) == 0) {
+            e->step = 2;
+            e->substep = 0;
+        }
+        return;
+    }
+    if (e->step != 2) return;
+    if (e->substep == 0) {
+        e->timer = (uint8_t)((random() & 0x1Fu) + 0x20u);
+        e->substep = 1;
+    }
+    if (e->substep == 1) {
+        /* The original flips the *linked owner's* facing bit here. */
+        e->substep = 2;
+    }
+    if (e->substep != 2) return;
+    if (--e->timer == 0xFF) {
+        if ((random() & 1u) == 0) {
+            e->step = 0;
+            e->substep = 0;
+            e->timer = 0;
+        } else {
+            e->substep = 0;
+        }
+    }
+}
+
 static void buer_controller(AosEnemy *e, const AosSoma *soma) {
     face_player(e, soma);
     e->x += e->vx;
@@ -7779,6 +7819,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         face_player(e, soma);
         break;
     case AOS_ENEMY_BUER:
+        buer_attack_timing(e, random);
         buer_controller(e, soma);
         break;
     case AOS_ENEMY_WHITE_DRAGON:

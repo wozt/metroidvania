@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-30T10:49:07+00:00",
+ "generated_at": "2026-10-30T11:02:05+00:00",
  "git": {
-  "commit": "ab9bb0a",
+  "commit": "1e6602d",
   "branch": "main",
   "dirty": true
  },
@@ -9244,8 +9244,8 @@
     "sub_080CC4E4",
     "sub_080CC514"
    ],
-   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native state-4 visual-emitter callback is not yet ported. Buer's linked-owner death particles, probe motion and eight terminal fragments are not implemented. Buer's linked-owner facing, proximity checks and native probe motion in state 2 remain unported. Native Buer state-2 attack visual effects and the linked flame volleys remain incomplete. The linked fire's native angular and attack visuals are still incomplete. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. The inert state-4 updater now raises the visual centre 32 pixels once, selects direct frame 0 and advances the native 0x100 orbit phase each tick. It does not execute the regular movement/contact controller. A lethal hit now enters the source-derived state 3 and plays 0x6E on its first update. The 96- and 128-frame countdown phases and additional periodic 0x6E requests are reconstructed without generic death flames. State-2 step timing now follows sub_080CBAEC: 8-bit 0xFF idle threshold, even/odd RNG entry, 32..63-frame action windows and RNG-selected repeat/exit. The GBA sub_0806E29C inclusive 96x48 Soma proximity check now transitions from the attack window to step 1, whose 80-frame attack and 32-frame recovery countdowns request 0x84 at native intervals. The linked fire sprite now keeps a parent-independent facing initialized from Buer's signed velocity, toggles once at the start of each state-2 action window, and sets the parent's velocity direction on even window expiry.",
-   "next_action": "Port Buer's linked fire effects and attack probes, and complete per-child state/damage effects; retain verified native facing timing.",
+   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native state-4 visual-emitter callback is not yet ported. Buer's linked-owner death particles, probe motion and eight terminal fragments are not implemented. Buer's linked-owner facing, proximity checks and native probe motion in state 2 remain unported. Native Buer state-2 attack visual effects and the linked flame volleys remain incomplete. The linked fire's native angular and attack visuals are still incomplete. Buer's state-1 gate does not yet include sub_080CC20C's full terrain motion probes. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. The inert state-4 updater now raises the visual centre 32 pixels once, selects direct frame 0 and advances the native 0x100 orbit phase each tick. It does not execute the regular movement/contact controller. A lethal hit now enters the source-derived state 3 and plays 0x6E on its first update. The 96- and 128-frame countdown phases and additional periodic 0x6E requests are reconstructed without generic death flames. State-2 step timing now follows sub_080CBAEC: 8-bit 0xFF idle threshold, even/odd RNG entry, 32..63-frame action windows and RNG-selected repeat/exit. The GBA sub_0806E29C inclusive 96x48 Soma proximity check now transitions from the attack window to step 1, whose 80-frame attack and 32-frame recovery countdowns request 0x84 at native intervals. The linked fire sprite now keeps a parent-independent facing initialized from Buer's signed velocity, toggles once at the start of each state-2 action window, and sets the parent's velocity direction on even window expiry. sub_080CC458 now checks the native one-screen/multi-screen room probe at (x, y + 92) and changes state 1 to 2 outside the bounds, clearing step and substep while keeping the byte timer.",
+   "next_action": "Port Buer's native sub_080CC20C movement probes, then the linked attack fire and eight death fragments; preserve reward ownership.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
@@ -15897,7 +15897,7 @@
     "assets.aria_peeping_eye_target_0476"
    ],
    "native_routines": [],
-   "limitations": "Bone Pillar now assembles its native 22-pixel linked tower and Buer emits its linked second direct frame. Per-segment and fire collision, bounce timing, attacks, fades, sounds and rewards remain open. Buer's separate native state-4 updater now raises the inert visual once by 32 pixels and advances its 0x100 orbit phase; the emitted effect remains missing. Buer's lethal state-3 dispatch now runs the native 96/128-frame death counters with 0x6E sound requests. The linked death effect and eight fragments remain absent. Buer state 2 now preserves the GBA 0xFF wait threshold and 32..63-frame RNG window/retry timing; linked motion and effects remain open. Buer state-2 proximity now starts its native 80-frame attack/32-frame recovery cycle and requests 0x84 at the source-derived frame values. Linked projectile visuals and motion still need dedicated ports. Buer's linked fire sprite now preserves its own facing bit and the source-derived one-flip-per-window timing, with correct parent velocity direction on idle restart. Native flame attacks and linked sprite effects remain incomplete.",
+   "limitations": "Bone Pillar now assembles its native 22-pixel linked tower and Buer emits its linked second direct frame. Per-segment and fire collision, bounce timing, attacks, fades, sounds and rewards remain open. Buer's separate native state-4 updater now raises the inert visual once by 32 pixels and advances its 0x100 orbit phase; the emitted effect remains missing. Buer's lethal state-3 dispatch now runs the native 96/128-frame death counters with 0x6E sound requests. The linked death effect and eight fragments remain absent. Buer state 2 now preserves the GBA 0xFF wait threshold and 32..63-frame RNG window/retry timing; linked motion and effects remain open. Buer state-2 proximity now starts its native 80-frame attack/32-frame recovery cycle and requests 0x84 at the source-derived frame values. Linked projectile visuals and motion still need dedicated ports. Buer's linked fire sprite now preserves its own facing bit and the source-derived one-flip-per-window timing, with correct parent velocity direction on idle restart. Native flame attacks and linked sprite effects remain incomplete. Buer state 1 now enters state 2 on the native room-boundary probe (x, y+92), without clearing the independent timer; the terrain/linked fire probes are still missing.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -18538,6 +18538,12 @@
  },
  "timeline": [
   {
+   "commit": "1e6602d",
+   "date": "2026-10-30",
+   "subject": "Match Aria Buer linked fire facing flips and native exit velocity sign",
+   "scope": "project"
+  },
+  {
    "commit": "ab9bb0a",
    "date": "2026-10-30",
    "subject": "Port Aria Buer proximity-triggered attack stages and native sound cues",
@@ -19009,12 +19015,6 @@
    "commit": "db739be",
    "date": "2026-10-27",
    "subject": "Model Aria's native main-menu BG0",
-   "scope": "project"
-  },
-  {
-   "commit": "b5eb7a1",
-   "date": "2026-10-27",
-   "subject": "Port Aria's native text cursors and windows",
    "scope": "project"
   }
  ],
@@ -21686,7 +21686,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "blue:4",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported. A lethal hit enters native state 3: 0x6E is requested on death update, then 96- and 128-frame counters and periodic 0x6E requests follow. Sound output, linked visuals and the eight terminal fragments remain absent. The sub_080CBAEC state-2 8-bit idle and 32..63-frame RNG action window now use the original parity and countdown rules; linked-facing and attacks remain missing. Attack range now uses the native inclusive 96x48 window around Buer. State-2 step 1 cycles 80 attack and 32 recovery frames and requests song 0x84 at 72, 63 and 54; paired flames and native sounds in audio output are not implemented. Linked-fire orientation now starts from signed parent velocity, flips at state-2 action-window entry, and controls parent velocity sign at even expiry per sub_080CBA30/sub_080CBAEC; source-derived, but fire effects are missing."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported. A lethal hit enters native state 3: 0x6E is requested on death update, then 96- and 128-frame counters and periodic 0x6E requests follow. Sound output, linked visuals and the eight terminal fragments remain absent. The sub_080CBAEC state-2 8-bit idle and 32..63-frame RNG action window now use the original parity and countdown rules; linked-facing and attacks remain missing. Attack range now uses the native inclusive 96x48 window around Buer. State-2 step 1 cycles 80 attack and 32 recovery frames and requests song 0x84 at 72, 63 and 54; paired flames and native sounds in audio output are not implemented. Linked-fire orientation now starts from signed parent velocity, flips at state-2 action-window entry, and controls parent velocity sign at even expiry per sub_080CBA30/sub_080CBAEC; source-derived, but fire effects are missing. Its state-1 movement-to-action gate now follows sub_080CC458/sub_0806DF40's signed room boundary test with the +92-pixel vertical probe. The terrain probe and linked fire behavior remain incomplete."
       }
      },
      {
@@ -27848,7 +27848,7 @@
        "id": "06:04",
        "name": "Buer",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported. A lethal hit enters native state 3: 0x6E is requested on death update, then 96- and 128-frame counters and periodic 0x6E requests follow. Sound output, linked visuals and the eight terminal fragments remain absent. The sub_080CBAEC state-2 8-bit idle and 32..63-frame RNG action window now use the original parity and countdown rules; linked-facing and attacks remain missing. Attack range now uses the native inclusive 96x48 window around Buer. State-2 step 1 cycles 80 attack and 32 recovery frames and requests song 0x84 at 72, 63 and 54; paired flames and native sounds in audio output are not implemented. Linked-fire orientation now starts from signed parent velocity, flips at state-2 action-window entry, and controls parent velocity sign at even expiry per sub_080CBA30/sub_080CBAEC; source-derived, but fire effects are missing.",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported. A lethal hit enters native state 3: 0x6E is requested on death update, then 96- and 128-frame counters and periodic 0x6E requests follow. Sound output, linked visuals and the eight terminal fragments remain absent. The sub_080CBAEC state-2 8-bit idle and 32..63-frame RNG action window now use the original parity and countdown rules; linked-facing and attacks remain missing. Attack range now uses the native inclusive 96x48 window around Buer. State-2 step 1 cycles 80 attack and 32 recovery frames and requests song 0x84 at 72, 63 and 54; paired flames and native sounds in audio output are not implemented. Linked-fire orientation now starts from signed parent velocity, flips at state-2 action-window entry, and controls parent velocity sign at even expiry per sub_080CBA30/sub_080CBAEC; source-derived, but fire effects are missing. Its state-1 movement-to-action gate now follows sub_080CC458/sub_0806DF40's signed room boundary test with the +92-pixel vertical probe. The terrain probe and linked fire behavior remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

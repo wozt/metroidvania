@@ -94,6 +94,81 @@ static void buer_linked_fire_facing_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* sub_080CC458 -> sub_0806DF40: Buer enters state 2 when its
+ * (x, y + 0x5C) probe leaves the room; one-screen bounds are 240 x 208.
+ * The source resets step/substep but NOT the independent 8-bit timer. */
+static void buer_room_exit_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    const AosCollision single = {1, 1, W, H, cells, NULL, false};
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(90), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100, 0, 0,
+                            &soma, &single, &kind, &stats));
+    assert(e.state == 1);
+
+    /* Stable interior: motion must not falsely trigger a transition. */
+    e.home = 70;
+    e.x = AOS_FIXED(100);
+    e.vx = 0;
+    e.phase = 0;
+    e.timer = 37;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 1 && e.timer == 37);
+
+    /* The rightmost pixel of a one-screen room is 239, still inside. */
+    e.x = AOS_FIXED(239);
+    e.vx = 0;
+    e.phase = 0;
+    e.step = 4;
+    e.substep = 5;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 1);
+
+    /* First pixel after the right boundary: native state 2, both steps 0. */
+    e.x = AOS_FIXED(240);
+    e.vx = 0;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 2 && e.step == 0 && e.substep == 0 && e.timer == 37);
+
+    /* Negative coordinates -7..-1 still round into tile zero. */
+    e.state = 1;
+    e.home = 70;
+    e.x = -AOS_FIXED(7);
+    e.vx = 0;
+    e.phase = 0;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 1);
+    e.x = -AOS_FIXED(8);
+    e.vx = 0;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 2);
+
+    /* 92-pixel Y probe reaches the 208-pixel room bottom. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.vx = 0;
+    e.home = 125;
+    e.phase = 0;
+    e.step = 2;
+    e.substep = 3;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 2 && e.step == 0 && e.substep == 0);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_near_player_attack_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -4038,6 +4113,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_room_exit_tests();
     buer_linked_fire_facing_tests();
     buer_near_player_attack_tests();
     buer_attack_timing_tests();

@@ -7517,6 +7517,20 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
     }
 }
 
+/* sub_080CC458 -> sub_0806DF40(entity, 0, 0x5C): on leaving the
+ * room probe, Buer's state-1 runner switches to state 2. For single-screen
+ * rooms the native tile counts are 30 x 26, otherwise 32 per screen.
+ * GetEntityRoomPositionInteger uses signed room-relative pixel positions;
+ * its negative-tile rounding makes -7 inclusive but -8 outside. */
+static bool buer_room_probe_outside(const AosEnemy *e, const AosCollision *layer) {
+    if (!layer || !layer->width_screens || !layer->height_screens) return false;
+    int width = (layer->width_screens == 1 ? 30 : 32 * layer->width_screens) * 8;
+    int height = (layer->height_screens == 1 ? 26 : 32 * layer->height_screens) * 8;
+    int x = e->x >> 16;
+    int y = (e->y >> 16) + 0x5C;
+    return x < -7 || x >= width || y < -7 || y >= height;
+}
+
 static void buer_controller(AosEnemy *e, const AosSoma *soma) {
     face_player(e, soma);
     e->x += e->vx;
@@ -7871,6 +7885,13 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     case AOS_ENEMY_BUER:
         buer_attack_timing(e, soma, random);
         buer_controller(e, soma);
+        if (e->state == 1 && buer_room_probe_outside(e, layer)) {
+            /* sub_080CC458: only the state and two sub-states clear.
+             * The original does not zero +0x0D (the 8-bit timer). */
+            e->state = 2;
+            e->step = 0;
+            e->substep = 0;
+        }
         break;
     case AOS_ENEMY_WHITE_DRAGON:
         if (e->state == 3) {

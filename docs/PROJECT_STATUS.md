@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0652 - Buer native room-boundary state gate
+
+- Ported the source-derived `sub_080CC458` room-exit gate: after moving in
+  state 1, Buer switches to state 2 when `sub_0806DF40(0, 0x5C)` would
+  classify its room-relative probe as out of bounds. A single-screen room
+  spans 240 x 208 pixels; larger rooms use 256 pixels per screen.
+- Preserved GBA signed negative-coordinate tile rounding (-7 inside,
+  -8 outside), and changed only state/step/substep, retaining the native
+  8-bit timer as in the GBA routine.
+- Added ROM-free regression tests for the inside, left, right and lower
+  room boundaries and counter preservation; no ROM data was imported.
+- Buer's terrain/rolling probes, real flame projectiles, linked collisions,
+  visual effects and sound output remain incomplete. No feature status or
+  parity percentage was increased.
+- Left native golden cache, input hashes, importer and reference fixtures
+  untouched. Timed the scoped test, full build and full CTest dashboard.
+
 ## Patch 0651 - Buer linked-fire facing and velocity parity
 
 - Ported sub_080CBA30's linked direct-frame facing initialization from

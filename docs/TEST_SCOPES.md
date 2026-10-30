@@ -29,7 +29,13 @@ cmake --build build -j8
 The dashboard's full CTest pass uses four parallel workers by default. For
 smaller systems or memory-heavy tests, set `FUSION_CTEST_JOBS=2` or `=1`;
 values 1..8 are supported. This changes *only* scheduling, never the number
-of tests or their verdicts. Do not run individual scopes and the full suite
+of tests or their verdicts.
+
+Scoped tests use `/usr/bin/time -p` when available to report real/user/sys
+seconds. Native golden cache misses and explicit uncached golden checks are
+also timed. The dashboard prints the wall time of its parallel full CTest
+pass and any individual tests lasting at least three seconds. Cache hits
+are still reported as cache hits, not as new ROM golden test executions. Do not run individual scopes and the full suite
 repeatedly in the same patch iteration unless debugging a failure.
 
 Auto-AI-PyPatch owns the commit/push after successful final validation.

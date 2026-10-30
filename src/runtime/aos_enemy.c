@@ -7718,7 +7718,20 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         buer_controller(e, soma);
         break;
     case AOS_ENEMY_WHITE_DRAGON:
-        white_dragon_controller(e, soma);
+        if (e->state == 3) {
+            /* EnemyWhiteDragonUpdate state 3 -> sub_08076ED8: retain the
+             * head's position during 30 recovery frames, then clear state,
+             * step, timer and direct sprite frame on the following update.
+             * The native affine recovery and linked-part effects are open. */
+            if (e->timer++ > 0x1D) {
+                e->state = 0;
+                e->step = 0;
+                e->timer = 0;
+                e->static_frame = 0;
+            }
+        } else {
+            white_dragon_controller(e, soma);
+        }
         break;
     case AOS_ENEMY_GIANT_GHOST:
         giant_ghost_controller(e, soma);

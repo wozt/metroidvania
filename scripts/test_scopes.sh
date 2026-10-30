@@ -16,14 +16,20 @@ if [ "$jobs" -lt 1 ] || [ "$jobs" -gt 8 ]; then
 fi
 scope=${1:-enemy}
 case "$scope" in
-    enemy) exec ctest --test-dir build --parallel "$jobs" --output-on-failure \
+    enemy) set -- ctest --test-dir build --parallel "$jobs" --output-on-failure \
         -R '^(aos_enemy|aos_audio|aos_stats|aos_pickup)$' ;;
-    aria) exec ctest --test-dir build --parallel "$jobs" --output-on-failure \
+    aria) set -- ctest --test-dir build --parallel "$jobs" --output-on-failure \
         -R '^aos_' ;;
-    mzm) exec ctest --test-dir build --parallel "$jobs" --output-on-failure \
+    mzm) set -- ctest --test-dir build --parallel "$jobs" --output-on-failure \
         -R '^mzm_' ;;
-    dashboard) exec ctest --test-dir build --parallel "$jobs" --output-on-failure \
+    dashboard) set -- ctest --test-dir build --parallel "$jobs" --output-on-failure \
         -R '^(dashboard_generator|no_proprietary_files)$' ;;
-    full) exec ./build/fusion_dashboard --run-tests ;;
+    full) set -- ./build/fusion_dashboard --run-tests ;;
     *) echo "usage: scripts/test_scopes.sh {enemy|aria|mzm|dashboard|full}" >&2; exit 2;;
 esac
+# POSIX time: real (wall time), user and sys. The Debian time package is
+# optional; retain the original test command when it is not installed.
+if [ -x /usr/bin/time ]; then
+    exec /usr/bin/time -p "$@"
+fi
+exec "$@"

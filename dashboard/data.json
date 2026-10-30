@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-30T02:26:26+00:00",
+ "generated_at": "2026-10-30T02:39:39+00:00",
  "git": {
-  "commit": "efb534b",
+  "commit": "f6b2cd6",
   "branch": "main",
   "dirty": true
  },
@@ -12017,7 +12017,7 @@
     "sub_08077458",
     "sub_080773AC"
    ],
-   "limitations": "The native affine scale/matrix choreography beyond the shared unit slot, articulated hit callbacks, palette callbacks and sounds are not ported. The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot. Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete.",
+   "limitations": "The native affine scale/matrix choreography beyond the shared unit slot, articulated hit callbacks, palette callbacks and sounds are not ported. White Dragon has its existing partial nine-part linked body with contact collisions. Source-aligned state-3 recovery now holds the parent for 30 frames then clears state, step, timer and direct sprite frame on update 31; a ROM-free regression covers that boundary. Native affine recovery, full articulated attack, death effects, sound, sprite parity and yellow:26 soul effect remain incomplete.",
    "next_action": "Trace the remaining affine scale/matrix sequence, damage callbacks and attack state machine.",
    "evidence": {
     "unit_tests": [
@@ -15056,7 +15056,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The dashboard separates declared implementation status, tests observed in the generating run, manual in-game checks, emulator comparisons and playthroughs. Feature percentages cover registered features only. The dedicated Aria catalog names all 113 enemies, separates its 11 bosses, and lists all 137 normal-mode items and 120 souls; catalog discovery is not implementation or native-fidelity evidence. The catalog previews for both games read native-generated coverage; Zero Mission actor/item totals, Aria monster/boss/item/soul families, five monster aspects and cross-category uniqueness are checked without duplicating detail rows in the game views. Full-suite CTest runs use bounded parallel workers with FUSION_CTEST_JOBS (default four, maximum eight); scoped enemy, Aria, MZM and dashboard commands avoid full ROM tests during edits. The complete dashboard test run remains mandatory once per cycle. Native ROM-wide golden tests use a SHA-256 fingerprint of the golden test binary, importer binary, fixtures, private ROMs and decompilation databases to reuse a previous successful result only when inputs are byte-identical. The cache lives in build/, never stores assets and can be bypassed with FUSION_GOLDEN_CACHE=0; other tests always execute.",
+   "limitations": "The development dashboard separates declared status from verified results, game/manual/emulator evidence and catalog discovery. Full CTest still runs all cases with bounded parallelism, while native golden cases may reuse a prior successful SHA-256 verification of unchanged inputs. It now reports total CTest wall time and individual tests lasting 3 seconds or longer. The shell test scopes and real golden rechecks use external time for real/user/sys durations. No fidelity or game progress is implied by test caching.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16901,7 +16901,7 @@
     "assets.aria_polar_affine_motion_0472"
    ],
    "native_routines": [],
-   "limitations": "The middle linked body record uses the native shared unit-scale affine slot and tracked angle; full scale/matrix choreography, attack timing, damage callbacks, fades, sounds and rewards remain open.",
+   "limitations": "The middle linked record uses the traced shared unit-scale affine slot and angle. White Dragon state-3 recovery now lasts 30 frames and returns the head to idle on update 31, ROM-free tested. Full attacks, palette matrices, hit forwarding, death, SFX and yellow soul ability remain incomplete.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -18538,6 +18538,12 @@
  },
  "timeline": [
   {
+   "commit": "f6b2cd6",
+   "date": "2026-10-30",
+   "subject": "Cache unchanged native golden verifications between Aria patches",
+   "scope": "project"
+  },
+  {
    "commit": "efb534b",
    "date": "2026-10-30",
    "subject": "Align Aria Peeping Eye steering with native GBA timing",
@@ -19009,12 +19015,6 @@
    "commit": "1fdc204",
    "date": "2026-10-27",
    "subject": "Connect Aria introduction ROM text",
-   "scope": "project"
-  },
-  {
-   "commit": "bd9e49f",
-   "date": "2026-10-27",
-   "subject": "Port Aria introduction text script",
    "scope": "project"
   }
  ],
@@ -21713,7 +21713,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "yellow:26",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete."
+       "notes": "The partial nine-part linked body, affine centre and Soma contact are still approximate. EnemyWhiteDragonUpdate's source-derived 30-frame state-3 recovery now clears the parent back to idle on update 31, covered by a ROM-free regression. Native attack/affine choreography, damage forwarding, dying, SFX playback and yellow:26 soul ability remain incomplete."
       }
      },
      {
@@ -28586,7 +28586,7 @@
        "id": "07:1A",
        "name": "White Dragon",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete.",
+       "note": "The partial nine-part linked body, affine centre and Soma contact are still approximate. EnemyWhiteDragonUpdate's source-derived 30-frame state-3 recovery now clears the parent back to idle on update 31, covered by a ROM-free regression. Native attack/affine choreography, damage forwarding, dying, SFX playback and yellow:26 soul ability remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

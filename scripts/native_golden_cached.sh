@@ -9,10 +9,18 @@ mode=${1:-}
 case "$mode" in aos|mzm) ;; *) echo 'usage: native_golden_cached.sh {aos|mzm}' >&2; exit 2;; esac
 binary="$root/build/fusion_native_golden_tests"
 importer="$root/build/fusion_importer"
+# Print real/user/sys only for actual ROM-wide runs, not successful cache hits.
+run_timed_golden() {
+    if [ -x /usr/bin/time ]; then
+        /usr/bin/time -p "$binary" "$mode"
+    else
+        "$binary" "$mode"
+    fi
+}
 # Golden updates and deliberate forced verification must always run the real
 # test, including its normal skip code when a ROM or tool is missing.
 if [ "${FUSION_GOLDEN_CACHE:-1}" = 0 ] || [ -n "${AOS_GOLDEN_UPDATE:-}" ] || [ -n "${MZM_GOLDEN_UPDATE:-}" ]; then
-    exec "$binary" "$mode"
+    run_timed_golden; exit $?
 fi
 # Inputs used directly by tests/test_native_golden.c's command vectors.
 if [ "$mode" = aos ]; then
@@ -32,16 +40,16 @@ fi
 # original test report the missing data and choose its own exit status.
 for input do
     if [ ! -f "$input" ]; then
-        exec "$binary" "$mode"
+        run_timed_golden; exit $?
     fi
 done
 # Include the source directory, locale, script version and each file name as
 # well as its content hash. All failures fall back to the real test.
 if ! command -v sha256sum >/dev/null 2>&1; then
-    exec "$binary" "$mode"
+    run_timed_golden; exit $?
 fi
 if ! hashes=$(sha256sum "$@"); then
-    exec "$binary" "$mode"
+    run_timed_golden; exit $?
 fi
 if ! key=$(
     {
@@ -50,10 +58,10 @@ if ! key=$(
         printf '%s\n' "$hashes"
     } | sha256sum | cut -d ' ' -f 1
 ); then
-    exec "$binary" "$mode"
+    run_timed_golden; exit $?
 fi
 case "$key" in
-    *[!0-9a-f]*|'') exec "$binary" "$mode" ;;
+    *[!0-9a-f]*|'') run_timed_golden; exit $? ;;
 esac
 stamp="$root/build/.fusion-native-golden-${mode}.ok"
 if [ -f "$stamp" ] && [ "$(cat "$stamp")" = "$key" ]; then
@@ -61,7 +69,7 @@ if [ -f "$stamp" ] && [ "$(cat "$stamp")" = "$key" ]; then
     exit 0
 fi
 # Run the original test and propagate its failure/skip without writing a stamp.
-if "$binary" "$mode"; then
+if run_timed_golden; then
     temporary="$stamp.$$.tmp"
     if printf '%s\n' "$key" > "$temporary"; then
         mv -f "$temporary" "$stamp" || rm -f "$temporary"

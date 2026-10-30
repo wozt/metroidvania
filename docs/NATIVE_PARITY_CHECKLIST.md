@@ -1731,7 +1731,7 @@ Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)`.
 
-[~] **`aos.enemies.white_dragon` — White Dragon.** The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot. Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete.
+[~] **`aos.enemies.white_dragon` — White Dragon.** White Dragon has its existing partial nine-part linked body with contact collisions. Source-aligned state-3 recovery now holds the parent for 30 frames then clears state, step, timer and direct sprite frame on update 31; a ROM-free regression covers that boundary. Native affine recovery, full articulated attack, death effects, sound, sprite parity and yellow:26 soul effect remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080773AC`, `aos:asm:asm/code/code_080709D8.s:sub_08077458`, `aos:asm:asm/code/code_080709D8.s:sub_08077C40`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  

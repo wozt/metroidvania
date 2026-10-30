@@ -597,7 +597,11 @@ static FusionJson default_run_ctest(const char *build) {
     int jobs = ctest_parallel_jobs(getenv("FUSION_CTEST_JOBS"));
     snprintf(command, sizeof command,
              "ctest --test-dir '%s' --parallel %d 2>/dev/null", build, jobs);
+    time_t started = time(NULL);
     char *output = capture(command, NULL);
+    time_t ended = time(NULL);
+    fprintf(stderr, "Full CTest elapsed: %lld s wall (parallel workers: %d)\n",
+            (long long)(ended - started), jobs);
     FusionJson outcomes = fusion_json_object();
     /* Test\s+#\d+:\s+([\w-]+)\s+\.+\s*(\*{0,3}\s*\w[^\n]*?)\s+[\d.]+ sec */
     for (char *line = output, *next; line && *line; line = next) {
@@ -633,6 +637,15 @@ static FusionJson default_run_ctest(const char *build) {
             *name_end = '\0';
             char *result = strndup(c, (size_t)(seconds - c));
             put_string(&outcomes, name, strstr(result, "Passed") ? "passed" : "failed");
+            /* CTest already reports individual durations in seconds; keep
+             * noisy short tests out of the logs and surface the slow ones. */
+            const char *duration = seconds;
+            while (duration > c &&
+                   (isdigit((unsigned char)duration[-1]) || duration[-1] == '.'))
+                --duration;
+            double elapsed = strtod(duration, NULL);
+            if (duration < seconds && elapsed >= 3.0)
+                fprintf(stderr, "Slow CTest: %s %.2f s\n", name, elapsed);
             free(result);
             *name_end = saved;
             break;

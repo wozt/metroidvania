@@ -219,6 +219,47 @@ static void peeping_eye_native_steering_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* White Dragon state 3 (sub_08076ED8) holds its position for
+ * thirty updates and resets on update 31, retaining shared contact. */
+static void white_dragon_recovery_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[2] = {{2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 2};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    for (int animation = 0; animation < 2; ++animation)
+        for (int frame = 0; frame < 2; ++frame) {
+            kind.modes[animation][frame] = 1;
+            kind.hurt[animation][frame] = kind.attack[animation][frame] =
+                (AosBox){-8, -8, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 4};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    AosEnemy dragon;
+    assert(aos_enemy_create(&dragon, AOS_ENEMY_WHITE_DRAGON,
+                            100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    dragon.spawned_count = 9; /* Body linkage is tested separately. */
+    dragon.state = 3;
+    dragon.step = 4;
+    dragon.timer = 0;
+    int32_t x = dragon.x, y = dragon.y;
+    for (int frame = 0; frame < 30; ++frame) {
+        aos_enemy_update(&dragon, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(dragon.state == 3 && dragon.x == x && dragon.y == y);
+    }
+    assert(dragon.timer == 30 && dragon.step == 4);
+    aos_enemy_update(&dragon, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(dragon.state == 0 && dragon.step == 0 && dragon.timer == 0);
+    assert(dragon.static_frame == 0 && dragon.x == x && dragon.y == y);
+    aos_enemy_update(&dragon, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(dragon.x != x); /* Normal controller resumed after recovery. */
+    memset(cells, 0, sizeof cells);
+}
+
 static void early_enemy_batch_tests(void) {
     assert(AOS_ENEMY_SKELETON == 0x02 && AOS_ENEMY_PEEPING_EYE == 0x06 &&
            AOS_ENEMY_KILLER_FISH == 0x07 && AOS_ENEMY_BONE_PILLAR == 0x08 &&
@@ -3722,6 +3763,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();
     giant_ghost_death_cue_tests();
     skeleton_bone_tests();

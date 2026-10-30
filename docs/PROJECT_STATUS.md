@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0646 - White Dragon recovery and timed long validations
+
+- Ported the bounded EnemyWhiteDragonUpdate state-3 recovery from GBA
+  sub_08076ED8: 30 stationary recovery frames, then reset state/step/timer
+  and the direct-frame sprite on the 31st update. Added a ROM-free boundary
+  test without asserting that the native affine motions or attacks are done.
+- Developer test scopes and real native golden cache misses now wrap their
+  commands in external `time -p` when available. Full dashboard CTest prints
+  total wall seconds and the individual slow tests (at least 3 seconds),
+  while recording every CTest verdict unchanged. The patch installer also
+  times its complete build and final dashboard regeneration.
+- No game fidelity status was upgraded. White Dragon's linked collision,
+  native attack, affine state, death effects, sound output and yellow soul
+  remain partial or unported.
+
 ## Patch 0645 - Verified-input cache for slow ROM golden CTest cases
 
 - Kept all native CTest entries in the full dashboard check, but introduced

@@ -94,6 +94,70 @@ static void buer_linked_fire_facing_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* sub_080CC3C8: the linked Buer fire copies its owner's coordinates only
+ * while its own state is zero. It remains allocated during the owner's
+ * staged death and disappears when the owner slot is removed, not on the
+ * lethal frame. There is no independent collision pass during that death. */
+static void buer_linked_fire_lifetime_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    AosHitReport made = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                         NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(made.child_count == 1 && made.children[0].role == AOS_ROLE_BUER_FIRE);
+    AosEnemy fire = made.children[0];
+    fire.parent = &buer;
+
+    /* Native helper state 0 follows the owner, including any subpixel part. */
+    buer.x = AOS_FIXED(105) + 0x1234;
+    buer.y = AOS_FIXED(126) + 0x2345;
+    AosHitReport hit = aos_enemy_update(&fire, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fire.state == 0 && fire.x == buer.x && fire.y == buer.y);
+    assert(!fire.removed && !hit.soma_hit && !hit.enemy_hit);
+
+    /* Native helper state 1 freezes its coordinates, despite owner motion. */
+    const int32_t frozen_x = fire.x, frozen_y = fire.y;
+    fire.state = 1;
+    buer.x = AOS_FIXED(140);
+    buer.y = AOS_FIXED(130);
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!fire.removed && fire.x == frozen_x && fire.y == frozen_y);
+
+    /* Buer's staged death still uses the linked owner visual. A defeated
+     * owner is not equivalent to a deleted owner, and contact is disabled. */
+    buer.defeated = true;
+    buer.state = 3;
+    buer.step = 1;
+    soma.x = frozen_x;
+    soma.y = frozen_y;
+    hit = aos_enemy_update(&fire, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!fire.removed && !hit.soma_hit && !hit.enemy_hit);
+    assert(fire.x == frozen_x && fire.y == frozen_y);
+    fire.state = 0;
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fire.x == buer.x && fire.y == buer.y && !fire.removed);
+
+    /* A deleted owner finally retires its linked child. */
+    buer.removed = true;
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fire.removed);
+    memset(cells, 0, sizeof cells);
+}
+
 /* sub_080CC458 -> sub_0806DF40: Buer enters state 2 when its
  * (x, y + 0x5C) probe leaves the room; one-screen bounds are 240 x 208.
  * The source resets step/substep but NOT the independent 8-bit timer. */
@@ -4113,6 +4177,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_linked_fire_lifetime_tests();
     buer_room_exit_tests();
     buer_linked_fire_facing_tests();
     buer_near_player_attack_tests();

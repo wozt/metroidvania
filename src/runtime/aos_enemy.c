@@ -6282,7 +6282,12 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
                                                const AosEnemyKind *kind) {
     AosHitReport report = {0};
     const AosEnemy *owner = child->parent;
-    if (!owner || owner->removed || owner->defeated) {
+    /* sub_080CC3C8 is a separately allocated linked visual: Buer's
+     * staged death still references it. Only the owner slot's actual
+     * removal retires that child. Other linked enemies retain the previous
+     * defeated-owner cleanup semantics. */
+    if (!owner || owner->removed ||
+        (owner->defeated && child->role != AOS_ROLE_BUER_FIRE)) {
         child->removed = true;
         return report;
     }
@@ -6313,9 +6318,17 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
         return report;
     }
     if (child->role == AOS_ROLE_BUER_FIRE) {
-        child->x = owner->x;
-        child->y = owner->y;
-        report = collide(child, soma, kind, NULL, NULL, 0, 0);
+        /* sub_080CC3C8: copy the owner's +0x40/+0x44 only while the
+         * linked child's own +0x0A state is zero. Do not keep teleporting
+         * a child that has entered its independent visual animation. */
+        if (child->state == 0) {
+            child->x = owner->x;
+            child->y = owner->y;
+        }
+        /* EnemyBuerUpdate dispatches its staged death without a normal
+         * enemy hit callback. Preserve its linked visual but not contact. */
+        if (!owner->defeated)
+            report = collide(child, soma, kind, NULL, NULL, 0, 0);
         aos_combat_tick(&child->combat);
         return report;
     }

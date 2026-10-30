@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0653 - Buer linked fire state gating and death lifetime
+
+- Reconstructed the bounded linked-helper callback of cvaos sub_080CC3C8:
+  the Buer fire's coordinates copy its owner's x/y only in child state 0.
+  Nonzero child states keep their position instead of teleporting each frame.
+- Kept Buer's linked fire allocated throughout the native multi-stage death;
+  the helper is removed when the owner itself is removed. Disabled the
+  provisional linked contact collision after the owner is defeated.
+- Added ROM-free regressions for exact subpixel copying, nonzero-state freeze,
+  death lifetime without contact and removal with the owner.
+- The child's genuine animation, native flame projectiles, owner-linked
+  visual effects, terrain probes and audible game audio are still missing.
+  No parity status or percentage was increased.
+- Golden-import cache inputs and wrappers remain unchanged. Targeted tests
+  precede one timed full build and one timed dashboard/CTest validation.
+
 ## Patch 0652 - Buer native room-boundary state gate
 
 - Ported the source-derived `sub_080CC458` room-exit gate: after moving in

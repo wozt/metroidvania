@@ -367,9 +367,18 @@ if(BUILD_TESTING)
         PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}" FUSION_BINARY_DIR="${CMAKE_BINARY_DIR}")
     target_link_libraries(fusion_native_golden_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_native_golden_tests)
-    add_test(NAME native_golden_aos COMMAND fusion_native_golden_tests aos)
-    add_test(NAME native_golden_mzm COMMAND fusion_native_golden_tests mzm)
+    # The wrapper caches only *successful* real-ROM verifications whose
+    # importer/test binaries, ROMs, fixtures and external input databases are
+    # byte-identical to the previous pass; other tests still execute normally.
+    add_test(NAME native_golden_aos
+             COMMAND sh "${CMAKE_SOURCE_DIR}/scripts/native_golden_cached.sh" aos
+                     "$<TARGET_FILE:fusion_native_golden_tests>")
+    add_test(NAME native_golden_mzm
+             COMMAND sh "${CMAKE_SOURCE_DIR}/scripts/native_golden_cached.sh" mzm
+                     "$<TARGET_FILE:fusion_native_golden_tests>")
     set_tests_properties(native_golden_aos native_golden_mzm PROPERTIES SKIP_RETURN_CODE 77)
+    add_test(NAME native_golden_cache_contract
+             COMMAND sh "${CMAKE_SOURCE_DIR}/tests/test_native_golden_cache.sh")
 
     add_executable(fusion_editor_cli_tests tests/test_editor_cli.c)
     target_compile_definitions(fusion_editor_cli_tests

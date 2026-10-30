@@ -37,8 +37,12 @@ decode both games' data), so target it while working and run it in full only onc
 - At the end of the cycle, in this order:
   1. `cmake --build build -j8`
   2. `./build/fusion_checklist`
-  3. `./build/fusion_dashboard --run-tests`: the single full test run.
-     It runs every CTest test once, records the outcomes, prints the failed tests and exits non-zero when one failed. The leak
+  3. `./build/fusion_dashboard --run-tests`: the single full CTest pass.
+     Every entry is checked; native ROM-wide golden entries may reuse a prior
+     successful SHA-256 verification of identical binaries and private inputs.
+     Use `FUSION_GOLDEN_CACHE=0` to force fresh imports when investigating a
+     golden regression or for a periodically uncached full audit. The dashboard
+     records outcomes, prints failed tests and exits non-zero when one failed. The leak
      check runs there as the `no_proprietary_files` CTest test.
   4. `./build/fusion_check_generated`
 - Do not add a separate `ctest` or `fusion_check_no_proprietary` run to that cycle: step 3 already runs

@@ -33,3 +33,26 @@ of tests or their verdicts. Do not run individual scopes and the full suite
 repeatedly in the same patch iteration unless debugging a failure.
 
 Auto-AI-PyPatch owns the commit/push after successful final validation.
+
+## Cache for expensive native golden tests
+
+The two ROM-wide golden tests still appear in every full CTest run. Their
+first successful execution creates a private stamp in `build/`. On subsequent
+runs the wrapper hashes each test/importer binary, relevant ROM/ELF, fixture
+and decompilation database input. If all bytes match the previous successful
+run, that previous golden verification is reused rather than re-importing
+thousands of native asset files. Missing data, updated fixtures, changed
+binaries or failed tests never produce a cached success.
+
+This is *incremental validation*, not a claim that the full ROM importer was
+executed anew: a CTest entry marked passed may be backed by an unchanged
+verified input fingerprint. To force real re-execution for auditing:
+
+```sh
+FUSION_GOLDEN_CACHE=0 ./build/fusion_dashboard --run-tests
+```
+
+Only the two golden CTest entries are cached; all other tests rerun. The
+standalone `native_golden_cache_contract` test checks cache hits, changes,
+explicit bypass and failure invalidation without using ROMs. Generated
+output and status remain derived from the authoritative C tools.

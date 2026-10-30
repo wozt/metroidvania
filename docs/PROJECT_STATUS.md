@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0645 - Verified-input cache for slow ROM golden CTest cases
+
+- Kept all native CTest entries in the full dashboard check, but introduced
+  content-addressed revalidation of the two extremely slow native golden
+  cases (Aria and Zero Mission). Their tests/importer binaries, matching ROMs,
+  MZM ELF, source databases and golden fixtures must have identical SHA-256
+  fingerprints to reuse a prior successful result. Missing data or failure
+  cannot populate the private cache, and any fingerprint change re-executes
+  the original golden test before updating its cache stamp.
+- Added a ROM-free cache contract test for reuse, invalidation, bypass and
+  failure behavior; all other CTest cases continue to run on every cycle.
+- `FUSION_GOLDEN_CACHE=0` forces a fresh native import and golden comparison.
+  A cached result is evidence for unchanged inputs, not a new execution of
+  the golden test. CTest result totals still enumerate the full suite.
+- This is validation-performance work only: it changes no gameplay code,
+  reconstruction fidelity or Aria/MZM parity percentages.
+
 ## Patch 0644 - Aria Peeping Eye native steering corrections
 
 - Compared sub_080882D2 and sub_08088478 against cvaos's original GBA

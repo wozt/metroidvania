@@ -1365,7 +1365,7 @@ Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not chec
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
 
-[~] **`aos.enemies.bone_pillar` — Bone Pillar.** The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected.
+[~] **`aos.enemies.bone_pillar` — Bone Pillar.** The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected. Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1374,7 +1374,7 @@ Known divergences: The per-segment collision, variant collision and damage callb
 Next action: Port per-segment collision and hit callbacks.
 Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
 
-[~] **`aos.enemies.buer` — Buer.** The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.
+[~] **`aos.enemies.buer` — Buer.** The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBuerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CBA30`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC3F8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC4E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC514`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1492,7 +1492,7 @@ Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the roo
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
 
-[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The native sheet, palette, frame descriptor and homing-plus-hover controller are connected.
+[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The native sheet, palette, frame descriptor and homing-plus-hover controller are connected. Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1547,7 +1547,7 @@ Known divergences: Sounds 0x6E and 0x153, the palette bits, the tracking list of
 Next action: Compare against an emulator.
 Evidence: in game: `aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames`.
 
-[~] **`aos.enemies.killer_fish` — Killer Fish.** The native Merman sheet and frame descriptor are reused with the Killer Fish identity, inert state and a bounded swimming loop.
+[~] **`aos.enemies.killer_fish` — Killer Fish.** The native Merman sheet and frame descriptor are reused with the Killer Fish identity, inert state and a bounded swimming loop. Added solid-wall collision guard to the partial swim controller; the water-height probe, multi-fish producer, attacks and sound are still missing.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08070168`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1623,7 +1623,7 @@ Known divergences: The four direct OAM records and collision boxes are ported; t
 Next action: Compare the three delayed effect trails and palette behavior against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis body and technical children render and Soma takes its native 52-damage contact hit by frame 180`.
 
-[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames.
+[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames. Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1653,7 +1653,7 @@ Known divergences: Animation-marker timing is represented by the exported animat
 Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator. Port Skill_EvilButcher_Ripper_Use and its sprite resource. Ripper red soul now has an isolated C11 motion test but is not castable; its art, wall probes, affine and hit callbacks remain missing.
 Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts`.
 
-[~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected.
+[~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected. Added solid-wall collision guard to the patrol; native multi-probe walking, hit reactions, debris and sound are still missing.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F10`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1672,14 +1672,14 @@ Known divergences: As Harpy, exact native acceleration rounding, activity-region
 Next action: Refine the shared acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_009 (--spawn 250 255 --hp 9999): Siren renders with its native palette, its three-note fan is visible by frame 40 and contact damages Soma for 40 HP`.
 
-[~] **`aos.enemies.skeleton` — Skeleton.** The native sheet, palette, frame boxes, floor placement, facing and bounded walking loop are connected; global inert state 5 is preserved.
+[~] **`aos.enemies.skeleton` — Skeleton.** Skeleton throws a bone projectile at animation-4 frame 2 with the traced 0x12/0x1B OAM IDs, motion, collision boxes, 0x88/0x89 throw cues and 0x6B death cue; the renderer falls back to exported bone-soul art until exact enemy OAM is available. Host reward and red soul remain shared; ROM-free regressions cover both projectile variants.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_080C0A1C.s:EnemySkeletonCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemySkeletonUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4148`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C4624`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The native bone children, throws, sounds and reward callback are not ported.  
-Next action: Port the bone children and attack timing.
+Known divergences: The full five-state native movement AI, attack variants, exact enemy-bone sprite export and emulator-parity timing remain open; a related native soul-bone sprite is used temporarily for rendering.  
+Next action: Reconstruct native patrol and attack-selection branches, bone spin and rendering comparison; validate in game before marking functional.
 Evidence: in game: `aria area_00_room_006: skeleton record at x 128, y 176`.
 
 [+] **`aos.enemies.skeleton_knight` — Skeleton knight.** The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
@@ -1731,7 +1731,7 @@ Known divergences: Sounds 0x87 and 0x1CD, the palette bits, the tracking list of
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_04_room_008 (--spawn 300 140 --hp 9999): the Valkyrie hovers in (frames 40 and 100), takes position above Soma (frame 140) and charges with its spear (frame 200)`.
 
-[~] **`aos.enemies.white_dragon` — White Dragon.** The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot.
+[~] **`aos.enemies.white_dragon` — White Dragon.** The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot. Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWhiteDragonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080773AC`, `aos:asm:asm/code/code_080709D8.s:sub_08077458`, `aos:asm:asm/code/code_080709D8.s:sub_08077C40`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1740,7 +1740,7 @@ Known divergences: The native affine scale/matrix choreography beyond the shared
 Next action: Trace the remaining affine scale/matrix sequence, damage callbacks and attack state machine.
 Evidence: in game: `aria area_00_room_013: White Dragon record at x 208, y 104`.
 
-[~] **`aos.enemies.winged_skeleton` — Winged Skeleton.** The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected.
+[~] **`aos.enemies.winged_skeleton` — Winged Skeleton.** The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected. Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete.
 
 Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyWingedSkeletonUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080751B4`, `aos:asm:asm/code/code_080709D8.s:sub_080754E0`, `aos:asm:asm/code/code_080709D8.s:sub_0807552C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  

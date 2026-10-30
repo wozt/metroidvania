@@ -512,6 +512,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             enemy->home_left = enemy->home - 32;
             enemy->home_right = enemy->home + 32;
             enemy->vx = toward_facing(enemy, 0x8000);
+            enemy->attack_wait = 40;
             break;
         case AOS_ENEMY_PEEPING_EYE:
             enemy->own_boxes = true;
@@ -1199,7 +1200,27 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                  * sub_0806E314 then skips its collisions. Its experience
                  * reward is applied by the runtime (aos_stats). */
                 enemy->defeated = true;
-                if (enemy->id == AOS_ENEMY_BAT) {
+                if (enemy->id == AOS_ENEMY_SKELETON &&
+                    enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080C4624: native death cue, followed by the
+                     * shared death flames; rewards are handled by the host. */
+                    aos_audio_play_song(0x6B);
+                    enemy->state = 0xFF;
+                    enemy->step = 0;
+                    enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_WINGED_SKELETON &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080751B4: the GBA requests 0x6B and enters
+                     * state 2 with a 40-frame death timer. */
+                    aos_audio_play_song(0x6B);
+                    enemy->state = 2;
+                    enemy->step = 0;
+                    enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    enemy->state = 2;
+                    enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_BAT) {
                     /* sub_080AD6E4: the bat dies. */
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
@@ -6178,7 +6199,10 @@ static void bone_pillar_children(const AosEnemy *owner, const AosAnimSet *anims,
         child.stats = owner->stats;
         child.hp = owner->hp;
         child.combat.type = AOS_TYPE_ENEMY;
-        child.combat.attack_off = child.combat.hurt_off = true;
+        /* The segments have native contact boxes; damage to the tower
+         * itself still needs the original per-piece hit callback. */
+        child.combat.attack_off = false;
+        child.combat.hurt_off = true;
         play_loop(&child, anims, 0, true);
         step_anim(&child, anims);
         report->children[report->child_count++] = child;
@@ -6193,7 +6217,12 @@ static void buer_fire_child(const AosEnemy *owner, AosHitReport *report) {
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
     AosEnemy child;
     make_static_child(&child, owner, AOS_ROLE_BUER_FIRE, 1);
-    child.combat.attack_off = child.combat.hurt_off = true;
+    /* Buer fire touches Soma, but cannot be destroyed independently
+     * until its native callbacks have been reconstructed. */
+    child.own_boxes = true;
+    child.own_hurt = child.own_attack = (AosBox){-8, -8, 16, 16};
+    child.combat.attack_off = false;
+    child.combat.hurt_off = true;
     report->children[report->child_count++] = child;
 }
 
@@ -6220,13 +6249,17 @@ static void white_dragon_children(const AosEnemy *owner, const AosAnimSet *anims
         child.stats = owner->stats;
         child.hp = owner->hp;
         child.combat.type = AOS_TYPE_ENEMY;
+        /* A linked part has contact collision but grants no separate XP.
+         * The native damage-to-head callbacks are not yet ported. */
+        child.combat.hurt_off = true;
         play_loop(&child, anims, 1, true);
         step_anim(&child, anims);
         report->children[report->child_count++] = child;
     }
 }
 
-static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKind *kind) {
+static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
+                                               const AosEnemyKind *kind) {
     AosHitReport report = {0};
     const AosEnemy *owner = child->parent;
     if (!owner || owner->removed || owner->defeated) {
@@ -6251,11 +6284,17 @@ static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKin
         child->x = owner->x;
         child->y = owner->y + AOS_FIXED((owner->param0 - child->variant) * 22);
         step_anim(child, kind->anims);
+        /* Only contact collision is active: the owner receives damage and
+         * normal rewards, so linked pieces never duplicate its loot. */
+        report = collide(child, soma, kind, NULL, NULL, 0, 0);
+        aos_combat_tick(&child->combat);
         return report;
     }
     if (child->role == AOS_ROLE_BUER_FIRE) {
         child->x = owner->x;
         child->y = owner->y;
+        report = collide(child, soma, kind, NULL, NULL, 0, 0);
+        aos_combat_tick(&child->combat);
         return report;
     }
     unsigned i = child->variant;
@@ -6269,6 +6308,59 @@ static AosHitReport linked_early_child_update(AosEnemy *child, const AosEnemyKin
     child->x = owner->x + side * (spacing + fixed_mul(aos_sine(bend + 0x4000u), curve));
     child->y = owner->y + fixed_mul(aos_sine(bend), curve);
     step_anim(child, kind->anims);
+    report = collide(child, soma, kind, NULL, NULL, 0, 0);
+    aos_combat_tick(&child->combat);
+    return report;
+}
+
+/* Skeleton's thrown bone, sub_080C3BD8. The native attack frame 2
+ * creates a projectile with its own OAM frame, sound, 8x8 hurt box and a
+ * 2x2 contact box. Its loot and experience must never be awarded: only
+ * AOS_ROLE_ENEMY is eligible in aria_runtime.c. */
+static void skeleton_throw_bone(const AosEnemy *owner, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy bone;
+    make_static_child(&bone, owner, AOS_ROLE_SKELETON_BONE,
+                      owner->variant ? 0x1B : 0x12);
+    bone.variant = owner->variant;
+    bone.x = owner->x;
+    bone.y = owner->y - AOS_FIXED(30);
+    bone.vx = owner->mirrored ? 0x8AAA : -0x8AAA;
+    bone.vy = -0x30000;
+    bone.ay = 0x6000;
+    bone.hp = 1;
+    bone.timer = 120; /* Safety cap for rooms extending below screen Y=0xAA. */
+    bone.own_boxes = true;
+    bone.own_hurt = (AosBox){-8, -8, 16, 16};
+    bone.own_attack = (AosBox){-1, -1, 2, 2};
+    aos_audio_play_song(owner->variant ? 0x89 : 0x88);
+    report->children[report->child_count++] = bone;
+}
+
+static AosHitReport skeleton_bone_update(AosEnemy *bone, AosSoma *soma,
+                                         const AosEnemyKind *kind,
+                                         const AosWeaponEntity *weapon,
+                                         const AosWeaponFrames *weapon_frames,
+                                         int soma_atk, int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (bone->defeated || bone->hp <= 0 || !bone->timer) {
+        bone->removed = true;
+        return report;
+    }
+    --bone->timer;
+    bone->x += bone->vx;
+    bone->y += bone->vy;
+    bone->vy += bone->ay;
+    /* Native sub_080C3BD8 removes the bone after leaving the lower screen.
+     * Horizontal culling prevents invisible projectiles living indefinitely. */
+    int x = (bone->x >> 16) - cam_x, y = (bone->y >> 16) - cam_y;
+    if (y > 0xAA || x < -0x50 || x > 0x130) {
+        bone->removed = true;
+        return report;
+    }
+    report = collide(bone, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (report.enemy_hit || report.soma_hit) bone->removed = true;
+    aos_combat_tick(&bone->combat);
     return report;
 }
 
@@ -7293,8 +7385,8 @@ static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma,
         e->x += e->vx;
         e->y += e->vy;
         e->phase = (uint16_t)(e->phase + 0x200);
-        if ((dx < 0 ? -dx : dx) <= AOS_FIXED(4) &&
-            (dy < 0 ? -dy : dy) <= AOS_FIXED(4)) {
+        if ((dx < 0 ? -dx : dx) < AOS_FIXED(4) &&
+            (dy < 0 ? -dy : dy) < AOS_FIXED(4)) {
             e->step = 2;
         } else if (e->timer++ >= 120) {
             e->step = 2;
@@ -7481,8 +7573,33 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
                                        uint32_t (*random)(void)) {
     AosHitReport report = {0};
     (void)layer;
+    if (e->id == AOS_ENEMY_WINGED_SKELETON && e->state == 3) {
+        /* EnemyWingedSkeletonUpdate state 3: one-in-32 spawn attempt,
+         * capped by the record's parameter 0. Spawned children remain
+         * owned by this room producer, which decrements on their removal. */
+        if ((random() & 31) == 0 && e->param0 > 0 &&
+            e->spawned_count < e->param0) {
+            int sx = (soma->x >> 16) - cam_x;
+            int sy = (int)(soma->vy >> 16);
+            report.spawn_x = cam_x + (sx <= 31 ? 256 : sx > 208 ? -16 :
+                                      ((random() & 1) ? 256 : -16));
+            report.spawn_y = cam_y + (sy < 0 ? (int)(random() % 0x50) - 0x40 :
+                                      sy > 0 ? (int)(random() & 0x3F) + 0x90 :
+                                               (int)(random() & 0x3F) + 0x30);
+            report.spawn_param1 = 0;
+            report.spawn = true;
+            ++e->spawned_count;
+        }
+        return report;
+    }
     if (e->defeated) {
-        generic_death(e, kind, random, &report);
+        if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
+            /* EnemyGiantGhostUpdate state 2: blinking death tail. This
+             * uses a deterministic alternating hide until the complete
+             * native palette/fade sequence can be imported. */
+            e->hidden = (e->timer & 1u) != 0;
+            if (e->timer && --e->timer == 0) e->removed = true;
+        } else generic_death(e, kind, random, &report);
         aos_combat_tick(&e->combat);
         return report;
     }
@@ -7512,20 +7629,68 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
 
     switch (e->id) {
     case AOS_ENEMY_SKELETON:
+        /* EnemySkeletonUpdate / sub_080C39F4: animation 4 throws exactly
+         * once at frame 2. The other native attack variants and the full
+         * movement decision tree are not yet reproduced. */
+        if (e->state == 4) {
+            if (e->step == 0) {
+                e->vx = 0;
+                play_loop(e, kind->anims, 4, false);
+                e->step = 1;
+            } else if (e->step == 1 && e->anim.frame >= 2) {
+                skeleton_throw_bone(e, &report);
+                e->step = 2;
+            } else if (e->step == 2 && e->cycle_done) {
+                e->state = 1;
+                e->step = 0;
+                e->attack_wait = 60;
+                play(e, kind->anims, 0);
+                e->vx = toward_facing(e, 0x8000);
+            }
+            break;
+        }
         e->x += e->vx;
         if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
             e->mirrored = !e->mirrored;
             e->vx = toward_facing(e, 0x8000);
         }
+        if (e->attack_wait) --e->attack_wait;
+        else if (kind->anims && kind->anims->count > 4 &&
+                 kind->anims->anims[4].count > 2 &&
+                 abs((e->x >> 16) - (soma->x >> 16)) <= 0xC4 &&
+                 abs((e->y >> 16) - (soma->y >> 16)) <= 0x80) {
+            face_player(e, soma);
+            e->state = 4;
+            e->step = 0;
+        }
         break;
     case AOS_ENEMY_ROCK_ARMOR:
         rock_armor_controller(e, soma);
+        /* The first-pass walker didn't test BG1 walls at all. Avoid walking
+         * through a solid tile until the complete probe state is ported. */
+        if ((e->vx > 0 && aos_wall_push_left(layer, (e->x >> 16) + 8,
+                                             (e->y >> 16) - 8)) ||
+            (e->vx < 0 && aos_wall_push_right(layer, (e->x >> 16) - 8,
+                                              (e->y >> 16) - 8))) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0x6000);
+        }
         break;
     case AOS_ENEMY_PEEPING_EYE:
         peeping_eye_controller(e, soma, random);
         break;
     case AOS_ENEMY_KILLER_FISH:
         e->x += e->vx;
+        /* Solid BG1 walls terminate the swim patrol. The separate water
+         * surface probe and native fish producer remain unported. */
+        if (e->vx > 0 && aos_wall_push_left(layer, e->x >> 16, e->y >> 16)) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0xC000);
+        } else if (e->vx < 0 &&
+                   aos_wall_push_right(layer, e->x >> 16, e->y >> 16)) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0xC000);
+        }
         e->phase += 0x300;
         e->y = AOS_FIXED(e->home) + aos_sine(e->phase) / 16;
         if (outside_margins(kind, 0, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y)) {
@@ -7589,11 +7754,14 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (enemy->role == AOS_ROLE_SKELETON_BONE)
+        return skeleton_bone_update(enemy, soma, kind, weapon, weapon_frames,
+                                    soma_atk, soma_def, cam_x, cam_y);
     if (enemy->role == AOS_ROLE_PEEPING_SEGMENT ||
         enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
         enemy->role == AOS_ROLE_BUER_FIRE ||
         enemy->role == AOS_ROLE_WHITE_DRAGON_PART)
-        return linked_early_child_update(enemy, kind);
+        return linked_early_child_update(enemy, soma, kind);
     if (enemy->id == AOS_ENEMY_GHOST && enemy->role == AOS_ROLE_ENEMY)
         return enemy_ghost_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                   cam_x, cam_y, random);

@@ -1,10 +1,10 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-29T23:48:53+00:00",
+ "generated_at": "2026-10-30T01:35:04+00:00",
  "git": {
-  "commit": "1438b61",
+  "commit": "f200619",
   "branch": "main",
-  "dirty": false
+  "dirty": true
  },
  "areas": [
   {
@@ -800,7 +800,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -883,7 +883,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1012,7 +1012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1083,7 +1083,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1211,7 +1211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1300,7 +1300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1379,7 +1379,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1451,7 +1451,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1524,7 +1524,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1602,7 +1602,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1694,7 +1694,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1768,7 +1768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1842,7 +1842,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1924,7 +1924,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -1989,7 +1989,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2071,7 +2071,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2133,7 +2133,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2221,7 +2221,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2321,7 +2321,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2380,7 +2380,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2453,7 +2453,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2522,7 +2522,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2593,7 +2593,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2651,7 +2651,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2729,7 +2729,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2787,7 +2787,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2875,7 +2875,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -2958,7 +2958,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3045,7 +3045,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3151,7 +3151,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3269,7 +3269,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3327,7 +3327,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3402,7 +3402,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3495,7 +3495,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3553,7 +3553,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3648,7 +3648,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3712,7 +3712,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3782,7 +3782,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3842,7 +3842,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -3954,7 +3954,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4021,7 +4021,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4081,7 +4081,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4140,7 +4140,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4266,7 +4266,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4338,7 +4338,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4423,7 +4423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4481,7 +4481,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4540,7 +4540,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4663,7 +4663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4725,7 +4725,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4793,7 +4793,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4852,7 +4852,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4910,7 +4910,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -4968,7 +4968,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5058,7 +5058,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5130,7 +5130,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5230,7 +5230,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5309,7 +5309,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5422,7 +5422,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5491,7 +5491,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5617,7 +5617,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5716,7 +5716,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5836,7 +5836,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5901,7 +5901,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -5976,7 +5976,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6074,7 +6074,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6162,7 +6162,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6311,7 +6311,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6383,7 +6383,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6460,7 +6460,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6535,7 +6535,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6596,7 +6596,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6685,7 +6685,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6748,7 +6748,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6841,7 +6841,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -6936,7 +6936,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7126,7 +7126,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7215,7 +7215,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7339,7 +7339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7398,7 +7398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7506,7 +7506,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7588,7 +7588,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7665,7 +7665,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7744,7 +7744,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7870,7 +7870,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -7957,7 +7957,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8034,7 +8034,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8132,7 +8132,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8235,7 +8235,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8324,7 +8324,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8416,7 +8416,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8521,7 +8521,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8670,7 +8670,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8785,7 +8785,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8909,7 +8909,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -8982,7 +8982,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9065,7 +9065,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9147,7 +9147,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9173,7 +9173,7 @@
     "sub_080B3BAC",
     "sub_080B3DCC"
    ],
-   "limitations": "The per-segment collision, variant collision and damage callbacks are not ported. The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected.",
+   "limitations": "The per-segment collision, variant collision and damage callbacks are not ported. The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected. Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete.",
    "next_action": "Port per-segment collision and hit callbacks.",
    "evidence": {
     "unit_tests": [
@@ -9216,7 +9216,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9244,7 +9244,7 @@
     "sub_080CC4E4",
     "sub_080CC514"
    ],
-   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected.",
+   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete.",
    "next_action": "Port fire collision and the bounce state machine.",
    "evidence": {
     "unit_tests": [
@@ -9287,7 +9287,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9358,7 +9358,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9427,7 +9427,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9505,7 +9505,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9579,7 +9579,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9654,7 +9654,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9723,7 +9723,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9792,7 +9792,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9868,7 +9868,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -9944,7 +9944,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10016,7 +10016,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10092,7 +10092,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10120,7 +10120,7 @@
     "sub_0807DBB4",
     "sub_0807DE14"
    ],
-   "limitations": "The three linked visual children, palette script, fade and attack states are not ported. The native sheet, palette, frame descriptor and homing-plus-hover controller are connected.",
+   "limitations": "The three linked visual children, palette script, fade and attack states are not ported. The native sheet, palette, frame descriptor and homing-plus-hover controller are connected. Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete.",
    "next_action": "Port the three children and palette/fade behavior.",
    "evidence": {
     "unit_tests": [
@@ -10163,7 +10163,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10238,7 +10238,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10307,7 +10307,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10388,7 +10388,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10468,7 +10468,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10549,7 +10549,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10578,7 +10578,7 @@
     "sub_08070168",
     "sub_08070B10"
    ],
-   "limitations": "The water-height probe, multi-fish producer, attack phases and sounds are not ported. The native Merman sheet and frame descriptor are reused with the Killer Fish identity, inert state and a bounded swimming loop.",
+   "limitations": "The water-height probe, multi-fish producer, attack phases and sounds are not ported. The native Merman sheet and frame descriptor are reused with the Killer Fish identity, inert state and a bounded swimming loop. Added solid-wall collision guard to the partial swim controller; the water-height probe, multi-fish producer, attacks and sound are still missing.",
    "next_action": "Port the water probe and linked fish producer.",
    "evidence": {
     "unit_tests": [
@@ -10621,7 +10621,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10703,7 +10703,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10779,7 +10779,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10856,7 +10856,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -10936,7 +10936,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11014,7 +11014,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11089,7 +11089,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11173,7 +11173,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11202,7 +11202,7 @@
     "sub_08088E08",
     "sub_08088D28"
    ],
-   "limitations": "The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported. The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames.",
+   "limitations": "The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported. The parent tracks Soma with the native angle convention; its 180 by 200 entry window runs the traced ten-stage, 40-frame extension sequence, then selects and steers toward the traced random upper-side target through two eye overlays and six linked polar frames. Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete.",
    "next_action": "Trace the state-3 visual variant selection and ceiling probe.",
    "evidence": {
     "unit_tests": [
@@ -11245,7 +11245,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11320,7 +11320,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11398,7 +11398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11425,7 +11425,7 @@
     "sub_0806B1FC",
     "sub_0806AF98"
    ],
-   "limitations": "The native armor hit reactions, walk probes, debris and sounds are not ported. The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected.",
+   "limitations": "The native armor hit reactions, walk probes, debris and sounds are not ported. The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected. Added solid-wall collision guard to the patrol; native multi-probe walking, hit reactions, debris and sound are still missing.",
    "next_action": "Port the probe walker and armor attack/reaction states.",
    "evidence": {
     "unit_tests": [
@@ -11468,7 +11468,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11537,7 +11537,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11566,8 +11566,8 @@
     "sub_080C4624",
     "sub_0806AF98"
    ],
-   "limitations": "The native bone children, throws, sounds and reward callback are not ported. The native sheet, palette, frame boxes, floor placement, facing and bounded walking loop are connected; global inert state 5 is preserved.",
-   "next_action": "Port the bone children and attack timing.",
+   "limitations": "The full five-state native movement AI, attack variants, exact enemy-bone sprite export and emulator-parity timing remain open; a related native soul-bone sprite is used temporarily for rendering. Skeleton throws a bone projectile at animation-4 frame 2 with the traced 0x12/0x1B OAM IDs, motion, collision boxes, 0x88/0x89 throw cues and 0x6B death cue; the renderer falls back to exported bone-soul art until exact enemy OAM is available. Host reward and red soul remain shared; ROM-free regressions cover both projectile variants.",
+   "next_action": "Reconstruct native patrol and attack-selection branches, bone spin and rendering comparison; validate in game before marking functional.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
@@ -11609,7 +11609,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11684,7 +11684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11765,7 +11765,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11836,7 +11836,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11912,7 +11912,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -11990,7 +11990,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12017,7 +12017,7 @@
     "sub_08077458",
     "sub_080773AC"
    ],
-   "limitations": "The native affine scale/matrix choreography beyond the shared unit slot, articulated hit callbacks, palette callbacks and sounds are not ported. The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot.",
+   "limitations": "The native affine scale/matrix choreography beyond the shared unit slot, articulated hit callbacks, palette callbacks and sounds are not ported. The dedicated head controller adds its facing, hover and drift; all nine animation-1 body parts are emitted in linked batches and follow a curved chain with per-part angles, with variant 5 using the shared unit-scale affine slot. Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete.",
    "next_action": "Trace the remaining affine scale/matrix sequence, damage callbacks and attack state machine.",
    "evidence": {
     "unit_tests": [
@@ -12060,7 +12060,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12087,7 +12087,7 @@
     "sub_0807552C",
     "sub_080751B4"
    ],
-   "limitations": "The native wing probes, dive attack, producer behavior and sounds are not ported. The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected.",
+   "limitations": "The native wing probes, dive attack, producer behavior and sounds are not ported. The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected. Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete.",
    "next_action": "Port the wing probes and dive attack.",
    "evidence": {
     "unit_tests": [
@@ -12130,7 +12130,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12210,7 +12210,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12286,7 +12286,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12369,7 +12369,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12438,7 +12438,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12503,7 +12503,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12564,7 +12564,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12638,7 +12638,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12735,7 +12735,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12839,7 +12839,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -12932,7 +12932,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13002,7 +13002,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13088,7 +13088,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13170,7 +13170,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13219,7 +13219,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13292,7 +13292,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13367,7 +13367,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13456,7 +13456,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13563,7 +13563,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -13639,7 +13639,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -14058,7 +14058,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -14232,7 +14232,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -14415,7 +14415,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -14562,7 +14562,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -14619,7 +14619,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -14694,7 +14694,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15028,7 +15028,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15080,7 +15080,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15129,7 +15129,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15191,7 +15191,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15240,7 +15240,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15300,7 +15300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15458,7 +15458,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15535,7 +15535,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15596,7 +15596,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15680,7 +15680,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15747,7 +15747,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15859,7 +15859,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15910,7 +15910,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -15973,7 +15973,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16022,7 +16022,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16191,7 +16191,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16255,7 +16255,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16368,7 +16368,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16417,7 +16417,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16467,7 +16467,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16516,7 +16516,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16566,7 +16566,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16644,7 +16644,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16721,7 +16721,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16786,7 +16786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16864,7 +16864,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -16914,7 +16914,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17056,7 +17056,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17135,7 +17135,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17199,7 +17199,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17276,7 +17276,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17367,7 +17367,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17445,7 +17445,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17603,7 +17603,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17650,7 +17650,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -17693,7 +17693,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-10-30"
    }
   },
   {
@@ -18515,6 +18515,12 @@
  },
  "timeline": [
   {
+   "commit": "f200619",
+   "date": "2026-10-30",
+   "subject": "new site",
+   "scope": "project"
+  },
+  {
    "commit": "1438b61",
    "date": "2026-10-30",
    "subject": "Fix dashboard tests using the native FusionJson number kind",
@@ -18986,12 +18992,6 @@
    "commit": "d08cc9e",
    "date": "2026-10-27",
    "subject": "Connect Aria native menu to portable saves",
-   "scope": "project"
-  },
-  {
-   "commit": "bd10d70",
-   "date": "2026-10-27",
-   "subject": "Port Aria native name entry controller",
    "scope": "project"
   }
  ],
@@ -21440,11 +21440,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "partial",
-       "sounds": "missing",
+       "sounds": "partial",
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "red:3",
-       "notes": "Soul: drops, is collected and casts (the shared throw routine (parameter 3)). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Animations: animation-4 bone throw frame 2 is ported, but native AI variants and complete timing remain open. Sounds: throw 0x88/0x89 and death 0x6B are requested and unit-tested, not listened to or emulator-compared. Loot: n/a; global drops and its red:3 soul are already integrated."
       }
      },
      {
@@ -21555,7 +21555,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "yellow:6",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete."
       }
      },
      {
@@ -21582,7 +21582,7 @@
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:7",
-       "notes": "Soul: drops, is collected and casts SkillKillerFishUse with its water and air paths. Sounds: the soul requests 0x19C, 0x1AD, 0xDB and 0xDA, but the enemy's native sounds are not traced. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops, is collected and casts SkillKillerFishUse with its water and air paths. Sounds: the soul requests 0x19C, 0x1AD, 0xDB and 0xDA, but the enemy's native sounds are not traced. Animations: its AI is only partly ported (see its enemy row). Added solid-wall collision guard to the partial swim controller; the water-height probe, multi-fish producer, attacks and sound are still missing."
       }
      },
      {
@@ -21609,7 +21609,7 @@
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "blue:10",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete."
       }
      },
      {
@@ -21663,7 +21663,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "blue:4",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete."
       }
      },
      {
@@ -21690,7 +21690,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "yellow:26",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete."
       }
      },
      {
@@ -21879,7 +21879,7 @@
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:14",
-       "notes": "Soul: drops, is collected and casts its terrain-walking stone, which bursts into four native-art fragments on landing. Sounds: the soul requests 0xE3 on cast and 0xD3 on landing; the enemy sounds remain missing. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops, is collected and casts its terrain-walking stone, which bursts into four native-art fragments on landing. Sounds: the soul requests 0xE3 on cast and 0xD3 on landing; the enemy sounds remain missing. Animations: its AI is only partly ported (see its enemy row). Added solid-wall collision guard to the patrol; native multi-probe walking, hit reactions, debris and sound are still missing."
       }
      },
      {
@@ -21906,7 +21906,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "blue:6",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete."
       }
      },
      {
@@ -21933,7 +21933,7 @@
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:1",
-       "notes": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row)."
+       "notes": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete."
       }
      },
      {
@@ -23446,8 +23446,8 @@
      },
      "sounds": {
       "ported": 24,
-      "partial": 0,
-      "missing": 23
+      "partial": 1,
+      "missing": 22
      },
      "loot": {
       "ported": 26,
@@ -25630,7 +25630,7 @@
        "id": "05:01",
        "name": "Winged Skeleton",
        "status": "functional",
-       "note": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -25708,7 +25708,7 @@
        "id": "05:03",
        "name": "Skeleton",
        "status": "functional",
-       "note": "Soul: drops, is collected and casts (the shared throw routine (parameter 3)). Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Animations: animation-4 bone throw frame 2 is ported, but native AI variants and complete timing remain open. Sounds: throw 0x88/0x89 and death 0x6B are requested and unit-tested, not listened to or emulator-compared. Loot: n/a; global drops and its red:3 soul are already integrated.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -25864,7 +25864,7 @@
        "id": "05:07",
        "name": "Killer Fish",
        "status": "functional",
-       "note": "Soul: drops, is collected and casts SkillKillerFishUse with its water and air paths. Sounds: the soul requests 0x19C, 0x1AD, 0xDB and 0xDA, but the enemy's native sounds are not traced. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops, is collected and casts SkillKillerFishUse with its water and air paths. Sounds: the soul requests 0x19C, 0x1AD, 0xDB and 0xDA, but the enemy's native sounds are not traced. Animations: its AI is only partly ported (see its enemy row). Added solid-wall collision guard to the partial swim controller; the water-height probe, multi-fish producer, attacks and sound are still missing.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -26137,7 +26137,7 @@
        "id": "05:0E",
        "name": "Rock Armor",
        "status": "functional",
-       "note": "Soul: drops, is collected and casts its terrain-walking stone, which bursts into four native-art fragments on landing. Sounds: the soul requests 0xE3 on cast and 0xD3 on landing; the enemy sounds remain missing. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops, is collected and casts its terrain-walking stone, which bursts into four native-art fragments on landing. Sounds: the soul requests 0xE3 on cast and 0xD3 on landing; the enemy sounds remain missing. Animations: its AI is only partly ported (see its enemy row). Added solid-wall collision guard to the patrol; native multi-probe walking, hit reactions, debris and sound are still missing.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -27825,7 +27825,7 @@
        "id": "06:04",
        "name": "Buer",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -27857,7 +27857,7 @@
        "id": "06:06",
        "name": "Giant Ghost",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Added a bounded state-2 blinking death tail; the native palette script, linked visual children, fades and attack choreography remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -27921,7 +27921,7 @@
        "id": "06:0A",
        "name": "Bone Pillar",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28243,7 +28243,7 @@
        "id": "07:06",
        "name": "Peeping Eye",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Aligned state-3 steering completion with the GBA 0x0003FFFF threshold; ceiling probes and visual-variant selection remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28563,7 +28563,7 @@
        "id": "07:1A",
        "name": "White Dragon",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row).",
+       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Animated body segments now use shared contact collision without independently awarding rewards; affine matrices and damage forwarding remain incomplete.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

@@ -20,6 +20,90 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+/* Skeleton: the native attack's third animation frame launches a single
+ * bone, using source-derived OAM IDs, sound, launch trajectory and boxes.
+ * The regular kill path is deliberately still used for XP and soul drops. */
+static void skeleton_bone_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {1, 1, 1, 1};
+    const AosAnimDef defs[5] = {
+        {4, ticks}, {4, ticks}, {4, ticks}, {4, ticks}, {4, ticks}
+    };
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    const AosEnemyStats stats = {20, 10, 1, 0, 0, 15};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(110), AOS_FIXED(150), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_SKELETON, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.attack_wait == 40);
+    e.attack_wait = 0;
+    AosHitReport report = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 4 && report.child_count == 0);
+    aos_audio_clear();
+    AosEnemy bone = {0};
+    int launches = 0;
+    for (int frame = 0; frame < 20; ++frame) {
+        report = aos_enemy_update(&e, &soma, &layer, &kind,
+                                  NULL, NULL, 10, 4, 0, 0, never_zero);
+        launches += report.child_count;
+        if (report.child_count) bone = report.children[0];
+    }
+    assert(launches == 1);
+    assert(bone.id == AOS_ENEMY_SKELETON && bone.role == AOS_ROLE_SKELETON_BONE);
+    assert(bone.static_frame == 0x12 && bone.y < e.y);
+    assert(bone.vx == 0x8AAA && bone.vy == -0x30000 && bone.ay == 0x6000);
+    assert(bone.own_hurt.w == 16 && bone.own_attack.w == 2);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x88) == 1);
+    assert(e.state == 1 && e.attack_wait > 0);
+    int32_t x0 = bone.x, y0 = bone.y;
+    aos_enemy_update(&bone, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(bone.x > x0 && bone.y < y0 && bone.vy == -0x2A000);
+    /* A struck projectile disappears but does not become a rewardable mob. */
+    bone.defeated = true;
+    aos_enemy_update(&bone, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(bone.removed);
+
+    AosEnemy mirrored = e;
+    mirrored.state = 4;
+    mirrored.step = 0;
+    mirrored.mirrored = false;
+    mirrored.variant = 1;
+    mirrored.anim = (AosAnimState){0};
+    aos_audio_clear();
+    for (int frame = 0; frame < 12; ++frame) {
+        report = aos_enemy_update(&mirrored, &soma, &layer, &kind,
+                                  NULL, NULL, 10, 4, 0, 0, never_zero);
+        if (report.child_count) {
+            assert(report.children[0].static_frame == 0x1B);
+            assert(report.children[0].vx == -0x8AAA);
+            break;
+        }
+    }
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
+    aos_audio_clear();
+    AosSoulAttack soul = {{e.x >> 16, (e.y >> 16) - 16, e.x >> 16,
+                           (e.y >> 16) - 16}, 255, 0, false, NULL};
+    aos_enemy_set_soul_attacks(&soul, 1);
+    report = aos_enemy_update(&e, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(report.killed && e.defeated && e.timer == 0x28);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    memset(cells, 0, sizeof cells);
+}
+
 static void early_enemy_batch_tests(void) {
     assert(AOS_ENEMY_SKELETON == 0x02 && AOS_ENEMY_PEEPING_EYE == 0x06 &&
            AOS_ENEMY_KILLER_FISH == 0x07 && AOS_ENEMY_BONE_PILLAR == 0x08 &&
@@ -86,6 +170,15 @@ static void early_enemy_batch_tests(void) {
     assert(eye.step == 3 && eye.target_x > eye.x && eye.target_y < eye.y);
     aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(eye.x > eye_x && eye.y < eye_y);
+    /* At exactly four pixels, the native <0x40000 threshold does not
+     * complete the steering state (the old <= test returned too early). */
+    eye.step = 3;
+    eye.vx = eye.vy = 0;
+    eye.timer = 0;
+    eye.target_x = eye.x + AOS_FIXED(4);
+    eye.target_y = eye.y;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 3);
 
     AosEnemy dragon;
     assert(aos_enemy_create(&dragon, AOS_ENEMY_WHITE_DRAGON, 100, 100, 0, 0, &soma, &layer,
@@ -107,6 +200,37 @@ static void early_enemy_batch_tests(void) {
     aos_enemy_update(&part, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(part.x != part_x || part.y != dragon.y);
     assert(part.angle != 0);
+
+    /* Source-derived Winged Skeleton producer: 1/32, cap, right-side
+     * entry when Soma is near the left camera border. */
+    AosEnemy winged_producer;
+    AosSoma near_left = aos_soma_spawn(AOS_FIXED(10), AOS_FIXED(100), NULL);
+    assert(aos_enemy_create(&winged_producer, AOS_ENEMY_WINGED_SKELETON,
+                            100, 100, 2, 1, &near_left, &layer, &kind, &stats));
+    assert(winged_producer.state == 3 && winged_producer.hidden);
+    AosHitReport winged_spawn = aos_enemy_update(&winged_producer, &near_left, &layer,
+        &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(winged_spawn.spawn && winged_spawn.spawn_x == 256 &&
+           winged_spawn.spawn_y == 48 && winged_producer.spawned_count == 1);
+    winged_spawn = aos_enemy_update(&winged_producer, &near_left, &layer,
+        &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(winged_spawn.spawn && winged_producer.spawned_count == 2);
+    winged_spawn = aos_enemy_update(&winged_producer, &near_left, &layer,
+        &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!winged_spawn.spawn);
+
+    AosEnemy giant_death;
+    assert(aos_enemy_create(&giant_death, AOS_ENEMY_GIANT_GHOST,
+                            100, 100, 0, 0, &near_left, &layer, &kind, &stats));
+    giant_death.defeated = true;
+    giant_death.state = 2;
+    giant_death.timer = 2;
+    aos_enemy_update(&giant_death, &near_left, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!giant_death.removed);
+    aos_enemy_update(&giant_death, &near_left, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(giant_death.removed);
 
     AosEnemy producer;
     assert(aos_enemy_create(&producer, AOS_ENEMY_GHOST, 100, 100, 0, 1, &soma, &layer, &kind,
@@ -3483,6 +3607,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    skeleton_bone_tests();
     soul_attack_tests();
     death_sound_tests();
     /* sub_080009E4 */

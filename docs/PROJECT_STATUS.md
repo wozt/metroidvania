@@ -2,6 +2,16 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0642 - Aria Skeleton native bone throw (direct C patch)
+
+- Added Skeleton's own bone entity, emitted once when native attack animation 4 reaches frame 2. Its sprite IDs 0x12/0x1B, initial launch offsets and fixed-point motion, 8x8 hurtbox / 2x2 attack box, and throw sound IDs 0x88/0x89 come from the cvaos GBA routines `sub_080C39F4` and `sub_080C3BD8`.
+- Connected the projectile to the existing room entity/render and collision paths, including a visible fallback to the already-exported bone-soul sprite while exact native Skeleton OAM frames remain unexported. It disappears on contact, leaves the camera, or expires. The native Skeleton death cue 0x6B is triggered at lethal hit; experience, drops and the red Bone soul continue through existing shared native reward logic.
+- Added ROM-free tests for one projectile per throw, both sprite/sound variants, motion, collision boxes and death cue. Marked only the Skeleton sound aspect `partial`; its enemy and animation statuses stay `partial` pending movement AI, variant selection, full bone art parity and in-game/emulator checks.
+- Applied directly to the C runtime; no Codex/agent orchestration and no ROM assets. This is an incremental native port, not a claim that all nine early enemies are complete.
+- Extended native type-8 contact collision to linked Bone Pillar segments, Buer fire and White Dragon body parts without creating duplicate experience, loot, or souls. The per-part native damage callbacks remain unported.
+- Added solid BG1 wall guards to the partial Killer Fish and Rock Armor patrols; aligned Peeping Eye state-3 target-distance completion with the native 0x0003FFFF threshold and added a regression. These bounded improvements do not claim complete AI, water-probe, child, fade or dive-state parity.
+- Added the source-derived one-in-32 Winged Skeleton room producer with parameter-capped children, and a bounded Giant Ghost death tail. Both remain `partial`: native visual children, flight/dive phases and palette fades remain unfinished.
+
 ## Patch 0641 - Generated catalog navigation and cross-section audit
 
 - The overview and individual game tabs now expose native-generated catalog

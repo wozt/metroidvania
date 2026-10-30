@@ -2726,6 +2726,14 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
                 if (objects->enemies[e->id].static_ids[k] == e->enemy.static_frame)
                     frame = &objects->enemies[e->id].statics[k];
         }
+        if (e->enemy.role == AOS_ROLE_SKELETON_BONE &&
+            (!frame || !frame->texture) &&
+            objects->skills[SKILL_ART_BONE].static_count >= 2) {
+            /* The enemy's native OAM 0x12/0x1B frames are not yet in the
+             * importer; reuse the existing native bone-soul sprite until
+             * the dedicated frames can be exported and golden-tested. */
+            frame = &objects->skills[SKILL_ART_BONE].statics[e->enemy.variant ? 1 : 0];
+        }
         if (!frame || !frame->texture) continue;
         int ex = e->enemy.x >> 16, ey = e->enemy.y >> 16;
         bool flip = e->enemy.mirrored;

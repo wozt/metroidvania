@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0661 - Buer state-one native X translation
+
+- Replaced state-one Buer's provisional 1.5-pixel patrolling X controller
+  with the bounded native `sub_0806CAF8(mode=2)` motion slice: copy the
+  signed +0x18 angular spin into +0x48 velocity before friction or bounce,
+  clamp to +/-0x80000 fixed-point and advance the 16.16 horizontal position.
+- Reused the conservative flat-solid front probe to cancel attempted X
+  movement on a wall and restored X when the +/-24-pixel room-front probe
+  leaves the room grid. Removed the artificial +/-64-pixel patrol reversal
+  in state one; the existing provisional bobbing is unchanged.
+- Added ROM-free regressions for subpixel accumulation, pre-friction ordering,
+  negative velocity, +/-8-pixel saturation, wall and room-front rollback,
+  both 512-pixel two-screen and 240-pixel one-screen room boundaries,
+  removal of provisional patrol reversal and state-2 attack isolation.
+- Native geometry from 0x08528B64, real vertical gravity and slope response,
+  state-2 mode-six X rollback, flame attacks and effects remain partial.
+  No reconstruction status was upgraded; no proprietary input was touched.
+
 ## Patch 0660 - Buer bounded floor-slope angular impulses
 
 - Extended the conservative `sub_080CC20C` contact approximation with

@@ -472,33 +472,33 @@ static void buer_rolling_fire_sign_sync_tests(void) {
     buer.home = 60;
     buer.y = AOS_FIXED(60); /* Keep the Y+92 room probe inside. */
 
-    /* Distinguish +0x18 (angular) from +0x48 (provisional X speed).
-     * A right-moving Buer spinning left must face its linked flame left. */
+    /* State-1 +0x48 now derives from pre-friction +0x18 spin.
+     * Parent player facing remains separate from linked flame facing. */
     buer.vx = 0x18000;
     buer.spin = -0x8000;
     buer.buer_fire_mirrored = true;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(buer.state == 1 && buer.vx > 0 && buer.spin < 0);
+    assert(buer.state == 1 && buer.vx == -0x8000 && buer.spin < 0);
     assert(buer.mirrored && !buer.buer_fire_mirrored);
 
-    /* Zero spin is clamped to the native +0x4000 friction floor; the
-     * flame faces right, even with independent leftward translation. */
+    /* Zero initial spin means zero X speed for this tick; only the
+     * later angular-friction branch raises spin to +0x4000. */
     buer.vx = -0x18000;
     buer.spin = 0;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(buer.spin == 0x4000 && buer.vx < 0);
+    assert(buer.spin == 0x4000 && buer.vx == 0);
     assert(buer.buer_fire_mirrored);
 
-    /* A provisional boundary reversal affects X speed, not the linked
-     * fire's +0x18 direction. Native collision probes remain pending. */
+    /* Old +/-64 provisional patrol boundaries no longer reverse X
+     * motion in state 1; room-front and terrain checks control it. */
     buer.x = AOS_FIXED(buer.home_right);
     buer.vx = 0x18000;
     buer.spin = 0x8000;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(buer.state == 1 && buer.vx < 0 && buer.spin > 0);
+    assert(buer.state == 1 && buer.vx == 0x8000 && buer.spin > 0);
     assert(buer.buer_fire_mirrored);
 
     /* Idle spin reverses/halves BEFORE choosing linked facing. */
@@ -646,7 +646,7 @@ static void buer_solid_wall_angular_bounce_tests(void) {
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.state == 1 && e.angle == 0x200 && e.spin == -0x4000);
-    assert(e.vx == 0 && !e.buer_fire_mirrored);
+    assert(e.vx == 0x8000 && !e.buer_fire_mirrored);
     cells[7 * W + 15] = 0;
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -796,6 +796,105 @@ static void buer_floor_slope_angular_impulse_tests(void) {
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.spin == 0x6000 && e.angle == 0x1234 && e.timer == 6);
+    memset(cells, 0, sizeof cells);
+}
+
+/* Patch 0661: source +0x18 spin is the mode-2 +0x48 X velocity
+ * BEFORE the angular friction/bounce step, never the provisional speed. */
+static void buer_state_one_horizontal_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    e.home = 60;
+    e.y = AOS_FIXED(60);
+    e.phase = 0;
+
+    /* The constructor's 0x8000 spin moves one half-pixel. Friction only
+     * affects the NEXT tick's signed native X translation. */
+    e.x = AOS_FIXED(100) + 0x2000;
+    e.vx = -0x30000;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 1 && e.x == AOS_FIXED(100) + 0xA000);
+    assert(e.vx == 0x8000 && e.spin == 0x7FC0);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(101) + 0x1FC0);
+    assert(e.vx == 0x7FC0 && e.spin == 0x7F80);
+
+    /* Signed negative subpixel motion, independent of player facing. */
+    e.x = AOS_FIXED(100) + 0x2000;
+    e.spin = -0x6000;
+    e.vx = 0x18000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(99) + 0xC000);
+    assert(e.vx == -0x6000 && e.spin == -0x5FC0 && e.mirrored);
+
+    /* The native horizontal translation is bounded to eight pixels. */
+    e.x = AOS_FIXED(100);
+    e.spin = 0x90000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(108) && e.vx == 0x80000);
+
+    /* A front solid wall causes wrapper rollback of the attempted X. */
+    e.x = AOS_FIXED(100);
+    e.spin = 0x8000;
+    e.y = AOS_FIXED(60);
+    e.phase = 0;
+    cells[7 * W + 15] = 0x03; /* (100+24,60) lies in this tile */
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.vx == 0x8000);
+    assert(e.spin == -0x4000);
+    cells[7 * W + 15] = 0;
+
+    /* The shared test layer spans TWO screens (512px): x=217 with a
+     * +24 forward probe remains inside, so the half-pixel motion survives. */
+    e.x = AOS_FIXED(217);
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(217) + 0x8000 && e.vx == 0x8000);
+
+    /* One-screen rooms use 30 tiles = 240px. At x=217, the forward
+     * +24 probe crosses x=240 after attempted movement: X rolls back. */
+    const AosCollision single_screen = {1, 1, W, H, cells, NULL, false};
+    e.x = AOS_FIXED(217);
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &single_screen, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(217) && e.vx == 0x8000);
+    e.x = AOS_FIXED(e.home_right);
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(e.home_right) + 0x8000 && e.vx == 0x8000);
+
+    /* State-2 active attack is unchanged: +0x48 is still provisional
+     * until the separate native mode-6 probe and attack motion are ported. */
+    e.x = AOS_FIXED(100);
+    e.state = 2;
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.vx = 0x18000;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(101) + 0x8000);
+    assert(e.vx == 0x18000 && e.spin == 0x8000);
     memset(cells, 0, sizeof cells);
 }
 
@@ -4704,6 +4803,7 @@ int main(void) {
     buer_no_contact_angular_tests();
     buer_solid_wall_angular_bounce_tests();
     buer_floor_slope_angular_impulse_tests();
+    buer_state_one_horizontal_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

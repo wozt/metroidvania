@@ -7674,12 +7674,50 @@ static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer) {
     buer_no_contact_angular_step(e);
 }
 
-static void buer_controller(AosEnemy *e, const AosSoma *soma) {
+/* Patch 0661: state-1 bounded native X translation via +0x18 spin. */
+/* sub_080CC20C -> sub_0806CAF8(mode 2) -> sub_0806C828:
+ * before spin friction/contact response, the source copies +0x18 into
+ * signed +0x48 X speed (mode 2 never reverses it), clamps horizontal
+ * speed at +/-8 px/frame and advances +0x40. Its collision wrapper
+ * restores the old X on horizontal contact; the separate +/-24 front
+ * room probe also restores X if it leaves the room's tile grid.
+ *
+ * Only Buer state 1 uses this bounded translation for now. It probes
+ * flat walls through the existing conservative helper. Ground slopes,
+ * gravity, the full 0x08528B64 contact table and state-2 mode-6 movement
+ * are intentionally NOT claimed as native by this slice. */
+static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *layer) {
+    const int32_t original_x = e->x;
+    int32_t velocity = e->spin;
+    if (velocity > 0x80000) velocity = 0x80000;
+    if (velocity < -0x80000) velocity = -0x80000;
+    e->vx = velocity;
+    e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
+    if (!layer || !layer->cells || !layer->width_screens ||
+        !layer->height_screens) return;
+    if (buer_forward_solid_wall(e, layer)) {
+        e->x = original_x;
+        return;
+    }
+    const int x = (e->x >> 16) + (e->spin >= 0 ? 24 : -24);
+    const int y = e->y >> 16;
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    if (x < 0 || x >= width || y < 0 || y >= height)
+        e->x = original_x;
+}
+
+static void buer_controller(AosEnemy *e, const AosSoma *soma,
+                            bool provisional_horizontal) {
     face_player(e, soma);
-    e->x += e->vx;
-    if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
-        e->mirrored = !e->mirrored;
-        e->vx = toward_facing(e, 0x18000);
+    if (provisional_horizontal) {
+        e->x += e->vx;
+        if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
+            e->mirrored = !e->mirrored;
+            e->vx = toward_facing(e, 0x18000);
+        }
     }
     e->phase = (uint16_t)(e->phase + 0x400);
     e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
@@ -8030,11 +8068,13 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
          * idle step execute sub_080CC20C's rolling-facing update. Capture
          * that condition before the timer can enter the attack step. */
         bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
-        /* Apply the bounded native angular wall-bounce branch before
-         * the attack gate; full native terrain mask reconstruction remains open. */
+        const bool state_one = e->state == 1;
+        /* Source mode 2 translates X using pre-contact spin. Do it
+         * before the bounded angular flags, preserving +0x48 timing. */
+        if (state_one) buer_state_one_horizontal_step(e, layer);
         if (rolling) buer_rolling_angular_step(e, layer);
         buer_attack_timing(e, soma, random);
-        buer_controller(e, soma);
+        buer_controller(e, soma, !state_one);
         if (rolling) {
             /* sub_080CC20C writes the linked +0x58 facing from the
              * final angular velocity at +0x18, after damping/reversal.

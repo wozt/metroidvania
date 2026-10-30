@@ -1523,6 +1523,82 @@ static void buer_terminal_death_flames_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0668: two different native death scatter windows and the linked
+ * fire's one-pixel 3-tick wobble. All coordinates here are synthetic. */
+static void buer_death_scatter_and_linked_wobble_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.defeated = true;
+    e.state = 3;
+    e.step = 0;
+    e.x = AOS_FIXED(100) + 0x1234;
+    e.y = AOS_FIXED(80) + 0x5678;
+    e.buer_death_linked_wobble = 1;
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(e.step == 1 && e.timer == 95 && e.buer_death_linked_wobble == 1);
+    assert(hit.effect_count == 0);
+    AosEnemy fire = {.role = AOS_ROLE_BUER_FIRE, .id = AOS_ENEMY_BUER,
+                     .parent = &e, .state = 0, .static_frame = 1};
+    hit = aos_enemy_update(&fire, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fire.x == e.x + AOS_FIXED(1) && fire.y == e.y + AOS_FIXED(1));
+    assert(!hit.soma_hit && !fire.removed);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(e.timer == 94 && !e.buer_death_linked_wobble);
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fire.x == e.x && fire.y == e.y);
+
+    /* At timer 91, flame precedes wobble undo. Fixed RNG=0 samples the
+     * first point of the source's 16x64-pixel rectangle. */
+    e.timer = 91;
+    e.buer_death_linked_wobble = 1;
+    const int32_t before_x = e.x, before_y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
+    assert(hit.effects[0].x == before_x - AOS_FIXED(7));
+    assert(hit.effects[0].y == before_y - AOS_FIXED(31));
+    assert(!hit.effects[0].mirrored && !e.buer_death_linked_wobble);
+
+    /* On death step two, sample the OLD X/Y, then advance the parent by
+     * pre-contact spin. The linked fire moves by that exact parent delta. */
+    e.step = 2;
+    e.timer = 128;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.spin = 0x8000;
+    e.buer_death_linked_wobble = 1;
+    const int32_t old_x = e.x, old_y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
+    assert(hit.effects[0].x == old_x - AOS_FIXED(32));
+    assert(hit.effects[0].y == old_y - AOS_FIXED(32));
+    assert(e.x == old_x + 0x8000 && e.buer_death_linked_wobble == 1);
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fire.x == e.x + AOS_FIXED(1) && fire.y == e.y + AOS_FIXED(1));
+    /* Once the owner is removed, the visual child also retires. */
+    e.removed = true;
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fire.removed);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5320,6 +5396,7 @@ int main(void) {
     buer_projectile_lifecycle_tests();
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();
+    buer_death_scatter_and_linked_wobble_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

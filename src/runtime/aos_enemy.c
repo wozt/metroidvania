@@ -6336,8 +6336,15 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
          * linked child's own +0x0A state is zero. Do not keep teleporting
          * a child that has entered its independent visual animation. */
         if (child->state == 0) {
-            child->x = owner->x;
-            child->y = owner->y;
+            /* During sub_080CBEA4's death animation, the linked fire
+             * receives a one-pixel X/Y nudge every third countdown tick,
+             * undoes it on the next tick, and keeps the final displacement
+             * while moving with its owner in death stage two. */
+            const int32_t wobble = owner->defeated && owner->state == 3 &&
+                (owner->step == 1 || owner->step == 2) &&
+                owner->buer_death_linked_wobble ? AOS_FIXED(1) : 0;
+            child->x = (int32_t)((uint32_t)owner->x + (uint32_t)wobble);
+            child->y = (int32_t)((uint32_t)owner->y + (uint32_t)wobble);
         }
         /* EnemyBuerUpdate dispatches its staged death without a normal
          * enemy hit callback. Preserve its linked visual but not contact. */
@@ -8089,10 +8096,26 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
         aos_audio_play_song(0x6E);
         e->timer = 0x60;
         e->step = 1;
+        e->buer_death_linked_wobble = 0;
         /* sub_080CBEF2: preserve the incoming spin sign. */
         e->spin = e->spin < 0 ? -0x20000 : 0x20000;
     }
     if (e->step == 1) {
+        /* Native source order: the 7-tick flame emission reads the linked
+         * visual position BEFORE the 3-tick X/Y linked-fire wobble. Its
+         * two random axes span 16x64 fixed-point pixels (sub_0806D5C0),
+         * not a zero-sized effect at the enemy centre. */
+        if (e->timer % 7u == 0) {
+            const int32_t shift = e->buer_death_linked_wobble ? AOS_FIXED(1) : 0;
+            spawn_flame_at((int32_t)((uint32_t)e->x + (uint32_t)shift),
+                           (int32_t)((uint32_t)e->y + (uint32_t)shift),
+                           AOS_FIXED(16), AOS_FIXED(64), random, &report);
+        }
+        /* The linked child receives a +1,+1 pixel nudge every third tick
+         * and an undo on the next. The phase-two child preserves the last
+         * displacement and follows the owner's X/Y delta. */
+        if (e->timer % 3u == 0) e->buer_death_linked_wobble = 1;
+        else if (e->buer_death_linked_wobble) e->buer_death_linked_wobble = 0;
         /* Native first stage, every frame including its creation frame:
          * decelerate 0x380 toward the +/-0x4000 floor and integrate spin/64. */
         if (e->spin >= 0) {
@@ -8103,25 +8126,25 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
             if (e->spin > -0x4000) e->spin = -0x4000;
         }
         e->angle += (uint32_t)(e->spin / 64);
-        if (e->timer % 7u == 0)
-            spawn_flame_at(e->x, e->y, 0, 0, random, &report);
         if (--e->timer == 0xFF) {
             e->timer = 0x80;
             e->step = 2;
         }
     } else if (e->step == 2) {
-        /* Native second stage re-enters sub_080CC20C(mode 1). Its angular
-         * contacts and affine rotation are reconstructed; full X/Y probes
-         * and translation of the linked sprite remain pending. */
-        /* This death phase calls sub_080CC20C(mode 1): native X
-         * translation from the previous spin precedes angular damping. */
+        /* Native stage two scatters flames around the OLD parent position,
+         * before sub_080CC20C moves it. Both random axes span 64 pixels.
+         * Preserve the linked flame's last stage-one nudge, and let its
+         * state-zero callback follow the updated owner position. */
+        if ((e->timer & 1u) == 0)
+            spawn_flame_at(e->x, e->y, AOS_FIXED(64), AOS_FIXED(64),
+                           random, &report);
+        if (e->timer > 0x1C && (e->timer % 0x14) == 0)
+            aos_audio_play_song(0x6E);
+        /* Source sub_080CC20C(mode=1) moves before angular damping. The
+         * complete multi-point terrain table remains a separate task. */
         buer_state_one_horizontal_step(e, layer);
         buer_rolling_angular_step(e, layer);
         e->buer_fire_mirrored = e->spin >= 0;
-        if ((e->timer & 1u) == 0)
-            spawn_flame_at(e->x, e->y, 0, 0, random, &report);
-        if (e->timer > 0x1C && (e->timer % 0x14) == 0)
-            aos_audio_play_song(0x6E);
         if (--e->timer == 0xFF) e->step = 3;
     } else if (e->step == 3) {
         /* Source sub_080CC0F2: all eight fire effects in one native tick,

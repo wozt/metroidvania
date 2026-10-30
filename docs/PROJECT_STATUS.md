@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0668 - Buer linked death wobble and source-sized flame scattering
+
+- Reconstructed source `sub_080CBEA4` death-stage-one linked-fire wobble:
+  a one-pixel offset in both coordinates at every third countdown tick,
+  cleared on the next tick and carried into the second death stage. This
+  works through the existing owner/child model without raw room pointers.
+- The linked state-zero child follows the owner with this death offset;
+  independently animated linked children continue freezing their position,
+  contact remains off during staged death and the child retires with owner.
+- Ported the native `sub_0806D5C0` flame scatter widths: 16x64 pixels in
+  stage one around the linked visual, 64x64 pixels in stage two around the
+  *previous* owner position before the movement/contact step. Preserves the
+  source's RNG draw order, 7/2 frame emission cadence, spin damping, angle,
+  sounds, final 8-flame ROM-local finale and death cleanup.
+- Added deterministic ROM-free tests for 3-tick wobble, linked following,
+  both scatter rectangles, old-position ordering, and owner cleanup.
+- Buer remains PARTIAL: native mode-two/six multi-point collision, affine
+  OAM effects, exact linked animation, and verified projectile hitboxes are
+  pending. No ROM data or native proprietary tables are bundled.
+
 ## Patch 0667 - Buer ROM-local eight-flame death finale
 
 - Ported Buer's eight final native `sub_0806D578` flame spawns from its

@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0658 - Correct Buer native spin ownership and linked-fire sign
+
+- Audited source `EnemyBuerCreate`, `sub_080CBA30`, `sub_080CC20C` and
+  state-2 `sub_080CBAEC`/`_080CBC4C`: GBA +0x18 is signed angular speed
+  (C `spin`), while GBA +0x48 is translation (C `vx`). Previous Buer
+  facing/attack-expiry code inadvertently used `vx` for native +0x18.
+- Linked-fire initialization, rolling updates and the idle wake-up gate now
+  use post-damping `spin` sign. On even state-2 action-window expiry, the
+  native code changes `spin` sign to the linked fire's direction without
+  rewriting the still-provisional horizontal translation speed.
+- Regressions cover conflicting angular and translational signs, the
+  zero-spin clamp, rolling state-1 and state-2 idle, independent active fire
+  orientation, alternating idle angular sign, directional proximity and
+  even-expiry restoration of the signed spin.
+- No full terrain collision or bounce behavior is claimed. The older
+  provisional translation, original linked flame effects and actual game
+  audio/rendering are still partial. No ROMs, golden inputs or cache paths
+  were read or changed; registries retain their partial statuses.
+
 ## Patch 0657 - Buer native no-contact rolling angular damping
 
 - Ported a bounded branch of cvaos `sub_080CC20C`, specifically the case

@@ -546,7 +546,9 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             /* EnemyBuerCreate (+0x18): the native angular speed starts
              * at 0x8000, independently of the provisional translation. */
             enemy->spin = 0x8000;
-            enemy->buer_fire_mirrored = enemy->vx >= 0;
+            /* sub_080CBA30: linked flame facing derives from +0x18
+             * angular speed, not provisional +0x48 translation. */
+            enemy->buer_fire_mirrored = enemy->spin >= 0;
             break;
         case AOS_ENEMY_WHITE_DRAGON:
             enemy->own_boxes = true;
@@ -7487,10 +7489,10 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
     if (e->state != 2) return;
     if (e->step == 0) {
         /* sub_080CC20C is run immediately before the source idle branch:
-         * it writes the linked fire's facing from the rolling speed's sign.
-         * The native probe/friction changes to that speed are still pending;
-         * do not reuse a stale attack-window facing for the wake-up test. */
-        e->buer_fire_mirrored = e->vx >= 0;
+         * it writes linked-fire facing from angular velocity (+0x18).
+         * Collision-driven speed changes are still pending; the no-contact
+         * angular step has already run before this facing/wake-up check. */
+        e->buer_fire_mirrored = e->spin >= 0;
         /* sub_080CBAEC/_080CBB2E: an idle Buer notices Soma in the
          * inclusive 192x48 window only on the linked fire's facing side.
          * sub_0806BBC4 returns +1 for Soma right, -1 for left, 0 aligned.
@@ -7552,11 +7554,11 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
      * still override the transition if it reaches 0xFF on the same tick. */
     if (--e->timer == 0xFF) {
         if ((random() & 1u) == 0) {
-            /* _080CBC4C.._080CBC56: restart the idle step with
-             * the signed velocity dictated by the linked fire's
-             * orientation, irrespective of the parent facing. */
-            int32_t magnitude = e->vx < 0 ? -e->vx : e->vx;
-            e->vx = e->buer_fire_mirrored ? magnitude : -magnitude;
+            /* _080CBC4C.._080CBC56 writes GBA +0x18: match the
+             * linked fire's facing by changing signed angular velocity,
+             * leaving provisional +0x48 translation untouched. */
+            int32_t magnitude = e->spin < 0 ? -e->spin : e->spin;
+            e->spin = e->buer_fire_mirrored ? magnitude : -magnitude;
             e->step = 0;
             e->substep = 0;
             e->timer = 0;
@@ -7965,10 +7967,10 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         buer_attack_timing(e, soma, random);
         buer_controller(e, soma);
         if (rolling) {
-            /* sub_080CC20C's final +0x58 bit-0x40 write uses velocity
-             * after movement. Do not overwrite the linked independent bit
-             * during attack windows, recovery, or the timed death. */
-            e->buer_fire_mirrored = e->vx >= 0;
+            /* sub_080CC20C writes the linked +0x58 facing from the
+             * final angular velocity at +0x18, after damping/reversal.
+             * Active attacks and death preserve their independent facing. */
+            e->buer_fire_mirrored = e->spin >= 0;
         }
         if (e->state == 1 && buer_room_probe_outside(e, layer)) {
             /* sub_080CC458: only the state and two sub-states clear.

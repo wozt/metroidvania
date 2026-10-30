@@ -51,11 +51,15 @@ static void buer_linked_fire_facing_tests(void) {
     AosEnemy fire = spawned.children[0];
     fire.parent = &buer;
 
-    /* Window 1: positive speed, linked facing toggles to left and the
-     * outgoing parent velocity becomes negative on an even expiry draw. */
+    /* Window 1: positive angular speed, then the linked sprite
+     * flips left; even expiry reverses the +0x18 spin, not +0x48 X speed. */
     const uint32_t left_draws[] = {0, 0};
     script = left_draws;
     script_at = 0;
+    /* The preceding idle tick reversed angular speed and linked facing.
+     * Establish a positive-spin/right-facing start for window 1. */
+    buer.spin = 0x8000;
+    buer.buer_fire_mirrored = true;
     buer.step = 2;
     buer.substep = buer.timer = 0;
     aos_enemy_update(&buer, &soma, &layer, &kind,
@@ -69,12 +73,13 @@ static void buer_linked_fire_facing_tests(void) {
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, scripted);
     assert(script_at == 2 && buer.step == 0 && buer.substep == 0);
-    assert(buer.vx < 0 && !buer.buer_fire_mirrored);
+    assert(buer.spin < 0 && !buer.buer_fire_mirrored);
+    assert(buer.vx > 0); /* Provisional translation is not the native spin. */
 
-    /* Window 2: start facing left, then flip the linked fire back to
-     * right and restore a positive parent velocity on expiration. */
+    /* Window 2: start spinning left, flip linked fire right, and restore
+     * positive angular velocity on expiry without altering X velocity. */
     buer.x = AOS_FIXED(100);
-    buer.vx = -0x18000;
+    buer.spin = -0x8000;
     buer.step = 2;
     buer.substep = buer.timer = 0;
     const uint32_t right_draws[] = {0, 0};
@@ -89,8 +94,8 @@ static void buer_linked_fire_facing_tests(void) {
     for (int frame = 0; frame < 32; ++frame)
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, scripted);
-    assert(script_at == 2 && buer.step == 0 && buer.vx > 0);
-    assert(buer.buer_fire_mirrored);
+    assert(script_at == 2 && buer.step == 0 && buer.spin > 0);
+    assert(buer.vx > 0 && buer.buer_fire_mirrored);
     memset(cells, 0, sizeof cells);
 }
 
@@ -379,10 +384,12 @@ static void buer_idle_directional_wakeup_tests(void) {
         buer.x = AOS_FIXED(100);
         buer.y = AOS_FIXED(buer.home);
         buer.phase = 0;
-        buer.vx = side ? 0x18000 : -0x18000;
+        buer.vx = 0;
+        /* Idle no-contact motion reverses +0x18 BEFORE the wake-up gate. */
+        buer.spin = side ? -0x8000 : 0x8000;
         buer.state = 2;
         buer.step = buer.substep = buer.timer = 0;
-        /* The live rolling update must rederive this orientation. */
+        /* A deliberately stale bit proves the spin-based update. */
         buer.buer_fire_mirrored = side == 0;
         soma.x = buer.x + (side ? AOS_FIXED(96) : -AOS_FIXED(96));
         soma.y = buer.y + AOS_FIXED(24);
@@ -401,6 +408,7 @@ static void buer_idle_directional_wakeup_tests(void) {
         buer.y = AOS_FIXED(buer.home);
         buer.phase = 0;
         buer.vx = 0;
+        buer.spin = -0x8000; /* Idle reversal leaves facing right. */
         buer.state = 2;
         buer.step = buer.substep = buer.timer = 0;
         buer.buer_fire_mirrored = true;
@@ -422,6 +430,7 @@ static void buer_idle_directional_wakeup_tests(void) {
         buer.y = AOS_FIXED(buer.home);
         buer.phase = 0;
         buer.vx = 0;
+        buer.spin = -0x8000;
         buer.state = 2;
         buer.step = buer.substep = 0;
         buer.timer = 0xFD;
@@ -431,8 +440,10 @@ static void buer_idle_directional_wakeup_tests(void) {
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, scripted);
         assert(buer.step == 1 && buer.timer == 0xFE && script_at == 0);
-        /* Restore step 0 to exercise the independent threshold ordering. */
+        /* Restore the same rightward angular heading at the byte
+         * threshold to exercise the independent RNG/attack ordering. */
         buer.step = 0;
+        buer.spin = -0x8000;
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, scripted);
         assert(script_at == 1 && buer.timer == 0);
@@ -457,48 +468,56 @@ static void buer_rolling_fire_sign_sync_tests(void) {
     AosEnemy buer;
     assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
                             0, 0, &soma, &layer, &kind, &stats));
-    assert(buer.state == 1);
-    /* Keep the original room probe (Y+92) inside the one-screen height.
-     * The floor-snap constructor otherwise starts below this test room. */
+    assert(buer.state == 1 && buer.spin == 0x8000);
     buer.home = 60;
-    buer.y = AOS_FIXED(60);
+    buer.y = AOS_FIXED(60); /* Keep the Y+92 room probe inside. */
 
-    /* A left-moving state-1 Buer forces the linked sprite left even if
-     * the parent faces Soma to the right. Zero velocity faces right. */
-    buer.vx = -0x18000;
+    /* Distinguish +0x18 (angular) from +0x48 (provisional X speed).
+     * A right-moving Buer spinning left must face its linked flame left. */
+    buer.vx = 0x18000;
+    buer.spin = -0x8000;
     buer.buer_fire_mirrored = true;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(buer.state == 1 && buer.vx < 0);
+    assert(buer.state == 1 && buer.vx > 0 && buer.spin < 0);
     assert(buer.mirrored && !buer.buer_fire_mirrored);
-    buer.vx = 0;
+
+    /* Zero spin is clamped to the native +0x4000 friction floor; the
+     * flame faces right, even with independent leftward translation. */
+    buer.vx = -0x18000;
+    buer.spin = 0;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.spin == 0x4000 && buer.vx < 0);
     assert(buer.buer_fire_mirrored);
 
-    /* When the provisional movement controller reverses at the edge,
-     * orientation reflects the resulting signed speed, not its old sign. */
+    /* A provisional boundary reversal affects X speed, not the linked
+     * fire's +0x18 direction. Native collision probes remain pending. */
     buer.x = AOS_FIXED(buer.home_right);
     buer.vx = 0x18000;
+    buer.spin = 0x8000;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(buer.state == 1 && buer.vx < 0 && !buer.buer_fire_mirrored);
+    assert(buer.state == 1 && buer.vx < 0 && buer.spin > 0);
+    assert(buer.buer_fire_mirrored);
 
-    /* Native state-2 idle executes the same rolling-facing callback. */
+    /* Idle spin reverses/halves BEFORE choosing linked facing. */
     buer.x = AOS_FIXED(100);
     buer.state = 2;
     buer.step = 0;
     buer.timer = 4;
-    buer.vx = -0x18000;
+    buer.spin = 0x8000;
+    buer.vx = 0x18000;
     buer.buer_fire_mirrored = true;
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 0 && buer.timer == 5);
-    assert(buer.vx < 0 && !buer.buer_fire_mirrored);
+    assert(buer.spin == -0x3FE0 && buer.vx > 0);
+    assert(!buer.buer_fire_mirrored);
 
-    /* Native state-2 step 2 and step 1 do not call sub_080CC20C. A
-     * different parent velocity must NOT overwrite the linked fire bit. */
-    buer.vx = 0x18000;
+    /* Attack and recovery must not overwrite independent fire facing,
+     * even when angular speed has the opposite sign. */
+    buer.spin = 0x8000;
     buer.buer_fire_mirrored = false;
     buer.step = 2;
     buer.substep = 2;
@@ -573,13 +592,15 @@ static void buer_no_contact_angular_tests(void) {
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.step == 0 && e.timer == 11 && e.angle == 0x1FF);
-    assert(e.spin == -0x3FE0);
+    assert(e.spin == -0x3FE0 && !e.buer_fire_mirrored);
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.timer == 12 && e.angle == 0xFF && e.spin == 0x2000);
+    assert(e.buer_fire_mirrored);
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.timer == 13 && e.angle == 0x1FF && e.spin == -0x2000);
+    assert(!e.buer_fire_mirrored);
 
     /* Step 1 and 2 do not call this rolling routine: neither may pick up
      * state-2 idle's no-contact inversion while their own probes are open. */

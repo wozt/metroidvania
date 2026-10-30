@@ -543,6 +543,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
             enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
             enemy->vx = toward_facing(enemy, 0x18000);
+            enemy->buer_fire_mirrored = enemy->vx >= 0;
             break;
         case AOS_ENEMY_WHITE_DRAGON:
             enemy->own_boxes = true;
@@ -6233,6 +6234,9 @@ static void buer_fire_child(const AosEnemy *owner, AosHitReport *report) {
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
     AosEnemy child;
     make_static_child(&child, owner, AOS_ROLE_BUER_FIRE, 1);
+    /* sub_080CBA30: linked fire mirrors its owner's signed velocity,
+     * not the current facing of the parent body. */
+    child.mirrored = owner->buer_fire_mirrored;
     /* Buer fire touches Soma, but cannot be destroyed independently
      * until its native callbacks have been reconstructed. */
     child.own_boxes = true;
@@ -6282,7 +6286,9 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
         child->removed = true;
         return report;
     }
-    child->mirrored = owner->mirrored;
+    /* Buer's linked direct frame carries its own native facing bit. */
+    child->mirrored = child->role == AOS_ROLE_BUER_FIRE
+                      ? owner->buer_fire_mirrored : owner->mirrored;
     child->hidden = owner->hidden;
     if (child->role == AOS_ROLE_PEEPING_SEGMENT) {
         unsigned i = child->variant;
@@ -7483,7 +7489,9 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
         e->substep = 1;
     }
     if (e->substep == 1) {
-        /* Native linked-owner facing flip is still unported. */
+        /* sub_080CBBDA toggles the linked fire's +0x58 bit 0x40
+         * exactly once on entering the native attack window. */
+        e->buer_fire_mirrored = !e->buer_fire_mirrored;
         e->substep = 2;
     }
     if (e->substep != 2) return;
@@ -7495,6 +7503,11 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
      * still override the transition if it reaches 0xFF on the same tick. */
     if (--e->timer == 0xFF) {
         if ((random() & 1u) == 0) {
+            /* _080CBC4C.._080CBC56: restart the idle step with
+             * the signed velocity dictated by the linked fire's
+             * orientation, irrespective of the parent facing. */
+            int32_t magnitude = e->vx < 0 ? -e->vx : e->vx;
+            e->vx = e->buer_fire_mirrored ? magnitude : -magnitude;
             e->step = 0;
             e->substep = 0;
             e->timer = 0;

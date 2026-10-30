@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0651 - Buer linked-fire facing and velocity parity
+
+- Ported sub_080CBA30's linked direct-frame facing initialization from
+  Buer's signed horizontal speed instead of borrowing the parent's facing.
+- Ported sub_080CBBDA's one-time bit-0x40 facing toggle at the start of each
+  native state-2 attack window, retaining it across linked-child updates.
+- Ported the even-expiry branch of sub_080CBAEC: returning to idle now
+  sets the owner's horizontal velocity to the linked fire's facing direction
+  while preserving its speed magnitude. Added ROM-free tests for both signs,
+  the child-parent orientation distinction, and window/RNG boundaries.
+- Flame emissions, native movement probes, linked collision/damage and sound
+  output remain partial. No fidelity or completion percentage was upgraded.
+- The native golden cache, importer, ROM inputs and golden fixtures remain
+  untouched; the final dashboard still checks every CTest entry once, with
+  the existing elapsed-time and slow-test reports.
+
 ## Patch 0650 - Buer native proximity attack and timed sound cues
 
 - Transcribed the inclusive 96-by-48 integer-room proximity window from

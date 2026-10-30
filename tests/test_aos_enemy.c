@@ -25,6 +25,75 @@ static uint32_t scripted(void) { return script[script_at++]; }
  * remains separate; this test only checks reproducible state/RNG timing. */
 /* sub_0806E29C / sub_080CBC64: the 96x48 inclusive trigger,
  * followed by the 80-frame attack/32-frame recovery clock and 0x84 cues. */
+/* sub_080CBA30 / sub_080CBBDA / _080CBC4C: linked Buer fire owns
+ * its facing, toggles it once per action window, and dictates the parent's
+ * velocity sign when an even RNG draw ends that window. No ROM required. */
+static void buer_linked_fire_facing_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[] = {{2, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    /* Soma stays outside the native 96x48 attack trigger while Buer rolls. */
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(buer.state == 2 && buer.vx > 0 && buer.buer_fire_mirrored);
+    AosHitReport spawned = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(spawned.child_count == 1 &&
+           spawned.children[0].role == AOS_ROLE_BUER_FIRE &&
+           spawned.children[0].mirrored);
+    AosEnemy fire = spawned.children[0];
+    fire.parent = &buer;
+
+    /* Window 1: positive speed, linked facing toggles to left and the
+     * outgoing parent velocity becomes negative on an even expiry draw. */
+    const uint32_t left_draws[] = {0, 0};
+    script = left_draws;
+    script_at = 0;
+    buer.step = 2;
+    buer.substep = buer.timer = 0;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(script_at == 1 && buer.substep == 2 && buer.timer == 31);
+    assert(!buer.buer_fire_mirrored && buer.mirrored);
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!fire.mirrored && fire.x == buer.x && fire.y == buer.y);
+    for (int frame = 0; frame < 32; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(script_at == 2 && buer.step == 0 && buer.substep == 0);
+    assert(buer.vx < 0 && !buer.buer_fire_mirrored);
+
+    /* Window 2: start facing left, then flip the linked fire back to
+     * right and restore a positive parent velocity on expiration. */
+    buer.x = AOS_FIXED(100);
+    buer.vx = -0x18000;
+    buer.step = 2;
+    buer.substep = buer.timer = 0;
+    const uint32_t right_draws[] = {0, 0};
+    script = right_draws;
+    script_at = 0;
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(script_at == 1 && buer.buer_fire_mirrored);
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fire.mirrored && fire.x == buer.x);
+    for (int frame = 0; frame < 32; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(script_at == 2 && buer.step == 0 && buer.vx > 0);
+    assert(buer.buer_fire_mirrored);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_near_player_attack_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -3969,6 +4038,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_linked_fire_facing_tests();
     buer_near_player_attack_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();

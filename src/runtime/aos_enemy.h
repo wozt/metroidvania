@@ -209,6 +209,7 @@ typedef struct AosEnemy {
      * random destination rather than following Soma directly. */
     int32_t target_x, target_y;
     bool helper_spawned;    /* the Nemesis body has emitted its linked helper */
+    bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     bool technical_effects_spawned; /* the three Nemesis visual effect slots */
     int16_t home, home_right, home_left;  /* + 0x22, + 0x14, + 0x16 of a beam skeleton */
     uint16_t rest;          /* + 0x1C of a beam skeleton: frames before it may fire */

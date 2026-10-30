@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0665 - Buer independent native fire projectiles and death X translation
+
+- Replaced the two provisional non-damaging AOS_EFFECT_FIRE attack visuals
+  with independent AOS_ROLE_BUER_PROJECTILE children emitted at the native
+  timer > 50, timer % 3 == 0 cadence (sub_080CC5D8).
+- Both children now originate from the high-word integer Buer X and Y+24,
+  share the same coordinates, use their native 0/1 animation variant and
+  attack-side mirror bit, and run independent sub_080CC178 animation
+  lifetimes. Their 8.0-clamped acceleration integrator follows native
+  sub_0806D3D8. Missing assets get a deliberately bounded placeholder life.
+- Ported the horizontal motion ordering of Buer's second death phase:
+  +0x18 spin becomes capped +0x48 X velocity before angular collision
+  damping via sub_080CC20C(mode=1). Verified subpixel translation.
+- Child entities do not request independent rewards; until original fire
+  frame collision boxes and their exact asset animation set are imported,
+  they deliberately have no player hitbox or weapon hit response. The ROM
+  0x081194DC death fragment positions, real affine rendering, complete
+  0x08528B64 probe table and audio output remain open. All parity flags
+  stay PARTIAL. No ROM, copied sprite data or extracted assets are added.
+
 ## Patch 0664 - Buer attack spin, paired visual fire and death rotation
 
 - Extended state-two step-one attack with native source-derived +/-0xCCC

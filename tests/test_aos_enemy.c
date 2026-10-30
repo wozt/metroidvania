@@ -1246,11 +1246,13 @@ static void buer_attack_death_animation_tests(void) {
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     result = aos_enemy_update(&e, &soma, &layer, &kind,
                               NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(e.timer == 0x4D && result.effect_count == 2);
-    assert(result.effects[0].kind == AOS_EFFECT_FIRE &&
-           result.effects[1].kind == AOS_EFFECT_FIRE);
-    assert(result.effects[0].x == result.effects[1].x &&
-           result.effects[0].y < result.effects[1].y);
+    assert(e.timer == 0x4D && result.child_count == 2 &&
+           result.effect_count == 0);
+    assert(result.children[0].role == AOS_ROLE_BUER_PROJECTILE &&
+           result.children[1].role == AOS_ROLE_BUER_PROJECTILE);
+    assert(result.children[0].variant == 0 && result.children[1].variant == 1);
+    assert(result.children[0].x == result.children[1].x &&
+           result.children[0].y == result.children[1].y);
 
     /* Opposite side chooses the negative angular acceleration and turn. */
     soma.x = AOS_FIXED(20);
@@ -1284,10 +1286,96 @@ static void buer_attack_death_animation_tests(void) {
     e.spin = 0x8000;
     e.angle = 0;
     e.y = AOS_FIXED(60); /* No floor-slope or forward-wall fixture. */
+    const int32_t before_death_x = e.x;
     result = aos_enemy_update(&e, &soma, &layer, &kind,
                               NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == before_death_x + 0x8000 && e.vx == 0x8000);
     assert(e.spin == 0x7FC0 && e.angle == 0x1FF && e.timer == 127);
     assert(result.effect_count == 1 && result.effects[0].kind == AOS_EFFECT_FLAME);
+    memset(cells, 0, sizeof cells);
+}
+
+/* sub_080CC5D8 + sub_080CC178: two independent animation-selected
+ * fire entities, no guessed weapon boxes, no independent loot, and correct
+ * velocity/acceleration ordering with an 8.0 maximum speed. */
+static void buer_projectile_lifecycle_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t frames[] = {1, 1, 1};
+    const AosAnimDef defs[] = {{3, frames}, {3, frames}};
+    const AosAnimSet anims = {defs, 2};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(100) + 0x1234;
+    e.y = AOS_FIXED(136) + 0x5678;
+    e.home = 136;
+    e.state = 2;
+    e.step = 1;
+    e.substep = 1;
+    e.timer = 78;
+    e.spin = 0x8000;
+    e.away = 1;
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, never_zero);
+    /* The first owner update also emits its persistent linked flame.
+     * Both fire projectiles occupy the next two child slots. */
+    assert(hit.child_count == 3 && hit.effect_count == 0);
+    assert(hit.children[0].role == AOS_ROLE_BUER_FIRE);
+    for (int i = 1; i < 3; ++i) {
+        const AosEnemy *p = &hit.children[i];
+        assert(p->role == AOS_ROLE_BUER_PROJECTILE && p->variant == i - 1);
+        assert(p->x == AOS_FIXED(100) && p->y == AOS_FIXED(160));
+        assert(p->mirrored && p->state == 0 && !p->removed);
+        assert(p->combat.attack_off && p->combat.hurt_off && !p->own_boxes);
+    }
+    AosEnemy shot = hit.children[1];
+    shot.vx = 0x70000;
+    shot.vy = -0x10000;
+    shot.ax = 0x20000;
+    shot.ay = 0;
+    const int32_t x0 = shot.x, y0 = shot.y;
+    AosHitReport update = aos_enemy_update(&shot, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(shot.state == 1 && shot.vx == 0x80000);
+    assert(shot.x == x0 + 0x80000 && shot.y == y0 - 0x10000);
+    assert(!update.killed && !update.soma_hit && !update.targetable);
+    for (int i = 0; i < 30 && !shot.removed; ++i)
+        aos_enemy_update(&shot, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(shot.removed);
+
+    /* Missing variant-1 animation must not leak a permanent child. */
+    const AosAnimSet single = {defs, 1};
+    AosEnemy fallback = hit.children[2];
+    kind.anims = &single;
+    aos_enemy_update(&fallback, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fallback.state == 2 && fallback.timer == 23 &&
+           fallback.static_frame == 2 && !fallback.removed);
+    for (int i = 0; i < 23; ++i)
+        aos_enemy_update(&fallback, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fallback.removed);
+
+    /* Later attack ticks emit exactly the two new projectiles: the
+     * persistent owner-linked flame was emitted on the first tick. */
+    /* Opposite attack side mirrors both native projectile variants. */
+    kind.anims = &anims;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(136);
+    e.step = 1;
+    e.substep = 1;
+    e.timer = 78;
+    e.away = -1;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.child_count == 2 && !hit.children[0].mirrored &&
+           !hit.children[1].mirrored);
     memset(cells, 0, sizeof cells);
 }
 
@@ -5085,6 +5173,7 @@ int main(void) {
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_attack_death_animation_tests();
+    buer_projectile_lifecycle_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

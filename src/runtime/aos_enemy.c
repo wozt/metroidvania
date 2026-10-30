@@ -7506,21 +7506,69 @@ static void buer_attack_angular_step(AosEnemy *e) {
     if (spin < 0) e->buer_fire_mirrored = false;
 }
 
-/* Two sub_080CC5D8 fire entities are requested on each native third
- * countdown tick while timer > 50. Full sub_080CC178 projectile animation,
- * collision and lifetime are not exposed in the compact runtime yet.
- * Until then emit non-damaging AOS_EFFECT_FIRE visuals, preserving count,
- * side and cadence without inventing player damage or reward ownership. */
-static void buer_attack_visual_pair(const AosEnemy *e, AosHitReport *report) {
-    const int32_t side = e->away >= 0 ? AOS_FIXED(12) : -AOS_FIXED(12);
-    for (int i = 0; i < 2 && report->effect_count < AOS_ENEMY_MAX_EFFECTS; ++i) {
-        AosEffect *fire = &report->effects[report->effect_count++];
-        *fire = (AosEffect){.kind = AOS_EFFECT_FIRE, .drift = true,
-                            .x = e->x + side, .y = e->y + AOS_FIXED(24),
-                            .vx = e->away >= 0 ? 0x20000 : -0x20000,
-                            .mirrored = e->away < 0};
-        fire->y += (i ? AOS_FIXED(5) : -AOS_FIXED(5));
+/* sub_080CC5D8: two independent children, both at the parent's integer
+ * coordinates (the high words of +0x40 and +0x44), with Y offset +24.
+ * Their +0x12 animation selection is 0 and 1 respectively; the linked
+ * owner's attack-side byte chooses the opposite sprite mirror bit.
+ * Do not manufacture velocity or damage boxes: sub_080CC178 initializes
+ * its own animation, and native frame collision metadata is still pending. */
+static void buer_attack_projectile_pair(const AosEnemy *e, AosHitReport *report) {
+    for (unsigned i = 0; i < 2 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy child;
+        make_static_child(&child, e, AOS_ROLE_BUER_PROJECTILE, -1);
+        child.variant = (uint8_t)i;
+        child.x = (int32_t)((uint32_t)e->x & ~0xFFFFu);
+        child.y = AOS_FIXED((e->y >> 16) + 24);
+        child.mirrored = e->away > 0;
+        child.hp = 1;
+        /* No invented hit or reward callback until the ROM frame boxes
+         * and the original object's collision init are reconstructed. */
+        child.combat.attack_off = true;
+        child.combat.hurt_off = true;
+        report->children[report->child_count++] = child;
     }
+}
+
+/* sub_080CC178: state zero chooses animation +0x12; state one runs the
+ * source sub_0806D3D8 acceleration/position integrator (8.0 cap) and
+ * retires when the non-looping animation reports completion. If an asset
+ * exporter supplied no animation, use a 24-tick bounded fallback solely
+ * to avoid accumulating invisible entities indefinitely. */
+static AosHitReport buer_projectile_update(AosEnemy *shot, const AosEnemyKind *kind) {
+    AosHitReport report = {0};
+    if (shot->state == 0) {
+        const AosAnimSet *anims = kind ? kind->anims : NULL;
+        if (anims && shot->variant < anims->count &&
+            anims->anims[shot->variant].count) {
+            play_loop(shot, anims, shot->variant, false);
+            shot->state = 1;
+        } else {
+            /* The private ROM animation has not been imported: bounded
+             * placeholder life, with no ungrounded collision or rewards. */
+            shot->state = 2;
+            shot->timer = 24;
+            shot->static_frame = (int16_t)(shot->variant + 1);
+        }
+    }
+    if (shot->state == 1 || shot->state == 2) {
+        int32_t vx = (int32_t)((uint32_t)shot->vx + (uint32_t)shot->ax);
+        int32_t vy = (int32_t)((uint32_t)shot->vy + (uint32_t)shot->ay);
+        if (shot->ax >= 0 && vx > 0x80000) vx = 0x80000;
+        if (shot->ax < 0 && vx < -0x80000) vx = -0x80000;
+        if (shot->ay >= 0 && vy > 0x80000) vy = 0x80000;
+        if (shot->ay < 0 && vy < -0x80000) vy = -0x80000;
+        shot->vx = vx;
+        shot->vy = vy;
+        shot->x = (int32_t)((uint32_t)shot->x + (uint32_t)vx);
+        shot->y = (int32_t)((uint32_t)shot->y + (uint32_t)vy);
+        if (shot->state == 1) {
+            step_anim(shot, kind->anims);
+            if (shot->cycle_done) shot->removed = true;
+        } else if (--shot->timer == 0) {
+            shot->removed = true;
+        }
+    }
+    return report;
 }
 
 static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
@@ -7565,7 +7613,7 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
         if (e->substep == 1) {
             buer_attack_angular_step(e);
             if (e->timer > 0x32 && e->timer % 3u == 0)
-                buer_attack_visual_pair(e, report);
+                buer_attack_projectile_pair(e, report);
             if (e->timer > 0x32 && (e->timer % 9u) == 0)
                 aos_audio_play_song(0x84);
             if (--e->timer == 0xFF) {
@@ -8020,6 +8068,9 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosCollision *layer,
         /* Native second stage re-enters sub_080CC20C(mode 1). Its angular
          * contacts and affine rotation are reconstructed; full X/Y probes
          * and translation of the linked sprite remain pending. */
+        /* This death phase calls sub_080CC20C(mode 1): native X
+         * translation from the previous spin precedes angular damping. */
+        buer_state_one_horizontal_step(e, layer);
         buer_rolling_angular_step(e, layer);
         e->buer_fire_mirrored = e->spin >= 0;
         if ((e->timer & 1u) == 0)
@@ -8303,6 +8354,8 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->role == AOS_ROLE_SKELETON_BONE)
         return skeleton_bone_update(enemy, soma, kind, weapon, weapon_frames,
                                     soma_atk, soma_def, cam_x, cam_y);
+    if (enemy->role == AOS_ROLE_BUER_PROJECTILE)
+        return buer_projectile_update(enemy, kind);
     if (enemy->role == AOS_ROLE_PEEPING_SEGMENT ||
         enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
         enemy->role == AOS_ROLE_BUER_FIRE ||

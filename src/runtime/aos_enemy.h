@@ -195,8 +195,8 @@ typedef struct AosEnemy {
     int16_t static_frame;   /* sprite frame of a child (+ 0x65), or -1 */
     bool own_boxes;         /* boxes set by code, not by the animation frame */
     uint8_t ground;         /* + 0x3F: floor cell byte under the walker */
-    uint32_t angle;         /* + 0x14 of a spinning child (affine rotation) */
-    int32_t spin;           /* + 0x18: angle step per frame */
+    uint32_t angle;         /* +0x14: affine angle of a child or Buer */
+    int32_t spin;           /* +0x18: signed angular speed, including Buer */
     int8_t volley_count;    /* + 0x14 of a shooter: volleys fired, 0..4 */
     uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
     int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */

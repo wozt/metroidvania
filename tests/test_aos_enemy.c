@@ -517,6 +517,85 @@ static void buer_rolling_fire_sign_sync_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Source-derived no-contact slice of sub_080CC20C. The collision flags,
+ * terrain probes, affine emitter and horizontal controller remain partial. */
+static void buer_no_contact_angular_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    assert(e.state == 1 && e.spin == 0x8000 && e.angle == 0);
+    /* Keep the native +92 room-exit probe in bounds and avoid the
+     * provisional controller's horizontal edge reversal. */
+    e.home = 60;
+    e.y = AOS_FIXED(60);
+    e.x = AOS_FIXED(100);
+    e.vx = 0;
+    e.phase = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 1 && e.spin == 0x7FC0 && e.angle == 0x1FF);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x7F80 && e.angle == 0x1FF + 0x1FE);
+
+    /* Negative spin decays toward -0x4000; signed angle steps truncate
+     * toward zero rather than floor-dividing negative subpixels. */
+    e.spin = -0x8000;
+    e.angle = 0x10;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0x7FC0 && e.angle == (uint32_t)(0x10u - 0x1FFu));
+    e.spin = 0;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x4000 && e.angle == 0x100);
+
+    /* State-2 idle uses argument zero: AFTER each angle update the native
+     * empty-contact branch reverses and halves spin. Entry into the
+     * source idle gate must not erase the just-computed angle. */
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 10;
+    e.spin = 0x8000;
+    e.angle = 0;
+    e.vx = 0;
+    e.x = AOS_FIXED(100);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 0 && e.timer == 11 && e.angle == 0x1FF);
+    assert(e.spin == -0x3FE0);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.timer == 12 && e.angle == 0xFF && e.spin == 0x2000);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.timer == 13 && e.angle == 0x1FF && e.spin == -0x2000);
+
+    /* Step 1 and 2 do not call this rolling routine: neither may pick up
+     * state-2 idle's no-contact inversion while their own probes are open. */
+    for (int step = 1; step <= 2; ++step) {
+        e.step = (uint8_t)step;
+        e.substep = 2;
+        e.timer = 12;
+        e.spin = 0x6000;
+        e.angle = 0x1200;
+        aos_enemy_update(&e, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(e.spin == 0x6000 && e.angle == 0x1200);
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_timing_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -4419,6 +4498,7 @@ int main(void) {
     buer_near_player_attack_tests();
     buer_idle_directional_wakeup_tests();
     buer_rolling_fire_sign_sync_tests();
+    buer_no_contact_angular_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

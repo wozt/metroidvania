@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0657 - Buer native no-contact rolling angular damping
+
+- Ported a bounded branch of cvaos `sub_080CC20C`, specifically the case
+  where `sub_0806CAF8` reports no terrain contact: signed angular speed
+  loses 0x40 toward the +/-0x4000 floor and advances the 32-bit affine
+  accumulator with a truncation-toward-zero divide by 64.
+- Initialized Buer's independent native +0x18 angular speed to 0x8000 as
+  written by `EnemyBuerCreate`, without reusing the provisional X velocity.
+  State 1 preserves post-friction spin; state-2 idle reverses and halves it
+  after updating the angle, as dictated by the source's mode argument.
+- Added ROM-free regressions for the initial spin, both signs, signed
+  truncation, angle wrap, friction floor, state-2 idle reversal/halving and
+  non-interference with active attack/recovery steps.
+- This is not a full reconstruction of the rolling physics: native contact
+  flags, collision rebounds, source-faithful translation, affine effect
+  emission and linked fire projectiles remain missing. No status or parity
+  percentage was upgraded, and no ROM inputs or golden caches were changed.
+
 ## Patch 0656 - Buer native rolling linked-fire facing synchronization
 
 - Ported the bounded linked-fire-facing write at the end of

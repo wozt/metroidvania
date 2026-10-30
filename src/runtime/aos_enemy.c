@@ -543,6 +543,9 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
             enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
             enemy->vx = toward_facing(enemy, 0x18000);
+            /* EnemyBuerCreate (+0x18): the native angular speed starts
+             * at 0x8000, independently of the provisional translation. */
+            enemy->spin = 0x8000;
             enemy->buer_fire_mirrored = enemy->vx >= 0;
             break;
         case AOS_ENEMY_WHITE_DRAGON:
@@ -7577,6 +7580,29 @@ static bool buer_room_probe_outside(const AosEnemy *e, const AosCollision *layer
     return x < -7 || x >= width || y < -7 || y >= height;
 }
 
+/* sub_080CC20C, restricted to sub_0806CAF8 collision flags == 0.
+ * In that branch, +0x18 loses 0x40 toward the +/-0x4000 floor, then the
+ * signed spin divided toward zero by 64 advances the 32-bit +0x14 angle.
+ * With argument 0 (state-2 idle), the no-contact branch reverses and halves
+ * spin AFTER updating the angle. With argument 1 (state 1) it does not.
+ * This does not claim native wall/terrain probes, bounce impulses, the
+ * affine effect emitter or source-faithful translation. */
+static void buer_no_contact_angular_step(AosEnemy *e) {
+    int32_t spin = e->spin;
+    if (spin >= 0) {
+        spin -= 0x40;
+        if (spin <= 0x3FFF) spin = 0x4000;
+    } else {
+        spin += 0x40;
+        if (spin > -0x4000) spin = -0x4000;
+    }
+    /* C signed division truncates toward zero, matching the source's
+     * add-63-before-ASR for negative spin. Unsigned addition wraps angle. */
+    e->angle += (uint32_t)(spin / 64);
+    if (e->state == 2 && e->step == 0) spin = -spin / 2;
+    e->spin = spin;
+}
+
 static void buer_controller(AosEnemy *e, const AosSoma *soma) {
     face_player(e, soma);
     e->x += e->vx;
@@ -7933,6 +7959,9 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
          * idle step execute sub_080CC20C's rolling-facing update. Capture
          * that condition before the timer can enter the attack step. */
         bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
+        /* The original runs sub_080CC20C BEFORE the idle attack gate.
+         * Only its no-contact angular part is reconstructed here. */
+        if (rolling) buer_no_contact_angular_step(e);
         buer_attack_timing(e, soma, random);
         buer_controller(e, soma);
         if (rolling) {

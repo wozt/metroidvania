@@ -7455,18 +7455,24 @@ static void white_dragon_controller(AosEnemy *e, const AosSoma *soma) {
     e->x += toward_facing(e, 0x2000);
 }
 
-/* sub_0806E29C(e, 0x60, 0x30): sub_08068AD4 compares the
- * selected player's integer room position against an inclusive 96x48
- * window around Buer, using unsigned 16-bit differences. The alternate
- * controlled entity selected by the GBA is not yet part of this runtime. */
+/* sub_0806E29C/sub_08068AD4: inclusive GBA player proximity windows.
+ * Width/height are full dimensions; unsigned 16-bit room coordinates must
+ * wrap, so a position just outside the low edge cannot pass accidentally.
+ * The GBA's alternate controlled entity is not yet represented here. */
+static bool buer_player_in_window(const AosEnemy *e, const AosSoma *soma,
+                                  uint16_t width, uint16_t height) {
+    uint16_t dx = (uint16_t)((soma->x >> 16) - ((e->x >> 16) - (int)(width / 2)));
+    uint16_t dy = (uint16_t)((soma->y >> 16) - ((e->y >> 16) - (int)(height / 2)));
+    return dx <= width && dy <= height;
+}
+
 static bool buer_player_in_attack_range(const AosEnemy *e, const AosSoma *soma) {
-    uint16_t dx = (uint16_t)((soma->x >> 16) - ((e->x >> 16) - 0x30));
-    uint16_t dy = (uint16_t)((soma->y >> 16) - ((e->y >> 16) - 0x18));
-    return dx <= 0x60 && dy <= 0x30;
+    return buer_player_in_window(e, soma, 0x60, 0x30);
 }
 
 /* EnemyBuerUpdate state 2 -> sub_080CBAEC / sub_080CBC64:
- * Step 0 waits for byte 0xFF and uses an even RNG draw to enter step 2.
+ * Step 0 wakes on a facing-matched 192x48 window; its byte 0xFF
+ * threshold can independently override wake-up with an even RNG draw.
  * Step 2 first chooses a 32..63-frame window, with an immediate countdown
  * tick. When Soma enters the native 96x48 window, step 1 starts next frame.
  * Step 1 loops an 80-frame attack stage and a 32-frame recovery stage.
@@ -7477,6 +7483,19 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
                                uint32_t (*random)(void)) {
     if (e->state != 2) return;
     if (e->step == 0) {
+        /* sub_080CBAEC/_080CBB2E: an idle Buer notices Soma in the
+         * inclusive 192x48 window only on the linked fire's facing side.
+         * sub_0806BBC4 returns +1 for Soma right, -1 for left, 0 aligned.
+         * The timer increment still executes on this wake-up frame, and
+         * the 0xFF RNG branch can override the newly selected step. */
+        if (buer_player_in_window(e, soma, 0xC0, 0x30)) {
+            int direction = (soma->x > e->x) - (soma->x < e->x);
+            if ((e->buer_fire_mirrored && direction == 1) ||
+                (!e->buer_fire_mirrored && direction == -1)) {
+                e->step = 1;
+                e->substep = 0;
+            }
+        }
         ++e->timer;
         if (e->timer != 0xFF) return;
         e->timer = 0;

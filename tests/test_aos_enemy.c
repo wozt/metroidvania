@@ -356,6 +356,90 @@ static void buer_near_player_attack_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* sub_080CBAEC/_080CBB2E: idle state-2 Buer wakes only on the side
+ * faced by its linked fire, within the inclusive GBA 192x48 window. */
+static void buer_idle_directional_wakeup_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(buer.state == 2);
+
+    /* Exactly on either horizontal edge (+/-96) and vertical edge (+24)
+     * is inside. The linked fire faces separately from the owner. */
+    for (int side = 0; side < 2; ++side) {
+        buer.x = AOS_FIXED(100);
+        buer.y = AOS_FIXED(buer.home);
+        buer.phase = 0;
+        buer.vx = 0;
+        buer.state = 2;
+        buer.step = buer.substep = buer.timer = 0;
+        buer.buer_fire_mirrored = side != 0;
+        soma.x = buer.x + (side ? AOS_FIXED(96) : -AOS_FIXED(96));
+        soma.y = buer.y + AOS_FIXED(24);
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(buer.state == 2 && buer.step == 1 && buer.substep == 0);
+        assert(buer.timer == 1);
+    }
+
+    /* Wrong-facing side, aligned X (direction 0), outside X at 97 and
+     * outside Y at 25 must not start the attack. */
+    static const int dx[] = {-20, 0, 97, 30};
+    static const int dy[] = {0, 0, 0, 25};
+    for (int i = 0; i < 4; ++i) {
+        buer.x = AOS_FIXED(100);
+        buer.y = AOS_FIXED(buer.home);
+        buer.phase = 0;
+        buer.vx = 0;
+        buer.state = 2;
+        buer.step = buer.substep = buer.timer = 0;
+        buer.buer_fire_mirrored = true;
+        soma.x = buer.x + dx[i] * AOS_FIXED(1);
+        soma.y = buer.y + AOS_FIXED(dy[i]);
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(buer.step == 0 && buer.substep == 0 && buer.timer == 1);
+    }
+
+    /* On the precise 0xFF byte boundary the original consumes one RNG
+     * value after checking proximity. Odd retains step 1; even wins and
+     * selects step 2. A previous frame never consumes that RNG draw. */
+    for (int parity = 0; parity < 2; ++parity) {
+        const uint32_t draws[] = {(uint32_t)parity};
+        script = draws;
+        script_at = 0;
+        buer.x = AOS_FIXED(100);
+        buer.y = AOS_FIXED(buer.home);
+        buer.phase = 0;
+        buer.vx = 0;
+        buer.state = 2;
+        buer.step = buer.substep = 0;
+        buer.timer = 0xFD;
+        buer.buer_fire_mirrored = true;
+        soma.x = buer.x + AOS_FIXED(20);
+        soma.y = buer.y;
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, scripted);
+        assert(buer.step == 1 && buer.timer == 0xFE && script_at == 0);
+        /* Restore step 0 to exercise the independent threshold ordering. */
+        buer.step = 0;
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, scripted);
+        assert(script_at == 1 && buer.timer == 0);
+        assert(buer.step == (parity ? 1 : 2) && buer.substep == 0);
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_timing_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -4256,6 +4340,7 @@ int main(void) {
     buer_room_exit_tests();
     buer_linked_fire_facing_tests();
     buer_near_player_attack_tests();
+    buer_idle_directional_wakeup_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

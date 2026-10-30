@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0655 - Buer native idle facing-gated wake-up
+
+- Ported the unimplemented `sub_080CBAEC` state-2 idle proximity branch:
+  the inclusive 192-by-48 pixel Soma window wakes Buer to attack step 1 only
+  when `sub_0806BBC4`'s horizontal direction matches the linked-fire facing.
+- Preserved the independent byte timer, including its same-tick 0xFF RNG
+  override, without modifying the already ported 96-by-48 active-window gate.
+- Added ROM-free edge cases for both facings, signed direction zero, width/
+  height exclusions, byte counter and RNG draw ordering.
+- The original `sub_080CC20C` rolling terrain probes and native flame
+  effects are still missing. No parity completion status was upgraded; native
+  golden inputs, imported proprietary files and caches are untouched.
+
 ## Patch 0654 - Buer surviving-hit native attack interruption
 
 - Ported cvaos `sub_080CC514`'s surviving-hit callback: after damage, a

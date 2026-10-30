@@ -1599,6 +1599,93 @@ static void buer_death_scatter_and_linked_wobble_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0669: synthetic per-entity probe geometry exercises all of the
+ * existing ROM-local wall offsets and the source floor position. No table
+ * from any ROM is embedded in the test. The legacy count-zero fallback is
+ * covered by the earlier Buer 24-pixel probes. */
+static void buer_native_probe_geometry_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+
+    /* Only the UPPER wall contact at (116,88) intersects this tile;
+     * a central y=100-only wall probe would miss it completely. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.spin = 0x8000;
+    e.angle = 0;
+    cells[11 * W + 14] = 0x03;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.spin == -0x4000);
+    cells[11 * W + 14] = 0;
+
+    /* The previous tick may leave state 1 via the room-exit probe and
+     * apply the provisional vertical controller. Restore the entire
+     * test fixture so the lower wall sample is really (116, 112). */
+    cells[14 * W + 14] = 0x03;
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.spin = 0x8000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.spin == -0x4000);
+    cells[14 * W + 14] = 0;
+
+    /* Ground at y=160 is 20 pixels below a native y=140 entity;
+     * old fixed y+24 logic would use a different landing height. */
+    e.state = 2;
+    e.step = 0;
+    e.substep = 0;
+    e.timer = 3;
+    e.spin = 0;
+    e.vy = 0;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(141) + 0x3456;
+    e.home = 40;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(140));
+
+    /* Mode-six translation preserves the new native floor and front
+     * offsets, including the subpixel portion of X. */
+    e.x = AOS_FIXED(100) + 0x1000;
+    e.y = AOS_FIXED(140);
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x9000);
+
+    /* Reject an out-of-range table: it must fall back to the previous
+     * safe floor offset instead of reading past wall_y[8]. */
+    kind.probes.count = 9;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(137) + 0x1234;
+    e.spin = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(136));
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5397,6 +5484,7 @@ int main(void) {
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();
     buer_death_scatter_and_linked_wobble_tests();
+    buer_native_probe_geometry_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

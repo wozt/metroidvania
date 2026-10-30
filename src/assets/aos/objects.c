@@ -118,7 +118,11 @@ static const EntitySpec entities[] = {
     ENTITY("killer_fish", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4),
     ENTITY("bone_pillar", 0x081E41D4, 0x0820B8E8, 0, 0x08242F8C),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
-    STATIC("buer", 0x081F428C, 0x0820BF9C, 0, 0x0824FDB0, 2, 0, 1),
+    /* Buer sub_0806CAF8: the shared 0x08528B64 s16 probe descriptor
+     * has wall count, ceiling, floor, half-width and wall Y offsets.
+     * Export the descriptor from the user's ROM, preserving both still frames. */
+    {"buer", 0x081F428C, 0x0820BF9C, 0, 0x0824FDB0,
+     0x08528B64, 0, 0, 2, {0, 1}},
     STATIC("white_dragon", 0x081CBF74, 0x0820A580, 0, 0x0821631C, 1, 0),
     ENTITY("ghost", 0x081CBFFC, 0x0820A8D4, 0, 0x0821EE0C),
     ENTITY("rock_armor", 0x081E41BC, 0x0820B83C, 1, 0x0823FFD8),

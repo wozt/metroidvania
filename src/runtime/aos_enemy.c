@@ -7720,34 +7720,73 @@ static void buer_no_contact_angular_step(AosEnemy *e) {
  * is reconstructed, recognize ONLY axis-aligned solid wall cells at the
  * source's +/-24-pixel forward probe. Slopes, floors and outside-room
  * coordinates intentionally remain in the no-contact approximation. */
-static bool buer_forward_solid_wall(const AosEnemy *e, const AosCollision *layer) {
+/* The C exporter already writes `probes\tbuer` from 0x08528B64.
+ * A legacy metadata export leaves count zero, keeping the previous
+ * conservative half-width/floor probe. Reject malformed synthetic tables
+ * rather than reading uninitialized wall offsets or leaving room bounds. */
+static const AosProbes *buer_native_probes(const AosEnemyKind *kind) {
+    if (!kind || kind->probes.count < 1 || kind->probes.count > 8 ||
+        kind->probes.half_width < 1 || kind->probes.half_width > 128 ||
+        kind->probes.floor < -128 || kind->probes.floor > 128 ||
+        kind->probes.ceiling < -128 || kind->probes.ceiling > 128)
+        return NULL;
+    for (int i = 0; i < kind->probes.count; ++i)
+        if (kind->probes.wall_y[i] < -128 || kind->probes.wall_y[i] > 128)
+            return NULL;
+    return &kind->probes;
+}
+
+static int buer_front_offset(const AosEnemyKind *kind) {
+    const AosProbes *probes = buer_native_probes(kind);
+    return probes ? probes->half_width : 24;
+}
+
+static int buer_floor_offset(const AosEnemyKind *kind) {
+    const AosProbes *probes = buer_native_probes(kind);
+    return probes ? probes->floor : 24;
+}
+
+/* Native sub_0806C828 tests each signed wall-Y offset at the leading X
+ * edge, not just the entity centre. Preserve the collision library's flat
+ * wall penetration test and the existing room-boundary guard; curved
+ * corner masks and per-tile contact flags are still unfinished. */
+static bool buer_forward_solid_wall(const AosEnemy *e, const AosCollision *layer,
+                                    const AosEnemyKind *kind) {
     if (!layer || !layer->cells || layer->width_screens <= 0 ||
         layer->height_screens <= 0) return false;
+    const AosProbes *probes = buer_native_probes(kind);
     const bool right = e->spin >= 0;
-    const int x = (e->x >> 16) + (right ? 24 : -24);
-    const int y = e->y >> 16;
+    const int x = (e->x >> 16) + (right ? buer_front_offset(kind) :
+                                           -buer_front_offset(kind));
     const int width = (layer->width_screens == 1 ? 30 :
                        32 * layer->width_screens) * 8;
     const int height = (layer->height_screens == 1 ? 26 :
                         32 * layer->height_screens) * 8;
-    if (x < 0 || x >= width || y < 0 || y >= height) return false;
-    const uint8_t cell = aos_collision_cell(layer, x, y);
-    if ((cell & 3u) != 3u || (cell & 0xC0u)) return false;
-    return right ? aos_wall_push_left(layer, x, y) < 0 :
-                   aos_wall_push_right(layer, x, y) > 0;
+    if (x < 0 || x >= width) return false;
+    const int count = probes ? probes->count : 1;
+    for (int i = 0; i < count; ++i) {
+        const int y = (e->y >> 16) + (probes ? probes->wall_y[i] : 0);
+        if (y < 0 || y >= height) continue;
+        const uint8_t cell = aos_collision_cell(layer, x, y);
+        if ((cell & 3u) != 3u || (cell & 0xC0u)) continue;
+        if (right ? aos_wall_push_left(layer, x, y) < 0 :
+                    aos_wall_push_right(layer, x, y) > 0)
+            return true;
+    }
+    return false;
 }
-
 /* A bounded floor contact for sub_0806C828's 0x20/0x40 slope flags.
  * Native probes use 0x08528B64 and ground metadata; until that complete
  * table is ported, classify only a non-wall slope directly under the
  * 24-pixel lower sample when the collision layer confirms penetration.
  * The slope's X-flip bit and the original +0x18 angular sign determine
  * the sign of the contact impulse. This is not the general native mask. */
-static uint8_t buer_floor_slope_flags(const AosEnemy *e, const AosCollision *layer) {
+static uint8_t buer_floor_slope_flags(const AosEnemy *e, const AosCollision *layer,
+                                       const AosEnemyKind *kind) {
     if (!layer || !layer->cells || layer->width_screens <= 0 ||
         layer->height_screens <= 0 || e->spin == 0) return 0;
     const int x = e->x >> 16;
-    const int y = (e->y >> 16) + 24;
+    const int y = (e->y >> 16) + buer_floor_offset(kind);
     const int width = (layer->width_screens == 1 ? 30 :
                        32 * layer->width_screens) * 8;
     const int height = (layer->height_screens == 1 ? 26 :
@@ -7761,15 +7800,16 @@ static uint8_t buer_floor_slope_flags(const AosEnemy *e, const AosCollision *lay
     return right == flipped ? 0x40u : 0x20u;
 }
 
-static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer) {
-    if (buer_forward_solid_wall(e, layer)) {
+static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer,
+                                      const AosEnemyKind *kind) {
+    if (buer_forward_solid_wall(e, layer, kind)) {
         /* Original flag 1/2: advance affine angle then reverse/halve. */
         const int32_t spin = e->spin;
         e->angle += (uint32_t)(spin / 64);
         e->spin = -spin / 2;
         return;
     }
-    const uint8_t slope_flags = buer_floor_slope_flags(e, layer);
+    const uint8_t slope_flags = buer_floor_slope_flags(e, layer, kind);
     if (slope_flags) {
         /* sub_080CC20C: flag 0x40 opposes the angular sign; flag 0x20
          * reinforces it. Unlike the no-contact branch, neither adds the
@@ -7789,8 +7829,9 @@ static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer) {
  * branch has NO 0x40 free-rolling friction and NO -spin/2 reflection.
  * This conservative implementation only recognizes the existing bounded
  * floor-slope flag probe; true multi-point mode-six motion is still open. */
-static void buer_recovery_angular_step(AosEnemy *e, const AosCollision *layer) {
-    const uint8_t flags = buer_floor_slope_flags(e, layer);
+static void buer_recovery_angular_step(AosEnemy *e, const AosCollision *layer,
+                                       const AosEnemyKind *kind) {
+    const uint8_t flags = buer_floor_slope_flags(e, layer, kind);
     if (flags) {
         const int32_t impulse = (flags & 0x40u) ? -0x333 : 0x333;
         e->spin += (e->spin > 0) ? impulse : -impulse;
@@ -7810,7 +7851,8 @@ static void buer_recovery_angular_step(AosEnemy *e, const AosCollision *layer) {
  * flat walls through the existing conservative helper. Ground slopes,
  * gravity, the full 0x08528B64 contact table and state-2 mode-6 movement
  * are intentionally NOT claimed as native by this slice. */
-static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *layer) {
+static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *layer,
+                                           const AosEnemyKind *kind) {
     const int32_t original_x = e->x;
     int32_t velocity = e->spin;
     if (velocity > 0x80000) velocity = 0x80000;
@@ -7819,11 +7861,12 @@ static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *laye
     e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
     if (!layer || !layer->cells || !layer->width_screens ||
         !layer->height_screens) return;
-    if (buer_forward_solid_wall(e, layer)) {
+    if (buer_forward_solid_wall(e, layer, kind)) {
         e->x = original_x;
         return;
     }
-    const int x = (e->x >> 16) + (e->spin >= 0 ? 24 : -24);
+    const int front = buer_front_offset(kind);
+    const int x = (e->x >> 16) + (e->spin >= 0 ? front : -front);
     const int y = e->y >> 16;
     const int width = (layer->width_screens == 1 ? 30 :
                        32 * layer->width_screens) * 8;
@@ -7843,7 +7886,8 @@ static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *laye
  * An unknown/slope contact must not be fabricated into native flag 8.
  * Attack and recovery substeps never invoke this routine. */
 static void buer_state_two_idle_horizontal_step(AosEnemy *e,
-                                                const AosCollision *layer) {
+                                                const AosCollision *layer,
+                                                const AosEnemyKind *kind) {
     const int32_t original_x = e->x;
     int32_t velocity = e->spin;
     if (velocity > 0x80000) velocity = 0x80000;
@@ -7856,7 +7900,7 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
     const int height = (layer->height_screens == 1 ? 26 :
                         32 * layer->height_screens) * 8;
     const int foot_x = e->x >> 16;
-    const int foot_y = (e->y >> 16) + 24;
+    const int foot_y = (e->y >> 16) + buer_floor_offset(kind);
     if (foot_x < 0 || foot_x >= width || foot_y < 0 || foot_y >= height)
         return;
     const uint8_t ground = aos_collision_cell(layer, foot_x, foot_y);
@@ -7875,11 +7919,12 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
         e->x = original_x;
         return;
     }
-    if (buer_forward_solid_wall(e, layer)) {
+    if (buer_forward_solid_wall(e, layer, kind)) {
         e->x = original_x;
         return;
     }
-    const int ahead = (e->x >> 16) + (e->spin >= 0 ? 24 : -24);
+    const int front = buer_front_offset(kind);
+    const int ahead = (e->x >> 16) + (e->spin >= 0 ? front : -front);
     if (ahead < 0 || ahead >= width)
         e->x = original_x;
 }
@@ -7892,11 +7937,12 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
  * At a confirmed axis-aligned flat floor, remove at most the shallow
  * penetration of the +24-pixel lower sample, retaining fixed-point X. */
 static void buer_state_two_idle_vertical_step(AosEnemy *e,
-                                              const AosCollision *layer) {
+                                              const AosCollision *layer,
+                                              const AosEnemyKind *kind) {
     if (!layer || !layer->cells || layer->width_screens <= 0 ||
         layer->height_screens <= 0 || e->vy < 0) return;
     const int x = e->x >> 16;
-    const int foot_y = (e->y >> 16) + 24;
+    const int foot_y = (e->y >> 16) + buer_floor_offset(kind);
     const int width = (layer->width_screens == 1 ? 30 :
                        32 * layer->width_screens) * 8;
     const int height = (layer->height_screens == 1 ? 26 :
@@ -7907,7 +7953,7 @@ static void buer_state_two_idle_vertical_step(AosEnemy *e,
         aos_floor_depth(layer, x, foot_y, 0, false) >= 0) return;
     /* A full flat 8-pixel tile has its top at foot_y rounded downward.
      * Keep this conservative correction out of unsupported slopes. */
-    e->y = AOS_FIXED(foot_y & ~7) - AOS_FIXED(24);
+    e->y = AOS_FIXED(foot_y & ~7) - AOS_FIXED(buer_floor_offset(kind));
 }
 
 static void buer_controller(AosEnemy *e, const AosSoma *soma,
@@ -8142,8 +8188,8 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
             aos_audio_play_song(0x6E);
         /* Source sub_080CC20C(mode=1) moves before angular damping. The
          * complete multi-point terrain table remains a separate task. */
-        buer_state_one_horizontal_step(e, layer);
-        buer_rolling_angular_step(e, layer);
+        buer_state_one_horizontal_step(e, layer, kind);
+        buer_rolling_angular_step(e, layer, kind);
         e->buer_fire_mirrored = e->spin >= 0;
         if (--e->timer == 0xFF) e->step = 3;
     } else if (e->step == 3) {
@@ -8333,16 +8379,16 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         const bool state_two_idle = e->state == 2 && e->step == 0;
         /* Mode 2/6 translates X from pre-contact spin. Idle mode 6
          * rolls X back without confirmed ground, before the attack gate. */
-        if (state_one) buer_state_one_horizontal_step(e, layer);
+        if (state_one) buer_state_one_horizontal_step(e, layer, kind);
         if (state_two_idle) {
-            buer_state_two_idle_horizontal_step(e, layer);
-            buer_state_two_idle_vertical_step(e, layer);
+            buer_state_two_idle_horizontal_step(e, layer, kind);
+            buer_state_two_idle_vertical_step(e, layer, kind);
         }
-        if (rolling) buer_rolling_angular_step(e, layer);
+        if (rolling) buer_rolling_angular_step(e, layer, kind);
         /* Recovery is processed BEFORE its timer decrement; the transition
          * from active attack to recovery must not run both on one frame. */
         if (e->state == 2 && e->step == 1 && e->substep == 2)
-            buer_recovery_angular_step(e, layer);
+            buer_recovery_angular_step(e, layer, kind);
         buer_attack_timing(e, soma, random, &report);
         /* Idle mode six has no provisional vertical sine motion. */
         buer_controller(e, soma, !rolling, !state_two_idle);

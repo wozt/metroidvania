@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0669 - Buer ROM-native wall and floor probe geometry
+
+- Connected Buer's 0x08528B64 native collision descriptor to the existing
+  Aria C object exporter. `probes\tbuer` is written only under the ignored
+  ROM-local `assets/extracted/aria/metadata/enemy_frames.tsv` export. No
+  proprietary probe offsets are committed to Git.
+- Buer's roll and death-stage motion now checks all exported signed wall-Y
+  probes at the original half-width and uses the imported floor offset for
+  slope impulses, mode-six grounded translation and shallow Y correction.
+- Old exports without the probe row continue to use bounded 24-pixel front
+  and lower probes, preserving compatibility. Invalid probe counts and
+  out-of-range geometry fall back instead of overrunning the probe array.
+- Added ROM-free synthetic collision tests for multiple wall-Y probes,
+  floor correction, grounded subpixel motion and invalid metadata fallback.
+- Refreshed only the expected Aria golden digest for the changed object
+  metadata export, without masking the complete native golden tests.
+- Buer is still PARTIAL: true tile mask contact flags, ceiling/gravity,
+  mode-six moving-attack X/Y, affine rendering and projectile damage remain.
+
 ## Patch 0668 - Buer linked death wobble and source-sized flame scattering
 
 - Reconstructed source `sub_080CBEA4` death-stage-one linked-fire wobble:

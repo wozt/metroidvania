@@ -7605,6 +7605,43 @@ static void buer_no_contact_angular_step(AosEnemy *e) {
     e->spin = spin;
 }
 
+/* sub_080CC20C's bit-0/bit-1 contact path is a reverse-and-half
+ * angular bounce. The original gets a rich collision mask from
+ * sub_0806CAF8 and a custom table at 0x08528B64. Until that whole probe
+ * is reconstructed, recognize ONLY axis-aligned solid wall cells at the
+ * source's +/-24-pixel forward probe. Slopes, floors and outside-room
+ * coordinates intentionally remain in the no-contact approximation. */
+static bool buer_forward_solid_wall(const AosEnemy *e, const AosCollision *layer) {
+    if (!layer || !layer->cells || layer->width_screens <= 0 ||
+        layer->height_screens <= 0) return false;
+    const bool right = e->spin >= 0;
+    const int x = (e->x >> 16) + (right ? 24 : -24);
+    const int y = e->y >> 16;
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    if (x < 0 || x >= width || y < 0 || y >= height) return false;
+    const uint8_t cell = aos_collision_cell(layer, x, y);
+    if ((cell & 3u) != 3u || (cell & 0xC0u)) return false;
+    return right ? aos_wall_push_left(layer, x, y) < 0 :
+                   aos_wall_push_right(layer, x, y) > 0;
+}
+
+static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer) {
+    if (!buer_forward_solid_wall(e, layer)) {
+        buer_no_contact_angular_step(e);
+        return;
+    }
+    /* sub_080CC20C/_080CC2D2 and _080CC2EE: a true collision flag
+     * takes priority over the no-contact 0x40 friction branch. Spin moves
+     * the affine angle first; then impact writes truncated -spin / 2.
+     * The independent +0x48 X translator remains provisional. */
+    const int32_t spin = e->spin;
+    e->angle += (uint32_t)(spin / 64);
+    e->spin = -spin / 2;
+}
+
 static void buer_controller(AosEnemy *e, const AosSoma *soma) {
     face_player(e, soma);
     e->x += e->vx;
@@ -7961,9 +7998,9 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
          * idle step execute sub_080CC20C's rolling-facing update. Capture
          * that condition before the timer can enter the attack step. */
         bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
-        /* The original runs sub_080CC20C BEFORE the idle attack gate.
-         * Only its no-contact angular part is reconstructed here. */
-        if (rolling) buer_no_contact_angular_step(e);
+        /* Apply the bounded native angular wall-bounce branch before
+         * the attack gate; full native terrain mask reconstruction remains open. */
+        if (rolling) buer_rolling_angular_step(e, layer);
         buer_attack_timing(e, soma, random);
         buer_controller(e, soma);
         if (rolling) {

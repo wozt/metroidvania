@@ -617,6 +617,87 @@ static void buer_no_contact_angular_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* sub_080CC20C: axis-aligned solid forward wall at +/-24 gives the
+ * native contact rebound (-spin/2), independent of the provisional X speed.
+ * Air and floor/slope samples retain the already tested free-spin branch. */
+static void buer_solid_wall_angular_bounce_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    e.home = 60;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.vx = 0;
+    e.phase = 0;
+
+    /* A right-hand 0x03 wall receives a positive rolling probe. */
+    cells[7 * W + 15] = 0x03; /* x + 24 = 124, y = 60 */
+    e.spin = 0x8000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.state == 1 && e.angle == 0x200 && e.spin == -0x4000);
+    assert(e.vx == 0 && !e.buer_fire_mirrored);
+    cells[7 * W + 15] = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0x4000 && e.angle == 0x100);
+
+    /* The mirrored left-hand contact uses the rightward wall push. */
+    cells[7 * W + 9] = 0x03; /* x - 24 = 76 */
+    e.spin = -0x6000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x3000 && e.angle == (uint32_t)(0u - 0x180u));
+    assert(e.buer_fire_mirrored);
+    cells[7 * W + 9] = 0;
+
+    /* In state-2 idle, contact must not apply the empty-contact reversal
+     * a second time; the byte timer still advances exactly once. */
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 4;
+    e.spin = 0x8000;
+    e.angle = 0;
+    cells[7 * W + 15] = 0x03;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 0 && e.timer == 5 && e.spin == -0x4000);
+    assert(e.angle == 0x200 && !e.buer_fire_mirrored);
+
+    /* Slopes are not promoted to solid-wall flags without a native probe. */
+    cells[7 * W + 15] = 0x41;
+    e.state = 1;
+    e.spin = 0x8000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x7FC0 && e.angle == 0x1FF);
+
+    /* The attack window never executes the rolling contact branch. */
+    cells[7 * W + 15] = 0x03;
+    e.state = 2;
+    e.step = 2;
+    e.substep = 2;
+    e.timer = 7;
+    e.spin = 0x8000;
+    e.angle = 0x1234;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x8000 && e.angle == 0x1234);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_timing_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -4520,6 +4601,7 @@ int main(void) {
     buer_idle_directional_wakeup_tests();
     buer_rolling_fire_sign_sync_tests();
     buer_no_contact_angular_tests();
+    buer_solid_wall_angular_bounce_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0659 - Buer bounded solid-wall angular rebound
+
+- Added a conservative axis-aligned solid-wall probe at +/-24 room pixels
+  in Buer's signed angular-spin direction, using existing Aria collision
+  wall-push primitives and rejecting slopes and outside-room samples.
+- Implemented `sub_080CC20C`'s contact flag 1/2 angular response for that
+  bounded case: integrate signed spin/64 into +0x14, then set +0x18 spin
+  to truncated -spin/2; do not apply the no-contact 0x40 damping first.
+- Preserved the current provisional X translation, independent linked-fire
+  facing derived from post-bounce spin, state-2 idle timer and active attack
+  gating. Added ROM-free tests for right/left impacts, no-contact friction,
+  idle bounce ordering, slope exclusion, and active-window non-interference.
+- This is a conservative first wall approximation, not complete parity with
+  `sub_0806CAF8` / `sub_0806C828` or the original 0x08528B64 collision
+  table. Ground, slope, 0x20/0x40 impulses, true translation, flame visuals
+  and audio remain incomplete. All parity statuses remain partial.
+
 ## Patch 0658 - Correct Buer native spin ownership and linked-fire sign
 
 - Audited source `EnemyBuerCreate`, `sub_080CBA30`, `sub_080CC20C` and

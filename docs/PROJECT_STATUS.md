@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0666 - Buer native attack spin saturation and recovery affine contacts
+
+- Fixed the active attack's strict +/-0x20000 spin overshoot rule from
+  `sub_080CBC64`: the same tick clears the timer BEFORE angle selection,
+  switches to the slower +/-0x800 angular step and enters recovery after
+  unsigned countdown underflow. Merely reaching exactly +/-0x20000 does
+  not terminate the attack; normal +/-0x400 timing continues.
+- Reconstructed the separate state-two step-one recovery angular branch:
+  angle advances by spin/64, with bounded existing 0x20/0x40 floor-slope
+  impulses of +/-0x333 but without the state-one/idle 0x40 friction or
+  idle spin reversal. The linked flame's facing bit is preserved.
+- Updated earlier tests that incorrectly assumed every attack always lasts
+  80 ticks and that recovery never rotates. Added signed cap, exact-limit,
+  slope-contact and no-contact ROM-free regressions.
+- Buer remains PARTIAL: native mode-six X/Y collision, original projectile
+  frame assets and combat boxes, 0x081194DC terminal death fragments and
+  linked OAM effects are still open. No ROM or proprietary art is embedded.
+
 ## Patch 0665 - Buer independent native fire projectiles and death X translation
 
 - Replaced the two provisional non-damaging AOS_EFFECT_FIRE attack visuals

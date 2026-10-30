@@ -341,16 +341,21 @@ static void buer_near_player_attack_tests(void) {
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 0 && buer.timer == 4);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 0);
-    /* Next frame starts native 80-frame attack; first countdown tick is
-     * immediate, just like sub_080CBC64 step 0 falling into step 1. */
+    /* The 80-frame timer is an upper bound: with the positive starting
+     * spin, +0xCCC reaches an overshoot on the next tick after timer 50.
+     * Native speed saturation forces an early switch to recovery. */
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 1 && buer.timer == 0x4F);
-    for (int frame = 0; frame < 80; ++frame)
+    for (int frame = 0; frame < 29; ++frame)
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 1 && buer.substep == 1 && buer.timer == 0x32);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 2 && buer.timer == 0x20);
-    /* 72, 63, 54 are the only countdown values >50 divisible by 9. */
+    assert(buer.spin == 0x20000);
+    /* Exactly 72, 63 and 54 still request native sound 0x84. */
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 3);
     for (int frame = 0; frame < 33; ++frame)
         aos_enemy_update(&buer, &soma, &layer, &kind,
@@ -604,8 +609,8 @@ static void buer_no_contact_angular_tests(void) {
     assert(e.timer == 13 && e.angle == 0x1FF && e.spin == -0x2000);
     assert(!e.buer_fire_mirrored);
 
-    /* Step 1 and 2 do not call this rolling routine: neither may pick up
-     * state-2 idle's no-contact inversion while their own probes are open. */
+    /* State-two step 1 recovery retains spin but advances affine angle
+     * without idle friction; step 2 still has no rolling angular update. */
     for (int step = 1; step <= 2; ++step) {
         e.step = (uint8_t)step;
         e.substep = 2;
@@ -614,7 +619,8 @@ static void buer_no_contact_angular_tests(void) {
         e.angle = 0x1200;
         aos_enemy_update(&e, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, never_zero);
-        assert(e.spin == 0x6000 && e.angle == 0x1200);
+        assert(e.spin == 0x6000);
+        assert(e.angle == (uint32_t)(0x1200 + (step == 1 ? 0x180 : 0)));
     }
     memset(cells, 0, sizeof cells);
 }
@@ -1020,7 +1026,7 @@ static void buer_state_two_idle_horizontal_tests(void) {
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.x == AOS_FIXED(101) + 0x8000);
-    assert(e.spin == 0x8000 && e.angle == 0x1234);
+    assert(e.spin == 0x8000 && e.angle == 0x1434);
     memset(cells, 0, sizeof cells);
 }
 
@@ -1376,6 +1382,96 @@ static void buer_projectile_lifecycle_tests(void) {
                            NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.child_count == 2 && !hit.children[0].mirrored &&
            !hit.children[1].mirrored);
+    memset(cells, 0, sizeof cells);
+}
+
+/* Patch 0666: the native attack saturates ONLY on strict spin overflow;
+ * recovery advances affine angle without idle damping and applies signed
+ * floor-slope contact impulses in the same order as sub_080CBC64. */
+static void buer_attack_cap_and_recovery_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.state = 2;
+    e.step = 1;
+    e.substep = 1;
+    e.away = 1;
+    e.timer = 78;
+    e.spin = 0x20000 - 0xCCC;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    /* Exactly at the limit: no timer reset, regular fast turn. */
+    assert(e.spin == 0x20000 && e.substep == 1 && e.timer == 77);
+    assert(e.angle == 0x400);
+
+    /* One extra angular unit STRICTLY crosses the limit and forces
+     * underflow and recovery on this tick; angle uses the slow turn. */
+    e.spin = 0x20000 - 0xCCC + 1;
+    e.angle = 0;
+    e.timer = 78;
+    e.substep = 1;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x20000 && e.substep == 2 && e.timer == 0x20);
+    assert(e.angle == 0x800);
+
+    /* Same strict comparison in the negative direction. */
+    e.away = -1;
+    e.spin = -0x20000 + 0xCCC - 1;
+    e.angle = 0;
+    e.substep = 1;
+    e.timer = 78;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0x20000 && e.substep == 2 && e.timer == 0x20);
+    assert(e.angle == (uint32_t)-0x800);
+
+    /* A no-contact recovery frame does not apply 0x40 friction. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.home = 60;
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.spin = 0x6000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x6000 && e.angle == 0x180 && e.timer == 11);
+
+    /* Probe at (100,124), row 15 col 12: floor-slope flag 0x20 grows
+     * positive spin and flag 0x40 opposes it. */
+    static const struct { uint8_t slope; int32_t expected; } slopes[] = {
+        {0x41, 0x6333}, {0x45, 0x5CCD}
+    };
+    for (size_t i = 0; i < sizeof slopes / sizeof slopes[0]; ++i) {
+        cells[15 * W + 12] = slopes[i].slope;
+        e.x = AOS_FIXED(100);
+        e.y = AOS_FIXED(100);
+        e.home = 100;
+        e.step = 1;
+        e.substep = 2;
+        e.timer = 12;
+        e.spin = 0x6000;
+        e.angle = 0;
+        aos_enemy_update(&e, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(e.spin == slopes[i].expected);
+        assert(e.angle == (uint32_t)(slopes[i].expected / 64));
+    }
     memset(cells, 0, sizeof cells);
 }
 
@@ -5174,6 +5270,7 @@ int main(void) {
     buer_death_stages_tests();
     buer_attack_death_animation_tests();
     buer_projectile_lifecycle_tests();
+    buer_attack_cap_and_recovery_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

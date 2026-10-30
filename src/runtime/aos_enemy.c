@@ -7489,15 +7489,26 @@ static bool buer_player_in_attack_range(const AosEnemy *e, const AosSoma *soma) 
  * angle advances +/-0x400 while the 80-frame clock is above 0x32, else
  * +/-0x800. We preserve the existing stage clock here: the source's early
  * timer-zero on saturation awaits its exact mode-6 collision integration. */
+/* sub_080CBC64, active attack: the source resets the 8-bit timer
+ * to zero only when the signed angular acceleration OVERSHOOTS +/-0x20000.
+ * Exact equality retains the normal timer; overflow makes the same tick
+ * use the slower 0x800 angular increment and immediately enters recovery
+ * on the timer's subsequent unsigned underflow. */
 static void buer_attack_angular_step(AosEnemy *e) {
     const int dir = e->away >= 0 ? 1 : -1;
     int32_t spin = e->spin;
     if (dir > 0) {
         spin += 0xCCC;
-        if (spin > 0x20000) spin = 0x20000;
+        if (spin > 0x20000) {
+            spin = 0x20000;
+            e->timer = 0;
+        }
     } else {
         spin -= 0xCCC;
-        if (spin < -0x20000) spin = -0x20000;
+        if (spin < -0x20000) {
+            spin = -0x20000;
+            e->timer = 0;
+        }
     }
     e->spin = spin;
     const uint32_t angular = e->timer > 0x32 ? 0x400u : 0x800u;
@@ -7763,6 +7774,21 @@ static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer) {
         return;
     }
     buer_no_contact_angular_step(e);
+}
+
+/* sub_080CBC64 step-one recovery, native substep 2:
+ * mode-six contact flags 0x20/0x40 influence signed spin by +/-0x333,
+ * then angle advances by spin/64. Unlike state-one/idle rolling, this
+ * branch has NO 0x40 free-rolling friction and NO -spin/2 reflection.
+ * This conservative implementation only recognizes the existing bounded
+ * floor-slope flag probe; true multi-point mode-six motion is still open. */
+static void buer_recovery_angular_step(AosEnemy *e, const AosCollision *layer) {
+    const uint8_t flags = buer_floor_slope_flags(e, layer);
+    if (flags) {
+        const int32_t impulse = (flags & 0x40u) ? -0x333 : 0x333;
+        e->spin += (e->spin > 0) ? impulse : -impulse;
+    }
+    e->angle += (uint32_t)(e->spin / 64);
 }
 
 /* Patch 0661: state-1 bounded native X translation via +0x18 spin. */
@@ -8270,6 +8296,10 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
             buer_state_two_idle_vertical_step(e, layer);
         }
         if (rolling) buer_rolling_angular_step(e, layer);
+        /* Recovery is processed BEFORE its timer decrement; the transition
+         * from active attack to recovery must not run both on one frame. */
+        if (e->state == 2 && e->step == 1 && e->substep == 2)
+            buer_recovery_angular_step(e, layer);
         buer_attack_timing(e, soma, random, &report);
         /* Idle mode six has no provisional vertical sine motion. */
         buer_controller(e, soma, !rolling, !state_two_idle);

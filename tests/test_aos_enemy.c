@@ -1475,6 +1475,54 @@ static void buer_attack_cap_and_recovery_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0667: native Buer death finale emits eight independent flame
+ * effects with ROM-locally imported signed offsets and one RNG bit each.
+ * The fixture below is synthetic, not extracted from copyrighted data. */
+static void buer_terminal_death_flames_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(136);
+    e.defeated = true;
+    e.state = 3;
+    e.step = 3;
+    e.timer = 0xFF;
+    kind.buer_death_offsets_valid = true;
+    for (int i = 0; i < 8; ++i) {
+        kind.buer_death_offsets[i][0] = (int16_t)(i - 4);
+        kind.buer_death_offsets[i][1] = (int16_t)(i * 2 - 7);
+    }
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.effect_count == 8 && !hit.child_count);
+    assert(e.removed && e.hidden && !hit.targetable);
+    for (int i = 0; i < 8; ++i) {
+        assert(hit.effects[i].kind == AOS_EFFECT_FLAME);
+        assert(hit.effects[i].x == AOS_FIXED(96 + i));
+        assert(hit.effects[i].y == AOS_FIXED(145 + 2 * i));
+        assert(!hit.effects[i].mirrored);
+        assert(!hit.effects[i].particle && !hit.effects[i].drift);
+    }
+    /* No local metadata (old export): preserve previous no-effect cleanup. */
+    AosEnemy old = e;
+    old.removed = old.hidden = false;
+    kind.buer_death_offsets_valid = false;
+    hit = aos_enemy_update(&old, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(old.removed && old.hidden && hit.effect_count == 0);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5271,6 +5319,7 @@ int main(void) {
     buer_attack_death_animation_tests();
     buer_projectile_lifecycle_tests();
     buer_attack_cap_and_recovery_tests();
+    buer_terminal_death_flames_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

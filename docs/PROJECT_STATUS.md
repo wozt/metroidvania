@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0667 - Buer ROM-local eight-flame death finale
+
+- Ported Buer's eight final native `sub_0806D578` flame spawns from its
+  source `0x081194DC` table. The C asset exporter now reads 8 signed X/Y
+  offset pairs from the user's own ROM, writes a `buer_death_offsets` row
+  into ignored `assets/extracted/aria/metadata/enemy_frames.tsv`, and the
+  runtime validates all 16 signed values before enabling them.
+- On the final death tick, emit eight ordinary `AOS_EFFECT_FLAME` entries
+  simultaneously at (Buer X + table dx, Buer Y + table dy + 16 pixels),
+  consuming one RNG mirror bit for each. Report capacity is now 8 effects.
+  No unlicensed table values are included in the repository or this patch.
+- Backward compatibility: without re-exported metadata, skip the final
+  flames and preserve the prior death/removal and sound behavior rather
+  than inventing offsets. Run the C Aria objects importer again after
+  applying the patch to populate local metadata for actual gameplay:
+  `./build/fusion_rebuild --task aria_objects`.
+- Added ROM-free tests with deliberately synthetic signed offset fixtures
+  for exact count, positions, effect kind, RNG facing and missing-data mode.
+- Buer remains PARTIAL: the real affine/OAM effect and the complete native
+  terrain/attack probe and projectile hitbox paths are still outstanding.
+
 ## Patch 0666 - Buer native attack spin saturation and recovery affine contacts
 
 - Fixed the active attack's strict +/-0x20000 spin overshoot rule from

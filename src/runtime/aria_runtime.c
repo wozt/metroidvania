@@ -2196,6 +2196,34 @@ static bool load_enemy_data(AriaObjects *objects) {
             }
             continue;
         }
+        /* Patch 0667: extra locally exported ROM table, eight signed (X,Y)
+         * pairs. Refuse partial/malformed rows, preserving old import data. */
+        if (!strncmp(line, "buer_death_offsets\tbuer\t", 24)) {
+            int16_t offsets[8][2] = {{0}};
+            char *cursor = line + 23;
+            bool valid = true;
+            for (int i = 0; i < 8 && valid; ++i) {
+                for (int axis = 0; axis < 2; ++axis) {
+                    if (*cursor != '\t') { valid = false; break; }
+                    ++cursor;
+                    char *end = NULL;
+                    long value = strtol(cursor, &end, 10);
+                    if (end == cursor || value < -32768 || value > 32767) {
+                        valid = false;
+                        break;
+                    }
+                    offsets[i][axis] = (int16_t)value;
+                    cursor = end;
+                }
+            }
+            if (*cursor && *cursor != '\r' && *cursor != '\n') valid = false;
+            if (valid) {
+                AosEnemyKind *buer = &objects->enemies[AOS_ENEMY_BUER].kind;
+                memcpy(buer->buer_death_offsets, offsets, sizeof offsets);
+                buer->buer_death_offsets_valid = true;
+            }
+            continue;
+        }
         if (!strncmp(line, "probes\t", 7)) {
             /* The walker probe table: count, ceiling, floor, half width,
              * then count wall offsets. */

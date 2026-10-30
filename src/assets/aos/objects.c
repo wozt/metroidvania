@@ -25,6 +25,7 @@ enum {
     ENEMY_COUNT = 0x71,
     DEATH_BLINK = 0x08118CE0,
     SCREEN_MARGINS = 0x08118D08,
+    BUER_DEATH_OFFSETS = 0x081194DC,
     TILE_BYTES = 32,
     MAX_ANIMATIONS = 256,
     MAX_FRAMES = 128,
@@ -696,6 +697,21 @@ static bool append_volleys(const FusionRom *rom, const EntitySpec *entity,
     return true;
 }
 
+/* sub_080CBEA4 final phase reads eight consecutive (X,Y) signed
+ * 16-bit pairs at 0x081194DC. Export from the locally supplied ROM only;
+ * this metadata is generated under ignored assets/extracted/, not in Git. */
+static bool append_buer_death_offsets(const FusionRom *rom, Text *rows,
+                                      char *error, size_t error_size) {
+    const uint8_t *bytes = slice(rom, BUER_DEATH_OFFSETS, 8 * 4,
+                                 "Buer death offsets", error, error_size);
+    if (!bytes || !text_append(rows, "buer_death_offsets\tbuer")) return false;
+    for (unsigned i = 0; i < 8; ++i) {
+        if (!text_append(rows, "\t%d\t%d", read_s16(bytes + 4 * i),
+                         read_s16(bytes + 4 * i + 2))) return false;
+    }
+    return text_append(rows, "\n");
+}
+
 static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
                           const EntitySpec *entity, Text *rows,
                           char *error, size_t error_size) {
@@ -1185,7 +1201,8 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         success = export_effect(rom, &library, &effects[index],
                                 error, error_size);
     if (success) success = export_icons(rom, &library, error, error_size);
-    if (success) success = append_global_metadata(rom, &rows, error, error_size) &&
+    if (success) success = append_buer_death_offsets(rom, &rows, error, error_size) &&
+                           append_global_metadata(rom, &rows, error, error_size) &&
                            append_enemy_stats(rom, &stats, error, error_size) &&
                            write_text_file(metadata_output, "enemy_frames.tsv",
                                            &rows, error, error_size) &&

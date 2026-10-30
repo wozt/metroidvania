@@ -97,6 +97,10 @@ typedef struct {
     /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
     int16_t margins[7][2];
     AosProbes probes;       /* walker probe table, count 0 when unused */
+    /* Exported locally from the user's ROM (0x081194DC, 8 x s16 X/Y).
+     * Not a compiled-in table. Absent in legacy asset exports. */
+    int16_t buer_death_offsets[8][2];
+    bool buer_death_offsets_valid;
     /* Volley lists (frame, y offset) of a shooter, e.g. 0x08528614. */
     int8_t volleys[4][8][2];
     uint8_t volley_sizes[4];
@@ -237,7 +241,7 @@ typedef struct AosEnemy {
     AosAnimState anim;
 } AosEnemy;
 
-#define AOS_ENEMY_MAX_EFFECTS 4  /* at most 3 per frame (sub_08092CCC) */
+#define AOS_ENEMY_MAX_EFFECTS 8  /* Buer finale: eight simultaneous flames */
 
 /* What one collision pass did. */
 typedef struct {

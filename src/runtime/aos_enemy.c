@@ -8061,7 +8061,26 @@ static AosHitReport enemy_ghost_update(AosEnemy *g, AosSoma *soma,
  * not only countdowns. Periodic flame art is represented through the
  * shared, non-damaging effect path until the native effect slots, linked
  * fire wobble and ROM's eight terminal-piece offsets are imported. */
-static AosHitReport buer_death_update(AosEnemy *e, const AosCollision *layer,
+/* Eight simultaneous sub_0806D578/sub_0806E524 fire effects from
+ * the ROM's 0x081194DC offset table (8 signed X/Y pairs). The source adds
+ * +16 pixels to Y and draws ONE RNG bit per successfully created effect.
+ * Without a local export, omit these effects rather than guessing offsets. */
+static void buer_terminal_death_flames(const AosEnemy *e, const AosEnemyKind *kind,
+                                        uint32_t (*random)(void), AosHitReport *report) {
+    if (!kind || !kind->buer_death_offsets_valid) return;
+    for (unsigned i = 0; i < 8 && report->effect_count < AOS_ENEMY_MAX_EFFECTS; ++i) {
+        const int32_t ox = (int32_t)kind->buer_death_offsets[i][0] * 0x10000;
+        const int32_t oy = (int32_t)kind->buer_death_offsets[i][1] * 0x10000;
+        AosEffect *flame = &report->effects[report->effect_count++];
+        *flame = (AosEffect){.kind = AOS_EFFECT_FLAME,
+                             .x = (int32_t)((uint32_t)e->x + (uint32_t)ox),
+                             .y = (int32_t)((uint32_t)e->y + (uint32_t)oy + 0x100000u),
+                             .mirrored = (random() & 1u) != 0};
+    }
+}
+
+static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
+                                      const AosCollision *layer,
                                       uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (e->step == 0) {
@@ -8105,8 +8124,9 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosCollision *layer,
             aos_audio_play_song(0x6E);
         if (--e->timer == 0xFF) e->step = 3;
     } else if (e->step == 3) {
-        /* Eight real sub_0806D578 terminal pieces need the source's
-         * 0x081194DC offsets, which are NOT embedded or guessed here. */
+        /* Source sub_080CC0F2: all eight fire effects in one native tick,
+         * using metadata imported from the user's own ROM. */
+        buer_terminal_death_flames(e, kind, random, &report);
         aos_audio_play_song(0x6E);
         e->hidden = true;
         e->removed = true;
@@ -8172,7 +8192,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     }
     if (e->defeated) {
         if (e->id == AOS_ENEMY_BUER && e->state == 3) {
-            report = buer_death_update(e, layer, random);
+            report = buer_death_update(e, kind, layer, random);
         } else if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
             /* EnemyGiantGhostUpdate state 2: the native 90-frame
              * death countdown. Blink approximates sub_0806D518; exact

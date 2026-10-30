@@ -698,6 +698,107 @@ static void buer_solid_wall_angular_bounce_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* A bounded slope probe exercises the original sub_080CC20C flag
+ * 0x20/0x40 angular impulses without claiming complete native terrain
+ * sampling or overwriting the solid-wall collision path from patch 0659. */
+static void buer_floor_slope_angular_impulse_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    e.vx = 0;
+    e.home = 100;
+    /* x=100, y=100: the bottom probe is (100,124), row 15/column 12.
+     * Source-facing slope 0x41 and X-flipped slope 0x45 are both
+     * penetrated here. Native 0x20 grows and 0x40 reduces angular speed. */
+    static const struct {
+        uint8_t tile;
+        int32_t spin;
+        int32_t expected;
+    } cases[] = {
+        {0x41, 0x6000, 0x6333},
+        {0x45, 0x6000, 0x5CCD},
+        {0x41, -0x6000, -0x5CCD},
+        {0x45, -0x6000, -0x6333},
+        {0x45, 0x0200, -0x0133},
+    };
+    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; ++i) {
+        cells[15 * W + 12] = cases[i].tile;
+        e.x = AOS_FIXED(100);
+        e.y = AOS_FIXED(100);
+        e.home = 100;
+        e.phase = 0;
+        e.state = 1;
+        e.step = e.substep = 0;
+        e.spin = cases[i].spin;
+        e.angle = 0;
+        aos_enemy_update(&e, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(e.state == 1 && e.spin == cases[i].expected);
+        assert(e.angle == (uint32_t)(cases[i].expected / 64));
+    }
+
+    /* A slope tile outside the lower probe is not a contact. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(95);
+    e.home = 95;
+    e.phase = 0;
+    e.spin = 0x6000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x5FC0 && e.angle == 0x17F);
+
+    /* With native flag 0x40 or 0x20, state-2 idle does not also
+     * execute the no-contact reverse-and-half angular response. */
+    cells[15 * W + 12] = 0x41;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.phase = 0;
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 4;
+    e.spin = -0x6000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 0 && e.timer == 5 && e.spin == -0x5CCD);
+    assert(e.angle == (uint32_t)(0u - 0x173u));
+
+    /* The solid-wall collision still has priority over a lower slope. */
+    cells[12 * W + 15] = 0x03; /* forward sample (124,100) */
+    e.state = 1;
+    e.spin = 0x6000;
+    e.angle = 0;
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.phase = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0x3000 && e.angle == 0x180);
+    cells[12 * W + 15] = 0;
+
+    /* State-2 attack windows do not execute the rolling slope probe. */
+    e.state = 2;
+    e.step = e.substep = 2;
+    e.timer = 7;
+    e.spin = 0x6000;
+    e.angle = 0x1234;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x6000 && e.angle == 0x1234 && e.timer == 6);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_timing_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -4602,6 +4703,7 @@ int main(void) {
     buer_rolling_fire_sign_sync_tests();
     buer_no_contact_angular_tests();
     buer_solid_wall_angular_bounce_tests();
+    buer_floor_slope_angular_impulse_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

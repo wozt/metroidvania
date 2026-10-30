@@ -7628,18 +7628,50 @@ static bool buer_forward_solid_wall(const AosEnemy *e, const AosCollision *layer
                    aos_wall_push_right(layer, x, y) > 0;
 }
 
+/* A bounded floor contact for sub_0806C828's 0x20/0x40 slope flags.
+ * Native probes use 0x08528B64 and ground metadata; until that complete
+ * table is ported, classify only a non-wall slope directly under the
+ * 24-pixel lower sample when the collision layer confirms penetration.
+ * The slope's X-flip bit and the original +0x18 angular sign determine
+ * the sign of the contact impulse. This is not the general native mask. */
+static uint8_t buer_floor_slope_flags(const AosEnemy *e, const AosCollision *layer) {
+    if (!layer || !layer->cells || layer->width_screens <= 0 ||
+        layer->height_screens <= 0 || e->spin == 0) return 0;
+    const int x = e->x >> 16;
+    const int y = (e->y >> 16) + 24;
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+    const uint8_t cell = aos_collision_cell(layer, x, y);
+    if (!(cell & 1u) || !(cell & 0xC0u) || (cell & 2u)) return 0;
+    if (aos_floor_depth(layer, x, y, 0, false) >= 0) return 0;
+    const bool right = e->spin > 0;
+    const bool flipped = (cell & 4u) != 0;
+    return right == flipped ? 0x40u : 0x20u;
+}
+
 static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer) {
-    if (!buer_forward_solid_wall(e, layer)) {
-        buer_no_contact_angular_step(e);
+    if (buer_forward_solid_wall(e, layer)) {
+        /* Original flag 1/2: advance affine angle then reverse/halve. */
+        const int32_t spin = e->spin;
+        e->angle += (uint32_t)(spin / 64);
+        e->spin = -spin / 2;
         return;
     }
-    /* sub_080CC20C/_080CC2D2 and _080CC2EE: a true collision flag
-     * takes priority over the no-contact 0x40 friction branch. Spin moves
-     * the affine angle first; then impact writes truncated -spin / 2.
-     * The independent +0x48 X translator remains provisional. */
-    const int32_t spin = e->spin;
-    e->angle += (uint32_t)(spin / 64);
-    e->spin = -spin / 2;
+    const uint8_t slope_flags = buer_floor_slope_flags(e, layer);
+    if (slope_flags) {
+        /* sub_080CC20C: flag 0x40 opposes the angular sign; flag 0x20
+         * reinforces it. Unlike the no-contact branch, neither adds the
+         * 0x40 friction nor reverses a state-2 idle rolling impulse. */
+        const int32_t impulse = (slope_flags & 0x40u) ? -0x333 : 0x333;
+        const int32_t spin = e->spin + (e->spin > 0 ? impulse : -impulse);
+        e->spin = spin;
+        e->angle += (uint32_t)(spin / 64);
+        return;
+    }
+    buer_no_contact_angular_step(e);
 }
 
 static void buer_controller(AosEnemy *e, const AosSoma *soma) {

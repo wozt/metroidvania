@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0660 - Buer bounded floor-slope angular impulses
+
+- Extended the conservative `sub_080CC20C` contact approximation with
+  `sub_0806C828` flags 0x20 and 0x40 for confirmed floor-slope tiles at
+  Buer's lower (+24-pixel) sample. The spin sign and the cell X-flip select
+  the angular impulse direction, using the source's exact +/-0x333 step.
+- A 0x20 contact reinforces spin and a 0x40 contact opposes spin. The new
+  spin is integrated toward zero by 64 into the 32-bit affine angle;
+  these contacts do not also apply 0x40 no-contact damping or the idle
+  empty-contact reverse-and-half behavior. Existing wall rebounds take
+  priority in this bounded approximation.
+- Added ROM-free regressions for both slope orientations, both spin signs,
+  sign-crossing, no-contact fallback, wall priority, state-2 idle and
+  attacks. The horizontal translator and native flame helper are unchanged.
+- This is not the full `sub_0806CAF8` / `sub_0806C828` collision mask or
+  `0x08528B64` table. Real probe offsets, slope geometry, terrain response,
+  affine effect output, fire attacks and audio are still partial. No parity
+  status was upgraded; no proprietary ROM or cached golden input was touched.
+
 ## Patch 0659 - Buer bounded solid-wall angular rebound
 
 - Added a conservative axis-aligned solid-wall probe at +/-24 room pixels

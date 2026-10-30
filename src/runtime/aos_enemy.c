@@ -1208,6 +1208,15 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 0xFF;
                     enemy->step = 0;
                     enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_BUER &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080CC514 marks Buer defeated and dispatches
+                     * sub_080CBEA4 in state 3. Its first tick supplies
+                     * the sound and death-stage timing, not the callback. */
+                    enemy->state = 3;
+                    enemy->step = 0;
+                    enemy->substep = 0;
+                    enemy->timer = 0;
                 } else if (enemy->id == AOS_ENEMY_WINGED_SKELETON &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080751B4: the GBA requests 0x6B and enters
@@ -7563,6 +7572,45 @@ static AosHitReport enemy_ghost_update(AosEnemy *g, AosSoma *soma,
     return report;
 }
 
+/* EnemyBuerUpdate -> sub_080CBEA4: a separate state-3 death
+ * sequence. The original drives a linked object, periodic visual effects,
+ * eight final fragments and sound. Only its observable countdown stages and
+ * audio requests are represented here; no ROM effect data is synthesized. */
+static AosHitReport buer_death_update(AosEnemy *e) {
+    AosHitReport report = {0};
+    if (e->step == 0) {
+        /* Native step 0 enters the first 96-frame stage and plays 0x6E.
+         * It immediately processes the first countdown tick. */
+        e->combat.attack_off = true;
+        e->combat.hurt_off = true;
+        aos_audio_play_song(0x6E);
+        e->timer = 0x60;
+        e->step = 1;
+    }
+    if (e->step == 1) {
+        /* Native step 1 completes after the 8-bit counter underflows. */
+        if (--e->timer == 0xFF) {
+            e->timer = 0x80;
+            e->step = 2;
+        }
+    } else if (e->step == 2) {
+        /* Native step 2: additional 0x6E cues every 20 timer values,
+         * only while more than 28 frames remain. The flying effects and
+         * probe-based motion are intentionally still unimplemented. */
+        if (e->timer > 0x1C && (e->timer % 0x14) == 0)
+            aos_audio_play_song(0x6E);
+        if (--e->timer == 0xFF) e->step = 3;
+    } else if (e->step == 3) {
+        /* Native step 3 plays a final 0x6E and hides its parent while
+         * emitting eight fragments. The compact runtime removes the dead
+         * owner here until those native visual children are ported. */
+        aos_audio_play_song(0x6E);
+        e->hidden = true;
+        e->removed = true;
+    }
+    return report;
+}
+
 static bool early_enemy_inert(const AosEnemy *e) {
     if ((e->id == AOS_ENEMY_SKELETON || e->id == AOS_ENEMY_KILLER_FISH) && e->state == 5)
         return true;
@@ -7620,7 +7668,9 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         return report;
     }
     if (e->defeated) {
-        if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
+        if (e->id == AOS_ENEMY_BUER && e->state == 3) {
+            report = buer_death_update(e);
+        } else if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
             /* EnemyGiantGhostUpdate state 2: the native 90-frame
              * death countdown. Blink approximates sub_0806D518; exact
              * palette and three generated death children remain pending. */

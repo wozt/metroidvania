@@ -20,6 +20,65 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+/* Buer's GBA sub_080CC514 / sub_080CBEA4: lethal hit enters
+ * state 3, step 0; its updater starts sound 0x6E and a 96-frame stage,
+ * followed by a 128-frame stage with 20-frame interval sound cues. */
+static void buer_death_stages_tests(void) {
+    memset(cells, 0, sizeof cells);
+    /* Buer's create routine snaps to a floor. Without a solid tile,
+     * snap_to_floor scans off-screen and skips the entire collision pass.
+     * Use the same at-y=160 test floor as the early-enemy batch tests. */
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2, 2, 2};
+    const AosAnimDef defs[] = {{3, ticks}, {3, ticks}, {3, ticks}};
+    const AosAnimSet anims = {defs, 3};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 3; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    assert((buer.y >> 16) > 0 && (buer.y >> 16) <= 0xB0);
+    AosSoulAttack soul = {{0, 0, 255, 200}, 255, 0, false, NULL};
+    aos_enemy_set_soul_attacks(&soul, 1);
+    AosHitReport hit = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(soul.struck && soul.target == &buer);
+    assert(hit.killed && buer.defeated && buer.state == 3 && buer.step == 0);
+    assert(!buer.removed);
+    aos_audio_clear();
+    int32_t death_x = buer.x, death_y = buer.y;
+
+    hit = aos_enemy_update(&buer, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(buer.step == 1 && buer.timer == 0x5F && buer.state == 3);
+    assert(buer.combat.attack_off && buer.combat.hurt_off);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1);
+    assert(!hit.child_count && !hit.effect_count && !hit.soma_hit);
+    for (int frame = 0; frame < 96; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(buer.step == 2 && buer.timer == 0x80 && !buer.removed);
+    assert(buer.x == death_x && buer.y == death_y);
+    for (int frame = 0; frame < 129; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(buer.step == 3 && buer.timer == 0xFF && !buer.removed);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) > 1);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(buer.removed && buer.hidden);
+    aos_audio_clear();
+    memset(cells, 0, sizeof cells);
+}
+
 /* EnemyBuerUpdate state 4 dispatches sub_080CC48C instead of the normal
  * Buer walking/contact path. The native visual effect is still missing. */
 static void buer_inert_orbit_tests(void) {
@@ -3800,6 +3859,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_death_stages_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

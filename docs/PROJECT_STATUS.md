@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0648 - Buer native death entry and timed stages
+
+- Reconstructed the source-derived lethal callback of `sub_080CC514` and
+  the state-3 countdown of `sub_080CBEA4` in the C enemy runtime.
+- First death update now requests song 0x6E, sets the attack/hurt flags and
+  starts a 96-frame countdown. The second 128-frame phase requests further
+  0x6E cues under the ROM's `timer > 28 && timer % 20 == 0` condition.
+- After the terminal phase, the compact owner is removed. Native linked
+  movement/particles, the eight final fragments, and live audio mixing are
+  still missing; this is not full Buer death fidelity.
+- Added ROM-free tests using a real collision floor so Buer remains
+  visible after spawn-time floor snapping; also verifies the soul strike,
+  lethal state, one-time entry sound, both stage boundaries, periodic cues,
+  no invented child effects and terminal cleanup.
+  Kept animation, loot, blue soul and enemy parity status appropriately partial.
+- Left `native_golden_cached.sh`, importer binaries/sources and goldens
+  untouched so identical successfully verified inputs may reuse cache.
+  The validation still runs every CTest entry once and reports duration.
+
 ## Patch 0647 - Native Buer inert visual timing
 
 - Implemented the bounded state-4 updater of cvaos sub_080CC48C in the C11

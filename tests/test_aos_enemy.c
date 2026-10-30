@@ -391,7 +391,8 @@ static void buer_idle_directional_wakeup_tests(void) {
         buer.step = buer.substep = buer.timer = 0;
         /* A deliberately stale bit proves the spin-based update. */
         buer.buer_fire_mirrored = side == 0;
-        soma.x = buer.x + (side ? AOS_FIXED(96) : -AOS_FIXED(96));
+        soma.x = buer.x + (side ? AOS_FIXED(96) - 0x8000 :
+                                  -AOS_FIXED(96) + 0x8000);
         soma.y = buer.y + AOS_FIXED(24);
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -412,7 +413,8 @@ static void buer_idle_directional_wakeup_tests(void) {
         buer.state = 2;
         buer.step = buer.substep = buer.timer = 0;
         buer.buer_fire_mirrored = true;
-        soma.x = buer.x + dx[i] * AOS_FIXED(1);
+        soma.x = buer.x + dx[i] * AOS_FIXED(1) -
+                 (i == 1 ? 0x8000 : 0);
         soma.y = buer.y + AOS_FIXED(dy[i]);
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -512,7 +514,7 @@ static void buer_rolling_fire_sign_sync_tests(void) {
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 0 && buer.timer == 5);
-    assert(buer.spin == -0x3FE0 && buer.vx > 0);
+    assert(buer.spin == -0x3FE0 && buer.vx == 0x8000);
     assert(!buer.buer_fire_mirrored);
 
     /* Attack and recovery must not overwrite independent fire facing,
@@ -895,6 +897,130 @@ static void buer_state_one_horizontal_tests(void) {
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.x == AOS_FIXED(101) + 0x8000);
     assert(e.vx == 0x18000 && e.spin == 0x8000);
+    memset(cells, 0, sizeof cells);
+}
+
+/* Patch 0662: in state-2 idle, mode 6 copies pre-contact spin to
+ * horizontal speed but rolls back X if no grounded flag 8 was observed.
+ * No unsupported slope/contact geometry is treated as solid floor. */
+static void buer_state_two_idle_horizontal_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(e.state == 2 && e.step == 0);
+
+    /* Flat floor at y=160: x moves by exactly 0x8000 before damping,
+     * without using the old provisional 1.5-pixel horizontal step. */
+    e.x = AOS_FIXED(100) + 0x2000;
+    e.y = AOS_FIXED(136);
+    e.home = 136;
+    e.phase = 0;
+    e.vx = -0x18000;
+    e.spin = 0x8000;
+    e.timer = 4;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 0 && e.timer == 5);
+    assert(e.x == AOS_FIXED(100) + 0xA000);
+    assert(e.vx == 0x8000 && e.spin == -0x3FE0);
+
+    /* Negative pre-contact spin moves left, again ahead of angular
+     * reversal. The entire fractional portion must be preserved. */
+    e.x = AOS_FIXED(100) + 0x2000;
+    e.y = AOS_FIXED(136);
+    e.phase = 0;
+    e.spin = -0x6000;
+    e.timer = 6;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(99) + 0xC000);
+    assert(e.vx == -0x6000 && e.spin == 0x2FE0);
+
+    /* No floor: mode-six's missing flag 8 restores old X, rather than
+     * running the old provisional patrol. The velocity is still written. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.home = 60;
+    e.phase = 0;
+    e.spin = 0x8000;
+    e.timer = 8;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.vx == 0x8000);
+    assert(e.timer == 9 && e.spin == -0x3FE0);
+
+    /* Rolling over an exposed ledge is not falsely declared grounded:
+     * the destination foot cell is checked after X motion as well. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(136);
+    e.home = 136;
+    e.phase = 0;
+    e.spin = 0x90000;
+    e.timer = 9;
+    cells[20 * W + 13] = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.vx == 0x80000);
+    cells[20 * W + 13] = 0x03;
+
+    /* A flat floor and a solid right wall trigger the conservative
+     * native X rollback, while angular impact still reverses spin. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(136);
+    e.home = 136;
+    e.phase = 0;
+    e.spin = 0x8000;
+    e.timer = 10;
+    cells[17 * W + 15] = 0x03; /* forward centre: x=124, y=136 */
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.vx == 0x8000);
+    assert(e.spin == -0x4000 && e.timer == 11);
+    cells[17 * W + 15] = 0;
+
+    /* The 240-pixel single-screen forward boundary restores old X,
+     * while the same x in a 512-pixel double-screen room remains valid. */
+    const AosCollision single = {1, 1, W, H, cells, NULL, false};
+    e.y = AOS_FIXED(136);
+    e.phase = 0;
+    e.spin = 0x8000;
+    e.x = AOS_FIXED(217);
+    e.timer = 12;
+    aos_enemy_update(&e, &soma, &single, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(217));
+    e.y = AOS_FIXED(136);
+    e.phase = 0;
+    e.spin = 0x8000;
+    e.x = AOS_FIXED(217);
+    e.timer = 12;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(217) + 0x8000);
+
+    /* Attack windows must continue using their provisional controller;
+     * neither +0x18 nor affine angle is touched by rolling logic. */
+    e.state = 2;
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.x = AOS_FIXED(100);
+    e.spin = 0x8000;
+    e.angle = 0x1234;
+    e.vx = 0x18000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(101) + 0x8000);
+    assert(e.spin == 0x8000 && e.angle == 0x1234);
     memset(cells, 0, sizeof cells);
 }
 
@@ -4804,6 +4930,7 @@ int main(void) {
     buer_solid_wall_angular_bounce_tests();
     buer_floor_slope_angular_impulse_tests();
     buer_state_one_horizontal_tests();
+    buer_state_two_idle_horizontal_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

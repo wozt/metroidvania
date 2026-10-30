@@ -7709,6 +7709,57 @@ static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *laye
         e->x = original_x;
 }
 
+/* Patch 0662: state-two idle mode-six ground-gated X translation. */
+/* sub_080CC20C calls sub_0806CAF8 with mode 6 in state-2 idle.
+ * Like state one, +0x48 uses PRE-contact spin and a signed +/-8-pixel
+ * clamp. Unlike mode 2, mode 6 includes flag 4: without native ground
+ * contact flag 8, the collision wrapper restores both old X and Y.
+ * Until the 0x08528B64 multi-point collision table is reconstructed,
+ * permit X motion only above a confirmed, penetrated FLAT solid floor.
+ * An unknown/slope contact must not be fabricated into native flag 8.
+ * Attack and recovery substeps never invoke this routine. */
+static void buer_state_two_idle_horizontal_step(AosEnemy *e,
+                                                const AosCollision *layer) {
+    const int32_t original_x = e->x;
+    int32_t velocity = e->spin;
+    if (velocity > 0x80000) velocity = 0x80000;
+    if (velocity < -0x80000) velocity = -0x80000;
+    e->vx = velocity;
+    if (!layer || !layer->cells || layer->width_screens <= 0 ||
+        layer->height_screens <= 0) return;
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    const int foot_x = e->x >> 16;
+    const int foot_y = (e->y >> 16) + 24;
+    if (foot_x < 0 || foot_x >= width || foot_y < 0 || foot_y >= height)
+        return;
+    const uint8_t ground = aos_collision_cell(layer, foot_x, foot_y);
+    if ((ground & 3u) != 3u || (ground & 0xC0u) != 0u ||
+        aos_floor_depth(layer, foot_x, foot_y, 0, false) >= 0)
+        return;
+    e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
+    const int after_x = e->x >> 16;
+    if (after_x < 0 || after_x >= width) {
+        e->x = original_x;
+        return;
+    }
+    const uint8_t landing = aos_collision_cell(layer, after_x, foot_y);
+    if ((landing & 3u) != 3u || (landing & 0xC0u) != 0u ||
+        aos_floor_depth(layer, after_x, foot_y, 0, false) >= 0) {
+        e->x = original_x;
+        return;
+    }
+    if (buer_forward_solid_wall(e, layer)) {
+        e->x = original_x;
+        return;
+    }
+    const int ahead = (e->x >> 16) + (e->spin >= 0 ? 24 : -24);
+    if (ahead < 0 || ahead >= width)
+        e->x = original_x;
+}
+
 static void buer_controller(AosEnemy *e, const AosSoma *soma,
                             bool provisional_horizontal) {
     face_player(e, soma);
@@ -8069,12 +8120,14 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
          * that condition before the timer can enter the attack step. */
         bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
         const bool state_one = e->state == 1;
-        /* Source mode 2 translates X using pre-contact spin. Do it
-         * before the bounded angular flags, preserving +0x48 timing. */
+        const bool state_two_idle = e->state == 2 && e->step == 0;
+        /* Mode 2/6 translates X from pre-contact spin. Idle mode 6
+         * rolls X back without confirmed ground, before the attack gate. */
         if (state_one) buer_state_one_horizontal_step(e, layer);
+        if (state_two_idle) buer_state_two_idle_horizontal_step(e, layer);
         if (rolling) buer_rolling_angular_step(e, layer);
         buer_attack_timing(e, soma, random);
-        buer_controller(e, soma, !state_one);
+        buer_controller(e, soma, !rolling);
         if (rolling) {
             /* sub_080CC20C writes the linked +0x58 facing from the
              * final angular velocity at +0x18, after damping/reversal.

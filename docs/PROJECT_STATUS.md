@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0662 - Buer bounded state-two idle mode-six translation
+
+- Ported the limited horizontal part of native `sub_080CC20C` / `sub_0806CAF8`
+  mode 6 during state-two idle: pre-contact +0x18 spin becomes +0x48 signed
+  velocity with the native +/-8-pixel clamp. X advances by that amount only
+  above a verified flat solid floor under the +24-pixel lower sample.
+- The mode-six no-ground rollback stops the old provisional idle motion when
+  no confirmed ground contact exists. Existing conservative wall and
+  forward-room checks restore X after a blocked attempted movement.
+- Native angular processing and idle wake-up continue after the movement,
+  and attack/recovery substeps retain the provisional controller. ROM-free
+  tests exercise signed subpixels, no ground, simple wall, 240/512-pixel
+  room boundaries, timer and attack isolation.
+- This is a BOUNDED approximation, not a full native multi-point collision
+  mask from `0x08528B64`: slopes, native vertical gravity, affine effects,
+  flame projectiles and exact Buer animation/audio remain unported. Parity
+  statuses were not upgraded and no proprietary assets were changed.
+
 ## Patch 0661 - Buer state-one native X translation
 
 - Replaced state-one Buer's provisional 1.5-pixel patrolling X controller

@@ -20,6 +20,43 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+/* EnemyBuerUpdate state 4 dispatches sub_080CC48C instead of the normal
+ * Buer walking/contact path. The native visual effect is still missing. */
+static void buer_inert_orbit_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(210), AOS_FIXED(140), NULL);
+    AosEnemy buer;
+
+    aos_enemy_set_flag_8e_40(true);
+    bool created = aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                                    0, 0, &soma, &layer, &kind, &stats);
+    aos_enemy_set_flag_8e_40(false);
+    assert(created && buer.state == 4 && buer.step == 0);
+    int32_t first_y = buer.y, first_x = buer.x;
+    uint16_t first_phase = buer.phase;
+
+    AosHitReport report = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(buer.y == first_y - AOS_FIXED(32));
+    assert(buer.x == first_x && buer.step == 1 && buer.static_frame == 0);
+    assert(buer.phase == (uint16_t)(first_phase + 0x100));
+    assert(!report.child_count && !report.soma_hit && !report.enemy_hit);
+
+    int32_t raised_y = buer.y;
+    for (int i = 0; i < 5; ++i) {
+        report = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                  NULL, NULL, 10, 4, 0, 0, always_zero);
+        assert(buer.y == raised_y && buer.x == first_x);
+        assert(buer.state == 4 && buer.step == 1);
+        assert(!report.child_count && !report.soma_hit && !report.enemy_hit);
+    }
+    assert(buer.phase == (uint16_t)(first_phase + 6 * 0x100));
+}
 /* Skeleton: the native attack's third animation frame launches a single
  * bone, using source-derived OAM IDs, sound, launch trajectory and boxes.
  * The regular kill path is deliberately still used for XP and soul drops. */
@@ -3763,6 +3800,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();
     giant_ghost_death_cue_tests();

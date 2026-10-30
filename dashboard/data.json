@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-30T02:39:39+00:00",
+ "generated_at": "2026-10-30T02:47:13+00:00",
  "git": {
-  "commit": "f6b2cd6",
+  "commit": "f662c28",
   "branch": "main",
   "dirty": true
  },
@@ -9244,8 +9244,8 @@
     "sub_080CC4E4",
     "sub_080CC514"
    ],
-   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete.",
-   "next_action": "Port fire collision and the bounce state machine.",
+   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native state-4 visual-emitter callback is not yet ported. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. The inert state-4 updater now raises the visual centre 32 pixels once, selects direct frame 0 and advances the native 0x100 orbit phase each tick. It does not execute the regular movement/contact controller.",
+   "next_action": "Port sub_0803E058's inert visual effect and trace native Buer fire, attacks, sound and hit forwarding.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
@@ -15897,7 +15897,7 @@
     "assets.aria_peeping_eye_target_0476"
    ],
    "native_routines": [],
-   "limitations": "Bone Pillar now assembles its native 22-pixel linked tower and Buer emits its linked second direct frame. Per-segment and fire collision, bounce timing, attacks, fades, sounds and rewards remain open.",
+   "limitations": "Bone Pillar now assembles its native 22-pixel linked tower and Buer emits its linked second direct frame. Per-segment and fire collision, bounce timing, attacks, fades, sounds and rewards remain open. Buer's separate native state-4 updater now raises the inert visual once by 32 pixels and advances its 0x100 orbit phase; the emitted effect remains missing.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -15907,7 +15907,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-23",
+   "last_validated": "2026-10-30",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -18538,6 +18538,12 @@
  },
  "timeline": [
   {
+   "commit": "f662c28",
+   "date": "2026-10-30",
+   "subject": "Restore White Dragon recovery and time long native test runs",
+   "scope": "project"
+  },
+  {
    "commit": "f6b2cd6",
    "date": "2026-10-30",
    "subject": "Cache unchanged native golden verifications between Aria patches",
@@ -19009,12 +19015,6 @@
    "commit": "d4fe6f0",
    "date": "2026-10-27",
    "subject": "Render Aria introduction native font",
-   "scope": "project"
-  },
-  {
-   "commit": "1fdc204",
-   "date": "2026-10-27",
-   "subject": "Connect Aria introduction ROM text",
    "scope": "project"
   }
  ],
@@ -21686,7 +21686,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "blue:4",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported."
       }
      },
      {
@@ -27848,7 +27848,7 @@
        "id": "06:04",
        "name": "Buer",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete.",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

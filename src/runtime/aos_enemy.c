@@ -7605,6 +7605,20 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         }
         return report;
     }
+    if (e->id == AOS_ENEMY_BUER && e->state == 4) {
+        /* sub_080CC48C: the inactive Buer does not run the ordinary
+         * movement/contact controller. On entry its visual centre rises
+         * by 32 pixels and selects direct frame 0. Subsequent ticks advance
+         * +0x14 by 0x100 for the native orbit/visual effect. The effect
+         * emitted by sub_0803E058 remains to be reconstructed. */
+        if (e->step == 0) {
+            e->y -= AOS_FIXED(32);
+            e->static_frame = 0;
+            e->step = 1;
+        }
+        if (e->step == 1) e->phase = (uint16_t)(e->phase + 0x100);
+        return report;
+    }
     if (e->defeated) {
         if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
             /* EnemyGiantGhostUpdate state 2: the native 90-frame

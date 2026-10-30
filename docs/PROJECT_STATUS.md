@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0647 - Native Buer inert visual timing
+
+- Implemented the bounded state-4 updater of cvaos sub_080CC48C in the C11
+  enemy runtime: an initial 32-pixel Y rise, direct-frame reset to 0, and a
+  +0x100 phase change each frame without ordinary Buer movement/contact.
+- Added ROM-free coverage of entry, one-shot displacement, phase progression
+  and no contact/child reports over subsequent frames.
+- State-4's sub_0803E058 visual effect is not ported. Buer's linked flames,
+  attacks, sound, death presentation and blue-soul ability remain partial or
+  missing; no fidelity or completion percentage was upgraded.
+- The golden-test cache script, native importer and its fixtures are intentionally
+  unchanged. Their prior successful cache stamps should remain usable when
+  binaries/ROMs/databases/fixtures are identical; every other test still runs.
+- Timed the targeted test, full build and final dashboard generation with
+  external `time -p` when available. The full dashboard check still records all
+  CTest results, including verified cached golden outcomes.
+
 ## Patch 0646 - White Dragon recovery and timed long validations
 
 - Ported the bounded EnemyWhiteDragonUpdate state-3 recovery from GBA

@@ -1215,6 +1215,82 @@ static void buer_death_stages_tests(void) {
 
 /* EnemyBuerUpdate state 4 dispatches sub_080CC48C instead of the normal
  * Buer walking/contact path. The native visual effect is still missing. */
+/* Patch 0664: cross-phase Buer attack/death mechanics. These tests
+ * deliberately use ROM-free tiles and fixed callback RNG. */
+static void buer_attack_death_animation_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(136);
+    e.home = 136;
+    e.state = 2;
+    e.step = 1;
+    e.substep = 0;
+    e.spin = 0x8000;
+    e.angle = 0;
+    AosHitReport result = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.substep == 1 && e.timer == 0x4F && e.away == 1);
+    assert(e.spin == 0x8CCC && e.angle == 0x400 && result.effect_count == 0);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    result = aos_enemy_update(&e, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.timer == 0x4D && result.effect_count == 2);
+    assert(result.effects[0].kind == AOS_EFFECT_FIRE &&
+           result.effects[1].kind == AOS_EFFECT_FIRE);
+    assert(result.effects[0].x == result.effects[1].x &&
+           result.effects[0].y < result.effects[1].y);
+
+    /* Opposite side chooses the negative angular acceleration and turn. */
+    soma.x = AOS_FIXED(20);
+    e.x = AOS_FIXED(100);
+    e.step = 1;
+    e.substep = 0;
+    e.spin = -0x8000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.away == -1 && e.spin == -0x8CCC && e.angle == (uint32_t)-0x400);
+
+    /* Death begins at +/-0x20000, decelerates by 0x380, and rotates by
+     * signed spin / 64; do not mistake this for the idle 0x40 friction. */
+    e.defeated = true;
+    e.state = 3;
+    e.step = 0;
+    e.timer = 0;
+    e.spin = -0x8000;
+    e.angle = 0;
+    result = aos_enemy_update(&e, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 1 && e.timer == 0x5F && e.spin == -0x1FC80);
+    assert(e.angle == (uint32_t)(-0x1FC80 / 64) && result.effect_count == 0);
+    e.timer = 91; /* first-stage multiple of 7; one visual flame */
+    result = aos_enemy_update(&e, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(result.effect_count == 1 && result.effects[0].kind == AOS_EFFECT_FLAME);
+    e.step = 2;
+    e.timer = 128;
+    e.spin = 0x8000;
+    e.angle = 0;
+    e.y = AOS_FIXED(60); /* No floor-slope or forward-wall fixture. */
+    result = aos_enemy_update(&e, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x7FC0 && e.angle == 0x1FF && e.timer == 127);
+    assert(result.effect_count == 1 && result.effects[0].kind == AOS_EFFECT_FLAME);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5008,6 +5084,7 @@ int main(void) {
     buer_state_two_idle_vertical_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
+    buer_attack_death_animation_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

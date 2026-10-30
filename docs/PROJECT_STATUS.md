@@ -2,6 +2,29 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0664 - Buer attack spin, paired visual fire and death rotation
+
+- Extended state-two step-one attack with native source-derived +/-0xCCC
+  angular acceleration, signed +/-0x20000 saturation and +/-0x400/0x800
+  affine angle increments, choosing the direction from Soma at entry.
+  Existing stage duration is retained until exact mode-six movement and
+  the original timer-zero-on-saturation rule can be integrated together.
+- Added a pair of non-damaging AOS_EFFECT_FIRE visuals every third attack
+  tick when timer > 50. These are visual stand-ins, NOT the source's two
+  sub_080CC178 projectile entities: projectile animation, hitboxes,
+  lifetime and damage still require their native frame data/callback.
+- Reconstructed the first death stage's signed 0x20000 initial spin,
+  0x380 per-frame deceleration with +/-0x4000 floor and spin/64 affine
+  rotation. The second death stage now applies rolling angular contact
+  processing. Emitted shared flame visuals at native 7/2 tick cadences.
+- Kept the existing 96/128 countdowns, source song requests, linked
+  ownership and safe cleanup, with regressions for positive/negative
+  attack directions, paired visuals, death rotation and flame cadence.
+- Buer remains PARTIAL: the full 0x08528B64 collision table, projectile
+  callback, source-linked flame wobble, eight terminal fragment offsets
+  from 0x081194DC and exact graphics/audio must not be marked complete.
+  No proprietary ROM or extracted data was embedded.
+
 ## Patch 0663 - Buer bounded state-two idle vertical contact
 
 - Added a conservative flat-floor contact adjustment for mode-six state-two

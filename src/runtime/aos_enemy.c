@@ -7484,8 +7484,48 @@ static bool buer_player_in_attack_range(const AosEnemy *e, const AosSoma *soma) 
  * The GBA emits attack sound 0x84 while timer>50, divisible by 9 and 3.
  * Native rolling probes, linked facing, the paired flame projectiles and
  * their effects are still unimplemented; this ports only the state clock. */
+/* sub_080CBC64 attack step 1: after acquiring Soma's horizontal side,
+ * +0x18 gains +/-0xCCC per frame and saturates at +/-0x20000. The affine
+ * angle advances +/-0x400 while the 80-frame clock is above 0x32, else
+ * +/-0x800. We preserve the existing stage clock here: the source's early
+ * timer-zero on saturation awaits its exact mode-6 collision integration. */
+static void buer_attack_angular_step(AosEnemy *e) {
+    const int dir = e->away >= 0 ? 1 : -1;
+    int32_t spin = e->spin;
+    if (dir > 0) {
+        spin += 0xCCC;
+        if (spin > 0x20000) spin = 0x20000;
+    } else {
+        spin -= 0xCCC;
+        if (spin < -0x20000) spin = -0x20000;
+    }
+    e->spin = spin;
+    const uint32_t angular = e->timer > 0x32 ? 0x400u : 0x800u;
+    e->angle += dir > 0 ? angular : (uint32_t)(-((int32_t)angular));
+    if (spin > 0) e->buer_fire_mirrored = true;
+    if (spin < 0) e->buer_fire_mirrored = false;
+}
+
+/* Two sub_080CC5D8 fire entities are requested on each native third
+ * countdown tick while timer > 50. Full sub_080CC178 projectile animation,
+ * collision and lifetime are not exposed in the compact runtime yet.
+ * Until then emit non-damaging AOS_EFFECT_FIRE visuals, preserving count,
+ * side and cadence without inventing player damage or reward ownership. */
+static void buer_attack_visual_pair(const AosEnemy *e, AosHitReport *report) {
+    const int32_t side = e->away >= 0 ? AOS_FIXED(12) : -AOS_FIXED(12);
+    for (int i = 0; i < 2 && report->effect_count < AOS_ENEMY_MAX_EFFECTS; ++i) {
+        AosEffect *fire = &report->effects[report->effect_count++];
+        *fire = (AosEffect){.kind = AOS_EFFECT_FIRE, .drift = true,
+                            .x = e->x + side, .y = e->y + AOS_FIXED(24),
+                            .vx = e->away >= 0 ? 0x20000 : -0x20000,
+                            .mirrored = e->away < 0};
+        fire->y += (i ? AOS_FIXED(5) : -AOS_FIXED(5));
+    }
+}
+
 static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
-                               uint32_t (*random)(void)) {
+                               uint32_t (*random)(void),
+                               AosHitReport *report) {
     if (e->state != 2) return;
     if (e->step == 0) {
         /* sub_080CC20C is run immediately before the source idle branch:
@@ -7517,12 +7557,15 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
     }
     if (e->step == 1) {
         if (e->substep == 0) {
+            /* sub_0806BD64 chooses the attack-side byte +0x13. */
+            e->away = soma->x > e->x ? 1 : -1;
             e->timer = 0x50;
             e->substep = 1;
         }
         if (e->substep == 1) {
-            /* sub_080CBC64: two flame effects accompany this cue in the
-             * source game, but are intentionally not invented here. */
+            buer_attack_angular_step(e);
+            if (e->timer > 0x32 && e->timer % 3u == 0)
+                buer_attack_visual_pair(e, report);
             if (e->timer > 0x32 && (e->timer % 9u) == 0)
                 aos_audio_play_song(0x84);
             if (--e->timer == 0xFF) {
@@ -7940,34 +7983,53 @@ static AosHitReport enemy_ghost_update(AosEnemy *g, AosSoma *soma,
  * sequence. The original drives a linked object, periodic visual effects,
  * eight final fragments and sound. Only its observable countdown stages and
  * audio requests are represented here; no ROM effect data is synthesized. */
-static AosHitReport buer_death_update(AosEnemy *e) {
+/* sub_080CBEA4: the native timed death carries spin and affine updates,
+ * not only countdowns. Periodic flame art is represented through the
+ * shared, non-damaging effect path until the native effect slots, linked
+ * fire wobble and ROM's eight terminal-piece offsets are imported. */
+static AosHitReport buer_death_update(AosEnemy *e, const AosCollision *layer,
+                                      uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (e->step == 0) {
-        /* Native step 0 enters the first 96-frame stage and plays 0x6E.
-         * It immediately processes the first countdown tick. */
         e->combat.attack_off = true;
         e->combat.hurt_off = true;
         aos_audio_play_song(0x6E);
         e->timer = 0x60;
         e->step = 1;
+        /* sub_080CBEF2: preserve the incoming spin sign. */
+        e->spin = e->spin < 0 ? -0x20000 : 0x20000;
     }
     if (e->step == 1) {
-        /* Native step 1 completes after the 8-bit counter underflows. */
+        /* Native first stage, every frame including its creation frame:
+         * decelerate 0x380 toward the +/-0x4000 floor and integrate spin/64. */
+        if (e->spin >= 0) {
+            e->spin -= 0x380;
+            if (e->spin < 0x4000) e->spin = 0x4000;
+        } else {
+            e->spin += 0x380;
+            if (e->spin > -0x4000) e->spin = -0x4000;
+        }
+        e->angle += (uint32_t)(e->spin / 64);
+        if (e->timer % 7u == 0)
+            spawn_flame_at(e->x, e->y, 0, 0, random, &report);
         if (--e->timer == 0xFF) {
             e->timer = 0x80;
             e->step = 2;
         }
     } else if (e->step == 2) {
-        /* Native step 2: additional 0x6E cues every 20 timer values,
-         * only while more than 28 frames remain. The flying effects and
-         * probe-based motion are intentionally still unimplemented. */
+        /* Native second stage re-enters sub_080CC20C(mode 1). Its angular
+         * contacts and affine rotation are reconstructed; full X/Y probes
+         * and translation of the linked sprite remain pending. */
+        buer_rolling_angular_step(e, layer);
+        e->buer_fire_mirrored = e->spin >= 0;
+        if ((e->timer & 1u) == 0)
+            spawn_flame_at(e->x, e->y, 0, 0, random, &report);
         if (e->timer > 0x1C && (e->timer % 0x14) == 0)
             aos_audio_play_song(0x6E);
         if (--e->timer == 0xFF) e->step = 3;
     } else if (e->step == 3) {
-        /* Native step 3 plays a final 0x6E and hides its parent while
-         * emitting eight fragments. The compact runtime removes the dead
-         * owner here until those native visual children are ported. */
+        /* Eight real sub_0806D578 terminal pieces need the source's
+         * 0x081194DC offsets, which are NOT embedded or guessed here. */
         aos_audio_play_song(0x6E);
         e->hidden = true;
         e->removed = true;
@@ -8033,7 +8095,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     }
     if (e->defeated) {
         if (e->id == AOS_ENEMY_BUER && e->state == 3) {
-            report = buer_death_update(e);
+            report = buer_death_update(e, layer, random);
         } else if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
             /* EnemyGiantGhostUpdate state 2: the native 90-frame
              * death countdown. Blink approximates sub_0806D518; exact
@@ -8157,7 +8219,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
             buer_state_two_idle_vertical_step(e, layer);
         }
         if (rolling) buer_rolling_angular_step(e, layer);
-        buer_attack_timing(e, soma, random);
+        buer_attack_timing(e, soma, random, &report);
         /* Idle mode six has no provisional vertical sine motion. */
         buer_controller(e, soma, !rolling, !state_two_idle);
         if (rolling) {

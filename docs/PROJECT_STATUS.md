@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0650 - Buer native proximity attack and timed sound cues
+
+- Transcribed the inclusive 96-by-48 integer-room proximity window from
+  `sub_0806E29C` / `sub_08068AD4` (Soma selected in the compact runtime).
+  During Buer state 2 step 2, a nearby Soma enters step 1 before the native
+  action-window timer decrements; underflow and RNG override are preserved.
+- Ported the bounded step-1 cycle from `sub_080CBC64`: an 80-frame attack
+  stage, sound 0x84 when the remaining timer is 72, 63 or 54, and a
+  32-frame recovery stage before restarting. No ROM effects are synthesized.
+- Added ROM-free tests for outside/boundary proximity, timer transitions,
+  sound count, and both stage boundaries. Native Buer rolling probes,
+  linked facing, pairwise flame projectile generation, sprite effects and
+  audible Aria mixing remain outside this patch; its status stays partial.
+- Golden cache scripts and importers are untouched. Scoped `aos_enemy` is
+  run first; full dashboard/CTest still runs once before commit, timed with
+  `time -p`, with the cached goldens still reverified by their input hashes.
+
 ## Patch 0649 - Buer native state-2 attack timing
 
 - Ported the bounded step/timer transitions of `sub_080CBAEC`: a byte timer

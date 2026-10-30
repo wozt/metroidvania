@@ -23,6 +23,57 @@ static uint32_t scripted(void) { return script[script_at++]; }
 /* sub_080CBAEC: Buer state-2 has a 255-count entry trigger and a
  * 32..63-tick random attack window. Native linked sprite/probe behavior
  * remains separate; this test only checks reproducible state/RNG timing. */
+/* sub_0806E29C / sub_080CBC64: the 96x48 inclusive trigger,
+ * followed by the 80-frame attack/32-frame recovery clock and 0x84 cues. */
+static void buer_near_player_attack_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(buer.state == 2);
+    buer.step = 2;
+    buer.substep = 2;
+    buer.timer = 6;
+    aos_audio_clear();
+    /* Out of range: countdown continues without triggering step 1. */
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 2 && buer.substep == 2 && buer.timer == 5);
+    /* Native inclusive boundary (the collision checks before movement). */
+    soma.x = buer.x + AOS_FIXED(48);
+    soma.y = buer.y + AOS_FIXED(24);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 1 && buer.substep == 0 && buer.timer == 4);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 0);
+    /* Next frame starts native 80-frame attack; first countdown tick is
+     * immediate, just like sub_080CBC64 step 0 falling into step 1. */
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 1 && buer.substep == 1 && buer.timer == 0x4F);
+    for (int frame = 0; frame < 80; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 1 && buer.substep == 2 && buer.timer == 0x20);
+    /* 72, 63, 54 are the only countdown values >50 divisible by 9. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 3);
+    for (int frame = 0; frame < 33; ++frame)
+        aos_enemy_update(&buer, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.step == 1 && buer.substep == 0 && buer.timer == 0xFF);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 3);
+    aos_audio_clear();
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_timing_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -3918,6 +3969,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_near_player_attack_tests();
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_inert_orbit_tests();

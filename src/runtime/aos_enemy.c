@@ -7427,14 +7427,26 @@ static void white_dragon_controller(AosEnemy *e, const AosSoma *soma) {
     e->x += toward_facing(e, 0x2000);
 }
 
-/* EnemyBuerUpdate state 2 -> sub_080CBAEC: step 0 waits for the
- * unsigned 8-bit timer to reach 0xFF, then an even RNG draw enters step 2.
- * Step 2 selects a 32..63-frame attack window, prepares the linked owner's
- * facing (not yet represented), and decrements the window on the same frame.
- * On underflow a second random parity draw either returns to step 0 or
- * retries the window. sub_0806E29C's proximity/linked facing, the native
- * sub_080CC20C probe and flame attack remain unported. */
-static void buer_attack_timing(AosEnemy *e, uint32_t (*random)(void)) {
+/* sub_0806E29C(e, 0x60, 0x30): sub_08068AD4 compares the
+ * selected player's integer room position against an inclusive 96x48
+ * window around Buer, using unsigned 16-bit differences. The alternate
+ * controlled entity selected by the GBA is not yet part of this runtime. */
+static bool buer_player_in_attack_range(const AosEnemy *e, const AosSoma *soma) {
+    uint16_t dx = (uint16_t)((soma->x >> 16) - ((e->x >> 16) - 0x30));
+    uint16_t dy = (uint16_t)((soma->y >> 16) - ((e->y >> 16) - 0x18));
+    return dx <= 0x60 && dy <= 0x30;
+}
+
+/* EnemyBuerUpdate state 2 -> sub_080CBAEC / sub_080CBC64:
+ * Step 0 waits for byte 0xFF and uses an even RNG draw to enter step 2.
+ * Step 2 first chooses a 32..63-frame window, with an immediate countdown
+ * tick. When Soma enters the native 96x48 window, step 1 starts next frame.
+ * Step 1 loops an 80-frame attack stage and a 32-frame recovery stage.
+ * The GBA emits attack sound 0x84 while timer>50, divisible by 9 and 3.
+ * Native rolling probes, linked facing, the paired flame projectiles and
+ * their effects are still unimplemented; this ports only the state clock. */
+static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
+                               uint32_t (*random)(void)) {
     if (e->state != 2) return;
     if (e->step == 0) {
         ++e->timer;
@@ -7446,16 +7458,41 @@ static void buer_attack_timing(AosEnemy *e, uint32_t (*random)(void)) {
         }
         return;
     }
+    if (e->step == 1) {
+        if (e->substep == 0) {
+            e->timer = 0x50;
+            e->substep = 1;
+        }
+        if (e->substep == 1) {
+            /* sub_080CBC64: two flame effects accompany this cue in the
+             * source game, but are intentionally not invented here. */
+            if (e->timer > 0x32 && (e->timer % 9u) == 0)
+                aos_audio_play_song(0x84);
+            if (--e->timer == 0xFF) {
+                e->substep = 2;
+                e->timer = 0x20;
+            }
+        } else if (e->substep == 2) {
+            if (--e->timer == 0xFF) e->substep = 0;
+        }
+        return;
+    }
     if (e->step != 2) return;
     if (e->substep == 0) {
         e->timer = (uint8_t)((random() & 0x1Fu) + 0x20u);
         e->substep = 1;
     }
     if (e->substep == 1) {
-        /* The original flips the *linked owner's* facing bit here. */
+        /* Native linked-owner facing flip is still unported. */
         e->substep = 2;
     }
     if (e->substep != 2) return;
+    if (buer_player_in_attack_range(e, soma)) {
+        e->step = 1;
+        e->substep = 0;
+    }
+    /* The GBA tests proximity before decrementing this window; expiry can
+     * still override the transition if it reaches 0xFF on the same tick. */
     if (--e->timer == 0xFF) {
         if ((random() & 1u) == 0) {
             e->step = 0;
@@ -7819,7 +7856,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         face_player(e, soma);
         break;
     case AOS_ENEMY_BUER:
-        buer_attack_timing(e, random);
+        buer_attack_timing(e, soma, random);
         buer_controller(e, soma);
         break;
     case AOS_ENEMY_WHITE_DRAGON:

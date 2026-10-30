@@ -94,6 +94,80 @@ static void buer_linked_fire_facing_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* sub_080CC514: a non-lethal weapon/soul hit during Buer's state 2
+ * forces step 1, substep 0. State 1 is unaffected; a lethal hit still wins
+ * and starts state-3 death. Verify via the full collision path, with a real
+ * floor to avoid the off-screen snap-to-floor fixture failure of 0648. */
+static void buer_surviving_hit_interrupt_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
+    AosEnemy buer;
+
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(buer.state == 2 && (buer.y >> 16) <= 0xB0);
+    buer.step = 2;
+    buer.substep = 2;
+    buer.timer = 47;
+    buer.vx = 0;
+    AosSoulAttack hitbox = {{0, 0, 255, 200}, 8, 0, false, NULL};
+    aos_enemy_set_soul_attacks(&hitbox, 1);
+    AosHitReport hit = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(hitbox.struck && hitbox.target == &buer && hit.enemy_hit);
+    assert(!hit.killed && !buer.defeated && buer.hp > 0);
+    assert(buer.state == 2 && buer.step == 1 && buer.substep == 0);
+    /* The callback never overwrites +0x0D: the earlier AI tick decremented
+     * 47 to 46, and the next frame starts the existing 80-frame attack. */
+    assert(buer.timer == 46);
+    aos_enemy_update(&buer, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(buer.state == 2 && buer.step == 1 && buer.substep == 1 &&
+           buer.timer == 0x4F);
+
+    /* The same surviving strike must not force step 1 from state 1. Keep
+     * this fixture within the GBA's Y+92 room bounds so the independent
+     * room-exit transition does not legitimately switch it into state 2. */
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    buer.y = AOS_FIXED(60);
+    buer.home = 60;
+    buer.vx = 0;
+    buer.step = 7;
+    buer.substep = 5;
+    buer.timer = 19;
+    AosSoulAttack standing = {{0, 0, 255, 200}, 8, 0, false, NULL};
+    aos_enemy_set_soul_attacks(&standing, 1);
+    hit = aos_enemy_update(&buer, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(standing.struck && hit.enemy_hit && !hit.killed && buer.hp > 0);
+    assert(buer.state == 1 && buer.step == 7 && buer.substep == 5 &&
+           buer.timer == 19);
+
+    /* A lethal hit must dispatch state 3, not the nonlethal attack step. */
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    buer.step = 2;
+    buer.substep = 2;
+    AosSoulAttack fatal = {{0, 0, 255, 200}, 255, 0, false, NULL};
+    aos_enemy_set_soul_attacks(&fatal, 1);
+    hit = aos_enemy_update(&buer, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(fatal.struck && hit.killed && buer.defeated);
+    assert(buer.state == 3 && buer.step == 0 && buer.substep == 0);
+    memset(cells, 0, sizeof cells);
+}
+
 /* sub_080CC3C8: the linked Buer fire copies its owner's coordinates only
  * while its own state is zero. It remains allocated during the owner's
  * staged death and disappears when the owner slot is removed, not on the
@@ -4177,6 +4251,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
+    buer_surviving_hit_interrupt_tests();
     buer_linked_fire_lifetime_tests();
     buer_room_exit_tests();
     buer_linked_fire_facing_tests();

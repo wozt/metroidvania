@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0654 - Buer surviving-hit native attack interruption
+
+- Ported cvaos `sub_080CC514`'s surviving-hit callback: after damage, a
+  still-living Buer in state 2 enters step 1/substep 0, preserving its
+  independent +0x0D byte timer for the following attack-phase update.
+- Preserved the already reconstructed lethal-hit state 3 death callback,
+  and did not change state 1 behavior or unrelated enemy hit callbacks.
+- Added ROM-free real-floor collision regressions for a surviving state-2
+  soul hit, the next attack-timer tick, an untouched state-1 hit, and a
+  lethal state-2 hit retaining the staged death route.
+- Native Buer rolling probes, paired fire visuals, linked collision/damage,
+  animation and game audio output are still partial. Parity statuses and
+  completion percentages remain unchanged.
+- The golden cache, ROM inputs, importer and fixtures remain untouched;
+  validations use the existing timed targeted and complete CTest checks.
+
 ## Patch 0653 - Buer linked fire state gating and death lifetime
 
 - Reconstructed the bounded linked-helper callback of cvaos sub_080CC3C8:

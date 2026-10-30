@@ -1195,6 +1195,15 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 enemy->state = 3;
                 enemy->step = 0;
             }
+            if (enemy->hp > 0 && enemy->id == AOS_ENEMY_BUER &&
+                enemy->role == AOS_ROLE_ENEMY && enemy->state == 2) {
+                /* sub_080CC514: any surviving hit in state 2 interrupts
+                 * the rolling/window phase, dispatching sub_080CBC64 on
+                 * the next update. It resets the two step bytes, not the
+                 * independent +0x0D timer. Lethal hits use state 3 below. */
+                enemy->step = 1;
+                enemy->substep = 0;
+            }
             if (enemy->hp <= 0) {
                 report.killed = true;
                 /* sub_080683BC marks it defeated (+ 0x3E bit 1):

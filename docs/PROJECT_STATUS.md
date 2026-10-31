@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0680 - Buer side-gated linked-fire mirror during attacks
+
+- Audited original Aria sub_080CBC64 (0x080CBCBA..0x080CBD42): during
+  positive angular acceleration the linked-fire mirror is SET only when
+  the newly updated spin is strictly positive; the negative-acceleration
+  branch CLEARs it only when the new spin is strictly negative. The two
+  branches never also apply the opposite mirror update.
+- Previously the shared post-branch sign checks would change the fire's
+  mirror while Buer was still counter-spinning, before its velocity had
+  crossed zero. Restrict the write to the actual branch-specific sign
+  gate; zero spin leaves the previous mirror unchanged.
+- ROM-free tests cover both counter-spinning directions, exact zero,
+  and the first opposite-sign frame, while retaining spin/angle/timer
+  assertions. No new projectile collision, graphics, ROM or BIOS content.
+- Buer remains PARTIAL pending native OAM/affine rendering, animation
+  and real-ROM emulator playback comparison.
+
 ## Patch 0679 - Buer unconditional source gravity initialization
 
 - EnemyBuerCreate at 0x080CB9AE writes +0x54 = 0x4000 BEFORE its inactive

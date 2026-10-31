@@ -1530,6 +1530,81 @@ static void buer_projectile_lifecycle_tests(void) {
 /* Patch 0666: the native attack saturates ONLY on strict spin overflow;
  * recovery advances affine angle without idle damping and applies signed
  * floor-slope contact impulses in the same order as sub_080CBC64. */
+/* Patch 0680: sub_080CBC64 branches on the native attack-side byte
+ * BEFORE considering the sign of the updated spin. A counter-spinning
+ * Buer must not overwrite the linked-fire mirror until the new spin has
+ * crossed zero in the branch's direction. No ROM is required. */
+static void buer_attack_fire_mirror_sign_gate_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.helper_spawned = true; /* no unrelated constructor-linked emission */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.home_left = 0;
+    e.home_right = 200;
+    e.vx = 0;
+    e.state = 2;
+    e.step = 1;
+    e.substep = 1;
+
+    /* Positive-acceleration attack with a still-negative incoming spin:
+     * the source leaves a previously mirrored linked flame mirrored. */
+    e.away = 1;
+    e.spin = -0x3000;
+    e.buer_fire_mirrored = true;
+    e.timer = 40; /* below projectile/sound window */
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0x2334 && e.buer_fire_mirrored);
+    assert(e.angle == 0x800 && e.timer == 39 && e.substep == 1);
+
+    /* Zero does not set the mirror. The next strictly-positive spin does. */
+    e.spin = -0xCCC;
+    e.buer_fire_mirrored = false;
+    e.timer = 40;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0 && !e.buer_fire_mirrored);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0xCCC && e.buer_fire_mirrored);
+
+    /* Negative-acceleration attack with still-positive incoming spin:
+     * the original must not set a previously unmirrored flame. */
+    e.away = -1;
+    e.spin = 0x3000;
+    e.buer_fire_mirrored = false;
+    e.timer = 40;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x2334 && !e.buer_fire_mirrored);
+    assert(e.angle == (uint32_t)-0x800 && e.timer == 39);
+
+    /* Zero does not clear the mirror. The next strictly-negative spin does. */
+    e.spin = 0xCCC;
+    e.buer_fire_mirrored = true;
+    e.timer = 40;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0 && e.buer_fire_mirrored);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0xCCC && !e.buer_fire_mirrored);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_cap_and_recovery_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -6236,6 +6311,7 @@ int main(void) {
     buer_visual_only_linked_fire_tests();
     buer_native_attack_side_sign_tests();
     buer_projectile_lifecycle_tests();
+    buer_attack_fire_mirror_sign_gate_tests();
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();
     buer_death_scatter_and_linked_wobble_tests();

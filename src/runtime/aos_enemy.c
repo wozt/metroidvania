@@ -7532,8 +7532,13 @@ static void buer_attack_angular_step(AosEnemy *e) {
     e->spin = spin;
     const uint32_t angular = e->timer > 0x32 ? 0x400u : 0x800u;
     e->angle += dir > 0 ? angular : (uint32_t)(-((int32_t)angular));
-    if (spin > 0) e->buer_fire_mirrored = true;
-    if (spin < 0) e->buer_fire_mirrored = false;
+    /* sub_080CBC64 writes the linked flame's +0x58 mirror only in the
+     * matching attack-side branch: positive acceleration can SET it only
+     * after spin becomes positive; negative acceleration can CLEAR it only
+     * after spin becomes negative. Opposite-signed and zero-spin frames
+     * preserve the bit instead of flipping the flame prematurely. */
+    if (dir > 0 && spin > 0) e->buer_fire_mirrored = true;
+    if (dir < 0 && spin < 0) e->buer_fire_mirrored = false;
 }
 
 /* sub_080CC5D8: two independent children, both at the parent's integer

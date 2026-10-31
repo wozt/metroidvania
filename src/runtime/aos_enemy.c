@@ -490,6 +490,16 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             play(enemy, anims, animation);
             step_anim(enemy, anims);
         }
+        /* EnemyBuerCreate sets up the rolling spin and native gravity
+         * BEFORE checking the global inert flag. In particular, a Buer
+         * created directly in state four must retain its independent
+         * linked-fire facing and GBA +0x18/+0x54 initialization. The
+         * non-native export keeps its existing bounded-motion fallback. */
+        if (id == AOS_ENEMY_BUER) {
+            enemy->spin = 0x8000;
+            enemy->buer_fire_mirrored = true;
+            if (kind && kind->buer_native_motion) enemy->ay = 0x4000;
+        }
         if (flag_8e_40) {
             enemy->state = id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_KILLER_FISH ? 5 :
                            id == AOS_ENEMY_BUER || id == AOS_ENEMY_WINGED_SKELETON ? 4 :
@@ -543,16 +553,8 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
             enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
             enemy->vx = toward_facing(enemy, 0x18000);
-            /* EnemyBuerCreate (+0x18): the native angular speed starts
-             * at 0x8000, independently of the provisional translation. */
-            enemy->spin = 0x8000;
-            /* EnemyBuerCreate at 0x080CB9AE initializes +0x54
-             * gravity to 0x4000. Keep the old approximation only
-             * when the ROM-local collision table is unavailable. */
-            if (kind && kind->buer_native_motion) enemy->ay = 0x4000;
-            /* sub_080CBA30: linked flame facing derives from +0x18
-             * angular speed, not provisional +0x48 translation. */
-            enemy->buer_fire_mirrored = enemy->spin >= 0;
+            /* +0x18 spin, +0x54 gravity and linked-fire facing were
+             * set before the inert-flag branch; do not reset them here. */
             break;
         case AOS_ENEMY_WHITE_DRAGON:
             enemy->own_boxes = true;
@@ -8353,6 +8355,14 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         return report;
     }
     if (e->id == AOS_ENEMY_BUER && e->state == 4) {
+        /* EnemyBuerCreate calls sub_080CBA30 before the global inert
+         * check, so the linked fire must exist even when the owner never
+         * enters its normal active collision/update path. The runtime
+         * materializes constructor children on the first owner update. */
+        if (!e->helper_spawned) {
+            buer_fire_child(e, &report);
+            e->helper_spawned = true;
+        }
         /* sub_080CC48C: the source increments the full 32-bit affine
          * word +0x14, not the shared 16-bit synthetic phase. The host
          * renderer already takes Buer's rotation from enemy->angle.

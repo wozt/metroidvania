@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0677 - Buer inert constructor and linked flame creation
+
+- Source-audited EnemyBuerCreate and sub_080CBA30 from the original Aria
+  GBA assembly. The native +0x18 spin (0x8000), +0x54 gravity (0x4000) and
+  linked-fire creation happen BEFORE the gEwramData+0x8E bit 0x40 inert
+  flag is checked. Previously the generic early-enemy return skipped all
+  three Buer-specific initialization steps in state four.
+- Buer now initializes its spin and linked-fire facing before that flag,
+  including the native gravity on locally exported metadata. Inert Buer
+  materializes the linked visual once on its first update, while its body
+  still rises 32 pixels once and rotates its full affine angle each tick.
+  Its linked visual follows the raised parent without an extra hitbox.
+- ROM-free tests cover both old and native exported metadata, one-time
+  child emission, independent linked-follow behavior, affine angle, inert
+  nonmovement, and the unchanged legacy active creation flow.
+- The host emits constructor children on first update rather than inside
+  aos_enemy_create; sprite placement must still be checked against a local
+  original ROM/emulator. Buer stays PARTIAL. No copyrighted data included.
+
 ## Patch 0676 - Buer death step-one native zero-speed gravity and floor collision
 
 - Source-audited sub_080CBEA4, _080CC01C and sub_0806CAF8 from the original

@@ -2326,6 +2326,10 @@ static void buer_inert_orbit_tests(void) {
                                     0, 0, &soma, &layer, &kind, &stats);
     aos_enemy_set_flag_8e_40(false);
     assert(created && buer.state == 4 && buer.step == 0);
+    /* Source EnemyBuerCreate sets up +0x18 and child facing before the
+     * global 0x8E bit 0x40 can select the inert state. */
+    assert(buer.spin == 0x8000 && buer.buer_fire_mirrored && buer.ay == 0);
+    assert(!buer.helper_spawned);
     int32_t first_y = buer.y, first_x = buer.x;
     /* Native +0x14 is a full 32-bit affine angle. Cross its
      * 0xffffffff wrap to catch accidental 16-bit phase updates. */
@@ -2339,7 +2343,20 @@ static void buer_inert_orbit_tests(void) {
     assert(buer.x == first_x && buer.step == 1 && buer.static_frame == 0);
     assert(buer.angle == first_angle + 0x100u);
     assert(buer.phase == first_phase);
-    assert(!report.child_count && !report.soma_hit && !report.enemy_hit);
+    assert(report.child_count == 1 && buer.helper_spawned);
+    assert(!report.soma_hit && !report.enemy_hit);
+    assert(report.children[0].role == AOS_ROLE_BUER_FIRE);
+    assert(report.children[0].mirrored && report.children[0].static_frame == 1);
+    assert(!report.children[0].own_boxes && report.children[0].combat.attack_off &&
+           report.children[0].combat.hurt_off);
+    /* The original linked visual follows the newly raised parent on its
+     * own update, rather than being deleted or applying contact damage. */
+    AosEnemy fire = report.children[0];
+    fire.parent = &buer;
+    AosHitReport visual = aos_enemy_update(&fire, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fire.x == buer.x && fire.y == buer.y && !fire.removed);
+    assert(!visual.soma_hit && !visual.enemy_hit);
 
     int32_t raised_y = buer.y;
     for (int i = 0; i < 5; ++i) {
@@ -2351,6 +2368,29 @@ static void buer_inert_orbit_tests(void) {
     }
     assert(buer.angle == first_angle + 6u * 0x100u);
     assert(buer.phase == first_phase);
+
+    /* With locally imported native collision data, even an inert Buer
+     * receives the original +0x54 gravity. Its dormant state never runs
+     * the physics walker, still emits just one visual and rises once. */
+    kind.buer_native_motion = true;
+    AosEnemy native;
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&native, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(native.state == 4 && native.spin == 0x8000 && native.ay == 0x4000);
+    assert(native.buer_fire_mirrored && native.step == 0);
+    const int32_t native_y = native.y;
+    report = aos_enemy_update(&native, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(native.y == native_y - AOS_FIXED(32) && native.vy == 0);
+    assert(native.spin == 0x8000 && native.angle == 0x100u);
+    assert(native.helper_spawned && report.child_count == 1 &&
+           report.children[0].role == AOS_ROLE_BUER_FIRE);
+    report = aos_enemy_update(&native, &soma, &layer, &kind,
+                              NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!report.child_count && native.y == native_y - AOS_FIXED(32));
+    memset(cells, 0, sizeof cells);
 }
 /* Skeleton: the native attack's third animation frame launches a single
  * bone, using source-derived OAM IDs, sound, launch trajectory and boxes.

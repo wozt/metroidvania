@@ -433,6 +433,9 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
     if (zombie->y <= y0 - 0x80000) zombie_vanish(zombie);
 }
 
+/* Constructor and update must agree on validity of ROM-local Buer probes. */
+static bool buer_native_enabled(const AosEnemyKind *kind);
+
 static bool is_early_enemy(uint8_t id) {
     return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_PEEPING_EYE ||
            id == AOS_ENEMY_KILLER_FISH || id == AOS_ENEMY_BONE_PILLAR ||
@@ -555,7 +558,13 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             enemy->home = (int16_t)(enemy->y >> 16);
             enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
             enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
-            enemy->vx = toward_facing(enemy, 0x18000);
+            /* EnemyBuerCreate does NOT initialize horizontal speed
+             * at +0x48. Native sub_080CC20C / sub_0806CAF8 sets it
+             * from +0x18 spin on the first movement tick, independent
+             * of body facing. The historical synthetic starting speed
+             * remains necessary only for old/malformed probe exports. */
+            if (!buer_native_enabled(kind))
+                enemy->vx = toward_facing(enemy, 0x18000);
             /* +0x18 spin, +0x54 gravity and linked-fire facing were
              * set before the inert-flag branch; do not reset them here. */
             break;

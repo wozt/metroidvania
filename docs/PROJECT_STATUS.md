@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0682 - Buer source constructor X velocity parity
+
+- Audited GBA EnemyBuerCreate (0x080CB94C..0x080CBA1A): it sets the
+  rolling +0x18 angular speed to 0x8000 and +0x54 gravity to 0x4000,
+  but does not assign +0x48 horizontal velocity. Native movement first
+  writes X speed from angular spin inside sub_080CC20C / sub_0806CAF8.
+- A previous host-only patrol initializer gave new Buer entities a
+  facing-dependent +/-0x18000 X speed before their first native frame.
+  Native Buer with validated ROM-local probes now begins with zero X
+  speed as in the source. Keep the historical patrol initialization
+  ONLY for older or malformed exports that still use the fallback.
+- Constructor and native update use exactly the same validated-probe
+  predicate. ROM-free tests cover both player sides, native metadata,
+  legacy exports and an invalid native flag, then verify first-frame
+  movement is driven by angular spin rather than the provisional speed.
+- Affine OAM, exact graphics/sounds and live original-ROM verification
+  remain outstanding; Buer stays PARTIAL. No proprietary data included.
+
 ## Patch 0681 - Buer native final death burst Y origin
 
 - Audited source sub_080CC0F2 (0x080CC118..0x080CC13C). Each of Buer's

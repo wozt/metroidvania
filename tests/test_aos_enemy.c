@@ -2335,6 +2335,55 @@ static void buer_native_integrated_motion_tests(void) {
  * original mode-2/mode-6 walker has the raw-speed flag and does not
  * call sub_0806BC40. This must hold with legacy and imported probes;
  * only the separate fire facing may switch during the attack state. */
+/* Patch 0682: EnemyBuerCreate stores +0x18 rolling spin, NOT +0x48
+ * horizontal velocity. sub_0806CAF8 writes +0x48 only on the movement
+ * tick. Preserve the earlier bounded start speed when the ROM-local Buer
+ * probe table is missing or malformed, even if its flag was set. */
+static void buer_constructor_native_velocity_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(210), AOS_FIXED(120), NULL);
+
+    for (int metadata = 0; metadata < 3; ++metadata) {
+        /* 0 = legacy; 1 = native flag but invalid zero-count probes;
+         * 2 = full native flag plus validated geometry. */
+        kind.buer_native_motion = metadata != 0;
+        kind.probes.count = metadata == 2 ? 2 : 0;
+        kind.probes.half_width = 16;
+        kind.probes.ceiling = -20;
+        kind.probes.floor = 20;
+        kind.probes.wall_y[0] = -12;
+        kind.probes.wall_y[1] = 12;
+        for (int side = 0; side < 2; ++side) {
+            soma.x = AOS_FIXED(side ? 20 : 210);
+            AosEnemy e;
+            assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                                    0, 0, &soma, &layer, &kind, &stats));
+            assert(e.state == 1 && e.spin == 0x8000 && e.ay == 0x4000);
+            assert(e.mirrored == (side == 0) && e.buer_fire_mirrored);
+            if (metadata == 2) assert(e.vx == 0);
+            else assert(e.vx == (side ? -0x18000 : 0x18000));
+
+            /* Both paths take their first movement speed from spin, but
+             * only the validated native path starts with a zero +0x48. */
+            e.helper_spawned = true;
+            e.x = AOS_FIXED(100);
+            e.y = AOS_FIXED(60);
+            e.home = 60;
+            const int32_t x_before = e.x;
+            aos_enemy_update(&e, &soma, &layer, &kind,
+                             NULL, NULL, 10, 4, 0, 0, never_zero);
+            assert(e.vx == 0x8000 && e.x == x_before + 0x8000);
+        }
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_native_body_facing_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -6334,6 +6383,7 @@ int main(void) {
     buer_floor_edge_slope_probe_tests();
     buer_mode_six_floor_edge_support_tests();
     buer_native_integrated_motion_tests();
+    buer_constructor_native_velocity_tests();
     buer_native_body_facing_tests();
     buer_native_death_stage_one_walk_tests();
     buer_inert_orbit_tests();

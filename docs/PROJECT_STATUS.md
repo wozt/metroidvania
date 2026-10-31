@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0687 - Buer GBA signed Y halfword wrap on creation and inert lift
+
+- Audited original EnemyBuerCreate at 0x080CBA0E..0x080CBA1A and
+  sub_080CC48C at 0x080CC49E..0x080CC4B6. Each performs ldrh/subs/strh
+  on +0x46, the high 16-bit room Y coordinate: Y-24 and Y-32 respectively.
+- Replaced potentially overflowing signed 32-bit 16.16 subtraction with
+  explicit modulo-2^32 arithmetic, identical to updating the native high
+  halfword and preserving fractional X/Y coordinates and the low Y word.
+- ROM-free regression covers inert-state Y at the signed 16-bit boundary,
+  ordinary positive/negative origins, fractional bits and the one-time
+  lift followed by 0x100 angle ticks. Previous Buer behavior is unchanged
+  away from coordinate wrap boundaries.
+- Buer stays PARTIAL: this fixes one numerical parity edge case, not the
+  remaining sprite/OAM, sound, blue-soul or live emulator verification work.
+  No ROM, extracted artwork or proprietary data is committed.
+
 ## Patch 0686 - Buer visual resource safety and lifecycle smoke coverage
 
 - A paired Buer attack flame already in animation state 1 now retires

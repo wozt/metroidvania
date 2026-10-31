@@ -2773,6 +2773,52 @@ static void buer_native_death_stage_one_walk_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0687: EnemyBuerCreate and sub_080CC48C write +0x46 as a
+ * 16-bit room Y halfword. The inert-state vertical raise must therefore
+ * wrap without signed C overflow, retain the low fractional word and
+ * happen exactly once even at the signed high-word boundary. */
+static void buer_inert_y_halfword_wrap_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(210), AOS_FIXED(140), NULL);
+    AosEnemy buer;
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(buer.state == 4);
+
+    static const uint32_t initial_y[] = {
+        0x80081234u, /* -32760 - 32 wraps to +32744 */
+        0x7FFFABCDu, /* positive boundary, no wrap needed */
+        0x00005566u, /* zero high word, fractional low word */
+        0xFFE10001u  /* -31 - 32, ordinary negative result */
+    };
+    for (size_t n = 0; n < sizeof initial_y / sizeof initial_y[0]; ++n) {
+        buer.y = (int32_t)initial_y[n];
+        buer.angle = 0;
+        buer.step = 0;
+        buer.helper_spawned = true; /* isolate the inert body write */
+        const uint32_t expected = (uint32_t)(initial_y[n] - (32u << 16));
+        AosHitReport report = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                                NULL, NULL, 10, 4, 0, 0,
+                                                never_zero);
+        assert((uint32_t)buer.y == expected);
+        assert(((uint32_t)buer.y & 0xFFFFu) == (initial_y[n] & 0xFFFFu));
+        assert(buer.step == 1 && buer.state == 4 && buer.angle == 0x100u);
+        assert(!report.child_count && !report.soma_hit && !report.enemy_hit);
+        report = aos_enemy_update(&buer, &soma, &layer, &kind,
+                                  NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert((uint32_t)buer.y == expected && buer.angle == 0x200u);
+        assert(!report.child_count);
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -6634,6 +6680,7 @@ int main(void) {
     buer_native_body_facing_tests();
     buer_native_death_stage_one_walk_tests();
     buer_inert_orbit_tests();
+    buer_inert_y_halfword_wrap_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();
     giant_ghost_death_cue_tests();

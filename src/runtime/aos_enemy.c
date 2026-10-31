@@ -554,7 +554,10 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             enemy->own_boxes = true;
             enemy->own_hurt = enemy->own_attack = (AosBox){-20, -20, 40, 40};
             snap_to_floor(enemy, layer);
-            enemy->y -= AOS_FIXED(24);
+            /* EnemyBuerCreate subtracts 0x18 through a u16 write to
+             * +0x46 (the high Y halfword). Preserve 16.16 fractions and
+             * wrap on the native signed 16-bit coordinate boundary. */
+            enemy->y = (int32_t)((uint32_t)enemy->y - (24u << 16));
             enemy->home = (int16_t)(enemy->y >> 16);
             enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
             enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
@@ -8417,7 +8420,9 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
          * Entry raises the body exactly once; no contact or movement
          * controller executes in inactive state four. */
         if (e->step == 0) {
-            e->y -= AOS_FIXED(32);
+            /* sub_080CC48C updates only the u16 high Y halfword:
+             * subtraction by 0x20 must wrap, never overflow signed C. */
+            e->y = (int32_t)((uint32_t)e->y - (32u << 16));
             e->static_frame = 0;
             e->step = 1;
         }

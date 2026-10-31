@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0671 - Buer bounded native floor-edge slope contacts
+
+- Extended the conservative 0x20/0x40 slope impulse detection from the
+  centre foot point to the front and rear points using the ROM-local
+  probe descriptor's half-width, in both movement directions. The centre
+  keeps first priority to preserve previously reconstructed behavior.
+- The imported floor offset and `aos_floor_depth` determine each contact.
+  Invalid or absent native metadata falls back to the existing 24-pixel
+  half-width; outside-room points are skipped without clamped-cell reads.
+- Both state-one/idle rolling and state-two recovery reuse these slope
+  contacts, retaining their different spin/friction responses. New ROM-free
+  synthetic tests cover positive/negative contact, recovery, centre
+  precedence and malformed probe descriptors.
+- This remains an approximation, NOT complete sub_0806C828 contact masks.
+  Curved wall masks, general gravity/ceiling responses, attack movement,
+  affine sprite rendering and projectile damage remain partial.
+
 ## Patch 0670 - Buer special 16-pixel solid-block collision
 
 - Fixed Buer's imported multi-point wall probes to recognize BG1 cell

@@ -7789,19 +7789,32 @@ static uint8_t buer_floor_slope_flags(const AosEnemy *e, const AosCollision *lay
                                        const AosEnemyKind *kind) {
     if (!layer || !layer->cells || layer->width_screens <= 0 ||
         layer->height_screens <= 0 || e->spin == 0) return 0;
-    const int x = e->x >> 16;
+    const int centre = e->x >> 16;
     const int y = (e->y >> 16) + buer_floor_offset(kind);
     const int width = (layer->width_screens == 1 ? 30 :
                        32 * layer->width_screens) * 8;
     const int height = (layer->height_screens == 1 ? 26 :
                         32 * layer->height_screens) * 8;
-    if (x < 0 || x >= width || y < 0 || y >= height) return 0;
-    const uint8_t cell = aos_collision_cell(layer, x, y);
-    if (!(cell & 1u) || !(cell & 0xC0u) || (cell & 2u)) return 0;
-    if (aos_floor_depth(layer, x, y, 0, false) >= 0) return 0;
+    if (y < 0 || y >= height) return 0;
+    /* Conservative floor-contact extension of the exported 0x08528B64
+     * half-width: centre first for existing behavior, then leading and
+     * trailing edges. A missing or malformed native row uses the proven
+     * 24-pixel legacy offset. These are synthetic tests of contact points,
+     * NOT a reconstruction of sub_0806C828's full per-tile mask. */
+    const int edge = buer_front_offset(kind);
+    const int forward = e->spin > 0 ? edge : -edge;
+    const int samples[3] = {centre, centre + forward, centre - forward};
     const bool right = e->spin > 0;
-    const bool flipped = (cell & 4u) != 0;
-    return right == flipped ? 0x40u : 0x20u;
+    for (int i = 0; i < 3; ++i) {
+        const int x = samples[i];
+        if (x < 0 || x >= width) continue;
+        const uint8_t cell = aos_collision_cell(layer, x, y);
+        if (!(cell & 1u) || !(cell & 0xC0u) || (cell & 2u)) continue;
+        if (aos_floor_depth(layer, x, y, 0, false) >= 0) continue;
+        const bool flipped = (cell & 4u) != 0;
+        return right == flipped ? 0x40u : 0x20u;
+    }
+    return 0;
 }
 
 static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer,

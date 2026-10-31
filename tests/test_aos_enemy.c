@@ -1786,6 +1786,106 @@ static void buer_special_full_block_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0671: floor slope signals can be reached at the ROM-local
+ * horizontal edges even when the centre stands over an ordinary flat tile.
+ * All byte values and offsets below are synthetic collision fixtures. */
+static void buer_floor_edge_slope_probe_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+
+    /* State one: after +0.5 px motion the leading sample is x=116,
+     * y=165 (tile column 14, row 20). The centre tile stays flat. */
+    e.state = 1;
+    e.step = e.substep = 0;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(145);
+    e.home = 145;
+    e.phase = 0;
+    e.spin = 0x8000;
+    e.angle = 0;
+    cells[20 * W + 14] = 0x41;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x8333 && e.angle == (uint32_t)(0x8333 / 64));
+    cells[20 * W + 14] = 0x03;
+
+    /* Mirrored edge: -0.5 px yields x=83, a flipped slope in column 10. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(145);
+    e.home = 145;
+    e.phase = 0;
+    e.spin = -0x8000;
+    e.angle = 0;
+    cells[20 * W + 10] = 0x45;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == -0x8333 && e.angle == (uint32_t)(-0x8333 / 64));
+    cells[20 * W + 10] = 0x03;
+
+    /* Recovery shares the bounded contact helper but not rolling friction. */
+    e.state = 2;
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(145);
+    e.home = 145;
+    e.vx = 0;
+    e.spin = 0x6000;
+    e.angle = 0;
+    cells[20 * W + 14] = 0x41;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x6333 && e.angle == (uint32_t)(0x6333 / 64));
+
+    /* The earlier centre-only contact has priority over the edge. */
+    cells[20 * W + 12] = 0x45;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(145);
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.spin = 0x6000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x5CCD && e.angle == (uint32_t)(0x5CCD / 64));
+    cells[20 * W + 12] = cells[20 * W + 14] = 0x03;
+
+    /* Malformed metadata must use the previous bounded +/-24 offset. */
+    kind.probes.count = 9;
+    cells[21 * W + 15] = 0x41;  /* centre 100 + 24 = 124 */
+    e.state = 1;
+    e.step = e.substep = 0;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(149);  /* fallback foot y=173, row 21, local y=5 */
+    e.home = 149;
+    e.phase = 0;
+    e.spin = 0x8000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.spin == 0x8333);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5586,6 +5686,7 @@ int main(void) {
     buer_death_scatter_and_linked_wobble_tests();
     buer_native_probe_geometry_tests();
     buer_special_full_block_tests();
+    buer_floor_edge_slope_probe_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

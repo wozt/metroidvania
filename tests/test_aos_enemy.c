@@ -2232,6 +2232,85 @@ static void buer_native_body_facing_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0676: source sub_080CBEA4 death step 1 calls the same
+ * sub_0806CAF8 collision walker as ordinary motion, BUT with speed zero
+ * and mode two. Rotation must never become horizontal drift. Gravity and
+ * floor contact must remain active through the entire 96-frame stage. */
+static void buer_native_death_stage_one_walk_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.buer_native_motion = true;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(e.ay == 0x4000);
+    e.defeated = true;
+    e.state = 3;
+    e.step = 0;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.vx = 0x30000; /* must be overwritten by zero-speed native mode 2 */
+    e.vy = 0;
+    e.spin = -0x8000;
+    e.angle = 0;
+    AosHitReport report = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.step == 1 && e.timer == 95 && e.spin == -0x1FC80);
+    assert(e.angle == (uint32_t)(-0x1FC80 / 64));
+    assert(e.vx == 0 && e.vy == 0x4000);
+    assert(e.x == AOS_FIXED(100) && e.y == AOS_FIXED(60) + 0x4000);
+    assert(!report.soma_hit && !report.enemy_hit);
+
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.timer == 94 && e.vx == 0 && e.vy == 0x8000);
+    assert(e.x == AOS_FIXED(100) && e.y == AOS_FIXED(60) + 0xC000);
+
+    /* A real collision layer still stops the native fall with mode 2.
+     * Unlike mode 6, the floor support is not required to keep X/Y. */
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(140);
+    e.vx = 0x30000;
+    e.vy = 0;
+    e.step = 1;
+    e.timer = 40;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.vx == 0);
+    assert(e.vy == 0 && e.ground == 0x03);
+    assert(e.y < AOS_FIXED(141) && e.y >= AOS_FIXED(138));
+
+    /* An older export without locally imported probes retains the
+     * previous compatibility behavior, without synthesized gravity. */
+    memset(cells, 0, sizeof cells);
+    kind.buer_native_motion = false;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.vx = 0x30000;
+    e.vy = 0;
+    e.ay = 0;
+    e.timer = 40;
+    e.step = 1;
+    const uint32_t saved_angle = e.angle;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.y == AOS_FIXED(60));
+    assert(e.vx == 0x30000 && e.vy == 0 && e.angle != saved_angle);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -6043,6 +6122,7 @@ int main(void) {
     buer_mode_six_floor_edge_support_tests();
     buer_native_integrated_motion_tests();
     buer_native_body_facing_tests();
+    buer_native_death_stage_one_walk_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

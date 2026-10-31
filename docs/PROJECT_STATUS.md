@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0676 - Buer death step-one native zero-speed gravity and floor collision
+
+- Source-audited sub_080CBEA4, _080CC01C and sub_0806CAF8 from the original
+  Aria GBA assembly. During each tick of the 96-frame first death stage,
+  Buer updates death flames, linked-fire wobble, angular friction and affine
+  angle, THEN invokes collision mode two with *zero horizontal speed*.
+  The previous port skipped the walker entirely, leaving a dying Buer
+  suspended above the terrain until the second death stage.
+- When locally imported native Buer probes are available, the death-step-one
+  callback now calls the shared collision walker with speed 0 and mode 2.
+  Native 0x4000 gravity and ceiling/floor checks proceed without any horizontal
+  displacement from the death spin. This phase does not add the unrelated
+  front-of-room rollback used by sub_080CC20C. Older metadata remains on the
+  existing conservative fallback and is not misrepresented as native.
+- ROM-free tests cover the creation tick's gravity, repeated acceleration,
+  horizontal zeroing in spite of signed spin, solid-floor contact, and the
+  legacy-metadata compatibility path. No copyrighted ROM/artwork included.
+- Buer remains PARTIAL pending local-ROM and emulator visual comparisons,
+  in particular true affine OAM placement and source animation playback.
+
 ## Patch 0675 - Buer inactive affine angle and independent body facing
 
 - Audited original GBA routines sub_080CC48C, sub_0806CAF8, sub_080CC458,

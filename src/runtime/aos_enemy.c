@@ -8266,6 +8266,15 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
             if (e->spin > -0x4000) e->spin = -0x4000;
         }
         e->angle += (uint32_t)(e->spin / 64);
+        /* sub_080CBEA4 step 1, _080CC01C: immediately AFTER applying
+         * the affine matrix, the original calls sub_0806CAF8 with
+         * speed = 0 and mode = 2. Even a rapidly spinning dying Buer
+         * therefore has zero horizontal movement, but native +0x54
+         * gravity, ceiling and floor probes continue to run every tick.
+         * The source does NOT call sub_080CC5B4's room-front X rollback
+         * in this stage. Do not reuse the spin-speed rolling wrapper. */
+        if (buer_native_enabled(kind) && layer && layer->cells)
+            (void)aos_enemy_probe_walk(e, layer, &kind->probes, 0, 2);
         if (--e->timer == 0xFF) {
             e->timer = 0x80;
             e->step = 2;

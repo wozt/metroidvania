@@ -8046,10 +8046,14 @@ static void buer_state_two_idle_vertical_step(AosEnemy *e,
     e->y = AOS_FIXED(top) - AOS_FIXED(buer_floor_offset(kind));
 }
 
-static void buer_controller(AosEnemy *e, const AosSoma *soma,
+static void buer_controller(AosEnemy *e,
                             bool provisional_horizontal,
                             bool provisional_vertical) {
-    face_player(e, soma);
+    /* This is the legacy-metadata compatibility fallback only. Native
+     * Buer state 1 / state 2 dispatches sub_0806CAF8(mode 2/6), neither
+     * of which requests sub_0806BC40's facing-to-player bit. The body
+     * keeps its own mirror; the separately linked fire keeps its own
+     * angular-velocity-derived mirror. Never re-face Buer here. */
     if (provisional_horizontal) {
         e->x += e->vx;
         if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
@@ -8340,17 +8344,17 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         return report;
     }
     if (e->id == AOS_ENEMY_BUER && e->state == 4) {
-        /* sub_080CC48C: the inactive Buer does not run the ordinary
-         * movement/contact controller. On entry its visual centre rises
-         * by 32 pixels and selects direct frame 0. Subsequent ticks advance
-         * +0x14 by 0x100 for the native orbit/visual effect. The effect
-         * emitted by sub_0803E058 remains to be reconstructed. */
+        /* sub_080CC48C: the source increments the full 32-bit affine
+         * word +0x14, not the shared 16-bit synthetic phase. The host
+         * renderer already takes Buer's rotation from enemy->angle.
+         * Entry raises the body exactly once; no contact or movement
+         * controller executes in inactive state four. */
         if (e->step == 0) {
             e->y -= AOS_FIXED(32);
             e->static_frame = 0;
             e->step = 1;
         }
-        if (e->step == 1) e->phase = (uint16_t)(e->phase + 0x100);
+        if (e->step == 1) e->angle += 0x100u;
         return report;
     }
     if (e->defeated) {
@@ -8495,7 +8499,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         }
         buer_attack_timing(e, soma, random, &report);
         /* Native motion does not use provisional bob or patrol translation. */
-        if (!native) buer_controller(e, soma, !rolling, !state_two_idle);
+        if (!native) buer_controller(e, !rolling, !state_two_idle);
         if (rolling) {
             /* sub_080CC20C writes the linked +0x58 facing from the
              * final angular velocity at +0x18, after damping/reversal.

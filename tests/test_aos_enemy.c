@@ -2161,6 +2161,77 @@ static void buer_native_integrated_motion_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0675: Buer's body does not turn toward Soma each frame. The
+ * original mode-2/mode-6 walker has the raw-speed flag and does not
+ * call sub_0806BC40. This must hold with legacy and imported probes;
+ * only the separate fire facing may switch during the attack state. */
+static void buer_native_body_facing_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(210), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    e.helper_spawned = true;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.home = 60;
+    e.state = 1;
+    e.spin = 0x8000;
+    e.mirrored = true;
+    assert(e.mirrored);
+    /* Legacy fallback used to re-face this body on every update. */
+    soma.x = AOS_FIXED(20);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.mirrored);
+    soma.x = AOS_FIXED(210);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.mirrored);
+
+    /* Native mode six, when no ground is available, still preserves
+     * the body's mirror while the independent linked fire can flip. */
+    kind.buer_native_motion = true;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.spin = 0x8000;
+    e.buer_fire_mirrored = true;
+    soma.x = AOS_FIXED(20);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.mirrored && !e.buer_fire_mirrored);
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.spin = 0x6000;
+    soma.x = AOS_FIXED(210);
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.mirrored && !e.buer_fire_mirrored && e.timer == 11);
+    /* The follower uses its own mirror, not the parent body's bit. */
+    AosEnemy fire = {.id = AOS_ENEMY_BUER, .role = AOS_ROLE_BUER_FIRE,
+                     .parent = &e, .static_frame = 1};
+    AosHitReport follow = aos_enemy_update(&fire, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!fire.mirrored && e.mirrored && !follow.soma_hit);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -2177,13 +2248,18 @@ static void buer_inert_orbit_tests(void) {
     aos_enemy_set_flag_8e_40(false);
     assert(created && buer.state == 4 && buer.step == 0);
     int32_t first_y = buer.y, first_x = buer.x;
-    uint16_t first_phase = buer.phase;
+    /* Native +0x14 is a full 32-bit affine angle. Cross its
+     * 0xffffffff wrap to catch accidental 16-bit phase updates. */
+    const uint16_t first_phase = buer.phase;
+    buer.angle = 0xFFFFFF80u;
+    const uint32_t first_angle = buer.angle;
 
     AosHitReport report = aos_enemy_update(&buer, &soma, &layer, &kind,
                                             NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(buer.y == first_y - AOS_FIXED(32));
     assert(buer.x == first_x && buer.step == 1 && buer.static_frame == 0);
-    assert(buer.phase == (uint16_t)(first_phase + 0x100));
+    assert(buer.angle == first_angle + 0x100u);
+    assert(buer.phase == first_phase);
     assert(!report.child_count && !report.soma_hit && !report.enemy_hit);
 
     int32_t raised_y = buer.y;
@@ -2194,7 +2270,8 @@ static void buer_inert_orbit_tests(void) {
         assert(buer.state == 4 && buer.step == 1);
         assert(!report.child_count && !report.soma_hit && !report.enemy_hit);
     }
-    assert(buer.phase == (uint16_t)(first_phase + 6 * 0x100));
+    assert(buer.angle == first_angle + 6u * 0x100u);
+    assert(buer.phase == first_phase);
 }
 /* Skeleton: the native attack's third animation frame launches a single
  * bone, using source-derived OAM IDs, sound, launch trajectory and boxes.
@@ -5965,6 +6042,7 @@ int main(void) {
     buer_floor_edge_slope_probe_tests();
     buer_mode_six_floor_edge_support_tests();
     buer_native_integrated_motion_tests();
+    buer_native_body_facing_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

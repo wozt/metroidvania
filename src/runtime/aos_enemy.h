@@ -185,7 +185,7 @@ typedef struct AosEnemy {
     uint8_t step;           /* + 0x0B */
     uint8_t substep;        /* + 0x0C */
     uint8_t timer;          /* + 0x0D */
-    uint16_t phase;         /* + 0x14 */
+    uint16_t phase;         /* generic visual phase; NOT Buer's affine +0x14 */
     bool mirrored;          /* + 0x58 bit 0x40 */
     bool removed;           /* + 0x59 bit 8: deleted by the framework */
     bool vflip;             /* + 0x58 bit 0x80 */

@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0675 - Buer inactive affine angle and independent body facing
+
+- Audited original GBA routines sub_080CC48C, sub_0806CAF8, sub_080CC458,
+  sub_080CBAEC and sub_080CBC64. In inactive state four, Buer increments
+  the full native +0x14 affine angle by 0x100 each update, including its
+  creation tick. The previous 16-bit generic `phase` advanced instead,
+  so the already-ported SDL rotation stayed visually frozen.
+- Removed the synthetic repeated face-player callback in the legacy
+  Buer fallback: the source's mode-2/mode-6 probes use signed raw speed
+  and never request the body-facing-to-Soma callback. Its owner-linked
+  fire keeps its independent mirror calculated from signed spin/attack.
+  Older exported asset metadata still follows its bounded movement path.
+- ROM-free tests cover 32-bit affine wrap on the first six inert frames,
+  one-time vertical raise, stable generic phase, body facing across a
+  player-side swap, native mode-six recovery and linked-fire orientation.
+- Keep Buer PARTIAL until the user's original-ROM animation, hardware
+  double-size OAM placement and live emulator comparisons are validated.
+  No ROM or extracted artwork is tracked by this patch.
+
 ## Patch 0674 - Buer native linked-flame and attack-visual collision parity
 
 - Audited original Aria GBA assembly for sub_080CBA30, sub_080CC3C8,

@@ -1312,6 +1312,63 @@ static void buer_attack_death_animation_tests(void) {
 /* sub_080CC5D8 + sub_080CC178: two independent animation-selected
  * fire entities, no guessed weapon boxes, no independent loot, and correct
  * velocity/acceleration ordering with an 8.0 maximum speed. */
+/* Patch 0674: Buer's owner-linked flame has no independent collision
+ * callback in native sub_080CC3C8, whereas the body remains targetable.
+ * Synthetic animation boxes intentionally cover a very wide area to
+ * detect accidental calls to collide() on this non-interactive child. */
+static void buer_visual_only_linked_fire_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.modes[0][0] = 1;
+    kind.attack[0][0] = kind.hurt[0][0] = (AosBox){-64, -64, 128, 128};
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(136), NULL);
+    AosEnemy owner;
+    assert(aos_enemy_create(&owner, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    AosHitReport created = aos_enemy_update(&owner, &soma, &layer, &kind,
+                                             NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(created.child_count == 1 &&
+           created.children[0].role == AOS_ROLE_BUER_FIRE);
+    AosEnemy fire = created.children[0];
+    assert(fire.static_frame == 1 && !fire.own_boxes);
+    assert(fire.combat.attack_off && fire.combat.hurt_off);
+    fire.parent = &owner;
+    fire.state = 0;
+    fire.x = soma.x;
+    fire.y = soma.y;
+    /* Do not let a collision on the owner mask a false child contact. */
+    soma.combat = (AosCombat){0};
+    const int16_t hp = soma.hp;
+    AosHitReport contact = aos_enemy_update(&fire, &soma, &layer, &kind,
+                                             NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!contact.soma_hit && !contact.enemy_hit && !contact.killed);
+    assert(soma.hp == hp && !fire.removed);
+    assert(fire.x == owner.x && fire.y == owner.y);
+    fire.state = 1;
+    const int32_t frozen_x = fire.x, frozen_y = fire.y;
+    owner.x += AOS_FIXED(10);
+    owner.y += AOS_FIXED(2);
+    contact = aos_enemy_update(&fire, &soma, &layer, &kind,
+                                NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fire.x == frozen_x && fire.y == frozen_y && !contact.soma_hit);
+    owner.defeated = true;
+    fire.state = 0;
+    contact = aos_enemy_update(&fire, &soma, &layer, &kind,
+                                NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!fire.removed && fire.x == owner.x && !contact.soma_hit);
+    owner.removed = true;
+    aos_enemy_update(&fire, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fire.removed);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_projectile_lifecycle_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -1363,18 +1420,15 @@ static void buer_projectile_lifecycle_tests(void) {
                          NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(shot.removed);
 
-    /* Missing variant-1 animation must not leak a permanent child. */
+    /* Native sub_080CC178 deletes immediately if it cannot load
+     * variant 1, rather than borrowing a Buer static sprite for 24 ticks. */
     const AosAnimSet single = {defs, 1};
     AosEnemy fallback = hit.children[2];
     kind.anims = &single;
-    aos_enemy_update(&fallback, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(fallback.state == 2 && fallback.timer == 23 &&
-           fallback.static_frame == 2 && !fallback.removed);
-    for (int i = 0; i < 23; ++i)
-        aos_enemy_update(&fallback, &soma, &layer, &kind,
-                         NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(fallback.removed);
+    AosHitReport missing = aos_enemy_update(&fallback, &soma, &layer, &kind,
+                                             NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fallback.removed && fallback.state == 0 && fallback.static_frame == -1);
+    assert(!missing.enemy_hit && !missing.soma_hit && !missing.killed);
 
     /* Later attack ticks emit exactly the two new projectiles: the
      * persistent owner-linked flame was emitted on the first tick. */
@@ -5901,6 +5955,7 @@ int main(void) {
     buer_attack_timing_tests();
     buer_death_stages_tests();
     buer_attack_death_animation_tests();
+    buer_visual_only_linked_fire_tests();
     buer_projectile_lifecycle_tests();
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();

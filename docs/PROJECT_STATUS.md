@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0674 - Buer native linked-flame and attack-visual collision parity
+
+- Audited original Aria GBA assembly for sub_080CBA30, sub_080CC3C8,
+  sub_080CC5D8 and sub_080CC178. The persistent linked Buer flame only
+  mirrors/follows the owner's record: it has no separate attack collision
+  callback. Removed the provisional 16x16 contact box that could apply
+  an extra unwanted hit to Soma, while retaining Buer body contact.
+- Source sub_080CC178 spawns two graphics-only effects and deletes an
+  entity on failed sprite initialization. Missing local animation data now
+  removes the visual immediately rather than faking static Buer frames
+  and a 24-frame lifetime. Existing ROM animation paths retain their
+  velocity/acceleration and animation-driven teardown.
+- ROM-free tests cover noninteractive Buer linked flame (active, inert and
+  death lifetime), and immediate deletion of unavailable attack art.
+- This corrects independent visual/combat paths, not the native hardware
+  OAM affine matrices or pixel-perfect scene parity; full emulator/ROM
+  validation is still required. No proprietary ROM data is committed.
+
 ## Patch 0673 - Buer full native movement states and affine host rotation
 
 - Source-matched EnemyBuerCreate (+0x54 0x4000 gravity), sub_080CC20C

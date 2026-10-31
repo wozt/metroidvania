@@ -6255,11 +6255,12 @@ static void buer_fire_child(const AosEnemy *owner, AosHitReport *report) {
     /* sub_080CBA30: linked fire mirrors its owner's signed velocity,
      * not the current facing of the parent body. */
     child.mirrored = owner->buer_fire_mirrored;
-    /* Buer fire touches Soma, but cannot be destroyed independently
-     * until its native callbacks have been reconstructed. */
-    child.own_boxes = true;
-    child.own_hurt = child.own_attack = (AosBox){-8, -8, 16, 16};
-    child.combat.attack_off = false;
+    /* Native sub_080CBA30 sets the linked visual's non-interactive
+     * entity flag. sub_080CC3C8 only copies the parent's coordinates;
+     * it never calls the attack/weapon collision callback. The Buer
+     * body alone handles type-8 contact via sub_080CC4E4. */
+    child.own_boxes = false;
+    child.combat.attack_off = true;
     child.combat.hurt_off = true;
     report->children[report->child_count++] = child;
 }
@@ -6350,10 +6351,12 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
             child->x = (int32_t)((uint32_t)owner->x + (uint32_t)wobble);
             child->y = (int32_t)((uint32_t)owner->y + (uint32_t)wobble);
         }
-        /* EnemyBuerUpdate dispatches its staged death without a normal
-         * enemy hit callback. Preserve its linked visual but not contact. */
-        if (!owner->defeated)
-            report = collide(child, soma, kind, NULL, NULL, 0, 0);
+        /* Native sub_080CC3C8 never dispatches sub_080421AC:
+         * the linked sprite is visual-only in every owner state, not
+         * merely while the owner is dying. Buer itself receives attacks
+         * and collides with Soma through its own callback. */
+        child->combat.attack_off = true;
+        child->combat.hurt_off = true;
         aos_combat_tick(&child->combat);
         return report;
     }
@@ -7551,11 +7554,11 @@ static void buer_attack_projectile_pair(const AosEnemy *e, AosHitReport *report)
     }
 }
 
-/* sub_080CC178: state zero chooses animation +0x12; state one runs the
- * source sub_0806D3D8 acceleration/position integrator (8.0 cap) and
- * retires when the non-looping animation reports completion. If an asset
- * exporter supplied no animation, use a 24-tick bounded fallback solely
- * to avoid accumulating invisible entities indefinitely. */
+/* sub_080CC178: its state-zero resource allocation initializes the
+ * chosen 0/1 animation, then sub_0806D3D8 integrates at an 8.0 cap.
+ * Native allocation failure deletes the entity immediately. Thus an
+ * unavailable local animation has no fabricated 24-tick visible proxy.
+ * The native routine has no attack/hit callback: these are visuals. */
 static AosHitReport buer_projectile_update(AosEnemy *shot, const AosEnemyKind *kind) {
     AosHitReport report = {0};
     if (shot->state == 0) {
@@ -7565,14 +7568,13 @@ static AosHitReport buer_projectile_update(AosEnemy *shot, const AosEnemyKind *k
             play_loop(shot, anims, shot->variant, false);
             shot->state = 1;
         } else {
-            /* The private ROM animation has not been imported: bounded
-             * placeholder life, with no ungrounded collision or rewards. */
-            shot->state = 2;
-            shot->timer = 24;
-            shot->static_frame = (int16_t)(shot->variant + 1);
+            /* Source 0x080CC188..0x080CC1A0 deletes on missing art.
+             * No borrowed body frames or arbitrary fallback lifetime. */
+            shot->removed = true;
+            return report;
         }
     }
-    if (shot->state == 1 || shot->state == 2) {
+    if (shot->state == 1) {
         int32_t vx = (int32_t)((uint32_t)shot->vx + (uint32_t)shot->ax);
         int32_t vy = (int32_t)((uint32_t)shot->vy + (uint32_t)shot->ay);
         if (shot->ax >= 0 && vx > 0x80000) vx = 0x80000;
@@ -7583,12 +7585,8 @@ static AosHitReport buer_projectile_update(AosEnemy *shot, const AosEnemyKind *k
         shot->vy = vy;
         shot->x = (int32_t)((uint32_t)shot->x + (uint32_t)vx);
         shot->y = (int32_t)((uint32_t)shot->y + (uint32_t)vy);
-        if (shot->state == 1) {
-            step_anim(shot, kind->anims);
-            if (shot->cycle_done) shot->removed = true;
-        } else if (--shot->timer == 0) {
-            shot->removed = true;
-        }
+        step_anim(shot, kind->anims);
+        if (shot->cycle_done) shot->removed = true;
     }
     return report;
 }

@@ -1967,6 +1967,73 @@ static void buer_terminal_death_flames_tests(void) {
 /* Patches 0668/0685: both dimensions are source-derived fixed-point
  * 16x16 and 32x32 scatter windows, plus a one-pixel linked-fire wobble.
  * Use ROM-free synthetic positions and deterministic random edges. */
+/* Patch 0688: sub_0806D5C0 wraps signed 16.16 sprite positions
+ * modulo 2^32 when a randomized death flame crosses the room coordinate
+ * boundary. Each phase uses two position RNG draws plus one mirror draw.
+ * The fixtures are synthetic and require no copyrighted assets. */
+static void buer_death_flame_coordinate_wrap_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.defeated = true;
+    e.state = 3;
+    e.step = 1;
+    e.timer = 91; /* divisible by seven: exactly one 16x16 flame */
+    e.spin = 0x8000;
+    e.buer_death_linked_wobble = 0;
+    e.x = (int32_t)0x7FFF9000u;
+    e.y = (int32_t)0x80002000u;
+    const uint32_t first_rng[] = {0xFFFFFu, 0u, 1u};
+    script = first_rng;
+    script_at = 0;
+    const int32_t first_x = e.x, first_y = e.y;
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, 0, 0, scripted);
+    script = NULL;
+    assert(script_at == 3 && hit.effect_count == 1);
+    assert(hit.effects[0].kind == AOS_EFFECT_FLAME);
+    assert(hit.effects[0].x ==
+           (int32_t)((uint32_t)first_x + 0xFFFFFu - 0x80000u));
+    assert(hit.effects[0].y ==
+           (int32_t)((uint32_t)first_y - 0x80000u));
+    assert(hit.effects[0].x < 0 && hit.effects[0].y > 0);
+    assert(hit.effects[0].mirrored);
+    assert(!hit.soma_hit && !hit.enemy_hit && !hit.child_count);
+
+    /* The 32x32 second phase samples old parent coordinates before
+     * movement; the positive X and negative Y wraps occur as on GBA. */
+    e.step = 2;
+    e.timer = 128;
+    e.x = (int32_t)0x7FFF9000u;
+    e.y = (int32_t)0x80002000u;
+    e.spin = 0x8000;
+    const uint32_t second_rng[] = {0x1FFFFFu, 0u, 0u};
+    script = second_rng;
+    script_at = 0;
+    const int32_t second_x = e.x, second_y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, scripted);
+    script = NULL;
+    assert(script_at == 3 && hit.effect_count == 1);
+    assert(hit.effects[0].kind == AOS_EFFECT_FLAME);
+    assert(hit.effects[0].x ==
+           (int32_t)((uint32_t)second_x + 0x1FFFFFu - 0x100000u));
+    assert(hit.effects[0].y ==
+           (int32_t)((uint32_t)second_y - 0x100000u));
+    assert(hit.effects[0].x < 0 && hit.effects[0].y > 0);
+    assert(!hit.effects[0].mirrored);
+    assert(!hit.soma_hit && !hit.enemy_hit && !hit.child_count);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_death_scatter_and_linked_wobble_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -6671,6 +6738,7 @@ int main(void) {
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();
     buer_death_scatter_and_linked_wobble_tests();
+    buer_death_flame_coordinate_wrap_tests();
     buer_native_probe_geometry_tests();
     buer_special_full_block_tests();
     buer_floor_edge_slope_probe_tests();

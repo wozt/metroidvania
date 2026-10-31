@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0688 - Buer GBA 32-bit death flame scatter wrap
+
+- Audited sub_0806D5C0 in the Aria GBA assembly: randomized 16.16
+  flame positions use unsigned-modulo RNG offsets followed by ARM 32-bit
+  ADD/SUB arithmetic. Signed host X/Y additions could overflow in C
+  close to the signed coordinate boundary, unlike the native wrap.
+- Made the shared flame-position helper use explicit uint32_t arithmetic,
+  keeping the original X/Y RNG order and the conditional third mirror
+  draw. This also removes signed-overflow undefined behavior for other
+  enemies that use the same helper; normal-range values are unchanged.
+- Added ROM-free Buer stage-one (16x16) and stage-two (32x32) regressions
+  that cross both signed-coordinate boundaries, check three RNG draws,
+  mirror flags, effect count and noncombat behavior.
+- Buer stays PARTIAL. Imported art, affine OAM rendering, sound playback,
+  blue soul effects and live original-ROM comparisons remain outstanding.
+  No proprietary ROM or extracted assets are included.
+
 ## Patch 0687 - Buer GBA signed Y halfword wrap on creation and inert lift
 
 - Audited original EnemyBuerCreate at 0x080CBA0E..0x080CBA1A and

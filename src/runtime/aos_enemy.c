@@ -102,8 +102,15 @@ static uint32_t umod(uint32_t value, uint32_t divisor) {
 
 static void spawn_flame_at(int32_t cx, int32_t cy, uint32_t w, uint32_t h,
                            uint32_t (*random)(void), AosHitReport *report) {
-    int32_t x = cx + (int32_t)umod(random(), w) - (int32_t)(w / 2);
-    int32_t y = cy + (int32_t)umod(random(), h) - (int32_t)(h / 2);
+    /* sub_0806D5C0 uses GBA 32-bit ADD/SUB for fixed-point sprite
+     * positions. Explicit unsigned operations preserve its modulo-2^32
+     * wrap near the signed room boundary without signed overflow in C.
+     * Keep the same two RNG calls in X-then-Y order; the mirror RNG
+     * draw below is made only if an effect slot was allocated. */
+    const uint32_t dx = umod(random(), w);
+    const uint32_t dy = umod(random(), h);
+    const int32_t x = (int32_t)((uint32_t)cx + dx - (w / 2u));
+    const int32_t y = (int32_t)((uint32_t)cy + dy - (h / 2u));
     if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
     AosEffect *flame = &report->effects[report->effect_count++];
     *flame = (AosEffect){.kind = AOS_EFFECT_FLAME, .x = x, .y = y};

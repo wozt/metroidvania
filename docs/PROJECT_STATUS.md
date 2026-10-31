@@ -2,6 +2,21 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0686 - Buer visual resource safety and lifecycle smoke coverage
+
+- A paired Buer attack flame already in animation state 1 now retires
+  immediately if its animation set or variant becomes unavailable during
+  local resource reload. No placeholder art, attack hitbox or reward is
+  fabricated, matching the native visual-only contract of sub_080CC178.
+- Added ROM-free regression cases for lost animation sets and missing
+  variants, including no enemy/Soma hits or spawned substitute effects.
+- Added a parent/linked-fire smoke test spanning initial linked-sprite
+  creation, both visual attack flames, the 96/128-frame death timeline,
+  and cleanup of the linked child after its owner is removed.
+- These synthetic tests do not certify original-ROM parity. Buer remains
+  PARTIAL until body collision, graphics/OAM, sounds, blue soul and live
+  emulator behavior are validated. No proprietary assets included.
+
 ## Patch 0685 - Buer source-sized death flame scatter areas
 
 - Audited cvaos GBA assembly sub_080CBEA4: at the stage-one seven-frame

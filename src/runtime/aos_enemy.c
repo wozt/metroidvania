@@ -7604,6 +7604,16 @@ static AosHitReport buer_projectile_update(AosEnemy *shot, const AosEnemyKind *k
         }
     }
     if (shot->state == 1) {
+        /* sub_080CC178 deletes a visual child if its own animation
+         * resources cannot be allocated. During host asset reloads a
+         * previously initialized child can also lose that metadata.
+         * Retire it rather than dereferencing missing animation frames;
+         * never substitute a damaging or arbitrary fallback sprite. */
+        if (!kind || !kind->anims || shot->variant >= kind->anims->count ||
+            !kind->anims->anims[shot->variant].count) {
+            shot->removed = true;
+            return report;
+        }
         int32_t vx = (int32_t)((uint32_t)shot->vx + (uint32_t)shot->ax);
         int32_t vy = (int32_t)((uint32_t)shot->vy + (uint32_t)shot->ay);
         if (shot->ax >= 0 && vx > 0x80000) vx = 0x80000;

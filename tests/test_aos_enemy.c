@@ -1638,6 +1638,112 @@ static void buer_projectile_lifecycle_tests(void) {
  * BEFORE considering the sign of the updated spin. A counter-spinning
  * Buer must not overwrite the linked-fire mirror until the new spin has
  * crossed zero in the branch's direction. No ROM is required. */
+/* Patch 0686: an animation pack may be replaced while a linked visual
+ * projectile is alive. Both its absent animation set and an absent
+ * variant must retire it without touching gameplay or drawing fake art. */
+static void buer_projectile_resource_loss_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {4, 4};
+    const AosAnimDef defs[] = {{2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 2};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy owner;
+    assert(aos_enemy_create(&owner, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    owner.helper_spawned = true;
+    owner.state = 2;
+    owner.step = owner.substep = 1;
+    owner.timer = 78;
+    owner.away = 1;
+    owner.x = AOS_FIXED(100);
+    owner.y = AOS_FIXED(136);
+    AosHitReport spawn = aos_enemy_update(&owner, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(spawn.child_count == 2);
+    const AosAnimSet one_variant = {defs, 1};
+    for (int i = 0; i < 2; ++i) {
+        AosEnemy flame = spawn.children[1]; /* variant 1 */
+        AosHitReport hit = aos_enemy_update(&flame, &soma, &layer, &kind,
+                                             NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(flame.state == 1 && !flame.removed);
+        assert(!hit.soma_hit && !hit.enemy_hit && !hit.killed);
+        kind.anims = i ? &one_variant : NULL;
+        hit = aos_enemy_update(&flame, &soma, &layer, &kind,
+                               NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(flame.removed && !hit.soma_hit && !hit.enemy_hit &&
+               !hit.killed && !hit.child_count && !hit.effect_count);
+        kind.anims = &anims;
+    }
+    memset(cells, 0, sizeof cells);
+}
+
+/* Patch 0686: ROM-free complete Buer ownership lifecycle. The parent
+ * creates exactly one persistent linked visual, emits noncombat attack
+ * flames, enters the 96+128-frame staged death, and finally retires its
+ * own linked fire without generating independent kills or rewards.
+ * This is a component smoke test, NOT original-ROM gameplay validation. */
+static void buer_component_lifecycle_smoke_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {4, 4};
+    const AosAnimDef defs[] = {{2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 2};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy owner;
+    assert(aos_enemy_create(&owner, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    AosHitReport hit = aos_enemy_update(&owner, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.child_count == 1 &&
+           hit.children[0].role == AOS_ROLE_BUER_FIRE);
+    AosEnemy fire = hit.children[0];
+    fire.parent = &owner;
+    owner.state = 2;
+    owner.step = owner.substep = 1;
+    owner.timer = 78;
+    owner.away = 1;
+    hit = aos_enemy_update(&owner, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(hit.child_count == 2 && hit.effect_count == 0);
+    for (int i = 0; i < 2; ++i) {
+        assert(hit.children[i].role == AOS_ROLE_BUER_PROJECTILE);
+        assert(hit.children[i].variant == i);
+        assert(hit.children[i].combat.attack_off &&
+               hit.children[i].combat.hurt_off);
+    }
+    hit = aos_enemy_update(&fire, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!fire.removed && !hit.soma_hit && !hit.enemy_hit);
+    owner.defeated = true;
+    owner.state = 3;
+    owner.step = 0;
+    owner.timer = 0;
+    hit = aos_enemy_update(&owner, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(owner.step == 1 && owner.timer == 95 && !owner.removed);
+    hit = aos_enemy_update(&fire, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!fire.removed && !hit.soma_hit);
+    int death_frames = 0;
+    while (!owner.removed && death_frames < 230) {
+        hit = aos_enemy_update(&owner, &soma, &layer, &kind,
+                               NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++death_frames;
+        assert(!hit.enemy_hit && !hit.killed && !hit.soma_hit);
+    }
+    assert(owner.removed && death_frames == 226);
+    hit = aos_enemy_update(&fire, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(fire.removed && !hit.soma_hit && !hit.enemy_hit);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_attack_fire_mirror_sign_gate_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -6513,6 +6619,8 @@ int main(void) {
     buer_native_side_spin_and_projectile_mirror_tests();
     buer_projectile_signed_y_wrap_tests();
     buer_projectile_lifecycle_tests();
+    buer_projectile_resource_loss_tests();
+    buer_component_lifecycle_smoke_tests();
     buer_attack_fire_mirror_sign_gate_tests();
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();

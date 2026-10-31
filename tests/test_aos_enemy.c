@@ -334,18 +334,18 @@ static void buer_near_player_attack_tests(void) {
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 2 && buer.substep == 2 && buer.timer == 5);
-    /* Native inclusive LEFT boundary. A Buer-minus-Soma positive
-     * delta selects positive angular acceleration, allowing the original
-     * early-cap timing assertions below to remain meaningful. */
-    soma.x = buer.x - AOS_FIXED(48);
+    /* Native inclusive RIGHT boundary. Buer-minus-Soma is
+     * negative, selecting source side 1 and positive acceleration.
+     * This is the native early-cap (31-tick) attack branch. */
+    soma.x = buer.x + AOS_FIXED(48);
     soma.y = buer.y + AOS_FIXED(24);
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 0 && buer.timer == 4);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 0);
-    /* The 80-frame timer is an upper bound: with Soma LEFT and
-     * positive starting spin, +0xCCC reaches an overshoot on the next
-     * tick after timer 50. Native saturation forces early recovery. */
+    /* The 80-frame timer is an upper bound: with Soma RIGHT and
+     * positive starting spin, +0xCCC overshoots at attack tick 31.
+     * Native saturation forces early recovery. */
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 1 && buer.timer == 0x4F);
@@ -366,9 +366,9 @@ static void buer_near_player_attack_tests(void) {
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 3);
     aos_audio_clear();
 
-    /* Symmetric RIGHT boundary selects negative spin. Its cap arrives
-     * on attack tick 51 (rather than positive spin's tick 31), because
-     * the source starts every Buer at positive angular speed. */
+    /* Symmetric LEFT boundary selects source side 0 and negative
+     * acceleration. Its cap arrives at attack tick 51, instead of 31,
+     * because the source starts every Buer spinning positively. */
     AosEnemy opposite;
     assert(aos_enemy_create(&opposite, AOS_ENEMY_BUER, 100, 100,
                             1, 0, &soma, &layer, &kind, &stats));
@@ -380,7 +380,7 @@ static void buer_near_player_attack_tests(void) {
     opposite.substep = 2;
     opposite.timer = 6;
     opposite.spin = 0x8000;
-    soma.x = opposite.x + AOS_FIXED(48);
+    soma.x = opposite.x - AOS_FIXED(48);
     soma.y = opposite.y + AOS_FIXED(24);
     aos_enemy_update(&opposite, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -1274,7 +1274,7 @@ static void buer_attack_death_animation_tests(void) {
     AosEnemyKind kind = {.anims = &anims};
     kind.margins[0][0] = kind.margins[0][1] = 32;
     const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
-    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(20), AOS_FIXED(120), NULL);
     AosEnemy e;
     assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
                             1, 0, &soma, &layer, &kind, &stats));
@@ -1288,8 +1288,8 @@ static void buer_attack_death_animation_tests(void) {
     e.angle = 0;
     AosHitReport result = aos_enemy_update(&e, &soma, &layer, &kind,
                                             NULL, NULL, 10, 4, 0, 0, never_zero);
-    /* Soma right: native Buer-minus-Soma is negative, selecting
-     * +0x13=1 and a negative angular acceleration. */
+    /* Soma LEFT: Buer-minus-Soma is positive, giving source
+     * +0x13=0 and NEGATIVE angular acceleration. */
     assert(e.substep == 1 && e.timer == 0x4F && e.away == -1);
     assert(e.spin == 0x7334 && e.angle == (uint32_t)-0x400 &&
            result.effect_count == 0);
@@ -1305,8 +1305,8 @@ static void buer_attack_death_animation_tests(void) {
     assert(result.children[0].x == result.children[1].x &&
            result.children[0].y == result.children[1].y);
 
-    /* Soma left selects positive angular acceleration and turn. */
-    soma.x = AOS_FIXED(20);
+    /* Soma RIGHT selects source side 1: positive acceleration. */
+    soma.x = AOS_FIXED(400);
     e.x = AOS_FIXED(100);
     e.step = 1;
     e.substep = 0;
@@ -1423,7 +1423,7 @@ static void buer_native_attack_side_sign_tests(void) {
     assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
                             1, 0, &soma, &layer, &kind, &stats));
     const int targets[] = {90, 100, 110};
-    const int signs[] = {1, -1, -1};
+    const int signs[] = {-1, 1, 1};
     for (int i = 0; i < 3; ++i) {
         e.state = 2;
         e.step = 1;
@@ -1452,6 +1452,62 @@ static void buer_native_attack_side_sign_tests(void) {
  * the resulting halfword, including its wrap, before making 16.16 Y.
  * Verify source integer X/Y truncation, positive normal Y and the
  * signed-halfword boundary without a ROM or extracted assets. */
+/* Patch 0684: original sub_080CBC64 branches on +0x13, not on
+ * signed Buer-minus-Soma directly. Side 0 accelerates -0xCCC and
+ * creates unmirrored flame 0/1; side 1 accelerates +0xCCC and mirrors
+ * both. Equal integer X (despite different fractions) is side 1. */
+static void buer_native_side_spin_and_projectile_mirror_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(90), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    const int targets[3] = {90, 110, 100};
+    const int expected_signs[3] = {-1, 1, 1};
+    for (int pass = 0; pass < 3; ++pass) {
+        e.helper_spawned = true;
+        e.state = 2;
+        e.step = 1;
+        e.substep = 0;
+        e.timer = 0;
+        e.x = AOS_FIXED(100) + 0xC000;
+        e.y = AOS_FIXED(100);
+        e.home = 100;
+        e.vx = 0;
+        e.spin = 0;
+        e.angle = 0;
+        e.buer_fire_mirrored = pass == 0;
+        soma.x = AOS_FIXED(targets[pass]);
+        for (int frame = 0; frame < 3; ++frame) {
+            AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                                 NULL, NULL, 10, 4,
+                                                 0, 0, never_zero);
+            if (frame < 2) assert(hit.child_count == 0);
+            else {
+                assert(e.away == expected_signs[pass]);
+                assert(e.spin == expected_signs[pass] * (3 * 0xCCC));
+                assert(e.timer == 77);
+                assert(hit.child_count == 2);
+                assert(e.buer_fire_mirrored == (pass != 0));
+                for (int i = 0; i < 2; ++i) {
+                    assert(hit.children[i].role == AOS_ROLE_BUER_PROJECTILE);
+                    assert(hit.children[i].variant == i);
+                    assert(hit.children[i].mirrored == (pass != 0));
+                    assert(hit.children[i].combat.attack_off);
+                    assert(hit.children[i].combat.hurt_off);
+                }
+            }
+        }
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_projectile_signed_y_wrap_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -1516,8 +1572,8 @@ static void buer_projectile_lifecycle_tests(void) {
     e.substep = 1;
     e.timer = 78;
     e.spin = 0x8000;
-    /* Native side 1: negative spin, mirrored fire. */
-    e.away = -1;
+    /* Native side 1: positive acceleration, mirrored fire. */
+    e.away = 1;
     AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
                                         NULL, NULL, 10, 4, 0, 0, never_zero);
     /* The first owner update also emits its persistent linked flame.
@@ -1566,8 +1622,8 @@ static void buer_projectile_lifecycle_tests(void) {
     e.step = 1;
     e.substep = 1;
     e.timer = 78;
-    /* Native side 0: positive spin, unmirrored fire. */
-    e.away = 1;
+    /* Native side 0: negative acceleration, unmirrored fire. */
+    e.away = -1;
     hit = aos_enemy_update(&e, &soma, &layer, &kind,
                            NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.child_count == 2 && !hit.children[0].mirrored &&
@@ -6421,6 +6477,7 @@ int main(void) {
     buer_attack_death_animation_tests();
     buer_visual_only_linked_fire_tests();
     buer_native_attack_side_sign_tests();
+    buer_native_side_spin_and_projectile_mirror_tests();
     buer_projectile_signed_y_wrap_tests();
     buer_projectile_lifecycle_tests();
     buer_attack_fire_mirror_sign_gate_tests();

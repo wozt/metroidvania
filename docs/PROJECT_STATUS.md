@@ -2,6 +2,25 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0684 - Buer source-side attack spin and paired fire mirrors
+
+- Re-audited original GBA sub_080CBC64 at 0x080CBC9C..0x080CBD42.
+  Its signed 16-bit Buer-minus-Soma X test writes side byte +0x13=0
+  only for positive results. Contrary to earlier patch-0678 direction
+  notes, side 0 branches at 0x080CBD1C to NEGATIVE 0xCCC acceleration;
+  side 1 branches at 0x080CBCBA to POSITIVE acceleration.
+- Corrected source side -> native angular sign while keeping equal
+  integer X (regardless of fractional positions) on side 1. Updated
+  sub_080CC5D8 paired noncombat-flame mirrors to match the actual side
+  byte, rather than the formerly inverted host sign convention.
+- ROM-free regressions cover left/right/tied positions, both flame
+  variants, 31/51-tick spin cap timing, counter-spin mirror sign gates
+  and preserved noncombat semantics. Supersedes the mistaken direction
+  interpretation in patch 0678; no old commits are rewritten.
+- Buer is PARTIAL. Affine OAM, exact animations/sounds, terrain masks
+  and original-ROM emulator comparison remain open. No proprietary
+  ROM or extracted visual data is included.
+
 ## Patch 0683 - Buer paired attack-flame signed Y placement
 
 - Audited original GBA sub_080CBC64 and sub_080CC5D8. Each attack

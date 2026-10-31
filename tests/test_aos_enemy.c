@@ -973,10 +973,14 @@ static void buer_state_two_idle_horizontal_tests(void) {
     e.spin = 0x90000;
     e.timer = 9;
     cells[20 * W + 13] = 0;
+    cells[20 * W + 10] = 0; /* rear of destination x=108 */
+    cells[20 * W + 16] = 0; /* front of destination x=108 */
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.x == AOS_FIXED(100) && e.vx == 0x80000);
     cells[20 * W + 13] = 0x03;
+    cells[20 * W + 10] = 0x03;
+    cells[20 * W + 16] = 0x03;
 
     /* A flat floor and a solid right wall trigger the conservative
      * native X rollback, while angular impact still reverses spin. */
@@ -1077,12 +1081,16 @@ static void buer_state_two_idle_vertical_tests(void) {
     /* Neither slope geometry nor upward motion may be classified as a
      * supported flat-floor correction in this bounded implementation. */
     cells[20 * W + 12] = 0x41;
+    cells[20 * W + 9] = 0;  /* no rear flat support */
+    cells[20 * W + 15] = 0; /* no leading flat support */
     e.y = AOS_FIXED(137) + 0x1234;
     e.spin = 0;
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.y == AOS_FIXED(137) + 0x1234);
     cells[20 * W + 12] = 0x03;
+    cells[20 * W + 9] = 0x03;
+    cells[20 * W + 15] = 0x03;
     e.vy = -0x4000;
     e.spin = 0;
     aos_enemy_update(&e, &soma, &layer, &kind,
@@ -1883,6 +1891,110 @@ static void buer_floor_edge_slope_probe_tests(void) {
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(e.spin == 0x8333);
+    memset(cells, 0, sizeof cells);
+}
+
+/* Patch 0672: mode-six flat support is sampled at both native edges,
+ * without treating curved masks as flat contact or reading outside BG1. */
+static void buer_mode_six_floor_edge_support_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 3;
+    e.vy = 0;
+    e.home = 30;
+
+    /* Centre is empty: the leading imported edge supports both X motion
+     * and the y=141 -> 140 correction on an ordinary 8px floor. */
+    cells[20 * W + 14] = 0x03;
+    e.x = AOS_FIXED(100) + 0x1000;
+    e.y = AOS_FIXED(141) + 0x2345;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x9000 && e.y == AOS_FIXED(140));
+    cells[20 * W + 14] = 0;
+
+    /* The left edge supports the same grounded translation when rolling
+     * left; the subpixel component must survive the negative X step. */
+    cells[20 * W + 10] = 0x03;
+    e.x = AOS_FIXED(100) + 0xC000;
+    e.y = AOS_FIXED(141) + 0x4567;
+    e.spin = -0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x4000 && e.y == AOS_FIXED(140));
+
+    /* Rear support is also valid when the leading edge is in air. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(141);
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x8000 && e.y == AOS_FIXED(140));
+    cells[20 * W + 10] = 0;
+
+    /* Imported edges also recognize full 16px 0xFF blocks, retaining the
+     * 16px top rather than snapping inside the block's second 8px row. */
+    for (int row = 20; row <= 21; ++row)
+        for (int col = 14; col <= 15; ++col)
+            cells[row * W + col] = 0xFF;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(143) + 0x2468;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x8000 && e.y == AOS_FIXED(140));
+    for (int row = 20; row <= 21; ++row)
+        for (int col = 14; col <= 15; ++col)
+            cells[row * W + col] = 0;
+
+    /* A curved slope must not create flat support in mode six. */
+    cells[20 * W + 14] = 0x41;
+    e.x = AOS_FIXED(100) + 0x1000;
+    e.y = AOS_FIXED(145) + 0x2468;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x1000);
+    assert(e.y == AOS_FIXED(145) + 0x2468);
+    cells[20 * W + 14] = 0;
+
+    /* Unsupported air never permits movement or correction. */
+    e.x = AOS_FIXED(100) + 0x1000;
+    e.y = AOS_FIXED(141) + 0x2468;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x1000);
+    assert(e.y == AOS_FIXED(141) + 0x2468);
+
+    /* Malformed native metadata retains the 24px half-width and +24px
+     * floor sample. The chosen floor tile is solely at x=124, y=161. */
+    kind.probes.count = 9;
+    cells[20 * W + 15] = 0x03;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(137) + 0x5678;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x8000 && e.y == AOS_FIXED(136));
     memset(cells, 0, sizeof cells);
 }
 
@@ -5687,6 +5799,7 @@ int main(void) {
     buer_native_probe_geometry_tests();
     buer_special_full_block_tests();
     buer_floor_edge_slope_probe_tests();
+    buer_mode_six_floor_edge_support_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

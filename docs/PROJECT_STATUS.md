@@ -1,6 +1,22 @@
 # Project status
 
-Last updated: **2026-10-30**.
+Last updated: **2026-10-31**.
+
+## Patch 0672 - Buer bounded mode-six flat-floor edge support
+
+- Mode-six idle now recognizes flat floor support under the imported centre,
+  leading and trailing floor points in centre-first order. The same source
+  geometry gates pre/post horizontal movement and the shallow vertical
+  correction, avoiding floating beside a supported floor edge.
+- Reuses the shared BG1 floor penetration primitive for regular 8-pixel
+  solids and 0xFF 16-pixel solids; rejects curved slopes, unsupported mask
+  values, off-room sample points and missing collision layers. Legacy or
+  malformed ROM-local probe rows retain the existing 24-pixel fallback.
+- Added ROM-free regression tests for either rolling direction, rear-only
+  support, full blocks, unsupported slopes and air, and invalid metadata.
+- This bounded geometry is not the native sub_0806C828 mask solver: exact
+  gravity, ceiling, slope traction, attack motion, affine OAM and linked
+  projectile damage remain partial. No proprietary assets were added.
 
 ## Patch 0671 - Buer bounded native floor-edge slope contacts
 

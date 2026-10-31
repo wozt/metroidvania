@@ -7902,6 +7902,41 @@ static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *laye
  * permit X motion only above a confirmed, penetrated FLAT solid floor.
  * An unknown/slope contact must not be fabricated into native flag 8.
  * Attack and recovery substeps never invoke this routine. */
+/* Patch 0672: mode-six idle recognizes flat ground under the centre or
+ * either imported floor edge, in the same centre/forward/rear order as the
+ * bounded Buer slope probes. Reject other curved masks, out-of-room
+ * samples and unsupported floor depths. This is not the native contact
+ * mask or a new gravity integrator. */
+static bool buer_flat_floor_support(const AosEnemy *e, const AosCollision *layer,
+                                    const AosEnemyKind *kind, int *top_out) {
+    if (!layer || !layer->cells || layer->width_screens <= 0 ||
+        layer->height_screens <= 0) return false;
+    const int centre = e->x >> 16;
+    const int foot_y = (e->y >> 16) + buer_floor_offset(kind);
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    if (centre < 0 || centre >= width || foot_y < 0 || foot_y >= height)
+        return false;
+    const int edge = buer_front_offset(kind);
+    const int ahead = e->spin >= 0 ? edge : -edge;
+    const int samples[3] = {centre, centre + ahead, centre - ahead};
+    for (int i = 0; i < 3; ++i) {
+        const int x = samples[i];
+        if (x < 0 || x >= width) continue;
+        const uint8_t cell = aos_collision_cell(layer, x, foot_y);
+        if ((cell & 3u) != 3u ||
+            ((cell & 0xC0u) != 0u && cell != 0xFFu) ||
+            aos_floor_depth(layer, x, foot_y, 0, false) >= 0)
+            continue;
+        if (top_out)
+            *top_out = cell == 0xFFu ? (foot_y & ~15) : (foot_y & ~7);
+        return true;
+    }
+    return false;
+}
+
 static void buer_state_two_idle_horizontal_step(AosEnemy *e,
                                                 const AosCollision *layer,
                                                 const AosEnemyKind *kind) {
@@ -7914,29 +7949,11 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
         layer->height_screens <= 0) return;
     const int width = (layer->width_screens == 1 ? 30 :
                        32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    const int foot_x = e->x >> 16;
-    const int foot_y = (e->y >> 16) + buer_floor_offset(kind);
-    if (foot_x < 0 || foot_x >= width || foot_y < 0 || foot_y >= height)
-        return;
-    const uint8_t ground = aos_collision_cell(layer, foot_x, foot_y);
-    /* A 0xFF cell is the full 16x16 block supported by the shared
-     * floor-depth routine. Other slopes/unknown masks remain rejected. */
-    if ((ground & 3u) != 3u ||
-        ((ground & 0xC0u) != 0u && ground != 0xFFu) ||
-        aos_floor_depth(layer, foot_x, foot_y, 0, false) >= 0)
-        return;
+    if (!buer_flat_floor_support(e, layer, kind, NULL)) return;
     e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
     const int after_x = e->x >> 16;
-    if (after_x < 0 || after_x >= width) {
-        e->x = original_x;
-        return;
-    }
-    const uint8_t landing = aos_collision_cell(layer, after_x, foot_y);
-    if ((landing & 3u) != 3u ||
-        ((landing & 0xC0u) != 0u && landing != 0xFFu) ||
-        aos_floor_depth(layer, after_x, foot_y, 0, false) >= 0) {
+    if (after_x < 0 || after_x >= width ||
+        !buer_flat_floor_support(e, layer, kind, NULL)) {
         e->x = original_x;
         return;
     }
@@ -7960,25 +7977,11 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
 static void buer_state_two_idle_vertical_step(AosEnemy *e,
                                               const AosCollision *layer,
                                               const AosEnemyKind *kind) {
-    if (!layer || !layer->cells || layer->width_screens <= 0 ||
-        layer->height_screens <= 0 || e->vy < 0) return;
-    const int x = e->x >> 16;
-    const int foot_y = (e->y >> 16) + buer_floor_offset(kind);
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    if (x < 0 || x >= width || foot_y < 0 || foot_y >= height) return;
-    const uint8_t ground = aos_collision_cell(layer, x, foot_y);
-    if ((ground & 3u) != 3u ||
-        ((ground & 0xC0u) != 0u && ground != 0xFFu) ||
-        aos_floor_depth(layer, x, foot_y, 0, false) >= 0) return;
-    /* A full flat 8-pixel tile has its top at foot_y rounded downward.
-     * Keep this conservative correction out of unsupported slopes. */
-    /* Flat ordinary tiles are 8 pixels; 0xFF blocks use the
-     * collision engine's 16-pixel depth (sub_08001D94). Align to the
-     * corresponding TOP edge, not an interior 8-pixel half of the block. */
-    const int top = ground == 0xFFu ? (foot_y & ~15) : (foot_y & ~7);
+    if (e->vy < 0) return;
+    int top = 0;
+    if (!buer_flat_floor_support(e, layer, kind, &top)) return;
+    /* Preserve the existing integer landing correction, extending it
+     * only when a validated native/legacy side probe supports the floor. */
     e->y = AOS_FIXED(top) - AOS_FIXED(buer_floor_offset(kind));
 }
 

@@ -8281,15 +8281,15 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
         e->spin = e->spin < 0 ? -0x20000 : 0x20000;
     }
     if (e->step == 1) {
-        /* Native source order: the 7-tick flame emission reads the linked
-         * visual position BEFORE the 3-tick X/Y linked-fire wobble. Its
-         * two random axes span 16x64 fixed-point pixels (sub_0806D5C0),
-         * not a zero-sized effect at the enemy centre. */
+        /* sub_080CBEA4 at 0x080CBF6C sets BOTH scatter widths to
+         * (0x80 << 13) = 0x100000, or 16 pixels in 16.16 units.
+         * The seven-tick emission reads the linked visual position BEFORE
+         * this frame's three-tick X/Y wobble. */
         if (e->timer % 7u == 0) {
             const int32_t shift = e->buer_death_linked_wobble ? AOS_FIXED(1) : 0;
             spawn_flame_at((int32_t)((uint32_t)e->x + (uint32_t)shift),
                            (int32_t)((uint32_t)e->y + (uint32_t)shift),
-                           AOS_FIXED(16), AOS_FIXED(64), random, &report);
+                           AOS_FIXED(16), AOS_FIXED(16), random, &report);
         }
         /* The linked child receives a +1,+1 pixel nudge every third tick
          * and an undo on the next. The phase-two child preserves the last
@@ -8320,12 +8320,12 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
             e->step = 2;
         }
     } else if (e->step == 2) {
-        /* Native stage two scatters flames around the OLD parent position,
-         * before sub_080CC20C moves it. Both random axes span 64 pixels.
-         * Preserve the linked flame's last stage-one nudge, and let its
-         * state-zero callback follow the updated owner position. */
+        /* sub_080CBEA4 at 0x080CC098 uses (0x80 << 14) =
+         * 0x200000, or 32 pixels for BOTH scatter dimensions. Read
+         * the OLD parent position before sub_080CC20C moves it; the
+         * linked visual retains its final one-pixel stage-one wobble. */
         if ((e->timer & 1u) == 0)
-            spawn_flame_at(e->x, e->y, AOS_FIXED(64), AOS_FIXED(64),
+            spawn_flame_at(e->x, e->y, AOS_FIXED(32), AOS_FIXED(32),
                            random, &report);
         if (e->timer > 0x1C && (e->timer % 0x14) == 0)
             aos_audio_play_song(0x6E);

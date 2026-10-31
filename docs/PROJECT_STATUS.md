@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0685 - Buer source-sized death flame scatter areas
+
+- Audited cvaos GBA assembly sub_080CBEA4: at the stage-one seven-frame
+  effect call (0x080CBF6C), both dimensions passed to sub_0806D5C0 are
+  0x80 << 13 = 0x100000 (16 pixels in 16.16). At stage two
+  (0x080CC098), both dimensions are 0x80 << 14 = 0x200000 (32 pixels).
+- Corrected the previous patch-0668 reconstruction's 16x64 and 64x64
+  rectangles to 16x16 and 32x32 respectively. Keep the seven-frame and
+  alternate-frame emission clocks, pre-motion source coordinates, three
+  RNG draws, independent effect mirroring and linked one-pixel wobble.
+- ROM-free tests cover minimum and inclusive maximum fixed-point offsets
+  on both axes of both phases; also check RNG draw count and flame mirror.
+- Buer stays PARTIAL: imported visual assets, OAM/affine choreography,
+  terrain flags and original-ROM emulator comparisons remain unfinished.
+  No ROM, BIOS, saves or proprietary extracted assets are distributed.
+
 ## Patch 0684 - Buer source-side attack spin and paired fire mirrors
 
 - Re-audited original GBA sub_080CBC64 at 0x080CBC9C..0x080CBD42.

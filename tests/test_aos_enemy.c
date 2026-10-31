@@ -1858,8 +1858,9 @@ static void buer_terminal_death_flames_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
-/* Patch 0668: two different native death scatter windows and the linked
- * fire's one-pixel 3-tick wobble. All coordinates here are synthetic. */
+/* Patches 0668/0685: both dimensions are source-derived fixed-point
+ * 16x16 and 32x32 scatter windows, plus a one-pixel linked-fire wobble.
+ * Use ROM-free synthetic positions and deterministic random edges. */
 static void buer_death_scatter_and_linked_wobble_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -1896,8 +1897,8 @@ static void buer_death_scatter_and_linked_wobble_tests(void) {
                      NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(fire.x == e.x && fire.y == e.y);
 
-    /* At timer 91, flame precedes wobble undo. Fixed RNG=0 samples the
-     * first point of the source's 16x64-pixel rectangle. */
+    /* At timer 91, flame precedes wobble undo. Fixed RNG=0 samples
+     * the minimum of the native 16x16-pixel rectangle. */
     e.timer = 91;
     e.buer_death_linked_wobble = 1;
     const int32_t before_x = e.x, before_y = e.y;
@@ -1905,8 +1906,24 @@ static void buer_death_scatter_and_linked_wobble_tests(void) {
                            NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
     assert(hit.effects[0].x == before_x - AOS_FIXED(7));
-    assert(hit.effects[0].y == before_y - AOS_FIXED(31));
+    assert(hit.effects[0].y == before_y - AOS_FIXED(7));
     assert(!hit.effects[0].mirrored && !e.buer_death_linked_wobble);
+
+    /* Sample each axis at its inclusive high end (w-1): stage one
+     * spans [-8, +8) fixed-point pixels around the linked visual. */
+    static const uint32_t stage_one_high_rng[] = {0xFFFFFu, 0xFFFFFu, 1};
+    script = stage_one_high_rng;
+    script_at = 0;
+    e.timer = 91;
+    e.buer_death_linked_wobble = 0;
+    const int32_t first_high_x = e.x, first_high_y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, scripted);
+    script = NULL;
+    assert(script_at == 3 && hit.effect_count == 1);
+    assert(hit.effects[0].x == first_high_x + AOS_FIXED(8) - 1);
+    assert(hit.effects[0].y == first_high_y + AOS_FIXED(8) - 1);
+    assert(hit.effects[0].mirrored);
 
     /* On death step two, sample the OLD X/Y, then advance the parent by
      * pre-contact spin. The linked fire moves by that exact parent delta. */
@@ -1920,9 +1937,25 @@ static void buer_death_scatter_and_linked_wobble_tests(void) {
     hit = aos_enemy_update(&e, &soma, &layer, &kind,
                            NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_FLAME);
-    assert(hit.effects[0].x == old_x - AOS_FIXED(32));
-    assert(hit.effects[0].y == old_y - AOS_FIXED(32));
+    assert(hit.effects[0].x == old_x - AOS_FIXED(16));
+    assert(hit.effects[0].y == old_y - AOS_FIXED(16));
     assert(e.x == old_x + 0x8000 && e.buer_death_linked_wobble == 1);
+
+    /* Stage two spans [-16, +16), still taking exactly three RNG draws.
+     * Its effects are positioned BEFORE the parent motion of that tick. */
+    static const uint32_t stage_two_high_rng[] = {0x1FFFFFu, 0x1FFFFFu, 1};
+    script = stage_two_high_rng;
+    script_at = 0;
+    e.step = 2;
+    e.timer = 128;
+    const int32_t second_high_x = e.x, second_high_y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, scripted);
+    script = NULL;
+    assert(script_at == 3 && hit.effect_count == 1);
+    assert(hit.effects[0].x == second_high_x + AOS_FIXED(16) - 1);
+    assert(hit.effects[0].y == second_high_y + AOS_FIXED(16) - 1);
+    assert(hit.effects[0].mirrored);
     aos_enemy_update(&fire, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(fire.x == e.x + AOS_FIXED(1) && fire.y == e.y + AOS_FIXED(1));

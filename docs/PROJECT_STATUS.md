@@ -2,6 +2,24 @@
 
 Last updated: **2026-10-30**.
 
+## Patch 0670 - Buer special 16-pixel solid-block collision
+
+- Fixed Buer's imported multi-point wall probes to recognize BG1 cell
+  `0xFF` as a complete 16x16 solid block, using the existing collision
+  library's special wall-push branches for either direction. Other curved
+  `0xC0` tiles remain deliberately outside the conservative wall mask.
+- Mode-six idle ground gating and post-movement validation now accept
+  `0xFF` through the collision library's floor-depth check. The shallow
+  grounded Y correction aligns to 16-pixel block boundaries rather than
+  snapping inside the block to an incorrect 8-pixel half.
+- Added ROM-free tests for right/left walls at different imported Y probes,
+  a curved-tile negative case, full-block ground correction, grounded
+  subpixel X movement and absent-metadata +24-pixel fallback.
+- No private ROM assets, importer schema, golden digests or sprite files
+  changed. This is a bounded bug fix, not a complete sub_0806C828 port.
+  Native ceiling/gravity masks, curved terrain, attack movement, affine
+  output and projectile combat remain partial and unverified.
+
 ## Patch 0669 - Buer ROM-native wall and floor probe geometry
 
 - Connected Buer's 0x08528B64 native collision descriptor to the existing

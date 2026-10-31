@@ -1686,6 +1686,106 @@ static void buer_native_probe_geometry_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0670: the shared BG1 collision routines treat 0xFF as a
+ * complete 16x16 solid block. These are artificial 0xFF cells; no ROM
+ * tiles, probe offsets or extracted data are embedded in the fixture. */
+static void buer_special_full_block_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+
+    /* Right wall: only the upper native Y probe sees the special block. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.phase = 0;
+    e.spin = 0x8000;
+    cells[11 * W + 14] = 0xFF;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.spin == -0x4000);
+    cells[11 * W + 14] = 0;
+
+    /* Left wall: the lower native Y probe hits a 16-pixel block. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.phase = 0;
+    e.spin = -0x8000;
+    cells[14 * W + 10] = 0xFF;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.spin == 0x4000);
+    cells[14 * W + 10] = 0;
+
+    /* A curved collision value (0xC3) must NOT be mistaken for a
+     * completely solid 0xFF tile. Its contact mask is still pending. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.home = 100;
+    e.phase = 0;
+    e.spin = 0x8000;
+    cells[11 * W + 14] = 0xC3;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x8000 && e.spin == 0x7FC0);
+    cells[11 * W + 14] = 0;
+
+    /* Put a real (synthetic) 16x16 0xFF block under the central sample;
+     * y=163 means the 20-pixel foot probe is three pixels inside it. */
+    for (int col = 12; col <= 13; ++col)
+        for (int row = 20; row <= 21; ++row)
+            cells[row * W + col] = 0xFF;
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 3;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(143) + 0x1234;
+    e.spin = e.vy = 0;
+    e.home = 30;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(140) && e.x == AOS_FIXED(100));
+
+    /* Idle mode-six translation now also accepts confirmed 0xFF floor
+     * contact and preserves the subpixel fraction of position. */
+    e.x = AOS_FIXED(100) + 0x1000;
+    e.y = AOS_FIXED(140);
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x9000 && e.y == AOS_FIXED(140));
+
+    /* A missing native metadata row retains the safe +24 foot offset,
+     * and the full-block landing still aligns on the 16-pixel boundary. */
+    kind.probes.count = 0;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(139) + 0x5678;
+    e.spin = e.vy = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.y == AOS_FIXED(136));
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5485,6 +5585,7 @@ int main(void) {
     buer_terminal_death_flames_tests();
     buer_death_scatter_and_linked_wobble_tests();
     buer_native_probe_geometry_tests();
+    buer_special_full_block_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

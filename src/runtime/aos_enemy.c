@@ -7768,7 +7768,11 @@ static bool buer_forward_solid_wall(const AosEnemy *e, const AosCollision *layer
         const int y = (e->y >> 16) + (probes ? probes->wall_y[i] : 0);
         if (y < 0 || y >= height) continue;
         const uint8_t cell = aos_collision_cell(layer, x, y);
-        if ((cell & 3u) != 3u || (cell & 0xC0u)) continue;
+        /* Collision's 0xFF is a complete 16x16 solid block, not a
+         * curved slope. aos_wall_push_* already has its native 16-pixel
+         * penetration branch; keep rejecting every other 0xC0 shape. */
+        if ((cell & 3u) != 3u || ((cell & 0xC0u) && cell != 0xFFu))
+            continue;
         if (right ? aos_wall_push_left(layer, x, y) < 0 :
                     aos_wall_push_right(layer, x, y) > 0)
             return true;
@@ -7904,7 +7908,10 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
     if (foot_x < 0 || foot_x >= width || foot_y < 0 || foot_y >= height)
         return;
     const uint8_t ground = aos_collision_cell(layer, foot_x, foot_y);
-    if ((ground & 3u) != 3u || (ground & 0xC0u) != 0u ||
+    /* A 0xFF cell is the full 16x16 block supported by the shared
+     * floor-depth routine. Other slopes/unknown masks remain rejected. */
+    if ((ground & 3u) != 3u ||
+        ((ground & 0xC0u) != 0u && ground != 0xFFu) ||
         aos_floor_depth(layer, foot_x, foot_y, 0, false) >= 0)
         return;
     e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
@@ -7914,7 +7921,8 @@ static void buer_state_two_idle_horizontal_step(AosEnemy *e,
         return;
     }
     const uint8_t landing = aos_collision_cell(layer, after_x, foot_y);
-    if ((landing & 3u) != 3u || (landing & 0xC0u) != 0u ||
+    if ((landing & 3u) != 3u ||
+        ((landing & 0xC0u) != 0u && landing != 0xFFu) ||
         aos_floor_depth(layer, after_x, foot_y, 0, false) >= 0) {
         e->x = original_x;
         return;
@@ -7949,11 +7957,16 @@ static void buer_state_two_idle_vertical_step(AosEnemy *e,
                         32 * layer->height_screens) * 8;
     if (x < 0 || x >= width || foot_y < 0 || foot_y >= height) return;
     const uint8_t ground = aos_collision_cell(layer, x, foot_y);
-    if ((ground & 3u) != 3u || (ground & 0xC0u) != 0u ||
+    if ((ground & 3u) != 3u ||
+        ((ground & 0xC0u) != 0u && ground != 0xFFu) ||
         aos_floor_depth(layer, x, foot_y, 0, false) >= 0) return;
     /* A full flat 8-pixel tile has its top at foot_y rounded downward.
      * Keep this conservative correction out of unsupported slopes. */
-    e->y = AOS_FIXED(foot_y & ~7) - AOS_FIXED(buer_floor_offset(kind));
+    /* Flat ordinary tiles are 8 pixels; 0xFF blocks use the
+     * collision engine's 16-pixel depth (sub_08001D94). Align to the
+     * corresponding TOP edge, not an interior 8-pixel half of the block. */
+    const int top = ground == 0xFFu ? (foot_y & ~15) : (foot_y & ~7);
+    e->y = AOS_FIXED(top) - AOS_FIXED(buer_floor_offset(kind));
 }
 
 static void buer_controller(AosEnemy *e, const AosSoma *soma,

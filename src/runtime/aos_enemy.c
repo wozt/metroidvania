@@ -7546,7 +7546,11 @@ static void buer_attack_projectile_pair(const AosEnemy *e, AosHitReport *report)
         child.variant = (uint8_t)i;
         child.x = (int32_t)((uint32_t)e->x & ~0xFFFFu);
         child.y = AOS_FIXED((e->y >> 16) + 24);
-        child.mirrored = e->away > 0;
+        /* sub_080CC5D8 inverts its argument before writing +0x58 bit
+         * 0x40. sub_080CBC64 passes the opposite of native side byte
+         * +0x13, so the stored mirror bit equals that native byte.
+         * away < 0 represents native side 1; away > 0 represents 0. */
+        child.mirrored = e->away < 0;
         child.hp = 1;
         /* No invented hit or reward callback until the ROM frame boxes
          * and the original object's collision init are reconstructed. */
@@ -7627,8 +7631,14 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
     }
     if (e->step == 1) {
         if (e->substep == 0) {
-            /* sub_0806BD64 chooses the attack-side byte +0x13. */
-            e->away = soma->x > e->x ? 1 : -1;
+            /* sub_0806BD64 is (s16)(Buer integer X - Soma integer X),
+             * not Soma minus Buer. The source sub_080CBC64 selects side
+             * byte 0 only for positive results; zero and negatives use
+             * side 1. The GBA checks integer room positions, so fractions
+             * cannot change the result when both positions share a pixel. */
+            const int16_t native_side = (int16_t)(uint16_t)(
+                (uint16_t)(e->x >> 16) - (uint16_t)(soma->x >> 16));
+            e->away = native_side > 0 ? 1 : -1;
             e->timer = 0x50;
             e->substep = 1;
         }

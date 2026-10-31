@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0678 - Buer native signed player-side attack and mirror
+
+- Audited original assembly routines sub_0806BD64, sub_080CBC64 and
+  sub_080CC5D8. The attack computes signed 16-bit Buer integer X minus
+  Soma integer X. Only a positive result selects native side 0 and
+  positive angular acceleration; zero or negative selects side 1 and
+  negative spin. Previous Buer code had inverted the spin direction.
+- Projectile construction writes the native side byte into the visual
+  mirror bit, matching source's double inversion through sub_080CC5D8.
+  The earlier visuals were incidentally right despite their spin being
+  wrong. Both animation variants retain noncombat collision semantics.
+- ROM-free regressions check both player sides, equal integer positions
+  with different fractional X, both signs of rotation and both projectile
+  mirrors. The explicit spin-limit/recovery fixtures remain unchanged.
+- The scene still requires original-ROM and emulator visual comparisons;
+  Buer remains PARTIAL. No proprietary assets, ROM or BIOS included.
+
 ## Patch 0677 - Buer inert constructor and linked flame creation
 
 - Source-audited EnemyBuerCreate and sub_080CBA30 from the original Aria

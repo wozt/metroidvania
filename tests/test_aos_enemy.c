@@ -334,16 +334,18 @@ static void buer_near_player_attack_tests(void) {
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 2 && buer.substep == 2 && buer.timer == 5);
-    /* Native inclusive boundary (the collision checks before movement). */
-    soma.x = buer.x + AOS_FIXED(48);
+    /* Native inclusive LEFT boundary. A Buer-minus-Soma positive
+     * delta selects positive angular acceleration, allowing the original
+     * early-cap timing assertions below to remain meaningful. */
+    soma.x = buer.x - AOS_FIXED(48);
     soma.y = buer.y + AOS_FIXED(24);
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 0 && buer.timer == 4);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 0);
-    /* The 80-frame timer is an upper bound: with the positive starting
-     * spin, +0xCCC reaches an overshoot on the next tick after timer 50.
-     * Native speed saturation forces an early switch to recovery. */
+    /* The 80-frame timer is an upper bound: with Soma LEFT and
+     * positive starting spin, +0xCCC reaches an overshoot on the next
+     * tick after timer 50. Native saturation forces early recovery. */
     aos_enemy_update(&buer, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 1 && buer.timer == 0x4F);
@@ -361,6 +363,38 @@ static void buer_near_player_attack_tests(void) {
         aos_enemy_update(&buer, &soma, &layer, &kind,
                          NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(buer.step == 1 && buer.substep == 0 && buer.timer == 0xFF);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 3);
+    aos_audio_clear();
+
+    /* Symmetric RIGHT boundary selects negative spin. Its cap arrives
+     * on attack tick 51 (rather than positive spin's tick 31), because
+     * the source starts every Buer at positive angular speed. */
+    AosEnemy opposite;
+    assert(aos_enemy_create(&opposite, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    opposite.x = AOS_FIXED(100);
+    opposite.y = AOS_FIXED(136);
+    opposite.home = 136;
+    opposite.state = 2;
+    opposite.step = 2;
+    opposite.substep = 2;
+    opposite.timer = 6;
+    opposite.spin = 0x8000;
+    soma.x = opposite.x + AOS_FIXED(48);
+    soma.y = opposite.y + AOS_FIXED(24);
+    aos_enemy_update(&opposite, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(opposite.step == 1 && opposite.substep == 0 && opposite.timer == 5);
+    for (int frame = 0; frame < 50; ++frame)
+        aos_enemy_update(&opposite, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(opposite.away == -1 && opposite.step == 1 &&
+           opposite.substep == 1 && opposite.timer == 0x1E);
+    assert(opposite.spin == 0x8000 - 50 * 0xCCC);
+    aos_enemy_update(&opposite, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(opposite.spin == -0x20000 && opposite.step == 1 &&
+           opposite.substep == 2 && opposite.timer == 0x20);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) == 3);
     aos_audio_clear();
     memset(cells, 0, sizeof cells);
@@ -1254,8 +1288,11 @@ static void buer_attack_death_animation_tests(void) {
     e.angle = 0;
     AosHitReport result = aos_enemy_update(&e, &soma, &layer, &kind,
                                             NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(e.substep == 1 && e.timer == 0x4F && e.away == 1);
-    assert(e.spin == 0x8CCC && e.angle == 0x400 && result.effect_count == 0);
+    /* Soma right: native Buer-minus-Soma is negative, selecting
+     * +0x13=1 and a negative angular acceleration. */
+    assert(e.substep == 1 && e.timer == 0x4F && e.away == -1);
+    assert(e.spin == 0x7334 && e.angle == (uint32_t)-0x400 &&
+           result.effect_count == 0);
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     result = aos_enemy_update(&e, &soma, &layer, &kind,
@@ -1268,7 +1305,7 @@ static void buer_attack_death_animation_tests(void) {
     assert(result.children[0].x == result.children[1].x &&
            result.children[0].y == result.children[1].y);
 
-    /* Opposite side chooses the negative angular acceleration and turn. */
+    /* Soma left selects positive angular acceleration and turn. */
     soma.x = AOS_FIXED(20);
     e.x = AOS_FIXED(100);
     e.step = 1;
@@ -1277,7 +1314,7 @@ static void buer_attack_death_animation_tests(void) {
     e.angle = 0;
     aos_enemy_update(&e, &soma, &layer, &kind,
                      NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(e.away == -1 && e.spin == -0x8CCC && e.angle == (uint32_t)-0x400);
+    assert(e.away == 1 && e.spin == -0x7334 && e.angle == 0x400);
 
     /* Death begins at +/-0x20000, decelerates by 0x380, and rotates by
      * signed spin / 64; do not mistake this for the idle 0x40 friction. */
@@ -1369,6 +1406,47 @@ static void buer_visual_only_linked_fire_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0678: source sub_0806BD64 subtracts integer positions,
+ * sign-extending to 16 bits. Fractional same-pixel offsets must not
+ * change the native attack-side choice. */
+static void buer_native_attack_side_sign_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    const int targets[] = {90, 100, 110};
+    const int signs[] = {1, -1, -1};
+    for (int i = 0; i < 3; ++i) {
+        e.state = 2;
+        e.step = 1;
+        e.substep = 0;
+        e.timer = 0;
+        e.x = AOS_FIXED(100) + 0xC000;
+        e.y = AOS_FIXED(136);
+        e.home = 136;
+        e.vx = 0;
+        e.spin = 0x8000;
+        e.angle = 0;
+        soma.x = AOS_FIXED(targets[i]);
+        soma.y = AOS_FIXED(120);
+        aos_enemy_update(&e, &soma, &layer, &kind,
+                         NULL, NULL, 10, 4, 0, 0, never_zero);
+        assert(e.away == signs[i]);
+        assert(e.substep == 1 && e.timer == 0x4F);
+        assert(e.angle == (signs[i] > 0 ? 0x400u : (uint32_t)-0x400));
+        assert(e.spin == (signs[i] > 0 ? 0x8CCC : 0x7334));
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_projectile_lifecycle_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -1390,7 +1468,8 @@ static void buer_projectile_lifecycle_tests(void) {
     e.substep = 1;
     e.timer = 78;
     e.spin = 0x8000;
-    e.away = 1;
+    /* Native side 1: negative spin, mirrored fire. */
+    e.away = -1;
     AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
                                         NULL, NULL, 10, 4, 0, 0, never_zero);
     /* The first owner update also emits its persistent linked flame.
@@ -1439,7 +1518,8 @@ static void buer_projectile_lifecycle_tests(void) {
     e.step = 1;
     e.substep = 1;
     e.timer = 78;
-    e.away = -1;
+    /* Native side 0: positive spin, unmirrored fire. */
+    e.away = 1;
     hit = aos_enemy_update(&e, &soma, &layer, &kind,
                            NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.child_count == 2 && !hit.children[0].mirrored &&
@@ -6152,6 +6232,7 @@ int main(void) {
     buer_death_stages_tests();
     buer_attack_death_animation_tests();
     buer_visual_only_linked_fire_tests();
+    buer_native_attack_side_sign_tests();
     buer_projectile_lifecycle_tests();
     buer_attack_cap_and_recovery_tests();
     buer_terminal_death_flames_tests();

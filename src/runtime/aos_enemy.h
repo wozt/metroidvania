@@ -97,6 +97,9 @@ typedef struct {
     /* 0x08118D08: the (x, y) screen margins of sub_0806D128(e, n). */
     int16_t margins[7][2];
     AosProbes probes;       /* walker probe table, count 0 when unused */
+    /* True only for a locally imported ROM Buer probe row. Allows
+     * accurate source-mode motion without changing legacy fixtures. */
+    bool buer_native_motion;
     /* Exported locally from the user's ROM (0x081194DC, 8 x s16 X/Y).
      * Not a compiled-in table. Absent in legacy asset exports. */
     int16_t buer_death_offsets[8][2];

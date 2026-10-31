@@ -2,6 +2,31 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0673 - Buer full native movement states and affine host rotation
+
+- Source-matched EnemyBuerCreate (+0x54 0x4000 gravity), sub_080CC20C
+  (mode 2 and mode 6 collision response), and sub_080CBC64 attack/recovery
+  translation now reuse the existing sub_0806CAF8 / sub_0806C828 walker.
+  Imported ROM-local Buer probes supply native ceiling, floor, wall and
+  signed 0x20/0x40 slope flags; old or invalid export geometry retains the
+  bounded compatibility path and is never silently marked as native.
+- Native state one, state-two idle, active attack, recovery and second death
+  stage use this shared physics and +/-24 room-front rollback. Death/attack
+  angular timing remains in the pre-existing verified state machines.
+- The SDL renderer now rotates Buer's body from its existing 32-bit affine
+  angle just like the already supported enemy affine children. GBA OAM
+  double-size placement, palette bits and hardware matrices still need
+  side-by-side visual validation.
+- Source audit: sub_080CC178 creates/updates two attack visual entities and
+  never invokes an enemy/weapon collision callback. Do not invent damaging
+  projectile hitboxes. Native animation/combat parity still requires a
+  local-ROM and emulator comparison, especially linked flame and rendering.
+- ROM-free tests cover mode-two gravity, wall bounce, mode-six no-ground
+  rollback, attack recovery movement, and legacy metadata fallback. No ROM,
+  BIOS, save or proprietary extracted asset is shipped by this patch.
+- Buer stays PARTIAL until actual local-ROM playback, rendering and collision
+  comparison support all facets; no percentage or fidelity flag is inflated.
+
 ## Patch 0672 - Buer bounded mode-six flat-floor edge support
 
 - Mode-six idle now recognizes flat floor support under the imported centre,

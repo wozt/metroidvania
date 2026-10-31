@@ -546,6 +546,10 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             /* EnemyBuerCreate (+0x18): the native angular speed starts
              * at 0x8000, independently of the provisional translation. */
             enemy->spin = 0x8000;
+            /* EnemyBuerCreate at 0x080CB9AE initializes +0x54
+             * gravity to 0x4000. Keep the old approximation only
+             * when the ROM-local collision table is unavailable. */
+            if (kind && kind->buer_native_motion) enemy->ay = 0x4000;
             /* sub_080CBA30: linked flame facing derives from +0x18
              * angular speed, not provisional +0x48 translation. */
             enemy->buer_fire_mirrored = enemy->spin >= 0;
@@ -7856,6 +7860,65 @@ static void buer_recovery_angular_step(AosEnemy *e, const AosCollision *layer,
     e->angle += (uint32_t)(e->spin / 64);
 }
 
+/* Patch 0673: the real sub_080CC20C and sub_080CBC64 both call the
+ * existing native sub_0806CAF8/sub_0806C828 probe walker, with mode 2
+ * for state one / death phase two and mode 6 for idle/attack/recovery.
+ * It consumes the 0x08528B64 ROM-local descriptor, including ceiling,
+ * gravity and per-wall probes. Unlike the historical bounded substitute,
+ * preserve the walker flags before applying the source angular response.
+ * Sub_080CC5B4 only restores old X at the +/-24 room-front boundary. */
+static bool buer_native_enabled(const AosEnemyKind *kind) {
+    return kind && kind->buer_native_motion && buer_native_probes(kind);
+}
+
+static int buer_native_collision_step(AosEnemy *e, const AosCollision *layer,
+                                      const AosEnemyKind *kind, int mode) {
+    if (!layer || !layer->cells) return 0;
+    const int32_t original_x = e->x;
+    const int flags = aos_enemy_probe_walk(e, layer, &kind->probes, e->spin, mode);
+    const int width = (layer->width_screens == 1 ? 30 :
+                       32 * layer->width_screens) * 8;
+    const int height = (layer->height_screens == 1 ? 26 :
+                        32 * layer->height_screens) * 8;
+    const int x = (e->x >> 16) + (e->spin >= 0 ? 24 : -24);
+    const int y = e->y >> 16;
+    if (layer->width_screens <= 0 || layer->height_screens <= 0 ||
+        x < -7 || x >= width || y < -7 || y >= height)
+        e->x = original_x;
+    return flags;
+}
+
+static void buer_native_rolling_step(AosEnemy *e, const AosCollision *layer,
+                                     const AosEnemyKind *kind, bool state_one) {
+    const int flags = buer_native_collision_step(e, layer, kind, state_one ? 2 : 6);
+    int32_t spin = e->spin;
+    if (flags & 0x40) {
+        spin += spin > 0 ? -0x333 : 0x333;
+    } else if (flags & 0x20) {
+        spin += spin > 0 ? 0x333 : -0x333;
+    } else if (spin >= 0) {
+        spin -= 0x40;
+        if (spin <= 0x3FFF) spin = 0x4000;
+    } else {
+        spin += 0x40;
+        if (spin > -0x4000) spin = -0x4000;
+    }
+    /* Thumb ASR after adding 63 for negative values is C truncation. */
+    e->angle += (uint32_t)(spin / 64);
+    /* Native mode-six idle reverses when unsupported by floor, even in
+     * empty space; mode two reverses only after a wall contact. */
+    if ((flags & 3) || (!state_one && !(flags & 8)))
+        spin = -spin / 2;
+    e->spin = spin;
+}
+
+static void buer_native_recovery_step(AosEnemy *e, int flags) {
+    /* sub_080CBE18: no 0x40 friction or idle negative-half bounce here. */
+    if (flags & 0x40) e->spin += e->spin > 0 ? -0x333 : 0x333;
+    else if (flags & 0x20) e->spin += e->spin > 0 ? 0x333 : -0x333;
+    e->angle += (uint32_t)(e->spin / 64);
+}
+
 /* Patch 0661: state-1 bounded native X translation via +0x18 spin. */
 /* sub_080CC20C -> sub_0806CAF8(mode 2) -> sub_0806C828:
  * before spin friction/contact response, the source copies +0x18 into
@@ -8217,8 +8280,12 @@ static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
             aos_audio_play_song(0x6E);
         /* Source sub_080CC20C(mode=1) moves before angular damping. The
          * complete multi-point terrain table remains a separate task. */
-        buer_state_one_horizontal_step(e, layer, kind);
-        buer_rolling_angular_step(e, layer, kind);
+        if (buer_native_enabled(kind))
+            buer_native_rolling_step(e, layer, kind, true);
+        else {
+            buer_state_one_horizontal_step(e, layer, kind);
+            buer_rolling_angular_step(e, layer, kind);
+        }
         e->buer_fire_mirrored = e->spin >= 0;
         if (--e->timer == 0xFF) e->step = 3;
     } else if (e->step == 3) {
@@ -8406,21 +8473,31 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
         const bool state_one = e->state == 1;
         const bool state_two_idle = e->state == 2 && e->step == 0;
-        /* Mode 2/6 translates X from pre-contact spin. Idle mode 6
-         * rolls X back without confirmed ground, before the attack gate. */
-        if (state_one) buer_state_one_horizontal_step(e, layer, kind);
-        if (state_two_idle) {
-            buer_state_two_idle_horizontal_step(e, layer, kind);
-            buer_state_two_idle_vertical_step(e, layer, kind);
+        /* Native ROM probe geometry selects the complete existing walker
+         * for state-one, idle, attack and recovery. Old metadata preserves
+         * the conservative path covered by previous ROM-free tests. */
+        const bool native = buer_native_enabled(kind);
+        int native_flags = 0;
+        if (native) {
+            if (rolling) buer_native_rolling_step(e, layer, kind, state_one);
+            else if (e->state == 2 && e->step == 1 && e->substep <= 2)
+                native_flags = buer_native_collision_step(e, layer, kind, 6);
+        } else {
+            if (state_one) buer_state_one_horizontal_step(e, layer, kind);
+            if (state_two_idle) {
+                buer_state_two_idle_horizontal_step(e, layer, kind);
+                buer_state_two_idle_vertical_step(e, layer, kind);
+            }
+            if (rolling) buer_rolling_angular_step(e, layer, kind);
         }
-        if (rolling) buer_rolling_angular_step(e, layer, kind);
-        /* Recovery is processed BEFORE its timer decrement; the transition
-         * from active attack to recovery must not run both on one frame. */
-        if (e->state == 2 && e->step == 1 && e->substep == 2)
-            buer_recovery_angular_step(e, layer, kind);
+        /* Recovery is processed BEFORE its timer decrement. */
+        if (e->state == 2 && e->step == 1 && e->substep == 2) {
+            if (native) buer_native_recovery_step(e, native_flags);
+            else buer_recovery_angular_step(e, layer, kind);
+        }
         buer_attack_timing(e, soma, random, &report);
-        /* Idle mode six has no provisional vertical sine motion. */
-        buer_controller(e, soma, !rolling, !state_two_idle);
+        /* Native motion does not use provisional bob or patrol translation. */
+        if (!native) buer_controller(e, soma, !rolling, !state_two_idle);
         if (rolling) {
             /* sub_080CC20C writes the linked +0x58 facing from the
              * final angular velocity at +0x18, after damping/reversal.

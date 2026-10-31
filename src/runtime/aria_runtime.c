@@ -2246,6 +2246,11 @@ static bool load_enemy_data(AriaObjects *objects) {
                 probes->half_width = (int16_t)strtol(cursor, &cursor, 10);
                 for (long i = 0; i < count; ++i)
                     probes->wall_y[i] = (int16_t)strtol(cursor, &cursor, 10);
+                /* Enable the mode-2/mode-6 native integration only
+                 * when Buer's table came from a local ROM export.
+                 * Runtime still validates every signed offset. */
+                if (id == AOS_ENEMY_BUER)
+                    objects->enemies[id].kind.buer_native_motion = true;
             }
             continue;
         }
@@ -2788,7 +2793,9 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         double degrees = 0;
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
-            e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART)
+            e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART ||
+            (e->enemy.id == AOS_ENEMY_BUER &&
+             e->enemy.role == AOS_ROLE_ENEMY))
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
          * coefficients are not traced, half alpha stands for them. */

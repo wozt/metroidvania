@@ -1998,6 +1998,115 @@ static void buer_mode_six_floor_edge_support_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0673: exercise the actual shared native collision walker,
+ * instead of Buer's historical bounded mode-2/mode-6 approximation.
+ * These geometry values are synthetic, not copied from a ROM. */
+static void buer_native_integrated_motion_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.buer_native_motion = true;
+    kind.probes.count = 2;
+    kind.probes.half_width = 16;
+    kind.probes.ceiling = -20;
+    kind.probes.floor = 20;
+    kind.probes.wall_y[0] = -12;
+    kind.probes.wall_y[1] = 12;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(120), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            0, 0, &soma, &layer, &kind, &stats));
+    assert(e.ay == 0x4000);
+
+    /* A state-one tick uses the native +0x54 gravity (0x4000) and
+     * pre-friction 0x8000 horizontal spin. The legacy path has no Y fall. */
+    e.state = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.vx = e.vy = 0;
+    e.spin = 0x8000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) + 0x8000);
+    assert(e.y == AOS_FIXED(60) + 0x4000);
+    assert(e.vy == 0x4000 && e.spin == 0x7FC0 && e.angle == 0x1FF);
+
+    /* Mode two: an imported upper wall probe causes the original X to
+     * roll back and the signed spin to reverse/halve. */
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(100);
+    e.vy = 0;
+    e.spin = 0x8000;
+    e.angle = 0;
+    cells[11 * W + 14] = 0x03;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.spin == -0x3FE0);
+    cells[11 * W + 14] = 0;
+
+    /* Mode six requires ground flag 8. With air on all samples, motion
+     * and the falling offset are restored; spin still reverses in idle. */
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.timer = 1;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.vy = 0;
+    e.spin = 0x8000;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.y == AOS_FIXED(60));
+    assert(e.spin == -0x3FE0);
+
+    /* Active attack/recovery also calls mode-six, not the previous
+     * provisional +0x48 translation and sine positioning. */
+    e.state = 2;
+    e.step = 1;
+    e.substep = 2;
+    e.timer = 12;
+    e.x = AOS_FIXED(100);
+    e.y = AOS_FIXED(60);
+    e.vy = 0;
+    e.vx = 0x18000;
+    e.spin = 0x6000;
+    e.angle = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(e.x == AOS_FIXED(100) && e.y == AOS_FIXED(60));
+    assert(e.angle == 0x180 && e.timer == 11);
+
+    /* No native flag on an old export: fallback does not add gravity or
+     * change legacy attack trajectory. */
+    kind.buer_native_motion = false;
+    AosEnemy legacy;
+    assert(aos_enemy_create(&legacy, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    assert(legacy.ay == 0);
+    legacy.state = 2;
+    legacy.step = 1;
+    legacy.substep = 2;
+    legacy.timer = 12;
+    /* Empty synthetic collision rooms can push the constructor's
+     * snap_to_floor result well below the update activity window.
+     * Place the legacy fixture explicitly on screen, as for the native
+     * motion cases above, before testing the fallback X translation. */
+    legacy.x = AOS_FIXED(100);
+    legacy.y = AOS_FIXED(100);
+    legacy.home = 100;
+    legacy.phase = 0;
+    legacy.vx = 0x18000;
+    legacy.spin = 0x8000;
+    aos_enemy_update(&legacy, &soma, &layer, &kind,
+                     NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(legacy.x == AOS_FIXED(101) + 0x8000);
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_inert_orbit_tests(void) {
     memset(cells, 0, sizeof cells);
     static const uint8_t ticks[] = {2};
@@ -5800,6 +5909,7 @@ int main(void) {
     buer_special_full_block_tests();
     buer_floor_edge_slope_probe_tests();
     buer_mode_six_floor_edge_support_tests();
+    buer_native_integrated_motion_tests();
     buer_inert_orbit_tests();
     white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();

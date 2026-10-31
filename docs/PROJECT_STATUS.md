@@ -2,6 +2,22 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0681 - Buer native final death burst Y origin
+
+- Audited source sub_080CC0F2 (0x080CC118..0x080CC13C). Each of Buer's
+  eight terminal flame objects receives a signed 16-bit ROM-local Y
+  offset and then exactly 0x80 << 11 = 0x40000 (4 pixels) above the
+  stored entity Y coordinate. The prior reconstruction added 0x100000
+  (16 pixels), displacing all eight visual effects 12 pixels downward.
+- Corrected only that fixed-point vertical displacement. Preserved
+  original entity fractional coordinates, per-flame signed offsets,
+  native X positions, effect count and fallback without death metadata.
+- ROM-free tests cover the eight distinct negative/positive synthetic
+  offset pairs and fractional X/Y components of all eight flames.
+  Original-ROM effect graphics, affine OAM placement and visual timing
+  still require live emulator comparison; Buer remains PARTIAL.
+- No ROM, BIOS, saves or extracted proprietary assets are distributed.
+
 ## Patch 0680 - Buer side-gated linked-fire mirror during attacks
 
 - Audited original Aria sub_080CBC64 (0x080CBCBA..0x080CBD42): during

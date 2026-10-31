@@ -8241,7 +8241,11 @@ static void buer_terminal_death_flames(const AosEnemy *e, const AosEnemyKind *ki
         AosEffect *flame = &report->effects[report->effect_count++];
         *flame = (AosEffect){.kind = AOS_EFFECT_FLAME,
                              .x = (int32_t)((uint32_t)e->x + (uint32_t)ox),
-                             .y = (int32_t)((uint32_t)e->y + (uint32_t)oy + 0x100000u),
+                             /* sub_080CC0F2 / 0x080CC13C: after the
+                              * signed ROM-local Y offset, the source adds
+                              * 0x80 << 11 = 0x40000 (FOUR pixels). Keep
+                              * the 16.16 fractions of the Buer position. */
+                             .y = (int32_t)((uint32_t)e->y + (uint32_t)oy + 0x40000u),
                              .mirrored = (random() & 1u) != 0};
     }
 }

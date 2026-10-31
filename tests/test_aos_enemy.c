@@ -1726,10 +1726,24 @@ static void buer_terminal_death_flames_tests(void) {
     for (int i = 0; i < 8; ++i) {
         assert(hit.effects[i].kind == AOS_EFFECT_FLAME);
         assert(hit.effects[i].x == AOS_FIXED(96 + i));
-        assert(hit.effects[i].y == AOS_FIXED(145 + 2 * i));
+        assert(hit.effects[i].y == AOS_FIXED(133 + 2 * i));
         assert(!hit.effects[i].mirrored);
         assert(!hit.effects[i].particle && !hit.effects[i].drift);
     }
+    /* GBA arithmetic adds the signed offsets to the full fixed-point
+     * entity position, not just its integer pixels. Regression against
+     * truncating the fractional coordinates in the final eight flames. */
+    e.removed = e.hidden = false;
+    e.x = AOS_FIXED(100) + 0x2345;
+    e.y = AOS_FIXED(136) + 0x6789;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                           NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.effect_count == 8 && e.removed && e.hidden);
+    for (int i = 0; i < 8; ++i) {
+        assert(hit.effects[i].x == AOS_FIXED(96 + i) + 0x2345);
+        assert(hit.effects[i].y == AOS_FIXED(133 + 2 * i) + 0x6789);
+    }
+
     /* No local metadata (old export): preserve previous no-effect cleanup. */
     AosEnemy old = e;
     old.removed = old.hidden = false;

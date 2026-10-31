@@ -2214,13 +2214,14 @@ static void buer_native_integrated_motion_tests(void) {
     assert(e.x == AOS_FIXED(100) && e.y == AOS_FIXED(60));
     assert(e.angle == 0x180 && e.timer == 11);
 
-    /* No native flag on an old export: fallback does not add gravity or
-     * change legacy attack trajectory. */
+    /* An old export still receives the unconditional native
+     * constructor gravity word. The metadata gate controls which motion
+     * solver executes, not the initial acceleration field. */
     kind.buer_native_motion = false;
     AosEnemy legacy;
     assert(aos_enemy_create(&legacy, AOS_ENEMY_BUER, 100, 100,
                             1, 0, &soma, &layer, &kind, &stats));
-    assert(legacy.ay == 0);
+    assert(legacy.ay == 0x4000);
     legacy.state = 2;
     legacy.step = 1;
     legacy.substep = 2;
@@ -2408,7 +2409,8 @@ static void buer_inert_orbit_tests(void) {
     assert(created && buer.state == 4 && buer.step == 0);
     /* Source EnemyBuerCreate sets up +0x18 and child facing before the
      * global 0x8E bit 0x40 can select the inert state. */
-    assert(buer.spin == 0x8000 && buer.buer_fire_mirrored && buer.ay == 0);
+    assert(buer.spin == 0x8000 && buer.buer_fire_mirrored &&
+           buer.ay == 0x4000);
     assert(!buer.helper_spawned);
     int32_t first_y = buer.y, first_x = buer.x;
     /* Native +0x14 is a full 32-bit affine angle. Cross its
@@ -2449,9 +2451,9 @@ static void buer_inert_orbit_tests(void) {
     assert(buer.angle == first_angle + 6u * 0x100u);
     assert(buer.phase == first_phase);
 
-    /* With locally imported native collision data, even an inert Buer
-     * receives the original +0x54 gravity. Its dormant state never runs
-     * the physics walker, still emits just one visual and rises once. */
+    /* Native and legacy metadata now agree on +0x54 gravity.
+     * The dormant state never runs the walker, emits one linked visual
+     * and raises the body exactly once. */
     kind.buer_native_motion = true;
     AosEnemy native;
     aos_enemy_set_flag_8e_40(true);

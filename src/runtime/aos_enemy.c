@@ -496,9 +496,12 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
          * linked-fire facing and GBA +0x18/+0x54 initialization. The
          * non-native export keeps its existing bounded-motion fallback. */
         if (id == AOS_ENEMY_BUER) {
+            /* EnemyBuerCreate initializes +0x18 spin and +0x54 gravity
+             * before the inactive flag is read, regardless of the ROM
+             * metadata version. Collision walker selection is separate. */
             enemy->spin = 0x8000;
             enemy->buer_fire_mirrored = true;
-            if (kind && kind->buer_native_motion) enemy->ay = 0x4000;
+            enemy->ay = 0x4000;
         }
         if (flag_8e_40) {
             enemy->state = id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_KILLER_FISH ? 5 :

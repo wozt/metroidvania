@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0679 - Buer unconditional source gravity initialization
+
+- EnemyBuerCreate at 0x080CB9AE writes +0x54 = 0x4000 BEFORE its inactive
+  state and collision metadata decisions. The previous C constructor
+  incorrectly set gravity only when a locally exported native probe table
+  existed. Preserve the source gravity word for every Buer, including
+  inactive and legacy-metadata instances.
+- The locally validated native-probe flag still gates sub_0806CAF8
+  terrain movement, so this initialization does not silently activate
+  unsupported legacy physics, create fake collisions or change other
+  enemies. Existing Buer native movement, linked sprite and death code
+  stay intact.
+- Updated ROM-free active and inactive constructor tests assert the
+  original 0x4000 field with and without imported probe metadata. Full
+  ROM/emulator affine visual and collision comparison remains outstanding.
+  Buer stays PARTIAL; no ROM, BIOS or extracted art included.
+
 ## Patch 0678 - Buer native signed player-side attack and mirror
 
 - Audited original assembly routines sub_0806BD64, sub_080CBC64 and

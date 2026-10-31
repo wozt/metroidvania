@@ -1447,6 +1447,54 @@ static void buer_native_attack_side_sign_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+/* Patch 0683: sub_080CBC64 adds 24 to the high 16-bit Y word,
+ * not to an unbounded signed integer. The projectile allocation keeps
+ * the resulting halfword, including its wrap, before making 16.16 Y.
+ * Verify source integer X/Y truncation, positive normal Y and the
+ * signed-halfword boundary without a ROM or extracted assets. */
+static void buer_projectile_signed_y_wrap_tests(void) {
+    memset(cells, 0, sizeof cells);
+    static const uint8_t ticks[] = {2};
+    const AosAnimDef defs[] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
+    AosEnemyKind kind = {.anims = &anims};
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 7};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(20), AOS_FIXED(100), NULL);
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BUER, 100, 100,
+                            1, 0, &soma, &layer, &kind, &stats));
+    e.helper_spawned = true;
+    for (int pass = 0; pass < 2; ++pass) {
+        const int origin_y = pass ? 32760 : 100;
+        e.state = 2;
+        e.step = 1;
+        e.substep = 1;
+        e.timer = 54; /* >50 and divisible by three: emit both flames. */
+        e.away = 1;
+        e.spin = 0x8000;
+        e.vx = 0;
+        e.x = AOS_FIXED(100) + 0x2468;
+        e.y = AOS_FIXED(origin_y) + 0x5678;
+        e.home = (int16_t)origin_y;
+        soma.y = AOS_FIXED(origin_y);
+        const int camera_y = pass ? 32700 : 0;
+        AosHitReport result = aos_enemy_update(&e, &soma, &layer, &kind,
+                                                NULL, NULL, 10, 4, 0, camera_y,
+                                                never_zero);
+        assert(result.child_count == 2);
+        for (int i = 0; i < 2; ++i) {
+            const AosEnemy *flame = &result.children[i];
+            assert(flame->role == AOS_ROLE_BUER_PROJECTILE);
+            assert(flame->variant == i);
+            assert(flame->x == AOS_FIXED(100));
+            assert(flame->y == (pass ? -2146435072 : AOS_FIXED(124)));
+            assert(flame->combat.attack_off && flame->combat.hurt_off);
+        }
+    }
+    memset(cells, 0, sizeof cells);
+}
+
 static void buer_projectile_lifecycle_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -6373,6 +6421,7 @@ int main(void) {
     buer_attack_death_animation_tests();
     buer_visual_only_linked_fire_tests();
     buer_native_attack_side_sign_tests();
+    buer_projectile_signed_y_wrap_tests();
     buer_projectile_lifecycle_tests();
     buer_attack_fire_mirror_sign_gate_tests();
     buer_attack_cap_and_recovery_tests();

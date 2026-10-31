@@ -2,6 +2,19 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0683 - Buer paired attack-flame signed Y placement
+
+- Audited original GBA sub_080CBC64 and sub_080CC5D8. Each attack
+  flame uses the parent's high Y halfword plus 24, truncated to u16
+  before its signed 16.16 entity coordinate is stored.
+- Replaced the host's potentially overflowing signed AOS_FIXED(Y + 24)
+  with an explicit unsigned halfword wrap. Both visual-only flame variants
+  retain the same X position, mirror, timing, no-hitbox and reward rules.
+- ROM-free tests cover normal and signed-halfword-boundary Y positions,
+  fractional parent coordinates, both children and noncombat semantics.
+- Native affine OAM, exact animation/sounds, terrain and original-ROM
+  emulator comparisons remain open. Buer stays PARTIAL.
+
 ## Patch 0682 - Buer source constructor X velocity parity
 
 - Audited GBA EnemyBuerCreate (0x080CB94C..0x080CBA1A): it sets the

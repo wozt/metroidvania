@@ -7562,7 +7562,13 @@ static void buer_attack_projectile_pair(const AosEnemy *e, AosHitReport *report)
         make_static_child(&child, e, AOS_ROLE_BUER_PROJECTILE, -1);
         child.variant = (uint8_t)i;
         child.x = (int32_t)((uint32_t)e->x & ~0xFFFFu);
-        child.y = AOS_FIXED((e->y >> 16) + 24);
+        /* sub_080CBC64 reads +0x46 as u16, adds 0x18, then
+         * sub_080CC5D8 keeps only that u16 for the newly allocated
+         * object's signed 16.16 Y coordinate. Wrap BEFORE shifting:
+         * AOS_FIXED(integer_y + 24) can overflow signed 32-bit and
+         * does not specify the original Thumb halfword behavior. */
+        const uint16_t gba_y = (uint16_t)((uint16_t)(e->y >> 16) + 24u);
+        child.y = (int32_t)((uint32_t)gba_y << 16);
         /* sub_080CC5D8 inverts its argument before writing +0x58 bit
          * 0x40. sub_080CBC64 passes the opposite of native side byte
          * +0x13, so the stored mirror bit equals that native byte.

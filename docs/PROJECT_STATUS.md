@@ -2,6 +2,18 @@
 
 Last updated: **2026-10-31**.
 
+## Patch 0689 - Buer sounds audited
+
+- A source audit of the Buer block finds four native PlaySong sites:
+  0x84 in `sub_080CBC64` (attack frames above 0x32 that are multiples of
+  9) and three 0x6E in `sub_080CBEA4` (staged death). All are requested
+  and unit-tested, and the mixer renders both; the monster matrix marks
+  its sounds ported and its aspect note is condensed to the current
+  state.
+- Its animations stay partial (affine art, projectile boxes, curved
+  terrain masks) and its blue soul is not ported. Zero Mission is
+  unchanged.
+
 ## Patch 0688 - Buer GBA 32-bit death flame scatter wrap
 
 - Audited sub_0806D5C0 in the Aria GBA assembly: randomized 16.16

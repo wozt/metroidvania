@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-10-31T11:57:00+00:00",
+ "generated_at": "2026-11-01T17:59:04+00:00",
  "git": {
-  "commit": "39a25cd",
+  "commit": "b8ce152",
   "branch": "main",
   "dirty": true
  },
@@ -800,7 +800,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -883,7 +883,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1012,7 +1012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1083,7 +1083,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1211,7 +1211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1300,7 +1300,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1379,7 +1379,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1451,7 +1451,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1524,7 +1524,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1602,7 +1602,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1694,7 +1694,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1768,7 +1768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1842,7 +1842,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1924,7 +1924,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -1989,7 +1989,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2071,7 +2071,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2133,7 +2133,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2221,7 +2221,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2321,7 +2321,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2380,7 +2380,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2453,7 +2453,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2522,7 +2522,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2593,7 +2593,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2651,7 +2651,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2729,7 +2729,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2787,7 +2787,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2875,7 +2875,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -2958,7 +2958,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3045,7 +3045,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3151,7 +3151,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3269,7 +3269,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3327,7 +3327,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3402,7 +3402,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3495,7 +3495,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3553,7 +3553,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3648,7 +3648,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3712,7 +3712,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3782,7 +3782,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3842,7 +3842,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -3954,7 +3954,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4021,7 +4021,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4081,7 +4081,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4140,7 +4140,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4266,7 +4266,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4338,7 +4338,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4423,7 +4423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4481,7 +4481,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4540,7 +4540,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4663,7 +4663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4725,7 +4725,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4793,7 +4793,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4852,7 +4852,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4910,7 +4910,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -4968,7 +4968,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5058,7 +5058,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5130,7 +5130,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5230,7 +5230,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5309,7 +5309,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5422,7 +5422,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5491,7 +5491,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5617,7 +5617,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5716,7 +5716,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5836,7 +5836,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5901,7 +5901,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -5976,7 +5976,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6074,7 +6074,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6162,7 +6162,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6311,7 +6311,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6383,7 +6383,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6460,7 +6460,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6535,7 +6535,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6596,7 +6596,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6685,7 +6685,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6748,7 +6748,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6841,7 +6841,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -6936,7 +6936,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7126,7 +7126,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7215,7 +7215,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7339,7 +7339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7398,7 +7398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7506,7 +7506,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7588,7 +7588,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7665,7 +7665,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7744,7 +7744,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7870,7 +7870,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -7957,7 +7957,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8034,7 +8034,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8132,7 +8132,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8235,7 +8235,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8324,7 +8324,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8416,7 +8416,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8521,7 +8521,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8670,7 +8670,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8785,7 +8785,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8909,7 +8909,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -8982,7 +8982,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9065,7 +9065,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9147,7 +9147,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9216,7 +9216,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9245,9 +9245,11 @@
     "sub_080CC514",
     "sub_0806BBC4",
     "sub_0806E29C",
-    "sub_080CC20C"
+    "sub_080CC20C",
+    "sub_080CBC64",
+    "sub_080CBEA4"
    ],
-   "limitations": "The linked fire collision, native bounce timing, sounds and palette callbacks are not ported. The native state-4 visual-emitter callback is not yet ported. Buer's linked-owner death particles, probe motion and eight terminal fragments are not implemented. Buer's native facing/proximity handling is partial, and native rolling terrain probes in state 2 remain unported. Native Buer state-2 attack visual effects and the linked flame volleys remain incomplete. The linked fire's native angular and attack visuals are still incomplete. Buer's state-1 gate does not yet include sub_080CC20C's full terrain motion probes. Native Buer fire animation states beyond the coordinate-follow gate remain unimplemented. Earlier linked facing and idle-exit notes wrongly treated +0x48 provisional X translation as the original +0x18 spin; patch 0658 corrects that storage mapping. The GBA sub_0806CAF8 slope and complex contact flags are still missing. Patch 0659 recognizes only axis-aligned solid wall cells at a conservative 24-pixel forward probe. The 0x20/0x40 angular impulses are modeled only for a conservative floor-slope probe at y+24; the full native 0x08528B64 mask and complete terrain movement remain open. State-one native horizontal translation now uses pre-friction angular spin as bounded X velocity, with flat-wall and forward-room rollback; slopes and vertical motion remain approximations. State-two idle mode-six now copies angular spin into +0x48 before contact response; without confirmed ground it restores X. Only flat floor and conservative wall/room probes are recognized. Patch 0663 adds bounded state-two idle Y penetration correction on verified flat floors and removes provisional vertical bob in that mode; full native gravity and ceilings are missing. Patch 0664 reconstructs Buer attack spin/angle and visual paired fire timing, plus two death stages of affine angular motion and 7/2 flame cadence. The native flame projectile hitbox, eight terminal fragments and full terrain table remain unported. Patch 0673 source-aligned native Buer movement is enabled only with ROM-exported valid probes; legacy geometry keeps its bounded old path. Hardware OAM double-size and emulator validation remain open. Patch 0674 removes provisional linked-fire independent 16x16 contact and fabricated missing-animation projectile lifetime; native Buer body remains sole owner contact. Emulator parity remains unverified. Patch 0675 corrects the inactive affine +0x14 word and removes synthetic repeated body facing; original-ROM rendering and emulator parity remain unverified. Patch 0676 restores native mode-two zero-horizontal-speed gravity and floor collision during Buer death stage one; local-ROM visual parity remains outstanding. Patch 0677 initializes Buer spin, native gravity, and linked-fire facing even under the global inert flag; inert Buer now creates its noncombat linked visual. Patch 0678 corrects the Buer minus Soma signed integer attack-side test and pairs the resulting spin sign with native fire projectile mirrors. Patch 0679 restores the unconditional original 0x4000 vertical acceleration at Buer construction, including inert state and legacy metadata; native probe motion stays metadata gated. Patch 0680 preserves the linked Buer flame mirror through counter-signed attack spin and at zero, changing it only after the native direction-specific sign gate. Patch 0681 positions all eight final Buer death flames at the native signed ROM-local offsets plus 4 fixed-point pixels in Y, preserving owner subpixels. Patch 0682 preserves zero initial native Buer horizontal speed; the first native movement tick derives velocity from angular spin, while legacy or invalid geometry retains bounded fallback speed. Patch 0685 replaces the earlier patch-0668 oversized Buer death scatter approximation: original sub_080CBEA4 passes 16x16 fixed pixel windows in stage one and 32x32 in stage two, not 16x64 and 64x64. Exact effect art and emulator comparison stay missing. Patch 0686 still needs in-game collision, OAM, full animation, audible audio, blue-soul behavior and emulator verification. Patch 0687 fixes signed overflow in two Y high-halfword writes, but full OAM/affine rendering, audible sound, soul effect and original-ROM comparisons remain open. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. The inert state-4 updater now raises the visual centre 32 pixels once, selects direct frame 0 and advances the native 0x100 orbit phase each tick. It does not execute the regular movement/contact controller. A lethal hit now enters the source-derived state 3 and plays 0x6E on its first update. The 96- and 128-frame countdown phases and additional periodic 0x6E requests are reconstructed without generic death flames. State-2 step timing now follows sub_080CBAEC: 8-bit 0xFF idle threshold, even/odd RNG entry, 32..63-frame action windows and RNG-selected repeat/exit. The GBA sub_0806E29C inclusive 96x48 Soma proximity check now transitions from the attack window to step 1, whose 80-frame attack and 32-frame recovery countdowns request 0x84 at native intervals. The linked fire sprite now keeps a parent-independent facing initialized from Buer's signed velocity, toggles once at the start of each state-2 action window, and sets the parent's velocity direction on even window expiry. sub_080CC458 now checks the native one-screen/multi-screen room probe at (x, y + 92) and changes state 1 to 2 outside the bounds, clearing step and substep while keeping the byte timer. The linked fire now follows its owner only in state 0; later states retain their position. It survives a defeated owner during staged death and expires when the owner is removed, with contact suppressed during death. A surviving hit in state 2 now applies the native sub_080CC514 interruption into attack step 1 and substep 0, preserving the independent timer; lethal hits still enter staged state-3 death. Buer state-2 idle now follows sub_080CBAEC's inclusive 192x48 directional wake-up: the linked-fire facing must agree with the signed Soma X relation; the byte timer and same-frame 0xFF RNG priority are retained. During state 1 and state-2 idle, the linked fire's orientation now follows the post-controller signed X speed as in sub_080CC20C; attack/recovery keep their independent linked facing bit. The provisional movement controller is not the native rolling terrain probe. EnemyBuerCreate now seeds the source +0x18 angular speed at 0x8000. In no-contact rolling updates, sub_080CC20C now decays signed angular speed by 0x40 toward +/-0x4000, integrates +0x14 by signed speed divided toward zero by 64, and reverses/halves speed after the angle step only during state-2 idle. Native collision flags, terrain probes, physical translation, affine visuals and hit forwarding are still incomplete. Native Buer sub_080CBA30, sub_080CC20C and the state-2 idle/exit branches now derive the linked-fire facing and returned rolling direction from signed +0x18 spin after angular damping/reversal. Provisional +0x48 X translation stays independent. The linked attack projectile, collision-driven impulses, rendering and faithful movement remain incomplete. Buer now uses sub_080CC20C's signed angle integration and -spin/2 angular response for confirmed simple solid wall probes, including state-2 idle; free spin retains 0x40 damping and the independent fire-facing sign. Terrain slopes and faithful X translation are not ported. The source-derived 0x20 and 0x40 slope flag branches now adjust Buer angular spin by +/-0x333 according to its sign and the floor-slope X-flip bit; collision integrates the resulting signed angle without no-contact friction or idle reversal. These are bounded contact cases. State-one X advances using the signed pre-contact spin in +0x48, clamped at eight pixels per frame; flat-wall and room-front checks cancel attempted movement, and provisional +/-64 patrol reversal is removed from state one. Buer state-two idle uses pre-friction spin for grounded subpixel X motion, with no-ground, wall and room rollback. The provisional horizontal translator remains confined to active attack/recovery steps. Patch 0665 uses two independent 0/1 animation fire entities with shared integer coordinates and Y+24 offset, native 8.0-clamped acceleration, and animation lifetime; no guessed combat boxes or independent loot. Death stage two now translates X before angular damping. Actual fire collision, missing sprite variants and ROM fragment coordinates remain incomplete. Patch 0666 ports native active-attack strict spin-cap timer zeroing and recovery-only affine spin updates with bounded 0x20/0x40 slope impulses. Exact +/-0x20000 equality continues, overshoot enters 32-tick recovery. Native mode-six translation and terminal visuals remain incomplete. Patch 0667 reconstructs all eight native terminal flame spawns using ROM-local 0x081194DC signed offset pairs read by the C object exporter and validated by the runtime. Missing older metadata preserves no-effect cleanup. True affine OAM and multi-point collision remain unported. Patch 0668 reconstructs Buer death linked-fire one-pixel X/Y oscillation during stage one and carries its last offset into stage two. Flame scatter now uses source 16x64 and 64x64-pixel areas around the linked visual and pre-motion owner position respectively. Full affine OAM and multi-point terrain motion remain unported. Patch 0669 imports the native 0x08528B64 wall count, signed wall-Y probes, half-width and floor offset through local C asset export. Buer uses the multi-point geometry for bounded wall, slope and grounded rolling checks, while legacy exports retain safe 24-pixel probes; exact sub_0806C828 contact masks remain incomplete. Patch 0670 uses the shared full 16x16 block (BG1 0xFF) depth semantics in multi-point Buer wall probes and grounded mode-six correction, without treating curved 0xC0 cells as flat. Exact native contact masks, ceiling and gravity remain unported. Patch 0671 extends bounded Buer slope 0x20/0x40 checks from the centre to front and rear floor points using exported half-width and floor offsets, with centre precedence and 24-pixel fallback. Full native collision masks and gravity remain unported. Patch 0672 reuses centre-first imported half-width floor-edge contact for conservative mode-six horizontal support and vertical correction; 8px and 16px flat blocks work with 24px legacy fallback. Real gravity and native terrain masks remain missing. Patch 0673 ports native gravity 0x4000, complete existing walker mode 2 and 6 state use, signed wall/floor/slope contacts, attack/recovery/death collision translation and SDL body affine rotation. Original attack visuals have no separate hit callback. Patch 0674 matches sub_080CC3C8 visual-only follower and sub_080CC178 no-callback visual lifetime, deleting missing local animation immediately. Patch 0675 source-audits sub_080CC48C 32-bit affine updates and preserves parent versus linked-fire facing independence in mode 2 and 6. Patch 0676 verifies the original sub_080CBEA4 death-step-one order: spin deceleration, affine update, then sub_0806CAF8 at speed zero and mode two. Patch 0677 verifies EnemyBuerCreate initializes spin and linked fire before checking gEwramData+0x8E bit 0x40. sub_0806BD64 returns signed low-16-bit Buer integer X minus player integer X; sub_080CBC64 maps positive to byte zero and nonpositive to byte one; sub_080CC5D8 stores the native side mirror. EnemyBuerCreate at 0x080CB9AE writes entity +0x54 as 0x4000 before global bit 0x40 chooses the inert state; terrain probes are a separate runtime capability. Aria sub_080CBC64 writes linked-fire 0x58 bit 0x40 only after a positive spin in its positive-side branch or negative spin in the opposite branch. Source sub_080CC0F2 adds 0x80 shifted left 11, namely 0x40000, after the final flame signed Y offset. Previous 0x100000 was 12 pixels too large. Source EnemyBuerCreate initializes angular +0x18 and gravity +0x54 without writing +0x48; sub_080CC20C and sub_0806CAF8 assign the latter upon actual movement. Patch 0683 matches sub_080CBC64 and sub_080CC5D8's u16 Y-plus-24 halfword wrap before placing the visual-only paired flames in 16.16 space. Tests cover normal and high-boundary coordinates without ROM data. Patch 0684 corrects earlier inverted attack acceleration from GBA sub_080CBC64: source side byte 0 spins negative and side byte 1 positive; noncombat paired-fire mirror matches the byte. Same-pixel ties, strict caps and two-child emission stay tested. Patch 0685 verifies 0x80 shifted by 13 and by 14 in sub_080CBEA4, as two equal axes to sub_0806D5C0. Synthetic low/high offset and three-draw tests preserve pre-motion origin and the linked 1px wobble without proprietary assets. Patch 0686 adds a ROM-free full parent/linked-fire/attack/death lifecycle smoke test and safely deletes attack flames whose animation metadata disappears; no damage or reward is attached to the visual children. Patch 0687 preserves GBA u16 +0x46 coordinate wrap and fractional bits in constructor (Y-24) and inert state-four entrance (Y-32); ROM-free tests cover boundary and ordinary integer coordinates. Patch 0688: native 32-bit wrap for randomized Buer death flame X/Y positions in both timed phases, with ROM-free boundary tests and no new visual assets or combat boxes.",
+   "limitations": "The linked fire collision, native bounce timing and palette callbacks are not ported. The native state-4 visual-emitter callback is not yet ported. Buer's linked-owner death particles, probe motion and eight terminal fragments are not implemented. Buer's native facing/proximity handling is partial, and native rolling terrain probes in state 2 remain unported. Native Buer state-2 attack visual effects and the linked flame volleys remain incomplete. The linked fire's native angular and attack visuals are still incomplete. Buer's state-1 gate does not yet include sub_080CC20C's full terrain motion probes. Native Buer fire animation states beyond the coordinate-follow gate remain unimplemented. Earlier linked facing and idle-exit notes wrongly treated +0x48 provisional X translation as the original +0x18 spin; patch 0658 corrects that storage mapping. The GBA sub_0806CAF8 slope and complex contact flags are still missing. Patch 0659 recognizes only axis-aligned solid wall cells at a conservative 24-pixel forward probe. The 0x20/0x40 angular impulses are modeled only for a conservative floor-slope probe at y+24; the full native 0x08528B64 mask and complete terrain movement remain open. State-one native horizontal translation now uses pre-friction angular spin as bounded X velocity, with flat-wall and forward-room rollback; slopes and vertical motion remain approximations. State-two idle mode-six now copies angular spin into +0x48 before contact response; without confirmed ground it restores X. Only flat floor and conservative wall/room probes are recognized. Patch 0663 adds bounded state-two idle Y penetration correction on verified flat floors and removes provisional vertical bob in that mode; full native gravity and ceilings are missing. Patch 0664 reconstructs Buer attack spin/angle and visual paired fire timing, plus two death stages of affine angular motion and 7/2 flame cadence. The native flame projectile hitbox, eight terminal fragments and full terrain table remain unported. Patch 0673 source-aligned native Buer movement is enabled only with ROM-exported valid probes; legacy geometry keeps its bounded old path. Hardware OAM double-size and emulator validation remain open. Patch 0674 removes provisional linked-fire independent 16x16 contact and fabricated missing-animation projectile lifetime; native Buer body remains sole owner contact. Emulator parity remains unverified. Patch 0675 corrects the inactive affine +0x14 word and removes synthetic repeated body facing; original-ROM rendering and emulator parity remain unverified. Patch 0676 restores native mode-two zero-horizontal-speed gravity and floor collision during Buer death stage one; local-ROM visual parity remains outstanding. Patch 0677 initializes Buer spin, native gravity, and linked-fire facing even under the global inert flag; inert Buer now creates its noncombat linked visual. Patch 0678 corrects the Buer minus Soma signed integer attack-side test and pairs the resulting spin sign with native fire projectile mirrors. Patch 0679 restores the unconditional original 0x4000 vertical acceleration at Buer construction, including inert state and legacy metadata; native probe motion stays metadata gated. Patch 0680 preserves the linked Buer flame mirror through counter-signed attack spin and at zero, changing it only after the native direction-specific sign gate. Patch 0681 positions all eight final Buer death flames at the native signed ROM-local offsets plus 4 fixed-point pixels in Y, preserving owner subpixels. Patch 0682 preserves zero initial native Buer horizontal speed; the first native movement tick derives velocity from angular spin, while legacy or invalid geometry retains bounded fallback speed. Patch 0685 replaces the earlier patch-0668 oversized Buer death scatter approximation: original sub_080CBEA4 passes 16x16 fixed pixel windows in stage one and 32x32 in stage two, not 16x64 and 64x64. Exact effect art and emulator comparison stay missing. Patch 0686 still needs in-game collision, OAM, full animation, audible audio, blue-soul behavior and emulator verification. Patch 0687 fixes signed overflow in two Y high-halfword writes, but full OAM/affine rendering, audible sound, soul effect and original-ROM comparisons remain open. The native direct frames, linked second direct-frame component, contact box, parameter-selected state, floor-relative placement and bounded rolling/bobbing controller are connected. The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. The inert state-4 updater now raises the visual centre 32 pixels once, selects direct frame 0 and advances the native 0x100 orbit phase each tick. It does not execute the regular movement/contact controller. A lethal hit now enters the source-derived state 3 and plays 0x6E on its first update. The 96- and 128-frame countdown phases and additional periodic 0x6E requests are reconstructed without generic death flames. State-2 step timing now follows sub_080CBAEC: 8-bit 0xFF idle threshold, even/odd RNG entry, 32..63-frame action windows and RNG-selected repeat/exit. The GBA sub_0806E29C inclusive 96x48 Soma proximity check now transitions from the attack window to step 1, whose 80-frame attack and 32-frame recovery countdowns request 0x84 at native intervals. The linked fire sprite now keeps a parent-independent facing initialized from Buer's signed velocity, toggles once at the start of each state-2 action window, and sets the parent's velocity direction on even window expiry. sub_080CC458 now checks the native one-screen/multi-screen room probe at (x, y + 92) and changes state 1 to 2 outside the bounds, clearing step and substep while keeping the byte timer. The linked fire now follows its owner only in state 0; later states retain their position. It survives a defeated owner during staged death and expires when the owner is removed, with contact suppressed during death. A surviving hit in state 2 now applies the native sub_080CC514 interruption into attack step 1 and substep 0, preserving the independent timer; lethal hits still enter staged state-3 death. Buer state-2 idle now follows sub_080CBAEC's inclusive 192x48 directional wake-up: the linked-fire facing must agree with the signed Soma X relation; the byte timer and same-frame 0xFF RNG priority are retained. During state 1 and state-2 idle, the linked fire's orientation now follows the post-controller signed X speed as in sub_080CC20C; attack/recovery keep their independent linked facing bit. The provisional movement controller is not the native rolling terrain probe. EnemyBuerCreate now seeds the source +0x18 angular speed at 0x8000. In no-contact rolling updates, sub_080CC20C now decays signed angular speed by 0x40 toward +/-0x4000, integrates +0x14 by signed speed divided toward zero by 64, and reverses/halves speed after the angle step only during state-2 idle. Native collision flags, terrain probes, physical translation, affine visuals and hit forwarding are still incomplete. Native Buer sub_080CBA30, sub_080CC20C and the state-2 idle/exit branches now derive the linked-fire facing and returned rolling direction from signed +0x18 spin after angular damping/reversal. Provisional +0x48 X translation stays independent. The linked attack projectile, collision-driven impulses, rendering and faithful movement remain incomplete. Buer now uses sub_080CC20C's signed angle integration and -spin/2 angular response for confirmed simple solid wall probes, including state-2 idle; free spin retains 0x40 damping and the independent fire-facing sign. Terrain slopes and faithful X translation are not ported. The source-derived 0x20 and 0x40 slope flag branches now adjust Buer angular spin by +/-0x333 according to its sign and the floor-slope X-flip bit; collision integrates the resulting signed angle without no-contact friction or idle reversal. These are bounded contact cases. State-one X advances using the signed pre-contact spin in +0x48, clamped at eight pixels per frame; flat-wall and room-front checks cancel attempted movement, and provisional +/-64 patrol reversal is removed from state one. Buer state-two idle uses pre-friction spin for grounded subpixel X motion, with no-ground, wall and room rollback. The provisional horizontal translator remains confined to active attack/recovery steps. Patch 0665 uses two independent 0/1 animation fire entities with shared integer coordinates and Y+24 offset, native 8.0-clamped acceleration, and animation lifetime; no guessed combat boxes or independent loot. Death stage two now translates X before angular damping. Actual fire collision, missing sprite variants and ROM fragment coordinates remain incomplete. Patch 0666 ports native active-attack strict spin-cap timer zeroing and recovery-only affine spin updates with bounded 0x20/0x40 slope impulses. Exact +/-0x20000 equality continues, overshoot enters 32-tick recovery. Native mode-six translation and terminal visuals remain incomplete. Patch 0667 reconstructs all eight native terminal flame spawns using ROM-local 0x081194DC signed offset pairs read by the C object exporter and validated by the runtime. Missing older metadata preserves no-effect cleanup. True affine OAM and multi-point collision remain unported. Patch 0668 reconstructs Buer death linked-fire one-pixel X/Y oscillation during stage one and carries its last offset into stage two. Flame scatter now uses source 16x64 and 64x64-pixel areas around the linked visual and pre-motion owner position respectively. Full affine OAM and multi-point terrain motion remain unported. Patch 0669 imports the native 0x08528B64 wall count, signed wall-Y probes, half-width and floor offset through local C asset export. Buer uses the multi-point geometry for bounded wall, slope and grounded rolling checks, while legacy exports retain safe 24-pixel probes; exact sub_0806C828 contact masks remain incomplete. Patch 0670 uses the shared full 16x16 block (BG1 0xFF) depth semantics in multi-point Buer wall probes and grounded mode-six correction, without treating curved 0xC0 cells as flat. Exact native contact masks, ceiling and gravity remain unported. Patch 0671 extends bounded Buer slope 0x20/0x40 checks from the centre to front and rear floor points using exported half-width and floor offsets, with centre precedence and 24-pixel fallback. Full native collision masks and gravity remain unported. Patch 0672 reuses centre-first imported half-width floor-edge contact for conservative mode-six horizontal support and vertical correction; 8px and 16px flat blocks work with 24px legacy fallback. Real gravity and native terrain masks remain missing. Patch 0673 ports native gravity 0x4000, complete existing walker mode 2 and 6 state use, signed wall/floor/slope contacts, attack/recovery/death collision translation and SDL body affine rotation. Original attack visuals have no separate hit callback. Patch 0674 matches sub_080CC3C8 visual-only follower and sub_080CC178 no-callback visual lifetime, deleting missing local animation immediately. Patch 0675 source-audits sub_080CC48C 32-bit affine updates and preserves parent versus linked-fire facing independence in mode 2 and 6. Patch 0676 verifies the original sub_080CBEA4 death-step-one order: spin deceleration, affine update, then sub_0806CAF8 at speed zero and mode two. Patch 0677 verifies EnemyBuerCreate initializes spin and linked fire before checking gEwramData+0x8E bit 0x40. sub_0806BD64 returns signed low-16-bit Buer integer X minus player integer X; sub_080CBC64 maps positive to byte zero and nonpositive to byte one; sub_080CC5D8 stores the native side mirror. EnemyBuerCreate at 0x080CB9AE writes entity +0x54 as 0x4000 before global bit 0x40 chooses the inert state; terrain probes are a separate runtime capability. Aria sub_080CBC64 writes linked-fire 0x58 bit 0x40 only after a positive spin in its positive-side branch or negative spin in the opposite branch. Source sub_080CC0F2 adds 0x80 shifted left 11, namely 0x40000, after the final flame signed Y offset. Previous 0x100000 was 12 pixels too large. Source EnemyBuerCreate initializes angular +0x18 and gravity +0x54 without writing +0x48; sub_080CC20C and sub_0806CAF8 assign the latter upon actual movement. Patch 0683 matches sub_080CBC64 and sub_080CC5D8's u16 Y-plus-24 halfword wrap before placing the visual-only paired flames in 16.16 space. Tests cover normal and high-boundary coordinates without ROM data. Patch 0684 corrects earlier inverted attack acceleration from GBA sub_080CBC64: source side byte 0 spins negative and side byte 1 positive; noncombat paired-fire mirror matches the byte. Same-pixel ties, strict caps and two-child emission stay tested. Patch 0685 verifies 0x80 shifted by 13 and by 14 in sub_080CBEA4, as two equal axes to sub_0806D5C0. Synthetic low/high offset and three-draw tests preserve pre-motion origin and the linked 1px wobble without proprietary assets. Patch 0686 adds a ROM-free full parent/linked-fire/attack/death lifecycle smoke test and safely deletes attack flames whose animation metadata disappears; no damage or reward is attached to the visual children. Patch 0687 preserves GBA u16 +0x46 coordinate wrap and fractional bits in constructor (Y-24) and inert state-four entrance (Y-32); ROM-free tests cover boundary and ordinary integer coordinates. Patch 0688: native 32-bit wrap for randomized Buer death flame X/Y positions in both timed phases, with ROM-free boundary tests and no new visual assets or combat boxes. Its native sounds are all requested and unit-tested: 0x84 every ninth attack frame above 0x32 (sub_080CBC64) and the three 0x6E of its staged death (sub_080CBEA4).",
    "next_action": "Port Buer's native sub_080CC20C movement probes, then the linked attack fire and eight death fragments; preserve reward ownership. Reconstruct the linked fire animation and sub_080CBEA4 visual death choreography before claiming full parity. Finish Buer rolling terrain probes, fire emissions, hit forwarding and native audiovisual effects. Port real native collision flags and terrain-driven +0x18 angular impulse/bounce response next. Reconstruct sub_0806CAF8's complete native collision table and 0x20/0x40 contact impulses, then remove the conservative simple-wall approximation. Replace bounded wall and floor-slope probes with the complete sub_0806CAF8 contact table and true X/Y response before claiming native Buer motion parity. Port the native state-two mode-six X rollback and gravity, then the complete multi-point 0x08528B64 terrain table. Port native mode-six multi-point floor/slope masks, vertical gravity and affine/flame effects before claiming parity. Finish native fire projectile hitboxes and imported animation assets, plus the 0x081194DC death-fragment table and complete collision probes before marking Buer functional. Import the original per-mode multi-point collision and art tables; finish mode-six attack/recovery X/Y motion, actual projectile frame collision behavior and death fragments before declaring Buer faithful. Re-export Aria object metadata from the user's own ROM to activate native final death flames. Complete the 0x08528B64 terrain mask, affine visuals and projectile frame damage before functional parity. Finish source mode-two/six collision masks and linked OAM animation; verify projectile attack boxes from local ROM data before enabling damage. Keep Buer partial until tests support all facets. Run fusion_rebuild --task aria_objects for locally imported Buer probes. Port native sub_0806C828 ground/ceiling collision and mode-six gravity, original attack hitbox data and affine sprites before full parity. Test native Buer 16x16 solid blocks alongside 8x8 solids in a local ROM room, then reconstruct sub_0806C828 curved masks, ceiling/gravity, attack movement and projectile combat. Compare Buer multi-point floor-slope behavior and probe ordering against emulator traces; reconstruct complete sub_0806C828 contact masks, ceiling/gravity, attack motion and projectile damage. Verify mode-six side-edge support and vertical snapping against emulator; reconstruct the original ground contact mask, curved terrain and vertical gravity before claiming native motion fidelity. Compare ROM-exported Buer mode 2 and mode 6 room traces, projectile animation and linked sprite OAM against an emulator; only then evaluate functional/fidelity status. Validate linked sprite facing, flame animation timing and owner-only contact against local-ROM GBA playback; preserve partial until verified. Verify state-four visible rotation, body mirror and independent fire facing in a local GBA emulator; keep the reconstruction partial until compared. Compare Buer first-death-stage gravity and landing against the original GBA game with locally exported native probes. Compare the original inert Buer linked sprite timing and 32-pixel body rise using locally extracted ROM visuals. Confirm Buer attack spin in both directions and same-pixel ties using a local original ROM and emulator. The 0x4000 constructor field is source aligned; compare legacy and native movement and sprite affine placement against a local original ROM before claiming full parity. The branch-specific mirror behavior has ROM-free sign-crossing tests; original-ROM OAM sprite placement and visual timing remain unvalidated. ROM-free eight-flame coordinates and 16.16 fractional origins are tested; original-ROM effect sprites and affine visual comparison are still outstanding. Synthetic constructor fixtures cover native and missing or invalid collision metadata on both player sides. OAM affine and live ROM collision comparison remain open. Patch 0684 source-byte mapping supersedes the direction interpretation in patch 0678; original-ROM visual, collision and affine parity still need independent verification. Compare both corrected Buer death flame spread rectangles and linked animation on an original local ROM/emulator; full collision flags, affine OAM and audiovisual parity remain open. Verify Buer body collision and movement in original-ROM rooms, import accurate sprite/OAM animation and audio, and implement its blue soul. Validate Buer active-room collision and graphics in an emulator, then finish audible audio and blue-soul behavior.",
    "evidence": {
     "unit_tests": [
@@ -9290,7 +9292,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9361,7 +9363,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9430,7 +9432,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9508,7 +9510,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9582,7 +9584,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9657,7 +9659,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9726,7 +9728,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9795,7 +9797,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9871,7 +9873,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -9947,7 +9949,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10019,7 +10021,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10095,7 +10097,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10166,7 +10168,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10241,7 +10243,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10310,7 +10312,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10391,7 +10393,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10471,7 +10473,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10552,7 +10554,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10624,7 +10626,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10706,7 +10708,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10782,7 +10784,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10859,7 +10861,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -10939,7 +10941,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11017,7 +11019,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11092,7 +11094,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11176,7 +11178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11248,7 +11250,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11323,7 +11325,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11401,7 +11403,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11471,7 +11473,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11540,7 +11542,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11612,7 +11614,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11687,7 +11689,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11768,7 +11770,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11839,7 +11841,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11915,7 +11917,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -11993,7 +11995,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12063,7 +12065,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12133,7 +12135,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12213,7 +12215,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12289,7 +12291,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12372,7 +12374,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12441,7 +12443,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12506,7 +12508,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12567,7 +12569,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12641,7 +12643,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12738,7 +12740,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12842,7 +12844,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -12935,7 +12937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13005,7 +13007,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13091,7 +13093,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13173,7 +13175,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13222,7 +13224,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13295,7 +13297,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13370,7 +13372,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13459,7 +13461,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13566,7 +13568,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -13642,7 +13644,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -14061,7 +14063,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -14235,7 +14237,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -14418,7 +14420,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -14565,7 +14567,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -14622,7 +14624,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -14697,7 +14699,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15031,7 +15033,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15099,7 +15101,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15148,7 +15150,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15210,7 +15212,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15259,7 +15261,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15319,7 +15321,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15477,7 +15479,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15554,7 +15556,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15615,7 +15617,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15699,7 +15701,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15766,7 +15768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15878,7 +15880,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15929,7 +15931,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -15992,7 +15994,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16041,7 +16043,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16210,7 +16212,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16274,7 +16276,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16387,7 +16389,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16436,7 +16438,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16486,7 +16488,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16535,7 +16537,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16585,7 +16587,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16663,7 +16665,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16740,7 +16742,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16805,7 +16807,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16883,7 +16885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -16933,7 +16935,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17075,7 +17077,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17154,7 +17156,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17218,7 +17220,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17295,7 +17297,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17386,7 +17388,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17464,7 +17466,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17622,7 +17624,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17669,7 +17671,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -17712,7 +17714,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-10-31"
+    "verified_on": "2026-11-01"
    }
   },
   {
@@ -18541,6 +18543,12 @@
  },
  "timeline": [
   {
+   "commit": "b8ce152",
+   "date": "2026-10-31",
+   "subject": "Match GBA wrapping for Buer death flame scatter coordinates",
+   "scope": "project"
+  },
+  {
    "commit": "39a25cd",
    "date": "2026-10-31",
    "subject": "Preserve Buer native signed Y halfword wrapping in constructor and inert state",
@@ -19013,12 +19021,6 @@
    "date": "2026-10-28",
    "subject": "Play the Curly, Durga, Valkyrie and Erinys sounds",
    "scope": "project"
-  },
-  {
-   "commit": "af7d8ab",
-   "date": "2026-10-28",
-   "subject": "Play the Harpy's dive, feather and death sounds",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19079,9 +19081,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 681,
-    "routines_attached_to_features": 681,
-    "unassigned_routines": 2892,
+    "routines_cited_by_features": 683,
+    "routines_attached_to_features": 683,
+    "unassigned_routines": 2890,
     "call_edges": 14228
    }
   },
@@ -21685,11 +21687,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "partial",
-       "sounds": "partial",
+       "sounds": "ported",
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "blue:4",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported. A lethal hit enters native state 3: 0x6E is requested on death update, then 96- and 128-frame counters and periodic 0x6E requests follow. Sound output, linked visuals and the eight terminal fragments remain absent. The sub_080CBAEC state-2 8-bit idle and 32..63-frame RNG action window now use the original parity and countdown rules; linked-facing and attacks remain missing. Attack range now uses the native inclusive 96x48 window around Buer. State-2 step 1 cycles 80 attack and 32 recovery frames and requests song 0x84 at 72, 63 and 54; paired flames and native sounds in audio output are not implemented. Linked-fire orientation now starts from signed parent velocity, flips at state-2 action-window entry, and controls parent velocity sign at even expiry per sub_080CBA30/sub_080CBAEC; source-derived, but fire effects are missing. Its state-1 movement-to-action gate now follows sub_080CC458/sub_0806DF40's signed room boundary test with the +92-pixel vertical probe. The terrain probe and linked fire behavior remain incomplete. The sub_080CC3C8 linked-fire callback now follows parent coordinates only in child state 0, holds them in subsequent states, and retains the visual during native death stages without contact; the child's actual animations are not yet ported. Buer surviving hits in state 2 now interrupt to the native attack step 1/substep 0 without resetting the byte timer. Fatal hits retain their state-3 death path; associated fire/animation effects remain missing. State-2 idle also detects Soma through the native inclusive 192x48 window only when aligned with the independent linked-fire facing; it preserves the 0xFF timer/RNG race. Terrain probes and flame output remain incomplete. The source-derived sub_080CC20C rolling-facing write is now applied in state 1 and state-2 idle using the signed horizontal speed after the compact movement tick. The attack/recovery stages retain the separate linked facing. Full rolling physics and native fire visuals remain missing. Buer now initializes its separate native +0x18 spin at 0x8000 and integrates the +0x14 angular accumulator on no-contact rolling ticks with the +/-0x4000 friction floor. State-2 idle reverses/halves the spin after rotation; true terrain probes and affine effects remain unported, so animations and audio are still partial. Buer's original +0x18 angular speed is now the sole determinant of rolling linked-flame facing and the signed idle-exit heading. Its provisional +0x48 X translation is independent; native collision impulses and all associated attack flame rendering remain open. A bounded solid-wall branch now rebounds native angular +0x18 spin as -spin/2 using the 24-pixel forward probe. This is not the complete sub_0806CAF8 collision system: floor, slope, 0x20/0x40 flags, true movement and visuals remain incomplete. Source-derived floor-slope contact flags 0x20/0x40 now change angular +0x18 spin by 0x333 toward or away from zero using the spin sign and slope X-flip. The collision table, accurate movement, audiovisual effects and attacks remain incomplete. State-one horizontal translation now derives +0x48 from pre-contact +0x18 spin, with bounded flat-wall and room-front rollback. Native vertical motion, mode-six idle translation and full collision geometry are still unimplemented. State-two idle now conservatively translates horizontal position from pre-contact angular spin only when a flat floor is confirmed; no-ground and forward-wall contact rollback are modeled. Native slope and vertical contact masks remain incomplete. Patch 0663 removes provisional vertical bob during idle mode six and resolves shallow flat-floor penetration; gravity, slopes and native collision visuals remain partial. Attack now accelerates angular spin by 0xCCC and emits paired non-damaging fire visuals on source cadence. Staged death decelerates and rotates, emitting shared flame visuals; native projectiles, eight fragments and full graphics remain partial. Patch 0665 creates the two native-timed independent fire projectile children, with per-variant animation/expiry and horizontal/vertical capped motion, while preserving one parent reward. Projectile hitboxes are conservatively disabled pending native frame collision records; death stage-two horizontal movement now uses pre-contact spin. Patch 0666 adds the native strict +/-0x20000 angular overshoot attack exit and the independent recovery spin/64 rotation with bounded floor slope flags. Sprite, sound, loot, soul and visual parity remain individually partial. Patch 0667 adds an eight-effect final death burst populated only from local ROM-derived offset metadata; no proprietary coordinates are committed. Native affine effect graphics and flame projectile contact remain partial. Patch 0668 adds the death-linked sprite's source 3-tick one-pixel wobble and 16x64 then 64x64 flame scatter with correct pre-motion origins. Visual metadata and projectile hitboxes still require fidelity work. Patch 0669 reuses the source wall count/Y offsets, half-width and floor offsets from the local 0x08528B64 probe export. The remaining terrain masks, gravity, attack contact boxes and affine effects are still partial. Patch 0670 handles BG1 0xFF full-block contact at imported Buer wall/floor offsets and preserves 16-pixel floor alignment; curved contacts, ceiling/gravity, sprite affine and fire damage remain partial. Patch 0671 samples bounded leading and trailing floor-edge slopes after the central contact for Buer rolling and recovery, with native-probe or legacy offsets; exact tile contact masks, graphics and damage remain partial. Patch 0672 extends bounded state-two idle ground support and vertical correction to centre-first native/legacy floor edges, handling ordinary and full blocks; complete contact masks and hitboxes are still missing. Patch 0673 reuses the source mode-2/mode-6 collision walker for Buer movement, attack, recovery and late death, sets source gravity and rotates host sprites. The original paired fire visuals have no hit-callback routine; OAM and actual gameplay comparison remain. Patch 0674 source audit confirms linked flame and paired attacks are graphics-only entities with no independent hit callback. Removed provisional extra contact and fake missing-animation sprite lifetime. Emulator comparison is outstanding. Patch 0675 uses the native 32-bit angle for inactive orbital rotation rather than generic phase and no longer invents a per-frame body face-player update. Full visual parity awaits local emulator comparison. Patch 0676 restores zero-speed native mode-two gravity and terrain collision throughout the first death stage while retaining its independent affine rotation. Local-ROM confirmation pending. Patch 0677 restores source-order spin and linked-flame initialization in global inert state four, including its noncombat child and native gravity when metadata exists. Patch 0678 matches signed source attack spin and projectile facing from Buer minus Soma integer X, including same-pixel ties. Patch 0679 writes 0x4000 native gravity on every Buer construction regardless of asset metadata while preserving legacy movement compatibility. Patch 0680 corrects source-side linked-fire mirror writes during counter-spin attack frames; both strict sign thresholds are tested without ROM data. Patch 0681 restores the original four-pixel plus signed-Y-offset placement of all eight terminal Buer death effects, including fractional room positions. Patch 0682 aligns the constructor horizontal-velocity field with GBA native timing; fallback patrol translation remains only for older or malformed imports. Patch 0683 restores source halfword overflow for both attack flame visuals at Y+24. It does not add damage, art, sounds or new sprite fidelity. Patch 0684 matches original +0x13 attack-side spin branch and both paired fire mirrors; positive Buer-minus-Soma gives negative spin, nonpositive gives positive spin. ROM-free tests do not establish original-ROM OAM fidelity. Patch 0685 source-audits timed death flame scatter: first phase 16x16 and second phase 32x32 pixels. ROM-free lower and upper edge tests include proper three-draw RNG and mirror behavior. Graphics and exact sprite animation remain partial. Patch 0686 covers the complete ROM-free visual-child ownership lifecycle and deletion on missing active animation metadata. Gameplay verification, affine visuals, audio and blue-soul effects are still partial. Patch 0687 matches the signed 16-bit vertical origin wraps of EnemyBuerCreate and the state-four inert lift; exact affine sprite, animation, sound and blue soul remain partial. Patch 0688 preserves native 32-bit overflow for randomized death flame positions and their three RNG draws; animation, audio and blue soul implementations remain partial."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: its native PlaySong sites are all requested and unit-tested: 0x84 every ninth attack frame above 0x32 (sub_080CBC64) and the three 0x6E of its staged death (sub_080CBEA4); a local run rendered both through the mixer (not listened to). Animations: partial. Ported and unit-tested: the constructor (gravity 0x4000, signed halfword placement), the state-1 rolling movement and state-2 idle and attack with the native +0x18 angular spin, the source mode-2/mode-6 collision walker with the 0x08528B64 probe export, the paired graphics-only attack fires and the two timed fire projectiles, the linked fire's facing and coordinate follow, the state-4 inert lift, and the staged death with its flame scatter and eight terminal effects (offsets from local ROM metadata). Missing: the affine sprite and fire art fidelity (OAM not compared), the projectile frame collision boxes, the complete curved terrain masks and the palette callbacks; nothing is emulator-compared."
       }
      },
      {
@@ -23471,8 +23473,8 @@
       "missing": 0
      },
      "sounds": {
-      "ported": 24,
-      "partial": 3,
+      "ported": 25,
+      "partial": 2,
       "missing": 20
      },
      "loot": {
@@ -27851,7 +27853,7 @@
        "id": "06:04",
        "name": "Buer",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). The linked fire piece now has a provisional 16-by-16 contact box; its native fire callback, bounce timing and sound are still incomplete. State-4 inert visuals now use sub_080CC48C's one-time 32-pixel rise and +0x100 phase each frame, without normal collision. Its sub_0803E058 effect is not yet ported. A lethal hit enters native state 3: 0x6E is requested on death update, then 96- and 128-frame counters and periodic 0x6E requests follow. Sound output, linked visuals and the eight terminal fragments remain absent. The sub_080CBAEC state-2 8-bit idle and 32..63-frame RNG action window now use the original parity and countdown rules; linked-facing and attacks remain missing. Attack range now uses the native inclusive 96x48 window around Buer. State-2 step 1 cycles 80 attack and 32 recovery frames and requests song 0x84 at 72, 63 and 54; paired flames and native sounds in audio output are not implemented. Linked-fire orientation now starts from signed parent velocity, flips at state-2 action-window entry, and controls parent velocity sign at even expiry per sub_080CBA30/sub_080CBAEC; source-derived, but fire effects are missing. Its state-1 movement-to-action gate now follows sub_080CC458/sub_0806DF40's signed room boundary test with the +92-pixel vertical probe. The terrain probe and linked fire behavior remain incomplete. The sub_080CC3C8 linked-fire callback now follows parent coordinates only in child state 0, holds them in subsequent states, and retains the visual during native death stages without contact; the child's actual animations are not yet ported. Buer surviving hits in state 2 now interrupt to the native attack step 1/substep 0 without resetting the byte timer. Fatal hits retain their state-3 death path; associated fire/animation effects remain missing. State-2 idle also detects Soma through the native inclusive 192x48 window only when aligned with the independent linked-fire facing; it preserves the 0xFF timer/RNG race. Terrain probes and flame output remain incomplete. The source-derived sub_080CC20C rolling-facing write is now applied in state 1 and state-2 idle using the signed horizontal speed after the compact movement tick. The attack/recovery stages retain the separate linked facing. Full rolling physics and native fire visuals remain missing. Buer now initializes its separate native +0x18 spin at 0x8000 and integrates the +0x14 angular accumulator on no-contact rolling ticks with the +/-0x4000 friction floor. State-2 idle reverses/halves the spin after rotation; true terrain probes and affine effects remain unported, so animations and audio are still partial. Buer's original +0x18 angular speed is now the sole determinant of rolling linked-flame facing and the signed idle-exit heading. Its provisional +0x48 X translation is independent; native collision impulses and all associated attack flame rendering remain open. A bounded solid-wall branch now rebounds native angular +0x18 spin as -spin/2 using the 24-pixel forward probe. This is not the complete sub_0806CAF8 collision system: floor, slope, 0x20/0x40 flags, true movement and visuals remain incomplete. Source-derived floor-slope contact flags 0x20/0x40 now change angular +0x18 spin by 0x333 toward or away from zero using the spin sign and slope X-flip. The collision table, accurate movement, audiovisual effects and attacks remain incomplete. State-one horizontal translation now derives +0x48 from pre-contact +0x18 spin, with bounded flat-wall and room-front rollback. Native vertical motion, mode-six idle translation and full collision geometry are still unimplemented. State-two idle now conservatively translates horizontal position from pre-contact angular spin only when a flat floor is confirmed; no-ground and forward-wall contact rollback are modeled. Native slope and vertical contact masks remain incomplete. Patch 0663 removes provisional vertical bob during idle mode six and resolves shallow flat-floor penetration; gravity, slopes and native collision visuals remain partial. Attack now accelerates angular spin by 0xCCC and emits paired non-damaging fire visuals on source cadence. Staged death decelerates and rotates, emitting shared flame visuals; native projectiles, eight fragments and full graphics remain partial. Patch 0665 creates the two native-timed independent fire projectile children, with per-variant animation/expiry and horizontal/vertical capped motion, while preserving one parent reward. Projectile hitboxes are conservatively disabled pending native frame collision records; death stage-two horizontal movement now uses pre-contact spin. Patch 0666 adds the native strict +/-0x20000 angular overshoot attack exit and the independent recovery spin/64 rotation with bounded floor slope flags. Sprite, sound, loot, soul and visual parity remain individually partial. Patch 0667 adds an eight-effect final death burst populated only from local ROM-derived offset metadata; no proprietary coordinates are committed. Native affine effect graphics and flame projectile contact remain partial. Patch 0668 adds the death-linked sprite's source 3-tick one-pixel wobble and 16x64 then 64x64 flame scatter with correct pre-motion origins. Visual metadata and projectile hitboxes still require fidelity work. Patch 0669 reuses the source wall count/Y offsets, half-width and floor offsets from the local 0x08528B64 probe export. The remaining terrain masks, gravity, attack contact boxes and affine effects are still partial. Patch 0670 handles BG1 0xFF full-block contact at imported Buer wall/floor offsets and preserves 16-pixel floor alignment; curved contacts, ceiling/gravity, sprite affine and fire damage remain partial. Patch 0671 samples bounded leading and trailing floor-edge slopes after the central contact for Buer rolling and recovery, with native-probe or legacy offsets; exact tile contact masks, graphics and damage remain partial. Patch 0672 extends bounded state-two idle ground support and vertical correction to centre-first native/legacy floor edges, handling ordinary and full blocks; complete contact masks and hitboxes are still missing. Patch 0673 reuses the source mode-2/mode-6 collision walker for Buer movement, attack, recovery and late death, sets source gravity and rotates host sprites. The original paired fire visuals have no hit-callback routine; OAM and actual gameplay comparison remain. Patch 0674 source audit confirms linked flame and paired attacks are graphics-only entities with no independent hit callback. Removed provisional extra contact and fake missing-animation sprite lifetime. Emulator comparison is outstanding. Patch 0675 uses the native 32-bit angle for inactive orbital rotation rather than generic phase and no longer invents a per-frame body face-player update. Full visual parity awaits local emulator comparison. Patch 0676 restores zero-speed native mode-two gravity and terrain collision throughout the first death stage while retaining its independent affine rotation. Local-ROM confirmation pending. Patch 0677 restores source-order spin and linked-flame initialization in global inert state four, including its noncombat child and native gravity when metadata exists. Patch 0678 matches signed source attack spin and projectile facing from Buer minus Soma integer X, including same-pixel ties. Patch 0679 writes 0x4000 native gravity on every Buer construction regardless of asset metadata while preserving legacy movement compatibility. Patch 0680 corrects source-side linked-fire mirror writes during counter-spin attack frames; both strict sign thresholds are tested without ROM data. Patch 0681 restores the original four-pixel plus signed-Y-offset placement of all eight terminal Buer death effects, including fractional room positions. Patch 0682 aligns the constructor horizontal-velocity field with GBA native timing; fallback patrol translation remains only for older or malformed imports. Patch 0683 restores source halfword overflow for both attack flame visuals at Y+24. It does not add damage, art, sounds or new sprite fidelity. Patch 0684 matches original +0x13 attack-side spin branch and both paired fire mirrors; positive Buer-minus-Soma gives negative spin, nonpositive gives positive spin. ROM-free tests do not establish original-ROM OAM fidelity. Patch 0685 source-audits timed death flame scatter: first phase 16x16 and second phase 32x32 pixels. ROM-free lower and upper edge tests include proper three-draw RNG and mirror behavior. Graphics and exact sprite animation remain partial. Patch 0686 covers the complete ROM-free visual-child ownership lifecycle and deletion on missing active animation metadata. Gameplay verification, affine visuals, audio and blue-soul effects are still partial. Patch 0687 matches the signed 16-bit vertical origin wraps of EnemyBuerCreate and the state-four inert lift; exact affine sprite, animation, sound and blue soul remain partial. Patch 0688 preserves native 32-bit overflow for randomized death flame positions and their three RNG draws; animation, audio and blue soul implementations remain partial.",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: its native PlaySong sites are all requested and unit-tested: 0x84 every ninth attack frame above 0x32 (sub_080CBC64) and the three 0x6E of its staged death (sub_080CBEA4); a local run rendered both through the mixer (not listened to). Animations: partial. Ported and unit-tested: the constructor (gravity 0x4000, signed halfword placement), the state-1 rolling movement and state-2 idle and attack with the native +0x18 angular spin, the source mode-2/mode-6 collision walker with the 0x08528B64 probe export, the paired graphics-only attack fires and the two timed fire projectiles, the linked fire's facing and coordinate follow, the state-4 inert lift, and the staged death with its flame scatter and eight terminal effects (offsets from local ROM metadata). Missing: the affine sprite and fire art fidelity (OAM not compared), the projectile frame collision boxes, the complete curved terrain masks and the palette callbacks; nothing is emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

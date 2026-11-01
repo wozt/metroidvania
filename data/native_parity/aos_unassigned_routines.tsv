@@ -1868,8 +1868,6 @@ aos:asm:asm/code/code_080C0A1C.s:sub_080C7B28	sub_080C7B28	enemies	referrers			a
 aos:asm:asm/code/code_080C0A1C.s:sub_080C997C	sub_080C997C	enemies	referrers			asm_function	0x080C997C	asm/code/code_080C0A1C.s	18599	1	4
 aos:asm:asm/code/code_080C0A1C.s:sub_080CB320	sub_080CB320	unclassified		technical	exclusive_callees	asm_function	0x080CB320	asm/code/code_080C0A1C.s	21969	0	4
 aos:asm:asm/code/code_080C0A1C.s:sub_080CBAEC	sub_080CBAEC	enemies	referrers			asm_function	0x080CBAEC	asm/code/code_080C0A1C.s	22980	1	6
-aos:asm:asm/code/code_080C0A1C.s:sub_080CBC64	sub_080CBC64	enemies	referrers			asm_function	0x080CBC64	asm/code/code_080C0A1C.s	23177	1	7
-aos:asm:asm/code/code_080C0A1C.s:sub_080CBEA4	sub_080CBEA4	enemies	referrers			asm_function	0x080CBEA4	asm/code/code_080C0A1C.s	23471	1	7
 aos:asm:asm/code/code_080C0A1C.s:sub_080CC178	sub_080CC178	enemies	referrers			asm_function	0x080CC178	asm/code/code_080C0A1C.s	23835	0	6
 aos:asm:asm/code/code_080C0A1C.s:sub_080CC3C8	sub_080CC3C8	enemies	referrers			asm_function	0x080CC3C8	asm/code/code_080C0A1C.s	24143	0	0
 aos:asm:asm/code/code_080C0A1C.s:sub_080CC458	sub_080CC458	enemies	referrers			asm_function	0x080CC458	asm/code/code_080C0A1C.s	24220	1	3

@@ -2,6 +2,7 @@
 /* ROM-free tests for the Aria of Sorrow Soma motion rules. */
 #include "aos_soma.h"
 #include "aos_audio.h"
+#include "aos_soul.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -723,8 +724,53 @@ static void transform_tests(void) {
     assert(soma.state == 0 && soma.anim.id != 0x4D);
 }
 
+/* sub_08021654 with elements, and state 15 (sub_08019BB0). */
+static void status_tests(void) {
+    fill(0, 0, W - 1, 19, 0x00);
+    fill(0, 20, W - 1, H - 1, 0x03);
+    AosStats stats = {0};
+    AosSoma soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 320;
+    soma.stats = &stats;
+    /* (10 * 4 - 4 * 2) >> 1 = 16; resisted (0x100 with resistance 0x100)
+     * >> 2 = 8 and no stone. */
+    aos_audio_clear();
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0) == 16);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xB3) == 1);
+    stats.resist = 0x100 | 0x4000;
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0x100) == 8 && stats.status == 0);
+    /* Unresisted, 0x100 petrifies: 15 presses, sounds 0x198 and 0xB1. */
+    stats.resist = 0;
+    aos_audio_clear();
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0x100) == 16);
+    assert(stats.status == 4 && stats.status_timers[2] == 0xF &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x198) == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0xB1) == 1);
+    /* The next update reacts: state 15, animation 0x49 (presses & 2). */
+    frame(&soma, 0, 0);
+    assert(soma.state == 15 && soma.anim.id == 0x49 && soma.vx == 0);
+    /* Petrified, a hit is doubled and no second status lands. */
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0x40) == 32 && stats.status == 4);
+    /* Mashing wears it off (aos_stats_status_update), then state 0. */
+    for (int k = 0; k < 8 && (stats.status & 4); ++k)
+        aos_stats_status_update(&stats, AOS_KEY_A | AOS_KEY_B, 0);
+    assert(!(stats.status & 4) && stats.status_timers[2] == 0);
+    soma.pending_damage = 0;    /* the doubled hit's reaction aside */
+    frame(&soma, 0, 0);
+    assert(soma.state == 0);
+    /* Poison (0x40) and curse (0x80): 600 frames each; 0x2000 evades. */
+    soma.state = 0;
+    soma.pending_damage = 0;
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0xC0) == 16);
+    assert(stats.status == 3 && stats.status_timers[0] == 0x258 && stats.status_timers[1] == 0x258);
+    stats.flags = 0x2000;
+    int hp = soma.hp;
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0) == 0 && soma.hp == hp);
+}
+
 int main(void) {
     init_anims();
+    status_tests();
     transform_tests();
     soul_tests();
     hit_tests();

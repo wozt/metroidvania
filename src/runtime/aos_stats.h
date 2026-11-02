@@ -66,6 +66,9 @@ typedef struct {
     uint8_t red_soul, blue_soul, yellow_soul;
     int16_t mp;                  /* currentMP (0x1327C) */
     uint16_t status;             /* poison, curse and stone bits (0x13270) */
+    /* 0x13272, 0x13274: the poison and curse frames left; 0x13276: the
+     * presses that break the stone. */
+    int16_t status_timers[3];
     AosButtonConfig buttons;     /* attack, jump, ability, guardian (0x13398) */
 } AosStats;
 

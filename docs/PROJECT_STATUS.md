@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0702 - Elements, statuses and petrification
+
+- `sub_08021654` now takes the hit's elements:
+  - a resisted element quarters the damage instead of halving it;
+  - the stone status doubles it;
+  - 0x13260 bit 0x2000 evades the hit (0x13B);
+  - 0xB3 is played for each hurt;
+  - the element bits 6-8 set poison, curse or stone, with the 0x080E1338
+    timers (600, 600, 15 presses) and sounds 0x198 then 0xAE, 0xAD or
+    0xB1, unless all the matching resistances are held.
+- The status part of `sub_08021994` runs every frame:
+  - stone presses wear the stone off (0xB0, 0xAF);
+  - the poison and curse timers run out;
+  - poison quarters STR, CON and INT;
+  - curse drains max MP / 128 every 4 frames instead of regenerating.
+- A petrified Soma enters state 15 (`sub_08019BB0`, animations 0x49 /
+  0x4A).
+- The grenade (2), a gold Medusa Head and the Gorgon breath (0x100) now
+  carry their contact elements.
+- Gargoyle's resistance 0x100 quarters those hits and refuses their
+  stone; Zombie's soul works on a poisoned Soma. Both monsters are now
+  complete (37), although no ported enemy poisons yet. Zero Mission is
+  unchanged.
+
 ## Patch 0701 - Soma state 9 and Curly's blue soul
 
 - Soma's state 9 (`sub_0801A94C`) is ported:

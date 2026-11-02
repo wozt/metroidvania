@@ -4722,12 +4722,16 @@ static void armor_tests(void) {
     }
     assert(a.removed && a.anim.id == 4 && dying >= 11 * 5);
     assert(fires == 16 && sparks == 4);
-    assert(aos_audio_count() == 5);
-    assert(aos_audio_get(0).action == AOS_AUDIO_START_SONG && aos_audio_get(0).value == 0x6F);
-    for (int i = 1; i < 5; ++i) {
-        assert(aos_audio_get(i).action == AOS_AUDIO_START_SONG);
-        assert(aos_audio_get(i).value == 0x6E);
+    /* Soma's hurt sound 0xB3 (sub_08021654) aside: 0x6F, then four 0x6E. */
+    int logged = 0;
+    for (int i = 0; i < aos_audio_count(); ++i) {
+        AosAudioRequest request = aos_audio_get(i);
+        if (request.action == AOS_AUDIO_START_SONG && request.value == 0xB3) continue;
+        assert(request.action == AOS_AUDIO_START_SONG &&
+               request.value == (logged == 0 ? 0x6F : 0x6E));
+        ++logged;
     }
+    assert(logged == 5);
 
     /* Under gEwramData + 0x8E bit 0x40: state 3, no floor snap, animation
      * only. */

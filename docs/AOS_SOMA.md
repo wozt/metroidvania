@@ -168,6 +168,17 @@ Lubicant and Zombie scale stats with lost HP or poison; Mimic turns damage
 into gold. Records come from `metadata/yellow_souls.tsv`, and
 `--yellow-soul N` equips one for diagnostics.
 
+## Hits, elements and statuses
+
+`aos_soma_take_elemental_hit` is `sub_08021654`: (ATK * 4 - DEF * 2) >> 1,
+quartered instead when Soma resists one of the hit's elements and doubled
+while he is petrified, at least 1; 0x13260 bit 0x2000 evades the hit and
++ 0x1E (invulnerability) ignores it. The hit's bits 6-8 set poison, curse
+or stone unless Soma resists all of them. Poison quarters STR, CON and INT
+and curse drains MP for 600 frames; stone puts Soma in state 15 until 15
+presses of A, B or the D-pad break it (`aos_stats_status_update`, the
+status part of `sub_08021994`).
+
 ## Explicitly unresolved
 
 - Palette banks 1 and 6 of Soma's palette descriptor are not referenced by the

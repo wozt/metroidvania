@@ -50,6 +50,14 @@ int32_t aos_red_soul_power(const AosStats *stats, const AosRedSoulRecord *record
  * 64 ticks (every 16 with accessory 0x29), at most the maximum. The curse
  * states of unk_13270 are not modelled. */
 void aos_stats_mp_regen(AosStats *stats, uint16_t ticks);
+/* The status part of sub_08021994, after aos_stats_frame_reset and before
+ * the ATK/DEF derivation: stone presses (A, B and the D-pad of `pressed`)
+ * wear the stone off (0xB0 on odd counts, 0xAF when it breaks; the dust
+ * and debris are not modelled); the poison and curse timers run out;
+ * poison quarters STR, CON and INT; curse drains max MP / 128 (at least 1)
+ * every 4 frames instead of the MP regeneration of aos_stats_mp_regen,
+ * which runs otherwise with `ticks`; accessory 0x2C keeps MP full. */
+void aos_stats_status_update(AosStats *stats, uint16_t pressed, uint16_t ticks);
 /* One of Soma's blue soul records (0x080E192C, metadata/blue_souls.tsv),
  * indexed by the equipped blue soul (0 is none). */
 typedef struct {

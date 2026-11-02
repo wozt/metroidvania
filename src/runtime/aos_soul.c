@@ -343,3 +343,39 @@ bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, A
     if (curly->child && (++curly->child_timer & 7) == 0) aos_audio_play_song(0x93);
     return true;
 }
+
+void aos_stats_status_update(AosStats *stats, uint16_t pressed, uint16_t ticks) {
+    if (stats->status_timers[2]) {
+        /* Presses of A, B and the D-pad (gEwramData + 0x1E & 0xF3). */
+        uint16_t keys = pressed & 0xF3;
+        int count = 0;
+        for (int bit = 0; bit < 8; ++bit) count += (keys >> bit) & 1;
+        if (stats->status_timers[2] & count & 1) aos_audio_play_song(0xB0);
+        stats->status_timers[2] = (int16_t)(stats->status_timers[2] - count);
+        if (stats->status_timers[2] <= 0) {
+            stats->status_timers[2] = 0;
+            stats->status &= 0xFFFB;
+            aos_audio_play_song(0xAF);
+        }
+    }
+    for (int bit = 1; bit >= 0; --bit) {
+        if (stats->status_timers[bit] && --stats->status_timers[bit] <= 0)
+            stats->status &= (uint16_t)~(1u << bit);
+    }
+    if (stats->status & 1) {
+        stats->current[AOS_STAT_STR] = (int16_t)(stats->current[AOS_STAT_STR] >> 2);
+        stats->current[AOS_STAT_CON] = (int16_t)(stats->current[AOS_STAT_CON] >> 2);
+        stats->current[AOS_STAT_INT] = (int16_t)(stats->current[AOS_STAT_INT] >> 2);
+    }
+    if (stats->status & 2) {
+        if ((stats->status_timers[1] & 3) == 0) {
+            int drain = stats->max_mp >> 7;
+            if (!drain) drain = 1;
+            stats->mp = (int16_t)(stats->mp - drain);
+            if (stats->mp < 0) stats->mp = 0;
+        }
+        if (stats->accessory == 0x2C) stats->mp = (int16_t)stats->max_mp;
+    } else {
+        aos_stats_mp_regen(stats, ticks);
+    }
+}

@@ -367,6 +367,28 @@ int main(void) {
     assert(!aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, 0, 0, 100 << 16,
                                       200 << 16, true, target));
     assert(!guardian.active && abilities == 0 && !curly.child && !(soma_flags & 0x200));
+    /* sub_08021994's statuses: poison quarters STR, CON and INT (Zombie's
+     * soul then multiplies them by 5.5); curse drains max MP / 128 every
+     * 4 frames instead of regenerating; both run out. */
+    AosStats st = {.max_mp = 256, .mp = 100, .status = 3,
+                   .status_timers = {2, 5, 0}, .equipped = {40, 20, 12, 9}};
+    aos_stats_frame_reset(&st);
+    aos_stats_status_update(&st, 0, 0);
+    assert(st.current[AOS_STAT_STR] == 10 && st.current[AOS_STAT_CON] == 5 &&
+           st.current[AOS_STAT_INT] == 3 && st.current[AOS_STAT_LCK] == 9);
+    assert(st.status_timers[0] == 1 && st.status_timers[1] == 4 && st.mp == 98);
+    aos_stats_status_update(&st, 0, 0);
+    assert(st.status == 2 && st.status_timers[1] == 3 && st.mp == 98);
+    for (int k = 0; k < 3; ++k) aos_stats_status_update(&st, 0, 0);
+    assert(st.status == 0 && st.status_timers[1] == 0);
+    /* Zombie's soul on a poisoned Soma: 40 / 4 = 10, then 10 * 5.5. */
+    AosYellowSoul zs = {0};
+    AosStats zp = {.yellow_soul = 12, .status = 1, .status_timers = {100, 0, 0},
+                   .equipped = {40, 20, 12, 9}};
+    aos_stats_frame_reset(&zp);
+    aos_stats_status_update(&zp, 0, 0);
+    aos_yellow_soul_update(&zs, &zp, yellow, 100, 100);
+    assert(zp.current[AOS_STAT_STR] == 55);
     puts("Aria red, blue and yellow soul tests passed");
     return 0;
 }

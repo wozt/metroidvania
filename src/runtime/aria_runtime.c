@@ -4115,6 +4115,7 @@ int main(int argc, char **argv) {
                         .burst = burst_list, .burst_count = burst_size};
     soma.cast = cast_red_soul;
     soma.cast_context = &souls;
+    soma.stats = &progress;
     static AosYellowSoulRecord yellow_souls[AOS_YELLOW_SOUL_RECORDS];
     bool have_yellow_souls = load_yellow_souls(DEFAULT_YELLOW_SOULS, yellow_souls);
     if (!have_yellow_souls)
@@ -4479,6 +4480,11 @@ int main(int argc, char **argv) {
             /* sub_08021FA4 and sub_08021C44 at the end of Soma's update,
              * then the yellow soul entity (slot 0x11). */
             aos_stats_frame_reset(&progress);
+            /* sub_08021994 runs inside the update, before + 0x22 advances:
+             * the statuses (stone presses, timers, poison, curse) and the
+             * MP regeneration, then sub_08021C44. */
+            aos_stats_status_update(&progress, player_new, (uint16_t)(soma.ticks - 1));
+            aos_stats_derive(&progress);
             if (have_yellow_souls)
                 aos_yellow_soul_update(&yellow_soul, &progress, yellow_souls, soma.hp,
                                        soma.max_hp);
@@ -4487,8 +4493,6 @@ int main(int argc, char **argv) {
             /* sub_0800DC70: the HUD chases the current values. */
             if (have_hud) aos_hud_update(&hud, soma.hp, soma.max_hp, progress.mp,
                                          (int16_t)progress.max_mp);
-            /* sub_08021994 runs inside the update, before + 0x22 advances. */
-            aos_stats_mp_regen(&progress, (uint16_t)(soma.ticks - 1));
             const __typeof__(objects.skills[0]) *bat = &objects.skills[SKILL_ART_BAT],
                                                 *archer = &objects.skills[SKILL_ART_ARCHER];
             souls.bat = objects_ok && bat->loaded ? &bat->set : NULL;

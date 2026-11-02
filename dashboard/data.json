@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T13:32:04+00:00",
+ "generated_at": "2026-11-02T15:00:54+00:00",
  "git": {
-  "commit": "a9bc5f0",
+  "commit": "20a7038",
   "branch": "main",
   "dirty": true
  },
@@ -13198,9 +13198,12 @@
    "dependencies": [],
    "native_routines": [
     "sub_0801B0D8",
-    "sub_0801A94C"
+    "sub_0801A94C",
+    "sub_08021654",
+    "sub_08019BB0",
+    "sub_08021994"
    ],
-   "limitations": "Movement and the currently traced ability states are ported; the full native player state machine is not complete. State 9 (sub_0801A94C) is ported: the guardian transformation with its pose, start, loop and end animations of 0x084F10A0, the forward charge with the 0x080E12EF wall probes, the ceiling test that ends the soul (sub_0802DFF0) and the invulnerability it keeps. + 0x1E is now the invulnerability counter: sub_08021654 ignores hits while it is set and _0801CCC0 counts it down, clearing the recent-hit slots at 0.",
+   "limitations": "Movement and the currently traced ability states are ported; the full native player state machine is not complete. State 9 (sub_0801A94C) is ported: the guardian transformation with its pose, start, loop and end animations of 0x084F10A0, the forward charge with the 0x080E12EF wall probes, the ceiling test that ends the soul (sub_0802DFF0) and the invulnerability it keeps. + 0x1E is now the invulnerability counter: sub_08021654 ignores hits while it is set and _0801CCC0 counts it down, clearing the recent-hit slots at 0. sub_08021654 takes the hit's elements (aos_soma_take_elemental_hit): resisted elements quarter the damage, the stone status doubles it, 0x13260 bit 0x2000 evades it (0x13B), 0xB3 is the hurt sound, and the elements' bits 6-8 set poison, curse or stone (unless all resisted) with the 0x080E1338 timers and sounds. A petrified Soma reacts with state 15 (sub_08019BB0, animations 0x49 / 0x4A) until A, B and D-pad presses wear the 15 stone points off (sub_08021994, 0xB0 / 0xAF); poison quarters STR, CON and INT and curse drains max MP / 128 every 4 frames instead of regenerating, each for 600 frames. The contact elements are set for the grenade (2), a gold Medusa Head and the Gorgon breath (0x100); the other enemies' contact callbacks (about 150 with their own constants) default to 0.",
    "next_action": "Port the remaining native Soma states.",
    "evidence": {
     "unit_tests": [
@@ -14290,8 +14293,8 @@
     "sub_0803222C",
     "sub_08044F80"
    ],
-   "limitations": "SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x800000 (Dead Warrior), 0x2000000 (Erinys) and 0x40000 (Mimic); the others (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. Soma's resistances (Poison Worm, Ectoplasm, Gargoyle) are not read by the ported damage rules, their status cure sub_08021E50 is not modelled, and no runtime rule sets the poison status that SkillZombieUse needs. Each yellow soul record (0x080E1B08, 12 bytes, exported as metadata/yellow_souls.tsv with 37 records, 0 for none) gives the soul entity's routine (+ 0x0), + 0x4, its + 0x1A (+ 0x6) and + 0x1C (+ 0x8). Soma's update runs sub_08031F3C (the entity of 0x13164, slot 0x11, created for a record with a routine), then sub_08021FA4 copies the equipped stats 0x13200 and resistances 0x13208 into current and resist and sub_08021C44 derives ATK (STR + equipment ATK) and DEF (CON / 2 + equipment DEF, each at least 0); the soul entity, updated after Soma, then adds its effect. A soul change (sub_08031FC4 / sub_080321C4) clears the 0x13260 bits 14-26 (mask 0xF8003FFF) and the entity. The flag souls OR + 0x1C into 0x13260, which the runtime now hands to Soma before each update; the stat souls add + 0x1C to the current stat + 0x1A (STR, CON, INT, LCK) then run sub_08021C44; the resistance souls OR + 0x1C into resist; SkillZombieUse, while unk_13270 bit 0 is set, adds 4v + v / 2 to STR, CON and INT; SkillLubicantUse adds STR and INT times (max HP - HP) / max HP and an eighth of that to CON; SkillWoodenGolemUse gives one MP every 32 frames; SkillBasiliskUse adds DEF / 4 and takes ATK / 2; record 36 (sub_0803222C) doubles ATK or DEF. Mimic's bit 0x40000 makes sub_08021654 give damage * 5 gold (sub_08044F80, at most 999999). Diagnostic --yellow-soul N equips and grants a yellow soul. Dead Warrior's bit 0x800000 lets Soma cast a red soul during an attack: state 1 (_0801C494) runs sub_08019478 on Up and a new attack press without the 0x540 flags.",
-   "next_action": "Port the readers of the remaining 0x13260 bits (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), Soma's resistances and statuses, and SkillGiantWormUse and SkillHeadhunterUse.",
+   "limitations": "SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x800000 (Dead Warrior), 0x2000000 (Erinys) and 0x40000 (Mimic); the others (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. The resistance souls' status cure sub_08021E50 is not modelled, and no ported enemy poisons yet (SkillZombieUse is reachable through the ported status rules only). Each yellow soul record (0x080E1B08, 12 bytes, exported as metadata/yellow_souls.tsv with 37 records, 0 for none) gives the soul entity's routine (+ 0x0), + 0x4, its + 0x1A (+ 0x6) and + 0x1C (+ 0x8). Soma's update runs sub_08031F3C (the entity of 0x13164, slot 0x11, created for a record with a routine), then sub_08021FA4 copies the equipped stats 0x13200 and resistances 0x13208 into current and resist and sub_08021C44 derives ATK (STR + equipment ATK) and DEF (CON / 2 + equipment DEF, each at least 0); the soul entity, updated after Soma, then adds its effect. A soul change (sub_08031FC4 / sub_080321C4) clears the 0x13260 bits 14-26 (mask 0xF8003FFF) and the entity. The flag souls OR + 0x1C into 0x13260, which the runtime now hands to Soma before each update; the stat souls add + 0x1C to the current stat + 0x1A (STR, CON, INT, LCK) then run sub_08021C44; the resistance souls OR + 0x1C into resist; SkillZombieUse, while unk_13270 bit 0 is set, adds 4v + v / 2 to STR, CON and INT; SkillLubicantUse adds STR and INT times (max HP - HP) / max HP and an eighth of that to CON; SkillWoodenGolemUse gives one MP every 32 frames; SkillBasiliskUse adds DEF / 4 and takes ATK / 2; record 36 (sub_0803222C) doubles ATK or DEF. Mimic's bit 0x40000 makes sub_08021654 give damage * 5 gold (sub_08044F80, at most 999999). Diagnostic --yellow-soul N equips and grants a yellow soul. Dead Warrior's bit 0x800000 lets Soma cast a red soul during an attack: state 1 (_0801C494) runs sub_08019478 on Up and a new attack press without the 0x540 flags.",
+   "next_action": "Port the readers of the remaining 0x13260 bits (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), and SkillGiantWormUse and SkillHeadhunterUse.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul.c",
@@ -18840,6 +18843,12 @@
  },
  "timeline": [
   {
+   "commit": "20a7038",
+   "date": "2026-11-02",
+   "subject": "Port Soma's state 9 transformation and Curly's blue soul",
+   "scope": "project"
+  },
+  {
    "commit": "a9bc5f0",
    "date": "2026-11-02",
    "subject": "Port the Killer Doll decoy soul and the enemies' aim at it",
@@ -19312,12 +19321,6 @@
    "date": "2026-10-29",
    "subject": "Integrate Ripper red soul into Aria runtime",
    "scope": "project"
-  },
-  {
-   "commit": "036413e",
-   "date": "2026-10-28",
-   "subject": "Port Ripper red soul motion state machine",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19378,9 +19381,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 721,
-    "routines_attached_to_features": 721,
-    "unassigned_routines": 2852,
+    "routines_cited_by_features": 723,
+    "routines_attached_to_features": 723,
+    "unassigned_routines": 2850,
     "call_edges": 14228
    }
   },
@@ -21740,9 +21743,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:12",
-       "notes": "Soul: drops, is collected and, equipped (yellow 12, SkillZombieUse), multiplies STR, CON and INT by 5.5 while Soma is poisoned (unk_13270 bit 0); unit-tested, but no poison status is set by the runtime yet. Sounds: a source audit of its block finds one PlaySong, 0x70 in the death callback sub_0807B0DC; it is requested and unit-tested, not listened to or emulator-compared."
+       "notes": "Soul: drops, is collected and, equipped (yellow 12, SkillZombieUse), multiplies STR, CON and INT by 5.5 while Soma is poisoned; the poison status is now ported (sub_08021654 sets it from a hit's element 0x40 for 600 frames, sub_08021994 quarters STR, CON and INT meanwhile), so a poisoned Soma with this soul has 1.375 times those stats. Unit-tested, not emulator-compared; no enemy ported so far poisons (the poisoning contacts belong to the worms, Slime and others not yet ported). Sounds: a source audit of its block finds one PlaySong, 0x70 in the death callback sub_0807B0DC; it is requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23327,9 +23330,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "n/a",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:21",
-       "notes": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: a source audit of its block finds 0x87 at the dive (sub_08086534) and 0x6E in the death callback sub_08086878; both are requested and unit-tested, not listened to or emulator-compared."
+       "notes": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame: sub_08021654 now quarters instead of halving the damage of element 0x100 (the Gorgon's breath, a gold Medusa Head) and refuses their petrification (resistance bits 6-8). Unit-tested, not emulator-compared; its status cure (sub_08021E50 with a status set) is not modelled. "
       }
      },
      {
@@ -23780,11 +23783,11 @@
       "missing": 0
      },
      "soul": {
-      "ported": 41,
-      "partial": 6,
+      "ported": 43,
+      "partial": 4,
       "missing": 0
      },
-     "complete": 35,
+     "complete": 37,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -28829,7 +28832,7 @@
        "id": "07:0C",
        "name": "Zombie",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 12, SkillZombieUse), multiplies STR, CON and INT by 5.5 while Soma is poisoned (unk_13270 bit 0); unit-tested, but no poison status is set by the runtime yet. Sounds: a source audit of its block finds one PlaySong, 0x70 in the death callback sub_0807B0DC; it is requested and unit-tested, not listened to or emulator-compared.",
+       "note": "Soul: drops, is collected and, equipped (yellow 12, SkillZombieUse), multiplies STR, CON and INT by 5.5 while Soma is poisoned; the poison status is now ported (sub_08021654 sets it from a hit's element 0x40 for 600 frames, sub_08021994 quarters STR, CON and INT meanwhile), so a poisoned Soma with this soul has 1.375 times those stats. Unit-tested, not emulator-compared; no enemy ported so far poisons (the poisoning contacts belong to the worms, Slime and others not yet ported). Sounds: a source audit of its block finds one PlaySong, 0x70 in the death callback sub_0807B0DC; it is requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28973,7 +28976,7 @@
        "id": "07:15",
        "name": "Gargoyle",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: a source audit of its block finds 0x87 at the dive (sub_08086534) and 0x6E in the death callback sub_08086878; both are requested and unit-tested, not listened to or emulator-compared.",
+       "note": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame: sub_08021654 now quarters instead of halving the damage of element 0x100 (the Gorgon's breath, a gold Medusa Head) and refuses their petrification (resistance bits 6-8). Unit-tested, not emulator-compared; its status cure (sub_08021E50 with a status set) is not modelled. ",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

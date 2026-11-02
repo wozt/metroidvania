@@ -648,6 +648,8 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         }
         enemy->own_boxes = true;
         enemy->own_hurt = enemy->own_attack = (AosBox){-5, -5, 10, 10};
+        /* sub_08093BF0: a gold head (+ 0x32 bit 0) petrifies (0x100). */
+        enemy->contact_elements = (param1 & 1) ? 0x100 : 0;
         if (param1 & 2) {
             enemy->state = 3;
             enemy->hidden = true;
@@ -1520,7 +1522,8 @@ contact:
     if (report.soma_hit && enemy->role == AOS_ROLE_GRENADE) {
         /* sub_08093098: element 2, always a knockback (type 1); a flying
          * grenade then bursts (sound 0x76). */
-        report.soma_damage = aos_soma_take_hit(soma, enemy->stats.contact, soma_def, enemy->x, 1);
+        report.soma_damage = aos_soma_take_elemental_hit(soma, enemy->stats.contact, soma_def,
+                                                         enemy->x, 1, 2);
         if (enemy->state == 0) {
             enemy->state = 1;
             enemy->timer = 0;
@@ -1535,9 +1538,14 @@ contact:
         if ((enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) &&
             !(enemy->state == 1 && enemy->anim.id == 1 && (uint8_t)(enemy->anim.frame - 4) <= 2))
             contact >>= 1;
-        /* sub_080994B0: the Mimic's contact is a knockback (type 1). */
-        report.soma_damage = aos_soma_take_hit(soma, contact, soma_def, enemy->x,
-                                               enemy->id == AOS_ENEMY_MIMIC ? 1 : 0);
+        /* sub_080994B0 (the Mimic) and sub_08093BF0 (a Medusa Head) are
+         * knockbacks (type 1); the elements are the callback's
+         * (contact_elements). */
+        bool knockback = enemy->id == AOS_ENEMY_MIMIC ||
+                         (enemy->id == AOS_ENEMY_MEDUSA_HEAD && enemy->role == AOS_ROLE_ENEMY);
+        report.soma_damage = aos_soma_take_elemental_hit(soma, contact, soma_def, enemy->x,
+                                                         knockback ? 1 : 0,
+                                                         enemy->contact_elements);
     }
     return report;
 }
@@ -6735,6 +6743,7 @@ static void gorgon_breath(AosEnemy *owner, AosHitReport *report) {
     child.vy = fixed_mul(aos_sine(child.angle), 0xC000);
     child.own_boxes = true;
     child.own_hurt = child.own_attack = (AosBox){-7, -7, 14, 14};
+    child.contact_elements = 0x100;    /* sub_080899CC: the breath petrifies */
     report->children[report->child_count++] = child;
     owner->phase = (uint16_t)(owner->phase + 0x400);
 }

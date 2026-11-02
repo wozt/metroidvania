@@ -25,6 +25,7 @@
 #include "aos_collision.h"
 #include "aos_combat.h"
 #include "aos_input.h"
+#include "aos_stats.h"
 
 #define AOS_FIXED(value) ((int32_t)((value) * 65536.0))
 #define AOS_WALK_SPEED 0x18000          /* 1.5 */
@@ -162,6 +163,9 @@ typedef struct {
     void (*guardian)(void *context);
     void *guardian_context;
     bool guardian_alive;    /* gEwramData + 0x13144 is set (state 10 waits on it) */
+    /* The stats sub_08021654 reads and writes (resistances, statuses and
+     * their timers, 0x13260); NULL: no element, status or evasion rules. */
+    AosStats *stats;
     /* State 9 (sub_0801A94C), a guardian's transformation: */
     uint8_t transform_step;     /* + 0x0B */
     bool transformed;           /* + 0x0C: the transformation animation played */
@@ -227,6 +231,16 @@ AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
  * are ported; other states do nothing. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
+/* sub_08021654 with the hit's elements (+ 2): with `soma->stats`, a
+ * resisted element quarters instead of halving the damage, the stone
+ * status doubles it, 0x13260 bit 0x2000 evades it (sound 0x13B), the hurt
+ * plays 0xB3 and the status bits 6-8 of the elements (poison, curse,
+ * stone), unless all resisted (resistance bits 6-8), are set with their
+ * 0x080E1338 timers (600, 600 frames, 15 presses) and sounds 0x198 then
+ * 0xAE, 0xAD or 0xB1. The status icon (sub_080220F8), the evasion of
+ * accessory 0x17 and the hit spark of sub_0806E268 are not modelled. */
+int aos_soma_take_elemental_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
+                                uint8_t knockback_type, uint16_t elements);
 /* A guardian's pose (SkillCatoblepasUse): state 10 with looping animation
  * `anim` and flags 0x10000000 and 0x400 cleared. State 10 (_0801CC68)
  * returns to state 0 (no pending animation) once no guardian is alive. */

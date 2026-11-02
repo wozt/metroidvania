@@ -810,6 +810,24 @@ static void hard_landing_state(AosSoma *soma) {
     }
 }
 
+static void transform_play(AosSoma *soma, unsigned id, bool loop);
+
+/* Case 15 (sub_08019BB0): petrified. Once the stone bit clears Soma
+ * returns to state 0 (flags 0x10000, 0x80, 0x10000000 and 0x160 cleared);
+ * meanwhile he shows animation 0x49 or 0x4A as the presses left (0x13276)
+ * are odd or even, stands still on the ground and falls (sub_08018020).
+ * sub_08001F3C's check at his position is not modelled. */
+static void stone_state(AosSoma *soma, const AosCollision *layer) {
+    if (!soma->stats || !(soma->stats->status & 4)) {
+        soma->flags &= 0xFFFEFF7Fu & 0xEFFFFE9Fu;
+        soma->state = 0;
+        return;
+    }
+    transform_play(soma, (soma->stats->status_timers[2] & 2) ? 0x49 : 0x4A, false);
+    if (!(soma->flags & AOS_FLAG_AIRBORNE)) soma->vx = soma->friction = 0;
+    air_routine(soma, layer);
+}
+
 /* sub_0801A94C start: animation `id` from frame 0 with the stand hurtbox,
  * no pending animation, the animation-end flag clear (the palette bank of
  * 0x080E126C is not modelled). */
@@ -944,17 +962,50 @@ AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
     return soma;
 }
 
-int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
-                      uint8_t knockback_type) {
+int aos_soma_take_elemental_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
+                                uint8_t knockback_type, uint16_t elements) {
     /* sub_08021654 returns at once while + 0x1E counts down. */
     if (soma->cast_1e) return 0;
-    int damage = aos_player_damage(attack, defence);
+    AosStats *stats = soma->stats;
+    int32_t raw = attack * 4 - defence * 2;
+    int damage = raw >> 1;
+    if (stats) {
+        if (stats->resist && (elements & stats->resist)) damage = raw >> 2;
+        if (stats->status & 4) damage <<= 1;
+    }
+    if (damage <= 0) damage = 1;
+    if (stats && (stats->flags & 0x2000u)) {
+        /* An evaded hit (0x13B); sub_08042A7C's "guard" text is not drawn. */
+        aos_audio_play_song(0x13B);
+        return 0;
+    }
     soma->hp = (int16_t)(soma->hp - damage > 0 ? soma->hp - damage : 0);
     soma->pending_damage = (int16_t)damage;
     soma->pending_source_x = source_x;
     soma->pending_type = knockback_type;
     if (soma->pending_type == 0 && damage > (soma->max_hp >> 2)) soma->pending_type = 1;
+    aos_audio_play_song(0xB3);
+    if (stats && stats->status_timers[2] == 0) {
+        /* 0x080E1338: each status's timer and sound. */
+        static const int16_t timers[3] = {0x258, 0x258, 0xF};
+        static const uint16_t songs[3] = {0xAE, 0xAD, 0xB1};
+        uint16_t inflicted = (uint16_t)((elements & 0x1C0) >> 6);
+        if (((stats->resist >> 6) & inflicted) != inflicted) {
+            stats->status |= inflicted;
+            for (int bit = 2; bit >= 0; --bit) {
+                if (!((inflicted >> bit) & 1)) continue;
+                aos_audio_play_song(0x198);
+                stats->status_timers[bit] = timers[bit];
+                aos_audio_play_song(songs[bit]);
+            }
+        }
+    }
     return damage;
+}
+
+int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
+                      uint8_t knockback_type) {
+    return aos_soma_take_elemental_hit(soma, attack, defence, source_x, knockback_type, 0);
 }
 
 /* Gives the enemy-type cooldown slot `frames` (_0801B752 / _0801B93C). */
@@ -1012,8 +1063,23 @@ static void react_to_hit(AosSoma *soma) {
         return;
     }
     soma->pending_damage = 0;
-    if (soma->pending_type > 1) return;
     bool from_right = soma->pending_source_x > soma->x;
+    if (soma->stats && (soma->stats->status & 4)) {
+        /* _0801B414: petrified, state 15 (flag 0x80); in the air thrown
+         * 1.5 away and 2.0 up. */
+        soma->state = 15;
+        soma->flags |= AOS_FLAG_STOP_AT_WALL;
+        if (soma->flags & AOS_FLAG_AIRBORNE) {
+            soma->vx = from_right ? (int32_t)0xFFFE8000 : 0x18000;
+            soma->friction = from_right ? 0x200 : (int32_t)0xFFFFFE00;
+            soma->vy = (int32_t)0xFFFE0000;
+            soma->gravity_mod = (int32_t)0xFFFFF000;
+            soma->flags |= AOS_FLAG_AIRBORNE;
+        }
+        soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+        return;
+    }
+    if (soma->pending_type > 1) return;
     if (soma->pending_type == 0 && !(soma->flags & AOS_FLAG_AIRBORNE)) {
         /* Hit on the ground: a flinch, 50 frames of immunity, state 12. */
         soma->anim.id = AOS_ANIM_NONE;
@@ -1127,6 +1193,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     case 9: transform_state(soma, layer); break;
     case 12: hit_state(soma, layer); break;
     case 13: knockback_state(soma, layer, pressed); break;
+    case 15: stone_state(soma, layer); break;
     case 16: death_state(soma); break;
     default: break;
     }

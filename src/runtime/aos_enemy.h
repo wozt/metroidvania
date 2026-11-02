@@ -244,6 +244,7 @@ typedef struct AosEnemy {
     uint8_t fade, fade_timer;   /* + 0x18, + 0x19 of a Ghost Dancer */
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;
+    uint16_t contact_elements;  /* the + 2 of its contact callback's hit (sub_08021654) */
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

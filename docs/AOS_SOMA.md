@@ -131,6 +131,19 @@ page range. Rendering is still a diagnostic overlay: native tiles, icons,
 animated previews, localized descriptions and exact transitions are not yet
 ported or emulator-compared.
 
+## Blue soul guardians
+
+Soma's states 0, 12 and 13 end with the blue soul start `sub_0802E0C4`
+(the `guardian` hook of `AosSoma`). With no guardian alive, the guardian
+button held (and newly pressed for a toggled soul) and at least max MP /
+128 + 1 MP, it creates the guardian entity of the equipped blue soul's
+record (0x080E192C, `metadata/blue_souls.tsv`) and sets Soma's flag
+`0x200`. The upkeep drains one MP every 60 / rate frames. Only
+`SkillMedusaHeadUse` is ported: it holds an airborne Soma still through
+his vy, gravity and the `0x131B8 & 0x20` flag (`hold_still`, read at the
+end of his update). The other 23 routines are refused before they start,
+and `--blue-soul N` equips a soul for diagnostics.
+
 ## Explicitly unresolved
 
 - Palette banks 1 and 6 of Soma's palette descriptor are not referenced by the

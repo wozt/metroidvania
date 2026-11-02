@@ -135,6 +135,8 @@ typedef struct {
     uint16_t anim_request;  /* + 0x20: one-shot animation, 0xFF for none */
     uint8_t up_frames;      /* + 0x2A: frames with Up held while idle */
     bool air_anim_locked;   /* gEwramData + 0x131B8 & 4, cleared every frame */
+    bool hold_still;        /* + 0x131B8 & 0x20: the update's end zeroes vx and
+                             * friction, then clears it */
     AosWeapon weapon;
     bool weapon_active;     /* gEwramData + 0x1311C: the weapon entity exists */
     AosBox hurtbox;         /* set by sub_080428B4 with each animation change */
@@ -153,6 +155,10 @@ typedef struct {
      * when a soul was cast (MP spent, slot taken), else -1. NULL: no souls. */
     int (*cast)(void *context);
     void *cast_context;
+    /* sub_0802E0C4, the blue soul start, at the end of states 0, 12 and
+     * 13. NULL: no blue souls. */
+    void (*guardian)(void *context);
+    void *guardian_context;
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF

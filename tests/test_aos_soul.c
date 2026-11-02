@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul.h"
 
+#include "aos_audio.h"
+
 #include <assert.h>
 #include <stdio.h>
 
@@ -91,6 +93,96 @@ int main(void) {
     caster_stats.current[AOS_STAT_INT] = 40;
     assert(aos_red_soul_power(&caster_stats, &records[3], false) ==
            (99 * 75 / 10 + 10 + 75 * 6) / 16);
-    puts("Aria red soul tests passed");
+    /* Blue souls (0x080E192C): Flying Armor 1 is held (5 MP/s), Giant Bat 2
+     * toggled (30 MP/s), Medusa Head 15 held (10 MP/s). */
+    AosBlueSoulRecord blue[AOS_BLUE_SOUL_RECORDS] = {{0}};
+    blue[1] = (AosBlueSoulRecord){0x0802E23D, 5, 1, 0, 0x100};
+    blue[2] = (AosBlueSoulRecord){0x0802EB85, 30, 2, 0, 0};
+    blue[15] = (AosBlueSoulRecord){0x08030CC9, 10, 1, 0, 0};
+    AosStats guard_stats = {.blue_soul = 15, .mp = 80, .max_mp = 500};
+    AosGuardian guardian = {0};
+    uint32_t soma_flags = 2;
+    /* sub_0802E0C4: R held, MP at least 500 / 128 + 1 = 4. */
+    assert(!aos_guardian_try(&guardian, &guard_stats, blue, 0, AOS_KEY_R, false, &soma_flags));
+    assert(!aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, true, &soma_flags));
+    guard_stats.mp = 3;
+    assert(!aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    guard_stats.mp = 4;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags) &&
+           guardian.active && guardian.interval == 6 && guardian.soul == 15 &&
+           (soma_flags & 0x200));
+    /* A second one waits for the first to end. */
+    assert(!aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    /* sub_0802DF2C: one MP every 6 frames; a held soul ends on release. */
+    for (int frame = 1; frame <= 5; ++frame)
+        assert(!aos_guardian_upkeep(&guardian, &guard_stats, blue, AOS_KEY_R, 0));
+    assert(guard_stats.mp == 4);
+    assert(!aos_guardian_upkeep(&guardian, &guard_stats, blue, AOS_KEY_R, 0) &&
+           guard_stats.mp == 3);
+    assert(aos_guardian_upkeep(&guardian, &guard_stats, blue, 0, 0));
+    aos_guardian_end(&guardian, &soma_flags);
+    assert(!guardian.active && !(soma_flags & 0x200) && soma_flags == 2);
+    /* At 0 MP it ends whatever the button. */
+    guard_stats.mp = 1;
+    guardian = (AosGuardian){.active = true, .soul = 15, .interval = 6, .ticks = 5};
+    assert(aos_guardian_upkeep(&guardian, &guard_stats, blue, AOS_KEY_R, 0) &&
+           guard_stats.mp == 0);
+    /* A toggled soul needs the press, ignores the release and ends with a
+     * second press once its routine has left state 0. */
+    guard_stats = (AosStats){.blue_soul = 2, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    assert(!aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags) && guardian.interval == 2);
+    assert(!aos_guardian_upkeep(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R));
+    guardian.state = 1;
+    assert(!aos_guardian_upkeep(&guardian, &guard_stats, blue, 0, 0) && guard_stats.mp == 79);
+    assert(aos_guardian_upkeep(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R));
+    /* No routine (record 0): nothing starts. */
+    guard_stats.blue_soul = 0;
+    guardian = (AosGuardian){0};
+    assert(!aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                             &soma_flags));
+
+    /* SkillMedusaHeadUse: Soma rising at -2.0 is held with vy 0 kept. */
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 15, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 2;
+    AosMedusaGuardian medusa = {0};
+    int32_t vy = (int32_t)0xFFFE0000, gravity = (int32_t)0xFFFFE000;
+    bool still = false;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    assert(aos_medusa_guardian_update(&medusa, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                      &soma_flags, &vy, &gravity, &still));
+    assert(medusa.vy == 0 && medusa.gravity == 0x2800 && vy == 0 && gravity == 0 && still &&
+           guardian.state == 1 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x8C) == 1);
+    /* Released: Soma gets the kept vy and gravity back. */
+    vy = 0x1A00;
+    still = false;
+    assert(!aos_medusa_guardian_update(&medusa, &guardian, &guard_stats, blue, 0, 0,
+                                       &soma_flags, &vy, &gravity, &still));
+    assert(vy == 0 && gravity == 0x2800 && !still && !guardian.active &&
+           !(soma_flags & 0x200) && aos_audio_requested(AOS_AUDIO_START_SONG, 0x8C) == 1);
+    /* Falling at 3.0: the fall speed is kept; landing ends it. */
+    vy = 0x30000;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    medusa = (AosMedusaGuardian){0};
+    assert(aos_medusa_guardian_update(&medusa, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                      &soma_flags, &vy, &gravity, &still) &&
+           medusa.vy == 0x30000);
+    soma_flags = 0x100000 | 0x200;
+    assert(!aos_medusa_guardian_update(&medusa, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                       &soma_flags, &vy, &gravity, &still));
+    assert(vy == 0x30000 && gravity == 0x2800 && soma_flags == 0x100000);
+    /* Started on the ground (or against a ceiling, flag 0x8000), it ends on
+     * its first update without a sound. */
+    aos_audio_clear();
+    soma_flags = 2 | 0x8000;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    assert(!aos_medusa_guardian_update(&medusa, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                       &soma_flags, &vy, &gravity, &still) &&
+           !aos_audio_requested(AOS_AUDIO_START_SONG, 0x8C) && !guardian.active);
+    puts("Aria red and blue soul tests passed");
     return 0;
 }

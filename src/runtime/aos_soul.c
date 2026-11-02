@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul.h"
 
+#include "aos_audio.h"
+
 /* 0x080E1918: the ground and air cast animations of the four poses. */
 static const uint8_t cast_animations[4][2] = {{22, 49}, {78, 78}, {79, 79}, {80, 80}};
 
@@ -52,4 +54,76 @@ int32_t aos_red_soul_power(const AosStats *stats, const AosRedSoulRecord *record
     power /= 16;
     if (reduced) power = power * 8 / 10;
     return (int32_t)power;
+}
+
+enum { SOMA_GUARDIAN = 0x200, MEDUSA_AIRBORNE_MASK = 0x01008082 };
+
+bool aos_guardian_try(AosGuardian *guardian, const AosStats *stats,
+                      const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS], uint16_t held,
+                      uint16_t pressed, bool locked, uint32_t *soma_flags) {
+    if (locked || guardian->active || !(held & AOS_KEY_R) ||
+        stats->blue_soul >= AOS_BLUE_SOUL_RECORDS)
+        return false;
+    const AosBlueSoulRecord *record = &records[stats->blue_soul];
+    if ((record->flags & AOS_BLUE_SOUL_TOGGLE) && !(pressed & AOS_KEY_R)) return false;
+    if (!record->routine || !record->mp_per_second) return false;
+    if (stats->mp < (int32_t)(stats->max_mp >> 7) + 1) return false;
+    *guardian = (AosGuardian){.active = true, .soul = stats->blue_soul,
+                              .interval = (uint8_t)(60 / record->mp_per_second)};
+    *soma_flags |= SOMA_GUARDIAN;
+    return true;
+}
+
+bool aos_guardian_upkeep(AosGuardian *guardian, AosStats *stats,
+                         const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS], uint16_t held,
+                         uint16_t pressed) {
+    const AosBlueSoulRecord *record = &records[guardian->soul];
+    guardian->ticks++;
+    if (guardian->interval && guardian->ticks % guardian->interval == 0) {
+        stats->mp--;
+        if (stats->mp <= 0) {
+            stats->mp = 0;
+            return true;
+        }
+    }
+    if (!(record->flags & AOS_BLUE_SOUL_TOGGLE)) return !(held & AOS_KEY_R);
+    return guardian->state != 0 && (pressed & AOS_KEY_R);
+}
+
+void aos_guardian_end(AosGuardian *guardian, uint32_t *soma_flags) {
+    guardian->active = false;
+    *soma_flags &= ~(uint32_t)SOMA_GUARDIAN;
+}
+
+bool aos_medusa_guardian_update(AosMedusaGuardian *medusa, AosGuardian *guardian,
+                                AosStats *stats,
+                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                int32_t *soma_vy, int32_t *soma_gravity, bool *hold_still) {
+    if (guardian->state == 0) {
+        if ((*soma_flags & MEDUSA_AIRBORNE_MASK) != 2) {
+            aos_guardian_end(guardian, soma_flags);
+            return false;
+        }
+        medusa->vy = *soma_vy < 0 ? 0 : *soma_vy;
+        medusa->gravity = 0x2800;
+        aos_audio_play_song(0x8C);
+        guardian->state = 1;
+    }
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        *soma_vy = medusa->vy;
+        *soma_gravity = medusa->gravity;
+        return false;
+    }
+    if ((*soma_flags & MEDUSA_AIRBORNE_MASK) != 2) {
+        *soma_vy = medusa->vy;
+        *soma_gravity = medusa->gravity;
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    *hold_still = true;
+    *soma_vy = 0;
+    *soma_gravity = 0;
+    return true;
 }

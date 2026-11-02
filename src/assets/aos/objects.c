@@ -19,6 +19,7 @@ enum {
     WEAPON_STATS = 0x08505D3C,
     ARMOR_STATS = 0x085063B0,
     RED_SOULS = 0x080E1598,
+    BLUE_SOULS = 0x080E192C,
     SKILL_THROWS = 0x084F12C8,
     HUD_PALETTE = 0x0820C428,
     HUD_TILES = 0x0827B208,
@@ -1059,6 +1060,28 @@ static bool append_red_souls(const FusionRom *rom, Text *souls, char *error,
     return true;
 }
 
+/* Soma's blue soul records (0x080E192C, 25 x 12 bytes indexed by the
+ * equipped blue soul; record 0 is none), as sub_0802E0C4 reads them: the
+ * guardian entity's routine (+ 0x0), the MP drained per second (+ 0x4, one
+ * MP every 60 / it frames), the flags (+ 0x5, bit 1: a press toggles the
+ * soul instead of holding it), the entity's + 0x1A (+ 0x6) and + 0x1C
+ * (+ 0x8). */
+static bool append_blue_souls(const FusionRom *rom, Text *souls, char *error,
+                              size_t error_size) {
+    if (!text_append(souls,
+            "schema\tmetroidvania-aos-blue-souls-v1\n"
+            "# soul\troutine\tmp_per_second\tflags\tparameter\targument\n")) return false;
+    for (uint32_t soul = 0; soul < 25; ++soul) {
+        const uint8_t *record = slice(rom, BLUE_SOULS + soul * 12, 12, "blue soul record",
+                                      error, error_size);
+        if (!record || !text_append(souls, "%u\t0x%08x\t%u\t0x%02x\t%u\t0x%08x\n", soul,
+                                    read_u32(record), record[4], record[5],
+                                    read_u16(record + 6), read_u32(record + 8)))
+            return false;
+    }
+    return true;
+}
+
 /* The thrown-object records of the shared Skeleton skill routine
  * (0x084F12C8, 8 x 24 bytes, indexed by the red soul's parameter): launch
  * speeds (+ 0x0, + 0x4), gravity (+ 0x8), graphics record of 0x080E13BC
@@ -1184,7 +1207,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     }
     *summary = (FusionAosObjectExportSummary){0};
     Text rows = {0}, stats = {0}, money = {0}, item_use = {0}, equipment = {0},
-         red_souls = {0}, skill_throws = {0}, bursts = {0}, item_icons = {0};
+         red_souls = {0}, blue_souls = {0}, skill_throws = {0}, bursts = {0}, item_icons = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
                                                    error_size) &&
@@ -1224,6 +1247,9 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            append_red_souls(rom, &red_souls, error, error_size) &&
                            write_text_file(metadata_output, "red_souls.tsv",
                                            &red_souls, error, error_size) &&
+                           append_blue_souls(rom, &blue_souls, error, error_size) &&
+                           write_text_file(metadata_output, "blue_souls.tsv",
+                                           &blue_souls, error, error_size) &&
                            append_skill_throws(rom, &skill_throws, error, error_size) &&
                            write_text_file(metadata_output, "skill_throws.tsv",
                                            &skill_throws, error, error_size) &&
@@ -1252,6 +1278,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     free(item_use.data);
     free(equipment.data);
     free(red_souls.data);
+    free(blue_souls.data);
     free(skill_throws.data);
     free(bursts.data);
     free(item_icons.data);

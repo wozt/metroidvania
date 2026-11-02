@@ -73,6 +73,7 @@
 #define DEFAULT_ITEM_USE "assets/extracted/aria/metadata/item_use.tsv"
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
+#define DEFAULT_BLUE_SOULS "assets/extracted/aria/metadata/blue_souls.tsv"
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
 #define DEFAULT_BURSTS "assets/extracted/aria/metadata/bursts.tsv"
 #define DEFAULT_AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
@@ -985,6 +986,38 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
     int mx = souls->margins ? souls->margins[n][0] : 16, my = souls->margins ? souls->margins[n][1] : 16;
     int sx = (skill->x >> 16) - souls->cam_x, sy = (skill->y >> 16) - souls->cam_y;
     return sx < -mx || sx > mx + 0xF0 || sy < -my || sy > my + 0xA0;
+}
+
+/* The blue soul guardian (gEwramData + 0x13144) and its routine. */
+#define GUARDIAN_MEDUSA_ROUTINE 0x08030CC9u
+typedef struct {
+    AosGuardian core;
+    AosMedusaGuardian medusa;
+    AosStats *stats;
+    const AosBlueSoulRecord *records;
+    AosSoma *soma;
+} AriaGuardian;
+
+/* Soma's guardian hook: sub_0802E0C4 for the souls whose routine is
+ * ported; the others are refused rather than draining MP for nothing. */
+static void start_guardian(void *context) {
+    AriaGuardian *guardian = context;
+    const AosStats *stats = guardian->stats;
+    if (stats->blue_soul >= AOS_BLUE_SOUL_RECORDS ||
+        guardian->records[stats->blue_soul].routine != GUARDIAN_MEDUSA_ROUTINE)
+        return;
+    if (aos_guardian_try(&guardian->core, stats, guardian->records, guardian->soma->held,
+                         guardian->soma->pressed, false, &guardian->soma->flags))
+        guardian->medusa = (AosMedusaGuardian){0};
+}
+
+/* The guardian entity's update, after Soma's in the entity order. */
+static void update_guardian(AriaGuardian *guardian) {
+    if (!guardian->core.active) return;
+    AosSoma *soma = guardian->soma;
+    aos_medusa_guardian_update(&guardian->medusa, &guardian->core, guardian->stats,
+                               guardian->records, soma->held, soma->pressed, &soma->flags,
+                               &soma->vy, &soma->gravity_mod, &soma->hold_still);
 }
 
 static void update_skills(AriaSouls *souls) {
@@ -2349,6 +2382,26 @@ static bool load_enemy_data(AriaObjects *objects) {
     return true;
 }
 
+/* metadata/blue_souls.tsv: Soma's blue soul records. */
+static bool load_blue_souls(const char *path, AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS]) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[256];
+    unsigned loaded = 0;
+    while (fgets(line, sizeof line, f)) {
+        unsigned soul, routine, mp, flags, parameter, argument;
+        if (sscanf(line, "%u\t%x\t%u\t%x\t%u\t%x", &soul, &routine, &mp, &flags, &parameter,
+                   &argument) != 6 ||
+            soul >= AOS_BLUE_SOUL_RECORDS)
+            continue;
+        records[soul] = (AosBlueSoulRecord){routine, (uint8_t)mp, (uint8_t)flags,
+                                            (uint16_t)parameter, argument};
+        loaded++;
+    }
+    fclose(f);
+    return loaded == AOS_BLUE_SOUL_RECORDS;
+}
+
 /* metadata/red_souls.tsv: Soma's red soul records. */
 static bool load_red_souls(const char *path, AosRedSoulRecord records[AOS_RED_SOUL_RECORDS]) {
     FILE *f = fopen(path, "rb");
@@ -3398,7 +3451,7 @@ static void usage(const char *name) {
             "Usage: %s [--check] [--save slot.sav] [--save-target slot.sav]"
             " [--consume-save] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
-            "       [--weapon none|INDEX] [--red-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
+            "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
@@ -3425,6 +3478,7 @@ int main(int argc, char **argv) {
     bool hp_override = false, moves_override = false, spawn_override = false;
     bool atk_override = false, def_override = false, weapon_override = false;
     long red_soul_override = -1;   /* --red-soul: equippedRedSoul diagnostic override */
+    long blue_soul_override = -1;  /* --blue-soul: equippedBlueSoul diagnostic override */
     /* --frontend FILE and --frontend-arg ARG...: the frontend to return to
      * with --game-over once Soma's death fade has ended. */
     const char *frontend_command[64] = {NULL};
@@ -3460,6 +3514,8 @@ int main(int argc, char **argv) {
             ++i;
         } else if (!strcmp(argv[i], "--red-soul") && i + 1 < argc) {
             red_soul_override = strtol(argv[++i], &end, 10);
+        } else if (!strcmp(argv[i], "--blue-soul") && i + 1 < argc) {
+            blue_soul_override = strtol(argv[++i], &end, 10);
         }
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
         else if (!strcmp(argv[i], "--debug-menu")) debug_at_start = true;
@@ -3732,6 +3788,12 @@ int main(int argc, char **argv) {
             !aos_souls_total(&progress, AOS_SOUL_RED, red_soul_override - 1))
             aos_souls_add(&progress, AOS_SOUL_RED, red_soul_override - 1, 1);
     }
+    if (blue_soul_override >= 0 && blue_soul_override < AOS_BLUE_SOUL_RECORDS) {
+        progress.blue_soul = (uint8_t)blue_soul_override;
+        if (blue_soul_override > 0 &&
+            !aos_souls_total(&progress, AOS_SOUL_BLUE, blue_soul_override - 1))
+            aos_souls_add(&progress, AOS_SOUL_BLUE, blue_soul_override - 1, 1);
+    }
     /* currentMP: the file's, full for a new or older file (sub_08014548). */
     progress.mp = has_active_save && active_save.mp >= 0 ? active_save.mp
                                                          : (int16_t)progress.max_mp;
@@ -3749,6 +3811,16 @@ int main(int argc, char **argv) {
                         .burst = burst_list, .burst_count = burst_size};
     soma.cast = cast_red_soul;
     soma.cast_context = &souls;
+    static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
+    static AriaGuardian guardian;
+    guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
+    if (load_blue_souls(DEFAULT_BLUE_SOULS, blue_souls)) {
+        guardian.records = blue_souls;
+        soma.guardian = start_guardian;
+        soma.guardian_context = &guardian;
+    } else {
+        fprintf(stderr, "No Aria blue soul records: %s\n", DEFAULT_BLUE_SOULS);
+    }
     /* The in-game HUD (sub_0800DA50), drawn from the exported resources. */
     static uint8_t hud_bytes[64 + AOS_HUD_TILE_BYTES];
     static AosHud hud;
@@ -4162,6 +4234,7 @@ int main(int argc, char **argv) {
             souls.bone_ids = objects.skills[SKILL_ART_BONE].static_ids;
             souls.bone_count = objects.skills[SKILL_ART_BONE].static_count;
             update_skills(&souls);
+            update_guardian(&guardian);
             ++step;
             if (has_active_save) active_save.play_frames++;
             if (soma.state == 16 && !announced_death) {

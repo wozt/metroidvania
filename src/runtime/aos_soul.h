@@ -50,4 +50,63 @@ int32_t aos_red_soul_power(const AosStats *stats, const AosRedSoulRecord *record
  * 64 ticks (every 16 with accessory 0x29), at most the maximum. The curse
  * states of unk_13270 are not modelled. */
 void aos_stats_mp_regen(AosStats *stats, uint16_t ticks);
+/* One of Soma's blue soul records (0x080E192C, metadata/blue_souls.tsv),
+ * indexed by the equipped blue soul (0 is none). */
+typedef struct {
+    uint32_t routine;       /* + 0x0: the guardian entity's routine, 0 for none */
+    uint8_t mp_per_second;  /* + 0x4: one MP every 60 / it frames */
+    uint8_t flags;          /* + 0x5: AOS_BLUE_SOUL_TOGGLE */
+    uint16_t parameter;     /* + 0x6: the entity's + 0x1A */
+    uint32_t argument;      /* + 0x8: the entity's + 0x1C */
+} AosBlueSoulRecord;
+
+enum { AOS_BLUE_SOUL_RECORDS = 25, AOS_BLUE_SOUL_TOGGLE = 2 };
+
+/* The guardian entity of gEwramData + 0x13144 as its upkeep sees it. */
+typedef struct {
+    bool active;
+    uint8_t soul;           /* + 0x18: the blue soul it was created for */
+    uint8_t interval;       /* + 0x20: frames per drained MP */
+    uint16_t ticks;         /* + 0x22 */
+    uint8_t state;          /* + 0x0A: its routine's state, 0 on the first update */
+} AosGuardian;
+
+/* sub_0802E0C4, run at the end of Soma's states 0, 12 and 13: with no
+ * guardian alive and the guardian button held (and pressed this frame for
+ * a toggled soul), a record with a routine and at least max MP / 128 + 1
+ * MP, the guardian starts and Soma's flag 0x200 is set (`soma_flags`). The
+ * 0x131B8 & 0x200 lock and the gEwramData + 0x344 & 0x200000 limit to
+ * souls 1-3 are passed as `locked`. */
+bool aos_guardian_try(AosGuardian *guardian, const AosStats *stats,
+                      const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS], uint16_t held,
+                      uint16_t pressed, bool locked, uint32_t *soma_flags);
+/* sub_0802DF2C (sub_0802DE5C adds the cleanup of aos_guardian_end): one
+ * MP every `interval` frames, the soul ending when MP reaches 0; a held
+ * soul ends once the button is released, a toggled one when it is pressed
+ * again after its first update. The gEwramData + 0x42C bits 0 and 8 are
+ * not modelled. Returns true when the guardian must end. */
+bool aos_guardian_upkeep(AosGuardian *guardian, AosStats *stats,
+                         const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS], uint16_t held,
+                         uint16_t pressed);
+/* sub_0802DD84: the guardian slot is freed and Soma's flag 0x200 cleared
+ * (its child entities, the 0x131D0 palette and the 0x13260 bits 8-13 belong
+ * to the souls that use them). */
+void aos_guardian_end(AosGuardian *guardian, uint32_t *soma_flags);
+
+/* SkillMedusaHeadUse: while Soma is airborne (+ 0x10 & 0x01008082 == 2) it
+ * holds him still: after his update it zeroes his vy and + 0x54 and sets
+ * gEwramData + 0x131B8 & 0x20 (`hold_still`), which the end of his next
+ * update reads to zero his vx and friction. It keeps his vy (0 when rising)
+ * and gravity 0x2800 to give back when it ends. */
+typedef struct {
+    int32_t vy, gravity;    /* + 0x4C, + 0x54 */
+} AosMedusaGuardian;
+
+/* One update after Soma's: sound 0x8C on its first, then the upkeep.
+ * Returns false once the guardian has ended (its cleanup done). */
+bool aos_medusa_guardian_update(AosMedusaGuardian *medusa, AosGuardian *guardian,
+                                AosStats *stats,
+                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                int32_t *soma_vy, int32_t *soma_gravity, bool *hold_still);
 #endif

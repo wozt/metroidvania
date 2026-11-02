@@ -619,7 +619,8 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_hud_tests)
     add_test(NAME aos_hud COMMAND fusion_aos_hud_tests)
 
-    add_executable(fusion_aos_soul_tests tests/test_aos_soul.c src/runtime/aos_soul.c)
+    add_executable(fusion_aos_soul_tests tests/test_aos_soul.c src/runtime/aos_soul.c
+                   src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_soul_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_tests)
     add_test(NAME aos_soul COMMAND fusion_aos_soul_tests)
@@ -938,7 +939,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_soma_tests tests/test_aos_soma.c
                    src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
-                   src/runtime/aos_anim.c)
+                   src/runtime/aos_anim.c src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_soma_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soma_tests)
     add_test(NAME aos_soma COMMAND fusion_aos_soma_tests)
@@ -950,13 +951,15 @@ if(BUILD_TESTING)
     add_test(NAME aos_room COMMAND fusion_aos_room_tests)
 
     add_executable(fusion_aos_door_tests tests/test_aos_door.c src/runtime/aos_door.c
-                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
+                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
+                   src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_door_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)
 
     add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
+                   src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
+                   src/runtime/aos_audio.c)
     target_include_directories(fusion_aos_weapon_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_weapon_tests)
     add_test(NAME aos_weapon COMMAND fusion_aos_weapon_tests)

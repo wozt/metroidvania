@@ -671,6 +671,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     }
     aos_soma_jump(soma, held, pressed);
     aos_soma_air(soma, layer, held);
+    if (soma->guardian) soma->guardian(soma->guardian_context);
 }
 
 /* Starts an animation but keeps the frame and tick, as case 3 does. */
@@ -922,6 +923,7 @@ static void hit_state(AosSoma *soma, const AosCollision *layer) {
         soma->state = 0;
     }
     air_routine(soma, layer);
+    if (soma->guardian) soma->guardian(soma->guardian_context);
 }
 
 /* Case 13 (sub_080199A0): knockback until Soma lands (the landing is hard,
@@ -942,6 +944,7 @@ static void knockback_state(AosSoma *soma, const AosCollision *layer, uint16_t p
         soma->state = 0;
     }
     air_routine(soma, layer);
+    if (soma->guardian) soma->guardian(soma->guardian_context);
 }
 
 /* _0801CD80: wall probes for the next frame. */
@@ -1003,9 +1006,11 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
         }
     }
     aos_anim_step(&soma->anim, soma->anims);
+    if (soma->hold_still) soma->vx = soma->friction = 0;
     /* _0801CF2C: per-frame flags are dropped at the end of the update. */
     soma->flags &= 0xFBF7FFFFu;
     soma->air_anim_locked = false;
+    soma->hold_still = false;
     /* The weapon entity deletes itself once the attack flag is clear. */
     if (!(soma->flags & AOS_FLAG_ATTACKING)) soma->weapon_active = false;
     soma->ticks++;

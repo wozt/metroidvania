@@ -11,8 +11,6 @@ aos:asm:asm/code/code_08014548.s:sub_080190E0	sub_080190E0	unclassified		audio	e
 aos:asm:asm/code/code_08014548.s:sub_08019180	sub_08019180	unclassified				asm_function	0x08019180	asm/code/code_08014548.s	9724	1	5
 aos:asm:asm/code/code_08014548.s:sub_0801938C	sub_0801938C	unclassified				asm_function	0x0801938C	asm/code/code_08014548.s	9978	1	1
 aos:asm:asm/code/code_08014548.s:sub_080197B4	sub_080197B4	unclassified		technical	exclusive_callees	asm_function	0x080197B4	asm/code/code_08014548.s	10493	1	6
-aos:asm:asm/code/code_08014548.s:sub_080199A0	sub_080199A0	unclassified				asm_function	0x080199A0	asm/code/code_08014548.s	10730	1	6
-aos:asm:asm/code/code_08014548.s:sub_08019A94	sub_08019A94	unclassified		technical	exclusive_callees	asm_function	0x08019A94	asm/code/code_08014548.s	10852	1	8
 aos:asm:asm/code/code_08014548.s:sub_08019BB0	sub_08019BB0	unclassified				asm_function	0x08019BB0	asm/code/code_08014548.s	10989	1	7
 aos:asm:asm/code/code_08014548.s:sub_08019D20	sub_08019D20	unclassified				asm_function	0x08019D20	asm/code/code_08014548.s	11159	1	3
 aos:asm:asm/code/code_08014548.s:sub_08019EF8	sub_08019EF8	unclassified		technical	exclusive_callees	asm_function	0x08019EF8	asm/code/code_08014548.s	11398	1	11
@@ -71,7 +69,6 @@ aos:asm:asm/code/code_080211F0.s:SkillLightningDollUse	SkillLightningDollUse	abi
 aos:asm:asm/code/code_080211F0.s:SkillLubicantUse	SkillLubicantUse	abilities	name			asm_function		asm/code/code_080211F0.s	34223	0	1
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:SkillMandragoraUse	SkillMandragoraUse	abilities	name			asm_function		asm/code/code_080211F0.s	19459	0	19
-aos:asm:asm/code/code_080211F0.s:SkillMedusaHeadUse	SkillMedusaHeadUse	abilities	name			asm_function		asm/code/code_080211F0.s	31367	0	4
 aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	name			asm_function		asm/code/code_080211F0.s	19018	0	20
 aos:asm:asm/code/code_080211F0.s:SkillPersephoneUse	SkillPersephoneUse	abilities	name			asm_function		asm/code/code_080211F0.s	29857	0	12
 aos:asm:asm/code/code_080211F0.s:SkillRedMinotaurUse	SkillRedMinotaurUse	abilities	name			asm_function		asm/code/code_080211F0.s	11109	0	11
@@ -125,11 +122,7 @@ aos:asm:asm/code/code_080211F0.s:sub_0802DBD0	sub_0802DBD0	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_0802DC10	sub_0802DC10	abilities	referrers			asm_function	0x0802DC10	asm/code/code_080211F0.s	25327	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DCB0	sub_0802DCB0	abilities	referrers			asm_function	0x0802DCB0	asm/code/code_080211F0.s	25410	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DD00	sub_0802DD00	unclassified		technical	exclusive_callees	asm_function	0x0802DD00	asm/code/code_080211F0.s	25452	9	1
-aos:asm:asm/code/code_080211F0.s:sub_0802DD84	sub_0802DD84	abilities	referrers			asm_function	0x0802DD84	asm/code/code_080211F0.s	25523	14	3
-aos:asm:asm/code/code_080211F0.s:sub_0802DE5C	sub_0802DE5C	abilities	referrers			asm_function	0x0802DE5C	asm/code/code_080211F0.s	25627	15	1
-aos:asm:asm/code/code_080211F0.s:sub_0802DF2C	sub_0802DF2C	unclassified				asm_function	0x0802DF2C	asm/code/code_080211F0.s	25732	7	0
 aos:asm:asm/code/code_080211F0.s:sub_0802DFF0	sub_0802DFF0	unclassified		technical	exclusive_callees	asm_function	0x0802DFF0	asm/code/code_080211F0.s	25834	10	4
-aos:asm:asm/code/code_080211F0.s:sub_0802E0C4	sub_0802E0C4	unclassified		technical	exclusive_callees	asm_function	0x0802E0C4	asm/code/code_080211F0.s	25935	3	1
 aos:asm:asm/code/code_080211F0.s:sub_0802E1D0	sub_0802E1D0	abilities	referrers			asm_function	0x0802E1D0	asm/code/code_080211F0.s	26065	4	2
 aos:asm:asm/code/code_080211F0.s:sub_0802E638	sub_0802E638	abilities	referrers			asm_function	0x0802E638	asm/code/code_080211F0.s	26607	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802ECF4	sub_0802ECF4	abilities	referrers			asm_function	0x0802ECF4	asm/code/code_080211F0.s	27438	0	8

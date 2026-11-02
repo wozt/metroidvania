@@ -1,6 +1,24 @@
 # Project status
 
-Last updated: **2026-10-31**.
+Last updated: **2026-11-02**.
+
+## Patch 0690 - Blue soul guardians and Medusa Head
+
+- The blue soul start `sub_0802E0C4` runs at the end of Soma's states 0,
+  12 and 13 through a new guardian hook. It needs the guardian button
+  held (and pressed for the toggled souls), no guardian alive and at
+  least max MP / 128 + 1 MP. The upkeep `sub_0802DF2C` drains one MP
+  every 60 / rate frames and ends a held soul on release and a toggled
+  soul on a second press. The 25 records of 0x080E192C are exported as
+  `metadata/blue_souls.tsv` (`aria_objects` v34).
+- `SkillMedusaHeadUse` (soul 15) holds an airborne Soma still: his vy
+  and gravity are zeroed after each update and gEwramData + 0x131B8 &
+  0x20 zeroes his vx and friction at the end of the next one; on release
+  he gets back his fall speed and gravity 0x2800. Sound 0x8C. A local
+  capture holds Soma at y 120 for 60 frames with R held.
+- The 23 other guardian routines are refused before they start. New
+  diagnostic `--blue-soul N`. Medusa Head's soul aspect is now ported.
+  Zero Mission is unchanged.
 
 ## Patch 0689 - Buer sounds audited
 

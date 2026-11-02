@@ -3152,7 +3152,7 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
             e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
-            (e->enemy.id == AOS_ENEMY_BUER &&
+            ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS) &&
              e->enemy.role == AOS_ROLE_ENEMY))
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend

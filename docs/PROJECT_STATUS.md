@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0705 - Nemesis AI from the native routines
+
+- Nemesis's AI is ported from its traced routines, replacing the old
+  hover-and-charge approximation:
+  - the fade-in with its linked sprite (`sub_080C68AC`);
+  - the tilted approach (`sub_080C6AA8`, turns of `sub_080686CC`);
+  - the attack rows of `0x08528A34` (`sub_080C6D0C`);
+  - three dashes (`sub_080C6F64`), the swoop legs of `0x085289FC`
+    (`sub_080C70F0`) and the spinning dive (`sub_080C722C`), with the tip
+    boxes of `sub_080C6EF8` and 0x85;
+  - the recoil every fourth blow or at a lethal one (`sub_080C7604`,
+    0x1C3, `sub_080C73F8`) and the fall at death (`sub_080C750C`, 0x72).
+- The runtime draws its affine tilt; the linked sprite (`sub_080C7784`)
+  runs at the end of the body's update and the trails go at the fall.
+- Rewritten `nemesis_tests`; a local capture of area 3 room 0 shows it
+  tilted with its trails and hitting Soma. Its sounds aspect is now
+  ported; its red soul skill still is not, so it stays incomplete. Zero
+  Mission is unchanged.
+
 ## Patch 0704 - Winged Skeleton AI from the native routines
 
 - The Winged Skeleton's AI is ported from its traced routines:

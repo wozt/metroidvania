@@ -1042,26 +1042,34 @@ player to its right their x and vx point left).
 
 Nemesis (enemy 0x26, `EnemyNemesisCreate` / `EnemyNemesisUpdate`) uses the
 compact direct-frame descriptor `0x0824D2D8`, loaded from graphics
-`0x081F4264` and palette `0x0820BEC8` by `sub_080C6714`. Its four native OAM
-records are exported as one-frame animation states, preserving the recorded
-hurt and attack boxes. The runtime ports the observable body loop from
-`sub_080C67CC`: an idle hover, a homing approach, a short charge and a
-recovery pause, with the native facing, sine bob and collision pass. The
-global `0x8E & 0x40` path keeps the idle frame without combat. The linked
-helper from `sub_080C76D4`/`sub_080C7784` is emitted as a parent-linked child:
-its static frames 1-3 use the exported native anchors, follow the parent's
-fixed-point position and mirror, and reproduce the +9/+10 pixel horizontal,
-+37/-4 pixel vertical and 10/40-frame/flicker timings. The three technical
-effect slots created by `sub_080C7B54` (sequence identities 9, 12 and 6) are
-also emitted as translucent, non-combat children. `sub_080458E4` allocates a
-zero-filled 24-record scratch table for each child; `sub_08045748` shifts that
-table backwards, writes the owner's integer position, sprite-frame id and
-mirror at record 0, then selects the child sequence index. The runtime keeps
-that history per child, so the three slots render delayed trails (9, 12 and 6
-frames), including the native first-frame zero-filled records. Their state-0 to
-state-2 activation, timer, visibility, vertical flip and owner removal match
-the callback. Palette callbacks and native sound calls remain open; death uses
-the shared 40-frame flame and blink sequence.
+`0x081F4264` and palette `0x0820BEC8` by `sub_080C6714`, in an affine slot
+whose angle (`+ 0x1C`) the runtime draws; the body is never mirrored. Its
+update is ported from the traced routines. State 0 (`sub_080C68AC`) waits
+hidden until its target is within 80 pixels, then fades in translucent with
+its linked sprite and fades that sprite out (128 frames). State 1
+(`sub_080C6AA8`) tilts to 0x1000 or 0xF000 by 0x180 a frame
+(`sub_080686CC`), then drifts half a pixel a frame until it is within 72
+pixels horizontally and 16 of 48 pixels above the target, its tilt bobbing
+by sin(`+ 0x1A`) / 32. State 2 (`sub_080C6D0C`) reads the next attack of
+one of the four rows of nine at `0x08528A34` (a new random row after nine):
+a dive starts at once; otherwise it slides two pixels a frame away while
+tilting, its linked sprite shows frame 2 below it, and two more tilts lead
+to a dash or a swoop. State 3 (`sub_080C6F64`) makes three dashes at three
+times its heading for 15 frames, the first two followed by an 8-frame
+recoil turning by the `0x081194D0` speeds; state 4 (`sub_080C70F0`) follows
+the six legs of `0x085289FC` (pixels, angle, frames), mirrored toward the
+target; state 5 (`sub_080C722C`) spins 65 frames by 0x1000, then flies at
+two pixels a frame at the target. These three states set both boxes to the
+16 x 8 tip of `sub_080C6EF8`, play 0x85 and rest 41 frames. Its hit callback
+`sub_080C7604` counts three blows down in `+ 0x24`; the fourth, or a lethal
+one (0x1C3), starts the recoil of state 6 (`sub_080C73F8`) with the linked
+sprite in state 3, and a dead Nemesis then falls (`sub_080C750C`, 0x72) with
+flames until below screen row 0xAA or after 65 frames. The linked sprite
+(`sub_080C7784`) runs at the end of the body's update, as its slot follows
+the body's. The three technical effect slots created by `sub_080C7B54`
+(sequence identities 9, 12 and 6) keep the 24-record history of
+`sub_08045748` and render delayed trails until the fall. The hit spark
+`sub_08042B8C` and the death palette bits are not ported, nor its red soul.
 
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the

@@ -181,6 +181,16 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_SKELETON_HELD = 33, AOS_ROLE_WINGED_BONE = 34,
        AOS_ROLE_WINGED_PIECE = 35 };
 
+/* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
+ * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
+ * follows the body's, so the body runs it at the end of its own update and
+ * the child entity only shows it. */
+typedef struct {
+    uint8_t state, step, timer, frame;
+    bool mirrored, hidden;
+    int32_t x, y;
+} AosNemesisHelper;
+
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
     int32_t x, y;           /* + 0x40, + 0x44 (room pixels, 16.16) */
@@ -257,6 +267,14 @@ typedef struct AosEnemy {
     uint8_t skel_flags;
     uint16_t skel_spin;
     bool spinning;
+    /* Nemesis: + 0x13 (passes left), + 0x16 / + 0x17 (attack row and
+     * index of 0x08528A34), + 0x18 (bit 1 right of its target, bit 3 right
+     * of Soma, bit 5 no collisions), + 0x1E (angular speed), + 0x24 (blows
+     * before a reaction); + 0x1A is `phase`, + 0x1C `angle`. */
+    uint8_t nem_passes, nem_row, nem_index, nem_hits;
+    uint16_t nem_flags;
+    int16_t nem_spin, nem_wait;
+    AosNemesisHelper nem_helper;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

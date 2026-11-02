@@ -6171,90 +6171,150 @@ static void killer_doll_tests(void) {
 static void nemesis_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t ticks[] = {1};
-    const AosAnimDef defs[4] = {{1, ticks}, {1, ticks}, {1, ticks}, {1, ticks}};
-    const AosAnimSet anims = {defs, 4};
+    const AosAnimDef defs[1] = {{1, ticks}};
+    const AosAnimSet anims = {defs, 1};
     static AosEnemyKind kind;
     memset(&kind, 0, sizeof kind);
     kind.anims = &anims;
-    kind.sprites[0][2] = 2;
-    for (int a = 1; a < 4; ++a) {
-        kind.modes[a][0] = 1;
-        kind.hurt[a][0] = kind.attack[a][0] = (AosBox){-8, -16, 16, 24};
-    }
     const AosEnemyStats stats = {440, 40, 24, 0x0181, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(100), NULL);
     AosEnemy n;
     aos_enemy_set_flag_8e_40(false);
-    assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
-    assert(n.state == 0 && n.anim.id == 0 && n.attack_wait >= 0x40 && n.attack_wait <= 0xBF);
-    n.attack_wait = 0;
-    AosHitReport helper_report =
-        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(helper_report.child_count == 4);
-    assert(helper_report.children[0].role == AOS_ROLE_NEMESIS_HELPER &&
-           helper_report.children[0].state == 1 && helper_report.children[0].static_frame == 1);
-    AosEnemy helper = helper_report.children[0];
-    assert(helper_report.children[1].role == AOS_ROLE_NEMESIS_EFFECT &&
-           helper_report.children[1].variant == 9);
-    assert(helper_report.children[2].role == AOS_ROLE_NEMESIS_EFFECT &&
-           helper_report.children[2].variant == 12);
-    assert(helper_report.children[3].role == AOS_ROLE_NEMESIS_EFFECT &&
-           helper_report.children[3].variant == 6);
-    helper.parent = &n;
-    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(!helper.hidden && helper.static_frame == 1 && helper.x == n.x && helper.y == n.y);
-    helper.state = 2;
-    helper.step = 0;
-    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(helper.static_frame == 2 && helper.y == n.y + AOS_FIXED(37) &&
-           (helper.x == n.x - AOS_FIXED(9) || helper.x == n.x + AOS_FIXED(9)));
-    helper.state = 3;
-    helper.step = 0;
-    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(helper.static_frame == 3 && helper.y == n.y - AOS_FIXED(4));
-    AosEnemy effect = helper_report.children[1];
-    effect.parent = &n;
-    n.anim.frame = 2;
-    aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(effect.state == 2 && effect.timer == 1 && effect.step == 9 && !effect.hidden &&
-           effect.translucent && effect.static_frame == 0 && effect.x == 0 && effect.y == 0 &&
-           effect.combat.attack_off && effect.combat.hurt_off);
-    aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(effect.timer == 2 && effect.static_frame == 0);
-    for (int i = 0; i < 8; ++i)
-        aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(effect.timer == 10 && effect.static_frame == 2 && effect.x == n.x &&
-           effect.y == (n.y >> 16) * 65536);
-    n.defeated = true;
-    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(helper.removed);
-    n.defeated = false;
-    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.state == 1);
-    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.anim.id == 1 && n.vx > 0);
-    int frames = 0;
-    while (n.state == 1 && frames++ < 80)
-        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.state == 2);
-    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.anim.id == 2);
-    while (n.state == 2 && frames++ < 120)
-        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.state == 3);
-    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.anim.id == 3);
-    while (n.state == 3 && frames++ < 180)
-        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.state == 0 && n.attack_wait == 0x40);
+    aos_audio_clear();
 
-    /* The direct frame-1 box participates in the normal weapon collision. */
-    n.state = 1;
-    n.step = 1;
-    n.timer = 0x20;
-    n.x = soma.x;
-    n.y = soma.y;
-    n.hp = 1;
+    /* Creation: never mirrored, the native boxes, state 0 step 1 hidden
+     * at angle 0x1000 with its linked sprite hidden in state 5. */
+    assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(n.state == 0 && n.step == 1 && n.hidden && n.angle == 0x1000 && !n.mirrored);
+    assert(n.own_boxes && n.own_attack.x == -4 && n.own_attack.y == 4 && n.own_attack.w == 8 &&
+           n.own_hurt.x == -8 && n.own_hurt.w == 16 && n.nem_index == 9 && n.nem_hits == 3);
+    assert(n.nem_helper.state == 5 && n.nem_helper.hidden && n.nem_helper.mirrored &&
+           n.nem_helper.frame == 1 && n.nem_helper.x == n.x);
+
+    /* The first update emits the linked sprite and the three trails; Soma
+     * 120 pixels away keeps it waiting. */
+    AosHitReport first = aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(first.child_count == 4 && first.children[0].role == AOS_ROLE_NEMESIS_HELPER &&
+           first.children[1].variant == 9 && first.children[2].variant == 12 &&
+           first.children[3].variant == 6 && n.step == 1);
+    AosEnemy helper = first.children[0];
+    helper.parent = &n;
+    AosEnemy effect = first.children[1];
+    effect.parent = &n;
+
+    /* Within 80 pixels: the linked sprite 10 pixels right (it faces
+     * right) and 16 below, then 128 frames of fading in and out. */
+    soma.x = AOS_FIXED(150);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.step == 2 && n.nem_helper.x == n.x + AOS_FIXED(10) &&
+           n.nem_helper.y == n.y + AOS_FIXED(16));
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.translucent && n.hidden == false && n.timer == 1);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.hidden && n.nem_helper.hidden);
+    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(helper.hidden && helper.translucent && helper.x == n.nem_helper.x &&
+           helper.static_frame == 1);
+    int frames = 2;
+    while (n.state == 0 && frames < 200) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(n.state == 1 && frames == 128 && !n.hidden && !n.translucent &&
+           n.nem_helper.state == 0 && n.nem_helper.hidden);
+
+    /* State 1: it tilts from 0x1000 to 0xF000 (Soma to its right) by 0x180
+     * in 22 frames, then rises half a pixel a frame until 48 pixels above
+     * Soma (within 72 horizontally already). */
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.step == 2 && n.nem_spin == -100 && n.own_attack.x == -8 && n.own_attack.w == 16);
+    frames = 0;
+    while (n.step == 2 && frames < 40) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 22 && n.angle == 0xF000 && n.step == 3);
+    frames = 0;
+    while (n.state == 1 && frames < 100) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(n.state == 2 && (n.y >> 16) == 68 && frames == 64 && n.x == AOS_FIXED(100));
+
+    /* State 2 (row 0 drawn by the zero random): it slides away from Soma
+     * two pixels a frame while tilting to 0x2800 by 800, the linked
+     * sprite shows frame 2 below it, then the first attack (a swoop). */
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.nem_row == 0 && n.nem_index == 0 && n.x == AOS_FIXED(98) && n.step == 0);
+    frames = 1;
+    while (n.step == 0 && frames < 40) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(n.angle == 0x2800 && n.nem_helper.state == 2 && n.nem_helper.frame == 2 &&
+           !n.nem_helper.mirrored && n.nem_helper.y == n.y + 0x250000 &&
+           n.nem_helper.x == n.x + AOS_FIXED(9));
+    while (n.state == 2 && frames < 200) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(n.state == 4 && n.nem_index == 1);
+
+    /* State 4: six legs over 64 frames (+48, +8 pixels toward Soma less the
+     * 8 / 24 truncation, the turns cancelling), sound 0x85 at each leg, 42
+     * frames of rest. */
+    int32_t x0 = n.x, y0 = n.y;
+    uint16_t a0 = (uint16_t)n.angle;
+    aos_audio_clear();
+    frames = 0;
+    while (n.step != 5 && frames < 100) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 64 && n.x == x0 + AOS_FIXED(48) && n.y == y0 + AOS_FIXED(8) - 8 &&
+           (uint16_t)n.angle == a0 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 7);
+    while (n.state == 4 && frames < 200) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(n.state == 1 && frames == 64 + 42);
+
+    /* State 3: three dashes of 16 frames, the first two followed by a
+     * 9-frame recoil, then 42 frames of rest; 0x85 at each dash's end. The
+     * tip box follows the angle (0: 16 x 8 at (0, 8)). */
+    n.state = 3;
+    n.step = 0;
+    n.angle = 0;
+    aos_audio_clear();
+    frames = 0;
+    while (n.state == 3 && frames < 200) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        if (frames == 0)
+            assert(n.own_hurt.x == 0 && n.own_hurt.y == 8 && n.own_hurt.w == 16 &&
+                   n.own_hurt.h == 8 && n.nem_spin == -0x320 && n.vy == 0x10000);
+        ++frames;
+    }
+    assert(frames == 25 + 25 + 17 + 42 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 3);
+
+    /* State 5: 65 frames spinning by 0x1000 (0x85 every 16), then a
+     * two-pixel flight at Soma for |dx / vx| frames; the turn frame and the
+     * two last steps also move it, two pixels past him. */
+    n.state = 5;
+    n.step = 0;
+    n.x = AOS_FIXED(100);
+    n.y = AOS_FIXED(100);
+    aos_audio_clear();
+    for (int i = 0; i < 66; ++i)
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.step == 2 && n.nem_spin == 0 && n.vx == 0x20000 && n.vy == 0 && n.timer == 25 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 6);
+    while (n.state == 5)
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.state == 1 && n.x == AOS_FIXED(154));
+
+    /* Blows: three only count down + 0x24; the fourth starts the recoil
+     * (state 6) with the linked sprite in state 3 behind it. */
     static const uint8_t blade_ticks[] = {8};
     const AosAnimDef blade_def = {1, blade_ticks};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -6262,13 +6322,61 @@ static void nemesis_tests(void) {
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
     soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
-    AosHitReport hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
+    n.state = 1;
+    n.step = 3;
+    n.x = soma.x;
+    n.y = soma.y - AOS_FIXED(8);
+    n.own_hurt = (AosBox){-8, -8, 16, 16};
+    const AosCombat fresh = n.combat;
+    for (int i = 0; i < 3; ++i) {
+        n.combat = fresh;
+        n.hit_flash = 0;
+        AosHitReport hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 60, 4,
+                                            0, 0, always_zero);
+        assert(hit.enemy_hit && !hit.killed && n.hit_flash == 8 && n.state == 1);
+    }
+    assert(n.nem_hits == 0);
+    n.combat = fresh;
+    n.hit_flash = 0;
+    AosHitReport hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 60, 4, 0, 0,
                                         always_zero);
-    assert(hit.enemy_hit && hit.killed && n.defeated && n.timer == 0x28 && n.anim.id == 3);
+    assert(hit.enemy_hit && n.state == 6 && n.nem_hits == 3 && n.nem_helper.state == 3 &&
+           n.nem_helper.frame == 3);
+    /* Flashing, it only collides; then, Soma not left of it, it is knocked
+     * left until the linked sprite has flickered out. */
     frames = 0;
-    while (!n.removed && frames++ < 50)
+    while (n.state == 6 && frames < 200) {
         aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(n.removed && frames == 40);
+        ++frames;
+    }
+    assert(n.state == 1 && n.x < soma.x);
+
+    /* A lethal blow: sound 0x1C3, the recoil, then the fall (0x72), the
+     * trails deleted, the body gone after 66 frames. */
+    n.combat = fresh;
+    n.hit_flash = 0;
+    n.state = 1;
+    n.step = 3;
+    n.x = soma.x;
+    n.y = soma.y - AOS_FIXED(8);
+    aos_audio_clear();
+    hit = aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 9999, 4, 0, 0,
+                           always_zero);
+    assert(hit.killed && n.defeated && n.state == 6 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1C3) == 1);
+    while (n.state == 6)
+        aos_enemy_update(&n, &soma, &layer, &kind, &weapon, &blade, 9999, 4, 0, 0, always_zero);
+    assert(n.state == 0xFF && (n.nem_flags & 0x20));
+    aos_enemy_update(&effect, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(effect.removed);
+    frames = 0;
+    while (!n.removed && frames < 100) {
+        aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 1000, always_zero);
+        ++frames;
+    }
+    assert(frames == 66 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
+    aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(helper.removed);
 
     aos_enemy_set_flag_8e_40(true);
     assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));

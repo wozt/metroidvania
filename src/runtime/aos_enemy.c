@@ -469,6 +469,9 @@ static bool is_early_enemy(uint8_t id) {
            id == AOS_ENEMY_WINGED_SKELETON;
 }
 
+static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma);
+static void nemesis_appear(AosEnemy *n, const AosSoma *soma);
+
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
@@ -914,20 +917,32 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
         return true;
     }
     if (id == AOS_ENEMY_NEMESIS) {
-        /* EnemyNemesisCreate / sub_080C6714: four direct OAM frames from
-         * 0x0824D2D8, with no animation table. The native state machine
-         * selects those records directly while orbiting and charging at
-         * Soma; the exporter exposes each record as a one-frame animation.
-         * Nemesis starts in state 0, with the global 0x8E & 0x40 path using
-         * the same idle frame without combat. */
+        /* EnemyNemesisCreate / sub_080C6714: direct OAM frame 0 of
+         * 0x0824D2D8 (the exporter's one-frame animation 0) in an affine
+         * slot at angle 0, never mirrored; state 7 (inert) under the global
+         * 0x8E & 0x40. Otherwise the attack box (-4, 4, 8, 8) of 0x080804FC,
+         * the hurtbox (-8, -8, 16, 16), + 0x16 = 0, + 0x17 = 9, + 0x24 = 3,
+         * the linked sprite (sub_080C76D4: state 1 run once) and state 0's
+         * first step. */
         play(enemy, anims, 0);
         step_anim(enemy, anims);
-        enemy->state = flag_8e_40 ? 7 : 0;
-        enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
-        enemy->attack_wait = (uint16_t)((aos_random() & 0x7F) + 0x40);
-        enemy->flight = (uint16_t)((aos_random() & 0x7F) + 0x40);
-        enemy->leg = 0;
-        enemy->own_boxes = false;
+        enemy->mirrored = false;
+        enemy->angle = 0;
+        if (flag_8e_40) {
+            enemy->state = 7;
+            return true;
+        }
+        enemy->own_boxes = true;
+        enemy->own_attack = (AosBox){-4, 4, 8, 8};
+        enemy->own_hurt = (AosBox){-8, -8, 16, 16};
+        enemy->nem_row = 0;
+        enemy->nem_index = 9;
+        enemy->nem_hits = 3;
+        enemy->nem_helper.state = 1;
+        nemesis_helper_step(enemy, soma);
+        enemy->state = 0;
+        enemy->step = 0;
+        nemesis_appear(enemy, soma);
         return true;
     }
     if (id == AOS_ENEMY_BEAM_SKELETON) {
@@ -1140,6 +1155,8 @@ static void beam_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report)
 static void doll_shatter(AosEnemy *e, AosHitReport *report);
 
 static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
+static void nemesis_struck(AosEnemy *n);
+static void skeleton_merge(AosHitReport *report, const AosHitReport *hit);
 
 /* sub_0806E314 / sub_080421AC: the player against the enemy, then the
  * weapon against the enemy, then the contact callbacks. */
@@ -1269,6 +1286,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                  * independent +0x0D timer. Lethal hits use state 3 below. */
                 enemy->step = 1;
                 enemy->substep = 0;
+            }
+            if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY) {
+                /* sub_080C7604: sub_080683BC at a lethal blow, then its
+                 * own reaction. */
+                if (enemy->hp <= 0) report.killed = enemy->defeated = true;
+                nemesis_struck(enemy);
+                goto contact;
             }
             if (enemy->hp <= 0) {
                 report.killed = true;
@@ -1891,93 +1915,142 @@ static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range
 static void integrate(AosEnemy *e);
 static void stop(AosEnemy *e);
 
-/* The linked Nemesis sprite created by sub_080C76D4/sub_080C7784. The native
- * callback is driven by a small state machine and reads the parent slot on
- * every frame for position and lifecycle. The offsets and frame selections
- * are the native fixed-point values. */
+/* sub_0806BD64: (s16)(integer x - the target's integer x). */
+static int16_t player_dx(const AosEnemy *enemy, const AosSoma *soma) {
+    return (int16_t)((enemy->x >> 16) - (target_x(soma) >> 16));
+}
+
+/* sub_0806BAC8: the angle from the entity to its target, whole pixels. */
+static uint16_t angle_to_target(const AosEnemy *e, const AosSoma *soma) {
+    return aos_arctan2((int16_t)((target_x(soma) >> 16) - (e->x >> 16)),
+                       (int16_t)((target_y(soma) >> 16) - (e->y >> 16)));
+}
+
+/* sub_080686CC: the 16-bit angle turned by `step` the short way toward
+ * `target`; true once it is there (the last step snaps onto it). */
+static int turn_side(uint16_t a, uint16_t target) {
+    if (a == target) return 0;
+    return (uint16_t)(a - target) > (uint16_t)(target - a) ? 1 : -1;
+}
+
+static bool turn_angle(uint32_t *angle, uint16_t step, uint16_t target) {
+    uint16_t a = (uint16_t)*angle;
+    int side = turn_side(a, target);
+    if (side == 0) return true;
+    a = (uint16_t)(side > 0 ? a + step : a - step);
+    *angle = a;
+    if (turn_side(a, target) == side) return false;
+    *angle = target;
+    return true;
+}
+
+/* + 0x18 bits of Nemesis. */
+#define NEM_TARGET_LEFT 0x02    /* its target lies left of it */
+#define NEM_SOMA_LEFT 0x08      /* Soma lies left of it (state 6) */
+#define NEM_NO_COLLIDE 0x20     /* dead: no more collision passes */
+
+/* Sets the linked sprite's state; a new state restarts its steps. */
+static void nemesis_helper_set(AosEnemy *n, uint8_t state) {
+    if (n->nem_helper.state == state) return;
+    n->nem_helper.state = state;
+    n->nem_helper.step = 0;
+}
+
+static void helper_face(AosNemesisHelper *h, const AosSoma *soma) {
+    if (target_x(soma) != h->x) h->mirrored = h->x < target_x(soma);
+}
+
+/* sub_080C7784, run after the body as its slot follows the body's: 0
+ * hidden; 1 frame 1 on the body; 2 frame 2 nine pixels on its facing side
+ * and 37 below, facing away from the target, for ten frames; 3 frame 3 ten
+ * pixels behind and 4 above, facing Soma, for 40 frames; 4 a 31-frame
+ * flicker (hidden unless + 0x0D % 3 = 0), then 0; 5 idle. */
+static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma) {
+    AosNemesisHelper *h = &n->nem_helper;
+    switch (h->state) {
+    case 0: h->hidden = true; break;
+    case 1:
+        h->hidden = false;
+        h->frame = 1;
+        h->x = n->x;
+        h->y = n->y;
+        helper_face(h, soma);
+        break;
+    case 2:
+        if (h->step == 0) {
+            h->x = n->x;
+            helper_face(h, soma);
+            h->mirrored = !h->mirrored;
+            h->hidden = false;
+            h->frame = 2;
+            h->timer = 0;
+            h->step = 1;
+        }
+        if (h->step == 1) {
+            h->x = n->x + (h->mirrored ? -AOS_FIXED(9) : AOS_FIXED(9));
+            h->y = n->y + 0x250000;
+            if (h->timer++ > 9) nemesis_helper_set(n, 4);
+        }
+        break;
+    case 3:
+        if (h->step == 0) {
+            h->hidden = false;
+            h->frame = 3;
+            h->timer = 0;
+            h->step = 1;
+            h->mirrored = !(soma->x < n->x);
+        }
+        if (h->step == 1) {
+            h->x = n->x + (h->mirrored ? AOS_FIXED(10) : -AOS_FIXED(10));
+            h->y = n->y - AOS_FIXED(4);
+            if (h->timer++ > 0x27) nemesis_helper_set(n, 4);
+        }
+        break;
+    case 4:
+        if (h->step == 0) {
+            h->timer = 0;
+            h->step = 1;
+        }
+        if (h->step == 1) {
+            h->hidden = h->timer % 3 != 0;
+            if (h->timer++ > 0x1E) {
+                nemesis_helper_set(n, 0);
+                h->timer = 0;
+            }
+        }
+        break;
+    default: break;
+    }
+}
+
+/* The child entity of sub_080C76D4 (translucent, + 0x5C + 2) shows the
+ * linked sprite its body runs. */
 static void nemesis_helper_update(AosEnemy *h) {
     const AosEnemy *parent = h->parent;
     if (!parent || parent->removed) {
         h->removed = true;
         return;
     }
-    if (parent->defeated) {
-        h->hidden = true;
-        h->removed = true;
-        return;
-    }
-    switch (h->state) {
-    case 0:
-        h->hidden = true;
-        break;
-    case 1:
-        h->hidden = false;
-        h->static_frame = 1;
-        h->x = parent->x;
-        h->y = parent->y;
-        h->mirrored = parent->mirrored;
-        break;
-    case 2:
-        h->hidden = false;
-        h->static_frame = 2;
-        if (h->step == 0) {
-            h->x = parent->x;
-            h->mirrored = !parent->mirrored;
-            h->timer = 0;
-            h->step = 1;
-        }
-        h->x = parent->x + (h->mirrored ? -AOS_FIXED(9) : AOS_FIXED(9));
-        h->y = parent->y + AOS_FIXED(37);
-        if (h->timer++ >= 10) {
-            h->state = 4;
-            h->step = 0;
-            h->timer = 0;
-        }
-        break;
-    case 3:
-        h->hidden = false;
-        h->static_frame = 3;
-        if (h->step == 0) {
-            h->timer = 0;
-            h->step = 1;
-            h->mirrored = parent->mirrored;
-        }
-        h->x = parent->x + (h->mirrored ? -AOS_FIXED(10) : AOS_FIXED(10));
-        h->y = parent->y - AOS_FIXED(4);
-        if (h->timer++ >= 40) {
-            h->state = 4;
-            h->step = 0;
-            h->timer = 0;
-        }
-        break;
-    case 4:
-        h->hidden = false;
-        h->static_frame = 3;
-        /* sub_080C7784: mirror is cleared on timer % 3 == 0 and set on the
-         * other two ticks of each three-frame flicker group. */
-        h->mirrored = (h->timer % 3) != 0;
-        if (h->timer++ >= 31) {
-            h->state = 0;
-            h->step = 0;
-            h->timer = 0;
-            h->hidden = true;
-        }
-        break;
-    default:
-        /* State 5 is the native no-op state used while the parent is idle. */
-        h->hidden = true;
-        break;
-    }
+    const AosNemesisHelper *s = &parent->nem_helper;
+    h->state = s->state;
+    h->x = s->x;
+    h->y = s->y;
+    h->mirrored = s->mirrored;
+    h->hidden = s->hidden;
+    h->static_frame = s->frame;
+    h->translucent = true;
 }
 
 /* The three visual slots made by sub_080C7B54 (sequence indices 9, 12 and
- * 6). sub_08045748 copies the owning Nemesis position, mirror and current
- * sprite record into each translucent child; their collision callbacks are
- * disabled. Keeping the sequence index in `variant` preserves the native
- * identity while the child scratch history selects a delayed direct frame. */
+ * 6). sub_08045748 copies the owning Nemesis position, mirror, visibility
+ * and current sprite record into each translucent child; their collision
+ * callbacks are disabled. sub_080C7AB8 deletes them when the body starts
+ * dying (state 0xFF). Keeping the sequence index in `variant` preserves the
+ * native identity while the child scratch history selects a delayed direct
+ * frame. */
 static void nemesis_effect_update(AosEnemy *effect, const AosEnemyKind *kind) {
     const AosEnemy *parent = effect->parent;
-    if (!parent || parent->removed || parent->defeated) {
+    if (!parent || parent->removed || parent->state == 0xFF) {
         effect->removed = true;
         return;
     }
@@ -2015,138 +2088,466 @@ static void nemesis_effect_update(AosEnemy *effect, const AosEnemyKind *kind) {
     effect->static_frame = effect->nemesis_history_frame[index];
 }
 
-/* EnemyNemesisUpdate (sub_080C67CC and states 0..6): the original uses a
- * compact four-frame descriptor and several linked helper entities. The
- * observable body routine keeps the idle hover, homing approach, short
- * charge and recovery loop, while emitting the linked helper on its first
- * active update. The three technical effects created by sub_080C7B54 remain
- * a separate parity gap. */
+/* sub_080C68AC (state 0): it waits hidden until the target is within 80
+ * pixels, flickers in translucent with its linked sprite for 41 frames,
+ * waits 21, flickers the linked sprite out for 41 and after 21 more starts
+ * its approach. Step 0 runs once at creation. */
+static void nemesis_appear(AosEnemy *n, const AosSoma *soma) {
+    AosNemesisHelper *h = &n->nem_helper;
+    switch (n->step) {
+    case 0:
+        n->angle = 0x1000;
+        n->hidden = h->hidden = true;
+        h->state = 5;
+        n->timer = 0;
+        n->step = 1;
+        /* fallthrough */
+    case 1:
+        if (!player_within(n, soma, 0x500000)) return;
+        h->x = n->x + (h->mirrored ? AOS_FIXED(10) : AOS_FIXED(13));
+        h->y = n->y + AOS_FIXED(16);
+        n->step = 2;
+        return;
+    case 2:
+        n->hidden = h->hidden = n->timer % 3 != 0;
+        n->translucent = true;
+        if (n->timer++ <= 0x28) return;
+        n->hidden = h->hidden = false;
+        n->translucent = false;
+        break;
+    case 3:
+        if (n->timer++ <= 0x14) return;
+        break;
+    case 4:
+        h->hidden = n->timer % 3 != 0;
+        if (n->timer++ <= 0x28) return;
+        h->hidden = true;
+        nemesis_helper_set(n, 0);
+        break;
+    case 5:
+        if (n->timer++ <= 0x14) return;
+        n->timer = 0;
+        n->state = 1;
+        n->step = n->substep = 0;
+        return;
+    default: return;
+    }
+    n->timer = 0;
+    n->step++;
+}
+
+/* sub_080C6AA8 (state 1): opaque, the attack box (-8, -8, 16, 16), it tilts
+ * to 0x1000 (0xF000 with the target to its right) by 0x180 a frame, then
+ * drifts half a pixel a frame on each axis until it is within 72 pixels
+ * horizontally and 16 of 48 pixels above the target (state 2), bobbing
+ * its tilt by sin(+ 0x1A) / 32; crossing the target restarts the tilt. */
+static void nemesis_approach(AosEnemy *n, const AosSoma *soma, uint32_t (*random)(void)) {
+    if (player_dx(n, soma) > 0) n->nem_flags |= NEM_TARGET_LEFT;
+    else n->nem_flags &= (uint16_t)~NEM_TARGET_LEFT;
+    switch (n->step) {
+    case 0:
+        n->translucent = false;
+        n->own_attack = (AosBox){-8, -8, 16, 16};
+        n->vx = n->vy = 0x8000;
+        if (player_dx(n, soma) > 0) n->vx = -n->vx;
+        if (player_dy(n, soma) > 0) n->vy = -n->vy;
+        n->phase = 0;
+        n->nem_spin = -100;
+        n->step = 2;
+        return;
+    case 1:
+    case 2:
+        if (turn_angle(&n->angle, 0x180, player_dx(n, soma) > 0 ? 0x1000 : 0xF000)) n->step++;
+        return;
+    case 3: {
+        bool near_x = false, near_y = false;
+        n->vx = n->vy = 0x8000;
+        if (player_dx(n, soma) > 0) n->vx = -abs(n->vx);
+        if (player_dy(n, soma) + 0x20 > 0) n->vy = -abs(n->vy);
+        if (abs(player_dx(n, soma)) > 0x48) n->x += n->vx;
+        else near_x = true;
+        if (abs(player_dy(n, soma) + 0x30) > 0x10) n->y += n->vy;
+        else near_y = true;
+        if (near_x && near_y && n->state != 2) {
+            n->state = 2;
+            n->step = n->substep = 0;
+        }
+        int16_t dx = player_dx(n, soma);
+        if ((dx >= 0 && n->vx > 0) || (dx <= 0 && n->vx < 0)) {
+            n->step = 0;
+            return;
+        }
+        int32_t s = aos_sine(n->phase);
+        if (s < 0) s += 0x1F;
+        n->angle = (uint16_t)((s >> 5) + (dx > 0 ? 0x1000 : -0x1000));
+        n->phase = (uint16_t)(n->phase + 0x200);
+        n->nem_wait = n->nem_wait ? (int16_t)(n->nem_wait - 1) : (int16_t)(random() % 0xB4 + 10);
+        return;
+    }
+    default: return;
+    }
+}
+
+/* 0x08528A34: four rows of nine attacks (0 dash, 1 swoop, 2 dive). */
+static const uint8_t nemesis_attacks[4][9] = {
+    {1, 0, 0, 2, 1, 1, 0, 2, 2},
+    {0, 1, 2, 1, 0, 1, 2, 1, 0},
+    {0, 1, 0, 1, 0, 2, 2, 2, 2},
+    {2, 2, 1, 1, 0, 0, 1, 1, 2},
+};
+
+static void nemesis_next_attack(AosEnemy *n, uint32_t (*random)(void)) {
+    if (n->nem_index == 9) {
+        n->nem_row = (uint8_t)(random() & 3);
+        n->nem_index = 0;
+    }
+}
+
+static void nemesis_enter(AosEnemy *n, uint8_t state) {
+    if (n->state == state) return;
+    n->state = state;
+    n->step = n->substep = 0;
+}
+
+/* sub_080C6D0C (state 2): the next attack of its row; a dive (2) starts at
+ * once, otherwise it slides two pixels a frame away from the target while
+ * tilting to 0xD800 (0x2800) by |8 * + 0x1E|, the
+ * linked sprite shows frame 2 and, once it is gone, it tilts to 0x9800
+ * (0x6800) then 0x2800 (0xD800) by |16 * + 0x1E| and starts the attack. */
+static void nemesis_choose(AosEnemy *n, uint32_t (*random)(void)) {
+    bool left = n->nem_flags & NEM_TARGET_LEFT;
+    if (n->step == 0) {
+        nemesis_next_attack(n, random);
+        if (nemesis_attacks[n->nem_row][n->nem_index] == 2) {
+            nemesis_enter(n, 5);
+            n->nem_index++;
+        }
+    }
+    uint16_t target;
+    switch (n->step) {
+    case 0:
+        n->x += left ? 0x20000 : -0x20000;
+        if (turn_angle(&n->angle, (uint16_t)abs(n->nem_spin * 8), left ? 0xD800 : 0x2800)) {
+            nemesis_helper_set(n, 2);
+            n->step++;
+        }
+        return;
+    case 1:
+        if (n->nem_helper.state == 0) n->step++;
+        return;
+    case 2:
+    case 3:
+        if (n->step == 2) target = left ? 0x9800 : 0x6800;
+        else target = left ? 0x2800 : 0xD800;
+        if (turn_angle(&n->angle, (uint16_t)abs(n->nem_spin * 16), target)) n->step++;
+        return;
+    case 4: {
+        if (n->nem_helper.state != 0) return;
+        nemesis_next_attack(n, random);
+        uint8_t attack = nemesis_attacks[n->nem_row][n->nem_index];
+        nemesis_enter(n, (uint8_t)(attack + 3));
+        n->nem_index++;
+        return;
+    }
+    default: return;
+    }
+}
+
+/* sub_080C6EF8: both boxes 16 x 8 at the tip its angle points to. */
+static void nemesis_tip_box(AosEnemy *n) {
+    int16_t a = (int16_t)n->angle;
+    int8_t x = (int8_t)(fixed_mul(aos_sine((uint32_t)(a + 0x8000)), 0x100000) >> 16);
+    int8_t y = (int8_t)(fixed_mul(aos_sine((uint32_t)(a + 0x4000)), 0x80000) >> 16);
+    if (x > 0) x = (int8_t)(x - 16);
+    n->own_attack = n->own_hurt = (AosBox){x, y, 16, 8};
+}
+
+/* sub_0806D2F8(e, + 0x1C + 0x4000, 1.0): the velocity along its body. */
+static void nemesis_heading(AosEnemy *n) {
+    uint32_t a = (uint32_t)((int16_t)n->angle + 0x4000);
+    n->vx = aos_sine(a + 0x4000);
+    n->vy = aos_sine(a);
+}
+
+static void nemesis_rest(AosEnemy *n) {
+    if (n->timer++ <= 0x28) return;
+    n->timer = 0;
+    nemesis_enter(n, 1);
+    n->nem_passes = 0;
+}
+
+/* sub_080C6F64 (state 3): three dashes at three times its heading for 15
+ * frames (sound 0x85 at the end), the first two followed by an 8-frame
+ * recoil at six times the reverse heading turning by 0x320, then -400 a
+ * frame (0x081194D0); 41 frames of rest, then state 1. */
+static void nemesis_dash(AosEnemy *n) {
+    static const int16_t spins[3] = {0x320, -400, 0};
+    nemesis_tip_box(n);
+    switch (n->step) {
+    case 0:
+        n->nem_passes = 3;
+        n->step = 1;
+        /* fallthrough */
+    case 1:
+        n->nem_spin = spins[3 - n->nem_passes];
+        if (!(n->nem_flags & NEM_TARGET_LEFT)) n->nem_spin = (int16_t)-n->nem_spin;
+        nemesis_heading(n);
+        n->timer = 0;
+        n->step = 2;
+        /* fallthrough */
+    case 2:
+        if (n->timer++ > 0xE) {
+            n->timer = 0;
+            n->step = 3;
+            aos_audio_play_song(0x85);
+            return;
+        }
+        n->x += n->vx * 3;
+        n->y += n->vy * 3;
+        return;
+    case 3:
+        if (n->nem_passes == 1) {
+            n->step = 4;
+            n->timer = 0;
+            return;
+        }
+        if (n->timer++ > 7) {
+            n->timer = 0;
+            n->step = --n->nem_passes == 0 ? 4 : 1;
+            return;
+        }
+        n->angle = (uint16_t)(n->angle + n->nem_spin);
+        nemesis_heading(n);
+        n->x -= n->vx * 6;
+        n->y -= n->vy * 6;
+        return;
+    case 4: nemesis_rest(n); return;
+    default: return;
+    }
+}
+
+/* 0x085289FC: the swoop's legs (x, y pixels, angle turned, frames), x
+ * mirrored toward the target, ended by 0x7FFF. */
+static const int16_t nemesis_swoop[][4] = {
+    {48, 8, 0, 24},  {8, -8, 0x3400, 8},  {8, 8, -0x3400, 8},     {-24, -4, 0x3000, 8},
+    {32, 0, 0, 8},   {-24, 4, -0x3000, 8}, {0x7FFF, 0, 0, 0},
+};
+
+/* sub_080C70F0 (state 4): each leg moves and turns it evenly over its
+ * frames, sound 0x85 at each new leg; 41 frames of rest, then state 1. */
+static void nemesis_swoop_update(AosEnemy *n) {
+    nemesis_tip_box(n);
+    switch (n->step) {
+    case 0:
+        n->nem_passes = 0;
+        aos_audio_play_song(0x85);
+        n->step = 1;
+        /* fallthrough */
+    case 1: {
+        const int16_t *leg = nemesis_swoop[n->nem_passes];
+        bool left = n->nem_flags & NEM_TARGET_LEFT;
+        uint8_t frames = (uint8_t)leg[3];
+        n->timer = frames;
+        n->vx = (int32_t)(left ? -leg[0] : leg[0]) * 0x10000 / frames;
+        n->vy = (int32_t)leg[1] * 0x10000 / frames;
+        n->nem_spin = (int16_t)(leg[2] / frames);
+        if (!left) n->nem_spin = (int16_t)-n->nem_spin;
+        n->step = 2;
+    }
+        /* fallthrough */
+    case 2:
+        n->x += n->vx;
+        n->y += n->vy;
+        n->angle = (uint16_t)(n->angle + n->nem_spin);
+        if (--n->timer) return;
+        n->nem_passes++;
+        n->step = nemesis_swoop[n->nem_passes][0] == 0x7FFF ? 5 : 1;
+        n->timer = 0;
+        aos_audio_play_song(0x85);
+        return;
+    case 5: nemesis_rest(n); return;
+    default: return;
+    }
+}
+
+/* sub_080C722C (state 5): it spins (0x1000 a frame, sound 0x85 every 16
+ * frames) in place for 65 frames, then points at the target and flies at
+ * it at two pixels a frame until it reaches its x, then state 1. */
+static void nemesis_dive(AosEnemy *n, const AosSoma *soma) {
+    nemesis_tip_box(n);
+    switch (n->step) {
+    case 0:
+        n->vx = n->vy = n->ax = n->ay = 0;
+        n->nem_spin = 0x1000;
+        n->timer = 0;
+        n->step = 1;
+        /* fallthrough */
+    case 1: {
+        if ((n->timer & 0xF) == 0) aos_audio_play_song(0x85);
+        if (n->timer++ <= 0x40) break;
+        n->nem_spin = 0;
+        n->angle = (uint16_t)(angle_to_target(n, soma) + 0xC000);
+        int16_t a = (int16_t)n->angle;
+        n->vx = fixed_mul(aos_sine((uint32_t)(a + 0x8000)), 0x20000);
+        n->vy = fixed_mul(aos_sine((uint32_t)(a + 0x4000)), 0x20000);
+        int32_t frames = n->vx ? (target_x(soma) - n->x) / n->vx : 0;
+        n->timer = (uint8_t)(frames < 0 ? -frames : frames);
+        n->step = 2;
+        aos_audio_play_song(0x85);
+        break;
+    }
+    case 2:
+        if (--n->timer == 0) n->step = 3;
+        break;
+    default: nemesis_enter(n, 1); break;
+    }
+    n->x += n->vx;
+    n->y += n->vy;
+    n->vx += n->ax;
+    n->vy += n->ay;
+    n->angle = (uint16_t)(n->angle + n->nem_spin);
+}
+
+/* sub_080C73F8 (state 6): knocked away from Soma along angle 0xD000 (two
+ * pixels a frame across, 1.5 up, falling by 0xF00 a frame) while the
+ * linked sprite shows frame 3; once it is gone, state 1, or 0xFF dead. */
+static void nemesis_recoil(AosEnemy *n, const AosSoma *soma) {
+    switch (n->step) {
+    case 0:
+        n->timer = 0;
+        n->phase = 0;
+        if (soma->x < n->x) n->nem_flags |= NEM_SOMA_LEFT;
+        else n->nem_flags &= (uint16_t)~NEM_SOMA_LEFT;
+        n->step = 1;
+        /* fallthrough */
+    case 1: {
+        int32_t speed = (n->nem_flags & NEM_SOMA_LEFT) ? 0x20000 : -0x20000;
+        n->x += (speed >> 8) * (aos_sine(0xD000 + 0x4000) >> 8);
+        n->y += (aos_sine(0xD000) >> 8) * (0x18000 >> 8) + (int16_t)n->phase * 0xF00;
+        n->phase = (uint16_t)(n->phase + 1);
+        if (n->nem_helper.state == 4) n->step++;
+        break;
+    }
+    case 2:
+        if (n->nem_helper.state != 0) break;
+        if (n->hp <= 0) {
+            if (n->state != 0xFF) {
+                n->state = 0xFF;
+                n->step = n->substep = 0;
+            }
+        } else {
+            nemesis_enter(n, 1);
+        }
+        break;
+    default: break;
+    }
+    if (n->hp <= 0) n->nem_flags |= NEM_NO_COLLIDE;
+}
+
+/* sub_080C750C (state 0xFF): sound 0x72, the trails go, it falls from 0.5
+ * by 0x800 a frame, blinking, a flame of a 16 x 16 area every seventh
+ * frame, until below screen row 0xAA or after 65 frames. */
+static void nemesis_die(AosEnemy *n, int cam_y, uint32_t (*random)(void), AosHitReport *report) {
+    if (n->step == 0) {
+        aos_audio_play_song(0x72);
+        n->vy = 0x8000;
+        n->ay = 0x800;
+        n->timer = 0;
+        n->step = 1;
+    }
+    if (n->step == 1) {
+        n->y += n->vy;
+        n->vy += n->ay;
+        if ((int16_t)((n->y >> 16) - cam_y) > 0xAA || n->timer++ > 0x40) n->removed = true;
+    }
+    if (n->timer % 7 == 0) spawn_flame_at(n->x, n->y, 0x100000, 0x100000, random, report);
+    n->hidden = n->timer & 1;
+}
+
+/* sub_080C7604 (its hit callback, after the damage and the 8-frame flash):
+ * three blows in four only count down + 0x24; the fourth, or a lethal one
+ * (sound 0x1C3), sends it into its recoil (state 6) with the linked sprite
+ * in state 3. Any blow shows it. */
+static void nemesis_struck(AosEnemy *n) {
+    if (n->nem_hits && n->hp > 0) {
+        n->nem_hits--;
+    } else {
+        if (n->hp <= 0) aos_audio_play_song(0x1C3);
+        nemesis_helper_set(n, 3);
+        n->state = 6;
+        n->step = 0;
+        n->nem_hits = 3;
+    }
+    n->hidden = false;
+}
+
+/* EnemyNemesisUpdate: state 7 is inert, 0xFF dies; otherwise it enters the
+ * homing list on screen (sub_08021924); alive and flashing from a blow
+ * (sub_0806AD24) it only collides, outside state 0; else states 0-6 and
+ * the collision pass until dead. Its body is never mirrored; its affine
+ * angle (+ 0x1C) turns it. The first update emits its linked sprite and
+ * the three trails (native: at creation). */
 static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
-                                   int soma_def, uint32_t (*random)(void)) {
+                                   int soma_def, int cam_x, int cam_y,
+                                   uint32_t (*random)(void)) {
     AosHitReport report = {0};
-    bool emit_helper = !n->helper_spawned && n->state != 7;
-    bool emit_effects = !n->technical_effects_spawned && n->state != 7;
-    if (n->state == 7) {
-        if (n->anim.id != 0) play(n, kind->anims, 0);
-        step_anim(n, kind->anims);
-        return report;
-    }
-    if (n->defeated) {
-        generic_death(n, kind, random, &report);
-        aos_combat_tick(&n->combat);
-        return report;
-    }
-    if (n->hit_flash) n->hit_flash--;
-    if (n->attack_wait) n->attack_wait--;
-    switch (n->state) {
-    case 0: {
-        if (n->anim.id != 0) play(n, kind->anims, 0);
-        n->phase = (uint16_t)(n->phase + 0x300);
-        n->y += aos_sine(n->phase) / 8;
-        face_player(n, soma);
-        if (player_within(n, soma, 0xC00000) && !n->attack_wait) {
-            n->state = 1;
-            n->step = 0;
-            n->timer = 0x20;
-        }
-        break;
-    }
-    case 1:
-        if (n->anim.id != 1) play(n, kind->anims, 1);
-        if (n->step == 0) {
-            n->timer = 0x20;
-            n->step = 1;
-        }
-        face_player(n, soma);
-        (void)move_toward(n, target_x(soma), target_y(soma) - 0x180000, 0x8000);
-        integrate(n);
-        if (n->timer == 0 || --n->timer == 0 || player_within(n, soma, 0x180000)) {
-            n->state = 2;
-            n->step = 0;
-        }
-        break;
-    case 2:
-        if (n->anim.id != 2) play(n, kind->anims, 2);
-        if (n->step == 0) {
-            face_player(n, soma);
-            (void)move_toward(n, target_x(soma), target_y(soma), 0x18000);
-            n->timer = 0x18;
-            n->step = 1;
-        }
-        integrate(n);
-        if (n->timer && --n->timer == 0) {
-            n->state = 3;
-            n->step = 0;
-        }
-        break;
-    case 3:
-        if (n->anim.id != 3) play(n, kind->anims, 3);
-        stop(n);
-        if (n->step == 0) {
-            n->timer = 0x1C;
-            n->step = 1;
-        }
-        if (n->timer && --n->timer == 0) {
-            n->state = 0;
-            n->step = 0;
-            n->attack_wait = 0x40;
-        }
-        break;
-    default:
-        n->state = 0;
-        n->step = 0;
-        break;
-    }
-    step_anim(n, kind->anims);
-    if (!n->defeated && player_within(n, soma, 0x1000000))
-        report = collide(n, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
-    aos_combat_tick(&n->combat);
-    if (emit_helper && report.child_count < AOS_ENEMY_MAX_CHILDREN) {
+    if (n->state == 7) return report;
+    if (!n->helper_spawned) {
+        n->helper_spawned = true;
+        static const uint8_t sequences[] = {9, 12, 6};
         AosEnemy helper = {0};
         helper.id = n->id;
         helper.role = AOS_ROLE_NEMESIS_HELPER;
-        helper.state = 1;
-        helper.static_frame = 1;
-        helper.anim.id = 0;
-        helper.x = n->x;
-        helper.y = n->y;
-        helper.mirrored = n->mirrored;
-        helper.combat.attack_off = true;
-        helper.combat.hurt_off = true;
+        helper.static_frame = n->nem_helper.frame;
+        helper.combat.attack_off = helper.combat.hurt_off = true;
         report.children[report.child_count++] = helper;
-        n->helper_spawned = true;
-        n->spawned_count = 1;
-    }
-    if (emit_effects) {
-        static const uint8_t sequences[] = {9, 12, 6};
-        for (unsigned i = 0; i < sizeof sequences &&
-                              report.child_count < AOS_ENEMY_MAX_CHILDREN;
-             ++i) {
+        for (unsigned i = 0; i < sizeof sequences; ++i) {
             AosEnemy effect = {0};
             effect.id = n->id;
             effect.role = AOS_ROLE_NEMESIS_EFFECT;
-            effect.variant = sequences[i];
-            effect.step = sequences[i];
-            effect.state = 0;
-            effect.timer = 0;
-            effect.static_frame = n->anim.frame < 4 ? n->anim.frame : 0;
-            effect.anim.id = 0;
+            effect.variant = effect.step = sequences[i];
+            effect.static_frame = 0;
             effect.x = n->x;
             effect.y = n->y;
-            effect.mirrored = n->mirrored;
             effect.hidden = n->hidden;
             effect.translucent = true;
-            effect.combat.attack_off = true;
-            effect.combat.hurt_off = true;
+            effect.combat.attack_off = effect.combat.hurt_off = true;
             report.children[report.child_count++] = effect;
         }
-        if (report.child_count >= 4) {
-            n->technical_effects_spawned = true;
-            n->spawned_count = report.child_count;
+        n->spawned_count = report.child_count;
+    }
+    if (n->state == 0xFF) {
+        nemesis_die(n, cam_y, random, &report);
+        nemesis_helper_step(n, soma);
+        return report;
+    }
+    int sx = (n->x >> 16) - cam_x, sy = (n->y >> 16) - cam_y;
+    if (!n->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+        report.targetable = true;
+    bool pass = true;
+    if (n->hp > 0 && n->hit_flash) {
+        n->hit_flash--;
+        pass = n->state != 0;
+    } else {
+        switch (n->state) {
+        case 0: nemesis_appear(n, soma); break;
+        case 1: nemesis_approach(n, soma, random); break;
+        case 2: nemesis_choose(n, random); break;
+        case 3: nemesis_dash(n); break;
+        case 4: nemesis_swoop_update(n); break;
+        case 5: nemesis_dive(n, soma); break;
+        case 6: nemesis_recoil(n, soma); break;
+        default: break;
         }
     }
+    if (pass && !(n->nem_flags & NEM_NO_COLLIDE)) {
+        AosHitReport hit = collide(n, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        skeleton_merge(&report, &hit);
+    }
+    aos_combat_tick(&n->combat);
+    nemesis_helper_step(n, soma);
     return report;
 }
 
@@ -9500,7 +9901,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                              random);
     if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY)
         return nemesis_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
-                              random);
+                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_LIGHTNING_DOLL && enemy->role == AOS_ROLE_ENEMY)
         return doll_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            random);

@@ -88,6 +88,9 @@ typedef struct {
     uint8_t blink[40];      /* 0x08118CE0 & 1: hidden while dying */
     /* Centre of each frame's last OAM component (sub_0806C48C). */
     int8_t anchors[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES][2];
+    /* The far corner (x + width, y + height) of each frame's last OAM
+     * component, mirrored by sub_0806C3F8 with the entity's flips. */
+    int8_t edges[AOS_ENEMY_MAX_ANIMS][AOS_ENEMY_MAX_FRAMES][2];
     /* The same for single sprite frames shown by children (+ 0x65 < 64). */
     int8_t static_anchors[64][2];
     /* The death flame's animation (Effect/flame), for a doll piece's glow. */
@@ -174,7 +177,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_RIPPER_BLADE = 25, AOS_ROLE_PEEPING_SEGMENT = 26,
        AOS_ROLE_WHITE_DRAGON_PART = 27, AOS_ROLE_BONE_PILLAR_SEGMENT = 28,
        AOS_ROLE_BUER_FIRE = 29, AOS_ROLE_SKELETON_BONE = 30,
-       AOS_ROLE_BUER_PROJECTILE = 31 };
+       AOS_ROLE_BUER_PROJECTILE = 31, AOS_ROLE_SKELETON_HEAD = 32,
+       AOS_ROLE_SKELETON_HELD = 33 };
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
@@ -245,6 +249,13 @@ typedef struct AosEnemy {
     AosBox own_hurt, own_attack;
     AosEnemyStats stats;
     uint16_t contact_elements;  /* the + 2 of its contact callback's hit (sub_08021654) */
+    /* The Skeleton: + 0x1A (bit 0 head on its neck, 1 head in hand, 2 bone
+     * in hand, 3 the alternate throw, 5 the head's laugh), + 0x1E (the
+     * affine angle its projectile turns by), and a projectile's affine use
+     * (+ 0x59 bit 4) and head (+ 0x18). */
+    uint8_t skel_flags;
+    uint16_t skel_spin;
+    bool spinning;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

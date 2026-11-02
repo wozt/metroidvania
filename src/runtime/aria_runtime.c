@@ -2141,6 +2141,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_PEEPING_SEGMENT ||
                  e->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
                  e->enemy.role == AOS_ROLE_BUER_FIRE ||
+                 e->enemy.role == AOS_ROLE_SKELETON_HEAD ||
+                 e->enemy.role == AOS_ROLE_SKELETON_HELD ||
+                 e->enemy.role == AOS_ROLE_SKELETON_BONE ||
                  e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
@@ -2446,6 +2449,20 @@ static bool load_enemy_data(AriaObjects *objects) {
                 if (enemy_names[id] && !strcmp(anchor_name, enemy_names[id])) {
                     objects->enemies[id].kind.anchors[anim][index][0] = (int8_t)ax;
                     objects->enemies[id].kind.anchors[anim][index][1] = (int8_t)ay;
+                }
+            continue;
+        }
+        if (!strncmp(line, "edge\t", 5)) {
+            char edge_name[16];
+            int anim, index, ex, ey;
+            if (sscanf(line + 5, "%15s %d %d %d %d", edge_name, &anim, &index, &ex, &ey) != 5 ||
+                anim < 0 || anim >= AOS_ENEMY_MAX_ANIMS || index < 0 ||
+                index >= AOS_ENEMY_MAX_FRAMES)
+                continue;
+            for (int id = 0; id < ENEMY_KINDS; ++id)
+                if (enemy_names[id] && !strcmp(edge_name, enemy_names[id])) {
+                    objects->enemies[id].kind.edges[anim][index][0] = (int8_t)ex;
+                    objects->enemies[id].kind.edges[anim][index][1] = (int8_t)ey;
                 }
             continue;
         }
@@ -3107,14 +3124,6 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
                 if (objects->enemies[e->id].static_ids[k] == e->enemy.static_frame)
                     frame = &objects->enemies[e->id].statics[k];
         }
-        if (e->enemy.role == AOS_ROLE_SKELETON_BONE &&
-            (!frame || !frame->texture) &&
-            objects->skills[SKILL_ART_BONE].static_count >= 2) {
-            /* The enemy's native OAM 0x12/0x1B frames are not yet in the
-             * importer; reuse the existing native bone-soul sprite until
-             * the dedicated frames can be exported and golden-tested. */
-            frame = &objects->skills[SKILL_ART_BONE].statics[e->enemy.variant ? 1 : 0];
-        }
         if (!frame || !frame->texture) continue;
         int ex = e->enemy.x >> 16, ey = e->enemy.y >> 16;
         bool flip = e->enemy.mirrored;
@@ -3142,6 +3151,7 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
             e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART ||
+            (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
             (e->enemy.id == AOS_ENEMY_BUER &&
              e->enemy.role == AOS_ROLE_ENEMY))
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;

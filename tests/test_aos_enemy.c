@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 enum { W = 64, H = 32 };
@@ -2985,71 +2986,108 @@ static void skeleton_bone_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
     static const uint8_t ticks[] = {1, 1, 1, 1};
-    const AosAnimDef defs[5] = {
-        {4, ticks}, {4, ticks}, {4, ticks}, {4, ticks}, {4, ticks}
-    };
-    const AosAnimSet anims = {defs, 5};
+    static AosAnimDef defs[0x11];
+    for (int a = 0; a < 0x11; ++a) defs[a] = (AosAnimDef){4, ticks};
+    const AosAnimSet anims = {defs, 0x11};
     static AosEnemyKind kind;
     memset(&kind, 0, sizeof kind);
     kind.anims = &anims;
-    for (int a = 0; a < 5; ++a)
+    for (int a = 0; a < 0x11; ++a)
         for (int f = 0; f < 4; ++f) {
             kind.modes[a][f] = 1;
             kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+            kind.edges[a][f][0] = -3;
+            kind.edges[a][f][1] = -27;
         }
     const AosEnemyStats stats = {20, 10, 1, 0, 0, 15};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(110), AOS_FIXED(150), NULL);
     AosEnemy e;
+    /* EnemySkeletonCreate: head on and bone in hand, home +/- 32, state 1. */
     assert(aos_enemy_create(&e, AOS_ENEMY_SKELETON, 100, 100, 0, 0,
                             &soma, &layer, &kind, &stats));
-    assert(e.attack_wait == 40);
-    e.attack_wait = 0;
+    assert(e.state == 1 && e.skel_flags == 5 && e.home == 100 && e.home_left == 68 &&
+           e.home_right == 132 && e.mirrored);
+    /* The first update creates the head and the bone in hand; on screen the
+     * body is shown again (sub_0806E4F8). */
     AosHitReport report = aos_enemy_update(&e, &soma, &layer, &kind,
-                                            NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(e.state == 4 && report.child_count == 0);
+                                           NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(report.child_count >= 2 && report.children[0].role == AOS_ROLE_SKELETON_HEAD &&
+           report.children[1].role == AOS_ROLE_SKELETON_HELD && !e.hidden);
+    /* The head sits at the corner of the body's last component, mirrored. */
+    AosEnemy head = report.children[0];
+    head.parent = &e;
+    aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(head.state == 1 && head.anim.id == 0x10 && (head.x >> 16) == (e.x >> 16) + 3 &&
+           (head.y >> 16) == (e.y >> 16) - 27);
+    /* The throw (state 4): at animation 4's frame 2 the bone flies. */
+    e.state = 4;
+    e.step = 0;
     aos_audio_clear();
     AosEnemy bone = {0};
     int launches = 0;
-    for (int frame = 0; frame < 20; ++frame) {
+    for (int frame = 0; frame < 20 && e.state == 4; ++frame) {
         report = aos_enemy_update(&e, &soma, &layer, &kind,
                                   NULL, NULL, 10, 4, 0, 0, never_zero);
-        launches += report.child_count;
-        if (report.child_count) bone = report.children[0];
+        for (int k = 0; k < report.child_count; ++k)
+            if (report.children[k].role == AOS_ROLE_SKELETON_BONE) {
+                bone = report.children[k];
+                ++launches;
+            }
     }
-    assert(launches == 1);
-    assert(bone.id == AOS_ENEMY_SKELETON && bone.role == AOS_ROLE_SKELETON_BONE);
-    assert(bone.static_frame == 0x12 && bone.y < e.y);
-    assert(bone.vx == 0x8AAA && bone.vy == -0x30000 && bone.ay == 0x6000);
+    assert(launches == 1 && e.state == 1 && !(e.skel_flags & 4) && e.spawned_count == 1);
+    assert(bone.static_frame == 0x12 && (bone.y >> 16) == (e.y >> 16) - 30 && bone.spinning);
+    assert(bone.vx == 0x8AAA && bone.vy == -0x30000);
     assert(bone.own_hurt.w == 16 && bone.own_attack.w == 2);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x88) == 1);
-    assert(e.state == 1 && e.attack_wait > 0);
+    /* It falls with 0x1800 of gravity and is gone below screen row 0xAA. */
+    bone.parent = &e;
     int32_t x0 = bone.x, y0 = bone.y;
-    aos_enemy_update(&bone, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(bone.x > x0 && bone.y < y0 && bone.vy == -0x2A000);
-    /* A struck projectile disappears but does not become a rewardable mob. */
-    bone.defeated = true;
-    aos_enemy_update(&bone, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(bone.removed);
-
-    AosEnemy mirrored = e;
-    mirrored.state = 4;
-    mirrored.step = 0;
-    mirrored.mirrored = false;
-    mirrored.variant = 1;
-    mirrored.anim = (AosAnimState){0};
+    aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(bone.x == x0 + 0x8AAA && bone.y == y0 - 0x30000 && bone.vy == -0x30000 + 0x1800);
+    for (int frame = 0; frame < 200 && !bone.removed; ++frame)
+        aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(bone.removed && e.spawned_count == 0);
+    /* With the head in hand (+ 0x1A bit 1) the head flies (0x1B, 0x89). */
+    e.skel_flags = 2;
+    e.state = 4;
+    e.step = 0;
     aos_audio_clear();
-    for (int frame = 0; frame < 12; ++frame) {
-        report = aos_enemy_update(&mirrored, &soma, &layer, &kind,
+    bone = (AosEnemy){0};
+    for (int frame = 0; frame < 20 && e.state == 4; ++frame) {
+        report = aos_enemy_update(&e, &soma, &layer, &kind,
                                   NULL, NULL, 10, 4, 0, 0, never_zero);
-        if (report.child_count) {
-            assert(report.children[0].static_frame == 0x1B);
-            assert(report.children[0].vx == -0x8AAA);
-            break;
+        for (int k = 0; k < report.child_count; ++k)
+            if (report.children[k].role == AOS_ROLE_SKELETON_BONE) bone = report.children[k];
+    }
+    assert(bone.static_frame == 0x1B && bone.variant && e.skel_flags == 0 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
+    /* sub_080C3B2C: a struck head flies back twelve times faster (0x15D),
+     * a struck bone drops (vy 0.25, 0x151); neither collides again. */
+    for (int k = 0; k < 2; ++k) {
+        AosEnemy struck = bone;
+        struck.parent = &e;
+        struck.variant = (uint8_t)(k == 0);
+        struck.combat = (AosCombat){.type = AOS_TYPE_ENEMY};
+        AosSoulAttack hit = {{0, 0, 2000, 2000}, 50, 0, false, NULL, AOS_TYPE_SOUL};
+        aos_enemy_set_soul_attacks(&hit, 1);
+        aos_audio_clear();
+        int32_t vx = struck.vx;
+        aos_enemy_update(&struck, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        aos_enemy_set_soul_attacks(NULL, 0);
+        assert(struck.state == 3 && !struck.spinning && struck.hit_flash == 8);
+        if (k == 0) {
+            assert(abs(struck.vx) == abs(vx) * 12 &&
+                   aos_audio_requested(AOS_AUDIO_START_SONG, 0x15D) == 1);
+        } else {
+            assert(struck.vx == 0 && struck.vy == 0x4000 &&
+                   aos_audio_requested(AOS_AUDIO_START_SONG, 0x151) == 1);
         }
     }
-    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
+    /* sub_080C4624: 0x6B, then six pieces (no head left), 256 frames. */
+    e.skel_flags = 0;
+    e.state = 1;
+    e.step = 0;
+    e.hit_flash = 0;
     aos_audio_clear();
     AosSoulAttack soul = {{e.x >> 16, (e.y >> 16) - 16, e.x >> 16,
                            (e.y >> 16) - 16}, 255, 0, false, NULL, AOS_TYPE_SOUL};
@@ -3057,8 +3095,16 @@ static void skeleton_bone_tests(void) {
     report = aos_enemy_update(&e, &soma, &layer, &kind,
                               NULL, NULL, 10, 4, 0, 0, never_zero);
     aos_enemy_set_soul_attacks(NULL, 0);
-    assert(report.killed && e.defeated && e.timer == 0x28);
+    int pieces = 0;
+    for (int k = 0; k < report.child_count; ++k) pieces += report.children[k].role == AOS_ROLE_DEBRIS;
+    assert(report.killed && e.defeated && e.state == 0xFF && e.hidden && pieces == 6);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    int frames = 0;
+    while (!e.removed && frames < 300) {
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(e.removed && frames == 256);
     memset(cells, 0, sizeof cells);
 }
 

@@ -101,6 +101,8 @@ typedef struct {
     uint8_t attack_height;
     int anchor_x;
     int anchor_y;
+    int edge_x;     /* the last component's x + width (sub_0806C3F8) */
+    int edge_y;
 } RenderedFrame;
 
 #define ENTITY(name_, graphics_, palette_, bank_, frames_) \
@@ -113,7 +115,11 @@ typedef struct {
 static const EntitySpec entities[] = {
     ENTITY("bat", 0x081F422C, 0x0820BD4C, 0, 0x0824B2C4),
     STATIC("zombie", 0x081CBF8C, 0x0820A62C, 0, 0x082178B8, 2, 0, 13),
-    ENTITY("skeleton", 0x081F424C, 0x0820BE3C, 0, 0x0824C910),
+    /* The Skeleton: its walker probes 0x08528948 (sub_0806CAF8 mode 12), the
+     * bone (0x12) and head (0x1B) projectiles and its death pieces
+     * (0x15-0x1B, 0x08528952). */
+    {"skeleton", 0x081F424C, 0x0820BE3C, 0, 0x0824C910, 0x08528948, 0, 0, 8,
+     {0x12, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B}},
     ENTITY("merman", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4),
     STATIC("peeping_eye", 0x081CBFEC, 0x0820A86C, 0, 0x0821D7B4, 6,
            11, 12, 13, 14, 15, 16),
@@ -494,6 +500,8 @@ static bool render_frame(const FusionRom *rom, uint32_t descriptor,
         const Component *last = &components[count - 1];
         rendered->anchor_x = last->x + last->width / 2;
         rendered->anchor_y = last->y + last->height / 2;
+        rendered->edge_x = last->x + last->width;
+        rendered->edge_y = last->y + last->height;
     }
     rendered->mode = record[4];
     if (rendered->mode) {
@@ -634,7 +642,7 @@ static bool export_animation(const FusionRom *rom,
             return false;
         }
     }
-    int anchors_x[MAX_FRAMES], anchors_y[MAX_FRAMES];
+    int anchors_x[MAX_FRAMES], anchors_y[MAX_FRAMES], edges_x[MAX_FRAMES], edges_y[MAX_FRAMES];
     char key[96];
     int written = snprintf(key, sizeof key, "%s/%s/anim_%zu",
                            key_prefix, name, animation_number);
@@ -660,6 +668,8 @@ static bool export_animation(const FusionRom *rom,
                           error, error_size)) return false;
         anchors_x[index] = rendered.anchor_x;
         anchors_y[index] = rendered.anchor_y;
+        edges_x[index] = rendered.edge_x;
+        edges_y[index] = rendered.edge_y;
         bool success = (!metadata || append_frame_row(
                             rows, name, animation_number, index,
                             frame, duration, &rendered)) &&
@@ -672,7 +682,10 @@ static bool export_animation(const FusionRom *rom,
         for (size_t index = 0; index < count; ++index) {
             if (!text_append(rows, "anchor\t%s\t%zu\t%zu\t%d\t%d\n",
                              name, animation_number, index,
-                             anchors_x[index], anchors_y[index])) return false;
+                             anchors_x[index], anchors_y[index]) ||
+                !text_append(rows, "edge\t%s\t%zu\t%zu\t%d\t%d\n",
+                             name, animation_number, index,
+                             edges_x[index], edges_y[index])) return false;
         }
     }
     return true;

@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0703 - Skeleton AI from the native routines
+
+- The Skeleton's whole AI is ported from its traced routines:
+  - the patrol, the close-in choices, the pause, and the pick-up of a
+    bone or of its own head;
+  - the throw of a turning bone or head, which the weapon deflects;
+  - the head and bone-in-hand children;
+  - the seven death pieces.
+- The "visibility bit" blocker is resolved: `sub_0806CC20` shows an
+  enemy again on screen through `sub_0806E4F8` when its record's + 0x20 is
+  0.
+- The export adds per-frame edge rows (the far corner of the last OAM
+  component, `sub_0806C3F8`) and the Skeleton's probes and still frames
+  (`aria_objects` v43).
+- The projectile's gravity is corrected from 0x6000 to 0x1800.
+- Tests rewritten for the native behaviour; local captures show the
+  Skeletons with their heads, throwing bones. The Skeleton becomes the
+  38th complete monster. Zero Mission is unchanged.
+
 ## Patch 0702 - Elements, statuses and petrification
 
 - `sub_08021654` now takes the hit's elements:

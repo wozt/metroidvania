@@ -2,6 +2,8 @@
 /* Aria of Sorrow Soma motion rules; comments name the cvaos routine and
  * the code path each function reproduces. */
 #include "aos_soma.h"
+
+#include "aos_audio.h"
 #include "aos_soul.h"
 
 const AosBox aos_soma_stand_box = {-6, -32, 12, 28};
@@ -15,6 +17,9 @@ const int8_t aos_soma_stand_probes[] = {3, -12, -20, -28};
 const int8_t aos_soma_low_probes[] = {2, -6, -9};
 const int8_t aos_soma_ceiling_probes[] = {1, -12};       /* 0x080E12E8 */
 const int8_t aos_soma_special_probes[] = {3, -6, -16, -28}; /* 0x080E12E4 */
+const int8_t aos_soma_transform_probes[] = {4, -14, -20, -32, -48}; /* 0x080E12EF */
+const uint8_t aos_soma_transform_anims[3][3] = {
+    {0x21, 0x22, 0x23}, {0x2B, 0x2A, 0x2C}, {0x4C, 0x4B, 0x4D}};  /* 0x080E12BF */
 
 /* sub_0801B0D8 prologue. */
 void aos_soma_integrate(AosSoma *soma) {
@@ -805,6 +810,117 @@ static void hard_landing_state(AosSoma *soma) {
     }
 }
 
+/* sub_0801A94C start: animation `id` from frame 0 with the stand hurtbox,
+ * no pending animation, the animation-end flag clear (the palette bank of
+ * 0x080E126C is not modelled). */
+static void transform_play(AosSoma *soma, unsigned id, bool loop) {
+    if (soma->anim.id == id) return;
+    aos_anim_start(&soma->anim, soma->anims, id, loop);
+    soma->anim.id = (uint8_t)id;
+    soma->hurtbox = aos_soma_stand_box;
+    soma->anim_request = AOS_ANIM_NONE;
+    soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+}
+
+/* sub_08001C1C at (x, y), the 0x1316C platform not being modelled. */
+static bool transform_ceiling(const AosCollision *layer, int32_t x, int32_t y) {
+    return layer && aos_ceiling_depth(layer, x, y, 0, false) != 0;
+}
+
+/* Case 9 (sub_0801A94C): a guardian's transformation (Devil, Manticore,
+ * Curly). Before the end steps, losing 0x13260 bit 0x1000 (the soul
+ * ended) jumps to step 4. Step 0 takes pose 0x20 for 45 frames (+ 0x0D;
+ * sound 0x1AB at 0x23; the sparkles of sub_08045B44 every 4 frames up to
+ * 0x1D and the palette blink are not modelled); step 2 plays the
+ * variant's start animation, then (animation end) step 3 loops its second
+ * animation: the body charges forward by 0x1000 a frame up to 6.0 with
+ * the wall probes 0x080E12EF and sub_08018020 (sub_0803319C's dust is not
+ * modelled). From step 2 + 0x1E stays 2 (invulnerable), and a ceiling at
+ * (x, y - 55), (x + 8, y - 50) or (x - 8, y - 50) ends the soul
+ * (sub_0802DFF0). Step 4 plays the end animation if the start one had
+ * played; step 5 brakes by 0x6000 until it ends, then state 0. */
+static void transform_state(AosSoma *soma, const AosCollision *layer) {
+    const uint8_t *anims = aos_soma_transform_anims[soma->transform_variant < 3
+                                                        ? soma->transform_variant : 0];
+    if (soma->transform_step <= 3 && !(soma->abilities & AOS_ABILITY_TRANSFORM))
+        soma->transform_step = 4;
+    switch (soma->transform_step) {
+    case 0:
+        soma->transformed = false;
+        soma->vx = 0;
+        soma->anim_request = AOS_ANIM_NONE;
+        transform_play(soma, 0x20, true);
+        soma->frame_counter = 0x2D;
+        soma->transform_step = 1;
+        soma->flags &= ~(uint32_t)AOS_FLAG_CROUCH;
+        return;
+    case 1:
+        if (soma->frame_counter) {
+            if (soma->frame_counter == 0x23) aos_audio_play_song(0x1AB);
+            soma->frame_counter--;
+            return;
+        }
+        if (soma->anim_request == AOS_ANIM_NONE) {
+            transform_play(soma, anims[0], false);
+            soma->transformed = true;
+            soma->transform_step = 2;
+        }
+        /* fall through */
+    case 2:
+    case 3:
+        if (soma->flags & AOS_FLAG_ANIM_DONE) {
+            soma->transform_step = 3;
+            transform_play(soma, anims[1], true);
+        }
+        soma->cast_1e = 2;
+        if (soma->transform_step == 3) {
+            soma->frame_counter++;
+            if (soma->facing_left) {
+                soma->vx -= 0x1000;
+                if (soma->vx < (int32_t)0xFFFA0000) soma->vx = (int32_t)0xFFFA0000;
+            } else {
+                soma->vx += 0x1000;
+                if (soma->vx > 0x60000) soma->vx = 0x60000;
+            }
+            soma->wall_probes = aos_soma_transform_probes;
+            air_routine(soma, layer);
+        }
+        {
+            int32_t x = soma->x >> 16, y = soma->y >> 16;
+            if ((transform_ceiling(layer, x, y - 0x37) || transform_ceiling(layer, x + 8, y - 0x32) ||
+                 transform_ceiling(layer, x - 8, y - 0x32)) &&
+                soma->guardian_cancel)
+                soma->guardian_cancel(soma->guardian_context);
+        }
+        return;
+    case 4:
+        soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+        soma->frame_counter = 0;
+        if (soma->transformed) transform_play(soma, anims[2], false);
+        else soma->flags |= AOS_FLAG_ANIM_DONE;
+        soma->transform_step = 5;
+        /* fall through */
+    case 5: {
+        int32_t old = soma->vx;
+        soma->friction = old < 0 ? 0x6000 : (int32_t)0xFFFFA000;
+        soma->vx = old + soma->friction;
+        if ((old >= 0 && soma->vx < 0) || (old <= 0 && soma->vx > 0)) soma->vx = soma->friction = 0;
+        if (!(soma->flags & AOS_FLAG_ANIM_DONE)) {
+            soma->cast_1e = 2;
+            soma->air_anim_locked = true;
+            soma->frame_counter++;
+            return;
+        }
+        soma->vx = soma->vy = soma->friction = soma->gravity_mod = 0;
+        soma->flags &= 0xEFFFFE9Fu;
+        soma->state = 0;
+        return;
+    }
+    default:
+        return;
+    }
+}
+
 void aos_soma_guardian_pose(AosSoma *soma, unsigned anim) {
     soma->state = 10;
     aos_anim_start(&soma->anim, soma->anims, anim, true);
@@ -830,6 +946,8 @@ AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
 
 int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
                       uint8_t knockback_type) {
+    /* sub_08021654 returns at once while + 0x1E counts down. */
+    if (soma->cast_1e) return 0;
     int damage = aos_player_damage(attack, defence);
     soma->hp = (int16_t)(soma->hp - damage > 0 ? soma->hp - damage : 0);
     soma->pending_damage = (int16_t)damage;
@@ -959,6 +1077,7 @@ static void knockback_state(AosSoma *soma, const AosCollision *layer, uint16_t p
 
 /* _0801CD80: wall probes for the next frame. */
 static void select_wall_probes(AosSoma *soma) {
+    if (soma->state == 9 && soma->transform_step == 3) return;  /* 0x080E12EF */
     if (soma->state == 3 || (soma->flags & AOS_FLAG_HEAD_CEILING)) {
         soma->wall_probes = aos_soma_ceiling_probes;
     } else if (soma->flags & AOS_FLAG_HEAD_SPECIAL) {
@@ -1005,6 +1124,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
             soma->state = 0;
         }
         break;
+    case 9: transform_state(soma, layer); break;
     case 12: hit_state(soma, layer); break;
     case 13: knockback_state(soma, layer, pressed); break;
     case 16: death_state(soma); break;
@@ -1022,6 +1142,10 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
         }
     }
     aos_anim_step(&soma->anim, soma->anims);
+    /* _0801CCC0: + 0x1E counts down; at 0 the recent-hit slots clear. */
+    if (soma->cast_1e && --soma->cast_1e == 0) {
+        for (int k = 0; k < 3; ++k) soma->combat.recent[k] = soma->combat.cooldown[k] = 0;
+    }
     if (soma->hold_still) soma->vx = soma->friction = 0;
     /* _0801CF2C: per-frame flags are dropped at the end of the update. */
     soma->flags &= 0xFBF7FFFFu;

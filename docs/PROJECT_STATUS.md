@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0701 - Soma state 9 and Curly's blue soul
+
+- Soma's state 9 (`sub_0801A94C`) is ported:
+  - pose 0x20 for 45 frames, with sound 0x1AB;
+  - the variant's transformation animation from 0x084F10A0 (Curly 0x4C);
+  - its loop (0x4B), where the body charges forward by 0x1000 a frame up
+    to 6.0 with the wall probes 0x080E12EF;
+  - a ceiling over the tall body ends the soul (`sub_0802DFF0`);
+  - on the way back, the end animation (0x4D) and braking at 0x6000 back
+    to state 0.
+- Soma's + 0x1E is now the invulnerability counter. `sub_08021654`
+  ignores hits while it is set, and the end of the update counts it down;
+  the cast poses' values now decrement as in the game.
+- Curly's variant of `Skill_Devil_Manticore_Curly_Use` (soul 20) starts
+  the transformation and, once Soma is transformed, attacks around him as
+  type 6 (power 0x32, elements 1, sound 0x1B0). Its shell
+  (`sub_0802EE40`, exported as `Enemy/skill_curly`, `aria_objects` v42)
+  follows him.
+- Tests in `tests/test_aos_soma.c` and `tests/test_aos_soul.c`. Local
+  captures show the transformation and charge, which kill five Skeletons
+  in area 0 room 6. Curly becomes the 35th complete monster. Zero Mission
+  is unchanged.
+
 ## Patch 0700 - Killer Doll decoy soul
 
 - `SkillKillerDollUse` (red 51; resource 6 exported as

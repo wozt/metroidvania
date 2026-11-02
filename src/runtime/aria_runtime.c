@@ -225,7 +225,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
-       SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ARTS };
+       SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -236,7 +236,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_cagnazzo", "skill_buer",
                                                          "skill_catoblepas", "skill_imp",
                                                          "skill_lightning",
-                                                         "skill_killer_doll"};
+                                                         "skill_killer_doll", "skill_curly"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1023,6 +1023,7 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_BUER_ROUTINE 0x0802FF41u
 #define GUARDIAN_CATOBLEPAS_ROUTINE 0x08030E65u
 #define GUARDIAN_IMP_ROUTINE 0x080310ADu
+#define GUARDIAN_TRANSFORM_ROUTINE 0x0802EFB1u
 typedef struct {
     AosGuardian core;
     uint32_t routine;
@@ -1031,6 +1032,7 @@ typedef struct {
     AosBuerGuardian buer;
     AosCatoblepasGuardian catoblepas;
     AosImpGuardian imp;
+    AosCurlyGuardian curly;
     int imp_target;              /* the room entity of the chased homing slot */
     AosAnimState anim;           /* Cagnazzo, or both Buer flames (same steps) */
     AosAnimState gas_anims[AOS_CATOBLEPAS_GASES];
@@ -1041,6 +1043,7 @@ typedef struct {
     const AosAnimSet *buer_art;      /* Enemy/skill_buer, NULL when missing */
     const AosAnimSet *catoblepas_art; /* Enemy/skill_catoblepas, NULL when missing */
     const AosAnimSet *imp_art;       /* Enemy/skill_imp, NULL when missing */
+    const AosAnimSet *curly_art;     /* Enemy/skill_curly, NULL when missing */
     const AosEnemyKind *imp_kind;    /* its frame attack boxes */
 } AriaGuardian;
 
@@ -1055,7 +1058,9 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_CAGNAZZO_ROUTINE && guardian->cagnazzo_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
-        !(routine == GUARDIAN_IMP_ROUTINE && guardian->imp_art))
+        !(routine == GUARDIAN_IMP_ROUTINE && guardian->imp_art) &&
+        !(routine == GUARDIAN_TRANSFORM_ROUTINE && guardian->curly_art &&
+          guardian->records[stats->blue_soul].argument == AOS_CURLY_VARIANT))
         return;
     if (aos_guardian_try(&guardian->core, stats, guardian->records, guardian->soma->held,
                          guardian->soma->pressed, false, &guardian->soma->flags)) {
@@ -1065,8 +1070,20 @@ static void start_guardian(void *context) {
         guardian->buer = (AosBuerGuardian){0};
         guardian->catoblepas = (AosCatoblepasGuardian){0};
         guardian->imp = (AosImpGuardian){.target = -1};
+        guardian->curly = (AosCurlyGuardian){0};
         guardian->imp_target = -1;
     }
+}
+
+/* sub_0802DFF0: the transformed body met a ceiling; the guardian, its
+ * child and 0x13260 bits 8-13 go, and the held sound 0x9C is released. */
+static void cancel_transform(void *context) {
+    AriaGuardian *guardian = context;
+    if (!guardian || !guardian->core.active || guardian->routine != GUARDIAN_TRANSFORM_ROUTINE)
+        return;
+    aos_audio_release(0x9C);
+    aos_curly_guardian_end(&guardian->curly, &guardian->core, &guardian->soma->flags,
+                           &guardian->stats->flags);
 }
 
 /* The guardian entity's update, after Soma's in the entity order. */
@@ -1118,6 +1135,19 @@ static void update_guardian(AriaGuardian *guardian) {
             }
             aos_anim_step(&guardian->gas_anims[k], guardian->catoblepas_art);
         }
+    } else if (guardian->routine == GUARDIAN_TRANSFORM_ROUTINE) {
+        bool had_child = guardian->curly.child;
+        AosTransformTarget target = {&soma->flags, &guardian->stats->flags, &soma->state,
+                                     &soma->transform_step, &soma->transform_variant,
+                                     &soma->friction, &soma->gravity_mod};
+        if (!aos_curly_guardian_update(&guardian->curly, &guardian->core, guardian->stats,
+                                       guardian->records, soma->held, soma->pressed, soma->x,
+                                       soma->y, soma->facing_left, target))
+            return;
+        /* sub_0802EE40: the shell's looping sequence 0. */
+        if (guardian->curly.child && !had_child)
+            aos_anim_start(&guardian->anim, guardian->curly_art, 0, true);
+        if (guardian->curly.child) aos_anim_step(&guardian->anim, guardian->curly_art);
     } else if (guardian->routine == GUARDIAN_IMP_ROUTINE) {
         /* The homing list's slots; a chased slot keeps its entity. */
         AosSkillTarget targets[AOS_IMP_TARGETS] = {{0}};
@@ -1173,6 +1203,16 @@ static int guardian_attacks(const AriaGuardian *guardian,
                 aos_guardian_power(guardian->stats, AOS_BUER_POWER, false), AOS_BUER_ELEMENTS,
                 false, NULL, AOS_TYPE_GUARDIAN};
         return AOS_BUER_FLAMES;
+    }
+    if (guardian->routine == GUARDIAN_TRANSFORM_ROUTINE) {
+        if (!guardian->curly.attacking) return 0;
+        attacks[0] = (AosSoulAttack){
+            aos_entity_rect((AosBox){-24, -64, 48, 68}, guardian->curly.x >> 16,
+                            guardian->curly.y >> 16, guardian->curly.facing_left,
+                            false),                                          /* 0x4430C0E8 */
+            aos_guardian_power(guardian->stats, AOS_CURLY_POWER, false), AOS_CURLY_ELEMENTS,
+            false, NULL, AOS_TYPE_GUARDIAN};
+        return 1;
     }
     if (guardian->routine == GUARDIAN_IMP_ROUTINE) {
         /* sub_0802E1D0: the frame's attack box, none without one. */
@@ -4092,6 +4132,10 @@ int main(int argc, char **argv) {
     if (objects_ok && objects.skills[SKILL_ART_CATOBLEPAS].loaded &&
         objects.skills[SKILL_ART_CATOBLEPAS].defs[0].count)
         guardian.catoblepas_art = &objects.skills[SKILL_ART_CATOBLEPAS].set;
+    if (objects_ok && objects.skills[SKILL_ART_CURLY].loaded &&
+        objects.skills[SKILL_ART_CURLY].defs[0].count)
+        guardian.curly_art = &objects.skills[SKILL_ART_CURLY].set;
+    soma.guardian_cancel = cancel_transform;
     if (objects_ok && objects.skills[SKILL_ART_IMP].loaded &&
         objects.skills[SKILL_ART_IMP].defs[0].count) {
         guardian.imp_art = &objects.skills[SKILL_ART_IMP].set;
@@ -4852,6 +4896,22 @@ int main(int argc, char **argv) {
                 SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
                                          cagnazzo->facing_left ? SDL_FLIP_HORIZONTAL
                                                                : SDL_FLIP_NONE);
+            }
+        }
+        /* Curly's shell around the transformed Soma. */
+        if (guardian.core.active && guardian.routine == GUARDIAN_TRANSFORM_ROUTINE &&
+            guardian.curly.child && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_CURLY].frames[0][guardian.anim.frame];
+            if (art->texture) {
+                int cx = guardian.curly.x >> 16, cy = guardian.curly.y >> 16;
+                float x = guardian.curly.facing_left ? (float)(cx - art->offset_x) - art->w
+                                                     : (float)(cx + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(cy + art->offset_y - cam_y), art->w,
+                                  art->h};
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         guardian.curly.facing_left ? SDL_FLIP_HORIZONTAL
+                                                                    : SDL_FLIP_NONE);
             }
         }
         /* The Imp familiar (blinking while it leaves). */

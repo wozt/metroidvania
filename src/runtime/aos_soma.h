@@ -67,7 +67,8 @@ enum {
     AOS_ABILITY_ZERO_FALL = 0x800,     /* sub_0801938C zeroes vy */
     AOS_ABILITY_FLOOR_MODE = 0x4000,   /* floor walks use collision mode 1 */
     AOS_ABILITY_SPECIAL_WALK = 0x8000, /* clears 0x800000, damps bit-3 entry */
-    AOS_ABILITY_ATTACK_CAST = 0x800000 /* Dead Warrior: red souls during attacks */
+    AOS_ABILITY_ATTACK_CAST = 0x800000, /* Dead Warrior: red souls during attacks */
+    AOS_ABILITY_TRANSFORM = 0x1000      /* set by a transforming guardian (state 9) */
 };
 
 /* Wall probe Y offsets (entity + 0x18 points to count, offsets). */
@@ -150,8 +151,8 @@ typedef struct {
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
     uint16_t ticks;         /* + 0x22: advanced at the end of every update */
     uint8_t recoil;         /* + 0x0B: set by cast pose 3 */
-    uint8_t cast_1e;        /* + 0x1E: written by the cast poses; its reader is not
-                             * traced */
+    uint8_t cast_1e;        /* + 0x1E: invulnerability frames (sub_08021654 ignores
+                             * hits while set; _0801CCC0 counts it down) */
     /* The red soul use of sub_08019478: returns the record's cast pose (0-3)
      * when a soul was cast (MP spent, slot taken), else -1. NULL: no souls. */
     int (*cast)(void *context);
@@ -161,6 +162,12 @@ typedef struct {
     void (*guardian)(void *context);
     void *guardian_context;
     bool guardian_alive;    /* gEwramData + 0x13144 is set (state 10 waits on it) */
+    /* State 9 (sub_0801A94C), a guardian's transformation: */
+    uint8_t transform_step;     /* + 0x0B */
+    bool transformed;           /* + 0x0C: the transformation animation played */
+    uint8_t transform_variant;  /* + 0x27: 0 Devil, 1 Manticore, 2 Curly */
+    /* sub_0802DFF0 when the transformed body meets a ceiling. NULL: none. */
+    void (*guardian_cancel)(void *context);
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF
@@ -224,5 +231,8 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
  * `anim` and flags 0x10000000 and 0x400 cleared. State 10 (_0801CC68)
  * returns to state 0 (no pending animation) once no guardian is alive. */
 void aos_soma_guardian_pose(AosSoma *soma, unsigned anim);
+/* The 0x084F10A0 animations of a transformation variant: start, loop, end. */
+extern const uint8_t aos_soma_transform_anims[3][3];
+extern const int8_t aos_soma_transform_probes[];  /* 0x080E12EF: -14, -20, -32, -48 */
 
 #endif /* AOS_SOMA_H */

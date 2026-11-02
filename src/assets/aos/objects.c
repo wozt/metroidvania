@@ -237,6 +237,9 @@ static const EntitySpec entities[] = {
     /* SkillImpUse's resource (graphics 0x081E317C, palette row 3): the
      * Imp familiar (looping sequence 0 and its frame attack boxes). */
     ENTITY("skill_imp", 0x081E317C, 0x0820B6DC, 0, 0x08237AC4),
+    /* sub_0802EE40's resource (graphics 0x081E116C, palette row 3): the
+     * Curly soul's shell around the transformed Soma (looping sequence 0). */
+    ENTITY("skill_curly", 0x081E116C, 0x0820B64C, 0, 0x0823760C),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

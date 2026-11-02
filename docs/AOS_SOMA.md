@@ -147,8 +147,13 @@ of his update), `SkillCagnazzoUse` carries an attacking guardian
 `SkillCatoblepasUse` holds him in the breath pose of state 10 (which
 returns to state 0 once no guardian is alive) while gas clouds drift
 ahead. `SkillImpUse` sends a familiar that follows him and dives at the
-nearest enemy of the homing list. The other 19 routines are refused
-before they start,
+nearest enemy of the homing list. Curly's soul puts Soma in state 9
+(`sub_0801A94C`): pose 0x20, the transformation 0x4C, then 0x4B charging
+forward up to 6.0 with the tall wall probes 0x080E12EF, invulnerable,
+until the soul ends or a ceiling meets the body, then 0x4D and braking
+back to state 0. Soma's + 0x1E is an invulnerability counter that
+`sub_08021654` honours. The other 18 routines are refused before they
+start,
 and `--blue-soul N` equips a soul for diagnostics.
 
 ## Yellow soul effects

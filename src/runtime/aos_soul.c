@@ -299,3 +299,47 @@ bool aos_catoblepas_guardian_update(AosCatoblepasGuardian *catoblepas, AosGuardi
     }
     return true;
 }
+
+void aos_curly_guardian_end(AosCurlyGuardian *curly, AosGuardian *guardian, uint32_t *soma_flags,
+                            uint32_t *abilities) {
+    aos_guardian_end(guardian, soma_flags);
+    *abilities &= ~(uint32_t)AOS_TRANSFORM_FLAGS;
+    curly->child = curly->attacking = false;
+}
+
+bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, AosStats *stats,
+                               const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                               uint16_t held, uint16_t pressed, int32_t soma_x, int32_t soma_y,
+                               bool soma_facing_left, AosTransformTarget soma) {
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed) ||
+        (*soma.flags & 0x81A2u)) {
+        aos_curly_guardian_end(curly, guardian, soma.flags, soma.abilities);
+        return false;
+    }
+    curly->facing_left = soma_facing_left;
+    curly->x = (int32_t)((uint32_t)(uint16_t)(soma_x >> 16) << 16);
+    curly->y = (int32_t)((uint32_t)(uint16_t)(soma_y >> 16) << 16);
+    if (guardian->state == 0) {
+        *soma.friction = 0;
+        *soma.gravity = 0;
+        *soma.flags &= ~0x20u;
+        guardian->state = 1;
+        *soma.step = 0;
+        *soma.variant = (uint8_t)records[guardian->soul].argument;
+    } else if (guardian->state == 1) {
+        if (*soma.step == 3) {
+            curly->child = true;
+            curly->child_timer = 0;
+            curly->attacking = true;
+            aos_audio_play_song(0x1B0);
+            guardian->state = 2;
+        }
+    } else if (guardian->state == 2) {
+        curly->timer++;
+    }
+    *soma.state = 9;
+    *soma.abilities |= 0x1000u;
+    /* sub_0802EE40: the child follows Soma, 0x93 every eighth frame. */
+    if (curly->child && (++curly->child_timer & 7) == 0) aos_audio_play_song(0x93);
+    return true;
+}

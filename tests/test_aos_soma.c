@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow Soma motion rules. */
 #include "aos_soma.h"
+#include "aos_audio.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -633,7 +634,8 @@ static void soul_tests(void) {
     soma.cast = scripted_cast;
     soma.facing_left = true;
     frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
-    assert(soma.state == 2 && soma.anim.id == 79 && soma.cast_1e == 0x10 &&
+    /* + 0x1E (invulnerability) is 0x10, counted down once by _0801CCC0. */
+    assert(soma.state == 2 && soma.anim.id == 79 && soma.cast_1e == 0x0F &&
            soma.vx == (int32_t)0xFFFD0000);
     /* Pose 1 hops: airborne, 3.5 up, lighter gravity. */
     cast_pose_result = 1;
@@ -648,7 +650,7 @@ static void soul_tests(void) {
     soma = caster(100, 159, AOS_FLAG_GROUNDED);
     soma.cast = scripted_cast;
     frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
-    assert(soma.recoil == 1 && soma.cast_1e == 0x32 && soma.anim.id == 80);
+    assert(soma.recoil == 1 && soma.cast_1e == 0x31 && soma.anim.id == 80);
     cast_pose_result = 0;
     soma = caster(100, 100, AOS_FLAG_AIRBORNE);
     soma.cast = scripted_cast;
@@ -669,8 +671,61 @@ static void soul_tests(void) {
     assert(cast_calls == 1 && soma.state == 2 && (soma.flags & 0x100) && soma.anim.id == 22);
 }
 
+/* sub_0801A94C (state 9): Curly's transformation. */
+static void transform_tests(void) {
+    fill(0, 0, W - 1, 19, 0x00);
+    fill(0, 20, W - 1, H - 1, 0x03);
+    static const uint8_t four[] = {4, 4};
+    anim_defs[0x4C] = (AosAnimDef){2, four};       /* start: 8 frames */
+    anim_defs[0x4D] = (AosAnimDef){2, four};       /* end */
+    AosSoma soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.abilities = AOS_ABILITY_TRANSFORM;
+    soma.state = 9;
+    soma.transform_step = 0;
+    soma.transform_variant = 2;
+    aos_audio_clear();
+    frame(&soma, 0, 0);
+    /* Pose 0x20 for 45 frames, sound 0x1AB at + 0x0D 0x23. */
+    assert(soma.anim.id == 0x20 && soma.transform_step == 1 && soma.frame_counter == 0x2D);
+    int frames = 0;
+    while (soma.transform_step == 1 && frames < 100) {
+        frame(&soma, 0, 0);
+        ++frames;
+    }
+    assert(frames == 0x2E && soma.anim.id == 0x4C && soma.transformed &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1AB) == 1);
+    /* Invulnerable (+ 0x1E 2) from step 2. */
+    assert(soma.cast_1e == 1 && aos_soma_take_hit(&soma, 50, 0, 0, 0) == 0);
+    frames = 0;
+    while (soma.transform_step == 2 && frames < 100) {
+        frame(&soma, 0, 0);
+        ++frames;
+    }
+    /* Step 3 loops 0x4B and charges forward by 0x1000 a frame up to 6.0. */
+    assert(soma.transform_step == 3 && soma.anim.id == 0x4B);
+    for (int k = 0; k < 120; ++k) frame(&soma, AOS_KEY_LEFT, 0);
+    assert(soma.vx == 0x60000 && !soma.facing_left && soma.state == 9);
+    /* The soul gone (no 0x1000), it plays 0x4D, brakes and returns to 0. */
+    soma.abilities = 0;
+    frame(&soma, 0, 0);
+    assert(soma.transform_step == 5 && soma.anim.id == 0x4D && soma.vx == 0x60000 - 0x6000);
+    frames = 0;
+    while (soma.state == 9 && frames < 100) {
+        frame(&soma, 0, 0);
+        ++frames;
+    }
+    assert(soma.state == 0 && soma.vx == 0);
+    /* Ended before the start animation, it returns without the end one. */
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.state = 9;
+    soma.transform_variant = 2;
+    frame(&soma, 0, 0);
+    assert(soma.state == 0 && soma.anim.id != 0x4D);
+}
+
 int main(void) {
     init_anims();
+    transform_tests();
     soul_tests();
     hit_tests();
     attack_tests();

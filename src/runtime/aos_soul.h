@@ -258,4 +258,46 @@ bool aos_catoblepas_guardian_update(AosCatoblepasGuardian *catoblepas, AosGuardi
                                     uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                                     int32_t soma_x, int32_t soma_y, bool soma_facing_left,
                                     int32_t soma_vx, bool *hold_still, bool *pose);
+/* Skill_Devil_Manticore_Curly_Use with Curly's record (soul 20, held, 30
+ * MP per second, + 0x1C 2): it turns Soma into its state 9 and, once he is
+ * transformed (+ 0x0B 3), attacks around him while its child sub_0802EE40
+ * (the Curly sprite) follows him. Devil (18) and Manticore (19) share it
+ * with the spark children of SkillDevilManticoreSparksUpdate, not ported. */
+enum { AOS_CURLY_POWER = 0x32, AOS_CURLY_ELEMENTS = 1, AOS_CURLY_VARIANT = 2,
+       AOS_TRANSFORM_FLAGS = 0x3F00 };
+
+typedef struct {
+    int32_t x, y;           /* Soma's (+ 0x42, + 0x46 copied) */
+    bool facing_left;
+    uint8_t timer;          /* + 0x0D */
+    bool attacking;         /* type 6 with box 0x4430C0E8 (-24, -64, 48 x 68) */
+    bool child;             /* sub_0802EE40 exists */
+    uint8_t child_timer;    /* its + 0x0D: 0x93 every 8 frames */
+} AosCurlyGuardian;
+
+/* What the soul changes on Soma (gEwramData + 0x13110). */
+typedef struct {
+    uint32_t *flags;            /* + 0x10 */
+    uint32_t *abilities;        /* gEwramData + 0x13260 */
+    uint8_t *state, *step;      /* + 0x0A, + 0x0B */
+    uint8_t *variant;           /* + 0x27 */
+    int32_t *friction, *gravity; /* + 0x50, + 0x54 */
+} AosTransformTarget;
+
+/* One update after Soma's: the upkeep (its end, or Soma airborne,
+ * attacking, casting or with flag 0x80 or 0x8000, ends the soul and clears
+ * 0x13260 bits 8-13); at Soma's position and facing; the first update
+ * stops his friction and gravity, clears his attack flag and starts his
+ * transformation with the record's variant; once he is transformed the
+ * child appears and the attack starts with sound 0x1B0 (sub_08042A54(2,
+ * 0xF) and the sub_0803D18C palette blend are not run). Each update puts
+ * Soma in state 9 with 0x13260 bit 0x1000. Returns false once ended. */
+bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, AosStats *stats,
+                               const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                               uint16_t held, uint16_t pressed, int32_t soma_x, int32_t soma_y,
+                               bool soma_facing_left, AosTransformTarget soma);
+/* sub_0802DFF0 / sub_0802DD84 for the transformation: the guardian and its
+ * child are gone and 0x13260 bits 8-13 cleared. */
+void aos_curly_guardian_end(AosCurlyGuardian *curly, AosGuardian *guardian, uint32_t *soma_flags,
+                            uint32_t *abilities);
 #endif

@@ -44,7 +44,6 @@ aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name	
 aos:asm:asm/code/code_080211F0.s:SkillBlackPantherUse	SkillBlackPantherUse	abilities	name			asm_function		asm/code/code_080211F0.s	26316	0	6
 aos:asm:asm/code/code_080211F0.s:SkillBonePillarUse	SkillBonePillarUse	abilities	name			asm_function		asm/code/code_080211F0.s	26724	0	11
 aos:asm:asm/code/code_080211F0.s:SkillBuerUse	SkillBuerUse	abilities	name			asm_function		asm/code/code_080211F0.s	29679	0	6
-aos:asm:asm/code/code_080211F0.s:SkillCagnazzoUse	SkillCagnazzoUse	abilities	name			asm_function		asm/code/code_080211F0.s	26451	0	11
 aos:asm:asm/code/code_080211F0.s:SkillCatoblepasUse	SkillCatoblepasUse	abilities	name			asm_function		asm/code/code_080211F0.s	31568	0	10
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8

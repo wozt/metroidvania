@@ -122,13 +122,23 @@ static void buer_surviving_hit_interrupt_tests(void) {
     buer.substep = 2;
     buer.timer = 47;
     buer.vx = 0;
-    AosSoulAttack hitbox = {{0, 0, 255, 200}, 8, 0, false, NULL};
+    AosSoulAttack hitbox = {{0, 0, 255, 200}, 8, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&hitbox, 1);
     AosHitReport hit = aos_enemy_update(&buer, &soma, &layer, &kind,
                                         NULL, NULL, 10, 4, 0, 0, never_zero);
     aos_enemy_set_soul_attacks(NULL, 0);
     assert(hitbox.struck && hitbox.target == &buer && hit.enemy_hit);
     assert(!hit.killed && !buer.defeated && buer.hp > 0);
+    /* A guardian's attack (type 6) strikes as a soul does, on a copy. */
+    AosEnemy guarded = buer;
+    int hp_before = guarded.hp;
+    AosSoulAttack guard = {{0, 0, 255, 200}, 8, 0, false, NULL, AOS_TYPE_GUARDIAN};
+    aos_enemy_set_soul_attacks(&guard, 1);
+    AosHitReport guard_hit = aos_enemy_update(&guarded, &soma, &layer, &kind, NULL, NULL, 10,
+                                              4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(guard.struck && guard.target == &guarded && guard_hit.enemy_hit &&
+           guarded.hp < hp_before);
     assert(buer.state == 2 && buer.step == 1 && buer.substep == 0);
     /* The callback never overwrites +0x0D: the earlier AI tick decremented
      * 47 to 46, and the next frame starts the existing 80-frame attack. */
@@ -149,7 +159,7 @@ static void buer_surviving_hit_interrupt_tests(void) {
     buer.step = 7;
     buer.substep = 5;
     buer.timer = 19;
-    AosSoulAttack standing = {{0, 0, 255, 200}, 8, 0, false, NULL};
+    AosSoulAttack standing = {{0, 0, 255, 200}, 8, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&standing, 1);
     hit = aos_enemy_update(&buer, &soma, &layer, &kind,
                            NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -163,7 +173,7 @@ static void buer_surviving_hit_interrupt_tests(void) {
                             1, 0, &soma, &layer, &kind, &stats));
     buer.step = 2;
     buer.substep = 2;
-    AosSoulAttack fatal = {{0, 0, 255, 200}, 255, 0, false, NULL};
+    AosSoulAttack fatal = {{0, 0, 255, 200}, 255, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&fatal, 1);
     hit = aos_enemy_update(&buer, &soma, &layer, &kind,
                            NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -1227,7 +1237,7 @@ static void buer_death_stages_tests(void) {
     assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100,
                             0, 0, &soma, &layer, &kind, &stats));
     assert((buer.y >> 16) > 0 && (buer.y >> 16) <= 0xB0);
-    AosSoulAttack soul = {{0, 0, 255, 200}, 255, 0, false, NULL};
+    AosSoulAttack soul = {{0, 0, 255, 200}, 255, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&soul, 1);
     AosHitReport hit = aos_enemy_update(&buer, &soma, &layer, &kind,
                                         NULL, NULL, 10, 4, 0, 0, always_zero);
@@ -3042,7 +3052,7 @@ static void skeleton_bone_tests(void) {
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) == 1);
     aos_audio_clear();
     AosSoulAttack soul = {{e.x >> 16, (e.y >> 16) - 16, e.x >> 16,
-                           (e.y >> 16) - 16}, 255, 0, false, NULL};
+                           (e.y >> 16) - 16}, 255, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&soul, 1);
     report = aos_enemy_update(&e, &soma, &layer, &kind,
                               NULL, NULL, 10, 4, 0, 0, never_zero);
@@ -3074,7 +3084,7 @@ static void giant_ghost_death_cue_tests(void) {
     AosEnemy ghost;
     assert(aos_enemy_create(&ghost, AOS_ENEMY_GIANT_GHOST, 100, 100,
                             0, 0, &soma, &layer, &kind, &stats));
-    AosSoulAttack hitbox = {{0, 0, 255, 200}, 255, 0, false, NULL};
+    AosSoulAttack hitbox = {{0, 0, 255, 200}, 255, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&hitbox, 1);
     aos_audio_clear();
     AosHitReport hit = aos_enemy_update(&ghost, &soma, &layer, &kind,
@@ -3572,7 +3582,7 @@ static void batch_enemy_tests(void) {
     AosEnemy doomed;
     assert(aos_enemy_create(&doomed, AOS_ENEMY_MERMAN, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
-    AosSoulAttack blast = {{0, 0, 300, 300}, 999, 0, false, NULL};
+    AosSoulAttack blast = {{0, 0, 300, 300}, 999, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&blast, 1);
     aos_audio_clear();
     for (int frame = 0; frame < 4 && !doomed.defeated; ++frame)
@@ -3663,7 +3673,7 @@ static void batch_enemy_tests(void) {
     AosEnemy doomed_harpy;
     assert(aos_enemy_create(&doomed_harpy, AOS_ENEMY_HARPY, 100, 100, 0, 0, &soma, &layer,
                             &kind, &stats));
-    AosSoulAttack harpy_blast = {{0, 0, 300, 300}, 999, 0, false, NULL};
+    AosSoulAttack harpy_blast = {{0, 0, 300, 300}, 999, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&harpy_blast, 1);
     aos_audio_clear();
     for (int frame = 0; frame < 4 && !doomed_harpy.defeated; ++frame)
@@ -5015,7 +5025,7 @@ static void curly_tests(void) {
     /* At the next walk frame start: 0.5 toward its facing. */
     assert(d.vx == (d.mirrored ? 0x8000 : -0x8000));
     /* A killing hit: sub_080935E8's sound 0x1C3. */
-    AosSoulAttack curly_blast = {{0, 0, 300, 300}, 999, 0, false, NULL};
+    AosSoulAttack curly_blast = {{0, 0, 300, 300}, 999, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&curly_blast, 1);
     aos_audio_clear();
     for (int frame = 0; frame < 4 && !d.defeated; ++frame)
@@ -5188,7 +5198,7 @@ static void death_sound_tests(void) {
                          always_zero);
     assert(ghost.step == 1);
     AosSoulAttack soul = {{ghost.x >> 16, ghost.y >> 16, ghost.x >> 16, ghost.y >> 16},
-                          100, 0, false, NULL};
+                          100, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&soul, 1);
     aos_audio_clear();
     aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
@@ -6673,7 +6683,7 @@ static void soul_attack_tests(void) {
     assert(aos_enemy_create(&e, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
     /* A ring over the enemy (hurt rectangle 92..107 x 84..99). */
-    AosSoulAttack ring = {{90, 80, 110, 104}, 26, 0, false, NULL};
+    AosSoulAttack ring = {{90, 80, 110, 104}, 26, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&ring, 1);
     AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                                         never_zero);
@@ -6688,7 +6698,7 @@ static void soul_attack_tests(void) {
     const AosEnemyStats weak_stats = {30, 16, 2, 0x0004, 0, 0};
     assert(aos_enemy_create(&weak, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
                             &weak_stats));
-    AosSoulAttack fire = {{90, 80, 110, 104}, 26, 0x0004, false, NULL};
+    AosSoulAttack fire = {{90, 80, 110, 104}, 26, 0x0004, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&fire, 1);
     hit = aos_enemy_update(&weak, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.enemy_damage == aos_enemy_damage(26, 2, 0x0004, 0, 0x0004) &&
@@ -6697,12 +6707,12 @@ static void soul_attack_tests(void) {
     AosEnemy apart;
     assert(aos_enemy_create(&apart, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
                             &stats));
-    AosSoulAttack beside = {{130, 80, 150, 104}, 26, 0, false, NULL};
+    AosSoulAttack beside = {{130, 80, 150, 104}, 26, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&beside, 1);
     hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(!hit.enemy_hit && apart.hp == 30 && !beside.struck);
     /* Enough power kills it. */
-    AosSoulAttack strong = {{90, 80, 110, 104}, 200, 0, false, NULL};
+    AosSoulAttack strong = {{90, 80, 110, 104}, 200, 0, false, NULL, AOS_TYPE_SOUL};
     aos_enemy_set_soul_attacks(&strong, 1);
     hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.killed && apart.defeated);

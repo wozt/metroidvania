@@ -1162,12 +1162,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
     }
     for (int i = 0; hurt_on && !struck && i < soul_attack_count; ++i) {
         AosSoulAttack *attack = &soul_attacks[i];
-        if (!aos_combat_can_take(&enemy->combat, AOS_TYPE_SOUL)) break;
+        uint8_t type = attack->type ? attack->type : AOS_TYPE_SOUL;
+        if (!aos_combat_can_take(&enemy->combat, type)) continue;
         if (attack->rect.x1 <= target.x2 && target.x1 <= attack->rect.x2 &&
             attack->rect.y1 <= target.y2 && target.y1 <= attack->rect.y2) {
-            aos_combat_take(&enemy->combat, AOS_TYPE_SOUL, aos_combat_cooldown(AOS_TYPE_SOUL, 0));
+            aos_combat_take(&enemy->combat, type, aos_combat_cooldown(type, 0));
             struck = true;
-            attacker = AOS_TYPE_SOUL;
+            attacker = type;
             attack->struck = true;
             attack->target = enemy;
             power = attack->power;

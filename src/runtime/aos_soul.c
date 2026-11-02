@@ -127,3 +127,28 @@ bool aos_medusa_guardian_update(AosMedusaGuardian *medusa, AosGuardian *guardian
     *soma_gravity = 0;
     return true;
 }
+
+int32_t aos_guardian_power(const AosStats *stats, uint16_t power, bool reduced) {
+    uint32_t value = power + (uint32_t)(power >> 3) * (uint32_t)(stats->current[AOS_STAT_INT] >> 1);
+    if (reduced) value = value * 8 / 10;
+    return (int32_t)(uint16_t)value;
+}
+
+bool aos_cagnazzo_guardian_update(AosCagnazzoGuardian *cagnazzo, AosGuardian *guardian,
+                                  AosStats *stats,
+                                  const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                  uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                  int32_t soma_x, int32_t soma_y, bool soma_facing_left) {
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    if (guardian->state == 0) {
+        aos_audio_play_song(0x1AA);
+        guardian->state = 1;
+    }
+    cagnazzo->facing_left = soma_facing_left;
+    cagnazzo->x = (int16_t)(soma_x + (soma_facing_left ? -0x10 : 0x10));
+    cagnazzo->y = (int16_t)(soma_y - 0x20);
+    return true;
+}

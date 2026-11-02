@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T10:07:22+00:00",
+ "generated_at": "2026-11-02T10:27:04+00:00",
  "git": {
-  "commit": "67454dd",
+  "commit": "b8c055c",
   "branch": "main",
   "dirty": true
  },
@@ -13481,7 +13481,8 @@
    ],
    "tests": [
     "tests/test_aos_soul.c",
-    "tests/test_aos_soma.c"
+    "tests/test_aos_soma.c",
+    "tests/test_aos_enemy.c"
    ],
    "dependencies": [
     "aos.souls.inventory_pickups",
@@ -13496,17 +13497,20 @@
     "SkillMedusaHeadUse",
     "sub_0801B0D8",
     "sub_080199A0",
-    "sub_08019A94"
+    "sub_08019A94",
+    "SkillCagnazzoUse",
+    "sub_08021530"
    ],
-   "limitations": "Only SkillMedusaHeadUse is ported; the 23 other guardian routines are refused before they start, so their souls do nothing. The gEwramData + 0x344 & 0x200000 limit to souls 1-3, the 0x131B8 & 0x200 lock and the 0x42C bits 0 and 8 of the upkeep are not modelled. The cleanup of sub_0802DD84 frees only the guardian slot and Soma's flag 0x200 (no guardian child entity, 0x131D0 palette or 0x13260 bits 8-13 exist yet). sub_0802E0C4 runs at the end of Soma's states 0 (_0801CC30), 12 (sub_08019A94) and 13 (sub_080199A0): with no guardian in gEwramData + 0x13144, the guardian button held (and newly pressed for a record with flag 2) and at least max MP / 128 + 1 MP, it creates the guardian entity for the equipped blue soul's record (0x080E192C, 12 bytes, exported as metadata/blue_souls.tsv with 25 records, 0 for none): routine (+ 0x0), MP per second (+ 0x4; the entity drains one MP every 60 / it frames), flags (+ 0x5), + 0x1A (+ 0x6) and + 0x1C (+ 0x8), and sets Soma's flag 0x200. The upkeep sub_0802DF2C/sub_0802DE5C drains the MP (0 ends the soul), ends a held soul when the button is released and a toggled soul when it is pressed again after its first update. SkillMedusaHeadUse (soul 15, held, 10 MP per second) requires Soma airborne with no 0x80, 0x8000 or 0x1000000 flag (else it ends on its first update), plays 0x8C, keeps his vy (0 when rising) and gravity 0x2800, then after each of his updates zeroes his vy and + 0x54 and sets 0x131B8 & 0x20, which the end of his next update (before _0801CF2C clears it) reads to zero his vx and friction; on its end Soma gets the kept vy and gravity back. Diagnostic --blue-soul N equips and grants a blue soul.",
-   "next_action": "Port the other guardian routines, starting with those of the tracked monsters (Buer 4, Giant Ghost 6, Catoblepas 9, Bone Pillar 10, Cagnazzo 11, Curly 20 and Imp 22).",
+   "limitations": "Only SkillMedusaHeadUse and SkillCagnazzoUse are ported; the 22 other guardian routines are refused before they start, so their souls do nothing. The gEwramData + 0x344 & 0x200000 limit to souls 1-3, the 0x131B8 & 0x200 lock and the 0x42C bits 0 and 8 of the upkeep are not modelled. The cleanup of sub_0802DD84 frees only the guardian slot and Soma's flag 0x200 (no guardian child entity exists yet; the Cagnazzo art's 0x131D0 palette slot is the exported art's, and no 0x13260 bits 8-13 are set). sub_08042A54(2, 0x14) at Cagnazzo's start is not run. sub_0802E0C4 runs at the end of Soma's states 0 (_0801CC30), 12 (sub_08019A94) and 13 (sub_080199A0): with no guardian in gEwramData + 0x13144, the guardian button held (and newly pressed for a record with flag 2) and at least max MP / 128 + 1 MP, it creates the guardian entity for the equipped blue soul's record (0x080E192C, 12 bytes, exported as metadata/blue_souls.tsv with 25 records, 0 for none): routine (+ 0x0), MP per second (+ 0x4; the entity drains one MP every 60 / it frames), flags (+ 0x5), + 0x1A (+ 0x6) and + 0x1C (+ 0x8), and sets Soma's flag 0x200. The upkeep sub_0802DF2C/sub_0802DE5C drains the MP (0 ends the soul), ends a held soul when the button is released and a toggled soul when it is pressed again after its first update. SkillMedusaHeadUse (soul 15, held, 10 MP per second) requires Soma airborne with no 0x80, 0x8000 or 0x1000000 flag (else it ends on its first update), plays 0x8C, keeps his vy (0 when rising) and gravity 0x2800, then after each of his updates zeroes his vy and + 0x54 and sets 0x131B8 & 0x20, which the end of his next update (before _0801CF2C clears it) reads to zero his vx and friction; on its end Soma gets the kept vy and gravity back. Diagnostic --blue-soul N equips and grants a blue soul. SkillCagnazzoUse (soul 11, toggled, 5 MP per second) runs the upkeep first, then on its first update loads its own art (0x081DC144, exported as Enemy/skill_cagnazzo), starts looping sequence 0, sets the guardian power 0x131C2 to 12 and the elements 0x131C4 to 0, its attack box 0x1414050A (10, 5, 20 x 20) with type 6 and plays 0x1AA; every update places it 16 pixels ahead of Soma (his facing) and 32 above his feet. sub_08021530(6) gives the type-6 power 0x131C2 + 0x131C2 / 8 * (INT / 2) (8 / 10 under gEwramData + 0xA1 & 0xF0); type 6 takes its own recent-hit slot with cooldown 0 (0x080E33F0).",
+   "next_action": "Port the other guardian routines, starting with those of the tracked monsters (Buer 4, Giant Ghost 6, Catoblepas 9, Bone Pillar 10, Curly 20 and Imp 22).",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul.c",
-     "tests/test_aos_soma.c"
+     "tests/test_aos_soma.c",
+     "tests/test_aos_enemy.c"
     ],
     "in_game_check": [
-     "aria area_00_room_003 (--blue-soul 15 --spawn 640 120 --repeat 1000, R held): Soma stays at y 120 through frame 60 (he lands at y 191 without R); with Right also held he moves one pixel, then is held still"
+     "aria area_00_room_003 (--blue-soul 15 --spawn 640 120 --repeat 1000, R held): Soma stays at y 120 through frame 60 (he lands at y 191 without R); with Right also held he moves one pixel, then is held still; area_00_room_003 (--blue-soul 11, R pressed once): Cagnazzo's guardian rides on Soma's shoulder; area_00_room_006 (--hp 9999 --blue-soul 11, R and Right): it kills a Skeleton with two 17-damage hits without an attack press"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -13533,6 +13537,16 @@
       "registered": true,
       "ctest": [
        "aos_soma"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
       ],
       "outcome": "passed",
       "exists": true
@@ -18622,6 +18636,12 @@
  },
  "timeline": [
   {
+   "commit": "b8c055c",
+   "date": "2026-11-02",
+   "subject": "Port the Aria blue soul guardian start, MP drain and Medusa Head soul",
+   "scope": "project"
+  },
+  {
    "commit": "67454dd",
    "date": "2026-11-01",
    "subject": "Audit the Buer sounds and mark them ported",
@@ -19094,12 +19114,6 @@
    "date": "2026-10-28",
    "subject": "Port the Blue Crow soul and the crow sounds",
    "scope": "project"
-  },
-  {
-   "commit": "1a836cc",
-   "date": "2026-10-28",
-   "subject": "Port the Tiny Devil soul and the homing list",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19160,9 +19174,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 690,
-    "routines_attached_to_features": 690,
-    "unassigned_routines": 2883,
+    "routines_cited_by_features": 691,
+    "routines_attached_to_features": 691,
+    "unassigned_routines": 2882,
     "call_edges": 14228
    }
   },
@@ -22896,9 +22910,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "blue:11",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: the shared controller requests 0x87 at the dive, Cagnazzo's additional 0x1BA and 0x1BC at death; unit-tested, not listened to or emulator-compared."
+       "notes": "Soul: drops, is collected and starts SkillCagnazzoUse with an R press (toggled, 5 MP per second, sound 0x1AA): its exported guardian rides 16 pixels ahead of Soma and 32 above his feet with looping sequence 0 and a 10, 5, 20 x 20 type-6 attack of power 12 + 12 / 8 * INT / 2; a second press ends it. Unit-tested and checked in local captures (it killed a Skeleton in area 0 room 6), not emulator-compared; sub_08042A54(2, 0x14) is not run. Sounds: the shared controller requests 0x87 at the dive, Cagnazzo's additional 0x1BA and 0x1BC at death; unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23562,11 +23576,11 @@
       "missing": 0
      },
      "soul": {
-      "ported": 22,
-      "partial": 25,
+      "ported": 23,
+      "partial": 24,
       "missing": 0
      },
-     "complete": 17,
+     "complete": 18,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -28044,7 +28058,7 @@
        "id": "06:0B",
        "name": "Cagnazzo",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: the shared controller requests 0x87 at the dive, Cagnazzo's additional 0x1BA and 0x1BC at death; unit-tested, not listened to or emulator-compared.",
+       "note": "Soul: drops, is collected and starts SkillCagnazzoUse with an R press (toggled, 5 MP per second, sound 0x1AA): its exported guardian rides 16 pixels ahead of Soma and 32 above his feet with looping sequence 0 and a 10, 5, 20 x 20 type-6 attack of power 12 + 12 / 8 * INT / 2; a second press ends it. Unit-tested and checked in local captures (it killed a Skeleton in area 0 room 6), not emulator-compared; sub_08042A54(2, 0x14) is not run. Sounds: the shared controller requests 0x87 at the dive, Cagnazzo's additional 0x1BA and 0x1BC at death; unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

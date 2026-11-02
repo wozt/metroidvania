@@ -109,4 +109,25 @@ bool aos_medusa_guardian_update(AosMedusaGuardian *medusa, AosGuardian *guardian
                                 const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
                                 uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                                 int32_t *soma_vy, int32_t *soma_gravity, bool *hold_still);
+/* sub_08021530(6) in normal play: the guardian's power gEwramData + 0x131C2
+ * plus power / 8 times INT / 2, scaled by 8 / 10 when `reduced`. */
+int32_t aos_guardian_power(const AosStats *stats, uint16_t power, bool reduced);
+
+/* SkillCagnazzoUse (soul 11, toggled): after the upkeep, its first update
+ * sets the guardian power to 12 with no elements, its attack box
+ * 0x1414050A (10, 5, 20 x 20, type 6) and sound 0x1AA; every update then
+ * places it 16 pixels ahead of Soma (his facing) and 32 above his feet.
+ * Returns false once the guardian has ended (its cleanup done). */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool facing_left;
+} AosCagnazzoGuardian;
+
+enum { AOS_CAGNAZZO_POWER = 12 };
+
+bool aos_cagnazzo_guardian_update(AosCagnazzoGuardian *cagnazzo, AosGuardian *guardian,
+                                  AosStats *stats,
+                                  const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                  uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                  int32_t soma_x, int32_t soma_y, bool soma_facing_left);
 #endif

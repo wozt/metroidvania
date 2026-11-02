@@ -295,6 +295,7 @@ typedef struct {
     uint16_t elements;
     bool struck;
     AosEnemy *target;
+    uint8_t type;           /* + 0x70: AOS_TYPE_SOUL when 0, 6 for a guardian */
 } AosSoulAttack;
 
 /* The soul attacks the next enemy updates test after the weapon (type 5

@@ -220,14 +220,15 @@ static int enemy_bank(const AosEnemy *enemy) {
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
-       SKILL_ARTS };
+       SKILL_ART_CAGNAZZO, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
                                                          "skill_flea", "skill_skull",
                                                          "skill_valkyrie", "skill_needles",
                                                          "skill_ripper", "skill_killer_fish",
-                                                         "skill_fish_head"};
+                                                         "skill_fish_head",
+                                                         "skill_cagnazzo"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -990,12 +991,17 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 
 /* The blue soul guardian (gEwramData + 0x13144) and its routine. */
 #define GUARDIAN_MEDUSA_ROUTINE 0x08030CC9u
+#define GUARDIAN_CAGNAZZO_ROUTINE 0x0802E4EDu
 typedef struct {
     AosGuardian core;
+    uint32_t routine;
     AosMedusaGuardian medusa;
+    AosCagnazzoGuardian cagnazzo;
+    AosAnimState anim;
     AosStats *stats;
     const AosBlueSoulRecord *records;
     AosSoma *soma;
+    const AosAnimSet *cagnazzo_art;  /* Enemy/skill_cagnazzo, NULL when missing */
 } AriaGuardian;
 
 /* Soma's guardian hook: sub_0802E0C4 for the souls whose routine is
@@ -1003,21 +1009,54 @@ typedef struct {
 static void start_guardian(void *context) {
     AriaGuardian *guardian = context;
     const AosStats *stats = guardian->stats;
-    if (stats->blue_soul >= AOS_BLUE_SOUL_RECORDS ||
-        guardian->records[stats->blue_soul].routine != GUARDIAN_MEDUSA_ROUTINE)
+    if (stats->blue_soul >= AOS_BLUE_SOUL_RECORDS) return;
+    uint32_t routine = guardian->records[stats->blue_soul].routine;
+    if (routine != GUARDIAN_MEDUSA_ROUTINE &&
+        !(routine == GUARDIAN_CAGNAZZO_ROUTINE && guardian->cagnazzo_art))
         return;
     if (aos_guardian_try(&guardian->core, stats, guardian->records, guardian->soma->held,
-                         guardian->soma->pressed, false, &guardian->soma->flags))
+                         guardian->soma->pressed, false, &guardian->soma->flags)) {
+        guardian->routine = routine;
         guardian->medusa = (AosMedusaGuardian){0};
+        guardian->cagnazzo = (AosCagnazzoGuardian){0};
+    }
 }
 
 /* The guardian entity's update, after Soma's in the entity order. */
 static void update_guardian(AriaGuardian *guardian) {
     if (!guardian->core.active) return;
     AosSoma *soma = guardian->soma;
-    aos_medusa_guardian_update(&guardian->medusa, &guardian->core, guardian->stats,
-                               guardian->records, soma->held, soma->pressed, &soma->flags,
-                               &soma->vy, &soma->gravity_mod, &soma->hold_still);
+    if (guardian->routine == GUARDIAN_MEDUSA_ROUTINE) {
+        aos_medusa_guardian_update(&guardian->medusa, &guardian->core, guardian->stats,
+                                   guardian->records, soma->held, soma->pressed, &soma->flags,
+                                   &soma->vy, &soma->gravity_mod, &soma->hold_still);
+    } else if (guardian->routine == GUARDIAN_CAGNAZZO_ROUTINE) {
+        /* Its looping sequence 0 starts on the first update and steps at
+         * its end (sub_0803F17C); sub_08042A54(2, 0x14) is not run. */
+        bool first = guardian->core.state == 0;
+        if (!aos_cagnazzo_guardian_update(&guardian->cagnazzo, &guardian->core, guardian->stats,
+                                          guardian->records, soma->held, soma->pressed,
+                                          &soma->flags, soma->x >> 16, soma->y >> 16,
+                                          soma->facing_left))
+            return;
+        if (first) aos_anim_start(&guardian->anim, guardian->cagnazzo_art, 0, true);
+        aos_anim_step(&guardian->anim, guardian->cagnazzo_art);
+    }
+}
+
+/* The guardian's attack this frame (type 6, sub_08021530(6) with the
+ * 0x131C2 power and no 0x131C4 elements); false for none. */
+static bool guardian_attack(const AriaGuardian *guardian, AosSoulAttack *attack) {
+    if (!guardian->core.active || guardian->routine != GUARDIAN_CAGNAZZO_ROUTINE ||
+        guardian->core.state == 0)
+        return false;
+    const AosCagnazzoGuardian *cagnazzo = &guardian->cagnazzo;
+    *attack = (AosSoulAttack){
+        aos_entity_rect((AosBox){10, 5, 20, 20}, cagnazzo->x, cagnazzo->y,  /* 0x1414050A */
+                        cagnazzo->facing_left, false),
+        aos_guardian_power(guardian->stats, AOS_CAGNAZZO_POWER, false), 0, false, NULL,
+        AOS_TYPE_GUARDIAN};
+    return true;
 }
 
 static void update_skills(AriaSouls *souls) {
@@ -1828,7 +1867,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         owners[count] = skill;
         attacks[count++] = (AosSoulAttack){
             aos_entity_rect(box, skill->x >> 16, skill->y >> 16, skill->facing_left, false),
-            aos_red_soul_power(souls->stats, record, false), record->elements, false, NULL};
+            aos_red_soul_power(souls->stats, record, false), record->elements, false, NULL,
+            AOS_TYPE_SOUL};
     }
     return count;
 }
@@ -3814,6 +3854,9 @@ int main(int argc, char **argv) {
     static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
     static AriaGuardian guardian;
     guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
+    if (objects_ok && objects.skills[SKILL_ART_CAGNAZZO].loaded &&
+        objects.skills[SKILL_ART_CAGNAZZO].defs[0].count)
+        guardian.cagnazzo_art = &objects.skills[SKILL_ART_CAGNAZZO].set;
     if (load_blue_souls(DEFAULT_BLUE_SOULS, blue_souls)) {
         guardian.records = blue_souls;
         soma.guardian = start_guardian;
@@ -4293,17 +4336,18 @@ int main(int argc, char **argv) {
                     if (combat.effects[weapon_entity.effects[k].kind])
                         room.effects[room.effect_count++] = weapon_entity.effects[k];
             }
-            AosSoulAttack attacks[MAX_SKILLS];
-            AriaSkill *owners[MAX_SKILLS];
+            AosSoulAttack attacks[MAX_SKILLS + 1];
+            AriaSkill *owners[MAX_SKILLS + 1];
             int attack_count = soul_attacks(&souls, souls.bat ? &objects.skills[SKILL_ART_BAT].kind : NULL,
                                             attacks, owners);
+            if (guardian_attack(&guardian, &attacks[attack_count])) owners[attack_count++] = NULL;
             aos_enemy_set_soul_attacks(attacks, attack_count);
             homing_room = &room;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
             for (int k = 0; k < attack_count; ++k)
-                if (attacks[k].struck) {
+                if (attacks[k].struck && owners[k]) {
                     owners[k]->struck = true;
                     if (owners[k]->kind == SKILL_RIPPER && !owners[k]->ripper.attached &&
                         attacks[k].target) {
@@ -4514,6 +4558,22 @@ int main(int argc, char **argv) {
                 (vertical_flip ? SDL_FLIP_VERTICAL : 0));
             SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, angle, NULL, flip);
             if (skill->kind == SKILL_AXE_TRAIL) SDL_SetTextureAlphaMod(art->texture, 255);
+        }
+        /* The guardian entity (Cagnazzo's sequence 0). */
+        if (guardian.core.active && guardian.routine == GUARDIAN_CAGNAZZO_ROUTINE &&
+            guardian.core.state && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_CAGNAZZO].frames[0][guardian.anim.frame];
+            if (art->texture) {
+                const AosCagnazzoGuardian *cagnazzo = &guardian.cagnazzo;
+                float x = cagnazzo->facing_left ? (float)(cagnazzo->x - art->offset_x) - art->w
+                                                : (float)(cagnazzo->x + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x,
+                                  (float)(cagnazzo->y + art->offset_y - cam_y), art->w, art->h};
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         cagnazzo->facing_left ? SDL_FLIP_HORIZONTAL
+                                                               : SDL_FLIP_NONE);
+            }
         }
         if (show_hitboxes) {
             /* The pickups' sprites are not exported: their boxes only. */

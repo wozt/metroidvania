@@ -218,6 +218,9 @@ static const EntitySpec entities[] = {
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),
     /* Resource 17 of 0x080E13BC: Fish Head's accelerating sequence 0. */
     ENTITY("skill_fish_head", 0x081D4908, 0x0820B2C8, 0, 0x082338A4),
+    /* SkillCagnazzoUse's own resource (graphics 0x081DC144, palette row 3):
+     * Cagnazzo's guardian (looping sequence 0). */
+    ENTITY("skill_cagnazzo", 0x081DC144, 0x0820B4E4, 0, 0x082361A4),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

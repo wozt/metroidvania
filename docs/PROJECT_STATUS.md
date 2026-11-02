@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0691 - Cagnazzo blue soul
+
+- `SkillCagnazzoUse` (soul 11, toggled, 5 MP per second): its own art
+  (0x081DC144) is exported as `Enemy/skill_cagnazzo` (`aria_objects`
+  v35). Its guardian rides 16 pixels ahead of Soma and 32 above his feet
+  with looping sequence 0, plays 0x1AA and attacks with box 0x1414050A
+  as collision type 6.
+- Soul attacks now carry their collision type. Type 6 uses its own
+  recent-hit slot and the power of `sub_08021530(6)`: 0x131C2 +
+  0x131C2 / 8 * (INT / 2), with 0x131C2 = 12 for Cagnazzo.
+- A local capture shows the guardian on Soma's shoulder. In area 0 room
+  6 it kills a Skeleton with two 17-damage hits without an attack press.
+  Cagnazzo's five aspects are now ported. Zero Mission is unchanged.
+
 ## Patch 0690 - Blue soul guardians and Medusa Head
 
 - The blue soul start `sub_0802E0C4` runs at the end of Soma's states 0,

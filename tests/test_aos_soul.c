@@ -183,6 +183,31 @@ int main(void) {
     assert(!aos_medusa_guardian_update(&medusa, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
                                        &soma_flags, &vy, &gravity, &still) &&
            !aos_audio_requested(AOS_AUDIO_START_SONG, 0x8C) && !guardian.active);
+    /* SkillCagnazzoUse (soul 11, toggled, 5 MP/s): sound 0x1AA once, placed
+     * 16 ahead and 32 above Soma; a second press ends it. */
+    blue[11] = (AosBlueSoulRecord){0x0802E4ED, 5, 2, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 11, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosCagnazzoGuardian cagnazzo = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags) && guardian.interval == 12);
+    assert(aos_cagnazzo_guardian_update(&cagnazzo, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                        AOS_KEY_R, &soma_flags, 100, 200, false));
+    assert(cagnazzo.x == 116 && cagnazzo.y == 168 && !cagnazzo.facing_left &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1AA) == 1);
+    assert(aos_cagnazzo_guardian_update(&cagnazzo, &guardian, &guard_stats, blue, 0, 0,
+                                        &soma_flags, 100, 200, true));
+    assert(cagnazzo.x == 84 && cagnazzo.facing_left &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1AA) == 1);
+    assert(!aos_cagnazzo_guardian_update(&cagnazzo, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                         AOS_KEY_R, &soma_flags, 100, 200, true) &&
+           !guardian.active && soma_flags == 0x100000);
+    /* sub_08021530(6): 12 + 12 / 8 * (INT / 2); 8 / 10 when reduced. */
+    guard_stats.current[AOS_STAT_INT] = 21;
+    assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, false) == 22);
+    assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, true) == 17);
     puts("Aria red and blue soul tests passed");
     return 0;
 }

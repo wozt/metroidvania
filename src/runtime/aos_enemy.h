@@ -239,6 +239,11 @@ typedef struct AosEnemy {
      * tick, then -1 on the following tick; carried into death step two.
      * This tracks the source child position without retaining room pointers. */
     uint8_t buer_death_linked_wobble;
+    /* Buer's fire sprite (sub_080CC3C8): its position, kept by the body,
+     * on the body while it follows it (its + 0x0A = 0), gone in death
+     * stage two. */
+    int32_t buer_fire_x, buer_fire_y;
+    bool buer_fire_following, buer_fire_gone;
     bool technical_effects_spawned; /* the three Nemesis visual effect slots */
     int16_t home, home_right, home_left;  /* + 0x22, + 0x14, + 0x16 of a beam skeleton */
     uint16_t rest;          /* + 0x1C of a beam skeleton: frames before it may fire */

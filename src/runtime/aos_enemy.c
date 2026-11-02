@@ -471,12 +471,11 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
 }
 
 /* Constructor and update must agree on validity of ROM-local Buer probes. */
-static bool buer_native_enabled(const AosEnemyKind *kind);
 
 static bool is_early_enemy(uint8_t id) {
     return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_PEEPING_EYE ||
            id == AOS_ENEMY_BONE_PILLAR ||
-           id == AOS_ENEMY_BUER || id == AOS_ENEMY_WHITE_DRAGON || id == AOS_ENEMY_GHOST ||
+           id == AOS_ENEMY_WHITE_DRAGON || id == AOS_ENEMY_GHOST ||
            id == AOS_ENEMY_GIANT_GHOST || id == AOS_ENEMY_WINGED_SKELETON;
 }
 
@@ -506,7 +505,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_CATOBLEPAS && id != AOS_ENEMY_IMP && id != AOS_ENEMY_GORGON &&
         id != AOS_ENEMY_HARPY && id != AOS_ENEMY_RIPPER &&
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR && id != AOS_ENEMY_ROCK_ARMOR &&
-        id != AOS_ENEMY_KILLER_FISH &&
+        id != AOS_ENEMY_KILLER_FISH && id != AOS_ENEMY_BUER &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -540,28 +539,15 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             return true;
         }
         unsigned animation = id == AOS_ENEMY_WINGED_SKELETON ? 2 : 0;
-        bool direct_frame = id == AOS_ENEMY_BUER || id == AOS_ENEMY_WHITE_DRAGON;
+        bool direct_frame = id == AOS_ENEMY_WHITE_DRAGON;
         if (direct_frame) enemy->static_frame = 0;
         else {
             play(enemy, anims, animation);
             step_anim(enemy, anims);
         }
-        /* EnemyBuerCreate sets up the rolling spin and native gravity
-         * BEFORE checking the global inert flag. In particular, a Buer
-         * created directly in state four must retain its independent
-         * linked-fire facing and GBA +0x18/+0x54 initialization. The
-         * non-native export keeps its existing bounded-motion fallback. */
-        if (id == AOS_ENEMY_BUER) {
-            /* EnemyBuerCreate initializes +0x18 spin and +0x54 gravity
-             * before the inactive flag is read, regardless of the ROM
-             * metadata version. Collision walker selection is separate. */
-            enemy->spin = 0x8000;
-            enemy->buer_fire_mirrored = true;
-            enemy->ay = 0x4000;
-        }
         if (flag_8e_40) {
             enemy->state = id == AOS_ENEMY_SKELETON ? 5 :
-                           id == AOS_ENEMY_BUER || id == AOS_ENEMY_WINGED_SKELETON ? 4 :
+                           id == AOS_ENEMY_WINGED_SKELETON ? 4 :
                            id == AOS_ENEMY_GIANT_GHOST ? 3 : 2;
             if (id == AOS_ENEMY_GHOST) enemy->y -= AOS_FIXED(36);
             return true;
@@ -600,28 +586,6 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             /* EnemyBonePillarCreate builds its linked tower upward in
              * 22-pixel increments, leaving this original record at the top. */
             enemy->y -= AOS_FIXED(enemy->param0 * 22);
-            break;
-        case AOS_ENEMY_BUER:
-            enemy->state = param0 ? 2 : 1;
-            enemy->own_boxes = true;
-            enemy->own_hurt = enemy->own_attack = (AosBox){-20, -20, 40, 40};
-            snap_to_floor(enemy, layer);
-            /* EnemyBuerCreate subtracts 0x18 through a u16 write to
-             * +0x46 (the high Y halfword). Preserve 16.16 fractions and
-             * wrap on the native signed 16-bit coordinate boundary. */
-            enemy->y = (int32_t)((uint32_t)enemy->y - (24u << 16));
-            enemy->home = (int16_t)(enemy->y >> 16);
-            enemy->home_left = (int16_t)((enemy->x >> 16) - 64);
-            enemy->home_right = (int16_t)((enemy->x >> 16) + 64);
-            /* EnemyBuerCreate does NOT initialize horizontal speed
-             * at +0x48. Native sub_080CC20C / sub_0806CAF8 sets it
-             * from +0x18 spin on the first movement tick, independent
-             * of body facing. The historical synthetic starting speed
-             * remains necessary only for old/malformed probe exports. */
-            if (!buer_native_enabled(kind))
-                enemy->vx = toward_facing(enemy, 0x18000);
-            /* +0x18 spin, +0x54 gravity and linked-fire facing were
-             * set before the inert-flag branch; do not reset them here. */
             break;
         case AOS_ENEMY_WHITE_DRAGON:
             enemy->own_boxes = true;
@@ -724,6 +688,35 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->state = 2;
             play(enemy, anims, 1);
         }
+        return true;
+    }
+    if (id == AOS_ENEMY_BUER) {
+        /* EnemyBuerCreate (tiles 0x081F428C, palette 0x0820BF9C, frames
+         * 0x0824FDB0): direct frame 0 in an affine slot, priority 0x14, the
+         * spin + 0x18 = 0.5, gravity 0x4000, state 1 (rolling) or, with
+         * parameter 0, state 2; its fire (sub_080CBA30) facing the spin.
+         * State 4 (inert) under the global 0x8E & 0x40; otherwise contact
+         * sub_080CC4E4 (element 1, a knockback), both boxes (-20, -20, 40,
+         * 40) of 0x2828ECEC, the floor snap and 24 pixels up. */
+        enemy->static_frame = 0;
+        enemy->spin = 0x8000;
+        enemy->ay = 0x4000;
+        enemy->state = param0 ? 2 : 1;
+        enemy->buer_fire_mirrored = true;
+        enemy->buer_fire_following = true;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->buer_fire_x = enemy->x;
+            enemy->buer_fire_y = enemy->y;
+            return true;
+        }
+        enemy->own_boxes = true;
+        enemy->own_hurt = enemy->own_attack = (AosBox){-20, -20, 40, 40};
+        enemy->contact_elements = 1;
+        snap_to_floor(enemy, layer);
+        enemy->y = (int32_t)((uint32_t)enemy->y - (24u << 16));
+        enemy->buer_fire_x = enemy->x;
+        enemy->buer_fire_y = enemy->y;
         return true;
     }
     if (id == AOS_ENEMY_KILLER_FISH) {
@@ -1332,11 +1325,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 enemy->step = 0;
             }
             if (enemy->hp > 0 && enemy->id == AOS_ENEMY_BUER &&
-                enemy->role == AOS_ROLE_ENEMY && enemy->state == 2) {
-                /* sub_080CC514: any surviving hit in state 2 interrupts
-                 * the rolling/window phase, dispatching sub_080CBC64 on
-                 * the next update. It resets the two step bytes, not the
-                 * independent +0x0D timer. Lethal hits use state 3 below. */
+                enemy->role == AOS_ROLE_ENEMY && enemy->state == 2 && enemy->step == 0) {
+                /* sub_080CC514: a surviving blow while it rolls in state 2
+                 * (the halfword + 0x0A == 2) starts the attack. */
                 enemy->step = 1;
                 enemy->substep = 0;
             }
@@ -1635,6 +1626,7 @@ contact:
          * knockbacks (type 1); the elements are the callback's
          * (contact_elements). */
         bool knockback = enemy->id == AOS_ENEMY_MIMIC || enemy->role == AOS_ROLE_ROCK ||
+                         (enemy->id == AOS_ENEMY_BUER && enemy->role == AOS_ROLE_ENEMY) ||
                          enemy->role == AOS_ROLE_FRY ||
                          (enemy->id == AOS_ENEMY_MEDUSA_HEAD && enemy->role == AOS_ROLE_ENEMY);
         report.soma_damage = aos_soma_take_elemental_hit(soma, contact, soma_def, enemy->x,
@@ -7051,27 +7043,6 @@ static void bone_pillar_children(const AosEnemy *owner, const AosAnimSet *anims,
     }
 }
 
-/* sub_080CBA30 creates Buer's second direct frame as a linked component.
- * The native helper follows the parent while it remains in its active state;
- * its independent fire collision and later states are intentionally left for
- * the dedicated attack pass. */
-static void buer_fire_child(const AosEnemy *owner, AosHitReport *report) {
-    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
-    AosEnemy child;
-    make_static_child(&child, owner, AOS_ROLE_BUER_FIRE, 1);
-    /* sub_080CBA30: linked fire mirrors its owner's signed velocity,
-     * not the current facing of the parent body. */
-    child.mirrored = owner->buer_fire_mirrored;
-    /* Native sub_080CBA30 sets the linked visual's non-interactive
-     * entity flag. sub_080CC3C8 only copies the parent's coordinates;
-     * it never calls the attack/weapon collision callback. The Buer
-     * body alone handles type-8 contact via sub_080CC4E4. */
-    child.own_boxes = false;
-    child.combat.attack_off = true;
-    child.combat.hurt_off = true;
-    report->children[report->child_count++] = child;
-}
-
 /* White Dragon's nine body records all use animation 1 and retain the native
  * owner link. The full ROM routine bends the chain with affine state; this
  * first pass keeps the nine animated parts visibly attached to the head. */
@@ -7112,14 +7083,12 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
      * staged death still references it. Only the owner slot's actual
      * removal retires that child. Other linked enemies retain the previous
      * defeated-owner cleanup semantics. */
-    if (!owner || owner->removed ||
-        (owner->defeated && child->role != AOS_ROLE_BUER_FIRE)) {
+    if (!owner || owner->removed || owner->defeated) {
         child->removed = true;
         return report;
     }
     /* Buer's linked direct frame carries its own native facing bit. */
-    child->mirrored = child->role == AOS_ROLE_BUER_FIRE
-                      ? owner->buer_fire_mirrored : owner->mirrored;
+    child->mirrored = owner->mirrored;
     child->hidden = owner->hidden;
     if (child->role == AOS_ROLE_PEEPING_SEGMENT) {
         unsigned i = child->variant;
@@ -7140,30 +7109,6 @@ static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
         /* Only contact collision is active: the owner receives damage and
          * normal rewards, so linked pieces never duplicate its loot. */
         report = collide(child, soma, kind, NULL, NULL, 0, 0);
-        aos_combat_tick(&child->combat);
-        return report;
-    }
-    if (child->role == AOS_ROLE_BUER_FIRE) {
-        /* sub_080CC3C8: copy the owner's +0x40/+0x44 only while the
-         * linked child's own +0x0A state is zero. Do not keep teleporting
-         * a child that has entered its independent visual animation. */
-        if (child->state == 0) {
-            /* During sub_080CBEA4's death animation, the linked fire
-             * receives a one-pixel X/Y nudge every third countdown tick,
-             * undoes it on the next tick, and keeps the final displacement
-             * while moving with its owner in death stage two. */
-            const int32_t wobble = owner->defeated && owner->state == 3 &&
-                (owner->step == 1 || owner->step == 2) &&
-                owner->buer_death_linked_wobble ? AOS_FIXED(1) : 0;
-            child->x = (int32_t)((uint32_t)owner->x + (uint32_t)wobble);
-            child->y = (int32_t)((uint32_t)owner->y + (uint32_t)wobble);
-        }
-        /* Native sub_080CC3C8 never dispatches sub_080421AC:
-         * the linked sprite is visual-only in every owner state, not
-         * merely while the owner is dying. Buer itself receives attacks
-         * and collides with Soma through its own callback. */
-        child->combat.attack_off = true;
-        child->combat.hurt_off = true;
         aos_combat_tick(&child->combat);
         return report;
     }
@@ -9616,10 +9561,8 @@ static void white_dragon_controller(AosEnemy *e, const AosSoma *soma) {
     e->x += toward_facing(e, 0x2000);
 }
 
-/* sub_0806E29C/sub_08068AD4: inclusive GBA player proximity windows.
- * Width/height are full dimensions; unsigned 16-bit room coordinates must
- * wrap, so a position just outside the low edge cannot pass accidentally.
- * The GBA's alternate controlled entity is not yet represented here. */
+/* sub_0806E29C(e, w, h): the target inside the w x h box centred on the
+ * entity (unsigned 16-bit whole-pixel compares, inclusive). */
 static bool buer_player_in_window(const AosEnemy *e, const AosSoma *soma,
                                   uint16_t width, uint16_t height) {
     uint16_t dx = (uint16_t)((target_x(soma) >> 16) - ((e->x >> 16) - (int)(width / 2)));
@@ -9627,617 +9570,373 @@ static bool buer_player_in_window(const AosEnemy *e, const AosSoma *soma,
     return dx <= width && dy <= height;
 }
 
-static bool buer_player_in_attack_range(const AosEnemy *e, const AosSoma *soma) {
-    return buer_player_in_window(e, soma, 0x60, 0x30);
+/* sub_0806DF40(e, dx, dy) / sub_0806B0A8 (dx = dy = 0): the point outside
+ * the room's cells (30 x 26 for a single screen, 32 per screen otherwise;
+ * negative pixels round toward zero). */
+static bool room_outside(const AosEnemy *e, const AosCollision *layer, int dx, int dy) {
+    if (!layer || !layer->width_screens || !layer->height_screens) return false;
+    int width = layer->width_screens == 1 ? 30 : 32 * layer->width_screens;
+    int height = layer->height_screens == 1 ? 26 : 32 * layer->height_screens;
+    int x = (int16_t)((e->x >> 16) + dx), y = (int16_t)((e->y >> 16) + dy);
+    int cx = (x < 0 ? x + 7 : x) >> 3, cy = (y < 0 ? y + 7 : y) >> 3;
+    return cx < 0 || cx >= width || cy < 0 || cy >= height;
 }
 
-/* EnemyBuerUpdate state 2 -> sub_080CBAEC / sub_080CBC64:
- * Step 0 wakes on a facing-matched 192x48 window; its byte 0xFF
- * threshold can independently override wake-up with an even RNG draw.
- * Step 2 first chooses a 32..63-frame window, with an immediate countdown
- * tick. When Soma enters the native 96x48 window, step 1 starts next frame.
- * Step 1 loops an 80-frame attack stage and a 32-frame recovery stage.
- * The GBA emits attack sound 0x84 while timer>50, divisible by 9 and 3.
- * Native rolling probes, linked facing, the paired flame projectiles and
- * their effects are still unimplemented; this ports only the state clock. */
-/* sub_080CBC64 attack step 1: after acquiring Soma's horizontal side,
- * +0x18 gains +/-0xCCC per frame and saturates at +/-0x20000. The affine
- * angle advances +/-0x400 while the 80-frame clock is above 0x32, else
- * +/-0x800. We preserve the existing stage clock here: the source's early
- * timer-zero on saturation awaits its exact mode-6 collision integration. */
-/* sub_080CBC64, active attack: the source resets the 8-bit timer
- * to zero only when the signed angular acceleration OVERSHOOTS +/-0x20000.
- * Exact equality retains the normal timer; overflow makes the same tick
- * use the slower 0x800 angular increment and immediately enters recovery
- * on the timer's subsequent unsigned underflow. */
-static void buer_attack_angular_step(AosEnemy *e) {
-    const int dir = e->away >= 0 ? 1 : -1;
-    int32_t spin = e->spin;
-    if (dir > 0) {
-        spin += 0xCCC;
-        if (spin > 0x20000) {
-            spin = 0x20000;
-            e->timer = 0;
-        }
+/* The walker probes 0x08528B64 (exported as `probes buer`). */
+static const AosProbes *buer_probes(const AosEnemyKind *kind) {
+    return kind && kind->probes.count > 0 && kind->probes.count <= 8 ? &kind->probes : NULL;
+}
+
+/* sub_0806CAF8(e, + 0x18, 0x08528B64, mode) then sub_080CC5B4: the move is
+ * undone when the point 24 pixels ahead (by the speed's sign) leaves the
+ * room. */
+static int buer_walk(AosEnemy *b, const AosSoma *soma, const AosCollision *layer,
+                     const AosEnemyKind *kind, int32_t speed, int mode) {
+    const AosProbes *p = buer_probes(kind);
+    int32_t x0 = b->x;
+    int r = p ? ground_walk(b, soma, layer, p, speed, mode) : 0;
+    if (room_outside(b, layer, b->spin < 0 ? -0x18 : 0x18, 0)) b->x = x0;
+    return r;
+}
+
+/* The fire's facing (+ 0x58 bit 6 of the linked sprite). */
+static void buer_fire_face(AosEnemy *b, bool right) { b->buer_fire_mirrored = right; }
+
+/* sub_080CC20C(e, rolling): the walk (mode 2 rolling, else 6) at the spin
+ * + 0x18, then on a downhill slope (0x40) the spin loses 0x333 of its
+ * magnitude, uphill (0x20) gains it, otherwise it decays by 0x40 to at
+ * least 0x4000; the affine angle + 0x14 turns by spin / 64; a wall, or no
+ * floor while not rolling, sends it back at half the spin; the fire faces
+ * the spin. */
+static void buer_roll(AosEnemy *b, const AosSoma *soma, const AosCollision *layer,
+                      const AosEnemyKind *kind, bool rolling) {
+    int r = buer_walk(b, soma, layer, kind, b->spin, rolling ? 2 : 6);
+    if (r & 0x40) b->spin += b->spin > 0 ? -0x333 : 0x333;
+    else if (r & 0x20) b->spin += b->spin > 0 ? 0x333 : -0x333;
+    else if (b->spin >= 0) {
+        b->spin -= 0x40;
+        if (b->spin <= 0x3FFF) b->spin = 0x4000;
     } else {
-        spin -= 0xCCC;
-        if (spin < -0x20000) {
-            spin = -0x20000;
-            e->timer = 0;
-        }
+        b->spin += 0x40;
+        if (b->spin > -0x4000) b->spin = -0x4000;
     }
-    e->spin = spin;
-    const uint32_t angular = e->timer > 0x32 ? 0x400u : 0x800u;
-    e->angle += dir > 0 ? angular : (uint32_t)(-((int32_t)angular));
-    /* sub_080CBC64 writes the linked flame's +0x58 mirror only in the
-     * matching attack-side branch: positive acceleration can SET it only
-     * after spin becomes positive; negative acceleration can CLEAR it only
-     * after spin becomes negative. Opposite-signed and zero-spin frames
-     * preserve the bit instead of flipping the flame prematurely. */
-    if (dir > 0 && spin > 0) e->buer_fire_mirrored = true;
-    if (dir < 0 && spin < 0) e->buer_fire_mirrored = false;
+    int32_t s = b->spin;
+    b->angle += (uint32_t)((s < 0 ? s + 0x3F : s) >> 6);
+    if ((r & 3) || (!rolling && !(r & 8))) b->spin = -s / 2;
+    buer_fire_face(b, b->spin >= 0);
 }
 
-/* sub_080CC5D8: two independent children, both at the parent's integer
- * coordinates (the high words of +0x40 and +0x44), with Y offset +24.
- * Their +0x12 animation selection is 0 and 1 respectively; the linked
- * owner's attack-side byte chooses the opposite sprite mirror bit.
- * Do not manufacture velocity or damage boxes: sub_080CC178 initializes
- * its own animation, and native frame collision metadata is still pending. */
-static void buer_attack_projectile_pair(const AosEnemy *e, AosHitReport *report) {
-    for (unsigned i = 0; i < 2 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
-        AosEnemy child;
-        make_static_child(&child, e, AOS_ROLE_BUER_PROJECTILE, -1);
-        child.variant = (uint8_t)i;
-        child.x = (int32_t)((uint32_t)e->x & ~0xFFFFu);
-        /* sub_080CBC64 reads +0x46 as u16, adds 0x18, then
-         * sub_080CC5D8 keeps only that u16 for the newly allocated
-         * object's signed 16.16 Y coordinate. Wrap BEFORE shifting:
-         * AOS_FIXED(integer_y + 24) can overflow signed 32-bit and
-         * does not specify the original Thumb halfword behavior. */
-        const uint16_t gba_y = (uint16_t)((uint16_t)(e->y >> 16) + 24u);
-        child.y = (int32_t)((uint32_t)gba_y << 16);
-        /* sub_080CBC64 passes the inverse of its native +0x13 byte
-         * to sub_080CC5D8; the callee inverts again for OAM mirror.
-         * Byte 1 accelerates spin positively (away > 0) and mirrors
-         * these two visual-only children. Byte 0 does neither. */
-        child.mirrored = e->away > 0;
-        child.hp = 1;
-        /* No invented hit or reward callback until the ROM frame boxes
-         * and the original object's collision init are reconstructed. */
-        child.combat.attack_off = true;
-        child.combat.hurt_off = true;
-        report->children[report->child_count++] = child;
-    }
+/* sub_080CC5D8(x, y, animation, flip): a graphics-only fire burst
+ * (sub_080CC178: palette 6, the animation once, priority 0x11, still). */
+static void buer_burst(const AosEnemy *b, int k, AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
+    AosEnemy shot = {0};
+    shot.id = b->id;
+    shot.role = AOS_ROLE_BUER_PROJECTILE;
+    shot.static_frame = -1;
+    shot.x = AOS_FIXED(b->x >> 16);
+    shot.y = AOS_FIXED((int16_t)((b->y >> 16) + 0x18));
+    shot.variant = (uint8_t)k;
+    shot.mirrored = b->nem_passes != 0;     /* + 0x13: its target to the right */
+    shot.combat.attack_off = shot.combat.hurt_off = true;
+    report->children[report->child_count++] = shot;
 }
 
-/* sub_080CC178: its state-zero resource allocation initializes the
- * chosen 0/1 animation, then sub_0806D3D8 integrates at an 8.0 cap.
- * Native allocation failure deletes the entity immediately. Thus an
- * unavailable local animation has no fabricated 24-tick visible proxy.
- * The native routine has no attack/hit callback: these are visuals. */
-static AosHitReport buer_projectile_update(AosEnemy *shot, const AosEnemyKind *kind) {
-    AosHitReport report = {0};
-    if (shot->state == 0) {
-        const AosAnimSet *anims = kind ? kind->anims : NULL;
-        if (anims && shot->variant < anims->count &&
-            anims->anims[shot->variant].count) {
-            play_loop(shot, anims, shot->variant, false);
-            shot->state = 1;
+/* sub_080CBC64 (state 2, step 1): it takes its target's side (+ 0x13),
+ * then for 80 frames spins up by 0xCCC a frame toward it (at most 2.0,
+ * which ends the stage at once), the fire facing the spin, turning by
+ * 0x400 (0x800 below 51 frames) and, past 50, every third frame two fire
+ * bursts (sound 0x84 every ninth); then 32 frames rolling on, spun by the
+ * slopes, and again. */
+static void buer_attack(AosEnemy *b, const AosSoma *soma, const AosCollision *layer,
+                        const AosEnemyKind *kind, AosHitReport *report) {
+    switch (b->substep) {
+    case 0:
+        b->nem_passes = (uint8_t)(player_dx(b, soma) > 0 ? 0 : 1);
+        b->timer = 0x50;
+        b->substep = 1;
+        /* fallthrough */
+    case 1: {
+        buer_walk(b, soma, layer, kind, b->spin, 6);
+        bool right = b->nem_passes != 0;
+        if (right) {
+            b->spin += 0xCCC;
+            if (b->spin > 0x20000) {
+                b->spin = 0x20000;
+                b->timer = 0;
+            }
+            if (b->spin > 0) buer_fire_face(b, true);
+            b->angle += b->timer > 0x32 ? 0x400u : 0x800u;
         } else {
-            /* Source 0x080CC188..0x080CC1A0 deletes on missing art.
-             * No borrowed body frames or arbitrary fallback lifetime. */
-            shot->removed = true;
-            return report;
+            b->spin -= 0xCCC;
+            if (b->spin < -0x20000) {
+                b->spin = -0x20000;
+                b->timer = 0;
+            }
+            if (b->spin < 0) buer_fire_face(b, false);
+            b->angle += b->timer > 0x32 ? (uint32_t)-0x400 : (uint32_t)-0x800;
         }
-    }
-    if (shot->state == 1) {
-        /* sub_080CC178 deletes a visual child if its own animation
-         * resources cannot be allocated. During host asset reloads a
-         * previously initialized child can also lose that metadata.
-         * Retire it rather than dereferencing missing animation frames;
-         * never substitute a damaging or arbitrary fallback sprite. */
-        if (!kind || !kind->anims || shot->variant >= kind->anims->count ||
-            !kind->anims->anims[shot->variant].count) {
-            shot->removed = true;
-            return report;
+        uint8_t t = b->timer;
+        if (t % 3 == 0 && t > 0x32) {
+            if (t % 9 == 0) aos_audio_play_song(0x84);
+            buer_burst(b, 0, report);
+            buer_burst(b, 1, report);
         }
-        int32_t vx = (int32_t)((uint32_t)shot->vx + (uint32_t)shot->ax);
-        int32_t vy = (int32_t)((uint32_t)shot->vy + (uint32_t)shot->ay);
-        if (shot->ax >= 0 && vx > 0x80000) vx = 0x80000;
-        if (shot->ax < 0 && vx < -0x80000) vx = -0x80000;
-        if (shot->ay >= 0 && vy > 0x80000) vy = 0x80000;
-        if (shot->ay < 0 && vy < -0x80000) vy = -0x80000;
-        shot->vx = vx;
-        shot->vy = vy;
-        shot->x = (int32_t)((uint32_t)shot->x + (uint32_t)vx);
-        shot->y = (int32_t)((uint32_t)shot->y + (uint32_t)vy);
-        step_anim(shot, kind->anims);
-        if (shot->cycle_done) shot->removed = true;
+        if (--b->timer == 0xFF) {
+            b->substep = 2;
+            b->timer = 0x20;
+        }
+        break;
     }
+    case 2: {
+        int r = buer_walk(b, soma, layer, kind, b->spin, 6);
+        if (r & 0x40) b->spin += b->spin > 0 ? -0x333 : 0x333;
+        else if (r & 0x20) b->spin += b->spin > 0 ? 0x333 : -0x333;
+        int32_t s = b->spin;
+        b->angle += (uint32_t)((s < 0 ? s + 0x3F : s) >> 6);
+        if (--b->timer == 0xFF) b->substep = 0;
+        break;
+    }
+    default: break;
+    }
+}
+
+/* sub_080CBAEC (state 2): step 0 rolls (not rolling mode) and attacks
+ * its target inside the 192 x 48 box on the fire's side; every 256 frames
+ * an even draw makes it wait (step 2): for 32-63 frames the fire turns
+ * round and its target inside the 96 x 48 box starts the attack, then an
+ * even draw rolls on with the spin toward the fire's side, an odd one
+ * waits again. */
+static void buer_idle(AosEnemy *b, const AosSoma *soma, const AosCollision *layer,
+                      const AosEnemyKind *kind, uint32_t (*random)(void),
+                      AosHitReport *report) {
+    switch (b->step) {
+    case 0: {
+        buer_roll(b, soma, layer, kind, false);
+        if (buer_player_in_window(b, soma, 0xC0, 0x30)) {
+            int side = b->x < target_x(soma) ? 1 : b->x > target_x(soma) ? -1 : 0;
+            if ((!b->buer_fire_mirrored && side == -1) || (b->buer_fire_mirrored && side == 1)) {
+                b->step = 1;
+                b->substep = 0;
+            }
+        }
+        if (++b->timer == 0xFF) {
+            b->timer = 0;
+            if (!(random() & 1)) b->step = 2;
+            b->substep = 0;
+        }
+        break;
+    }
+    case 1: buer_attack(b, soma, layer, kind, report); break;
+    case 2:
+        if (b->substep == 0) {
+            b->timer = (uint8_t)((random() & 0x1F) + 0x20);
+            b->substep = 1;
+        }
+        if (b->substep == 1) {
+            b->buer_fire_mirrored = !b->buer_fire_mirrored;
+            b->substep = 2;
+        }
+        if (buer_player_in_window(b, soma, 0x60, 0x30)) {
+            b->step = 1;
+            b->substep = 0;
+        }
+        if (--b->timer == 0xFF) {
+            if (!(random() & 1)) {
+                b->step = b->substep = 0;
+                b->timer = 0;
+                int32_t magnitude = b->spin < 0 ? -b->spin : b->spin;
+                b->spin = b->buer_fire_mirrored ? magnitude : -magnitude;
+            } else {
+                b->substep = 0;
+            }
+        }
+        break;
+    default: break;
+    }
+}
+
+/* Eight simultaneous sub_0806D578 flames at the ROM's 0x081194DC offsets
+ * (exported as `buer_death_offsets`), 4 pixels lower, each mirrored at
+ * random. */
+static void buer_terminal_flames(const AosEnemy *e, const AosEnemyKind *kind,
+                                 uint32_t (*random)(void), AosHitReport *report) {
+    if (!kind || !kind->buer_death_offsets_valid) return;
+    for (unsigned i = 0; i < 8 && report->effect_count < AOS_ENEMY_MAX_EFFECTS; ++i) {
+        AosEffect *flame = &report->effects[report->effect_count++];
+        *flame = (AosEffect){
+            .kind = AOS_EFFECT_FLAME,
+            .x = (int32_t)((uint32_t)e->x + ((uint32_t)kind->buer_death_offsets[i][0] << 16)),
+            .y = (int32_t)((uint32_t)e->y + ((uint32_t)kind->buer_death_offsets[i][1] << 16) +
+                           0x40000u)};
+        flame->mirrored = (random() & 1u) != 0;
+    }
+}
+
+/* sub_080CBEA4 (state 3, dead): sound 0x6E, no attack; the fire stops
+ * following and, for 97 frames, wobbles by a pixel every third frame and
+ * moves with the body, flaming every seventh, while the body's spin from
+ * 2.0 decays by 0x380 to 0x4000 turning it on the floor walker (speed 0);
+ * then the fire goes and for 129 frames the body rolls on with a 32 x 32
+ * flame every other frame (0x6E every 20th past 28); then eight flames
+ * (sound 0x6E) and it is gone. */
+static void buer_die(AosEnemy *b, const AosSoma *soma, const AosCollision *layer,
+                     const AosEnemyKind *kind, uint32_t (*random)(void), AosHitReport *report) {
+    int32_t x0 = b->x, y0 = b->y;
+    switch (b->step) {
+    case 0:
+        b->combat.attack_off = true;
+        aos_audio_play_song(0x6E);
+        b->buer_fire_following = false;
+        b->timer = 0x60;
+        b->step = 1;
+        b->spin = b->spin >= 0 ? 0x20000 : -0x20000;
+        /* fallthrough */
+    case 1:
+        if (b->timer % 7 == 0)
+            spawn_flame_at(b->buer_fire_x, b->buer_fire_y, 0x100000, 0x100000, random, report);
+        if (b->timer % 3 == 0) {
+            b->buer_death_linked_wobble = 1;
+            b->buer_fire_x += 0x10000;
+            b->buer_fire_y += 0x10000;
+        } else if (b->buer_death_linked_wobble) {
+            b->buer_fire_x -= 0x10000;
+            b->buer_fire_y -= 0x10000;
+            b->buer_death_linked_wobble = 0;
+        }
+        if (b->spin >= 0) {
+            b->spin -= 0x380;
+            if (b->spin <= 0x3FFF) b->spin = 0x4000;
+        } else {
+            b->spin += 0x380;
+            if (b->spin > -0x4000) b->spin = -0x4000;
+        }
+        {
+            int32_t s = b->spin;
+            b->angle += (uint32_t)((s < 0 ? s + 0x3F : s) >> 6);
+        }
+        if (buer_probes(kind)) ground_walk(b, soma, layer, buer_probes(kind), 0, 2);
+        b->buer_fire_x += b->x - x0;
+        b->buer_fire_y += b->y - y0;
+        if (--b->timer == 0xFF) {
+            b->buer_fire_gone = true;
+            b->timer = 0x80;
+            b->step = 2;
+        }
+        break;
+    case 2:
+        if ((b->timer & 1) == 0) {
+            spawn_flame_at(b->x, b->y, 0x200000, 0x200000, random, report);
+            if (b->timer % 20 == 0 && b->timer > 0x1C) aos_audio_play_song(0x6E);
+        }
+        buer_roll(b, soma, layer, kind, true);
+        if (--b->timer == 0xFF) b->step = 3;
+        break;
+    case 3:
+        buer_terminal_flames(b, kind, random, report);
+        aos_audio_play_song(0x6E);
+        b->removed = true;
+        break;
+    default: break;
+    }
+}
+
+/* EnemyBuerUpdate: state 4 (the global 0x8E & 0x40) rises 32 pixels once
+ * and spins by 0x100 a frame; state 3 dies; otherwise it enters the homing
+ * list, only collides while flashing from a blow, rolls (state 1, until 92
+ * pixels below it leave the room: state 2) or idles and attacks (state 2),
+ * deleted with its fire once it leaves the room (sub_080CC55C), then the
+ * collision pass. The fire (sub_080CBA30) is made by the first update
+ * (native: at creation). */
+static AosHitReport buer_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
+                                const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+                                int cam_x, int cam_y, uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    if (!b->helper_spawned) {
+        b->helper_spawned = true;
+        AosEnemy fire = {0};
+        fire.id = b->id;
+        fire.role = AOS_ROLE_BUER_FIRE;
+        fire.static_frame = 1;
+        fire.x = b->x;
+        fire.y = b->y;
+        fire.mirrored = b->buer_fire_mirrored;
+        fire.combat.attack_off = fire.combat.hurt_off = true;
+        spawned.children[spawned.child_count++] = fire;
+    }
+    if (b->state == 4) {
+        if (b->step == 0) {
+            b->y = (int32_t)((uint32_t)b->y - (32u << 16));
+            b->static_frame = 0;
+            b->step = 1;
+        }
+        b->angle += 0x100u;
+    } else if (b->state == 3) {
+        buer_die(b, soma, layer, kind, random, &spawned);
+    } else {
+        int sx = (b->x >> 16) - cam_x, sy = (b->y >> 16) - cam_y;
+        if (!b->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
+            report.targetable = true;
+        bool pass = true;
+        if (b->hp > 0 && b->hit_flash) {
+            b->hit_flash--;
+        } else if (room_outside(b, layer, 0, 0)) {
+            /* sub_080CC55C: gone with its fire. */
+            b->removed = true;
+            pass = false;
+        } else if (b->state == 1) {
+            buer_roll(b, soma, layer, kind, true);
+            if (room_outside(b, layer, 0, 0x5C)) {
+                b->state = 2;
+                b->step = b->substep = 0;
+            }
+        } else if (b->state == 2) {
+            buer_idle(b, soma, layer, kind, random, &spawned);
+        }
+        if (pass && b->state != 3) {
+            AosHitReport hit = collide(b, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+            bool targetable = report.targetable;
+            report = hit;
+            report.targetable |= targetable;
+        }
+        aos_combat_tick(&b->combat);
+    }
+    if (b->buer_fire_following) {
+        b->buer_fire_x = b->x;
+        b->buer_fire_y = b->y;
+    }
+    for (int c = 0; c < spawned.child_count && report.child_count < AOS_ENEMY_MAX_CHILDREN; ++c)
+        report.children[report.child_count++] = spawned.children[c];
+    take_effects(&report, &spawned);
     return report;
 }
 
-static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
-                               uint32_t (*random)(void),
-                               AosHitReport *report) {
-    if (e->state != 2) return;
-    if (e->step == 0) {
-        /* sub_080CC20C is run immediately before the source idle branch:
-         * it writes linked-fire facing from angular velocity (+0x18).
-         * Collision-driven speed changes are still pending; the no-contact
-         * angular step has already run before this facing/wake-up check. */
-        e->buer_fire_mirrored = e->spin >= 0;
-        /* sub_080CBAEC/_080CBB2E: an idle Buer notices Soma in the
-         * inclusive 192x48 window only on the linked fire's facing side.
-         * sub_0806BBC4 returns +1 for Soma right, -1 for left, 0 aligned.
-         * The timer increment still executes on this wake-up frame, and
-         * the 0xFF RNG branch can override the newly selected step. */
-        if (buer_player_in_window(e, soma, 0xC0, 0x30)) {
-            int direction = (target_x(soma) > e->x) - (target_x(soma) < e->x);
-            if ((e->buer_fire_mirrored && direction == 1) ||
-                (!e->buer_fire_mirrored && direction == -1)) {
-                e->step = 1;
-                e->substep = 0;
-            }
+/* sub_080CC3C8: the fire shows the second frame where its body keeps it,
+ * with the body's fire facing; gone with it. */
+static void buer_fire_update(AosEnemy *fire) {
+    const AosEnemy *b = fire->parent;
+    if (!b || b->removed || b->buer_fire_gone) {
+        fire->removed = true;
+        return;
+    }
+    fire->x = b->buer_fire_x;
+    fire->y = b->buer_fire_y;
+    fire->mirrored = b->buer_fire_mirrored;
+    fire->hidden = b->hidden;
+}
+
+/* sub_080CC178: a fire burst plays its animation once in place. */
+static void buer_burst_update(AosEnemy *shot, const AosEnemyKind *kind) {
+    if (shot->state == 0) {
+        if (!kind->anims || shot->variant >= kind->anims->count) {
+            shot->removed = true;
+            return;
         }
-        ++e->timer;
-        if (e->timer != 0xFF) return;
-        e->timer = 0;
-        if ((random() & 1u) == 0) {
-            e->step = 2;
-            e->substep = 0;
-        }
-        return;
+        play_loop(shot, kind->anims, shot->variant, false);
+        shot->state = 1;
     }
-    if (e->step == 1) {
-        if (e->substep == 0) {
-            /* sub_0806BD64 returns (s16)(Buer integer X - Soma
-             * integer X). sub_080CBC64 chooses +0x13 = 0 if POSITIVE,
-             * otherwise 1; its branch at 0x080CBD1C accelerates NEGATIVE
-             * for side 0, whereas side 1 accelerates POSITIVE at
-             * 0x080CBCBA. `away` encodes that acceleration sign, not
-             * the source byte. Same-pixel X ties belong to side 1. */
-            const int16_t native_side = (int16_t)(uint16_t)(
-                (uint16_t)(e->x >> 16) - (uint16_t)(target_x(soma) >> 16));
-            e->away = native_side > 0 ? -1 : 1;
-            e->timer = 0x50;
-            e->substep = 1;
-        }
-        if (e->substep == 1) {
-            buer_attack_angular_step(e);
-            if (e->timer > 0x32 && e->timer % 3u == 0)
-                buer_attack_projectile_pair(e, report);
-            if (e->timer > 0x32 && (e->timer % 9u) == 0)
-                aos_audio_play_song(0x84);
-            if (--e->timer == 0xFF) {
-                e->substep = 2;
-                e->timer = 0x20;
-            }
-        } else if (e->substep == 2) {
-            if (--e->timer == 0xFF) e->substep = 0;
-        }
-        return;
-    }
-    if (e->step != 2) return;
-    if (e->substep == 0) {
-        e->timer = (uint8_t)((random() & 0x1Fu) + 0x20u);
-        e->substep = 1;
-    }
-    if (e->substep == 1) {
-        /* sub_080CBBDA toggles the linked fire's +0x58 bit 0x40
-         * exactly once on entering the native attack window. */
-        e->buer_fire_mirrored = !e->buer_fire_mirrored;
-        e->substep = 2;
-    }
-    if (e->substep != 2) return;
-    if (buer_player_in_attack_range(e, soma)) {
-        e->step = 1;
-        e->substep = 0;
-    }
-    /* The GBA tests proximity before decrementing this window; expiry can
-     * still override the transition if it reaches 0xFF on the same tick. */
-    if (--e->timer == 0xFF) {
-        if ((random() & 1u) == 0) {
-            /* _080CBC4C.._080CBC56 writes GBA +0x18: match the
-             * linked fire's facing by changing signed angular velocity,
-             * leaving provisional +0x48 translation untouched. */
-            int32_t magnitude = e->spin < 0 ? -e->spin : e->spin;
-            e->spin = e->buer_fire_mirrored ? magnitude : -magnitude;
-            e->step = 0;
-            e->substep = 0;
-            e->timer = 0;
-        } else {
-            e->substep = 0;
-        }
-    }
-}
-
-/* sub_080CC458 -> sub_0806DF40(entity, 0, 0x5C): on leaving the
- * room probe, Buer's state-1 runner switches to state 2. For single-screen
- * rooms the native tile counts are 30 x 26, otherwise 32 per screen.
- * GetEntityRoomPositionInteger uses signed room-relative pixel positions;
- * its negative-tile rounding makes -7 inclusive but -8 outside. */
-static bool buer_room_probe_outside(const AosEnemy *e, const AosCollision *layer) {
-    if (!layer || !layer->width_screens || !layer->height_screens) return false;
-    int width = (layer->width_screens == 1 ? 30 : 32 * layer->width_screens) * 8;
-    int height = (layer->height_screens == 1 ? 26 : 32 * layer->height_screens) * 8;
-    int x = e->x >> 16;
-    int y = (e->y >> 16) + 0x5C;
-    return x < -7 || x >= width || y < -7 || y >= height;
-}
-
-/* sub_080CC20C, restricted to sub_0806CAF8 collision flags == 0.
- * In that branch, +0x18 loses 0x40 toward the +/-0x4000 floor, then the
- * signed spin divided toward zero by 64 advances the 32-bit +0x14 angle.
- * With argument 0 (state-2 idle), the no-contact branch reverses and halves
- * spin AFTER updating the angle. With argument 1 (state 1) it does not.
- * This does not claim native wall/terrain probes, bounce impulses, the
- * affine effect emitter or source-faithful translation. */
-static void buer_no_contact_angular_step(AosEnemy *e) {
-    int32_t spin = e->spin;
-    if (spin >= 0) {
-        spin -= 0x40;
-        if (spin <= 0x3FFF) spin = 0x4000;
-    } else {
-        spin += 0x40;
-        if (spin > -0x4000) spin = -0x4000;
-    }
-    /* C signed division truncates toward zero, matching the source's
-     * add-63-before-ASR for negative spin. Unsigned addition wraps angle. */
-    e->angle += (uint32_t)(spin / 64);
-    if (e->state == 2 && e->step == 0) spin = -spin / 2;
-    e->spin = spin;
-}
-
-/* sub_080CC20C's bit-0/bit-1 contact path is a reverse-and-half
- * angular bounce. The original gets a rich collision mask from
- * sub_0806CAF8 and a custom table at 0x08528B64. Until that whole probe
- * is reconstructed, recognize ONLY axis-aligned solid wall cells at the
- * source's +/-24-pixel forward probe. Slopes, floors and outside-room
- * coordinates intentionally remain in the no-contact approximation. */
-/* The C exporter already writes `probes\tbuer` from 0x08528B64.
- * A legacy metadata export leaves count zero, keeping the previous
- * conservative half-width/floor probe. Reject malformed synthetic tables
- * rather than reading uninitialized wall offsets or leaving room bounds. */
-static const AosProbes *buer_native_probes(const AosEnemyKind *kind) {
-    if (!kind || kind->probes.count < 1 || kind->probes.count > 8 ||
-        kind->probes.half_width < 1 || kind->probes.half_width > 128 ||
-        kind->probes.floor < -128 || kind->probes.floor > 128 ||
-        kind->probes.ceiling < -128 || kind->probes.ceiling > 128)
-        return NULL;
-    for (int i = 0; i < kind->probes.count; ++i)
-        if (kind->probes.wall_y[i] < -128 || kind->probes.wall_y[i] > 128)
-            return NULL;
-    return &kind->probes;
-}
-
-static int buer_front_offset(const AosEnemyKind *kind) {
-    const AosProbes *probes = buer_native_probes(kind);
-    return probes ? probes->half_width : 24;
-}
-
-static int buer_floor_offset(const AosEnemyKind *kind) {
-    const AosProbes *probes = buer_native_probes(kind);
-    return probes ? probes->floor : 24;
-}
-
-/* Native sub_0806C828 tests each signed wall-Y offset at the leading X
- * edge, not just the entity centre. Preserve the collision library's flat
- * wall penetration test and the existing room-boundary guard; curved
- * corner masks and per-tile contact flags are still unfinished. */
-static bool buer_forward_solid_wall(const AosEnemy *e, const AosCollision *layer,
-                                    const AosEnemyKind *kind) {
-    if (!layer || !layer->cells || layer->width_screens <= 0 ||
-        layer->height_screens <= 0) return false;
-    const AosProbes *probes = buer_native_probes(kind);
-    const bool right = e->spin >= 0;
-    const int x = (e->x >> 16) + (right ? buer_front_offset(kind) :
-                                           -buer_front_offset(kind));
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    if (x < 0 || x >= width) return false;
-    const int count = probes ? probes->count : 1;
-    for (int i = 0; i < count; ++i) {
-        const int y = (e->y >> 16) + (probes ? probes->wall_y[i] : 0);
-        if (y < 0 || y >= height) continue;
-        const uint8_t cell = aos_collision_cell(layer, x, y);
-        /* Collision's 0xFF is a complete 16x16 solid block, not a
-         * curved slope. aos_wall_push_* already has its native 16-pixel
-         * penetration branch; keep rejecting every other 0xC0 shape. */
-        if ((cell & 3u) != 3u || ((cell & 0xC0u) && cell != 0xFFu))
-            continue;
-        if (right ? aos_wall_push_left(layer, x, y) < 0 :
-                    aos_wall_push_right(layer, x, y) > 0)
-            return true;
-    }
-    return false;
-}
-/* A bounded floor contact for sub_0806C828's 0x20/0x40 slope flags.
- * Native probes use 0x08528B64 and ground metadata; until that complete
- * table is ported, classify only a non-wall slope directly under the
- * 24-pixel lower sample when the collision layer confirms penetration.
- * The slope's X-flip bit and the original +0x18 angular sign determine
- * the sign of the contact impulse. This is not the general native mask. */
-static uint8_t buer_floor_slope_flags(const AosEnemy *e, const AosCollision *layer,
-                                       const AosEnemyKind *kind) {
-    if (!layer || !layer->cells || layer->width_screens <= 0 ||
-        layer->height_screens <= 0 || e->spin == 0) return 0;
-    const int centre = e->x >> 16;
-    const int y = (e->y >> 16) + buer_floor_offset(kind);
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    if (y < 0 || y >= height) return 0;
-    /* Conservative floor-contact extension of the exported 0x08528B64
-     * half-width: centre first for existing behavior, then leading and
-     * trailing edges. A missing or malformed native row uses the proven
-     * 24-pixel legacy offset. These are synthetic tests of contact points,
-     * NOT a reconstruction of sub_0806C828's full per-tile mask. */
-    const int edge = buer_front_offset(kind);
-    const int forward = e->spin > 0 ? edge : -edge;
-    const int samples[3] = {centre, centre + forward, centre - forward};
-    const bool right = e->spin > 0;
-    for (int i = 0; i < 3; ++i) {
-        const int x = samples[i];
-        if (x < 0 || x >= width) continue;
-        const uint8_t cell = aos_collision_cell(layer, x, y);
-        if (!(cell & 1u) || !(cell & 0xC0u) || (cell & 2u)) continue;
-        if (aos_floor_depth(layer, x, y, 0, false) >= 0) continue;
-        const bool flipped = (cell & 4u) != 0;
-        return right == flipped ? 0x40u : 0x20u;
-    }
-    return 0;
-}
-
-static void buer_rolling_angular_step(AosEnemy *e, const AosCollision *layer,
-                                      const AosEnemyKind *kind) {
-    if (buer_forward_solid_wall(e, layer, kind)) {
-        /* Original flag 1/2: advance affine angle then reverse/halve. */
-        const int32_t spin = e->spin;
-        e->angle += (uint32_t)(spin / 64);
-        e->spin = -spin / 2;
-        return;
-    }
-    const uint8_t slope_flags = buer_floor_slope_flags(e, layer, kind);
-    if (slope_flags) {
-        /* sub_080CC20C: flag 0x40 opposes the angular sign; flag 0x20
-         * reinforces it. Unlike the no-contact branch, neither adds the
-         * 0x40 friction nor reverses a state-2 idle rolling impulse. */
-        const int32_t impulse = (slope_flags & 0x40u) ? -0x333 : 0x333;
-        const int32_t spin = e->spin + (e->spin > 0 ? impulse : -impulse);
-        e->spin = spin;
-        e->angle += (uint32_t)(spin / 64);
-        return;
-    }
-    buer_no_contact_angular_step(e);
-}
-
-/* sub_080CBC64 step-one recovery, native substep 2:
- * mode-six contact flags 0x20/0x40 influence signed spin by +/-0x333,
- * then angle advances by spin/64. Unlike state-one/idle rolling, this
- * branch has NO 0x40 free-rolling friction and NO -spin/2 reflection.
- * This conservative implementation only recognizes the existing bounded
- * floor-slope flag probe; true multi-point mode-six motion is still open. */
-static void buer_recovery_angular_step(AosEnemy *e, const AosCollision *layer,
-                                       const AosEnemyKind *kind) {
-    const uint8_t flags = buer_floor_slope_flags(e, layer, kind);
-    if (flags) {
-        const int32_t impulse = (flags & 0x40u) ? -0x333 : 0x333;
-        e->spin += (e->spin > 0) ? impulse : -impulse;
-    }
-    e->angle += (uint32_t)(e->spin / 64);
-}
-
-/* Patch 0673: the real sub_080CC20C and sub_080CBC64 both call the
- * existing native sub_0806CAF8/sub_0806C828 probe walker, with mode 2
- * for state one / death phase two and mode 6 for idle/attack/recovery.
- * It consumes the 0x08528B64 ROM-local descriptor, including ceiling,
- * gravity and per-wall probes. Unlike the historical bounded substitute,
- * preserve the walker flags before applying the source angular response.
- * Sub_080CC5B4 only restores old X at the +/-24 room-front boundary. */
-static bool buer_native_enabled(const AosEnemyKind *kind) {
-    return kind && kind->buer_native_motion && buer_native_probes(kind);
-}
-
-static int buer_native_collision_step(AosEnemy *e, const AosCollision *layer,
-                                      const AosEnemyKind *kind, int mode) {
-    if (!layer || !layer->cells) return 0;
-    const int32_t original_x = e->x;
-    const int flags = aos_enemy_probe_walk(e, layer, &kind->probes, e->spin, mode);
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    const int x = (e->x >> 16) + (e->spin >= 0 ? 24 : -24);
-    const int y = e->y >> 16;
-    if (layer->width_screens <= 0 || layer->height_screens <= 0 ||
-        x < -7 || x >= width || y < -7 || y >= height)
-        e->x = original_x;
-    return flags;
-}
-
-static void buer_native_rolling_step(AosEnemy *e, const AosCollision *layer,
-                                     const AosEnemyKind *kind, bool state_one) {
-    const int flags = buer_native_collision_step(e, layer, kind, state_one ? 2 : 6);
-    int32_t spin = e->spin;
-    if (flags & 0x40) {
-        spin += spin > 0 ? -0x333 : 0x333;
-    } else if (flags & 0x20) {
-        spin += spin > 0 ? 0x333 : -0x333;
-    } else if (spin >= 0) {
-        spin -= 0x40;
-        if (spin <= 0x3FFF) spin = 0x4000;
-    } else {
-        spin += 0x40;
-        if (spin > -0x4000) spin = -0x4000;
-    }
-    /* Thumb ASR after adding 63 for negative values is C truncation. */
-    e->angle += (uint32_t)(spin / 64);
-    /* Native mode-six idle reverses when unsupported by floor, even in
-     * empty space; mode two reverses only after a wall contact. */
-    if ((flags & 3) || (!state_one && !(flags & 8)))
-        spin = -spin / 2;
-    e->spin = spin;
-}
-
-static void buer_native_recovery_step(AosEnemy *e, int flags) {
-    /* sub_080CBE18: no 0x40 friction or idle negative-half bounce here. */
-    if (flags & 0x40) e->spin += e->spin > 0 ? -0x333 : 0x333;
-    else if (flags & 0x20) e->spin += e->spin > 0 ? 0x333 : -0x333;
-    e->angle += (uint32_t)(e->spin / 64);
-}
-
-/* Patch 0661: state-1 bounded native X translation via +0x18 spin. */
-/* sub_080CC20C -> sub_0806CAF8(mode 2) -> sub_0806C828:
- * before spin friction/contact response, the source copies +0x18 into
- * signed +0x48 X speed (mode 2 never reverses it), clamps horizontal
- * speed at +/-8 px/frame and advances +0x40. Its collision wrapper
- * restores the old X on horizontal contact; the separate +/-24 front
- * room probe also restores X if it leaves the room's tile grid.
- *
- * Only Buer state 1 uses this bounded translation for now. It probes
- * flat walls through the existing conservative helper. Ground slopes,
- * gravity, the full 0x08528B64 contact table and state-2 mode-6 movement
- * are intentionally NOT claimed as native by this slice. */
-static void buer_state_one_horizontal_step(AosEnemy *e, const AosCollision *layer,
-                                           const AosEnemyKind *kind) {
-    const int32_t original_x = e->x;
-    int32_t velocity = e->spin;
-    if (velocity > 0x80000) velocity = 0x80000;
-    if (velocity < -0x80000) velocity = -0x80000;
-    e->vx = velocity;
-    e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
-    if (!layer || !layer->cells || !layer->width_screens ||
-        !layer->height_screens) return;
-    if (buer_forward_solid_wall(e, layer, kind)) {
-        e->x = original_x;
-        return;
-    }
-    const int front = buer_front_offset(kind);
-    const int x = (e->x >> 16) + (e->spin >= 0 ? front : -front);
-    const int y = e->y >> 16;
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    if (x < 0 || x >= width || y < 0 || y >= height)
-        e->x = original_x;
-}
-
-/* Patch 0662: state-two idle mode-six ground-gated X translation. */
-/* sub_080CC20C calls sub_0806CAF8 with mode 6 in state-2 idle.
- * Like state one, +0x48 uses PRE-contact spin and a signed +/-8-pixel
- * clamp. Unlike mode 2, mode 6 includes flag 4: without native ground
- * contact flag 8, the collision wrapper restores both old X and Y.
- * Until the 0x08528B64 multi-point collision table is reconstructed,
- * permit X motion only above a confirmed, penetrated FLAT solid floor.
- * An unknown/slope contact must not be fabricated into native flag 8.
- * Attack and recovery substeps never invoke this routine. */
-/* Patch 0672: mode-six idle recognizes flat ground under the centre or
- * either imported floor edge, in the same centre/forward/rear order as the
- * bounded Buer slope probes. Reject other curved masks, out-of-room
- * samples and unsupported floor depths. This is not the native contact
- * mask or a new gravity integrator. */
-static bool buer_flat_floor_support(const AosEnemy *e, const AosCollision *layer,
-                                    const AosEnemyKind *kind, int *top_out) {
-    if (!layer || !layer->cells || layer->width_screens <= 0 ||
-        layer->height_screens <= 0) return false;
-    const int centre = e->x >> 16;
-    const int foot_y = (e->y >> 16) + buer_floor_offset(kind);
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    const int height = (layer->height_screens == 1 ? 26 :
-                        32 * layer->height_screens) * 8;
-    if (centre < 0 || centre >= width || foot_y < 0 || foot_y >= height)
-        return false;
-    const int edge = buer_front_offset(kind);
-    const int ahead = e->spin >= 0 ? edge : -edge;
-    const int samples[3] = {centre, centre + ahead, centre - ahead};
-    for (int i = 0; i < 3; ++i) {
-        const int x = samples[i];
-        if (x < 0 || x >= width) continue;
-        const uint8_t cell = aos_collision_cell(layer, x, foot_y);
-        if ((cell & 3u) != 3u ||
-            ((cell & 0xC0u) != 0u && cell != 0xFFu) ||
-            aos_floor_depth(layer, x, foot_y, 0, false) >= 0)
-            continue;
-        if (top_out)
-            *top_out = cell == 0xFFu ? (foot_y & ~15) : (foot_y & ~7);
-        return true;
-    }
-    return false;
-}
-
-static void buer_state_two_idle_horizontal_step(AosEnemy *e,
-                                                const AosCollision *layer,
-                                                const AosEnemyKind *kind) {
-    const int32_t original_x = e->x;
-    int32_t velocity = e->spin;
-    if (velocity > 0x80000) velocity = 0x80000;
-    if (velocity < -0x80000) velocity = -0x80000;
-    e->vx = velocity;
-    if (!layer || !layer->cells || layer->width_screens <= 0 ||
-        layer->height_screens <= 0) return;
-    const int width = (layer->width_screens == 1 ? 30 :
-                       32 * layer->width_screens) * 8;
-    if (!buer_flat_floor_support(e, layer, kind, NULL)) return;
-    e->x = (int32_t)((uint32_t)e->x + (uint32_t)velocity);
-    const int after_x = e->x >> 16;
-    if (after_x < 0 || after_x >= width ||
-        !buer_flat_floor_support(e, layer, kind, NULL)) {
-        e->x = original_x;
-        return;
-    }
-    if (buer_forward_solid_wall(e, layer, kind)) {
-        e->x = original_x;
-        return;
-    }
-    const int front = buer_front_offset(kind);
-    const int ahead = (e->x >> 16) + (e->spin >= 0 ? front : -front);
-    if (ahead < 0 || ahead >= width)
-        e->x = original_x;
-}
-
-/* Patch 0663: only the proven flat-floor slice of Buer's mode-6 Y contact.
- * sub_0806C828 integrates gravity and pushes up on floor penetration;
- * sub_0806CAF8(mode 6) restores its previous Y when no ground flag 8
- * exists. Native gravity, ceilings, slopes and the multi-point collision
- * table are still open, so do not introduce artificial falling/bobbing.
- * At a confirmed axis-aligned flat floor, remove at most the shallow
- * penetration of the +24-pixel lower sample, retaining fixed-point X. */
-static void buer_state_two_idle_vertical_step(AosEnemy *e,
-                                              const AosCollision *layer,
-                                              const AosEnemyKind *kind) {
-    if (e->vy < 0) return;
-    int top = 0;
-    if (!buer_flat_floor_support(e, layer, kind, &top)) return;
-    /* Preserve the existing integer landing correction, extending it
-     * only when a validated native/legacy side probe supports the floor. */
-    e->y = AOS_FIXED(top) - AOS_FIXED(buer_floor_offset(kind));
-}
-
-static void buer_controller(AosEnemy *e,
-                            bool provisional_horizontal,
-                            bool provisional_vertical) {
-    /* This is the legacy-metadata compatibility fallback only. Native
-     * Buer state 1 / state 2 dispatches sub_0806CAF8(mode 2/6), neither
-     * of which requests sub_0806BC40's facing-to-player bit. The body
-     * keeps its own mirror; the separately linked fire keeps its own
-     * angular-velocity-derived mirror. Never re-face Buer here. */
-    if (provisional_horizontal) {
-        e->x += e->vx;
-        if ((e->x >> 16) <= e->home_left || (e->x >> 16) >= e->home_right) {
-            e->mirrored = !e->mirrored;
-            e->vx = toward_facing(e, 0x18000);
-        }
-    }
-    e->phase = (uint16_t)(e->phase + 0x400);
-    if (provisional_vertical)
-        e->y = AOS_FIXED(e->home) - abs(aos_sine(e->phase) / 8);
+    if (aos_anim_step(&shot->anim, kind->anims) == 3) shot->removed = true;
 }
 
 static void giant_ghost_controller(AosEnemy *e, const AosSoma *soma) {
@@ -10351,124 +10050,11 @@ static AosHitReport enemy_ghost_update(AosEnemy *g, AosSoma *soma,
     return report;
 }
 
-/* EnemyBuerUpdate -> sub_080CBEA4: a separate state-3 death
- * sequence. The original drives a linked object, periodic visual effects,
- * eight final fragments and sound. Only its observable countdown stages and
- * audio requests are represented here; no ROM effect data is synthesized. */
-/* sub_080CBEA4: the native timed death carries spin and affine updates,
- * not only countdowns. Periodic flame art is represented through the
- * shared, non-damaging effect path until the native effect slots, linked
- * fire wobble and ROM's eight terminal-piece offsets are imported. */
-/* Eight simultaneous sub_0806D578/sub_0806E524 fire effects from
- * the ROM's 0x081194DC offset table (8 signed X/Y pairs). The source adds
- * +16 pixels to Y and draws ONE RNG bit per successfully created effect.
- * Without a local export, omit these effects rather than guessing offsets. */
-static void buer_terminal_death_flames(const AosEnemy *e, const AosEnemyKind *kind,
-                                        uint32_t (*random)(void), AosHitReport *report) {
-    if (!kind || !kind->buer_death_offsets_valid) return;
-    for (unsigned i = 0; i < 8 && report->effect_count < AOS_ENEMY_MAX_EFFECTS; ++i) {
-        const int32_t ox = (int32_t)kind->buer_death_offsets[i][0] * 0x10000;
-        const int32_t oy = (int32_t)kind->buer_death_offsets[i][1] * 0x10000;
-        AosEffect *flame = &report->effects[report->effect_count++];
-        *flame = (AosEffect){.kind = AOS_EFFECT_FLAME,
-                             .x = (int32_t)((uint32_t)e->x + (uint32_t)ox),
-                             /* sub_080CC0F2 / 0x080CC13C: after the
-                              * signed ROM-local Y offset, the source adds
-                              * 0x80 << 11 = 0x40000 (FOUR pixels). Keep
-                              * the 16.16 fractions of the Buer position. */
-                             .y = (int32_t)((uint32_t)e->y + (uint32_t)oy + 0x40000u),
-                             .mirrored = (random() & 1u) != 0};
-    }
-}
-
-static AosHitReport buer_death_update(AosEnemy *e, const AosEnemyKind *kind,
-                                      const AosCollision *layer,
-                                      uint32_t (*random)(void)) {
-    AosHitReport report = {0};
-    if (e->step == 0) {
-        e->combat.attack_off = true;
-        e->combat.hurt_off = true;
-        aos_audio_play_song(0x6E);
-        e->timer = 0x60;
-        e->step = 1;
-        e->buer_death_linked_wobble = 0;
-        /* sub_080CBEF2: preserve the incoming spin sign. */
-        e->spin = e->spin < 0 ? -0x20000 : 0x20000;
-    }
-    if (e->step == 1) {
-        /* sub_080CBEA4 at 0x080CBF6C sets BOTH scatter widths to
-         * (0x80 << 13) = 0x100000, or 16 pixels in 16.16 units.
-         * The seven-tick emission reads the linked visual position BEFORE
-         * this frame's three-tick X/Y wobble. */
-        if (e->timer % 7u == 0) {
-            const int32_t shift = e->buer_death_linked_wobble ? AOS_FIXED(1) : 0;
-            spawn_flame_at((int32_t)((uint32_t)e->x + (uint32_t)shift),
-                           (int32_t)((uint32_t)e->y + (uint32_t)shift),
-                           AOS_FIXED(16), AOS_FIXED(16), random, &report);
-        }
-        /* The linked child receives a +1,+1 pixel nudge every third tick
-         * and an undo on the next. The phase-two child preserves the last
-         * displacement and follows the owner's X/Y delta. */
-        if (e->timer % 3u == 0) e->buer_death_linked_wobble = 1;
-        else if (e->buer_death_linked_wobble) e->buer_death_linked_wobble = 0;
-        /* Native first stage, every frame including its creation frame:
-         * decelerate 0x380 toward the +/-0x4000 floor and integrate spin/64. */
-        if (e->spin >= 0) {
-            e->spin -= 0x380;
-            if (e->spin < 0x4000) e->spin = 0x4000;
-        } else {
-            e->spin += 0x380;
-            if (e->spin > -0x4000) e->spin = -0x4000;
-        }
-        e->angle += (uint32_t)(e->spin / 64);
-        /* sub_080CBEA4 step 1, _080CC01C: immediately AFTER applying
-         * the affine matrix, the original calls sub_0806CAF8 with
-         * speed = 0 and mode = 2. Even a rapidly spinning dying Buer
-         * therefore has zero horizontal movement, but native +0x54
-         * gravity, ceiling and floor probes continue to run every tick.
-         * The source does NOT call sub_080CC5B4's room-front X rollback
-         * in this stage. Do not reuse the spin-speed rolling wrapper. */
-        if (buer_native_enabled(kind) && layer && layer->cells)
-            (void)aos_enemy_probe_walk(e, layer, &kind->probes, 0, 2);
-        if (--e->timer == 0xFF) {
-            e->timer = 0x80;
-            e->step = 2;
-        }
-    } else if (e->step == 2) {
-        /* sub_080CBEA4 at 0x080CC098 uses (0x80 << 14) =
-         * 0x200000, or 32 pixels for BOTH scatter dimensions. Read
-         * the OLD parent position before sub_080CC20C moves it; the
-         * linked visual retains its final one-pixel stage-one wobble. */
-        if ((e->timer & 1u) == 0)
-            spawn_flame_at(e->x, e->y, AOS_FIXED(32), AOS_FIXED(32),
-                           random, &report);
-        if (e->timer > 0x1C && (e->timer % 0x14) == 0)
-            aos_audio_play_song(0x6E);
-        /* Source sub_080CC20C(mode=1) moves before angular damping. The
-         * complete multi-point terrain table remains a separate task. */
-        if (buer_native_enabled(kind))
-            buer_native_rolling_step(e, layer, kind, true);
-        else {
-            buer_state_one_horizontal_step(e, layer, kind);
-            buer_rolling_angular_step(e, layer, kind);
-        }
-        e->buer_fire_mirrored = e->spin >= 0;
-        if (--e->timer == 0xFF) e->step = 3;
-    } else if (e->step == 3) {
-        /* Source sub_080CC0F2: all eight fire effects in one native tick,
-         * using metadata imported from the user's own ROM. */
-        buer_terminal_death_flames(e, kind, random, &report);
-        aos_audio_play_song(0x6E);
-        e->hidden = true;
-        e->removed = true;
-    }
-    return report;
-}
 
 static bool early_enemy_inert(const AosEnemy *e) {
     if (e->id == AOS_ENEMY_SKELETON && e->state == 5)
         return true;
-    if ((e->id == AOS_ENEMY_BUER || e->id == AOS_ENEMY_WINGED_SKELETON) && e->state == 4)
+    if (e->id == AOS_ENEMY_WINGED_SKELETON && e->state == 4)
         return true;
     if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 3)
         return true;
@@ -10507,34 +10093,8 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         }
         return report;
     }
-    if (e->id == AOS_ENEMY_BUER && e->state == 4) {
-        /* EnemyBuerCreate calls sub_080CBA30 before the global inert
-         * check, so the linked fire must exist even when the owner never
-         * enters its normal active collision/update path. The runtime
-         * materializes constructor children on the first owner update. */
-        if (!e->helper_spawned) {
-            buer_fire_child(e, &report);
-            e->helper_spawned = true;
-        }
-        /* sub_080CC48C: the source increments the full 32-bit affine
-         * word +0x14, not the shared 16-bit synthetic phase. The host
-         * renderer already takes Buer's rotation from enemy->angle.
-         * Entry raises the body exactly once; no contact or movement
-         * controller executes in inactive state four. */
-        if (e->step == 0) {
-            /* sub_080CC48C updates only the u16 high Y halfword:
-             * subtraction by 0x20 must wrap, never overflow signed C. */
-            e->y = (int32_t)((uint32_t)e->y - (32u << 16));
-            e->static_frame = 0;
-            e->step = 1;
-        }
-        if (e->step == 1) e->angle += 0x100u;
-        return report;
-    }
     if (e->defeated) {
-        if (e->id == AOS_ENEMY_BUER && e->state == 3) {
-            report = buer_death_update(e, kind, layer, random);
-        } else if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
+        if (e->id == AOS_ENEMY_GIANT_GHOST && e->state == 2) {
             /* EnemyGiantGhostUpdate state 2: the native 90-frame
              * death countdown. Blink approximates sub_0806D518; exact
              * palette and three generated death children remain pending. */
@@ -10558,9 +10118,6 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     } else if (e->id == AOS_ENEMY_BONE_PILLAR && !e->helper_spawned) {
         bone_pillar_children(e, kind->anims, &report);
         e->helper_spawned = true;
-    } else if (e->id == AOS_ENEMY_BUER && !e->helper_spawned) {
-        buer_fire_child(e, &report);
-        e->helper_spawned = true;
     } else if (e->id == AOS_ENEMY_WHITE_DRAGON && e->spawned_count < 9) {
         unsigned remaining = (unsigned)(9 - e->spawned_count);
         unsigned emit = remaining > AOS_ENEMY_MAX_CHILDREN ? AOS_ENEMY_MAX_CHILDREN : remaining;
@@ -10575,53 +10132,6 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     case AOS_ENEMY_BONE_PILLAR:
         face_player(e, soma);
         break;
-    case AOS_ENEMY_BUER: {
-        /* sub_080CC458 / sub_080CBAEC: only state 1 and the state-2
-         * idle step execute sub_080CC20C's rolling-facing update. Capture
-         * that condition before the timer can enter the attack step. */
-        bool rolling = e->state == 1 || (e->state == 2 && e->step == 0);
-        const bool state_one = e->state == 1;
-        const bool state_two_idle = e->state == 2 && e->step == 0;
-        /* Native ROM probe geometry selects the complete existing walker
-         * for state-one, idle, attack and recovery. Old metadata preserves
-         * the conservative path covered by previous ROM-free tests. */
-        const bool native = buer_native_enabled(kind);
-        int native_flags = 0;
-        if (native) {
-            if (rolling) buer_native_rolling_step(e, layer, kind, state_one);
-            else if (e->state == 2 && e->step == 1 && e->substep <= 2)
-                native_flags = buer_native_collision_step(e, layer, kind, 6);
-        } else {
-            if (state_one) buer_state_one_horizontal_step(e, layer, kind);
-            if (state_two_idle) {
-                buer_state_two_idle_horizontal_step(e, layer, kind);
-                buer_state_two_idle_vertical_step(e, layer, kind);
-            }
-            if (rolling) buer_rolling_angular_step(e, layer, kind);
-        }
-        /* Recovery is processed BEFORE its timer decrement. */
-        if (e->state == 2 && e->step == 1 && e->substep == 2) {
-            if (native) buer_native_recovery_step(e, native_flags);
-            else buer_recovery_angular_step(e, layer, kind);
-        }
-        buer_attack_timing(e, soma, random, &report);
-        /* Native motion does not use provisional bob or patrol translation. */
-        if (!native) buer_controller(e, !rolling, !state_two_idle);
-        if (rolling) {
-            /* sub_080CC20C writes the linked +0x58 facing from the
-             * final angular velocity at +0x18, after damping/reversal.
-             * Active attacks and death preserve their independent facing. */
-            e->buer_fire_mirrored = e->spin >= 0;
-        }
-        if (e->state == 1 && buer_room_probe_outside(e, layer)) {
-            /* sub_080CC458: only the state and two sub-states clear.
-             * The original does not zero +0x0D (the 8-bit timer). */
-            e->state = 2;
-            e->step = 0;
-            e->substep = 0;
-        }
-        break;
-    }
     case AOS_ENEMY_WHITE_DRAGON:
         if (e->state == 3) {
             /* EnemyWhiteDragonUpdate state 3 -> sub_08076ED8: retain the
@@ -10709,11 +10219,19 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->id == AOS_ENEMY_SKELETON && enemy->role == AOS_ROLE_ENEMY)
         return skeleton_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);
-    if (enemy->role == AOS_ROLE_BUER_PROJECTILE)
-        return buer_projectile_update(enemy, kind);
+    if (enemy->role == AOS_ROLE_BUER_PROJECTILE) {
+        buer_burst_update(enemy, kind);
+        return report;
+    }
+    if (enemy->role == AOS_ROLE_BUER_FIRE) {
+        buer_fire_update(enemy);
+        return report;
+    }
+    if (enemy->id == AOS_ENEMY_BUER && enemy->role == AOS_ROLE_ENEMY)
+        return buer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+                           cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_PEEPING_SEGMENT ||
         enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
-        enemy->role == AOS_ROLE_BUER_FIRE ||
         enemy->role == AOS_ROLE_WHITE_DRAGON_PART)
         return linked_early_child_update(enemy, soma, kind);
     if (enemy->id == AOS_ENEMY_GHOST && enemy->role == AOS_ROLE_ENEMY)

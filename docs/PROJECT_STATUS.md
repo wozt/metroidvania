@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0708 - Buer rewritten from the native routines
+
+- Buer's AI is rewritten from its traced routines, replacing about 40
+  layered approximations and their tests:
+  - the rolling spin (`sub_080CC20C`) on the `0x08528B64` walker, with
+    its slope impulses, friction, bounces and affine angle;
+  - state 1 rolling out of the room's lower edge, then the state-2 idle,
+    wait and attack (`sub_080CBAEC`, `sub_080CBC64`) with its paired fire
+    bursts and 0x84;
+  - the hit callback, the room exit, the inert state 4, its fire sprite
+    and the staged death (`sub_080CBEA4`).
+- New `buer_tests`; a local capture of area 0 room 12 shows it rolling
+  with its fire. It becomes the 43rd complete monster. Zero Mission is
+  unchanged.
+
 ## Patch 0707 - Killer Fish AI from the native routines
 
 - Killer Fish's AI is ported from its traced routines, replacing the old

@@ -867,8 +867,8 @@ frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming and
 hovering loops. The dedicated parent motion controllers are now dispatched
-for Peeping Eye, White Dragon, Buer, Giant Ghost and Winged Skeleton;
-Rock Armor now has its own port (below). Ghost now has its complete specialized state machine: animation 0
+for Peeping Eye, White Dragon and Giant Ghost; Rock Armor, Buer and the
+Winged Skeleton now have their own ports. Ghost now has its complete specialized state machine: animation 0
 appears without collision, animation 1 enables its attack and accelerates
 toward a random height 16 to 32 pixels above Soma with 31/32 damping; inside
 four pixels it takes a two-pixel impulse away from a point below him. Its
@@ -883,15 +883,14 @@ angle and fixed-point radius; the White Dragon emits all nine animation-1 body
 parts in two linked batches, with a curved chain and per-part affine angle
 forwarded to the renderer. Its middle body record also owns the native shared
 unit-scale affine slot. Bone Pillar now constructs its linked 22-pixel tower,
-and Buer emits its native linked second direct frame. The Peeping Eye's first controller gate uses the
+The Peeping Eye's first controller gate uses the
 native 180 by 200 proximity window and its ten-stage, 40-frame extension
 sequence; it then chooses a random point 64 to 112 pixels sideways and 32 to
 80 pixels upward, steering toward it with the native damping, acceleration,
 speed cap and timeout. Its state-3 visual variant table, ceiling probes and
 callbacks are still open. The other nine parity rows remain partial because
 of those Peeping Eye gaps, White Dragon's complete affine choreography and
-damage callbacks, Giant Ghost visual children, Bone Pillar tower, Buer fire
-component, attacks, fades, sounds and rewards still need their own native
+damage callbacks, Giant Ghost visual children, Bone Pillar tower, attacks, fades, sounds and rewards still need their own native
 state machines.
 
 Ghost's red soul is separate from its enemy controller.
@@ -1039,6 +1038,24 @@ is above 0x400, is drawn scaled (`sub_0803E058`: 1 / scale, nothing at
 seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
+
+Buer (enemy 0x0A, `EnemyBuerCreate` / `EnemyBuerUpdate`) is a rolling,
+affine-turned body (frame 0 of `0x0824FDB0`) with a fire sprite (frame 1,
+`sub_080CBA30` / `sub_080CC3C8`) whose facing follows the spin `+ 0x18`.
+`sub_080CC20C` rolls it on the walker probes `0x08528B64`: slopes add or
+take 0x333 of spin, friction takes 0x40 down to 0x4000, a wall (or, idle, a
+missing floor) sends it back at half spin, and the angle turns by spin /
+64. A record without parameter 0 rolls (state 1) until 92 pixels below it
+leave the room; in state 2 its target inside the 192 x 48 box on the fire's
+side, or a surviving blow, starts the attack (`sub_080CBC64`): it spins up
+by 0xCCC a frame toward its target (2.0 ends the stage), spraying paired
+graphics-only fire bursts (`sub_080CC178`, 0x84 every ninth frame), then
+rolls on for 32 frames; every 256 frames it may instead wait 32-63 frames
+with the fire turned round. Out of the room it is deleted with its fire.
+Dead (`sub_080CBEA4`), the fire wobbles and flames for 97 frames, then the
+body rolls on in flames for 129 and ends in eight flames at the exported
+`0x081194DC` offsets (0x6E). Under the global `0x8E & 0x40` it only rises
+32 pixels and spins.
 
 Killer Fish (enemy 0x07, `EnemyKillerFishCreate` / `EnemyKillerFishUpdate`)
 uses the Merman's sheet. Out of water it lies upside down on the floor

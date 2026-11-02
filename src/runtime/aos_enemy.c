@@ -1832,7 +1832,11 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
     int sx = (z->x >> 16) - cam_x, sy = (z->y >> 16) - cam_y;
     if (!z->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
         report = collide(z, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
-    if (report.killed) zombie_gore(z, random, &spawned);
+    if (report.killed) {
+        /* sub_0807B0DC: sound 0x70, then the gore. */
+        aos_audio_play_song(0x70);
+        zombie_gore(z, random, &spawned);
+    }
     aos_combat_tick(&z->combat);
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);

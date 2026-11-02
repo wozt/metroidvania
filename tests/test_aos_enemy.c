@@ -3989,8 +3989,11 @@ static void zombie_tests(void) {
     z.hp = 1;
     /* The killing blow: sub_0807B258 throws two pieces (frame 0xD) from
      * x - 4 and y - 26 (random() = 0). */
+    aos_audio_clear();
     hit = aos_enemy_update(&z, &soma, &layer, &kind, &weapon, &blade, 10, 4, 100, 48, always_zero);
     assert(hit.enemy_hit && hit.killed && z.state == 1 && z.anim.id == 3 && z.timer == 0x28);
+    /* sub_0807B0DC: sound 0x70. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);
     /* (The walk of that frame may also drop a drip and a puddle first.) */
     assert(hit.child_count >= 2);
     const AosEnemy *gore = &hit.children[hit.child_count - 2];

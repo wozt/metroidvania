@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0699 - Zombie death sound and aspect corrections
+
+- Zombie's death (`sub_0807B0DC`) now plays 0x70 before its gore, which
+  is unit-tested; its sounds aspect becomes ported.
+- White Dragon's yellow soul (26, CON + 4) already ran through the stat
+  routine of patch 0693; its soul aspect is corrected to ported.
+- Winged Skeleton's death already requested 0x6B; its sounds aspect is
+  corrected to partial. The 0x85 of its bone throws is not placed,
+  because its attack is not ported.
+- Killer Doll's decoy soul, the enemies' contact elements (status and
+  resistance) and Soma's transformation state 9 are left open; each needs
+  a wide change. Zero Mission is unchanged.
+
 ## Patch 0698 - Dead Warrior soul and sounds
 
 - With Dead Warrior's yellow soul (0x13260 bit 0x800000), Soma's attack

@@ -1769,12 +1769,12 @@ Known divergences: The native wing probes, dive attack, producer behavior and so
 Next action: Port the wing probes and dive attack.
 Evidence: in game: `aria area_00_room_002: Winged Skeleton producer record at x 0, y 0`.
 
-[+] **`aos.enemies.zombie` — Zombie and generic enemy death.** Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.zombie` — Zombie and generic enemy death.** Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported. Its death (sub_0807B0DC) plays 0x70 before the gore; unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806E524`, `aos:asm:asm/code/code_080709D8.s:EnemyZombieCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyZombieUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807AD28`, `aos:asm:asm/code/code_080709D8.s:sub_0807B034`, `aos:asm:asm/code/code_080709D8.s:sub_0807B0DC`, `aos:asm:asm/code/code_080709D8.s:sub_0807B1CC`, `aos:asm:asm/code/code_080709D8.s:sub_0807B258`, `aos:asm:asm/code/code_080709D8.s:sub_0807B310`, `aos:asm:asm/code/code_080709D8.s:sub_0807B33C`, `aos:asm:asm/code/code_080709D8.s:sub_0807B3C8`, `aos:asm:asm/code/code_080709D8.s:sub_0807B3E4`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: Sounds (0x70), palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced).  
+Known divergences: Palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced).  
 Next action: Play the zombie's sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189`.
 

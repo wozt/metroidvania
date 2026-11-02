@@ -308,6 +308,109 @@ static void peeping_eye_native_steering_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+static void bone_pillar_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[25 * W + x] = 0x03;      /* floor top 200 */
+    /* The exported frame durations of its animations 0-5. */
+    static const uint8_t idle[1] = {200}, open_jaw[15] = {2, 1, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+                         turn[4] = {12, 12, 12, 12}, spit[5] = {12, 12, 48, 14, 12},
+                         breath[8] = {4, 4, 4, 4, 4, 4, 4, 4}, ball[3] = {2, 2, 3};
+    const AosAnimDef defs[6] = {{1, idle}, {15, open_jaw}, {4, turn},
+                                {5, spit}, {8, breath},    {3, ball}};
+    const AosAnimSet anims = {defs, 6};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 32;
+    const AosEnemyStats stats = {80, 20, 4, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(199), NULL);
+
+    /* + 0x30 = 3: the unseen controller 22 below the floor's bottom skull;
+     * its first update makes the three skulls, facing alternately. */
+    AosEnemy b;
+    assert(aos_enemy_create(&b, AOS_ENEMY_BONE_PILLAR, 100, 150, 3, 0, &soma, &layer, &kind,
+                            &stats));
+    int floor_y = (b.y >> 16) - 22;
+    assert(b.param0 == 3 && b.hidden && b.combat.attack_off && floor_y >= 198 &&
+           floor_y <= 201);
+    AosHitReport first = aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(first.child_count == 3 && first.children[0].variant == 0 &&
+           (first.children[0].y >> 16) == floor_y && (first.children[2].y >> 16) == floor_y - 44 &&
+           first.children[0].mirrored != first.children[1].mirrored &&
+           first.children[2].hp == 80);
+    AosEnemy s[3];
+    for (int i = 0; i < 3; ++i) {
+        s[i] = first.children[i];
+        s[i].parent = &b;
+    }
+    /* Active, the skulls register; the top one is the homing target. */
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    AosHitReport r[3];
+    for (int i = 0; i < 3; ++i)
+        r[i] = aos_enemy_update(&s[i], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                always_zero);
+    assert(b.bp_active && b.bp_skull[2] == &s[2] && !r[0].targetable && !r[1].targetable);
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    r[2] = aos_enemy_update(&s[2], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(b.bp_top == 2 && r[2].targetable && (s[0].y >> 16) == floor_y);
+
+    /* Soma within the 160 x 120 box: the attack. The even bottom skull
+     * breathes fire (0x6E) at frame 2, the odd one spits a fireball (0x7A). */
+    soma.x = s[0].x + AOS_FIXED(40);
+    soma.y = s[0].y;
+    aos_audio_clear();
+    int breaths = 0, balls = 0, smokes = 0;
+    for (int f = 0; f < 120; ++f) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        for (int i = 0; i < 2; ++i) {
+            AosHitReport h = aos_enemy_update(&s[i], &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                                              0, always_zero);
+            for (int c = 0; c < h.child_count; ++c) {
+                breaths += h.children[c].role == AOS_ROLE_PILLAR_BREATH;
+                balls += h.children[c].role == AOS_ROLE_PILLAR_FIREBALL;
+                smokes += h.children[c].role == AOS_ROLE_PILLAR_SMOKE;
+            }
+        }
+    }
+    assert(breaths == 1 && balls == 1 && smokes == 3 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x7A) == 1);
+
+    /* A lethal blow on the bottom skull: 0x6B, three pieces, then gone; the
+     * skulls above fall 22 pixels onto the floor. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.x = s[0].x;
+    soma.y = s[0].y + AOS_FIXED(10);
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&s[0], &soma, &layer, &kind, &weapon, &blade, 9999, 4,
+                                        0, 0, always_zero);
+    assert(hit.killed && s[0].state == 2);
+    AosHitReport pieces = aos_enemy_update(&s[0], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                           always_zero);
+    assert(pieces.child_count == 3 && pieces.children[0].static_frame == 0x17 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    int frames = 0;
+    while (!s[0].removed && frames < 30) {
+        aos_enemy_update(&s[0], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(s[0].removed && frames == 9);
+    soma.x = AOS_FIXED(900);
+    for (int f = 0; f < 30; ++f) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        aos_enemy_update(&s[1], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    }
+    assert((s[1].y >> 16) == floor_y);
+}
+
 static void giant_ghost_tests(void) {
     aos_audio_clear();
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
@@ -626,7 +729,7 @@ static void early_enemy_batch_tests(void) {
     const AosEnemyStats stats = {30, 16, 2, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
     const uint8_t ids[] = {AOS_ENEMY_SKELETON, AOS_ENEMY_PEEPING_EYE,
-                           AOS_ENEMY_KILLER_FISH, AOS_ENEMY_BONE_PILLAR,
+                           AOS_ENEMY_KILLER_FISH,
                            AOS_ENEMY_GHOST,
                            AOS_ENEMY_ROCK_ARMOR,
                            AOS_ENEMY_WINGED_SKELETON};
@@ -759,25 +862,6 @@ static void early_enemy_batch_tests(void) {
     int32_t inert_x = inert.x;
     aos_enemy_update(&inert, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(inert.x == inert_x);
-
-    AosEnemy pillar;
-    assert(aos_enemy_create(&pillar, AOS_ENEMY_BONE_PILLAR, 100, 100, 0, 0, &soma, &layer,
-                            &kind, &stats));
-    assert(pillar.param0 == 1);
-    assert(aos_enemy_create(&pillar, AOS_ENEMY_BONE_PILLAR, 100, 100, 12, 0, &soma, &layer,
-                            &kind, &stats));
-    assert(pillar.param0 == 8);
-    int32_t pillar_y = pillar.y;
-    AosHitReport pillar_parts = aos_enemy_update(&pillar, &soma, &layer, &kind, NULL, NULL, 10,
-                                                 4, 0, 0, never_zero);
-    assert(pillar_parts.child_count == 8 && pillar.helper_spawned);
-    assert(pillar_parts.children[0].role == AOS_ROLE_BONE_PILLAR_SEGMENT);
-    assert(pillar_parts.children[0].y > pillar_y &&
-           pillar_parts.children[7].y > pillar.y);
-    AosEnemy pillar_part = pillar_parts.children[7];
-    pillar_part.parent = &pillar;
-    aos_enemy_update(&pillar_part, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(pillar_part.y == pillar.y + AOS_FIXED(22));
 
     AosEnemy buer;
     assert(aos_enemy_create(&buer, AOS_ENEMY_BUER, 100, 100, 0, 0, &soma, &layer, &kind,
@@ -5008,6 +5092,7 @@ int main(void) {
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();
+    bone_pillar_tests();
     killer_fish_tests();
     archer_tests();
     needles_tests();

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T20:59:12+00:00",
+ "generated_at": "2026-11-02T21:11:35+00:00",
  "git": {
-  "commit": "da64853",
+  "commit": "5f9774a",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 50,
-    "functional": 153,
+    "partial": 49,
+    "functional": 154,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 153,
-   "functional_or_better_percent": 71.5,
+   "functional_or_better": 154,
+   "functional_or_better_percent": 72.0,
    "with_passing_tests": 201,
    "with_passing_tests_percent": 93.9,
    "unknown_or_blocked": 1,
@@ -452,15 +452,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 26,
-    "functional": 47,
+    "partial": 25,
+    "functional": 48,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 47,
-   "functional_or_better_percent": 64.4,
+   "functional_or_better": 48,
+   "functional_or_better_percent": 65.8,
    "with_passing_tests": 73,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -9159,8 +9159,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Bone Pillar",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -9175,17 +9175,28 @@
     "EnemyBonePillarCreate",
     "EnemyBonePillarUpdate",
     "sub_080B3BAC",
-    "sub_080B3DCC"
+    "sub_080B3DCC",
+    "sub_080B3AEC",
+    "sub_080B3A68",
+    "sub_080B36A0",
+    "sub_080B33C8",
+    "sub_080B32F4",
+    "sub_080B350C",
+    "sub_080B3954",
+    "sub_080B3EE8",
+    "sub_080B3E70",
+    "sub_080B3EB0",
+    "sub_080B3EE0"
    ],
-   "limitations": "The per-segment collision, variant collision and damage callbacks are not ported. The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected. Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete.",
-   "next_action": "Port per-segment collision and hit callbacks.",
+   "limitations": "Rewritten from the native routines, replacing the earlier linked-tower approximation. The skulls are made by the controller's first update (native: at creation) and register themselves in its slots; each grants its own reward. The Fish Head's extra water children (sub_080B31F0, sub_080B3114) are not used by the Bone Pillar and not ported; the palette bits are not modelled. Its blue soul ability is not ported. EnemyBonePillarUpdate is ported from its traced routines: the controller (+ 0x30 skulls, 1-8, 2 under the global 0x8E & 0x40) active inside its screen box, forgetting shattered skulls and putting the topmost live one in the homing list; each skull (sub_080B3AEC) falls by 0x1000 onto the next live one 22 pixels down, only collides while flashing, attacks a target inside its 160 x 120 box (sub_080B36A0: the jaw opens, then the even skulls breathe fire, box (-50, -8, 50, 16) from frame 4, element 2, 0x6E, with three smoke puffs, and the odd ones spit a 2.0 fireball, 0x7A, one hit point, bursting into a flame), turns toward the target or rests 128 frames; struck down it shatters (0x6B, three pieces of frames 0x17-0x15).",
+   "next_action": "Port its blue soul; compare the attacks and the collapse against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
      "tests/test_native_golden.c"
     ],
     "in_game_check": [
-     "aria area_01_room_003: Bone Pillar record at x 352, y 767"
+     "aria area_01_room_003 (--spawn 280 760 --hp 9999): the Bone Pillar's four skulls stand and animate beside Soma"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -18976,6 +18987,12 @@
  },
  "timeline": [
   {
+   "commit": "5f9774a",
+   "date": "2026-11-02",
+   "subject": "Port the Giant Ghost and Student Witch blue souls",
+   "scope": "project"
+  },
+  {
    "commit": "da64853",
    "date": "2026-11-02",
    "subject": "Rewrite the Giant Ghost from its native routines",
@@ -19448,12 +19465,6 @@
    "date": "2026-10-30",
    "subject": "unfinished job of codex",
    "scope": "project"
-  },
-  {
-   "commit": "9000692",
-   "date": "2026-10-30",
-   "subject": "Add usable Aria Enemy bestiary",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19514,9 +19525,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 808,
-    "routines_attached_to_features": 808,
-    "unassigned_routines": 2765,
+    "routines_cited_by_features": 819,
+    "routines_attached_to_features": 819,
+    "unassigned_routines": 2754,
     "call_edges": 14228
    }
   },
@@ -21759,11 +21770,11 @@
      "monsters": {
       "total": 102,
       "implemented": 47,
-      "functional_or_better": 45,
-      "functional_or_better_percent": 44,
+      "functional_or_better": 46,
+      "functional_or_better_percent": 45,
       "by_status": {
-       "functional": 45,
-       "partial": 2,
+       "functional": 46,
+       "partial": 1,
        "not_started": 55
       }
      },
@@ -22049,7 +22060,7 @@
      {
       "id": 8,
       "name": "Bone Pillar",
-      "status": "partial",
+      "status": "functional",
       "note": "Bone Pillar",
       "evidence": {
        "unit_tests": [
@@ -22057,7 +22068,7 @@
         "tests/test_native_golden.c"
        ],
        "in_game_check": [
-        "aria area_01_room_003: Bone Pillar record at x 352, y 767"
+        "aria area_01_room_003 (--spawn 280 760 --hp 9999): the Bone Pillar's four skulls stand and animate beside Soma"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -22065,12 +22076,12 @@
       "feature": "aos.enemies.bone_pillar",
       "aspects": {
        "sprite": "ported",
-       "animations": "partial",
-       "sounds": "missing",
+       "animations": "ported",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "blue:10",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete."
+       "notes": "Soul: drops and is collected; its blue soul ability is not ported. Animations: EnemyBonePillarUpdate is rewritten from its traced routines (shared with the Fish Head): an unseen controller (sub_080B3BAC / sub_080B3DCC) and up to eight stacked skulls, each its own enemy, facing alternately, falling onto the next when one dies (sub_080B3A68), the topmost in the homing list; each attacks a target in its 160 x 120 box (sub_080B36A0): the even ones breathe fire (sub_080B33C8) with smoke (sub_080B32F4), the odd ones spit a fireball (sub_080B350C), then they turn toward the target; struck down they shatter into three pieces (sub_080B3954, sub_080B3EE8); unit-tested and checked in a local capture of area 1 room 3, not emulator-compared. Sounds: a source audit of its block finds 0x6E (the breath), 0x7A (the fireball) and 0x6B (a skull shattering); all requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23901,14 +23912,14 @@
       "missing": 0
      },
      "animations": {
-      "ported": 45,
-      "partial": 2,
+      "ported": 46,
+      "partial": 1,
       "missing": 0
      },
      "sounds": {
-      "ported": 45,
+      "ported": 46,
       "partial": 0,
-      "missing": 2
+      "missing": 1
      },
      "loot": {
       "ported": 26,
@@ -28602,7 +28613,7 @@
        "id": "06:0A",
        "name": "Bone Pillar",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported. Animations: its AI is only partly ported (see its enemy row). Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete.",
+       "note": "Soul: drops and is collected; its blue soul ability is not ported. Animations: EnemyBonePillarUpdate is rewritten from its traced routines (shared with the Fish Head): an unseen controller (sub_080B3BAC / sub_080B3DCC) and up to eight stacked skulls, each its own enemy, facing alternately, falling onto the next when one dies (sub_080B3A68), the topmost in the homing list; each attacks a target in its 160 x 120 box (sub_080B36A0): the even ones breathe fire (sub_080B33C8) with smoke (sub_080B32F4), the odd ones spit a fireball (sub_080B350C), then they turn toward the target; struck down they shatter into three pieces (sub_080B3954, sub_080B3EE8); unit-tested and checked in a local capture of area 1 room 3, not emulator-compared. Sounds: a source audit of its block finds 0x6E (the breath), 0x7A (the fireball) and 0x6B (a skull shattering); all requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

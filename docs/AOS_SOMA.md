@@ -1041,6 +1041,17 @@ seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
 
+The Bone Pillar (enemy 0x08, `EnemyBonePillarCreate` /
+`EnemyBonePillarUpdate`, sharing `sub_080B3BAC` / `sub_080B3DCC` with the
+Fish Head) is an unseen controller and a tower of `+ 0x30` skulls stacked
+22 pixels apart, facing alternately, each its own enemy. The controller
+is active inside its screen box and puts only the topmost live skull in
+the homing list; a skull falls onto the next one when one below dies. A
+target inside a skull's 160 x 120 box makes it attack (`sub_080B36A0`):
+even skulls breathe fire (`sub_080B33C8`, 0x6E) with smoke, odd ones spit
+a fireball (`sub_080B350C`, 0x7A); then it turns toward the target or
+rests. Struck down it shatters into three pieces (`sub_080B3954`, 0x6B).
+
 The Giant Ghost (enemy 0x13, `EnemyGiantGhostCreate` /
 `EnemyGiantGhostUpdate`) is a skull with a translucent aura and two eyes.
 It faces its target and, one time in three with it inside the 160 x 160

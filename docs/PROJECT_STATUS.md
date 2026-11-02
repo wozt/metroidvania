@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0713 - Bone Pillar rewritten from the native routines
+
+- The Bone Pillar is rewritten from its traced routines: an unseen
+  controller and a tower of skulls, each its own enemy, falling onto the
+  next when one dies; the even skulls breathe fire (0x6E) with smoke, the
+  odd ones spit fireballs (0x7A); struck down they shatter (0x6B).
+- New `bone_pillar_tests`; a local capture of area 1 room 3 shows the
+  tower. Its blue soul is still missing. Zero Mission is unchanged.
+
 ## Patch 0712 - The Giant Ghost and Student Witch blue souls
 
 - `Skill_Witch_GiantGhost_Use` (blue souls 5 and 6) is ported in

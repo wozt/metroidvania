@@ -183,7 +183,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_ROCK_PIECE = 37, AOS_ROLE_FRY = 38, AOS_ROLE_BUBBLE = 39,
        AOS_ROLE_BUBBLE_POP = 40, AOS_ROLE_DRAGON_FIREBALL = 41, AOS_ROLE_DRAGON_FLAME = 42,
        AOS_ROLE_DRAGON_SPARK = 43, AOS_ROLE_DRAGON_PIECE = 44,
-       AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46 };
+       AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46,
+       AOS_ROLE_PILLAR_PIECE = 47, AOS_ROLE_PILLAR_BREATH = 48, AOS_ROLE_PILLAR_FIREBALL = 49,
+       AOS_ROLE_PILLAR_SMOKE = 50 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -256,6 +258,12 @@ typedef struct AosEnemy {
     /* Giant Ghost: + 0x21 (it touched Soma: it flees); a part's affine
      * scale (+ 0x48 / + 0x4C, 0x10000 = unit, larger draws smaller) and an
      * eye's inert sweep (+ 0x22 / + 0x23). */
+    /* Bone Pillar's controller: + 0x15 (inside its window), its skulls'
+     * slots (+ 0x18 + i, each registered by its skull), the topmost live
+     * one (the homing target) and whether any was seen. */
+    bool bp_active, bp_seen;
+    int8_t bp_top;
+    struct AosEnemy *bp_skull[8];
     bool gg_touched, gg_scan_back;
     uint8_t gg_scan;
     int32_t affine_sx, affine_sy;

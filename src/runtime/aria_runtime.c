@@ -2215,6 +2215,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_NEMESIS_HELPER ||
                  e->enemy.role == AOS_ROLE_NEMESIS_EFFECT ||
                  e->enemy.role == AOS_ROLE_FRY ||
+                 e->enemy.role == AOS_ROLE_PILLAR_BREATH ||
                  e->enemy.role == AOS_ROLE_IMP_HELPER ||
                  e->enemy.role == AOS_ROLE_RIPPER_BLADE ||
                  e->enemy.role == AOS_ROLE_PEEPING_SEGMENT ||
@@ -2236,7 +2237,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* sub_080683BC: a defeated enemy grants its experience once;
              * levels raise Soma's maximum HP (the level-up effect
              * sub_080455BC and the equipment refresh are not ported). */
-            if (hit.killed && e->enemy.role == AOS_ROLE_ENEMY && combat->progress) {
+            /* Bone Pillar's skulls are enemies in their own right. */
+            if (hit.killed &&
+                (e->enemy.role == AOS_ROLE_ENEMY ||
+                 e->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT) &&
+                combat->progress) {
                 int32_t gained = aos_stats_reward_enemy(
                     combat->progress, &e->reward_flags, 0, (uint8_t)e->id,
                     combat->stats[e->id]->experience);
@@ -2337,6 +2342,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_NEMESIS_HELPER ||
                                        hit.children[c].role == AOS_ROLE_NEMESIS_EFFECT ||
                                        hit.children[c].role == AOS_ROLE_FRY ||
+                                       hit.children[c].role == AOS_ROLE_PILLAR_BREATH ||
                                        hit.children[c].role == AOS_ROLE_IMP_HELPER ||
                                        hit.children[c].role == AOS_ROLE_RIPPER_BLADE ||
                                        hit.children[c].role == AOS_ROLE_PEEPING_SEGMENT ||

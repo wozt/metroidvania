@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 808 | 2765 |
+| Castlevania: Aria of Sorrow | 819 | 2754 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1385,14 +1385,14 @@ Known divergences: ArcTan2 follows the mGBA high-level BIOS polynomial, not chec
 Next action: Port the crow's sounds and palette bits once the Aria sound and palette paths exist.
 Evidence: in game: `aria area_00_room_012: knife kill at frame 195 (--spawn 100 750 --atk 50 --repeat 2, buttons 0x22), feathers, blood and flames captured at frames 198, 215 and 240; with --atk 3 the crow survives five hits`.
 
-[~] **`aos.enemies.bone_pillar` — Bone Pillar.** The variant-0 native graphics, palette, frame table, parameter clamp (1..8), floor placement, animation loop and constructor-time 22-pixel linked tower assembly are connected. Linked segments can now contact Soma through the shared type-8 collision path; per-segment hit and damage forwarding remain incomplete.
+[+] **`aos.enemies.bone_pillar` — Bone Pillar.** EnemyBonePillarUpdate is ported from its traced routines: the controller (+ 0x30 skulls, 1-8, 2 under the global 0x8E & 0x40) active inside its screen box, forgetting shattered skulls and putting the topmost live one in the homing list; each skull (sub_080B3AEC) falls by 0x1000 onto the next live one 22 pixels down, only collides while flashing, attacks a target inside its 160 x 120 box (sub_080B36A0: the jaw opens, then the even skulls breathe fire, box (-50, -8, 50, 16) from frame 4, element 2, 0x6E, with three smoke puffs, and the odd ones spit a 2.0 fireball, 0x7A, one hit point, bursting into a flame), turns toward the target or rests 128 frames; struck down it shatters (0x6B, three pieces of frames 0x17-0x15).
 
-Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`.  
+Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBonePillarUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B32F4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B33C8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B350C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B36A0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3954`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3A68`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3AEC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3E70`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3EB0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3EE0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3EE8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: The per-segment collision, variant collision and damage callbacks are not ported.  
-Next action: Port per-segment collision and hit callbacks.
-Evidence: in game: `aria area_01_room_003: Bone Pillar record at x 352, y 767`.
+Known divergences: Rewritten from the native routines, replacing the earlier linked-tower approximation. The skulls are made by the controller's first update (native: at creation) and register themselves in its slots; each grants its own reward. The Fish Head's extra water children (sub_080B31F0, sub_080B3114) are not used by the Bone Pillar and not ported; the palette bits are not modelled. Its blue soul ability is not ported.  
+Next action: Port its blue soul; compare the attacks and the collapse against an emulator.
+Evidence: in game: `aria area_01_room_003 (--spawn 280 760 --hp 9999): the Bone Pillar's four skulls stand and animate beside Soma`.
 
 [+] **`aos.enemies.buer` — Buer.** EnemyBuerUpdate is ported from its traced routines: the rolling spin of sub_080CC20C on the 0x08528B64 walker (mode 2 rolling, 6 idle; slope impulses of 0x333, friction by 0x40 to 0x4000, a wall or a missing floor sending it back at half spin, the affine angle by spin / 64, the fire facing the spin, the move undone 24 pixels short of the room edge by sub_080CC5B4), state 1 until 92 pixels below it leave the room, the state-2 idle with its 192 x 48 trigger on the fire's side, the wait of 32-63 frames with the 96 x 48 trigger, the attack (80 frames of spin-up by 0xCCC to 2.0 with paired graphics-only bursts of sub_080CC178 and 0x84, then 32 frames rolling), the surviving blow starting the attack (sub_080CC514), the deletion out of the room (sub_080CC55C), the inert state 4 and the staged death (sub_080CBEA4: 0x6E, 97 frames of the fire's wobble and flames, 129 of body flames, eight terminal flames at the exported 0x081194DC offsets).
 

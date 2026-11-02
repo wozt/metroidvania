@@ -361,7 +361,7 @@ static void test_bestiary(const FusionJson *data) {
     }
     EXPECT(!row_named(mzm_items, "Long Beam Hint (Chozo statue)"), "hint statue listed");
     EXPECT(!row_named(mzm_items, "Water Drop"), "water drop listed");
-    static const char *const partial[] = {"Peeping Eye", "Bone Pillar"};
+    static const char *const partial[] = {"Peeping Eye"};
     static const char *const working[] = {
         "Bat", "Zombie", "Blue Crow", "Zombie Soldier", "Axe Armor", "Skull Archer", "Needles",
         "Medusa Head", "Zombie Officer", "Gargoyle", "Ghost Dancer", "Curly", "Durga", "Valkyrie",
@@ -370,7 +370,7 @@ static void test_bestiary(const FusionJson *data) {
         "Nemesis", "Beam Skeleton", "Siren", "Catoblepas", "Gorgon", "Harpy", "Tiny Devil", "Imp",
         "Merman", "Ripper", "Ghost", "Skeleton", "Winged Skeleton", "Rock Armor",
         "Killer Fish", "Buer", "White Dragon",
-        "Giant Ghost"};
+        "Giant Ghost", "Bone Pillar"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

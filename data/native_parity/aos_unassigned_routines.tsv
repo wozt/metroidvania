@@ -43,7 +43,6 @@ aos:asm:asm/code/code_080211F0.s:SkillBigGolemUse	SkillBigGolemUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
 aos:asm:asm/code/code_080211F0.s:SkillBlackPantherUse	SkillBlackPantherUse	abilities	name			asm_function		asm/code/code_080211F0.s	26316	0	6
 aos:asm:asm/code/code_080211F0.s:SkillBonePillarUse	SkillBonePillarUse	abilities	name			asm_function		asm/code/code_080211F0.s	26724	0	11
-aos:asm:asm/code/code_080211F0.s:SkillBuerUse	SkillBuerUse	abilities	name			asm_function		asm/code/code_080211F0.s	29679	0	6
 aos:asm:asm/code/code_080211F0.s:SkillCatoblepasUse	SkillCatoblepasUse	abilities	name			asm_function		asm/code/code_080211F0.s	31568	0	10
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
@@ -120,7 +119,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802DB3C	sub_0802DB3C	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_0802DBD0	sub_0802DBD0	abilities	referrers			asm_function	0x0802DBD0	asm/code/code_080211F0.s	25292	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DC10	sub_0802DC10	abilities	referrers			asm_function	0x0802DC10	asm/code/code_080211F0.s	25327	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DCB0	sub_0802DCB0	abilities	referrers			asm_function	0x0802DCB0	asm/code/code_080211F0.s	25410	0	1
-aos:asm:asm/code/code_080211F0.s:sub_0802DD00	sub_0802DD00	unclassified		technical	exclusive_callees	asm_function	0x0802DD00	asm/code/code_080211F0.s	25452	9	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DFF0	sub_0802DFF0	unclassified		technical	exclusive_callees	asm_function	0x0802DFF0	asm/code/code_080211F0.s	25834	10	4
 aos:asm:asm/code/code_080211F0.s:sub_0802E1D0	sub_0802E1D0	abilities	referrers			asm_function	0x0802E1D0	asm/code/code_080211F0.s	26065	4	2
 aos:asm:asm/code/code_080211F0.s:sub_0802E638	sub_0802E638	abilities	referrers			asm_function	0x0802E638	asm/code/code_080211F0.s	26607	0	8
@@ -129,7 +127,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802EE40	sub_0802EE40	unclassified		audio	e
 aos:asm:asm/code/code_080211F0.s:sub_0802EF28	sub_0802EF28	unclassified				asm_function	0x0802EF28	asm/code/code_080211F0.s	27708	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802F7E8	sub_0802F7E8	abilities	referrers			asm_function	0x0802F7E8	asm/code/code_080211F0.s	28786	0	7
 aos:asm:asm/code/code_080211F0.s:sub_0802F8CC	sub_0802F8CC	abilities	referrers			asm_function	0x0802F8CC	asm/code/code_080211F0.s	28900	0	5
-aos:asm:asm/code/code_080211F0.s:sub_0802FDE4	sub_0802FDE4	abilities	referrers			asm_function	0x0802FDE4	asm/code/code_080211F0.s	29518	0	10
 aos:asm:asm/code/code_080211F0.s:sub_08030238	sub_08030238	abilities	referrers			asm_function	0x08030238	asm/code/code_080211F0.s	30049	0	18
 aos:asm:asm/code/code_080211F0.s:sub_08030650	sub_08030650	abilities	referrers			asm_function	0x08030650	asm/code/code_080211F0.s	30550	0	3
 aos:asm:asm/code/code_080211F0.s:sub_08030754	sub_08030754	abilities	referrers			asm_function	0x08030754	asm/code/code_080211F0.s	30682	0	9

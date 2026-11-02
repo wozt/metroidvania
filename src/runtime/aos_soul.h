@@ -130,4 +130,37 @@ bool aos_cagnazzo_guardian_update(AosCagnazzoGuardian *cagnazzo, AosGuardian *gu
                                   const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
                                   uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                                   int32_t soma_x, int32_t soma_y, bool soma_facing_left);
+/* SkillBuerUse (soul 4, toggled): an unseen parent over Soma (his x, his
+ * feet plus a height that eases toward -20, or -8 while he crouches, by
+ * 0.25 a frame from -16) whose radius grows to 28, and two flames of
+ * sub_0802FDE4 at angles 0 and 0x8000 turning by 0x200 a frame (-0x200
+ * when Soma faces left) at that radius. Each flame attacks with box
+ * 0x1414F6F6 (-10, -10, 20 x 20, type 6) at power 12 with elements 2.
+ * Ended (by the upkeep, which then stops), the radius shrinks by 2 a
+ * frame and at 0 the soul is cleaned up. The flames' timed type-6
+ * sparkles every fourth frame (sub_08045B44(x + random 2.0, y - 4, 0,
+ * -1/16, 6, 7), vy -1.0) are not ported. */
+enum { AOS_BUER_FLAMES = 2, AOS_BUER_POWER = 12, AOS_BUER_ELEMENTS = 2 };
+
+typedef struct {
+    int32_t x, y;           /* + 0x40, + 0x44 (16.16) */
+    uint16_t angle;         /* + 0x2C */
+    int16_t speed;          /* + 0x2E */
+    uint8_t timer;          /* + 0x0D */
+} AosBuerFlame;
+
+typedef struct {
+    int32_t x, y;           /* + 0x40, + 0x44 (16.16, whole parts written) */
+    int32_t height;         /* + 0x4C: its integer half is added to Soma's y */
+    int32_t radius;         /* + 0x30 */
+    AosBuerFlame flames[AOS_BUER_FLAMES];
+} AosBuerGuardian;
+
+/* One update of the parent, then of its flames (created by its first
+ * update: sounds 0x1A5 and 0x92). Returns false once the soul has ended
+ * and been cleaned up (the flames are gone without their update). */
+bool aos_buer_guardian_update(AosBuerGuardian *buer, AosGuardian *guardian, AosStats *stats,
+                              const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                              uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                              int32_t soma_x, int32_t soma_y, bool soma_facing_left);
 #endif

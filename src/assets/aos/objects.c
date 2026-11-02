@@ -221,6 +221,9 @@ static const EntitySpec entities[] = {
     /* SkillCagnazzoUse's own resource (graphics 0x081DC144, palette row 3):
      * Cagnazzo's guardian (looping sequence 0). */
     ENTITY("skill_cagnazzo", 0x081DC144, 0x0820B4E4, 0, 0x082361A4),
+    /* sub_0802FDE4's own resource (graphics 0x081E0164, palette row 3):
+     * the Buer soul's flames (looping sequence 0). */
+    ENTITY("skill_buer", 0x081E0164, 0x0820B604, 0, 0x08237304),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

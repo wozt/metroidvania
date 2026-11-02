@@ -138,12 +138,13 @@ Soma's states 0, 12 and 13 end with the blue soul start `sub_0802E0C4`
 button held (and newly pressed for a toggled soul) and at least max MP /
 128 + 1 MP, it creates the guardian entity of the equipped blue soul's
 record (0x080E192C, `metadata/blue_souls.tsv`) and sets Soma's flag
-`0x200`. The upkeep drains one MP every 60 / rate frames. Two routines
+`0x200`. The upkeep drains one MP every 60 / rate frames. Three routines
 are ported: `SkillMedusaHeadUse` holds an airborne Soma still through his
 vy, gravity and the `0x131B8 & 0x20` flag (`hold_still`, read at the end
-of his update), and `SkillCagnazzoUse` carries an attacking guardian
-(collision type 6) 16 pixels ahead of him and 32 above his feet. The
-other 22 routines are refused before they start,
+of his update), `SkillCagnazzoUse` carries an attacking guardian
+(collision type 6) 16 pixels ahead of him and 32 above his feet, and
+`SkillBuerUse` turns two attacking flames around a point above him. The
+other 21 routines are refused before they start,
 and `--blue-soul N` equips a soul for diagnostics.
 
 ## Explicitly unresolved

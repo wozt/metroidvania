@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0692 - Buer blue soul
+
+- `SkillBuerUse` (soul 4, toggled, 5 MP per second, sounds 0x1A5 and
+  0x92) creates two flames (`sub_0802FDE4`, art 0x081E0164 exported as
+  `Enemy/skill_buer`, `aria_objects` v36). They turn by 0x200 a frame on
+  opposite sides of a point that eases to 20 pixels above Soma's feet (8
+  while he crouches), at a radius growing to 28. Each is a type-6 attack
+  of power 12 with elements 2. Ended, the radius shrinks by 2 a frame
+  before the cleanup.
+- New `tests/test_aos_guardian_buer.c` covers the placement, radius,
+  height easing, ending and facing. Local captures show both flames
+  orbiting and killing Skeletons in area 0 room 6.
+- The flames' animated type-6 sparkle trail is not ported. Buer's soul
+  aspect is ported; its animations stay partial. Zero Mission is
+  unchanged.
+
 ## Patch 0691 - Cagnazzo blue soul
 
 - `SkillCagnazzoUse` (soul 11, toggled, 5 MP per second): its own art

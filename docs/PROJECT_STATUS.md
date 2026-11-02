@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0704 - Winged Skeleton AI from the native routines
+
+- The Winged Skeleton's AI is ported from its traced routines:
+  - the level flight with its wing beats and swoop (`sub_08074C24`);
+  - the aim at a diagonal Soma through `sub_0806D0B8`'s cell test 21
+    pixels ahead;
+  - the hanging attack (`sub_08075078`) and its bone (`sub_08075230` /
+    `sub_08075314`), with 0x85 per throw: it flies at 2.0 / 2.0, cycles
+    three attack boxes and rests on the floor for 60 frames;
+  - the seven death pieces (`sub_0807540C` / `sub_08075614`).
+- The sine bobbing of the old approximation is gone, and the pieces'
+  frames 0x24-0x2A are exported (`aria_objects` v44).
+- New `winged_skeleton_tests`; a local capture shows one crossing area 1
+  room 15. It becomes the 39th complete monster. Zero Mission is
+  unchanged.
+
 ## Patch 0703 - Skeleton AI from the native routines
 
 - The Skeleton's whole AI is ported from its traced routines:

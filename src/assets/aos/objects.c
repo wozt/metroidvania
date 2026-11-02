@@ -135,7 +135,10 @@ static const EntitySpec entities[] = {
     ENTITY("ghost", 0x081CBFFC, 0x0820A8D4, 0, 0x0821EE0C),
     ENTITY("rock_armor", 0x081E41BC, 0x0820B83C, 1, 0x0823FFD8),
     ENTITY("giant_ghost", 0x081CBFA4, 0x0820A698, 0, 0x08219140),
-    ENTITY("winged_skeleton", 0x081CBF64, 0x0820A518, 0, 0x08215CBC),
+    /* The Winged Skeleton and its death pieces (frames 0x24-0x2A of
+     * sub_0807540C). */
+    {"winged_skeleton", 0x081CBF64, 0x0820A518, 0, 0x08215CBC, 0, 0, 0, 7,
+     {0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A}},
     STATIC("red_crow", 0x081F4274, 0x0820BF10, 1, 0x0824EC04, 1, 8),
     PROBES("axe_armor", 0x081E41AC, 0x0820B7F4, 0, 0x0823C290, 0x08528708),
     {"skull_archer", 0x081E419C, 0x0820B78C, 0, 0x0823A52C,

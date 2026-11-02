@@ -2982,6 +2982,89 @@ static void buer_inert_orbit_tests(void) {
 /* Skeleton: the native attack's third animation frame launches a single
  * bone, using source-derived OAM IDs, sound, launch trajectory and boxes.
  * The regular kill path is deliberately still used for XP and soul drops. */
+/* EnemyWingedSkeletonUpdate from its traced routines. */
+static void winged_skeleton_tests(void) {
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t ticks[] = {2, 2, 2, 2};
+    static AosAnimDef defs[9];
+    for (int a = 0; a < 9; ++a) defs[a] = (AosAnimDef){4, ticks};
+    const AosAnimSet anims = {defs, 9};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int k = 0; k < 14; ++k) kind.margins[k / 2][k % 2] = 64;
+    for (int a = 0; a < 9; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    const AosEnemyStats stats = {30, 12, 2, 0, 0, 10};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    AosEnemy w;
+    /* Facing Soma on its right, it flies level at 0.75 + (r & 0x3FFF). */
+    assert(aos_enemy_create(&w, AOS_ENEMY_WINGED_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(w.state == 0 && w.mirrored && w.vx >= 0xC000 && w.vx <= 0xFFFF && w.vy == 0);
+    int32_t y0 = w.y;
+    for (int k = 0; k < 10; ++k)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+    assert(w.y == y0 && w.state == 0);
+    /* Aiming: Soma 40 right and 32 below (a diagonal), the point ahead in
+     * the air: + 0x1C, then at an animation start the attack (step 10). */
+    w.step = 3;
+    w.rest = 0;
+    w.vx = 0;
+    soma.x = w.x + AOS_FIXED(40);
+    soma.y = w.y + AOS_FIXED(32);
+    for (int k = 0; k < 20 && w.state == 0; ++k)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+    assert(w.state == 1 && w.step == 10);
+    /* Animation 7; past its frame 2 the bone (0x85), then it flies on. */
+    aos_audio_clear();
+    AosEnemy bone = {0};
+    for (int k = 0; k < 40 && w.state == 1; ++k) {
+        AosHitReport r = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_one_hundred);
+        for (int c = 0; c < r.child_count; ++c)
+            if (r.children[c].role == AOS_ROLE_WINGED_BONE) bone = r.children[c];
+    }
+    assert(bone.role == AOS_ROLE_WINGED_BONE && bone.vx == 0x20000 && bone.vy == 0x20000 &&
+           (bone.x >> 16) == (w.x >> 16) + 0x15 && (bone.y >> 16) == (w.y >> 16) - 9);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
+    assert(w.state == 0 && w.step == 4 && w.anim.id == 1);
+    /* The bone lands on the floor, rests 60 frames, then goes. */
+    int frames = 0;
+    while (bone.state == 0 && frames < 100) {
+        aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(bone.state == 1 && bone.combat.attack_off);
+    frames = 0;
+    while (!bone.removed && frames < 100) {
+        aos_enemy_update(&bone, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(bone.removed && frames == 0x3C);
+    /* A killing blow: 0x6B, then seven pieces (frames 0x24-0x2A). */
+    aos_audio_clear();
+    AosSoulAttack hit = {{0, 0, 2000, 2000}, 255, 0, false, NULL, AOS_TYPE_SOUL};
+    aos_enemy_set_soul_attacks(&hit, 1);
+    aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(w.state == 2 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    w.hit_flash = 0;
+    AosHitReport death = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_one_hundred);
+    int pieces = 0;
+    for (int c = 0; c < death.child_count; ++c)
+        if (death.children[c].role == AOS_ROLE_WINGED_PIECE) {
+            assert(death.children[c].static_frame == 0x24 + pieces);
+            ++pieces;
+        }
+    assert(pieces == 7);
+}
+
 static void skeleton_bone_tests(void) {
     memset(cells, 0, sizeof cells);
     for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
@@ -7132,6 +7215,7 @@ int main(void) {
     needles_tests();
     officer_tests();
     gargoyle_tests();
+    winged_skeleton_tests();
     ghost_tests();
     knight_tests();
     warrior_tests();

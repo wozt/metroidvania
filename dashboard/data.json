@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T16:13:46+00:00",
+ "generated_at": "2026-11-02T16:40:50+00:00",
  "git": {
-  "commit": "53c7952",
+  "commit": "567acb5",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 56,
-    "functional": 147,
+    "partial": 55,
+    "functional": 148,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 147,
-   "functional_or_better_percent": 68.7,
+   "functional_or_better": 148,
+   "functional_or_better_percent": 69.2,
    "with_passing_tests": 201,
    "with_passing_tests_percent": 93.9,
    "unknown_or_blocked": 1,
@@ -452,15 +452,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 32,
-    "functional": 41,
+    "partial": 31,
+    "functional": 42,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 41,
-   "functional_or_better_percent": 56.2,
+   "functional_or_better": 42,
+   "functional_or_better_percent": 57.5,
    "with_passing_tests": 73,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -12090,8 +12090,8 @@
    "area": "aos",
    "category": "enemies",
    "title": "Winged Skeleton",
-   "status": "partial",
-   "fidelity": "partial",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
@@ -12117,15 +12117,15 @@
     "sub_0806D3AC",
     "sub_0806CDB8"
    ],
-   "limitations": "The native wing probes, dive attack, producer behavior and sounds are not ported. The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected. Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete. Traced native structure (not yet ported faithfully): EnemyWingedSkeletonCreate plays animation 2 looping and, unless + 0x32 makes it the room producer (state 3), faces Soma and flies at 0.75 + (r & 0x3FFF) toward him. EnemyWingedSkeletonUpdate registers it for homing on screen, turns it into state 2 (vanishing, + 0x0D 1) beyond the margins of entry 4, collides only while flashing, and runs state 0 (sub_08074C24: five steps; the flight sub_0806D3AC, wing animations 0 and 2 switched at their ends with one chance in 3, the swoop toward Soma when the horizontal distance is at most the vertical one plus 32 (animation 3), the line of sight sub_0806D0B8 to Soma's side at x +/- 21, y - 9 setting + 0x1C, and the turn back past sub_0806CDB8's x +/- 16), state 1 (sub_08075078: animations 5 or 6 by sub_0806D044 > 0x50, the bone throws sub_08075230 with 0x85 at frame 3 of steps 2 and 11, back to flight), state 2 (sub_0807540C at 0 HP, the generic death sub_0806AEAC, the producer's count decreased) and state 4 (inert animation). sub_080751B4 is its hit callback (0x6B at death).",
-   "next_action": "Port the traced flight, swoop, line-of-sight and throw states (sub_08074C24, sub_08075078, sub_08075230, sub_08075314) with sub_0806D3AC, sub_0806D0B8 and sub_0806CDB8, then validate in game.",
+   "limitations": "The palette copies (+ 0x2C, + 0x5A), the homing registration's exact box and the + 0x5C priority are not modelled; the bone's and pieces' blink uses the 0x08118CE0 table as sub_0806D518 does elsewhere; the constructor's random speed draws from the runtime generator. The native animation-2 sheet, palette, frame boxes, hidden parameter-1 producer form, inert state and dedicated flight controller are connected. Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete. Traced native structure (not yet ported faithfully): EnemyWingedSkeletonCreate plays animation 2 looping and, unless + 0x32 makes it the room producer (state 3), faces Soma and flies at 0.75 + (r & 0x3FFF) toward him. EnemyWingedSkeletonUpdate registers it for homing on screen, turns it into state 2 (vanishing, + 0x0D 1) beyond the margins of entry 4, collides only while flashing, and runs state 0 (sub_08074C24: five steps; the flight sub_0806D3AC, wing animations 0 and 2 switched at their ends with one chance in 3, the swoop toward Soma when the horizontal distance is at most the vertical one plus 32 (animation 3), the line of sight sub_0806D0B8 to Soma's side at x +/- 21, y - 9 setting + 0x1C, and the turn back past sub_0806CDB8's x +/- 16), state 1 (sub_08075078: animations 5 or 6 by sub_0806D044 > 0x50, the bone throws sub_08075230 with 0x85 at frame 3 of steps 2 and 11, back to flight), state 2 (sub_0807540C at 0 HP, the generic death sub_0806AEAC, the producer's count decreased) and state 4 (inert animation). sub_080751B4 is its hit callback (0x6B at death).",
+   "next_action": "Compare the flight, aim and throw timing with an emulator capture.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
      "tests/test_native_golden.c"
     ],
     "in_game_check": [
-     "aria area_00_room_002: Winged Skeleton producer record at x 0, y 0"
+     "aria area_01_room_015 (--hp 9999 --spawn 120 120): frames 200-500 show a Winged Skeleton from the room producer flying across the room"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -18864,6 +18864,12 @@
  },
  "timeline": [
   {
+   "commit": "567acb5",
+   "date": "2026-11-02",
+   "subject": "Fix the Winged Skeleton annotation and regenerate the documents",
+   "scope": "project"
+  },
+  {
    "commit": "53c7952",
    "date": "2026-11-02",
    "subject": "Record the traced native structure of the Winged Skeleton",
@@ -19335,12 +19341,6 @@
    "commit": "ebb91c9",
    "date": "2026-10-29",
    "subject": "Complete Aria dashboard catalog",
-   "scope": "project"
-  },
-  {
-   "commit": "5e9ae1d",
-   "date": "2026-10-29",
-   "subject": "Port Gladiator red soul",
    "scope": "project"
   }
  ],
@@ -21647,11 +21647,11 @@
      "monsters": {
       "total": 102,
       "implemented": 47,
-      "functional_or_better": 39,
-      "functional_or_better_percent": 38,
+      "functional_or_better": 40,
+      "functional_or_better_percent": 39,
       "by_status": {
-       "functional": 39,
-       "partial": 8,
+       "functional": 40,
+       "partial": 7,
        "not_started": 55
       }
      },
@@ -22261,7 +22261,7 @@
      {
       "id": 20,
       "name": "Winged Skeleton",
-      "status": "partial",
+      "status": "functional",
       "note": "Winged Skeleton",
       "evidence": {
        "unit_tests": [
@@ -22269,7 +22269,7 @@
         "tests/test_native_golden.c"
        ],
        "in_game_check": [
-        "aria area_00_room_002: Winged Skeleton producer record at x 0, y 0"
+        "aria area_01_room_015 (--hp 9999 --spawn 120 120): frames 200-500 show a Winged Skeleton from the room producer flying across the room"
        ],
        "emulator_compared": false,
        "played_through": false
@@ -22277,12 +22277,12 @@
       "feature": "aos.enemies.winged_skeleton",
       "aspects": {
        "sprite": "ported",
-       "animations": "partial",
-       "sounds": "partial",
+       "animations": "ported",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:1",
-       "notes": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: its death callback sub_080751B4 requests 0x6B; the 0x85 of each bone throw (sub_08075078) is not placed, its attack not being ported. Animations: its AI is only partly ported (see its enemy row). Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete."
+       "notes": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Animations: EnemyWingedSkeletonUpdate is ported from its traced routines: the level flight with its wing beats and swoop (sub_08074C24), the aim at a diagonal Soma through the line-of-sight cell test sub_0806D0B8, the hanging attack (sub_08075078) throwing the 2.0 / 2.0 bone (sub_08075230 / sub_08075314) that rests on the floor, the producer (state 3) and the seven death pieces (sub_0807540C / sub_08075614); unit-tested and checked in a local capture of area 1 room 15, not emulator-compared. Sounds: a source audit of its block finds 0x85 at each bone throw (sub_08075078) and 0x6B at death (sub_080751B4); both requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23789,13 +23789,13 @@
       "missing": 0
      },
      "animations": {
-      "ported": 39,
-      "partial": 8,
+      "ported": 40,
+      "partial": 7,
       "missing": 0
      },
      "sounds": {
-      "ported": 39,
-      "partial": 2,
+      "ported": 40,
+      "partial": 1,
       "missing": 6
      },
      "loot": {
@@ -23808,7 +23808,7 @@
       "partial": 4,
       "missing": 0
      },
-     "complete": 38,
+     "complete": 39,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -25979,7 +25979,7 @@
        "id": "05:01",
        "name": "Winged Skeleton",
        "status": "functional",
-       "note": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Sounds: its death callback sub_080751B4 requests 0x6B; the 0x85 of each bone throw (sub_08075078) is not placed, its attack not being ported. Animations: its AI is only partly ported (see its enemy row). Implemented the source-derived hidden room producer with one-in-32 chance, a param0 live-child limit and camera-relative spawn positions; dive attacks, flight probes and visual parity remain incomplete.",
+       "note": "Soul: drops, is collected and casts (SkillWingedSkeletonUse). Animations: EnemyWingedSkeletonUpdate is ported from its traced routines: the level flight with its wing beats and swoop (sub_08074C24), the aim at a diagonal Soma through the line-of-sight cell test sub_0806D0B8, the hanging attack (sub_08075078) throwing the 2.0 / 2.0 bone (sub_08075230 / sub_08075314) that rests on the floor, the producer (state 3) and the seven death pieces (sub_0807540C / sub_08075614); unit-tested and checked in a local capture of area 1 room 15, not emulator-compared. Sounds: a source audit of its block finds 0x85 at each bone throw (sub_08075078) and 0x6B at death (sub_080751B4); both requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

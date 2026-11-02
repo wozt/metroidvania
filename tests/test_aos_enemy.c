@@ -2,6 +2,7 @@
 /* ROM-free tests for the Aria of Sorrow enemy framework and its ported enemy
  * state machines, including Nemesis. */
 #include "aos_enemy.h"
+#include "aos_effect.h"
 #include "aos_audio.h"
 
 #include <assert.h>
@@ -233,47 +234,6 @@ static void skeleton_bone_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
-/* The GBA Giant Ghost's lethal-hit callback uses song 0x6B,
- * animation 5 and 0x5A death frames. This is ROM-free: no private assets. */
-static void giant_ghost_death_cue_tests(void) {
-    memset(cells, 0, sizeof cells);
-    static const uint8_t ticks[] = {2, 2, 2};
-    const AosAnimDef defs[6] = {
-        {3, ticks}, {3, ticks}, {3, ticks},
-        {3, ticks}, {3, ticks}, {3, ticks}
-    };
-    const AosAnimSet anims = {defs, 6};
-    AosEnemyKind kind = {.anims = &anims};
-    kind.margins[0][0] = kind.margins[0][1] = 32;
-    for (int a = 0; a < 6; ++a)
-        for (int f = 0; f < 3; ++f) {
-            kind.modes[a][f] = 1;
-            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
-        }
-    const AosEnemyStats stats = {30, 12, 2, 0, 0, 4};
-    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(120), NULL);
-    AosEnemy ghost;
-    assert(aos_enemy_create(&ghost, AOS_ENEMY_GIANT_GHOST, 100, 100,
-                            0, 0, &soma, &layer, &kind, &stats));
-    AosSoulAttack hitbox = {{0, 0, 255, 200}, 255, 0, false, NULL, AOS_TYPE_SOUL};
-    aos_enemy_set_soul_attacks(&hitbox, 1);
-    aos_audio_clear();
-    AosHitReport hit = aos_enemy_update(&ghost, &soma, &layer, &kind,
-                                        NULL, NULL, 10, 4, 0, 0, always_zero);
-    aos_enemy_set_soul_attacks(NULL, 0);
-    assert(hit.killed && ghost.defeated);
-    assert(ghost.state == 2 && ghost.timer == 0x5A && ghost.anim.id == 5);
-    assert(ghost.combat.attack_off && ghost.combat.hurt_off);
-    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
-    aos_audio_clear();
-    for (int frame = 0; frame < 90; ++frame) {
-        assert(!ghost.removed);
-        aos_enemy_update(&ghost, &soma, &layer, &kind,
-                         NULL, NULL, 10, 4, 0, 0, always_zero);
-    }
-    assert(ghost.removed && !aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B));
-    memset(cells, 0, sizeof cells);
-}
 
 /* Peeping Eye sub_080882D2/sub_08088478: exactly three target draws,
  * symmetric 0x800 axis acceleration and no return-to-home teleport. */
@@ -346,6 +306,138 @@ static void peeping_eye_native_steering_tests(void) {
                      NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(eye.step == 2); /* 120-frame native timeout */
     memset(cells, 0, sizeof cells);
+}
+
+static void giant_ghost_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t ticks[2] = {6, 6};
+    AosAnimDef defs[9];
+    for (int i = 0; i < 9; ++i) defs[i] = (AosAnimDef){2, ticks};
+    const AosAnimSet anims = {defs, 9};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 9; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -40, 32, 40};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {300, 30, 4, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(100), NULL);
+
+    /* Creation: animation 0, contact element 0x10, state 0; the first
+     * update makes the aura (animation 6) and the two eyes (8, 7). */
+    AosEnemy g;
+    assert(aos_enemy_create(&g, AOS_ENEMY_GIANT_GHOST, 100, 120, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(g.state == 0 && g.contact_elements == 0x10 && g.anim.id == 0);
+    /* The zero random picks the charge, but Soma is outside the 160 x 160
+     * box: it drifts (step 1, animation 3). */
+    AosHitReport first = aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(first.child_count == 3 && first.children[0].anim.id == 6 &&
+           first.children[1].anim.id == 8 && first.children[2].anim.id == 7 &&
+           first.children[0].translucent && g.step == 1 && g.anim.id == 3);
+    AosEnemy aura = first.children[0], eye = first.children[1];
+    aura.parent = eye.parent = &g;
+    /* It speeds up by 0x1000 a frame toward 48 pixels over Soma for 21
+     * frames, coasts 21, slows by 0x800 for 31, then picks again. */
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.speed == 0x1000 && g.vx > 0 && g.vy < 0);
+    int frames = 1;
+    while (g.step != 0 && frames < 200) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 21 + 21 + 31 && g.speed == 0x1000);   /* capped 0xC000, floored 0x1000 */
+    /* The eye looks at Soma (to its right): 3 pixels out, less 1. */
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(eye.vx > 0x10000 && eye.x == g.x + eye.vx);
+    /* The aura sits 4 pixels behind (it faces Soma, to its right) and 18
+     * up, pulsing. */
+    aos_enemy_update(&aura, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.mirrored && (aura.x >> 16) == (g.x >> 16) - 4 && (aura.y >> 16) == (g.y >> 16) - 18 &&
+           aura.affine_sx == (aos_sine(0x400) >> 4) + 0x1B000);
+
+    /* Soma within its box: the charge. Back away 21 + 21 + 31 frames, face
+     * him 21, then (0x87) swoop at 2.0 and drift 46 frames, rest 31. */
+    soma.x = g.x + AOS_FIXED(40);
+    soma.y = g.y;
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.state == 1 && g.step == 0 && g.speed == 0);
+    aos_audio_clear();
+    frames = 0;
+    while (g.step != 4 && frames < 300) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 21 + 21 + 31 + 21 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) == 1 &&
+           g.anim.id == 3);
+    while (g.state == 1 && frames < 600) {
+        aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(g.state == 0 && g.step == 0);
+
+    /* Touching Soma (contact) flags it: next drift step it flees upward. */
+    g.step = 1;
+    g.gg_touched = true;
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.step == 10 && !g.gg_touched && g.anim.id == 2);
+    aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.step == 11 && g.vy == -0x1000);
+
+    /* A lethal blow: 0x6B, animation 5, translucent, four wisps, then 90
+     * frames blinking out with a wisp every eighth past 40; the parts go. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    g.state = 0;
+    g.step = 2;
+    soma.x = g.x;
+    soma.y = g.y;
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&g, &soma, &layer, &kind, &weapon, &blade, 9999, 4, 0,
+                                        0, always_zero);
+    assert(hit.killed && g.state == 2 && g.timer == 0x5A && g.anim.id == 5 && g.translucent &&
+           hit.effect_count == 4 && hit.effects[0].wisp &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_update(&aura, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(eye.removed && aura.state == 1 && aura.timer == 0x6E);
+    int wisps = 0;
+    frames = 0;
+    while (!g.removed && frames < 200) {
+        AosHitReport r = aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        wisps += r.effect_count;
+        ++frames;
+    }
+    assert(frames == 0x5A && wisps == 7);   /* timer 89, 81, ..., 41 */
+    /* A wisp falls with gravity 0x2000 for 200 frames. */
+    AosEffect w = hit.effects[0];
+    const AosEffectWorld world = {&layer, 0, 0, always_zero, 0, 0};
+    int life = 0;
+    while (aos_effect_update(&w, &anims, NULL, &world) && life < 300) ++life;
+    assert(life == 199);
+
+    /* The global 0x8E & 0x40: state 3, its eyes sweep a point. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&g, AOS_ENEMY_GIANT_GHOST, 100, 120, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    first = aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(g.state == 3 && first.child_count == 3 && first.children[1].target_x == g.x - 0x200000);
+    eye = first.children[1];
+    eye.parent = &g;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(eye.target_x == g.x - 0x1F0000 && eye.gg_scan == 1);
 }
 
 static void white_dragon_tests(void) {
@@ -536,7 +628,7 @@ static void early_enemy_batch_tests(void) {
     const uint8_t ids[] = {AOS_ENEMY_SKELETON, AOS_ENEMY_PEEPING_EYE,
                            AOS_ENEMY_KILLER_FISH, AOS_ENEMY_BONE_PILLAR,
                            AOS_ENEMY_GHOST,
-                           AOS_ENEMY_ROCK_ARMOR, AOS_ENEMY_GIANT_GHOST,
+                           AOS_ENEMY_ROCK_ARMOR,
                            AOS_ENEMY_WINGED_SKELETON};
     for (unsigned i = 0; i < sizeof ids; ++i) {
         AosEnemy e;
@@ -606,19 +698,6 @@ static void early_enemy_batch_tests(void) {
     winged_spawn = aos_enemy_update(&winged_producer, &near_left, &layer,
         &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(!winged_spawn.spawn);
-
-    AosEnemy giant_death;
-    assert(aos_enemy_create(&giant_death, AOS_ENEMY_GIANT_GHOST,
-                            100, 100, 0, 0, &near_left, &layer, &kind, &stats));
-    giant_death.defeated = true;
-    giant_death.state = 2;
-    giant_death.timer = 2;
-    aos_enemy_update(&giant_death, &near_left, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(!giant_death.removed);
-    aos_enemy_update(&giant_death, &near_left, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, always_zero);
-    assert(giant_death.removed);
 
     AosEnemy producer;
     assert(aos_enemy_create(&producer, AOS_ENEMY_GHOST, 100, 100, 0, 1, &soma, &layer, &kind,
@@ -4717,7 +4796,6 @@ static void soul_attack_tests(void) {
 
 int main(void) {
     peeping_eye_native_steering_tests();
-    giant_ghost_death_cue_tests();
     skeleton_bone_tests();
     soul_attack_tests();
     death_sound_tests();
@@ -4929,6 +5007,7 @@ int main(void) {
     rock_armor_tests();
     buer_tests();
     white_dragon_tests();
+    giant_ghost_tests();
     killer_fish_tests();
     archer_tests();
     needles_tests();

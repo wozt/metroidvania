@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0711 - Giant Ghost rewritten from the native routines
+
+- The Giant Ghost is rewritten from its traced routines: its drift over
+  its target and its flight after touching Soma, the charge (0x87), the
+  death blinking out with ghost wisps (0x6B), the pulsing translucent aura
+  with its afterimages and the two eyes looking at the target.
+- New effect mode for the wisps (`sub_08069134`: random flips, gravity, a
+  lifetime) and affine-scale drawing of the aura.
+- New `giant_ghost_tests`; a local capture of area 1 room 8 shows it
+  drifting down over Soma. Its blue soul is still missing, so it stays
+  incomplete. Zero Mission is unchanged.
+
 ## Patch 0710 - Misplaced sprite pixels fixed
 
 - Compressed Aria object, HUD and weapon tile sheets start with the

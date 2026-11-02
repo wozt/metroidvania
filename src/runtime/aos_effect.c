@@ -72,6 +72,23 @@ static bool ballistic_update(AosEffect *e, const AosAnimSet *anims,
     return sx >= -48 && sx <= 48 + 0xF0 && sy >= -48 && sy <= 48 + 0xA0;
 }
 
+/* sub_08069134 with + 0x18 = 0 and + 0x19 = 3: the accelerated move
+ * (sub_0806D3D8, 8.0), both flips at random, deleted when + 0x0D runs out.
+ * Its art is a still frame. */
+static bool wisp_update(AosEffect *e, const AosAnimSet *anims, const AosEffectWorld *world) {
+    if (!world || !world->random || !anims) return false;
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, true)) return false;
+        e->anim.id = 0;
+        e->started = true;
+    }
+    clamped_move(&e->x, &e->vx, e->ax);
+    clamped_move(&e->y, &e->vy, e->ay);
+    e->mirrored = world->random() & 1;
+    e->vflip = world->random() & 1;
+    return --e->timer != 0;
+}
+
 /* sub_08045000 state 1: the move, then the lifetime. */
 static bool timed_update(AosEffect *e, const AosAnimSet *anims) {
     if (!e->started) {
@@ -169,6 +186,7 @@ bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t
     if (effect->burst) return burst_update(effect, anims);
     if (effect->timed) return timed_update(effect, anims);
     if (effect->ballistic) return ballistic_update(effect, anims, world);
+    if (effect->wisp) return wisp_update(effect, anims, world);
     if (!effect->started) {
         /* State 0: the graphics set up, the animation played once. */
         aos_anim_start(&effect->anim, anims, 0, false);

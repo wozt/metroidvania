@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 796 | 2777 |
+| Castlevania: Aria of Sorrow | 804 | 2769 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1512,14 +1512,14 @@ Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the roo
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
 
-[~] **`aos.enemies.giant_ghost` — Giant Ghost.** The lethal callback now requests 0x6B, starts animation 5 and enters the source-derived 90-frame death countdown. Shared XP, loot and blue:6 soul drops remain connected through the host reward path.
+[+] **`aos.enemies.giant_ghost` — Giant Ghost.** EnemyGiantGhostUpdate is ported from its traced routines: inside the sub_0806CC20 window (only colliding while flashing), the drift (sub_0807D33C: facing its target, one time in three a charge with it inside the 160 x 160 box, otherwise 20 frames speeding by 0x1000 to 0xC000 toward 48 pixels over it, 20 coasting, 30 slowing by 0x800; after touching Soma, the same fleeing upward), the charge (sub_0807D65C: backing away from 16 pixels over the target, facing it, the 2.0 swoop with 0x87, the slowing drift and the rest), the death (sub_0807D88C: 0x6B, animation 5, translucent, four wisps, then 90 frames blinking out with a wisp every eighth past 40; wisps sub_08069134 with gravity 0x2000 for 200 frames), the aura (sub_0807D9B8: 4 pixels behind and 18 up, its affine scale pulsing, afterimages sub_0807E074, swelling at death) and the eyes looking at the target (sub_0807DBB4 / sub_0807DE14), sweeping under the global 0x8E & 0x40.
 
-Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08069134`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyGiantGhostUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807D33C`, `aos:asm:asm/code/code_080709D8.s:sub_0807D65C`, `aos:asm:asm/code/code_080709D8.s:sub_0807D88C`, `aos:asm:asm/code/code_080709D8.s:sub_0807D9B8`, `aos:asm:asm/code/code_080709D8.s:sub_0807DBB4`, `aos:asm:asm/code/code_080709D8.s:sub_0807DE14`, `aos:asm:asm/code/code_080709D8.s:sub_0807E074`, `aos:asm:asm/code/code_080709D8.s:sub_0807E1B0`, `aos:asm:asm/code/code_080709D8.s:sub_0807E228`, `aos:asm:asm/code/code_080709D8.s:sub_0807E2CC`, `aos:asm:asm/code/code_080709D8.s:sub_0807E328`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: The native multi-entity visuals, palette fade and complete attacks are still absent. The requested death sound is not mixed to audio output.  
-Next action: Port the three native death effects, visual children and remaining attack/fade states.
-Evidence: in game: `aria area_01_room_008: Giant Ghost record at x 160, y 224`.
+Known divergences: Rewritten from the native routines, replacing the earlier homing approximation. The parts are made by its first update (native: at creation); the aura's affine scale is drawn as a plain scale about the sprite centre (no double-size placement). The palette bits and the hit spark sub_08042B8C are not modelled. Its blue soul ability is not ported.  
+Next action: Port its blue soul; compare the drift, the charge and the death against an emulator.
+Evidence: in game: `aria area_01_room_008 (--spawn 260 224 --hp 9999): the Giant Ghost drifts down over Soma`.
 
 [+] **`aos.enemies.gorgon` — Gorgon.** Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path. Sound 0x67 is requested at + 0x0D 0x1E and 0x32 of the breath step (sub_08089560) and 0x71 at death (sub_080896D8); both unit-tested.
 

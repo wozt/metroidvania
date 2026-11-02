@@ -63,11 +63,13 @@ typedef struct {
     bool burst;             /* sub_08045E80 */
     bool timed;             /* sub_08045000 */
     bool ballistic;         /* sub_0802DA98: acceleration, 8.0 clamps, margin 4 */
+    bool wisp;              /* sub_08069134 (+ 0x18 = 0, + 0x19 = 3): random flips, a lifetime */
+    bool vflip;             /* + 0x58 bit 0x80 */
     uint8_t state;          /* + 0x0A of a casing: 1 falling, 2 bounced */
     int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */
     uint8_t flags;          /* + 0x18 of a particle */
     int32_t vx, vy;         /* + 0x48, + 0x4C of a particle */
-    uint8_t timer;          /* + 0x0D: blink counter of a particle */
+    uint8_t timer;          /* + 0x0D: blink counter of a particle, a wisp's lifetime */
     bool hidden;            /* + 0x58 bit 0x20 */
     bool cycle_done;        /* + 0x59 bit 0 */
     AosAnimState anim;

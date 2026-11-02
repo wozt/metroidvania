@@ -3169,6 +3169,18 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             rect.y += (rect.h - h) / 2;
             rect.h = h;
         }
+        if (e->enemy.affine_sx > 0 && e->enemy.affine_sy > 0) {
+            /* An affine matrix of scale parameters (pa, pd: 0x10000 =
+             * unit, texture from screen): drawn 0x10000 / p times as large
+             * about the sprite's centre (double-size placement is not
+             * modelled). */
+            float w = rect.w * 65536.0f / (float)e->enemy.affine_sx;
+            float h = rect.h * 65536.0f / (float)e->enemy.affine_sy;
+            rect.x += (rect.w - w) / 2;
+            rect.y += (rect.h - h) / 2;
+            rect.w = w;
+            rect.h = h;
+        }
         SDL_FlipMode mode = (SDL_FlipMode)((flip ? SDL_FLIP_HORIZONTAL : 0) |
                                            (e->enemy.vflip ? SDL_FLIP_VERTICAL : 0));
         /* A spinning child (the axe): its affine angle, 0x10000 per turn.
@@ -3205,8 +3217,10 @@ static void draw_effect(SDL_Renderer *renderer, const AriaObjects *objects, cons
     int fx = f->x >> 16, fy = f->y >> 16;
     float x = f->mirrored ? (float)(fx - frame->offset_x) - frame->w : (float)(fx + frame->offset_x);
     SDL_FRect rect = {x - (float)cam_x, (float)(fy + frame->offset_y - cam_y), frame->w, frame->h};
+    if (f->vflip) rect.y = (float)(fy - frame->offset_y - cam_y) - frame->h;
     SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
-                             f->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+                             (SDL_FlipMode)((f->mirrored ? SDL_FLIP_HORIZONTAL : 0) |
+                                            (f->vflip ? SDL_FLIP_VERTICAL : 0)));
 }
 
 static void draw_effects(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,

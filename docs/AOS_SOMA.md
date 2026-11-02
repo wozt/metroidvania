@@ -867,7 +867,7 @@ frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming and
 hovering loops. The dedicated parent motion controllers are now dispatched
-for Peeping Eye and Giant Ghost; Rock Armor, Buer, the White Dragon and
+for Peeping Eye; Rock Armor, Buer, the White Dragon, the Giant Ghost and
 the Winged Skeleton now have their own ports. Ghost now has its complete specialized state machine: animation 0
 appears without collision, animation 1 enables its attack and accelerates
 toward a random height 16 to 32 pixels above Soma with 31/32 damping; inside
@@ -1038,6 +1038,19 @@ is above 0x400, is drawn scaled (`sub_0803E058`: 1 / scale, nothing at
 seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
+
+The Giant Ghost (enemy 0x13, `EnemyGiantGhostCreate` /
+`EnemyGiantGhostUpdate`) is a skull with a translucent aura and two eyes.
+It faces its target and, one time in three with it inside the 160 x 160
+box around it, charges (`sub_0807D65C`: it backs away from a point 16
+pixels over it, faces it, swoops at 2.0 with 0x87 and slows down);
+otherwise it drifts toward 48 pixels over it (`sub_0807D33C`, speeding by
+0x1000 to 0xC000, then slowing by 0x800), and after touching Soma (its
+contact `sub_0807E328`, element 0x10) it flees upward the same way. Its
+aura (`sub_0807D9B8`) pulses its affine scale and leaves afterimages; its
+eyes (`sub_0807DBB4`, `sub_0807DE14`) look at the target. Dead
+(`sub_0807D88C`, 0x6B) it turns translucent, sheds ghost wisps
+(`sub_0807E228`) and blinks out over 90 frames.
 
 The White Dragon (enemy 0x0B, `EnemyWhiteDragonCreate` /
 `EnemyWhiteDragonUpdate`) is a head on a neck rooted at its record. Its

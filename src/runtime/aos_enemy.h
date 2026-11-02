@@ -182,7 +182,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WINGED_PIECE = 35, AOS_ROLE_ROCK = 36,
        AOS_ROLE_ROCK_PIECE = 37, AOS_ROLE_FRY = 38, AOS_ROLE_BUBBLE = 39,
        AOS_ROLE_BUBBLE_POP = 40, AOS_ROLE_DRAGON_FIREBALL = 41, AOS_ROLE_DRAGON_FLAME = 42,
-       AOS_ROLE_DRAGON_SPARK = 43, AOS_ROLE_DRAGON_PIECE = 44 };
+       AOS_ROLE_DRAGON_SPARK = 43, AOS_ROLE_DRAGON_PIECE = 44,
+       AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -252,6 +253,12 @@ typedef struct AosEnemy {
     uint16_t wd_phase, wd_angle, wd_heading, wd_rate, wd_aim;
     bool wd_sweep_up;
     uint16_t wd_history[100];
+    /* Giant Ghost: + 0x21 (it touched Soma: it flees); a part's affine
+     * scale (+ 0x48 / + 0x4C, 0x10000 = unit, larger draws smaller) and an
+     * eye's inert sweep (+ 0x22 / + 0x23). */
+    bool gg_touched, gg_scan_back;
+    uint8_t gg_scan;
+    int32_t affine_sx, affine_sy;
     int32_t buer_fire_x, buer_fire_y;
     bool buer_fire_following, buer_fire_gone;
     bool technical_effects_spawned; /* the three Nemesis visual effect slots */

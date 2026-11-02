@@ -146,7 +146,9 @@ of his update), `SkillCagnazzoUse` carries an attacking guardian
 `SkillBuerUse` turns two attacking flames around a point above him, and
 `SkillCatoblepasUse` holds him in the breath pose of state 10 (which
 returns to state 0 once no guardian is alive) while gas clouds drift
-ahead. The other 20 routines are refused before they start,
+ahead. `SkillImpUse` sends a familiar that follows him and dives at the
+nearest enemy of the homing list. The other 19 routines are refused
+before they start,
 and `--blue-soul N` equips a soul for diagnostics.
 
 ## Yellow soul effects

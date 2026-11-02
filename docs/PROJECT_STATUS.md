@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0696 - Imp blue soul
+
+- `SkillImpUse` (soul 22, toggled, 3 MP per second, sound 0x19E) now
+  sends its familiar (art 0x081E317C exported as `Enemy/skill_imp`,
+  `aria_objects` v39). It eases toward a point 40 pixels above Soma by
+  1/32 of the distance (BIOS Sqrt and ArcTan2 as in `sub_0806E43C`) and
+  hovers in a sine figure. By chance it dives at the nearest enemy of the
+  homing list by 1/16 of the distance, attacking with its frames' boxes
+  as type 6 (power 15, elements 0x11). A second press makes it blink for
+  16 frames before it leaves.
+- New `src/runtime/aos_guardian_imp.c` and
+  `tests/test_aos_guardian_imp.c`. Local captures show the familiar by
+  Soma, and it kills Skeletons in area 0 room 6. Imp becomes the 31st
+  complete monster. Zero Mission is unchanged.
+
 ## Patch 0695 - Catoblepas blue soul
 
 - `SkillCatoblepasUse` (soul 9, held, 15 MP per second) needs Soma

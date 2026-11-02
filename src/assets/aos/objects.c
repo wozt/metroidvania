@@ -228,6 +228,9 @@ static const EntitySpec entities[] = {
     /* SkillCatoblepasUse's resource (graphics 0x081E2978, palette row 3):
      * the gas clouds of sub_08030D6C (sequence 0 once). */
     ENTITY("skill_catoblepas", 0x081E2978, 0x0820B6B8, 0, 0x08237884),
+    /* SkillImpUse's resource (graphics 0x081E317C, palette row 3): the
+     * Imp familiar (looping sequence 0 and its frame attack boxes). */
+    ENTITY("skill_imp", 0x081E317C, 0x0820B6DC, 0, 0x08237AC4),
     /* Resource 7 of 0x080E13BC: the Skeleton soul's bone. */
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */

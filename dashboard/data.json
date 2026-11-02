@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T11:44:29+00:00",
+ "generated_at": "2026-11-02T12:00:16+00:00",
  "git": {
-  "commit": "abe5d76",
+  "commit": "a0ccb61",
   "branch": "main",
   "dirty": true
  },
@@ -13480,13 +13480,15 @@
     "src/runtime/aos_soma.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c",
-    "src/runtime/aos_guardian_buer.c"
+    "src/runtime/aos_guardian_buer.c",
+    "src/runtime/aos_guardian_imp.c"
    ],
    "tests": [
     "tests/test_aos_soul.c",
     "tests/test_aos_soma.c",
     "tests/test_aos_enemy.c",
-    "tests/test_aos_guardian_buer.c"
+    "tests/test_aos_guardian_buer.c",
+    "tests/test_aos_guardian_imp.c"
    ],
    "dependencies": [
     "aos.souls.inventory_pickups",
@@ -13509,19 +13511,28 @@
     "sub_0802DD00",
     "SkillCatoblepasUse",
     "sub_08030D6C",
-    "sub_0806D3D8"
+    "sub_0806D3D8",
+    "SkillImpUse",
+    "sub_0806CD38",
+    "sub_0806CD78",
+    "sub_0806E43C",
+    "sub_0806E3F8",
+    "sub_08068CDC",
+    "sub_0802D484",
+    "sub_0802E1D0"
    ],
-   "limitations": "Only SkillMedusaHeadUse, SkillCagnazzoUse, SkillBuerUse and SkillCatoblepasUse are ported; the 20 other guardian routines are refused before they start, so their souls do nothing. The gEwramData + 0x344 & 0x200000 limit to souls 1-3, the 0x131B8 & 0x200 lock and the 0x42C bits 0 and 8 of the upkeep are not modelled. The cleanup of sub_0802DD84 frees only the guardian slot and Soma's flag 0x200 (no guardian child entity exists yet; the Cagnazzo art's 0x131D0 palette slot is the exported art's, and no 0x13260 bits 8-13 are set). sub_08042A54(2, 0x14) at Cagnazzo's start and (2, 0x18) at Buer's are not run. Buer's flames do not spawn their timed type-6 sparkles (sub_08045B44(x + random 2.0, y - 4, 0, -1/16, 6, 7) every fourth frame, animated through 0x08525160), whose art is not exported. SkillCatoblepasUse's 0x131B8 & 0x800 bit and sub_08042A54(2, 0x1E) are not modelled. sub_0802E0C4 runs at the end of Soma's states 0 (_0801CC30), 12 (sub_08019A94) and 13 (sub_080199A0): with no guardian in gEwramData + 0x13144, the guardian button held (and newly pressed for a record with flag 2) and at least max MP / 128 + 1 MP, it creates the guardian entity for the equipped blue soul's record (0x080E192C, 12 bytes, exported as metadata/blue_souls.tsv with 25 records, 0 for none): routine (+ 0x0), MP per second (+ 0x4; the entity drains one MP every 60 / it frames), flags (+ 0x5), + 0x1A (+ 0x6) and + 0x1C (+ 0x8), and sets Soma's flag 0x200. The upkeep sub_0802DF2C/sub_0802DE5C drains the MP (0 ends the soul), ends a held soul when the button is released and a toggled soul when it is pressed again after its first update. SkillMedusaHeadUse (soul 15, held, 10 MP per second) requires Soma airborne with no 0x80, 0x8000 or 0x1000000 flag (else it ends on its first update), plays 0x8C, keeps his vy (0 when rising) and gravity 0x2800, then after each of his updates zeroes his vy and + 0x54 and sets 0x131B8 & 0x20, which the end of his next update (before _0801CF2C clears it) reads to zero his vx and friction; on its end Soma gets the kept vy and gravity back. Diagnostic --blue-soul N equips and grants a blue soul. SkillCagnazzoUse (soul 11, toggled, 5 MP per second) runs the upkeep first, then on its first update loads its own art (0x081DC144, exported as Enemy/skill_cagnazzo), starts looping sequence 0, sets the guardian power 0x131C2 to 12 and the elements 0x131C4 to 0, its attack box 0x1414050A (10, 5, 20 x 20) with type 6 and plays 0x1AA; every update places it 16 pixels ahead of Soma (his facing) and 32 above his feet. sub_08021530(6) gives the type-6 power 0x131C2 + 0x131C2 / 8 * (INT / 2) (8 / 10 under gEwramData + 0xA1 & 0xF0); type 6 takes its own recent-hit slot with cooldown 0 (0x080E33F0). SkillBuerUse (soul 4, toggled, 5 MP per second) runs the upkeep only while its state is below 2 (ending sets state 2). Its first update sets the power 0x131C2 to 12 and elements 0x131C4 to 2, + 0x4C to -16.0, creates two flames through sub_0802DD00 (guardian slots of 0x13144, callback sub_0802FDE4) at angles 0 and 0x8000 with speed 0x200 (negated when Soma faces left) and plays 0x1A5 and 0x92. In state 1 its radius + 0x30 grows by 1 to 28, it takes Soma's x and his y plus the integer half of + 0x4C, which eases by 0.25 toward -8 while he crouches (flag 0x400) and toward -20 otherwise. State 2 shrinks the radius by 2 a frame, then runs sub_0802DD84 and deletes itself. Each flame (its own art 0x081E0164, exported as Enemy/skill_buer, looping sequence 0, attack box 0x1414F6F6 with type 6) sits at the parent position plus sine(angle + 0x4000) and sine(angle) times the radius, then turns by its speed. SkillCatoblepasUse (soul 9, held, 15 MP per second) runs the upkeep, then ends unless Soma's + 0x10 & 0x1001A2 is 0x100000 (grounded and still); it sets 0x131B8 & 0x820 (the 0x20 vx freeze). Its first update sets power 10 and elements 0x100, puts Soma in state 10 with looping animation 0x35 and clears his flags 0x10000000 and 0x400; state 10 (_0801CC68) returns to state 0 once 0x13144 is empty. Each update it sits 16 pixels ahead of Soma and 28 above his feet; every fifth frame it creates a sub_08030D6C cloud (0x8E on every other) at its position with vx 1.5 forward plus Soma's vx, ax 0x400 forward, vy 0.5 plus 0x080E1A64[cycle of 3] and ay 0x200, moved by sub_0806D3D8 (8.0 clamp) for 26 frames with box 0x1414F6F6 and type 6; its art (0x081E2978) is exported as Enemy/skill_catoblepas.",
-   "next_action": "Port the other guardian routines, starting with those of the tracked monsters (Giant Ghost 6, Bone Pillar 10, Curly 20 and Imp 22), and export the type-6 timed sparkle of Buer's flames.",
+   "limitations": "Only SkillMedusaHeadUse, SkillCagnazzoUse, SkillBuerUse, SkillCatoblepasUse and SkillImpUse are ported; the 19 other guardian routines are refused before they start, so their souls do nothing. The gEwramData + 0x344 & 0x200000 limit to souls 1-3, the 0x131B8 & 0x200 lock and the 0x42C bits 0 and 8 of the upkeep are not modelled. The cleanup of sub_0802DD84 frees only the guardian slot and Soma's flag 0x200 (no guardian child entity exists yet; the Cagnazzo art's 0x131D0 palette slot is the exported art's, and no 0x13260 bits 8-13 are set). sub_08042A54(2, 0x14) at Cagnazzo's start and (2, 0x18) at Buer's are not run. Buer's flames do not spawn their timed type-6 sparkles (sub_08045B44(x + random 2.0, y - 4, 0, -1/16, 6, 7) every fourth frame, animated through 0x08525160), whose art is not exported. SkillCatoblepasUse's 0x131B8 & 0x800 bit and sub_08042A54(2, 0x1E) are not modelled. The Imp familiar keeps its chased target as the homing slot's room entity rather than an entity pointer, and its attack box follows the current frame rather than only frame changes (sub_0802E1D0); sub_08042A54(2, 0x3C) is not run. sub_0802E0C4 runs at the end of Soma's states 0 (_0801CC30), 12 (sub_08019A94) and 13 (sub_080199A0): with no guardian in gEwramData + 0x13144, the guardian button held (and newly pressed for a record with flag 2) and at least max MP / 128 + 1 MP, it creates the guardian entity for the equipped blue soul's record (0x080E192C, 12 bytes, exported as metadata/blue_souls.tsv with 25 records, 0 for none): routine (+ 0x0), MP per second (+ 0x4; the entity drains one MP every 60 / it frames), flags (+ 0x5), + 0x1A (+ 0x6) and + 0x1C (+ 0x8), and sets Soma's flag 0x200. The upkeep sub_0802DF2C/sub_0802DE5C drains the MP (0 ends the soul), ends a held soul when the button is released and a toggled soul when it is pressed again after its first update. SkillMedusaHeadUse (soul 15, held, 10 MP per second) requires Soma airborne with no 0x80, 0x8000 or 0x1000000 flag (else it ends on its first update), plays 0x8C, keeps his vy (0 when rising) and gravity 0x2800, then after each of his updates zeroes his vy and + 0x54 and sets 0x131B8 & 0x20, which the end of his next update (before _0801CF2C clears it) reads to zero his vx and friction; on its end Soma gets the kept vy and gravity back. Diagnostic --blue-soul N equips and grants a blue soul. SkillCagnazzoUse (soul 11, toggled, 5 MP per second) runs the upkeep first, then on its first update loads its own art (0x081DC144, exported as Enemy/skill_cagnazzo), starts looping sequence 0, sets the guardian power 0x131C2 to 12 and the elements 0x131C4 to 0, its attack box 0x1414050A (10, 5, 20 x 20) with type 6 and plays 0x1AA; every update places it 16 pixels ahead of Soma (his facing) and 32 above his feet. sub_08021530(6) gives the type-6 power 0x131C2 + 0x131C2 / 8 * (INT / 2) (8 / 10 under gEwramData + 0xA1 & 0xF0); type 6 takes its own recent-hit slot with cooldown 0 (0x080E33F0). SkillBuerUse (soul 4, toggled, 5 MP per second) runs the upkeep only while its state is below 2 (ending sets state 2). Its first update sets the power 0x131C2 to 12 and elements 0x131C4 to 2, + 0x4C to -16.0, creates two flames through sub_0802DD00 (guardian slots of 0x13144, callback sub_0802FDE4) at angles 0 and 0x8000 with speed 0x200 (negated when Soma faces left) and plays 0x1A5 and 0x92. In state 1 its radius + 0x30 grows by 1 to 28, it takes Soma's x and his y plus the integer half of + 0x4C, which eases by 0.25 toward -8 while he crouches (flag 0x400) and toward -20 otherwise. State 2 shrinks the radius by 2 a frame, then runs sub_0802DD84 and deletes itself. Each flame (its own art 0x081E0164, exported as Enemy/skill_buer, looping sequence 0, attack box 0x1414F6F6 with type 6) sits at the parent position plus sine(angle + 0x4000) and sine(angle) times the radius, then turns by its speed. SkillCatoblepasUse (soul 9, held, 15 MP per second) runs the upkeep, then ends unless Soma's + 0x10 & 0x1001A2 is 0x100000 (grounded and still); it sets 0x131B8 & 0x820 (the 0x20 vx freeze). Its first update sets power 10 and elements 0x100, puts Soma in state 10 with looping animation 0x35 and clears his flags 0x10000000 and 0x400; state 10 (_0801CC68) returns to state 0 once 0x13144 is empty. Each update it sits 16 pixels ahead of Soma and 28 above his feet; every fifth frame it creates a sub_08030D6C cloud (0x8E on every other) at its position with vx 1.5 forward plus Soma's vx, ax 0x400 forward, vy 0.5 plus 0x080E1A64[cycle of 3] and ay 0x200, moved by sub_0806D3D8 (8.0 clamp) for 26 frames with box 0x1414F6F6 and type 6; its art (0x081E2978) is exported as Enemy/skill_catoblepas. SkillImpUse (soul 22, toggled, 3 MP per second) runs the upkeep below state 6 (its end starts state 6: + 0x0F blinking, 16 frames, then sub_0802DD84). State 0 loads its art (0x081E317C, exported as Enemy/skill_imp), starts looping sequence 0, places it at Soma's x and his y - 16 with his facing and vy -0.25, sets type 6 with its attack off, power 15 and elements 0x11, and plays 0x19E. State 1 moves (sub_0806D3D8, 8.0) until + 0x0D is 0. State 2 (r & 0xFF == 0 starts state 4) steps toward Soma's x and y - 40 (sub_0806CD38/sub_0806CD78 through 0x13168) by the BIOS-Sqrt distance >> 5 along ArcTan2 (sub_0806E43C, sub_08068CDC), facing its vx, and hovers (state 3) once the step is under 0.5. State 3 (r & 0xFF <= 1 starts state 4) moves by sine(+ 0x0D << 8) / 4 and sine((+ 0x0D << 9) + 0xC000) / 4 (2.0 cap) and follows again beyond 48 pixels (sub_0806E3F8). State 4 takes the nearest homing-list target by squared whole-pixel distance (sub_0802D484, nothing while 0x13220 is set), else state 2 with + 0x0D 0x80, and picks a height 16 + (r & 7) above it; state 5 counts + 0x0D down and dives by the distance >> 4 until the target's HP, the count or a step under 0.25 ends it. sub_0802E1D0 steps the animation and takes the frame's attack box.",
+   "next_action": "Port the other guardian routines, starting with those of the tracked monsters (Giant Ghost 6, Bone Pillar 10 and Curly 20, whose transformation needs Soma's state 9), and export the type-6 timed sparkle of Buer's flames.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul.c",
      "tests/test_aos_soma.c",
      "tests/test_aos_enemy.c",
-     "tests/test_aos_guardian_buer.c"
+     "tests/test_aos_guardian_buer.c",
+     "tests/test_aos_guardian_imp.c"
     ],
     "in_game_check": [
-     "aria area_00_room_003 (--blue-soul 15 --spawn 640 120 --repeat 1000, R held): Soma stays at y 120 through frame 60 (he lands at y 191 without R); with Right also held he moves one pixel, then is held still; area_00_room_003 (--blue-soul 11, R pressed once): Cagnazzo's guardian rides on Soma's shoulder; area_00_room_006 (--hp 9999 --blue-soul 11, R and Right): it kills a Skeleton with two 17-damage hits without an attack press; area_00_room_003 (--blue-soul 4, R pressed once): Buer's two flames orbit Soma on opposite sides; area_00_room_006 (--hp 9999 --blue-soul 4, R and Right): they kill Skeletons with 17-damage hits without an attack press; area_00_room_003 (--blue-soul 9, R held): Soma takes the breath pose and gas clouds drift ahead of him; area_00_room_006 (--hp 9999 --blue-soul 9, R held): the clouds kill two Skeletons"
+     "aria area_00_room_003 (--blue-soul 15 --spawn 640 120 --repeat 1000, R held): Soma stays at y 120 through frame 60 (he lands at y 191 without R); with Right also held he moves one pixel, then is held still; area_00_room_003 (--blue-soul 11, R pressed once): Cagnazzo's guardian rides on Soma's shoulder; area_00_room_006 (--hp 9999 --blue-soul 11, R and Right): it kills a Skeleton with two 17-damage hits without an attack press; area_00_room_003 (--blue-soul 4, R pressed once): Buer's two flames orbit Soma on opposite sides; area_00_room_006 (--hp 9999 --blue-soul 4, R and Right): they kill Skeletons with 17-damage hits without an attack press; area_00_room_003 (--blue-soul 9, R held): Soma takes the breath pose and gas clouds drift ahead of him; area_00_room_006 (--hp 9999 --blue-soul 9, R held): the clouds kill two Skeletons; area_00_room_003 (--blue-soul 22, R pressed once): the Imp familiar hovers by Soma's head; area_00_room_006 (--hp 9999 --blue-soul 22, R pressed once): it kills Skeletons with 10-damage hits"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -13568,6 +13579,16 @@
       "registered": true,
       "ctest": [
        "aos_guardian_buer"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_guardian_imp.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_guardian_imp"
       ],
       "outcome": "passed",
       "exists": true
@@ -18469,6 +18490,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_guardian_imp",
+    "files": [
+     "tests/test_aos_guardian_imp.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_skill_ripper",
     "files": [
      "tests/test_aos_skill_ripper.c"
@@ -18743,12 +18771,18 @@
    }
   ],
   "summary": {
-   "passed": 115,
+   "passed": 116,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "a0ccb61",
+   "date": "2026-11-02",
+   "subject": "Port the Catoblepas blue soul and Soma's guardian pose state",
+   "scope": "project"
+  },
   {
    "commit": "abe5d76",
    "date": "2026-11-02",
@@ -19222,12 +19256,6 @@
    "date": "2026-10-28",
    "subject": "Port the Ghost enemy and its room producer",
    "scope": "project"
-  },
-  {
-   "commit": "e5959c0",
-   "date": "2026-10-28",
-   "subject": "Port the Siren soul and complete Harpy sounds",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19288,9 +19316,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 709,
-    "routines_attached_to_features": 709,
-    "unassigned_routines": 2864,
+    "routines_cited_by_features": 715,
+    "routines_attached_to_features": 715,
+    "unassigned_routines": 2858,
     "call_edges": 14228
    }
   },
@@ -22667,9 +22695,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "blue:22",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: its only native sound, 0x72 at the start of its death (sub_080C4ED4), is requested and unit-tested; a local run rendered it (not listened to)."
+       "notes": "Soul: drops, is collected and starts SkillImpUse with an R press (toggled, 3 MP per second, sound 0x19E): the exported familiar follows Soma 40 pixels above his feet by 1/32 of the distance, hovers in a sine figure and, by chance, dives at the nearest enemy of the homing list by 1/16 of the distance, attacking with its frames' boxes (type 6, power 15 + 15 / 8 * INT / 2, elements 0x11); a second press makes it blink for 16 frames, then it leaves. Unit-tested and checked in local captures (it killed Skeletons in area 0 room 6), not emulator-compared; sub_08042A54(2, 0x3C) is not run. Sounds: its only native sound, 0x72 at the start of its death (sub_080C4ED4), is requested and unit-tested; a local run rendered it (not listened to)."
       }
      },
      {
@@ -23690,11 +23718,11 @@
       "missing": 0
      },
      "soul": {
-      "ported": 35,
-      "partial": 12,
+      "ported": 36,
+      "partial": 11,
       "missing": 0
      },
-     "complete": 30,
+     "complete": 31,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -28348,7 +28376,7 @@
        "id": "06:16",
        "name": "Imp",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: its only native sound, 0x72 at the start of its death (sub_080C4ED4), is requested and unit-tested; a local run rendered it (not listened to).",
+       "note": "Soul: drops, is collected and starts SkillImpUse with an R press (toggled, 3 MP per second, sound 0x19E): the exported familiar follows Soma 40 pixels above his feet by 1/32 of the distance, hovers in a sine figure and, by chance, dives at the nearest enemy of the homing list by 1/16 of the distance, attacking with its frames' boxes (type 6, power 15 + 15 / 8 * INT / 2, elements 0x11); a second press makes it blink for 16 frames, then it leaves. Unit-tested and checked in local captures (it killed Skeletons in area 0 room 6), not emulator-compared; sub_08042A54(2, 0x3C) is not run. Sounds: its only native sound, 0x72 at the start of its death (sub_080C4ED4), is requested and unit-tested; a local run rendered it (not listened to).",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

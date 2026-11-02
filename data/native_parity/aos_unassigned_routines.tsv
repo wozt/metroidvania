@@ -57,7 +57,6 @@ aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillGiantWormUse	SkillGiantWormUse	abilities	name			asm_function		asm/code/code_080211F0.s	33890	0	1
 aos:asm:asm/code/code_080211F0.s:SkillGreatArmorUse	SkillGreatArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	32927	0	12
 aos:asm:asm/code/code_080211F0.s:SkillHeadhunterUse	SkillHeadhunterUse	abilities	name			asm_function		asm/code/code_080211F0.s	34280	0	1
-aos:asm:asm/code/code_080211F0.s:SkillImpUse	SkillImpUse	abilities	name			asm_function		asm/code/code_080211F0.s	31854	0	19
 aos:asm:asm/code/code_080211F0.s:SkillKillerMantleUse	SkillKillerMantleUse	abilities	name			asm_function		asm/code/code_080211F0.s	20960	0	12
 aos:asm:asm/code/code_080211F0.s:SkillKyomaDemonUse	SkillKyomaDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	21159	0	11
 aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13
@@ -91,7 +90,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802D300	sub_0802D300	unclassified				asm_f
 aos:asm:asm/code/code_080211F0.s:sub_0802D314	sub_0802D314	unclassified		technical	exclusive_callees	asm_function	0x0802D314	asm/code/code_080211F0.s	24122	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D390	sub_0802D390	unclassified				asm_function	0x0802D390	asm/code/code_080211F0.s	24192	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D3C4	sub_0802D3C4	unclassified				asm_function	0x0802D3C4	asm/code/code_080211F0.s	24221	0	0
-aos:asm:asm/code/code_080211F0.s:sub_0802D484	sub_0802D484	abilities	referrers			asm_function	0x0802D484	asm/code/code_080211F0.s	24333	3	0
 aos:asm:asm/code/code_080211F0.s:sub_0802D510	sub_0802D510	unclassified		technical	exclusive_callees	asm_function	0x0802D510	asm/code/code_080211F0.s	24406	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D55C	sub_0802D55C	unclassified				asm_function	0x0802D55C	asm/code/code_080211F0.s	24446	4	1
 aos:asm:asm/code/code_080211F0.s:sub_0802D590	sub_0802D590	unclassified				asm_function	0x0802D590	asm/code/code_080211F0.s	24477	1	1
@@ -112,7 +110,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802DBD0	sub_0802DBD0	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_0802DC10	sub_0802DC10	abilities	referrers			asm_function	0x0802DC10	asm/code/code_080211F0.s	25327	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DCB0	sub_0802DCB0	abilities	referrers			asm_function	0x0802DCB0	asm/code/code_080211F0.s	25410	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DFF0	sub_0802DFF0	unclassified		technical	exclusive_callees	asm_function	0x0802DFF0	asm/code/code_080211F0.s	25834	10	4
-aos:asm:asm/code/code_080211F0.s:sub_0802E1D0	sub_0802E1D0	abilities	referrers			asm_function	0x0802E1D0	asm/code/code_080211F0.s	26065	4	2
 aos:asm:asm/code/code_080211F0.s:sub_0802E638	sub_0802E638	abilities	referrers			asm_function	0x0802E638	asm/code/code_080211F0.s	26607	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802ECF4	sub_0802ECF4	abilities	referrers			asm_function	0x0802ECF4	asm/code/code_080211F0.s	27438	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802EE40	sub_0802EE40	unclassified		audio	exclusive_callees	asm_function	0x0802EE40	asm/code/code_080211F0.s	27597	0	6
@@ -773,7 +770,6 @@ aos:asm:asm/code/code_08060B98.s:sub_08068BC0	sub_08068BC0	abilities	referrers		
 aos:asm:asm/code/code_08060B98.s:sub_08068BF0	sub_08068BF0	unclassified				asm_function	0x08068BF0	asm/code/code_08060B98.s	16318	0	1
 aos:asm:asm/code/code_08060B98.s:sub_08068C74	sub_08068C74	unclassified				asm_function	0x08068C74	asm/code/code_08060B98.s	16383	0	0
 aos:asm:asm/code/code_08060B98.s:sub_08068CA8	sub_08068CA8	unclassified				asm_function	0x08068CA8	asm/code/code_08060B98.s	16415	0	0
-aos:asm:asm/code/code_08060B98.s:sub_08068CDC	sub_08068CDC	unclassified				asm_function	0x08068CDC	asm/code/code_08060B98.s	16447	8	1
 aos:asm:asm/code/code_08060B98.s:sub_08068D3C	sub_08068D3C	unclassified				asm_function	0x08068D3C	asm/code/code_08060B98.s	16499	0	1
 aos:asm:asm/code/code_08060B98.s:sub_08068DB0	sub_08068DB0	unclassified				asm_function	0x08068DB0	asm/code/code_08060B98.s	16561	0	1
 aos:asm:asm/code/code_08060B98.s:sub_08068E14	sub_08068E14	unclassified				asm_function	0x08068E14	asm/code/code_08060B98.s	16615	0	1
@@ -866,8 +862,6 @@ aos:asm:asm/code/code_08060B98.s:sub_0806E268	sub_0806E268	unclassified				asm_f
 aos:asm:asm/code/code_08060B98.s:sub_0806E314	sub_0806E314	unclassified				asm_function	0x0806E314	asm/code/code_08060B98.s	27881	69	2
 aos:asm:asm/code/code_08060B98.s:sub_0806E350	sub_0806E350	enemies	referrers			asm_function	0x0806E350	asm/code/code_08060B98.s	27913	4	0
 aos:asm:asm/code/code_08060B98.s:sub_0806E3B0	sub_0806E3B0	enemies	referrers			asm_function	0x0806E3B0	asm/code/code_08060B98.s	27965	1	0
-aos:asm:asm/code/code_08060B98.s:sub_0806E3F8	sub_0806E3F8	unclassified		technical	exclusive_callees	asm_function	0x0806E3F8	asm/code/code_08060B98.s	28003	5	1
-aos:asm:asm/code/code_08060B98.s:sub_0806E43C	sub_0806E43C	unclassified		technical	exclusive_callees	asm_function	0x0806E43C	asm/code/code_08060B98.s	28043	5	3
 aos:asm:asm/code/code_08060B98.s:sub_0806E59C	sub_0806E59C	unclassified		technical	exclusive_callees	asm_function	0x0806E59C	asm/code/code_08060B98.s	28226	0	2
 aos:asm:asm/code/code_08060B98.s:sub_0806E5C4	sub_0806E5C4	enemies	referrers			asm_function	0x0806E5C4	asm/code/code_08060B98.s	28248	0	2
 aos:asm:asm/code/code_08060B98.s:sub_0806E5DC	sub_0806E5DC	unclassified		technical	exclusive_callees	asm_function	0x0806E5DC	asm/code/code_08060B98.s	28262	0	1

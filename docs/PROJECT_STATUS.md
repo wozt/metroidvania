@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0706 - Rock Armor AI from the native routines
+
+- Rock Armor's AI is ported from its traced routines, replacing the old
+  patrol-and-bob approximation:
+  - the probe walker patrol (`sub_080B2978`, probes `0x0852872C`);
+  - the throw (`sub_080B2BD8`, 0x88) of a rock (`sub_080B2798`) thrown
+    by its distance to the player on the probes `0x08528738`, bursting
+    (0x80) into eight bouncing pieces (`sub_080B264C`);
+  - the hit reaction facing the player (`sub_080B2F10`) and the death with
+    its bursts and sparks (`sub_080B2CD8`, 0x6F, 0x72).
+- New `rock_armor_tests`; a local capture of area 0 room 24 shows it
+  walking and raising its rock. It becomes the 41st complete monster.
+  Zero Mission is unchanged.
+
 ## Patch 0705 - Nemesis AI from the native routines
 
 - Nemesis's AI is ported from its traced routines, replacing the old

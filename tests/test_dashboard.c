@@ -275,7 +275,7 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(red_souls->count == 55 && blue_souls->count == 24 &&
            yellow_souls->count == 35 && ability_souls->count == 6,
            "Aria soul families");
-    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 40,
+    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 41,
            "complete Aria monsters");
     const FusionJson *mzm_monster_coverage = fusion_json_member(mzm_coverage, "monsters");
     const FusionJson *mzm_item_coverage = fusion_json_member(mzm_coverage, "items");
@@ -362,14 +362,14 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(!row_named(mzm_items, "Long Beam Hint (Chozo statue)"), "hint statue listed");
     EXPECT(!row_named(mzm_items, "Water Drop"), "water drop listed");
     static const char *const partial[] = {"Peeping Eye", "Killer Fish", "Bone Pillar", "Buer",
-                                          "White Dragon", "Rock Armor", "Giant Ghost"};
+                                          "White Dragon", "Giant Ghost"};
     static const char *const working[] = {
         "Bat", "Zombie", "Blue Crow", "Zombie Soldier", "Axe Armor", "Skull Archer", "Needles",
         "Medusa Head", "Zombie Officer", "Gargoyle", "Ghost Dancer", "Curly", "Durga", "Valkyrie",
         "Erinys", "Gremlin", "Skeleton Knight", "Dead Warrior", "Fleaman", "Red Crow", "Mimic",
         "Dead Crusader", "Cagnazzo", "Skull Millione", "Lubicant", "Killer Doll", "Lightning Doll",
         "Nemesis", "Beam Skeleton", "Siren", "Catoblepas", "Gorgon", "Harpy", "Tiny Devil", "Imp",
-        "Merman", "Ripper", "Ghost", "Skeleton", "Winged Skeleton"};
+        "Merman", "Ripper", "Ghost", "Skeleton", "Winged Skeleton", "Rock Armor"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

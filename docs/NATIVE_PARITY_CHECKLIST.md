@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 747 | 2826 |
+| Castlevania: Aria of Sorrow | 754 | 2819 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1673,14 +1673,14 @@ Known divergences: Animation-marker timing is represented by the exported animat
 Next action: Compare the blade animation marker and acceleration rounding frame by frame with an emulator. Port Skill_EvilButcher_Ripper_Use and its sprite resource. Ripper red soul now has an isolated C11 motion test but is not castable; its art, wall probes, affine and hit callbacks remain missing.
 Evidence: in game: `aria area_07_room_055 (--spawn 224 159 --hp 9999): frame 180 captures the Ripper group, jumping bodies and emitted blades; Soma takes three 80-damage contacts`.
 
-[~] **`aos.enemies.rock_armor` — Rock Armor.** The native bank-1 sheet, palette, frame boxes, inert state, floor placement and dedicated patrol/bob controller are connected. Added solid-wall collision guard to the patrol; native multi-probe walking, hit reactions, debris and sound are still missing.
+[+] **`aos.enemies.rock_armor` — Rock Armor.** EnemyRockArmorUpdate is ported from its traced routines: inside the sub_0806CC20 window (only colliding while flashing), the probe walker patrol (sub_080B2978, probes 0x0852872C, mode 0x14, speed by walk frame, turning after parameter 0 updates of frame 9 or off a plain floor), the throw at the player ahead within 99 pixels (sub_080B2BD8, 0x88), the rock (sub_080B2798: 58 pixels up, up at 2.0 with gravity 0x2000, forward at 0.125 + distance / 64, probes 0x08528738, contact + 1/4 with a knockback, hit points zeroed by any blow) bursting with 0x80 into eight pieces (sub_080B264C) that bounce once, the hit callback facing the player (sub_080B2F10) and the death (sub_080B2CD8: animation 2, 0x6F, bursts and sparks with 0x72).
 
-Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F10`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRockArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B264C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2798`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2978`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2BD8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2CD8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F10`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F5C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2F94`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: The native armor hit reactions, walk probes, debris and sounds are not ported.  
-Next action: Port the probe walker and armor attack/reaction states.
-Evidence: in game: `aria area_00_room_024: Rock Armor record at x 576, y 184`.
+Known divergences: The rock is thrown on each update of throw frame 7, which lasts two updates in the export, so two overlapping rocks leave together as in the native code. The global pause gEwramData + 0x4BE, the death palette bits of sub_080B2F10 and the record + 0x20 visibility of sub_0806CC20 are not ported. The walker probe tables are compiled in from the ROM values.  
+Next action: Compare the throw, the rock arc and the death effects against an emulator.
+Evidence: in game: `aria area_00_room_024 (--spawn 470 184 --hp 9999): Rock Armor walks and raises its rock toward Soma`.
 
 [+] **`aos.enemies.siren` — Siren (Harpy's routines).** The native constructor and updater alias Harpy with palette bank 1. It uses the shared flight, recoil and death states plus its distinct three-note frame 14/13/14 fan and repeating 16-frame angular bend. Its 0x8B, 0x87, 0x89 and 0x1C3 sounds are requested and unit-tested. Source-derived, not emulator-compared.
 

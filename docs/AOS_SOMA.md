@@ -867,8 +867,8 @@ frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming and
 hovering loops. The dedicated parent motion controllers are now dispatched
-for Peeping Eye, White Dragon, Buer, Rock Armor, Giant Ghost and Winged
-Skeleton. Ghost now has its complete specialized state machine: animation 0
+for Peeping Eye, White Dragon, Buer, Giant Ghost and Winged Skeleton;
+Rock Armor now has its own port (below). Ghost now has its complete specialized state machine: animation 0
 appears without collision, animation 1 enables its attack and accelerates
 toward a random height 16 to 32 pixels above Soma with 31/32 damping; inside
 four pixels it takes a two-pixel impulse away from a point below him. Its
@@ -1039,6 +1039,22 @@ is above 0x400, is drawn scaled (`sub_0803E058`: 1 / scale, nothing at
 seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
+
+Rock Armor (enemy 0x12, `EnemyRockArmorCreate` / `EnemyRockArmorUpdate`)
+shares the Axe Armor's shape. Inside the `sub_0806CC20` window it walks with
+the probe walker (`sub_080B2978`, probes `0x0852872C`, mode 0x14, 0.125 +
+0.25 per walk frame % 5, none on the fifth), turning after parameter 0
+updates of frame 9 or off a plain floor; with the player ahead within 99
+pixels at the start of frame 9 it throws (`sub_080B2BD8`): a rock
+(`sub_080B2798`, sound 0x88) on each update of frame 7, again while the
+player stays ahead. The rock starts 58 pixels up, rises at 2.0 with gravity
+0x2000 and flies at 0.125 + its distance to the player / 64 a frame on the
+probes `0x08528738`; its contact (+ 1/4) knocks back and any blow zeroes its
+hit points. Meeting anything, it bursts (0x80) into eight pieces
+(`sub_080B264C`) that bounce once at half speed. Struck, the armor faces the
+player (`sub_080B2F10`); dead, it plays death animation 2 (0x6F) with
+bursts every fourth frame and sparks with 0x72 every eighth
+(`sub_080B2CD8`).
 
 Nemesis (enemy 0x26, `EnemyNemesisCreate` / `EnemyNemesisUpdate`) uses the
 compact direct-frame descriptor `0x0824D2D8`, loaded from graphics

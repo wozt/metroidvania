@@ -4690,6 +4690,166 @@ static void soldier_tests(void) {
     assert(idle.anim.frame == 3);
 }
 
+static void rock_armor_tests(void) {
+    aos_audio_clear();
+    /* Floor at cell row 20 (top 160) from cell 4 to 49, walls at cells 3
+     * and 50. */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 4; x < 50; ++x) cells[20 * W + x] = 0x03;
+    for (int y = 0; y < 21; ++y) cells[y * W + 3] = cells[y * W + 50] = 0x03;
+    /* The exported frame durations of animations 0 (walk), 1 (throw) and
+     * 2 (death); 3 the rock, 4-6 its pieces. */
+    static const uint8_t walk[10] = {25, 5, 5, 5, 4, 22, 4, 5, 4, 4};
+    static const uint8_t throw_ticks[33] = {2, 4, 3, 7, 9, 3, 2, 2, 2, 1, 1, 1, 2, 8, 31, 5, 6,
+                                            3, 3, 3, 8, 8, 8, 8, 8, 8, 8, 8, 6, 9, 9, 7, 8};
+    static const uint8_t death[11] = {8, 6, 6, 6, 8, 6, 6, 4, 4, 4, 11};
+    static const uint8_t one[1] = {1};
+    const AosAnimDef defs[7] = {{10, walk}, {33, throw_ticks}, {11, death}, {1, one},
+                                {1, one},   {1, one},          {1, one}};
+    const AosAnimSet anims = {defs, 7};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 33; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-13, -48, 24, 48};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    const AosEnemyStats stats = {60, 16, 8, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(400), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* Snapped onto the floor plus one pixel; frame 0 walks 0.125 a frame,
+     * frame 1 0.375 (frame % 5 * 0.25 + 0.125, none at frame % 5 = 4). */
+    AosEnemy a;
+    assert(aos_enemy_create(&a, AOS_ENEMY_ROCK_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert((a.y >> 16) == 160 && a.state == 0);
+    a.mirrored = false;
+    int32_t x0 = a.x;
+    aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(a.x == x0 - 0x2000);
+    /* With a patrol of 1 it turns on the third update of frame 9. */
+    AosEnemy patrol;
+    assert(aos_enemy_create(&patrol, AOS_ENEMY_ROCK_ARMOR, 200, 150, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    bool facing = patrol.mirrored;
+    int frame9 = 0;
+    for (int i = 0; i < 200 && patrol.mirrored == facing; ++i) {
+        if (patrol.anim.frame == 9) ++frame9;
+        aos_enemy_update(&patrol, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    }
+    assert(patrol.mirrored != facing && frame9 == 3);
+
+    /* The player 60 pixels ahead at the start of frame 9: the throw; its
+     * frame 7 lasts two updates, each throwing a rock (sound 0x88). */
+    assert(aos_enemy_create(&a, AOS_ENEMY_ROCK_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    a.mirrored = true;
+    soma.x = a.x + AOS_FIXED(60);
+    soma.y = a.y;
+    int frames = 0;
+    while (a.state == 0 && frames < 200) {
+        aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(a.state == 1 && a.anim.frame == 9);
+    aos_audio_clear();
+    AosEnemy rock = {0};
+    int rocks = 0;
+    while (a.state == 1 && frames < 600) {
+        AosHitReport r = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          never_zero);
+        for (int c = 0; c < r.child_count; ++c)
+            if (r.children[c].role == AOS_ROLE_ROCK) {
+                rock = r.children[c];
+                ++rocks;
+            }
+        ++frames;
+        if (a.step == 0 && a.anim.id == 1 && rocks) break;
+    }
+    assert(rocks == 2 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x88) == 2 &&
+           rock.mirrored && rock.combat.type == 0x0A);
+
+    /* The rock: 58 pixels up, up at 2.0, right at 0.125 + distance / 64, power
+     * + 1 / 4; it lands, then bursts into eight pieces (sound 0x80). */
+    int32_t ry = rock.y, distance = (soma.x - rock.x) >> 16;
+    aos_enemy_update(&rock, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(rock.state == 1 && rock.speed == 0x2000 + distance * 0x400 &&
+           rock.stats.contact == 20 && rock.y == ry - 0x3A0000 - 0x20000 + 0x2000 && rock.own_hurt.w == 32);
+    frames = 0;
+    while (rock.state == 1 && frames < 200) {
+        aos_enemy_update(&rock, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(rock.state == 2 && (rock.y >> 16) == 151);   /* its floor probe on row 159 */
+    aos_audio_clear();
+    AosHitReport burst = aos_enemy_update(&rock, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(rock.removed && burst.child_count == 8 &&
+           burst.children[0].role == AOS_ROLE_ROCK_PIECE &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x80) == 1);
+    /* A piece (zero random: animation 4, vx -0.75, up at 1.0) falls with
+     * gravity 0.25 and bounces once off the floor. */
+    AosEnemy piece = burst.children[0];
+    assert(piece.x == rock.x - 0x80000 && piece.y == rock.y - 0x100000 && !piece.mirrored);
+    aos_enemy_update(&piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(piece.anim.id == 4 && piece.vx == -0xC000 && piece.vy == -0x10000 &&
+           piece.state == 1);
+    frames = 0;
+    while (piece.state == 1 && frames < 100) {
+        aos_enemy_update(&piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(piece.state == 2 && piece.vy < 0);
+
+    /* A rock struck by the weapon loses its hit points and bursts. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    AosEnemy struck = rock;
+    struck.removed = false;
+    struck.state = 1;
+    struck.hp = 60;
+    struck.x = soma.x;
+    struck.y = soma.y - AOS_FIXED(16);
+    AosHitReport hit = aos_enemy_update(&struck, &soma, &layer, &kind, &weapon, &blade, 10, 4,
+                                        0, 0, always_zero);
+    assert(hit.enemy_hit && struck.hp == 0 && struck.state == 2);
+
+    /* A lethal blow: it faces the player, death animation 2 (0x6F), a
+     * burst every fourth frame, a spark and 0x72 every eighth, gone when the
+     * animation ends. */
+    assert(aos_enemy_create(&a, AOS_ENEMY_ROCK_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    a.mirrored = false;
+    soma.x = a.x + AOS_FIXED(4);
+    soma.y = a.y;
+    aos_audio_clear();
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
+                           always_zero);
+    assert(hit.killed && a.state == 2 && a.mirrored);
+    frames = 0;
+    int bursts = 0, sparks = 0;
+    while (!a.removed && frames < 200) {
+        AosHitReport r = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        for (int e = 0; e < r.effect_count; ++e) {
+            bursts += r.effects[e].kind == AOS_EFFECT_BURST_15;
+            sparks += r.effects[e].kind == AOS_EFFECT_SPARK;
+        }
+        ++frames;
+    }
+    assert(a.removed && frames == 70 && bursts == 17 && sparks == 8 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6F) == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 8);
+}
+
 static uint32_t always_one(void) { return 1; }
 
 static void armor_tests(void) {
@@ -7330,6 +7490,7 @@ int main(void) {
     doll_tests();
     soldier_tests();
     armor_tests();
+    rock_armor_tests();
     archer_tests();
     needles_tests();
     officer_tests();

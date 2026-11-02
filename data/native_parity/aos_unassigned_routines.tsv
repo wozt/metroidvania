@@ -38,7 +38,6 @@ aos:asm:asm/code/code_080211F0.s:SkillAltairUse	SkillAltairUse	abilities	name			
 aos:asm:asm/code/code_080211F0.s:SkillAluraUneUse	SkillAluraUneUse	abilities	name			asm_function		asm/code/code_080211F0.s	26997	0	13
 aos:asm:asm/code/code_080211F0.s:SkillArachneUse	SkillArachneUse	abilities	name			asm_function		asm/code/code_080211F0.s	15671	0	15
 aos:asm:asm/code/code_080211F0.s:SkillBaloreUse	SkillBaloreUse	abilities	name			asm_function		asm/code/code_080211F0.s	22070	0	12
-aos:asm:asm/code/code_080211F0.s:SkillBasiliskUse	SkillBasiliskUse	abilities	name			asm_function		asm/code/code_080211F0.s	33951	0	0
 aos:asm:asm/code/code_080211F0.s:SkillBigGolemUse	SkillBigGolemUse	abilities	name			asm_function		asm/code/code_080211F0.s	33111	0	13
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
 aos:asm:asm/code/code_080211F0.s:SkillBlackPantherUse	SkillBlackPantherUse	abilities	name			asm_function		asm/code/code_080211F0.s	26316	0	6
@@ -64,7 +63,6 @@ aos:asm:asm/code/code_080211F0.s:SkillKillerMantleUse	SkillKillerMantleUse	abili
 aos:asm:asm/code/code_080211F0.s:SkillKyomaDemonUse	SkillKyomaDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	21159	0	11
 aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13
 aos:asm:asm/code/code_080211F0.s:SkillLightningDollUse	SkillLightningDollUse	abilities	name			asm_function		asm/code/code_080211F0.s	12841	0	14
-aos:asm:asm/code/code_080211F0.s:SkillLubicantUse	SkillLubicantUse	abilities	name			asm_function		asm/code/code_080211F0.s	34223	0	1
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:SkillMandragoraUse	SkillMandragoraUse	abilities	name			asm_function		asm/code/code_080211F0.s	19459	0	19
 aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	name			asm_function		asm/code/code_080211F0.s	19018	0	20
@@ -77,12 +75,7 @@ aos:asm:asm/code/code_080211F0.s:SkillStudentWitchUse	SkillStudentWitchUse	abili
 aos:asm:asm/code/code_080211F0.s:SkillUkobackUse	SkillUkobackUse	abilities	name			asm_function		asm/code/code_080211F0.s	17899	0	15
 aos:asm:asm/code/code_080211F0.s:SkillUneUse	SkillUneUse	abilities	name			asm_function		asm/code/code_080211F0.s	10605	0	13
 aos:asm:asm/code/code_080211F0.s:SkillWerewolfUse	SkillWerewolfUse	abilities	name			asm_function		asm/code/code_080211F0.s	14478	0	13
-aos:asm:asm/code/code_080211F0.s:SkillWoodenGolemUse	SkillWoodenGolemUse	abilities	name			asm_function		asm/code/code_080211F0.s	34158	0	1
-aos:asm:asm/code/code_080211F0.s:SkillZombieUse	SkillZombieUse	abilities	name			asm_function		asm/code/code_080211F0.s	34181	0	1
 aos:asm:asm/code/code_080211F0.s:Skill_Devil_Manticore_Curly_Use	Skill_Devil_Manticore_Curly_Use	abilities	name			asm_function		asm/code/code_080211F0.s	27777	0	12
-aos:asm:asm/code/code_080211F0.s:Skill_PoisonWorm_Ectoplasm_Gargoyle_Use	Skill_PoisonWorm_Ectoplasm_Gargoyle_Use	abilities	name			asm_function		asm/code/code_080211F0.s	34122	0	1
-aos:asm:asm/code/code_080211F0.s:Skill_SkeletonKnight_Minotaur_Golem_Triton_WhiteDragon_Quezlcoatl_Gorgon_DeadCrusader_RedCrow_Lilith_Bael_Stolas_GhostDancer_Gremlin_Use	Skill_SkeletonKnight_Minotaur_Golem_Triton_WhiteDragon_Quezlcoatl_Gorgon_DeadCrusader_RedCrow_Lilith_Bael_Stolas_GhostDancer_Gremlin_Use	abilities	name			asm_function		asm/code/code_080211F0.s	34096	0	1
-aos:asm:asm/code/code_080211F0.s:Skill_Undine_Skula_ZombieOfficer_IronGolem_DeadWarrior_PeepingEye_Succubus_FleshGolem_Tsuchinoko_Erinys_Mimic_ArcDemon_Use	Skill_Undine_Skula_ZombieOfficer_IronGolem_DeadWarrior_PeepingEye_Succubus_FleshGolem_Tsuchinoko_Erinys_Mimic_ArcDemon_Use	abilities	name			asm_function		asm/code/code_080211F0.s	34040	0	0
 aos:asm:asm/code/code_080211F0.s:Skill_Werejaguar_Weretiger_Use	Skill_Werejaguar_Weretiger_Use	abilities	name			asm_function		asm/code/code_080211F0.s	12635	0	11
 aos:asm:asm/code/code_080211F0.s:Skill_Witch_GiantGhost_Use	Skill_Witch_GiantGhost_Use	abilities	name			asm_function		asm/code/code_080211F0.s	28977	0	15
 aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers			asm_function	0x08025620	asm/code/code_080211F0.s	8666	0	5
@@ -141,11 +134,6 @@ aos:asm:asm/code/code_080211F0.s:sub_08031E70	sub_08031E70	unclassified				asm_f
 aos:asm:asm/code/code_080211F0.s:sub_08031F04	sub_08031F04	abilities	referrers			asm_function	0x08031F04	asm/code/code_080211F0.s	33654	0	0
 aos:asm:asm/code/code_080211F0.s:sub_08031F08	sub_08031F08	abilities	referrers			asm_function	0x08031F08	asm/code/code_080211F0.s	33659	0	1
 aos:asm:asm/code/code_080211F0.s:sub_08031F28	sub_08031F28	abilities	referrers			asm_function	0x08031F28	asm/code/code_080211F0.s	33679	0	1
-aos:asm:asm/code/code_080211F0.s:sub_08031F3C	sub_08031F3C	unclassified		technical	exclusive_callees	asm_function	0x08031F3C	asm/code/code_080211F0.s	33692	1	1
-aos:asm:asm/code/code_080211F0.s:sub_08031FC4	sub_08031FC4	unclassified		technical	exclusive_callees	asm_function	0x08031FC4	asm/code/code_080211F0.s	33759	8	2
-aos:asm:asm/code/code_080211F0.s:sub_080321A0	sub_080321A0	unclassified				asm_function	0x080321A0	asm/code/code_080211F0.s	33990	0	0
-aos:asm:asm/code/code_080211F0.s:sub_080321C4	sub_080321C4	unclassified		technical	exclusive_callees	asm_function	0x080321C4	asm/code/code_080211F0.s	34008	3	1
-aos:asm:asm/code/code_080211F0.s:sub_0803222C	sub_0803222C	unclassified				asm_function	0x0803222C	asm/code/code_080211F0.s	34061	0	0
 aos:asm:asm/code/code_080211F0.s:sub_0803242C	sub_0803242C	unclassified				asm_function	0x0803242C	asm/code/code_080211F0.s	34322	0	0
 aos:asm:asm/code/code_08039340.s:sub_08039820	sub_08039820	unclassified				asm_function	0x08039820	asm/code/code_08039340.s	620	0	0
 aos:asm:asm/code/code_08039340.s:sub_08039A6C	sub_08039A6C	unclassified				asm_function	0x08039A6C	asm/code/code_08039340.s	925	0	0
@@ -226,7 +214,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08044E94	sub_08044E94	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_08044EDC	sub_08044EDC	unclassified				asm_function	0x08044EDC	asm/code/code_08040A38.s	7176	7	0
 aos:asm:asm/code/code_08040A38.s:sub_08044F24	sub_08044F24	unclassified				asm_function	0x08044F24	asm/code/code_08040A38.s	7217	5	0
 aos:asm:asm/code/code_08040A38.s:sub_08044F50	sub_08044F50	unclassified				asm_function	0x08044F50	asm/code/code_08040A38.s	7247	3	0
-aos:asm:asm/code/code_08040A38.s:sub_08044F80	sub_08044F80	unclassified				asm_function	0x08044F80	asm/code/code_08040A38.s	7279	1	0
 aos:asm:asm/code/code_08040A38.s:sub_08044FA8	sub_08044FA8	unclassified				asm_function	0x08044FA8	asm/code/code_08040A38.s	7301	2	0
 aos:asm:asm/code/code_08040A38.s:sub_08044FF4	sub_08044FF4	unclassified				asm_function	0x08044FF4	asm/code/code_08040A38.s	7346	0	1
 aos:asm:asm/code/code_08040A38.s:sub_080450C8	sub_080450C8	unclassified		technical	exclusive_callees	asm_function	0x080450C8	asm/code/code_08040A38.s	7452	0	4

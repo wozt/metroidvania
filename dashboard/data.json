@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T10:32:44+00:00",
+ "generated_at": "2026-11-02T10:43:51+00:00",
  "git": {
-  "commit": "903439a",
+  "commit": "47aee30",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 213,
+   "total": 214,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 56,
+    "partial": 57,
     "functional": 146,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 146,
-   "functional_or_better_percent": 68.5,
-   "with_passing_tests": 200,
+   "functional_or_better_percent": 68.2,
+   "with_passing_tests": 201,
    "with_passing_tests_percent": 93.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -268,6 +268,7 @@
     "aos.souls.equipment_menu",
     "aos.souls.inventory_pickups",
     "aos.souls.red_soul_use",
+    "aos.souls.yellow_soul_use",
     "aos.startup.mode_dispatch",
     "aos.title.input_stage8",
     "aos.title.intro_cutscene",
@@ -447,11 +448,11 @@
    "areas": [
     "aos"
    ],
-   "total": 72,
+   "total": 73,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 32,
+    "partial": 33,
     "functional": 40,
     "faithful": 0,
     "validated": 0,
@@ -459,8 +460,8 @@
     "unknown": 0
    },
    "functional_or_better": 40,
-   "functional_or_better_percent": 55.6,
-   "with_passing_tests": 72,
+   "functional_or_better_percent": 54.8,
+   "with_passing_tests": 73,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -531,6 +532,7 @@
     "aos.souls.equipment_menu",
     "aos.souls.inventory_pickups",
     "aos.souls.red_soul_use",
+    "aos.souls.yellow_soul_use",
     "aos.startup.mode_dispatch",
     "aos.title.input_stage8",
     "aos.title.intro_cutscene",
@@ -14176,6 +14178,92 @@
    }
   },
   {
+   "id": "aos.souls.yellow_soul_use",
+   "area": "aos",
+   "category": "player",
+   "title": "Aria yellow soul effects",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos_soul.c",
+    "src/runtime/aos_stats.c",
+    "src/runtime/aos_soma.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_soul.c",
+    "tests/test_aos_soma.c"
+   ],
+   "dependencies": [
+    "aos.souls.inventory_pickups",
+    "aos.souls.equipment_menu",
+    "aos.progression.equipment_stats",
+    "aos.player.soma_controller"
+   ],
+   "native_routines": [
+    "sub_08031F3C",
+    "sub_08031FC4",
+    "sub_080321C4",
+    "sub_080321A0",
+    "sub_08021FA4",
+    "sub_08021C44",
+    "Skill_Undine_Skula_ZombieOfficer_IronGolem_DeadWarrior_PeepingEye_Succubus_FleshGolem_Tsuchinoko_Erinys_Mimic_ArcDemon_Use",
+    "Skill_SkeletonKnight_Minotaur_Golem_Triton_WhiteDragon_Quezlcoatl_Gorgon_DeadCrusader_RedCrow_Lilith_Bael_Stolas_GhostDancer_Gremlin_Use",
+    "Skill_PoisonWorm_Ectoplasm_Gargoyle_Use",
+    "SkillZombieUse",
+    "SkillLubicantUse",
+    "SkillWoodenGolemUse",
+    "SkillBasiliskUse",
+    "sub_0803222C",
+    "sub_08044F80"
+   ],
+   "limitations": "SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x2000000 (Erinys) and 0x40000 (Mimic); the others (Iron Golem, Dead Warrior, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. Soma's resistances (Poison Worm, Ectoplasm, Gargoyle) are not read by the ported damage rules, their status cure sub_08021E50 is not modelled, and no runtime rule sets the poison status that SkillZombieUse needs. Each yellow soul record (0x080E1B08, 12 bytes, exported as metadata/yellow_souls.tsv with 37 records, 0 for none) gives the soul entity's routine (+ 0x0), + 0x4, its + 0x1A (+ 0x6) and + 0x1C (+ 0x8). Soma's update runs sub_08031F3C (the entity of 0x13164, slot 0x11, created for a record with a routine), then sub_08021FA4 copies the equipped stats 0x13200 and resistances 0x13208 into current and resist and sub_08021C44 derives ATK (STR + equipment ATK) and DEF (CON / 2 + equipment DEF, each at least 0); the soul entity, updated after Soma, then adds its effect. A soul change (sub_08031FC4 / sub_080321C4) clears the 0x13260 bits 14-26 (mask 0xF8003FFF) and the entity. The flag souls OR + 0x1C into 0x13260, which the runtime now hands to Soma before each update; the stat souls add + 0x1C to the current stat + 0x1A (STR, CON, INT, LCK) then run sub_08021C44; the resistance souls OR + 0x1C into resist; SkillZombieUse, while unk_13270 bit 0 is set, adds 4v + v / 2 to STR, CON and INT; SkillLubicantUse adds STR and INT times (max HP - HP) / max HP and an eighth of that to CON; SkillWoodenGolemUse gives one MP every 32 frames; SkillBasiliskUse adds DEF / 4 and takes ATK / 2; record 36 (sub_0803222C) doubles ATK or DEF. Mimic's bit 0x40000 makes sub_08021654 give damage * 5 gold (sub_08044F80, at most 999999). Diagnostic --yellow-soul N equips and grants a yellow soul.",
+   "next_action": "Port the readers of the remaining 0x13260 bits (Dead Warrior's second red soul use, Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), Soma's resistances and statuses, and SkillGiantWormUse and SkillHeadhunterUse.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_soul.c",
+     "tests/test_aos_soma.c"
+    ],
+    "in_game_check": [
+     "aria area_00_room_006 (--hp 9999 --repeat 8, attack and Right): a knife hit on a Skeleton deals 15 damage, 19 with --yellow-soul 22 (STR + 4); a Skeleton's hit on Soma deals 13, 5 with --yellow-soul 29 (CON + 16)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_soul.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_soma.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soma"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-02"
+   }
+  },
+  {
    "id": "aos.startup.mode_dispatch",
    "area": "aos",
    "category": "startup",
@@ -18659,6 +18747,12 @@
  },
  "timeline": [
   {
+   "commit": "47aee30",
+   "date": "2026-11-02",
+   "subject": "Port the Buer blue soul and its orbiting flames",
+   "scope": "project"
+  },
+  {
    "commit": "903439a",
    "date": "2026-11-02",
    "subject": "Port the Cagnazzo blue soul guardian and type-6 soul attacks",
@@ -19131,12 +19225,6 @@
    "date": "2026-10-28",
    "subject": "Port the Zombie Soldier soul, burst effects and zombie sounds",
    "scope": "project"
-  },
-  {
-   "commit": "9d1d661",
-   "date": "2026-10-28",
-   "subject": "Port the Fleaman soul",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19197,9 +19285,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 694,
-    "routines_attached_to_features": 694,
-    "unassigned_routines": 2879,
+    "routines_cited_by_features": 707,
+    "routines_attached_to_features": 707,
+    "unassigned_routines": 2866,
     "call_edges": 14228
    }
   },
@@ -21561,7 +21649,7 @@
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "yellow:12",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 12, SkillZombieUse), multiplies STR, CON and INT by 5.5 while Soma is poisoned (unk_13270 bit 0); unit-tested, but no poison status is set by the runtime yet. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -21886,9 +21974,9 @@
        "animations": "ported",
        "sounds": "missing",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:22",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 22), adds 4 to STR every frame; a local run raised a knife hit on a Skeleton from 15 to 19 damage. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -22228,9 +22316,9 @@
        "animations": "ported",
        "sounds": "missing",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:34",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 34), adds 4 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -22294,9 +22382,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:3",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds are requested and unit-tested: 0x85 at attack frame 4 (sub_080924AC) and 0x70 at its death (sub_0809252C); a local run rendered both through the mixer (not listened to)."
+       "notes": "Soul: drops, is collected and, equipped (yellow 3), sets 0x13260 bit 0x400000, with which a jump press recovers Soma in the air from a knockback (sub_080199A0, unit-tested in tests/test_aos_soma.c). Sounds: its native sounds are requested and unit-tested: 0x85 at attack frame 4 (sub_080924AC) and 0x70 at its death (sub_0809252C); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -22498,9 +22586,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "n/a",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:30",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds are requested and unit-tested: 0x8B as it swoops (sub_080CA0D4) and 0x72 at the start of its death (sub_080CA308); a local run rendered both through the mixer (not listened to)."
+       "notes": "Soul: drops, is collected and, equipped (yellow 30), adds 4 to INT every frame (red soul and guardian power). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: its native sounds are requested and unit-tested: 0x8B as it swoops (sub_080CA0D4) and 0x72 at the start of its death (sub_080CA308); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -22539,7 +22627,7 @@
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "yellow:5",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 5), sets 0x13260 bit 0x800000; the second red soul use it enables in Soma's state 0 (_0801C494) is not ported. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -22615,9 +22703,9 @@
        "animations": "ported",
        "sounds": "missing",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:28",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 28), adds 12 to CON (DEF + 6) every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -22666,9 +22754,9 @@
        "animations": "ported",
        "sounds": "missing",
        "loot": "n/a",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:35",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 35), adds 8 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -23071,9 +23159,9 @@
        "animations": "ported",
        "sounds": "missing",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:29",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 29), adds 16 to CON every frame; a local run lowered a Skeleton's 13-damage hit on Soma to 5. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -23148,7 +23236,7 @@
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "yellow:21",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -23299,9 +23387,9 @@
        "animations": "ported",
        "sounds": "missing",
        "loot": "n/a",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:17",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 17), sets 0x13260 bit 0x40000, with which each hit Soma takes gives damage * 5 gold (sub_08021654, sub_08044F80, at most 999999). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
       }
      },
      {
@@ -23338,9 +23426,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:16",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds, run through the Valkyrie's routines, are requested and unit-tested: 0x87 as its charge starts (sub_0806E8AC) and 0x1CD at its death (sub_0806EBDC); a local run rendered both through the mixer (not listened to)."
+       "notes": "Soul: drops, is collected and, equipped (yellow 16), sets 0x13260 bit 0x2000000, which scales enemy experience by 0x133 / 256. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: its native sounds, run through the Valkyrie's routines, are requested and unit-tested: 0x87 as its charge starts (sub_0806E8AC) and 0x1CD at its death (sub_0806EBDC); a local run rendered both through the mixer (not listened to)."
       }
      },
      {
@@ -23365,9 +23453,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:13",
-       "notes": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: the shared controller requests 0x87 at the dive and 0x1BC at death; unit-tested, not listened to or emulator-compared."
+       "notes": "Soul: drops, is collected and, equipped (yellow 13, SkillLubicantUse), adds STR and INT times the lost HP fraction and an eighth of that to CON every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: the shared controller requests 0x87 at the dive and 0x1BC at death; unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23599,11 +23687,11 @@
       "missing": 0
      },
      "soul": {
-      "ported": 24,
-      "partial": 23,
+      "ported": 34,
+      "partial": 13,
       "missing": 0
      },
-     "complete": 18,
+     "complete": 22,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -28339,7 +28427,7 @@
        "id": "07:03",
        "name": "Zombie Officer",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds are requested and unit-tested: 0x85 at attack frame 4 (sub_080924AC) and 0x70 at its death (sub_0809252C); a local run rendered both through the mixer (not listened to).",
+       "note": "Soul: drops, is collected and, equipped (yellow 3), sets 0x13260 bit 0x400000, with which a jump press recovers Soma in the air from a knockback (sub_080199A0, unit-tested in tests/test_aos_soma.c). Sounds: its native sounds are requested and unit-tested: 0x85 at attack frame 4 (sub_080924AC) and 0x70 at its death (sub_0809252C); a local run rendered both through the mixer (not listened to).",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28371,7 +28459,7 @@
        "id": "07:05",
        "name": "Dead Warrior",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 5), sets 0x13260 bit 0x800000; the second red soul use it enables in Soma's state 0 (_0801C494) is not ported. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28483,7 +28571,7 @@
        "id": "07:0C",
        "name": "Zombie",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 12, SkillZombieUse), multiplies STR, CON and INT by 5.5 while Soma is poisoned (unk_13270 bit 0); unit-tested, but no poison status is set by the runtime yet. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28499,7 +28587,7 @@
        "id": "07:0D",
        "name": "Lubicant",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: the shared controller requests 0x87 at the dive and 0x1BC at death; unit-tested, not listened to or emulator-compared.",
+       "note": "Soul: drops, is collected and, equipped (yellow 13, SkillLubicantUse), adds STR and INT times the lost HP fraction and an eighth of that to CON every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: the shared controller requests 0x87 at the dive and 0x1BC at death; unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28547,7 +28635,7 @@
        "id": "07:10",
        "name": "Erinys",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds, run through the Valkyrie's routines, are requested and unit-tested: 0x87 as its charge starts (sub_0806E8AC) and 0x1CD at its death (sub_0806EBDC); a local run rendered both through the mixer (not listened to).",
+       "note": "Soul: drops, is collected and, equipped (yellow 16), sets 0x13260 bit 0x2000000, which scales enemy experience by 0x133 / 256. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: its native sounds, run through the Valkyrie's routines, are requested and unit-tested: 0x87 as its charge starts (sub_0806E8AC) and 0x1CD at its death (sub_0806EBDC); a local run rendered both through the mixer (not listened to).",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28563,7 +28651,7 @@
        "id": "07:11",
        "name": "Mimic",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 17), sets 0x13260 bit 0x40000, with which each hit Soma takes gives damage * 5 gold (sub_08021654, sub_08044F80, at most 999999). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28627,7 +28715,7 @@
        "id": "07:15",
        "name": "Gargoyle",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28643,7 +28731,7 @@
        "id": "07:16",
        "name": "Skeleton Knight",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 22), adds 4 to STR every frame; a local run raised a knife hit on a Skeleton from 15 to 19 damage. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28739,7 +28827,7 @@
        "id": "07:1C",
        "name": "Gorgon",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 28), adds 12 to CON (DEF + 6) every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28755,7 +28843,7 @@
        "id": "07:1D",
        "name": "Dead Crusader",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 29), adds 16 to CON every frame; a local run lowered a Skeleton's 13-damage hit on Soma to 5. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28771,7 +28859,7 @@
        "id": "07:1E",
        "name": "Red Crow",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: its native sounds are requested and unit-tested: 0x8B as it swoops (sub_080CA0D4) and 0x72 at the start of its death (sub_080CA308); a local run rendered both through the mixer (not listened to).",
+       "note": "Soul: drops, is collected and, equipped (yellow 30), adds 4 to INT every frame (red soul and guardian power). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: its native sounds are requested and unit-tested: 0x8B as it swoops (sub_080CA0D4) and 0x72 at the start of its death (sub_080CA308); a local run rendered both through the mixer (not listened to).",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28835,7 +28923,7 @@
        "id": "07:22",
        "name": "Ghost Dancer",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 34), adds 4 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28851,7 +28939,7 @@
        "id": "07:23",
        "name": "Gremlin",
        "status": "partial",
-       "note": "Soul: drops and is collected; yellow soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 35), adds 8 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

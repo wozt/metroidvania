@@ -208,6 +208,86 @@ int main(void) {
     guard_stats.current[AOS_STAT_INT] = 21;
     assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, false) == 22);
     assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, true) == 17);
-    puts("Aria red and blue soul tests passed");
+    /* Yellow souls (0x080E1B08): Zombie Officer 3 (flag 0x400000), Erinys
+     * 16 (0x2000000), Mimic 17 (0x40000), Gargoyle 21 (resist 0x100),
+     * Skeleton Knight 22 (STR + 4), Dead Crusader 29 (CON + 16), Red Crow
+     * 30 (INT + 4), Zombie 12, Lubicant 13. */
+    AosYellowSoulRecord yellow[AOS_YELLOW_SOUL_RECORDS] = {{0}};
+    yellow[3] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x400000};
+    yellow[12] = (AosYellowSoulRecord){AOS_YELLOW_ZOMBIE_ROUTINE, 1, 0, 0};
+    yellow[13] = (AosYellowSoulRecord){AOS_YELLOW_LUBICANT_ROUTINE, 1, 0, 0};
+    yellow[16] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x2000000};
+    yellow[17] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x40000};
+    yellow[21] = (AosYellowSoulRecord){AOS_YELLOW_RESIST_ROUTINE, 0, 0, 0x100};
+    yellow[22] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 0, 4};
+    yellow[29] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 1, 0x10};
+    yellow[30] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 2, 4};
+    AosStats ys = {.yellow_soul = 3, .equipment_atk = 5, .equipment_def = 2,
+                   .equipped = {10, 12, 14, 9}, .equipped_resist = 0x2, .flags = 0x100};
+    AosYellowSoul yellow_soul = {0};
+    aos_stats_frame_reset(&ys);
+    assert(ys.atk == 15 && ys.def == 8 && ys.resist == 2);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(yellow_soul.active && ys.flags == (0x100 | 0x400000));
+    /* A change clears the 0x13260 bits 14-26 (the 0x100 stays). */
+    ys.yellow_soul = 22;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.flags == 0x100 && ys.current[AOS_STAT_STR] == 14 && ys.atk == 19);
+    /* Every frame starts again from the equipped stats. */
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_STR] == 14 && ys.atk == 19);
+    ys.yellow_soul = 29;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_CON] == 28 && ys.def == 16 && ys.current[AOS_STAT_STR] == 10);
+    ys.yellow_soul = 30;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_INT] == 18);
+    ys.yellow_soul = 21;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.resist == 0x102);
+    /* Zombie: only while poisoned, 5.5 times STR, CON and INT. */
+    ys.yellow_soul = 12;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_STR] == 10);
+    ys.status = 1;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_STR] == 55 && ys.current[AOS_STAT_CON] == 66 &&
+           ys.current[AOS_STAT_INT] == 77 && ys.current[AOS_STAT_LCK] == 9 && ys.atk == 60);
+    ys.status = 0;
+    /* Lubicant at half HP: STR + 5, CON + 6 / 8 = 0, INT + 7. */
+    ys.yellow_soul = 13;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 50, 100);
+    assert(ys.current[AOS_STAT_STR] == 15 && ys.current[AOS_STAT_CON] == 12 &&
+           ys.current[AOS_STAT_INT] == 21);
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_STR] == 10);
+    /* Erinys sets the experience bonus bit; Mimic turns damage into gold. */
+    ys.yellow_soul = 16;
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.flags & AOS_STATS_FLAG_EXPERIENCE_BONUS);
+    ys.gold = 999990;
+    aos_yellow_soul_hit(&ys, 3);
+    assert(ys.gold == 999990);
+    ys.yellow_soul = 17;
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(!(ys.flags & AOS_STATS_FLAG_EXPERIENCE_BONUS) && (ys.flags & 0x40000));
+    aos_yellow_soul_hit(&ys, 1);
+    assert(ys.gold == 999995);
+    aos_yellow_soul_hit(&ys, 3);
+    assert(ys.gold == 999999);
+    /* Unequipped: the bits go and nothing runs. */
+    ys.yellow_soul = 0;
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(!yellow_soul.active && ys.flags == 0x100);
+    puts("Aria red, blue and yellow soul tests passed");
     return 0;
 }

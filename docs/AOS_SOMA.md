@@ -147,6 +147,18 @@ of his update), `SkillCagnazzoUse` carries an attacking guardian
 other 21 routines are refused before they start,
 and `--blue-soul N` equips a soul for diagnostics.
 
+## Yellow soul effects
+
+Soma's update copies the equipped stats and resistances back into the
+current ones every frame (`sub_08021FA4`, `aos_stats_frame_reset`) and
+derives ATK and DEF (`sub_08021C44`); the yellow soul entity, updated
+after him, then adds its effect (`aos_yellow_soul_update`). Flag souls set
+bits of gEwramData + 0x13260, which the runtime hands to Soma as
+`abilities` before each update; stat souls add to STR, CON, INT or LCK;
+Lubicant and Zombie scale stats with lost HP or poison; Mimic turns damage
+into gold. Records come from `metadata/yellow_souls.tsv`, and
+`--yellow-soul N` equips one for diagnostics.
+
 ## Explicitly unresolved
 
 - Palette banks 1 and 6 of Soma's palette descriptor are not referenced by the

@@ -163,4 +163,59 @@ bool aos_buer_guardian_update(AosBuerGuardian *buer, AosGuardian *guardian, AosS
                               const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
                               uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                               int32_t soma_x, int32_t soma_y, bool soma_facing_left);
+/* One of Soma's yellow soul records (0x080E1B08, metadata/yellow_souls.tsv),
+ * indexed by the equipped yellow soul (0 is none). */
+typedef struct {
+    uint32_t routine;       /* + 0x0: the soul entity's routine, 0 for none */
+    uint16_t refresh;       /* + 0x4: read by sub_08031FC4 */
+    uint16_t parameter;     /* + 0x6: the entity's + 0x1A */
+    uint32_t argument;      /* + 0x8: the entity's + 0x1C */
+} AosYellowSoulRecord;
+
+enum {
+    AOS_YELLOW_SOUL_RECORDS = 37,
+    AOS_YELLOW_FLAGS_MASK = 0x07FFC000, /* the 0x13260 bits a change clears */
+    AOS_YELLOW_FLAG_ROUTINE = 0x08032205,
+    AOS_YELLOW_STAT_ROUTINE = 0x0803226D,
+    AOS_YELLOW_RESIST_ROUTINE = 0x080322A1,
+    AOS_YELLOW_ZOMBIE_ROUTINE = 0x08032311,
+    AOS_YELLOW_LUBICANT_ROUTINE = 0x08032361,
+    AOS_YELLOW_WOODEN_GOLEM_ROUTINE = 0x080322E9,
+    AOS_YELLOW_BASILISK_ROUTINE = 0x08032155,
+    AOS_YELLOW_DOUBLE_ROUTINE = 0x0803222D,
+};
+
+/* The yellow soul entity of gEwramData + 0x13164. */
+typedef struct {
+    bool active;
+    uint8_t soul;           /* the equipped yellow soul it runs */
+    uint8_t timer;          /* + 0x0D */
+} AosYellowSoul;
+
+/* Whether the record's routine is one aos_yellow_soul_update runs. */
+bool aos_yellow_soul_ported(uint32_t routine);
+/* One frame of the yellow soul, after Soma's update has run
+ * aos_stats_frame_reset: an equip change (sub_08031FC4 / sub_080321C4)
+ * clears the 0x13260 bits 14-26 and the entity; sub_08031F3C then creates
+ * it for a record with a routine. Its routine then runs:
+ * - the flag souls (Undine ... Arc Demon) OR + 0x1C into 0x13260;
+ * - the stat souls (Skeleton Knight ... Gremlin) add + 0x1C to the current
+ *   stat + 0x1A, then sub_08021C44;
+ * - Poison Worm, Ectoplasm and Gargoyle OR + 0x1C into the resistances
+ *   (with a status set, sub_08021E50(+ 0x1C >> 6) is not modelled);
+ * - Zombie, while poisoned (unk_13270 bit 0), adds 4.5 times STR, CON and
+ *   INT to each (v += 4v + v / 2), then sub_08021C44;
+ * - Lubicant adds STR and INT times the lost HP fraction and an eighth of
+ *   that for CON, then sub_08021C44;
+ * - Wooden Golem gives one MP every 32 frames;
+ * - Basilisk adds DEF / 4 and takes ATK / 2 away;
+ * - record 36 doubles ATK (+ 0x1C 0) or DEF.
+ * Giant Worm and Headhunter, and the 0x131B8 & 0x400 and 0x344 limits,
+ * are not ported. */
+void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
+                            const AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS],
+                            int16_t hp, int16_t max_hp);
+/* sub_08021654's Mimic rule (0x13260 bit 0x40000): damage * 5 gold,
+ * at most 999999 (sub_08044F80). */
+void aos_yellow_soul_hit(AosStats *stats, int damage);
 #endif

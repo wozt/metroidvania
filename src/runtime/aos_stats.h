@@ -43,6 +43,10 @@ typedef struct {
     int16_t equipment_atk, equipment_def;
     int16_t current[AOS_STAT_COUNT];
     uint16_t resist;
+    /* 0x13200 and 0x13208: the equipped stats and resistances that
+     * sub_08021FA4 copies back into current and resist every frame. */
+    int16_t equipped[AOS_STAT_COUNT];
+    uint16_t equipped_resist;
     int16_t atk, def;
     /* itemInventory, weaponInventory, armorInventory + accessoryInventory:
      * counts 0-9 (0x13294, 0x132B4, 0x132EF). */
@@ -166,6 +170,12 @@ void aos_stats_new_game_inventory(AosStats *stats);
  * CON / 2 + equipment DEF, at least 0 (sub_08021FA4, sub_08021C44). An
  * index outside its table counts as nothing. */
 void aos_stats_refresh(AosStats *stats, const AosEquipmentTables *tables);
+/* sub_08021C44: currentATK = STR + equipment ATK, currentDEF = CON / 2 +
+ * equipment DEF, each at least 0. */
+void aos_stats_derive(AosStats *stats);
+/* Soma's per-frame sub_08021FA4 then sub_08021C44: current stats and
+ * resistances back to the equipped ones, then ATK and DEF. */
+void aos_stats_frame_reset(AosStats *stats);
 /* SoulInventory_AddAmountToGroupTotal: one group's nibble, clamped 0-9. */
 void aos_souls_add_group(AosStats *stats, uint8_t group, int32_t type, int32_t index,
                          int32_t amount);

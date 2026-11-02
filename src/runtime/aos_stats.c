@@ -174,12 +174,22 @@ void aos_stats_refresh(AosStats *stats, const AosEquipmentTables *tables) {
     stats->equipment_atk = atk;
     stats->equipment_def = def;
     for (int stat = 0; stat < AOS_STAT_COUNT; ++stat)
-        stats->current[stat] = (int16_t)(extra[stat] + stats->base[stat]);
-    stats->resist = resist;
-    stats->atk = (int16_t)(stats->current[AOS_STAT_STR] + atk);
-    stats->def = (int16_t)((stats->current[AOS_STAT_CON] >> 1) + def);
+        stats->equipped[stat] = stats->current[stat] = (int16_t)(extra[stat] + stats->base[stat]);
+    stats->equipped_resist = stats->resist = resist;
+    aos_stats_derive(stats);
+}
+
+void aos_stats_derive(AosStats *stats) {
+    stats->atk = (int16_t)(stats->current[AOS_STAT_STR] + stats->equipment_atk);
+    stats->def = (int16_t)((stats->current[AOS_STAT_CON] >> 1) + stats->equipment_def);
     if (stats->atk < 0) stats->atk = 0;
     if (stats->def < 0) stats->def = 0;
+}
+
+void aos_stats_frame_reset(AosStats *stats) {
+    for (int stat = 0; stat < AOS_STAT_COUNT; ++stat) stats->current[stat] = stats->equipped[stat];
+    stats->resist = stats->equipped_resist;
+    aos_stats_derive(stats);
 }
 
 void aos_stats_new_game_inventory(AosStats *stats) {

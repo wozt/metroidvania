@@ -2,6 +2,28 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0693 - Yellow soul effects
+
+- The 37 yellow soul records of 0x080E1B08 are exported as
+  `metadata/yellow_souls.tsv` (`aria_objects` v37).
+- Every frame after Soma's update, the current stats and resistances
+  return to the equipped ones (`sub_08021FA4`, new `equipped` fields
+  written by `aos_stats_refresh`) and ATK/DEF are derived again. The
+  equipped yellow soul then runs its routine: the flag, stat, resistance,
+  Zombie, Lubicant, Wooden Golem, Basilisk and record-36 routines. A soul
+  change clears the 0x13260 bits 14-26, and Soma now reads 0x13260
+  (Undine, Skula, Zombie Officer's air recovery). Mimic's bit gives
+  damage * 5 gold. New diagnostic `--yellow-soul N`.
+- Ten monster souls become ported: Zombie Officer, Lubicant, Erinys,
+  Mimic, Skeleton Knight, Gorgon, Dead Crusader, Red Crow, Ghost Dancer
+  and Gremlin. Zombie, Gargoyle and Dead Warrior stay partial (no
+  poison, no resistance reader, no second red soul use). The complete
+  monster count rises from 18 to 22: Zombie Officer, Lubicant, Erinys and
+  Red Crow.
+- Local runs: Skeleton Knight's soul raises a knife hit from 15 to 19;
+  Dead Crusader's lowers a Skeleton's hit on Soma from 13 to 5. Zero
+  Mission is unchanged.
+
 ## Patch 0692 - Buer blue soul
 
 - `SkillBuerUse` (soul 4, toggled, 5 MP per second, sounds 0x1A5 and

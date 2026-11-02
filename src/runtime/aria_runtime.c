@@ -74,6 +74,7 @@
 #define DEFAULT_EQUIPMENT "assets/extracted/aria/metadata/equipment.tsv"
 #define DEFAULT_RED_SOULS "assets/extracted/aria/metadata/red_souls.tsv"
 #define DEFAULT_BLUE_SOULS "assets/extracted/aria/metadata/blue_souls.tsv"
+#define DEFAULT_YELLOW_SOULS "assets/extracted/aria/metadata/yellow_souls.tsv"
 #define DEFAULT_SKILL_THROWS "assets/extracted/aria/metadata/skill_throws.tsv"
 #define DEFAULT_BURSTS "assets/extracted/aria/metadata/bursts.tsv"
 #define DEFAULT_AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
@@ -2083,8 +2084,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (hit.enemy_hit)
                 printf("%s hit: %d damage%s\n", enemy_names[e->id], hit.enemy_damage,
                        hit.killed ? ", killed" : "");
-            if (hit.soma_hit)
+            if (hit.soma_hit) {
+                /* sub_08021654: Mimic's soul (0x13260 bit 0x40000). */
+                if (combat->progress) aos_yellow_soul_hit(combat->progress, hit.soma_damage);
                 printf("Soma hit: %d damage, HP %d/%d\n", hit.soma_damage, soma->hp, soma->max_hp);
+            }
             continue;
         }
         if (!door) continue;
@@ -2447,6 +2451,28 @@ static bool load_enemy_data(AriaObjects *objects) {
         objects->money_loaded = loaded == (1u << AOS_MONEY_KINDS) - 1;
     }
     return true;
+}
+
+/* metadata/yellow_souls.tsv: Soma's yellow soul records; the routines the
+ * runtime does not run are cleared so that they do nothing. */
+static bool load_yellow_souls(const char *path,
+                              AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS]) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    char line[256];
+    unsigned loaded = 0;
+    while (fgets(line, sizeof line, f)) {
+        unsigned soul, routine, refresh, parameter, argument;
+        if (sscanf(line, "%u\t%x\t%u\t%u\t%x", &soul, &routine, &refresh, &parameter,
+                   &argument) != 5 ||
+            soul >= AOS_YELLOW_SOUL_RECORDS)
+            continue;
+        records[soul] = (AosYellowSoulRecord){aos_yellow_soul_ported(routine) ? routine : 0,
+                                              (uint16_t)refresh, (uint16_t)parameter, argument};
+        loaded++;
+    }
+    fclose(f);
+    return loaded == AOS_YELLOW_SOUL_RECORDS;
 }
 
 /* metadata/blue_souls.tsv: Soma's blue soul records. */
@@ -3518,7 +3544,7 @@ static void usage(const char *name) {
             "Usage: %s [--check] [--save slot.sav] [--save-target slot.sav]"
             " [--consume-save] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
-            "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
+            "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
@@ -3546,6 +3572,7 @@ int main(int argc, char **argv) {
     bool atk_override = false, def_override = false, weapon_override = false;
     long red_soul_override = -1;   /* --red-soul: equippedRedSoul diagnostic override */
     long blue_soul_override = -1;  /* --blue-soul: equippedBlueSoul diagnostic override */
+    long yellow_soul_override = -1; /* --yellow-soul: equippedYellowSoul diagnostic override */
     /* --frontend FILE and --frontend-arg ARG...: the frontend to return to
      * with --game-over once Soma's death fade has ended. */
     const char *frontend_command[64] = {NULL};
@@ -3583,6 +3610,8 @@ int main(int argc, char **argv) {
             red_soul_override = strtol(argv[++i], &end, 10);
         } else if (!strcmp(argv[i], "--blue-soul") && i + 1 < argc) {
             blue_soul_override = strtol(argv[++i], &end, 10);
+        } else if (!strcmp(argv[i], "--yellow-soul") && i + 1 < argc) {
+            yellow_soul_override = strtol(argv[++i], &end, 10);
         }
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
         else if (!strcmp(argv[i], "--debug-menu")) debug_at_start = true;
@@ -3861,6 +3890,12 @@ int main(int argc, char **argv) {
             !aos_souls_total(&progress, AOS_SOUL_BLUE, blue_soul_override - 1))
             aos_souls_add(&progress, AOS_SOUL_BLUE, blue_soul_override - 1, 1);
     }
+    if (yellow_soul_override >= 0 && yellow_soul_override < AOS_YELLOW_SOUL_RECORDS) {
+        progress.yellow_soul = (uint8_t)yellow_soul_override;
+        if (yellow_soul_override > 0 &&
+            !aos_souls_total(&progress, AOS_SOUL_YELLOW, yellow_soul_override - 1))
+            aos_souls_add(&progress, AOS_SOUL_YELLOW, yellow_soul_override - 1, 1);
+    }
     /* currentMP: the file's, full for a new or older file (sub_08014548). */
     progress.mp = has_active_save && active_save.mp >= 0 ? active_save.mp
                                                          : (int16_t)progress.max_mp;
@@ -3878,6 +3913,11 @@ int main(int argc, char **argv) {
                         .burst = burst_list, .burst_count = burst_size};
     soma.cast = cast_red_soul;
     soma.cast_context = &souls;
+    static AosYellowSoulRecord yellow_souls[AOS_YELLOW_SOUL_RECORDS];
+    bool have_yellow_souls = load_yellow_souls(DEFAULT_YELLOW_SOULS, yellow_souls);
+    if (!have_yellow_souls)
+        fprintf(stderr, "No Aria yellow soul records: %s\n", DEFAULT_YELLOW_SOULS);
+    AosYellowSoul yellow_soul = {0};
     static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
     static AriaGuardian guardian;
     guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
@@ -4218,7 +4258,17 @@ int main(int argc, char **argv) {
                                       ? aria_input.player_new_input
                                       : aos_button_config_remap(&progress.buttons,
                                                                 aria_input.player_new_input);
+            /* Soma reads gEwramData + 0x13260 (the yellow souls' bits). */
+            soma.abilities = progress.flags;
             aos_soma_update(&soma, &layer, player_held, player_new);
+            /* sub_08021FA4 and sub_08021C44 at the end of Soma's update,
+             * then the yellow soul entity (slot 0x11). */
+            aos_stats_frame_reset(&progress);
+            if (have_yellow_souls)
+                aos_yellow_soul_update(&yellow_soul, &progress, yellow_souls, soma.hp,
+                                       soma.max_hp);
+            if (have_equipment && !atk_override) player_stats.atk = progress.atk;
+            if (have_equipment && !def_override) player_stats.def = progress.def;
             /* sub_0800DC70: the HUD chases the current values. */
             if (have_hud) aos_hud_update(&hud, soma.hp, soma.max_hp, progress.mp,
                                          (int16_t)progress.max_mp);

@@ -152,3 +152,88 @@ bool aos_cagnazzo_guardian_update(AosCagnazzoGuardian *cagnazzo, AosGuardian *gu
     cagnazzo->y = (int16_t)(soma_y - 0x20);
     return true;
 }
+
+bool aos_yellow_soul_ported(uint32_t routine) {
+    switch (routine) {
+    case AOS_YELLOW_FLAG_ROUTINE: case AOS_YELLOW_STAT_ROUTINE:
+    case AOS_YELLOW_RESIST_ROUTINE: case AOS_YELLOW_ZOMBIE_ROUTINE:
+    case AOS_YELLOW_LUBICANT_ROUTINE: case AOS_YELLOW_WOODEN_GOLEM_ROUTINE:
+    case AOS_YELLOW_BASILISK_ROUTINE: case AOS_YELLOW_DOUBLE_ROUTINE:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
+                            const AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS],
+                            int16_t hp, int16_t max_hp) {
+    if (soul->active && soul->soul != stats->yellow_soul) {
+        stats->flags &= ~(uint32_t)AOS_YELLOW_FLAGS_MASK;
+        soul->active = false;
+    }
+    if (stats->yellow_soul >= AOS_YELLOW_SOUL_RECORDS) return;
+    const AosYellowSoulRecord *record = &records[stats->yellow_soul];
+    if (!soul->active) {
+        if (!record->routine) return;
+        *soul = (AosYellowSoul){.active = true, .soul = stats->yellow_soul};
+    }
+    int16_t *current = stats->current;
+    switch (record->routine) {
+    case AOS_YELLOW_FLAG_ROUTINE:
+        stats->flags |= record->argument;
+        break;
+    case AOS_YELLOW_STAT_ROUTINE:
+        if (record->parameter < AOS_STAT_COUNT)
+            current[record->parameter] = (int16_t)(current[record->parameter] + record->argument);
+        aos_stats_derive(stats);
+        break;
+    case AOS_YELLOW_RESIST_ROUTINE:
+        stats->resist |= (uint16_t)record->argument;
+        break;
+    case AOS_YELLOW_ZOMBIE_ROUTINE:
+        if (stats->status & 1) {
+            for (int stat = AOS_STAT_STR; stat <= AOS_STAT_INT; ++stat) {
+                int16_t v = current[stat];
+                current[stat] = (int16_t)(v + (int16_t)((v << 2) + (v >> 1)));
+            }
+            aos_stats_derive(stats);
+        }
+        break;
+    case AOS_YELLOW_LUBICANT_ROUTINE: {
+        int32_t lost = ((int32_t)(uint16_t)max_hp - hp) << 8, whole = (int32_t)(uint16_t)max_hp << 8;
+        if (whole) {
+            current[AOS_STAT_STR] = (int16_t)(current[AOS_STAT_STR] +
+                                              current[AOS_STAT_STR] * lost / whole);
+            current[AOS_STAT_CON] = (int16_t)(current[AOS_STAT_CON] +
+                                              ((current[AOS_STAT_CON] * lost / whole) >> 3));
+            current[AOS_STAT_INT] = (int16_t)(current[AOS_STAT_INT] +
+                                              current[AOS_STAT_INT] * lost / whole);
+        }
+        aos_stats_derive(stats);
+        break;
+    }
+    case AOS_YELLOW_WOODEN_GOLEM_ROUTINE:
+        if ((++soul->timer & 0x1F) == 0) {
+            stats->mp++;
+            if (stats->mp > (int16_t)stats->max_mp) stats->mp = (int16_t)stats->max_mp;
+        }
+        break;
+    case AOS_YELLOW_BASILISK_ROUTINE:
+        stats->def = (int16_t)(stats->def + stats->def / 4);
+        stats->atk = (int16_t)(stats->atk - stats->atk / 2);
+        break;
+    case AOS_YELLOW_DOUBLE_ROUTINE:
+        if (record->argument == 0) stats->atk = (int16_t)(stats->atk * 2);
+        else stats->def = (int16_t)(stats->def * 2);
+        break;
+    default:
+        break;
+    }
+}
+
+void aos_yellow_soul_hit(AosStats *stats, int damage) {
+    if (!(stats->flags & 0x40000u) || damage <= 0) return;
+    uint32_t gold = stats->gold + (uint32_t)damage * 5u;
+    stats->gold = gold > 999999u ? 999999u : gold;
+}

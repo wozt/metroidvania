@@ -544,6 +544,14 @@ static void hit_tests(void) {
     aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(90), 0);
     frame(&soma, 0, 0);
     assert(soma.state == 13 && soma.vx > 0 && soma.anim.id == AOS_SOMA_ANIM_HIT_BACK);
+    /* Without Zombie Officer's soul a jump press does not end it; with its
+     * 0x13260 bit 0x400000 (sub_080199A0) it recovers in the air. */
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 13);
+    soma.abilities |= 0x400000u;
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 0 && soma.vy > 0 && soma.vy < 0x4000);
+    soma.abilities = 0;
 
     /* sub_08021654: (6 * 4 - 4 * 2) / 2 = 8; HP never drops below 0, and
      * Soma dies: animation 0x33, no hurtbox, a drift that stops. */

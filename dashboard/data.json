@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-02T10:43:51+00:00",
+ "generated_at": "2026-11-02T10:50:57+00:00",
  "git": {
-  "commit": "47aee30",
+  "commit": "a63109a",
   "branch": "main",
   "dirty": true
  },
@@ -9393,7 +9393,7 @@
     "EnemyCatoblepasCreate",
     "EnemyCatoblepasUpdate"
    ],
-   "limitations": "The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled. The native constructor and updater alias Gorgon. Palette bank 1, grounded patrol, attack trigger and wind-up, the 21-cloud petrifying-breath stream, cloud frame transition and alternating collision, six-piece death, combat and global inert state are connected.",
+   "limitations": "The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, palette callbacks and rewards are not modelled. The native constructor and updater alias Gorgon. Palette bank 1, grounded patrol, attack trigger and wind-up, the 21-cloud petrifying-breath stream, cloud frame transition and alternating collision, six-piece death, combat and global inert state are connected. It shares Gorgon's sounds (0x67 breath, 0x71 death), requested and unit-tested.",
    "next_action": "Refine the shared gait and collision probes when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
@@ -9545,7 +9545,7 @@
     "sub_0808F848",
     "sub_080212C8"
    ],
-   "limitations": "Sounds 0x69, 0x72 and 0x85, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the hit stun of sub_0806D4C0 needs the global pause 0x4BE, taken as 0. The skeleton knight's wait, walk and back-off at 0.75, the guard while Soma's + 0x10 flags & 0x360 are set (animation 7 for 61 frames, blows dealing 0 damage), the attack (animation 2 for 39 frames, then a thrust with animations 3 and 4 or a slash with animation 6 four times), the generic death and state 3 under gEwramData + 0x8E bit 0x40 are ported, drawn with palette bank 1 of the knight's sheet.",
+   "limitations": "The palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the hit stun of sub_0806D4C0 needs the global pause 0x4BE, taken as 0. The skeleton knight's wait, walk and back-off at 0.75, the guard while Soma's + 0x10 flags & 0x360 are set (animation 7 for 61 frames, blows dealing 0 damage), the attack (animation 2 for 39 frames, then a thrust with animations 3 and 4 or a slash with animation 6 four times), the generic death and state 3 under gEwramData + 0x8E bit 0x40 are ported, drawn with palette bank 1 of the knight's sheet. Sound 0x85 is requested at + 0x0D 0x0B of the thrust and the slash (sub_0808F6E8), 0x69 for a guarded blow and 0x72 at death (sub_0808F848); all unit-tested.",
    "next_action": "Check a kill in game (the capture input cannot stop attacking, which keeps it guarding); compare against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -9910,7 +9910,7 @@
     "sub_0806CD78",
     "sub_0806D3D8"
    ],
-   "limitations": "Sounds 0x6E and 0x87, the palette bits and sub_080683BC are not ported; palette bank 1, used when another enemy id shares sub_08086900, is not exported. The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "The palette bits and sub_080683BC are not ported; palette bank 1, used when another enemy id shares sub_08086900, is not exported. The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x87 is requested at the swoop (sub_08086534) and 0x6E at death (sub_08086878); both unit-tested.",
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
@@ -10058,7 +10058,7 @@
     "sub_080C339C",
     "sub_0806BD64"
    ],
-   "limitations": "The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); sound 0x6D, the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read. The figure-of-eight dance, its animation swap, the fade between opaque and semi-transparent every half turn, the margin hiding, the hit stun, the death animation and state 5 under gEwramData + 0x8E bit 0x40 are ported; palette banks 0 to 2 follow parameter 0.",
+   "limitations": "The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read. The figure-of-eight dance, its animation swap, the fade between opaque and semi-transparent every half turn, the margin hiding, the hit stun, the death animation and state 5 under gEwramData + 0x8E bit 0x40 are ported; palette banks 0 to 2 follow parameter 0. Sound 0x6D is requested at death (sub_080C32EC) and unit-tested.",
    "next_action": "Trace the room blend coefficients for semi-transparent sprites.",
    "evidence": {
     "unit_tests": [
@@ -10204,7 +10204,7 @@
     "sub_080899FC",
     "sub_08089A50"
    ],
-   "limitations": "The native custom gait table is represented by exported animation sequences. Exact slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled. Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path.",
+   "limitations": "The native custom gait table is represented by exported animation sequences. Exact slope and edge probes, particle offsets, random flips, entity-slot ordering, palette callbacks and rewards are not modelled. Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path. Sound 0x67 is requested at + 0x0D 0x1E and 0x32 of the breath step (sub_08089560) and 0x71 at death (sub_080896D8); both unit-tested.",
    "next_action": "Refine the gait and collision probes when direct frame-by-frame comparison is available.",
    "evidence": {
     "unit_tests": [
@@ -10273,7 +10273,7 @@
     "EnemyGremlinCreate",
     "EnemyGremlinUpdate"
    ],
-   "limitations": "As the gargoyle. EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1.",
+   "limitations": "As the gargoyle. EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1. It shares Gargoyle's sounds (0x87 swoop, 0x6E death), requested and unit-tested.",
    "next_action": "Follow the gargoyle's open items.",
    "evidence": {
     "unit_tests": [
@@ -10822,7 +10822,7 @@
     "sub_0806AD24",
     "sub_0806AEAC"
    ],
-   "limitations": "The petrification of gold heads (contact element 0x100), sound 0x72, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced). The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "The petrification of gold heads (contact element 0x100), the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced). The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x72 is requested at death (sub_08093AE0) and unit-tested.",
    "next_action": "Port the petrification of gold heads with Soma's status effects.",
    "evidence": {
     "unit_tests": [
@@ -10980,7 +10980,7 @@
     "sub_0809937C",
     "sub_080993EC"
    ],
-   "limitations": "Sound 0x72 and the palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer. The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "The palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer. The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x72 is requested at death (sub_0809922C) and unit-tested.",
    "next_action": "Trace sub_08046100 to draw the trigger; compare against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -11650,7 +11650,7 @@
     "sub_0808F16C",
     "sub_0806B120"
    ],
-   "limitations": "Sounds 0x72 and 0x85, the palette bits and sub_080683BC are not ported. The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.",
+   "limitations": "The palette bits and sub_080683BC are not ported. The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x85 is requested at + 0x0D 0x0B of the attack's animation 3 (sub_0808EFD8) and 0x72 at death (sub_0808F0A4); both unit-tested.",
    "next_action": "Play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
@@ -18747,6 +18747,12 @@
  },
  "timeline": [
   {
+   "commit": "a63109a",
+   "date": "2026-11-02",
+   "subject": "Port the Aria yellow soul effects",
+   "scope": "project"
+  },
+  {
    "commit": "47aee30",
    "date": "2026-11-02",
    "subject": "Port the Buer blue soul and its orbiting flames",
@@ -19218,12 +19224,6 @@
    "commit": "e8b6cc8",
    "date": "2026-10-28",
    "subject": "Port the Ghost soul and sounds",
-   "scope": "project"
-  },
-  {
-   "commit": "77023ba",
-   "date": "2026-10-28",
-   "subject": "Port the Zombie Soldier soul, burst effects and zombie sounds",
    "scope": "project"
   }
  ],
@@ -21972,11 +21972,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "yellow:22",
-       "notes": "Soul: drops, is collected and, equipped (yellow 22), adds 4 to STR every frame; a local run raised a knife hit on a Skeleton from 15 to 19 damage. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 22), adds 4 to STR every frame; a local run raised a knife hit on a Skeleton from 15 to 19 damage. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds 0x85 at + 0x0D 0x0B of the attack's animation 3 (sub_0808EFD8) and 0x72 in the death callback sub_0808F0A4; both are requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -22287,11 +22287,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "partial",
        "soul_ref": "blue:9",
-       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops and is collected; blue soul effects are not ported. Sounds: EnemyCatoblepasUpdate calls EnemyGorgonUpdate, so it shares Gorgon's 0x67 breath cues (sub_08089560) and 0x71 death (sub_080896D8); both are requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -22314,11 +22314,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "yellow:34",
-       "notes": "Soul: drops, is collected and, equipped (yellow 34), adds 4 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 34), adds 4 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds one PlaySong, 0x6D in the death callback sub_080C32EC; it is requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -22701,11 +22701,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "yellow:28",
-       "notes": "Soul: drops, is collected and, equipped (yellow 28), adds 12 to CON (DEF + 6) every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 28), adds 12 to CON (DEF + 6) every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds 0x67 at + 0x0D 0x1E and 0x32 of the breath step (sub_08089560) and 0x71 in the death callback sub_080896D8; both are requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -22752,11 +22752,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "yellow:35",
-       "notes": "Soul: drops, is collected and, equipped (yellow 35), adds 8 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 35), adds 8 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: EnemyGremlinUpdate calls EnemyGargoyleUpdate, so it shares Gargoyle's 0x87 dive (sub_08086534) and 0x6E death (sub_08086878); both are requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -22806,11 +22806,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "blue:15",
-       "notes": "Soul: drops, is collected and starts SkillMedusaHeadUse with R held while airborne (sound 0x8C, 10 MP per second): Soma is held still in the air and gets his fall speed and gravity 0x2800 back on release; unit-tested and checked in a local capture, not emulator-compared. Sounds: the enemy's PlaySong sites are not audited."
+       "notes": "Soul: drops, is collected and starts SkillMedusaHeadUse with R held while airborne (sound 0x8C, 10 MP per second): Soma is held still in the air and gets his fall speed and gravity 0x2800 back on release; unit-tested and checked in a local capture, not emulator-compared. Sounds: a source audit of its block finds one PlaySong, 0x72 in the death callback sub_08093AE0; it is requested and unit-tested (death_sound_tests), not listened to or emulator-compared."
       }
      },
      {
@@ -23157,11 +23157,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "yellow:29",
-       "notes": "Soul: drops, is collected and, equipped (yellow 29), adds 16 to CON every frame; a local run lowered a Skeleton's 13-damage hit on Soma to 5. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 29), adds 16 to CON every frame; a local run lowered a Skeleton's 13-damage hit on Soma to 5. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds 0x85 at + 0x0D 0x0B of the thrust and of the slash (sub_0808F6E8), 0x69 for a guarded blow and 0x72 at death (sub_0808F848); all are requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23232,11 +23232,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "n/a",
        "soul": "partial",
        "soul_ref": "yellow:21",
-       "notes": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: a source audit of its block finds 0x87 at the dive (sub_08086534) and 0x6E in the death callback sub_08086878; both are requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23385,11 +23385,11 @@
       "aspects": {
        "sprite": "ported",
        "animations": "ported",
-       "sounds": "missing",
+       "sounds": "ported",
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "yellow:17",
-       "notes": "Soul: drops, is collected and, equipped (yellow 17), sets 0x13260 bit 0x40000, with which each hit Soma takes gives damage * 5 gold (sub_08021654, sub_08044F80, at most 999999). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported."
+       "notes": "Soul: drops, is collected and, equipped (yellow 17), sets 0x13260 bit 0x40000, with which each hit Soma takes gives damage * 5 gold (sub_08021654, sub_08044F80, at most 999999). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds one PlaySong, 0x72 in the death callback sub_0809922C; it is requested and unit-tested, not listened to or emulator-compared."
       }
      },
      {
@@ -23677,9 +23677,9 @@
       "missing": 0
      },
      "sounds": {
-      "ported": 25,
+      "ported": 34,
       "partial": 2,
-      "missing": 20
+      "missing": 11
      },
      "loot": {
       "ported": 26,
@@ -23691,7 +23691,7 @@
       "partial": 13,
       "missing": 0
      },
-     "complete": 22,
+     "complete": 29,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -28137,7 +28137,7 @@
        "id": "06:09",
        "name": "Catoblepas",
        "status": "partial",
-       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops and is collected; blue soul effects are not ported. Sounds: EnemyCatoblepasUpdate calls EnemyGorgonUpdate, so it shares Gorgon's 0x67 breath cues (sub_08089560) and 0x71 death (sub_080896D8); both are requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28233,7 +28233,7 @@
        "id": "06:0F",
        "name": "Medusa Head",
        "status": "partial",
-       "note": "Soul: drops, is collected and starts SkillMedusaHeadUse with R held while airborne (sound 0x8C, 10 MP per second): Soma is held still in the air and gets his fall speed and gravity 0x2800 back on release; unit-tested and checked in a local capture, not emulator-compared. Sounds: the enemy's PlaySong sites are not audited.",
+       "note": "Soul: drops, is collected and starts SkillMedusaHeadUse with R held while airborne (sound 0x8C, 10 MP per second): Soma is held still in the air and gets his fall speed and gravity 0x2800 back on release; unit-tested and checked in a local capture, not emulator-compared. Sounds: a source audit of its block finds one PlaySong, 0x72 in the death callback sub_08093AE0; it is requested and unit-tested (death_sound_tests), not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28651,7 +28651,7 @@
        "id": "07:11",
        "name": "Mimic",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 17), sets 0x13260 bit 0x40000, with which each hit Soma takes gives damage * 5 gold (sub_08021654, sub_08044F80, at most 999999). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 17), sets 0x13260 bit 0x40000, with which each hit Soma takes gives damage * 5 gold (sub_08021654, sub_08044F80, at most 999999). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds one PlaySong, 0x72 in the death callback sub_0809922C; it is requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28715,7 +28715,7 @@
        "id": "07:15",
        "name": "Gargoyle",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 21), ORs resistance 0x100 into Soma's resistances every frame; unit-tested, but Soma's resistances are not read by the ported damage rules and its status cure (sub_08021E50) is not modelled. Sounds: a source audit of its block finds 0x87 at the dive (sub_08086534) and 0x6E in the death callback sub_08086878; both are requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28731,7 +28731,7 @@
        "id": "07:16",
        "name": "Skeleton Knight",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 22), adds 4 to STR every frame; a local run raised a knife hit on a Skeleton from 15 to 19 damage. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 22), adds 4 to STR every frame; a local run raised a knife hit on a Skeleton from 15 to 19 damage. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds 0x85 at + 0x0D 0x0B of the attack's animation 3 (sub_0808EFD8) and 0x72 in the death callback sub_0808F0A4; both are requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28827,7 +28827,7 @@
        "id": "07:1C",
        "name": "Gorgon",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 28), adds 12 to CON (DEF + 6) every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 28), adds 12 to CON (DEF + 6) every frame. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds 0x67 at + 0x0D 0x1E and 0x32 of the breath step (sub_08089560) and 0x71 in the death callback sub_080896D8; both are requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28843,7 +28843,7 @@
        "id": "07:1D",
        "name": "Dead Crusader",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 29), adds 16 to CON every frame; a local run lowered a Skeleton's 13-damage hit on Soma to 5. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 29), adds 16 to CON every frame; a local run lowered a Skeleton's 13-damage hit on Soma to 5. Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds 0x85 at + 0x0D 0x0B of the thrust and of the slash (sub_0808F6E8), 0x69 for a guarded blow and 0x72 at death (sub_0808F848); all are requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28923,7 +28923,7 @@
        "id": "07:22",
        "name": "Ghost Dancer",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 34), adds 4 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 34), adds 4 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: a source audit of its block finds one PlaySong, 0x6D in the death callback sub_080C32EC; it is requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -28939,7 +28939,7 @@
        "id": "07:23",
        "name": "Gremlin",
        "status": "partial",
-       "note": "Soul: drops, is collected and, equipped (yellow 35), adds 8 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: no Aria audio is ported.",
+       "note": "Soul: drops, is collected and, equipped (yellow 35), adds 8 to LCK every frame (the drop rolls' luck term). Its entity runs after Soma's update, whose sub_08021FA4 resets the current stats to the equipped ones every frame; unit-tested, not emulator-compared. Sounds: EnemyGremlinUpdate calls EnemyGargoyleUpdate, so it shares Gargoyle's 0x87 dive (sub_08086534) and 0x6E death (sub_08086878); both are requested and unit-tested, not listened to or emulator-compared.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

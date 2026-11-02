@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0694 - Enemy sound audit for nine monsters
+
+- A source audit of the enemy blocks of Medusa Head, Mimic, Skeleton
+  Knight, Dead Crusader, Ghost Dancer, Gorgon (shared by Catoblepas) and
+  Gargoyle (shared by Gremlin) finds every PlaySong site. The death
+  callbacks now request 0x72, 0x6D, 0x71 or 0x6E. Skeleton Knight and
+  Dead Crusader request 0x85 at + 0x0D 0x0B of their swings, and Dead
+  Crusader 0x69 for a guarded blow. Gorgon requests 0x67 at breath
+  counts 0x1E and 0x32, and Gargoyle 0x87 at its swoop (the comment was
+  there, the call was not).
+- New assertions in `tests/test_aos_enemy.c` cover each site. The nine
+  monsters' sounds become ported; with the yellow souls of patch 0693,
+  29 monsters are complete. Nothing was listened to or emulator-compared.
+  Zero Mission is unchanged.
+
 ## Patch 0693 - Yellow soul effects
 
 - The 37 yellow soul records of 0x080E1B08 are exported as

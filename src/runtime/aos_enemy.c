@@ -1209,8 +1209,10 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                                                    elements);
             /* sub_0808F848: a guarding dead crusader takes no damage
              * (sound 0x69). */
-            if (enemy->id == AOS_ENEMY_DEAD_CRUSADER && enemy->guarding)
+            if (enemy->id == AOS_ENEMY_DEAD_CRUSADER && enemy->guarding) {
                 report.enemy_damage = 0;
+                aos_audio_play_song(0x69);
+            }
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
@@ -1298,6 +1300,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     /* sub_0809922C (sound 0x72): animation 3 when struck
                      * closed (step 3), else 2; 40 frames of the generic
                      * death (state 1). */
+                    aos_audio_play_song(0x72);
                     play_loop(enemy, kind->anims, enemy->step == 3 ? 3 : 2, false);
                     enemy->static_frame = -1;
                     enemy->own_boxes = false;
@@ -1379,6 +1382,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                            enemy->id == AOS_ENEMY_DEAD_CRUSADER) {
                     /* sub_0808F0A4 / sub_0808F848: 40 frames of the
                      * generic death in state 2 (sound 0x72). */
+                    aos_audio_play_song(0x72);
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = 0;
@@ -1403,6 +1407,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     /* sub_080C32EC (sound 0x6D) -> sub_080C327C: animation
                      * 2 once, semi-transparent, state 3; deleted when the
                      * animation ends. */
+                    aos_audio_play_song(0x6D);
                     play_loop(enemy, kind->anims, 2, false);
                     enemy->translucent = true;
                     enemy->state = 3;
@@ -1410,6 +1415,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 } else if (enemy->id == AOS_ENEMY_GARGOYLE || enemy->id == AOS_ENEMY_GREMLIN) {
                     /* sub_08086878: state 1, 40 frames, falling with
                      * + 0x54 = 0x1000 (sound 0x6E). */
+                    aos_audio_play_song(0x6E);
                     enemy->timer = 0x28;
                     enemy->state = 1;
                     enemy->step = 0;
@@ -1426,6 +1432,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 } else if (enemy->id == AOS_ENEMY_MEDUSA_HEAD) {
                     /* sub_08093AE0: death animation 3, 40 frames of the
                      * generic death in state 2 (sound 0x72). */
+                    aos_audio_play_song(0x72);
                     play_loop(enemy, kind->anims, 3, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
@@ -1449,8 +1456,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_GORGON ||
                            enemy->id == AOS_ENEMY_CATOBLEPAS) {
-                    /* sub_080896D8: a 60-frame death whose first update
-                     * emits six native sprite fragments. */
+                    /* sub_080896D8: sound 0x71 and a 60-frame death whose
+                     * first update emits six native sprite fragments. */
+                    aos_audio_play_song(0x71);
                     enemy->timer = 0x3C;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
@@ -3469,6 +3477,7 @@ static void knight_attack(AosEnemy *k, const AosSoma *soma, const AosAnimSet *an
         k->timer = 0;
         return;
     case 2:
+        if (k->timer == 0x0B) aos_audio_play_song(0x85);
         if (k->timer++ <= 0x1D) return;
         play_loop(k, anims, 4, false);
         k->step = 3;
@@ -4912,6 +4921,7 @@ static void crusader_attack(AosEnemy *k, const AosSoma *soma, const AosAnimSet *
         k->step = (random() & 0x7F) <= 0x3F ? 2 : 5;
         return;
     case 2:
+        if (k->timer == 0x0B) aos_audio_play_song(0x85);
         if (k->timer++ <= 0x1D) return;
         play_loop(k, anims, 4, false);
         k->step = 3;
@@ -4921,6 +4931,7 @@ static void crusader_attack(AosEnemy *k, const AosSoma *soma, const AosAnimSet *
         if (k->timer++ <= 0x13) return;
         break;
     case 5:
+        if (k->timer == 0x0B) aos_audio_play_song(0x85);
         if (k->timer++ <= 0x0B) return;
         play_loop(k, anims, 6, false);
         k->step = 6;
@@ -5233,6 +5244,7 @@ static void gargoyle_fly(AosEnemy *g, const AosSoma *soma, const AosAnimSet *ani
         play_loop(g, anims, 1, false);
         g->ax = g->mirrored ? 0xC00 : -0xC00;
         g->ay = 0x1800;
+        aos_audio_play_song(0x87);
         return;
     case 3:
         if (!(random() & 0xFF)) play_loop(g, anims, 2, false);
@@ -6741,6 +6753,8 @@ static AosHitReport gorgon_update(AosEnemy *e, AosSoma *soma, const AosCollision
                 e->timer = 0;
             }
         } else if (e->step == 2) {
+            /* sub_08089560: sound 0x67 at + 0x0D 0x1E and 0x32. */
+            if (e->timer == 0x1E || e->timer == 0x32) aos_audio_play_song(0x67);
             if (e->timer >= 30 && e->timer <= 70 && !(e->timer & 1))
                 gorgon_breath(e, &report);
             if (++e->timer > 76) {

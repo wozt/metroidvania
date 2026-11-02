@@ -1413,13 +1413,13 @@ Known divergences: As the Lubicant.
 Next action: Follow the Lubicant's open items.
 Evidence: in game: `aria area_07_room_054 (--spawn 250 191 --hp 9999): the two Cagnazzos bob (frame 40), circle above Soma with their tridents turning (frame 100) and dive head first (frame 160)`.
 
-[+] **`aos.enemies.catoblepas` — Catoblepas (Gorgon's routines).** The native constructor and updater alias Gorgon. Palette bank 1, grounded patrol, attack trigger and wind-up, the 21-cloud petrifying-breath stream, cloud frame transition and alternating collision, six-piece death, combat and global inert state are connected.
+[+] **`aos.enemies.catoblepas` — Catoblepas (Gorgon's routines).** The native constructor and updater alias Gorgon. Palette bank 1, grounded patrol, attack trigger and wind-up, the 21-cloud petrifying-breath stream, cloud frame transition and alternating collision, six-piece death, combat and global inert state are connected. It shares Gorgon's sounds (0x67 breath, 0x71 death), requested and unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyCatoblepasUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.gorgon`.  
-Known divergences: The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled.  
+Known divergences: The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, palette callbacks and rewards are not modelled.  
 Next action: Refine the shared gait and collision probes when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP`.
 
@@ -1433,13 +1433,13 @@ Known divergences: Sounds 0x85 and 0x1C3, the palette bits and sub_080683BC are 
 Next action: Trace the area 4 draw routine sub_0806CCE8.
 Evidence: in game: `aria area_04_room_014 (--spawn 200 175 --hp 9999): Curly walks down the stairs and wounds Soma (frames 30, 90, 150); with --atk 200 --repeat 2 (button 2) the knife kills it at frame 99, burning at frames 102 and 113`.
 
-[+] **`aos.enemies.dead_crusader` — Dead crusader.** The skeleton knight's wait, walk and back-off at 0.75, the guard while Soma's + 0x10 flags & 0x360 are set (animation 7 for 61 frames, blows dealing 0 damage), the attack (animation 2 for 39 frames, then a thrust with animations 3 and 4 or a slash with animation 6 four times), the generic death and state 3 under gEwramData + 0x8E bit 0x40 are ported, drawn with palette bank 1 of the knight's sheet.
+[+] **`aos.enemies.dead_crusader` — Dead crusader.** The skeleton knight's wait, walk and back-off at 0.75, the guard while Soma's + 0x10 flags & 0x360 are set (animation 7 for 61 frames, blows dealing 0 damage), the attack (animation 2 for 39 frames, then a thrust with animations 3 and 4 or a slash with animation 6 four times), the generic death and state 3 under gEwramData + 0x8E bit 0x40 are ported, drawn with palette bank 1 of the knight's sheet. Sound 0x85 is requested at + 0x0D 0x0B of the thrust and the slash (sub_0808F6E8), 0x69 for a guarded blow and 0x72 at death (sub_0808F848); all unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyDeadCrusaderUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808F364`, `aos:asm:asm/code/code_080809C0.s:sub_0808F6E8`, `aos:asm:asm/code/code_080809C0.s:sub_0808F848`, `aos:asm:asm/code/code_080809C0.s:sub_0808F8EC`, `aos:c:src/code/code_080211F0.c:sub_080212C8`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.skeleton_knight`.  
-Known divergences: Sounds 0x69, 0x72 and 0x85, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the hit stun of sub_0806D4C0 needs the global pause 0x4BE, taken as 0.  
+Known divergences: The palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; the hit stun of sub_0806D4C0 needs the global pause 0x4BE, taken as 0.  
 Next action: Check a kill in game (the capture input cannot stop attacking, which keeps it guarding); compare against an emulator.
 Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): it waits (frame 30), walks to Soma and strikes him (frames 20 and 60 walking right); attacking with --repeat 2 it raises its shield (frames 80 and 140) and two blows deal 0 damage over 300 frames`.
 
@@ -1483,13 +1483,13 @@ Known divergences: the palette bits, sub_080683BC, the global pause of sub_0806D
 Next action: Find what releases a carried Fleaman (step 1).
 Evidence: in game: `aria area_03_room_003 (--spawn 200 190 --hp 9999): the four Fleamen hop about toward Soma (frames 20, 45, 70 and 100)`.
 
-[+] **`aos.enemies.gargoyle` — Gargoyle.** The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.gargoyle` — Gargoyle.** The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x87 is requested at the swoop (sub_08086534) and 0x6E at death (sub_08086878); both unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806CD38`, `aos:asm:asm/code/code_08060B98.s:sub_0806CD78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08086534`, `aos:asm:asm/code/code_080809C0.s:sub_08086878`, `aos:asm:asm/code/code_080809C0.s:sub_08086900`, `aos:asm:asm/code/code_080809C0.s:sub_08086964`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: Sounds 0x6E and 0x87, the palette bits and sub_080683BC are not ported; palette bank 1, used when another enemy id shares sub_08086900, is not exported.  
+Known divergences: The palette bits and sub_080683BC are not ported; palette bank 1, used when another enemy id shares sub_08086900, is not exported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_08_room_012: both gargoyles leave their perches (frame 30), swoop onto Soma and knock him back (frame 90), fly off and climb back (frames 150 and 210)`.
 
@@ -1502,13 +1502,13 @@ Known divergences: The host does not reproduce the palette-bit callback installe
 Next action: Compare the producer timing, target motion and palette callback frame by frame in an emulator.
 Evidence: in game: `aria area_00_room_018 (--spawn 180 150 --hp 9999): the hidden producer creates a Ghost; it appears, homes into Soma and deals 17 contact damage`.
 
-[+] **`aos.enemies.ghost_dancer` — Ghost Dancer.** The figure-of-eight dance, its animation swap, the fade between opaque and semi-transparent every half turn, the margin hiding, the hit stun, the death animation and state 5 under gEwramData + 0x8E bit 0x40 are ported; palette banks 0 to 2 follow parameter 0.
+[+] **`aos.enemies.ghost_dancer` — Ghost Dancer.** The figure-of-eight dance, its animation swap, the fade between opaque and semi-transparent every half turn, the margin hiding, the hit stun, the death animation and state 5 under gEwramData + 0x8E bit 0x40 are ported; palette banks 0 to 2 follow parameter 0. Sound 0x6D is requested at death (sub_080C32EC) and unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806BD64`, `aos:asm:asm/code/code_080C0A1C.s:EnemyGhostDancerCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyGhostDancerUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C2E74`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C3190`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C327C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C32EC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C336C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C339C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.medusa_head`.  
-Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); sound 0x6D, the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read.  
+Known divergences: The semi-transparent OBJ mode is drawn at half alpha (the room's blend coefficients are not traced); the palette bits of + 0x5A bits 3-6 and sub_080683BC are not ported; sub_080C305C is not reached from the code read.  
 Next action: Trace the room blend coefficients for semi-transparent sprites.
 Evidence: in game: `aria area_03_room_006 (--spawn 256 300 --hp 9999): dancers of the three palettes dance opaque at frame 60 and semi-transparent at frames 300 and 330`.
 
@@ -1521,16 +1521,16 @@ Known divergences: The native multi-entity visuals, palette fade and complete at
 Next action: Port the three native death effects, visual children and remaining attack/fade states.
 Evidence: in game: `aria area_01_room_008: Giant Ghost record at x 160, y 224`.
 
-[+] **`aos.enemies.gorgon` — Gorgon.** Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path.
+[+] **`aos.enemies.gorgon` — Gorgon.** Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path. Sound 0x67 is requested at + 0x0D 0x1E and 0x32 of the breath step (sub_08089560) and 0x71 at death (sub_080896D8); both unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGorgonCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGorgonUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_080890E8`, `aos:asm:asm/code/code_080809C0.s:sub_08089560`, `aos:asm:asm/code/code_080809C0.s:sub_080896D8`, `aos:asm:asm/code/code_080809C0.s:sub_0808975C`, `aos:asm:asm/code/code_080809C0.s:sub_0808982C`, `aos:asm:asm/code/code_080809C0.s:sub_0808990C`, `aos:asm:asm/code/code_080809C0.s:sub_080899FC`, `aos:asm:asm/code/code_080809C0.s:sub_08089A50`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
-Known divergences: The native custom gait table is represented by exported animation sequences. Exact slope and edge probes, particle offsets, random flips, entity-slot ordering, sounds 0x67/0x71, palette callbacks and rewards are not modelled.  
+Known divergences: The native custom gait table is represented by exported animation sequences. Exact slope and edge probes, particle offsets, random flips, entity-slot ordering, palette callbacks and rewards are not modelled.  
 Next action: Refine the gait and collision probes when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon renders, emits the visible breath stream by frame 205 and damages Soma for 66 HP`.
 
-[+] **`aos.enemies.gremlin` — Gremlin (the gargoyle's routines).** EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1.
+[+] **`aos.enemies.gremlin` — Gremlin (the gargoyle's routines).** EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1. It shares Gargoyle's sounds (0x87 swoop, 0x6E death), requested and unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinUpdate`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
@@ -1595,13 +1595,13 @@ Known divergences: The palette bits, sub_080683BC, the tracking list of sub_0802
 Next action: Trace sub_08021654; compare against an emulator.
 Evidence: in game: `aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)`.
 
-[+] **`aos.enemies.medusa_head` — Medusa head and its spawner.** The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.medusa_head` — Medusa head and its spawner.** The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x72 is requested at death (sub_08093AE0) and unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3AC`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMedusaHeadUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08093A3C`, `aos:asm:asm/code/code_08090914.s:sub_08093AE0`, `aos:asm:asm/code/code_08090914.s:sub_08093B68`, `aos:asm:asm/code/code_08090914.s:sub_08093BCC`, `aos:asm:asm/code/code_08090914.s:sub_08093BF0`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The petrification of gold heads (contact element 0x100), sound 0x72, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced).  
+Known divergences: The petrification of gold heads (contact element 0x100), the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported; state 1 (sub_08093BCC) is not entered by any code read. Spawned heads are created after their spawner's update (native slot order not traced).  
 Next action: Port the petrification of gold heads with Soma's status effects.
 Evidence: in game: `aria area_06_room_013: gold heads arrive from the right edge and swing toward Soma at frames 60, 90, 150 and 200; contacts cost 52 HP`.
 
@@ -1614,13 +1614,13 @@ Known divergences: The collision export has no independent room-water height, so
 Next action: Compare the water-surface crossing height and spawner screen coordinates against an emulator.
 Evidence: in game: `aria area_07_room_002 (--spawn 160 175 --hp 9999): frame 240 captures active Mermen and two animation-6 shots; Soma takes four 14-damage contacts`.
 
-[+] **`aos.enemies.mimic` — Mimic.** The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.mimic` — Mimic.** The placed closed chest (parameter 0 set: sprite frame 0, the hurtbox 0x0E10F2F8, no attack box, floor snap), the hidden Mimic with its trigger (hurtbox 0x100CF8FA) that bursts in flames and wakes it, the fall of sub_080698A8 (vy + 0x2000 up to 4.0, landing at vy 1.0), the opening when the player is in (x - 16, y - 20, 32, 20) (animation 0 once, then animation 1), the hit into the generic death (animation 3 closed, 2 open), the knockback contact and the inert state 2 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x72 is requested at death (sub_0809922C) and unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080698A8`, `aos:asm:asm/code/code_08090914.s:EnemyMimicCreate`, `aos:asm:asm/code/code_08090914.s:EnemyMimicUpdate`, `aos:asm:asm/code/code_08090914.s:sub_080990D8`, `aos:asm:asm/code/code_08090914.s:sub_0809922C`, `aos:asm:asm/code/code_08090914.s:sub_080992C8`, `aos:asm:asm/code/code_08090914.s:sub_0809937C`, `aos:asm:asm/code/code_08090914.s:sub_080993EC`, `aos:asm:asm/code/code_08090914.s:sub_08099430`, `aos:asm:asm/code/code_08090914.s:sub_08099480`, `aos:asm:asm/code/code_08090914.s:sub_080994B0`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: Sound 0x72 and the palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer.  
+Known divergences: The palette bank of parameter 1 beyond bank 0 are not ported; the trigger's common sprite (animation 3, row 7) and its draw routine sub_08046100 are not traced, so it is not drawn; the trigger's slot is a room entity whose index stands for the parent pointer.  
 Next action: Trace sub_08046100 to draw the trigger; compare against an emulator.
 Evidence: in game: `aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)`.
 
@@ -1702,13 +1702,13 @@ Known divergences: The full five-state native movement AI, attack variants, exac
 Next action: Reconstruct native patrol and attack-selection branches, bone spin and rendering comparison; validate in game before marking functional.
 Evidence: in game: `aria area_00_room_006: skeleton record at x 128, y 176`.
 
-[+] **`aos.enemies.skeleton_knight` — Skeleton knight.** The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported.
+[+] **`aos.enemies.skeleton_knight` — Skeleton knight.** The wait for the player (or a wound), the 0.5 advance and retreat facing him every 60 frames, the room edge clamp of sub_0806B120, the three-animation sword attack, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x85 is requested at + 0x0D 0x0B of the attack's animation 3 (sub_0808EFD8) and 0x72 at death (sub_0808F0A4); both unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806B120`, `aos:asm:asm/code/code_080809C0.s:EnemySkeletonKnightCreate`, `aos:asm:asm/code/code_080809C0.s:EnemySkeletonKnightUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_0808ECF8`, `aos:asm:asm/code/code_080809C0.s:sub_0808EFD8`, `aos:asm:asm/code/code_080809C0.s:sub_0808F0A4`, `aos:asm:asm/code/code_080809C0.s:sub_0808F120`, `aos:asm:asm/code/code_080809C0.s:sub_0808F16C`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: Sounds 0x72 and 0x85, the palette bits and sub_080683BC are not ported.  
+Known divergences: The palette bits and sub_080683BC are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_00_room_015 (--spawn 180 280 --hp 9999): the skeleton knight walks toward Soma (frame 30), backs away facing him (frame 90) and raises its sword (frame 160)`.
 

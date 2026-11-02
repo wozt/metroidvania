@@ -3700,19 +3700,25 @@ static void batch_enemy_tests(void) {
      * 30..70-frame breath stream (one child every even frame). */
     assert(aos_enemy_create(&gorgon, AOS_ENEMY_GORGON, 100, 140, 0, 0, &soma, &layer, &kind,
                             &stats));
-    int breaths = 0;
+    int breaths = 0, breaths_at_song[2] = {-1, -1}, songs = 0;
     AosEnemy cloud = {0};
+    aos_audio_clear();
     for (int frame = 0; frame < 180 && breaths < 21; ++frame) {
         AosHitReport hit = aos_enemy_update(&gorgon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
                                             0, always_zero);
+        int heard = aos_audio_requested(AOS_AUDIO_START_SONG, 0x67);
         for (int i = 0; i < hit.child_count; ++i) {
             assert(hit.children[i].role == AOS_ROLE_GORGON_BREATH);
             assert(hit.children[i].static_frame == 25);
             cloud = hit.children[i];
             ++breaths;
         }
+        if (heard > songs) breaths_at_song[songs++] = breaths;
     }
     assert(breaths == 21 && gorgon.state == 1);
+    /* sub_08089560: 0x67 with the first breath (+ 0x0D 0x1E) and the
+     * eleventh (+ 0x0D 0x32). */
+    assert(songs == 2 && breaths_at_song[0] == 1 && breaths_at_song[1] == 11);
     for (int frame = 0; frame < 16 && gorgon.state == 1; ++frame)
         aos_enemy_update(&gorgon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                          always_zero);
@@ -5211,6 +5217,44 @@ static void death_sound_tests(void) {
         ghost_flames += death.effect_count;
     }
     assert(ghost.removed && ghost_flames == 2);
+    /* The death callbacks' PlaySong: Medusa Head sub_08093AE0, Mimic
+     * sub_0809922C, Skeleton Knight sub_0808F0A4 and Dead Crusader
+     * sub_0808F848 0x72, Ghost Dancer sub_080C32EC 0x6D, Gargoyle and
+     * Gremlin sub_08086878 0x6E, Gorgon and Catoblepas sub_080896D8 0x71. */
+    static const struct { uint8_t id; uint16_t song; } deaths[] = {
+        {AOS_ENEMY_MEDUSA_HEAD, 0x72}, {AOS_ENEMY_MIMIC, 0x72},
+        {AOS_ENEMY_SKELETON_KNIGHT, 0x72}, {AOS_ENEMY_DEAD_CRUSADER, 0x72},
+        {AOS_ENEMY_GHOST_DANCER, 0x6D}, {AOS_ENEMY_GARGOYLE, 0x6E},
+        {AOS_ENEMY_GREMLIN, 0x6E}, {AOS_ENEMY_GORGON, 0x71}, {AOS_ENEMY_CATOBLEPAS, 0x71},
+    };
+    for (int k = 0; k < 4; ++k)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[k][f] = 1;
+            kind.hurt[k][f] = (AosBox){-16, -32, 32, 48};
+        }
+    for (size_t k = 0; k < sizeof deaths / sizeof deaths[0]; ++k) {
+        AosEnemy e;
+        /* A placed Mimic (parameter 0 set) is a closed chest that can be hit. */
+        bool chest = deaths[k].id == AOS_ENEMY_MIMIC;
+        for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+        assert(aos_enemy_create(&e, deaths[k].id, 100, 150, chest ? 1 : 0, 0, &soma, &layer,
+                                &kind, &stats));
+        AosSoulAttack lethal = {{0, 0, 2000, 2000}, 999, 0, false, NULL, AOS_TYPE_SOUL};
+        AosHitReport report = {0};
+        aos_audio_clear();
+        for (int frame = 0; frame < 4 && !e.defeated; ++frame) {
+            aos_enemy_set_soul_attacks(&lethal, 1);
+            report = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                      always_zero);
+            aos_enemy_set_soul_attacks(NULL, 0);
+        }
+        (void)report;
+        if (!e.defeated || aos_audio_requested(AOS_AUDIO_START_SONG, deaths[k].song) != 1)
+            fprintf(stderr, "death sound of enemy 0x%02X: defeated %d, song %d\n",
+                    deaths[k].id, e.defeated,
+                    aos_audio_requested(AOS_AUDIO_START_SONG, deaths[k].song));
+        assert(e.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, deaths[k].song) == 1);
+    }
 }
 
 static void flea_tests(void) {
@@ -5406,13 +5450,19 @@ static void knight_tests(void) {
         ++frames;
     }
     assert(k.state == 1 && ((soma.x - k.x) >> 16) <= 40);
-    /* 45 + 31 + 21 frames of animations 2, 3 and 4, then walking again. */
+    /* 45 + 31 + 21 frames of animations 2, 3 and 4, then walking again;
+     * sub_0808EFD8 plays 0x85 once, at + 0x0D 0x0B of animation 3. */
     frames = 0;
+    int swing_frame = -1;
+    aos_audio_clear();
     while (k.state == 1 && frames < 200) {
         aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         ++frames;
+        if (swing_frame < 0 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x85))
+            swing_frame = frames;
     }
     assert(frames == 1 + 45 + 31 + 21 && k.step == 1 && k.anim.id == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1 && swing_frame == 1 + 45 + 12);
     /* r & 0x7F > 0x40 within reach: it backs away (step 2) facing him. */
     frames = 0;
     while (k.step == 1 && frames < 300) {
@@ -5466,23 +5516,29 @@ static void crusader_tests(void) {
     }
     assert(k.state == 1 && ((soma.x - k.x) >> 16) <= 40);
     frames = 0;
+    aos_audio_clear();
     while (k.state == 1 && frames < 200) {
         aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         if (k.step == 3) assert(k.anim.id == 4);
         ++frames;
     }
     assert(frames == 1 + 39 + 31 + 21 && k.step == 1 && k.anim.id == 1);
+    /* sub_0808F6E8: 0x85 once in the thrust (+ 0x0D 0x0B). */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
     /* Otherwise it slashes: 13 frames, then animation 6 four times 13. */
     k.state = 1;
     k.step = 0;
     frames = 0;
     bool slashed = false;
+    aos_audio_clear();
     while (k.state == 1 && frames < 200) {
         aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
         slashed |= k.anim.id == 6;
         ++frames;
     }
     assert(slashed && frames == 1 + 39 + 13 + 4 * 13 && k.step == 1);
+    /* ... and once in the slash's 13 frames (+ 0x0D 0x0B of step 5). */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
     /* r & 0x7F > 0x40 within reach: it backs away (step 2) at 0.75. */
     frames = 0;
     while (k.step == 1 && frames < 300) {
@@ -5507,10 +5563,13 @@ static void crusader_tests(void) {
     const AosHitbox blade_box[] = {{20, -40, 20, 20, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
+    aos_audio_clear();
     AosHitReport hit = aos_enemy_update(&k, &soma, &layer, &kind, &weapon, &blade, 50, 4, 0, 0,
                                         always_one_hundred);
     assert(k.step == 5 && k.guarding && k.anim.id == 7 && k.vx == 0);
     assert(hit.enemy_hit && hit.enemy_damage == 0 && k.hp == 180);
+    /* sub_0808F848: a guarded blow plays 0x69. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x69) == 1);
     soma.flags &= ~(uint32_t)AOS_FLAG_ATTACKING;
     frames = 1;
     while (k.step == 5 && frames < 100) {
@@ -5527,9 +5586,12 @@ static void crusader_tests(void) {
     assert(hit.enemy_hit && hit.enemy_damage > 0 && k.hp < 180 && !k.guarding);
     k.combat = (AosCombat){0};
     soma.x = k.x - AOS_FIXED(30);
+    aos_audio_clear();
     hit = aos_enemy_update(&k, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
                            always_one_hundred);
     assert(hit.killed && k.state == 2 && k.timer == 0x28);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1 &&
+           !aos_audio_requested(AOS_AUDIO_START_SONG, 0x69));
 }
 
 static void skull_tests(void) {
@@ -6335,11 +6397,14 @@ static void gargoyle_tests(void) {
      * up to 2.0 for 25 frames, then 15/16 of vy for 61 frames, then the
      * climb. */
     frames = 0;
+    aos_audio_clear();
     while (g.step == 2 && frames < 100) {
         aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         ++frames;
     }
     assert(frames == 21 && g.step == 3 && g.anim.id == 1 && g.ay == 0x1800);
+    /* sub_08086534: the swoop's sound 0x87. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) == 1);
     assert(g.ax == (g.mirrored ? 0xC00 : -0xC00));
     int32_t y_dive = g.y;
     frames = 0;

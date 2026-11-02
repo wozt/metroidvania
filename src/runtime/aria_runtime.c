@@ -34,6 +34,7 @@
 #include "aos_skill_merman.h"
 #include "aos_skill_needles.h"
 #include "aos_guardian_imp.h"
+#include "aos_guardian_ghost.h"
 #include "aos_skill_lightning.h"
 #include "aos_skill_killer_doll.h"
 #include "aos_skill_nemesis.h"
@@ -226,7 +227,8 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
-       SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ARTS };
+       SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
+       SKILL_ART_WITCH, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -237,7 +239,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_cagnazzo", "skill_buer",
                                                          "skill_catoblepas", "skill_imp",
                                                          "skill_lightning",
-                                                         "skill_killer_doll", "skill_curly"};
+                                                         "skill_killer_doll", "skill_curly",
+                                                         "skill_giant_ghost", "skill_witch"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1033,6 +1036,8 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_CATOBLEPAS_ROUTINE 0x08030E65u
 #define GUARDIAN_IMP_ROUTINE 0x080310ADu
 #define GUARDIAN_TRANSFORM_ROUTINE 0x0802EFB1u
+#define GUARDIAN_GHOST_ROUTINE 0x0802F96Du
+enum { GUARDIAN_ATTACKS = 8 };
 typedef struct {
     AosGuardian core;
     uint32_t routine;
@@ -1042,6 +1047,7 @@ typedef struct {
     AosCatoblepasGuardian catoblepas;
     AosImpGuardian imp;
     AosCurlyGuardian curly;
+    AosGhostGuardian ghost;
     int imp_target;              /* the room entity of the chased homing slot */
     AosAnimState anim;           /* Cagnazzo, or both Buer flames (same steps) */
     AosAnimState gas_anims[AOS_CATOBLEPAS_GASES];
@@ -1053,6 +1059,8 @@ typedef struct {
     const AosAnimSet *catoblepas_art; /* Enemy/skill_catoblepas, NULL when missing */
     const AosAnimSet *imp_art;       /* Enemy/skill_imp, NULL when missing */
     const AosAnimSet *curly_art;     /* Enemy/skill_curly, NULL when missing */
+    const AosAnimSet *ghost_art;     /* Enemy/skill_giant_ghost, NULL when missing */
+    const AosAnimSet *witch_art;     /* Enemy/skill_witch, NULL when missing */
     const AosEnemyKind *imp_kind;    /* its frame attack boxes */
 } AriaGuardian;
 
@@ -1068,6 +1076,9 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
         !(routine == GUARDIAN_IMP_ROUTINE && guardian->imp_art) &&
+        !(routine == GUARDIAN_GHOST_ROUTINE &&
+          (guardian->records[stats->blue_soul].argument ? guardian->ghost_art
+                                                        : guardian->witch_art)) &&
         !(routine == GUARDIAN_TRANSFORM_ROUTINE && guardian->curly_art &&
           guardian->records[stats->blue_soul].argument == AOS_CURLY_VARIANT))
         return;
@@ -1080,6 +1091,7 @@ static void start_guardian(void *context) {
         guardian->catoblepas = (AosCatoblepasGuardian){0};
         guardian->imp = (AosImpGuardian){.target = -1};
         guardian->curly = (AosCurlyGuardian){0};
+        guardian->ghost = (AosGhostGuardian){0};
         guardian->imp_target = -1;
     }
 }
@@ -1094,6 +1106,9 @@ static void cancel_transform(void *context) {
     aos_curly_guardian_end(&guardian->curly, &guardian->core, &guardian->soma->flags,
                            &guardian->stats->flags);
 }
+
+/* The camera, for the ghost's spirits' screen margin. */
+static int guardian_cam_x, guardian_cam_y;
 
 /* The guardian entity's update, after Soma's in the entity order. */
 static void update_guardian(AriaGuardian *guardian) {
@@ -1157,6 +1172,19 @@ static void update_guardian(AriaGuardian *guardian) {
         if (guardian->curly.child && !had_child)
             aos_anim_start(&guardian->anim, guardian->curly_art, 0, true);
         if (guardian->curly.child) aos_anim_step(&guardian->anim, guardian->curly_art);
+    } else if (guardian->routine == GUARDIAN_GHOST_ROUTINE) {
+        /* Its looping sequence (0 the Witch, 1 the Ghost), stepped at the
+         * end of each update (sub_0803F17C); sub_08042A54(2, 0xA) is not
+         * run. */
+        bool first = guardian->core.state == 0;
+        if (!aos_ghost_guardian_update(&guardian->ghost, &guardian->core, guardian->stats,
+                                       guardian->records, soma->held, soma->pressed,
+                                       &soma->flags, soma->x, soma->y, soma->facing_left,
+                                       guardian_cam_x, guardian_cam_y))
+            return;
+        const AosAnimSet *art = guardian->ghost.giant ? guardian->ghost_art : guardian->witch_art;
+        if (first) aos_anim_start(&guardian->anim, art, guardian->ghost.giant ? 1 : 0, true);
+        aos_anim_step(&guardian->anim, art);
     } else if (guardian->routine == GUARDIAN_IMP_ROUTINE) {
         /* The homing list's slots; a chased slot keeps its entity. */
         AosSkillTarget targets[AOS_IMP_TARGETS] = {{0}};
@@ -1192,8 +1220,30 @@ static void update_guardian(AriaGuardian *guardian) {
 /* The guardian's attacks this frame (type 6, sub_08021530(6) with the
  * 0x131C2 power and the 0x131C4 elements). Returns their count. */
 static int guardian_attacks(const AriaGuardian *guardian,
-                            AosSoulAttack attacks[AOS_CATOBLEPAS_GASES]) {
+                            AosSoulAttack attacks[GUARDIAN_ATTACKS]) {
     if (!guardian->core.active || guardian->core.state == 0) return 0;
+    if (guardian->routine == GUARDIAN_GHOST_ROUTINE) {
+        /* Its body (type 7: power 0, its touches throwing the spirits),
+         * then each spirit (type 6, box 0x0808FCFC: -4, -4, 8 x 8). */
+        const AosGhostGuardian *ghost = &guardian->ghost;
+        int count = 0;
+        if (ghost->attacking) {
+            int8_t b[4];
+            aos_ghost_guardian_box(ghost, b);
+            attacks[count++] = (AosSoulAttack){
+                aos_entity_rect((AosBox){b[0], b[1], (uint8_t)b[2], (uint8_t)b[3]},
+                                ghost->x >> 16, ghost->y >> 16, ghost->facing_left, false),
+                0, 0, false, NULL, AOS_GHOST_ATTACK_TYPE};
+        }
+        for (int k = 0; k < AOS_GHOST_SHOTS; ++k)
+            if (ghost->shots[k].alive && ghost->shots[k].state == 1)
+                attacks[count++] = (AosSoulAttack){
+                    aos_entity_rect((AosBox){-4, -4, 8, 8}, ghost->shots[k].x >> 16,
+                                    ghost->shots[k].y >> 16, false, false),
+                    aos_guardian_power(guardian->stats, AOS_GHOST_POWER, false),
+                    AOS_GHOST_ELEMENTS, false, NULL, AOS_TYPE_GUARDIAN};
+        return count;
+    }
     if (guardian->routine == GUARDIAN_CAGNAZZO_ROUTINE) {
         const AosCagnazzoGuardian *cagnazzo = &guardian->cagnazzo;
         attacks[0] = (AosSoulAttack){
@@ -4189,6 +4239,13 @@ int main(int argc, char **argv) {
     if (objects_ok && objects.skills[SKILL_ART_CURLY].loaded &&
         objects.skills[SKILL_ART_CURLY].defs[0].count)
         guardian.curly_art = &objects.skills[SKILL_ART_CURLY].set;
+    if (objects_ok && objects.skills[SKILL_ART_GIANT_GHOST].loaded &&
+        objects.skills[SKILL_ART_GIANT_GHOST].set.count > 1 &&
+        objects.skills[SKILL_ART_GIANT_GHOST].defs[1].count)
+        guardian.ghost_art = &objects.skills[SKILL_ART_GIANT_GHOST].set;
+    if (objects_ok && objects.skills[SKILL_ART_WITCH].loaded &&
+        objects.skills[SKILL_ART_WITCH].defs[0].count)
+        guardian.witch_art = &objects.skills[SKILL_ART_WITCH].set;
     soma.guardian_cancel = cancel_transform;
     if (objects_ok && objects.skills[SKILL_ART_IMP].loaded &&
         objects.skills[SKILL_ART_IMP].defs[0].count) {
@@ -4640,6 +4697,8 @@ int main(int argc, char **argv) {
             souls.bone_ids = objects.skills[SKILL_ART_BONE].static_ids;
             souls.bone_count = objects.skills[SKILL_ART_BONE].static_count;
             update_skills(&souls);
+            guardian_cam_x = cam_x;
+            guardian_cam_y = cam_y;
             update_guardian(&guardian);
             ++step;
             if (has_active_save) active_save.play_frames++;
@@ -4699,10 +4758,11 @@ int main(int argc, char **argv) {
                     if (combat.effects[weapon_entity.effects[k].kind])
                         room.effects[room.effect_count++] = weapon_entity.effects[k];
             }
-            AosSoulAttack attacks[MAX_SKILLS + AOS_CATOBLEPAS_GASES];
-            AriaSkill *owners[MAX_SKILLS + AOS_CATOBLEPAS_GASES];
+            AosSoulAttack attacks[MAX_SKILLS + GUARDIAN_ATTACKS];
+            AriaSkill *owners[MAX_SKILLS + GUARDIAN_ATTACKS];
             int attack_count = soul_attacks(&souls, souls.bat ? &objects.skills[SKILL_ART_BAT].kind : NULL,
                                             attacks, owners);
+            int guardian_first = attack_count;
             for (int k = guardian_attacks(&guardian, &attacks[attack_count]); k > 0; --k)
                 owners[attack_count++] = NULL;
             aos_enemy_set_soul_attacks(attacks, attack_count);
@@ -4725,6 +4785,16 @@ int main(int argc, char **argv) {
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
+            /* sub_0802F8CC: each touch of the ghost's body throws a spirit
+             * from the contact point. */
+            for (int k = guardian_first; k < attack_count; ++k)
+                if (attacks[k].struck && attacks[k].type == AOS_GHOST_ATTACK_TYPE &&
+                    guardian.routine == GUARDIAN_GHOST_ROUTINE)
+                {
+                    int cx, cy;
+                    aos_enemy_soul_attack_contact(k, &cx, &cy);
+                    aos_ghost_guardian_touch(&guardian.ghost, cx, cy, aos_random);
+                }
             for (int k = 0; k < attack_count; ++k)
                 if (attacks[k].struck && owners[k]) {
                     owners[k]->struck = true;
@@ -4979,6 +5049,33 @@ int main(int argc, char **argv) {
                 SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
                                          guardian.curly.facing_left ? SDL_FLIP_HORIZONTAL
                                                                     : SDL_FLIP_NONE);
+            }
+        }
+        /* The Giant Ghost (translucent, its affine scale + 0x28: drawn
+         * that many times as large about its centre) or the Student Witch,
+         * on Soma with his facing. */
+        if (guardian.core.active && guardian.routine == GUARDIAN_GHOST_ROUTINE &&
+            guardian.core.state && guardian.ghost.scale > 0 &&
+            guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            int a = guardian.ghost.giant ? SKILL_ART_GIANT_GHOST : SKILL_ART_WITCH;
+            int seq = guardian.ghost.giant ? 1 : 0;
+            const AriaFrame *art = &objects.skills[a].frames[seq][guardian.anim.frame];
+            if (art->texture) {
+                int gx = guardian.ghost.x >> 16, gy = guardian.ghost.y >> 16;
+                bool right = !guardian.ghost.facing_left;
+                float x = right ? (float)(gx - art->offset_x) - art->w : (float)(gx + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(gy + art->offset_y - cam_y), art->w,
+                                  art->h};
+                float k = (float)guardian.ghost.scale / 65536.0f;
+                float w = rect.w * k, h = rect.h * k;
+                rect.x += (rect.w - w) / 2;
+                rect.y += (rect.h - h) / 2;
+                rect.w = w;
+                rect.h = h;
+                if (guardian.ghost.giant) SDL_SetTextureAlphaMod(art->texture, 128);
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         right ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+                if (guardian.ghost.giant) SDL_SetTextureAlphaMod(art->texture, 255);
             }
         }
         /* The Imp familiar (blinking while it leaves). */

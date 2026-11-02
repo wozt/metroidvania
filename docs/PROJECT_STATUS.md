@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0712 - The Giant Ghost and Student Witch blue souls
+
+- `Skill_Witch_GiantGhost_Use` (blue souls 5 and 6) is ported in
+  `aos_guardian_ghost`: the guardian grows over Soma, follows him and
+  shrinks away when it ends (sounds 0x97 / 0x8D); its type-7 body only
+  touches, each touch throwing a spirit (0x98, power 30, elements 0x20)
+  at 4.0 from the contact point. The guardian attacks now report their
+  contact point (`aos_enemy_soul_attack_contact`).
+- Their art is exported (`aria_objects` v48). New `aos_guardian_ghost`
+  test; a local capture shows the ghost over Soma and its spirits killing
+  a Tiny Devil. The Giant Ghost becomes the 45th complete monster.
+
 ## Patch 0711 - Giant Ghost rewritten from the native routines
 
 - The Giant Ghost is rewritten from its traced routines: its drift over

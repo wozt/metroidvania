@@ -25,9 +25,18 @@ static bool flag_8e_40;
 static AosSoulAttack *soul_attacks;
 static int soul_attack_count;
 
+enum { SOUL_ATTACK_CONTACTS = 64 };
+static int16_t soul_contact[SOUL_ATTACK_CONTACTS][2];
+
 void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count) {
     soul_attacks = attacks;
     soul_attack_count = attacks ? count : 0;
+}
+
+void aos_enemy_soul_attack_contact(int index, int *x, int *y) {
+    bool ok = index >= 0 && index < SOUL_ATTACK_CONTACTS;
+    *x = ok ? soul_contact[index][0] : 0;
+    *y = ok ? soul_contact[index][1] : 0;
 }
 
 void aos_enemy_set_flag_8e_40(bool set) {
@@ -1295,6 +1304,16 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             attacker = type;
             attack->struck = true;
             attack->target = enemy;
+            {
+                int16_t x1 = attack->rect.x1 > target.x1 ? attack->rect.x1 : target.x1;
+                int16_t x2 = attack->rect.x2 < target.x2 ? attack->rect.x2 : target.x2;
+                int16_t y1 = attack->rect.y1 > target.y1 ? attack->rect.y1 : target.y1;
+                int16_t y2 = attack->rect.y2 < target.y2 ? attack->rect.y2 : target.y2;
+                if (i < SOUL_ATTACK_CONTACTS) {
+                    soul_contact[i][0] = (int16_t)((x1 + x2) / 2);
+                    soul_contact[i][1] = (int16_t)((y1 + y2) / 2);
+                }
+            }
             power = attack->power;
             elements = attack->elements;
         }

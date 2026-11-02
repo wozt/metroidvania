@@ -243,6 +243,10 @@ static const EntitySpec entities[] = {
     /* SkillCagnazzoUse's own resource (graphics 0x081DC144, palette row 3):
      * Cagnazzo's guardian (looping sequence 0). */
     ENTITY("skill_cagnazzo", 0x081DC144, 0x0820B4E4, 0, 0x082361A4),
+    /* Skill_Witch_GiantGhost_Use's own resources (palette row 3): the
+     * Giant Ghost (looping sequence 1) and the Student Witch (sequence 0). */
+    ENTITY("skill_giant_ghost", 0x081E0968, 0x0820B628, 0, 0x08237464),
+    ENTITY("skill_witch", 0x081DE958, 0x0820B598, 0, 0x0823693C),
     /* sub_0802FDE4's own resource (graphics 0x081E0164, palette row 3):
      * the Buer soul's flames (looping sequence 0). */
     ENTITY("skill_buer", 0x081E0164, 0x0820B604, 0, 0x08237304),

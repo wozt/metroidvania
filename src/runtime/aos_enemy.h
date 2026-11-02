@@ -371,6 +371,9 @@ void aos_enemy_set_no_target(bool none);
 /* The soul attacks the next enemy updates test after the weapon (type 5
  * collisions); NULL for none. */
 void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count);
+/* sub_0806B658: the centre of the overlap of soul attack `index` (as set
+ * by aos_enemy_set_soul_attacks) with the last hurtbox that took it. */
+void aos_enemy_soul_attack_contact(int index, int *x, int *y);
 /* sub_0806CAF8 for another entity carried in an AosEnemy (x, y, vx, vy,
  * ax, ay, mirrored, ground): one walker step at `speed` toward its facing
  * with the probe table; mode bit 0 (face the player) is not available

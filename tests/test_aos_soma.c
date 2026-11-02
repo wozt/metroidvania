@@ -654,6 +654,19 @@ static void soul_tests(void) {
     soma.cast = scripted_cast;
     frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
     assert(soma.state == 2 && soma.anim.id == 49);
+    /* During an attack (state 1) Up and a new attack press cast only with
+     * Dead Warrior's 0x13260 bit 0x800000 (_0801C494). */
+    cast_pose_result = 0;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.cast = scripted_cast;
+    frame(&soma, 0, AOS_KEY_ATTACK);
+    assert(soma.state == 1);
+    cast_calls = 0;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(cast_calls == 0 && soma.state == 1);
+    soma.abilities |= AOS_ABILITY_ATTACK_CAST;
+    frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
+    assert(cast_calls == 1 && soma.state == 2 && (soma.flags & 0x100) && soma.anim.id == 22);
 }
 
 int main(void) {

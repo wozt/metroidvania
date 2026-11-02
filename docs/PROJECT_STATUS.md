@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0698 - Dead Warrior soul and sounds
+
+- With Dead Warrior's yellow soul (0x13260 bit 0x800000), Soma's attack
+  state now casts the red soul on Up and a new attack press (`_0801C494`),
+  as state 0 does.
+- Dead Warrior plays 0x7D every 25 frames of its walk on screen, 0x127 as
+  it brakes and 0x6E every eighth frame of its death.
+- New assertions in `tests/test_aos_soma.c` and `tests/test_aos_enemy.c`
+  cover them. Dead Warrior becomes the 33rd complete monster. Zero Mission
+  is unchanged.
+
 ## Patch 0697 - Lightning Doll soul and doll sounds
 
 - `SkillLightningDollUse` (red 45; resource 9 exported as

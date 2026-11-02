@@ -5368,11 +5368,16 @@ static void warrior_tests(void) {
     /* It walks with + 0x18 rising by 0x4000 to 2.0; past + 0x1C 100 it
      * brakes (animation 2). */
     int frames = 0;
+    aos_audio_clear();
     while (w.step != 3 && frames < 200) {
         aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         ++frames;
     }
     assert(w.step == 3 && frames == 51 && w.anim.id == 2 && w.walk_timer == 0x20000);
+    /* sub_080B72F8: 0x7D at + 0x0D 0, 25 and 50 on screen, 0x127 as it
+     * brakes. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x7D) == 3 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x127) == 1);
     /* Braking: dust every 4 frames, then it turns around and walks again. */
     bool mirrored = w.mirrored;
     int dust = 0;
@@ -5401,6 +5406,7 @@ static void warrior_tests(void) {
     hit = aos_enemy_update(&w, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0, always_zero);
     assert(w.anim.id == 3 && w.vy == -0x28000 + 0x2000 && w.ay == 0x2000);
     int fires = 0, dying = 1;
+    aos_audio_clear();
     while (!w.removed && dying < 200) {
         hit = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
         for (int i = 0; i < hit.effect_count; ++i)
@@ -5410,6 +5416,8 @@ static void warrior_tests(void) {
     /* Deleted on the update after its 60-tick death animation ends (or off
      * screen first). */
     assert(w.removed && fires >= 10);
+    /* sub_080B747C: 0x6E every eighth frame of the fall. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == (dying + 1) / 8);
 }
 
 static void knight_tests(void) {

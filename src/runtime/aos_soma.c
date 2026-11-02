@@ -715,6 +715,9 @@ static void attack_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
     }
     apply_friction(soma);
+    /* _0801C494: with 0x13260 bit 0x800000 (Dead Warrior's soul) a red
+     * soul can be cast during an attack, as in state 0. */
+    if (soma->abilities & AOS_ABILITY_ATTACK_CAST) soul_start(soma, held, pressed);
     if ((soma->weapon.flags & AOS_WEAPON_LANDING_ATTACK) && (soma->flags & AOS_FLAG_AIR_ATTACK) &&
         (soma->flags & AOS_FLAG_GROUNDED)) {
         play_keeping_frame(soma, soma->weapon.anims[0], STAND);

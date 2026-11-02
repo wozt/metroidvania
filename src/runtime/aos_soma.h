@@ -66,7 +66,8 @@ enum {
     AOS_ABILITY_FAST_WALK = 0x400,
     AOS_ABILITY_ZERO_FALL = 0x800,     /* sub_0801938C zeroes vy */
     AOS_ABILITY_FLOOR_MODE = 0x4000,   /* floor walks use collision mode 1 */
-    AOS_ABILITY_SPECIAL_WALK = 0x8000  /* clears 0x800000, damps bit-3 entry */
+    AOS_ABILITY_SPECIAL_WALK = 0x8000, /* clears 0x800000, damps bit-3 entry */
+    AOS_ABILITY_ATTACK_CAST = 0x800000 /* Dead Warrior: red souls during attacks */
 };
 
 /* Wall probe Y offsets (entity + 0x18 points to count, offsets). */

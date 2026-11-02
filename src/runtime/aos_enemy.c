@@ -2934,8 +2934,8 @@ static bool player_in_centred(const AosEnemy *e, const AosSoma *soma, int w, int
  * frames (sub_08045CEC animation 4 or 5, row 6, vx 0.5 backward), then
  * turns around and walks again when the animation ends. */
 static void warrior_walk(AosEnemy *w, const AosSoma *soma, const AosCollision *layer,
-                         const AosEnemyKind *kind, uint32_t (*random)(void),
-                         AosHitReport *report) {
+                         const AosEnemyKind *kind, int cam_x, int cam_y,
+                         uint32_t (*random)(void), AosHitReport *report) {
     ground_walk(w, soma, layer, &kind->probes, w->walk_timer, 4);
     switch (w->step) {
     case 0:
@@ -2949,17 +2949,25 @@ static void warrior_walk(AosEnemy *w, const AosSoma *soma, const AosCollision *l
             w->step = 2;
         }
         /* fall through */
-    case 2:
+    case 2: {
+        /* Sound 0x7D every 25 frames within sub_08068AD4(e, -64, -64,
+         * 0x170, 0x120). */
+        int sx = (w->x >> 16) - cam_x, sy = (w->y >> 16) - cam_y;
+        if (w->timer % 25 == 0 && (uint16_t)(sx + 0x40) <= 0x170 &&
+            (uint16_t)(sy + 0x40) <= 0x120)
+            aos_audio_play_song(0x7D);
         w->timer++;
         if (w->walk_timer <= 0x1FFFF) w->walk_timer += 0x4000;
         w->shot++;
         if (w->anim.frame == 1 && w->anim.tick == 1) w->substep++;
         if (w->shot > 0x64) {
+            aos_audio_play_song(0x127);
             play_loop(w, kind->anims, 2, false);
             w->step = 3;
             w->timer = 0;
         }
         return;
+    }
     case 3:
         if (w->walk_timer > 0) w->walk_timer -= 0x1000;
         if ((++w->timer & 3) == 0) {
@@ -2997,6 +3005,7 @@ static bool warrior_die(AosEnemy *w, const AosEnemyKind *kind, int cam_x, int ca
         w->timer = 0;
     }
     w->timer++;
+    if ((w->timer & 7) == 0) aos_audio_play_song(0x6E);
     if ((w->timer & 3) == 0) {
         int32_t x = w->x + (int32_t)((uint32_t)random_centred(random, 16) << 16);
         int32_t y = w->y + (int32_t)((uint32_t)(random_centred(random, 16) - 0x20) << 16);
@@ -3020,7 +3029,7 @@ static AosHitReport warrior_update(AosEnemy *w, AosSoma *soma, const AosCollisio
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
     w->hidden = sy < -16;
     switch (w->state) {
-    case 0: warrior_walk(w, soma, layer, kind, random, &effects); break;
+    case 0: warrior_walk(w, soma, layer, kind, cam_x, cam_y, random, &effects); break;
     case 1:
         if (warrior_die(w, kind, cam_x, cam_y, random, &effects)) {
             w->removed = true;

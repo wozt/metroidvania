@@ -123,7 +123,9 @@ static const EntitySpec entities[] = {
     ENTITY("merman", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4),
     STATIC("peeping_eye", 0x081CBFEC, 0x0820A86C, 0, 0x0821D7B4, 6,
            11, 12, 13, 14, 15, 16),
-    ENTITY("killer_fish", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4),
+    /* The Killer Fish (the Merman's descriptor): its bubbles show sprite
+     * frames 15 and 16, bursting one frame lower (14). */
+    STATIC("killer_fish", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4, 3, 14, 15, 16),
     ENTITY("bone_pillar", 0x081E41D4, 0x0820B8E8, 0, 0x08242F8C),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
     /* Buer sub_0806CAF8: the shared 0x08528B64 s16 probe descriptor

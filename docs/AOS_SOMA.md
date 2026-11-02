@@ -1040,6 +1040,20 @@ seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
 
+Killer Fish (enemy 0x07, `EnemyKillerFishCreate` / `EnemyKillerFishUpdate`)
+uses the Merman's sheet. Out of water it lies upside down on the floor
+(step 0x63) and only dies; in water it creates `+ 0x32` fry. Inside screen
+margin 4 it swims (`sub_0806FA50`) at 0.25 a frame on the swimmer walker
+`sub_08069CF4`, bobbing by 0x400, turning after 61 frames at one x, kept
+under the surface by `sub_0806E5FC`, with a bubble every 120-239 frames.
+A target in water within 80 pixels starts the attack (`sub_0806FCA4`): it
+faces it, spits four bubbles after 40 frames and darts at 2.0 at a point
+above it. Dead, it floats up to the surface (`sub_0806FF70`, sound 0x6C),
+bobs there with bursting bubbles and blinks out. Its fry (`sub_08070218`)
+follow it, start a five-dash frenzy at a target in water inside their 160 x
+64 box, and burst into a bubble when struck. Its bubbles (`sub_080708B0`,
+`sub_0807091C`) show the exported sprite frames 14-16.
+
 Rock Armor (enemy 0x12, `EnemyRockArmorCreate` / `EnemyRockArmorUpdate`)
 shares the Axe Armor's shape. Inside the `sub_0806CC20` window it walks with
 the probe walker (`sub_080B2978`, probes `0x0852872C`, mode 0x14, 0.125 +

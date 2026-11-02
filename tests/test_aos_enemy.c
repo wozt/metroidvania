@@ -4850,6 +4850,175 @@ static void rock_armor_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 8);
 }
 
+static void killer_fish_tests(void) {
+    aos_audio_clear();
+    /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int y = 10; y < 20; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x08;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    static const uint8_t fry_ticks[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static const uint8_t swim_ticks[6] = {12, 12, 12, 12, 12, 12};
+    static const uint8_t spit_ticks[2] = {8, 30};
+    const AosAnimDef defs[3] = {{8, fry_ticks}, {6, swim_ticks}, {2, spit_ticks}};
+    const AosAnimSet anims = {defs, 3};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-12, -8, 24, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    const AosEnemyStats stats = {80, 24, 4, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(40), NULL);
+
+    /* Out of water: upside down on the floor, 8 pixels up, inert. */
+    AosEnemy f;
+    assert(aos_enemy_create(&f, AOS_ENEMY_KILLER_FISH, 100, 40, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(f.step == 0x63 && f.vflip && (f.y >> 16) < 160 && f.state == 0 && f.anim.id == 1);
+    AosHitReport none = aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                         always_zero);
+    assert(none.child_count == 0 && f.step == 0x63);
+
+    /* In water with + 0x32 = 3: three fry; it swims at 0.25 (facing left). */
+    assert(aos_enemy_create(&f, AOS_ENEMY_KILLER_FISH, 100, 120, 0, 3, &soma, &layer, &kind,
+                            &stats));
+    f.mirrored = false;
+    assert(f.step == 0);
+    AosHitReport first = aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(first.child_count == 3 && first.children[0].role == AOS_ROLE_FRY &&
+           first.children[0].stats.contact == 6 && f.step == 1 && f.vx == -0x4000 &&
+           f.ay == 0x400);
+    int32_t x0 = f.x;
+    /* The bubble countdown starts at 0: a bubble 16 pixels ahead (frame 16),
+     * then 120 + r % 120 frames. */
+    AosHitReport bubbles = aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+    assert(f.x == x0 - 0x4000 && bubbles.child_count == 1 &&
+           bubbles.children[0].role == AOS_ROLE_BUBBLE &&
+           bubbles.children[0].static_frame == 16 && bubbles.children[0].x == f.x - 0x100000 &&
+           f.fish_bubble == 0x78);
+    /* Its bob: ay flips at +/- 0.25. */
+    int frames = 0;
+    while (f.ay > 0 && frames < 100) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(f.ay == -0x400 && f.vy > 0x4000 && f.state == 0);
+
+    /* Soma in water within 80 pixels: the attack. It faces him, picks a
+     * point 16 above him (within 4), spits after 40 frames four bubbles (the
+     * first frame 15) and darts at the point at 2.0. */
+    soma.x = f.x + AOS_FIXED(60);
+    soma.y = f.y;
+    aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(f.state == 1 && f.step == 0);
+    aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(f.mirrored && f.vx == 0 && f.fish_tx == (soma.x >> 16) - 4 &&
+           f.fish_ty == (soma.y >> 16) - 16 && f.step == 1);
+    frames = 0;
+    while (f.step == 1 && frames < 100) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(frames == 41 && f.step == 2 && f.anim.id == 2);
+    AosHitReport spit = {0};
+    while (f.step == 2 && frames < 200)
+        spit = aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                always_zero);
+    assert(f.step == 3 && spit.child_count == 4 && spit.children[0].static_frame == 15 &&
+           spit.children[1].static_frame == 16 && spit.children[0].vx == 0x30000 &&
+           spit.children[0].vy == -0x6000 && spit.children[1].vy == -0x4000);
+    aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(f.vx > 0x10000 && f.vx <= 0x20000);
+    frames = 0;
+    while (f.state == 1 && frames < 200) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(f.state == 0 && f.anim.id == 1);
+
+    /* A bubble rises at its vy until its head leaves the water. */
+    AosEnemy b = bubbles.children[0];
+    frames = 0;
+    while (!b.removed && frames < 400) {
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(b.removed && (b.y >> 16) - 2 < 80 && (b.y >> 16) - 2 >= 78);
+    /* A bursting bubble shows the lower frame from its sixth update and goes
+     * after twelve. */
+    AosEnemy pop = {0};
+    pop.id = AOS_ENEMY_KILLER_FISH;
+    pop.role = AOS_ROLE_BUBBLE_POP;
+    pop.static_frame = 15;
+    pop.x = pop.y = AOS_FIXED(120);
+    for (frames = 0; !pop.removed && frames < 20; ++frames)
+        aos_enemy_update(&pop, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(frames == 12 && pop.static_frame == 14 && pop.y == AOS_FIXED(120) - 12 * 0x4000);
+
+    /* A fry follows its fish (a point within 8 pixels of it, 2.0 slowed by
+     * 1/20); Soma in water in its 160 x 64 box starts the frenzy. */
+    AosEnemy fry = first.children[0];
+    fry.parent = &f;
+    soma.x = AOS_FIXED(600);
+    aos_enemy_update(&fry, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fry.state == 1 && fry.fish_count == 0x14 && fry.anim.id == 0);
+    soma.x = fry.x + AOS_FIXED(40);
+    soma.y = fry.y;
+    aos_enemy_update(&fry, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fry.state == 3);
+    aos_enemy_update(&fry, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(fry.step == 1 && fry.timer == 1 && fry.vx > 0 && fry.mirrored);
+    /* Five more dashes, then back to its fish (state 4). */
+    frames = 0;
+    while (fry.state == 3 && frames < 400) {
+        aos_enemy_update(&fry, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(fry.state == 4);
+    /* Struck: no damage, a bursting bubble, 40 frames of blinking. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    fry.x = soma.x;
+    fry.y = soma.y - AOS_FIXED(16);
+    AosHitReport hit = aos_enemy_update(&fry, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0,
+                                        0, always_zero);
+    assert(hit.enemy_hit && !hit.killed && fry.state == 2 && hit.child_count == 1 &&
+           hit.children[0].role == AOS_ROLE_BUBBLE_POP);
+    for (frames = 0; !fry.removed && frames < 60; ++frames)
+        aos_enemy_update(&fry, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(frames == 0x28);
+
+    /* A lethal blow: the fish floats up dead (sound 0x6C at the surface),
+     * bobs there and is gone after 70 more frames. */
+    f.state = 0;
+    f.step = 1;
+    f.hit_flash = 0;
+    f.x = soma.x;
+    f.y = soma.y - AOS_FIXED(8);
+    aos_audio_clear();
+    hit = aos_enemy_update(&f, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
+                           always_zero);
+    assert(hit.killed && f.state == 2 && f.timer == 0x28);
+    frames = 0;
+    while (!f.removed && frames < 400) {
+        aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(f.removed && f.vflip && aos_audio_requested(AOS_AUDIO_START_SONG, 0x6C) == 1);
+}
+
 static uint32_t always_one(void) { return 1; }
 
 static void armor_tests(void) {
@@ -7491,6 +7660,7 @@ int main(void) {
     soldier_tests();
     armor_tests();
     rock_armor_tests();
+    killer_fish_tests();
     archer_tests();
     needles_tests();
     officer_tests();

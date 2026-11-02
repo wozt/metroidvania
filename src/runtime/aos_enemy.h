@@ -180,7 +180,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BUER_PROJECTILE = 31, AOS_ROLE_SKELETON_HEAD = 32,
        AOS_ROLE_SKELETON_HELD = 33, AOS_ROLE_WINGED_BONE = 34,
        AOS_ROLE_WINGED_PIECE = 35, AOS_ROLE_ROCK = 36,
-       AOS_ROLE_ROCK_PIECE = 37 };
+       AOS_ROLE_ROCK_PIECE = 37, AOS_ROLE_FRY = 38, AOS_ROLE_BUBBLE = 39,
+       AOS_ROLE_BUBBLE_POP = 40 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -265,6 +266,13 @@ typedef struct AosEnemy {
      * in hand, 3 the alternate throw, 5 the head's laugh), + 0x1E (the
      * affine angle its projectile turns by), and a projectile's affine use
      * (+ 0x59 bit 4) and head (+ 0x18). */
+    /* Killer Fish: + 0x14 (frames at one x; a fry's retarget countdown),
+     * + 0x18 (that x), + 0x1A (bubble countdown), + 0x1C / + 0x1E (the
+     * attack point); a fry's + 0x18 (its fish gone), + 0x19 (its fish dead)
+     * and + 0x1C (it touched Soma). */
+    int32_t fish_count;
+    int16_t fish_last_x, fish_bubble, fish_tx, fish_ty;
+    bool fry_parent_gone, fry_parent_dead, fry_touched;
     uint8_t skel_flags;
     uint16_t skel_spin;
     bool spinning;

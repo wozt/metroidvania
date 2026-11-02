@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 754 | 2819 |
+| Castlevania: Aria of Sorrow | 767 | 2806 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1567,15 +1567,15 @@ Known divergences: The palette bits, the tracking list of sub_08021924 and sub_0
 Next action: Compare against an emulator.
 Evidence: in game: `aria area_00_room_002 (--spawn 120 207 --hp 9999): both Killer Dolls render and run their wake/flight state machines over 300 frames`.
 
-[~] **`aos.enemies.killer_fish` — Killer Fish.** The native Merman sheet and frame descriptor are reused with the Killer Fish identity, inert state and a bounded swimming loop. Added solid-wall collision guard to the partial swim controller; the water-height probe, multi-fish producer, attacks and sound are still missing.
+[+] **`aos.enemies.killer_fish` — Killer Fish.** EnemyKillerFishUpdate is ported from its traced routines: outside screen margin 4 inactive, the swim (sub_0806FA50: 0.25 a frame, bob by 0x400, turn after 61 frames at one x, pushed under the surface by sub_0806E5FC, a bubble every 120-239 frames) on the swimmer walker sub_08069CF4, the attack at a target in water within 80 pixels (sub_0806FCA4: 40 frames, four spat bubbles, a 2.0 dart at a point above it, a drift), the hit callback (sub_080700CC) and the death floating up dead to the surface with 0x6C (sub_0806FF70), or the generic death for a fish lying out of water, its + 0x32 fry (sub_08070168 / sub_08070218: following, a five-dash frenzy at a target in water, bursting when struck by sub_08070A08) and its rising and bursting bubbles (sub_080708B0 on sub_08069B70, sub_0807091C). The bubble frames 14-16 are exported (aria_objects v45).
 
-Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_08070168`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`.  
+Native evidence: `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishCreate`, `aos:asm:asm/code/code_08060B98.s:EnemyKillerFishUpdate`, `aos:asm:asm/code/code_08060B98.s:sub_080693E4`, `aos:asm:asm/code/code_08060B98.s:sub_08069B70`, `aos:asm:asm/code/code_08060B98.s:sub_08069CF4`, `aos:asm:asm/code/code_08060B98.s:sub_0806A224`, `aos:asm:asm/code/code_08060B98.s:sub_0806E5FC`, `aos:asm:asm/code/code_08060B98.s:sub_0806FA50`, `aos:asm:asm/code/code_08060B98.s:sub_0806FCA4`, `aos:asm:asm/code/code_08060B98.s:sub_0806FF70`, `aos:asm:asm/code/code_08060B98.s:sub_080700CC`, `aos:asm:asm/code/code_08060B98.s:sub_08070168`, `aos:asm:asm/code/code_08060B98.s:sub_08070218`, `aos:asm:asm/code/code_08060B98.s:sub_08070774`, `aos:asm:asm/code/code_08060B98.s:sub_080707BC`, `aos:asm:asm/code/code_08060B98.s:sub_080708B0`, `aos:asm:asm/code/code_08060B98.s:sub_0807091C`, `aos:asm:asm/code/code_08060B98.s:sub_08070988`, `aos:asm:asm/code/code_080709D8.s:sub_080709D8`, `aos:asm:asm/code/code_080709D8.s:sub_08070A08`, `aos:asm:asm/code/code_080709D8.s:sub_08070A30`, `aos:asm:asm/code/code_080709D8.s:sub_08070AC4`, `aos:asm:asm/code/code_080709D8.s:sub_08070B10`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.merman`.  
-Known divergences: The water-height probe, multi-fish producer, attack phases and sounds are not ported.  
-Next action: Port the water probe and linked fish producer.
-Evidence: in game: `aria area_00_room_016: Killer Fish record at x 384, y 184`.
+Known divergences: The fry and the bubbles are created by the first update rather than at creation. The box walker sub_0806A224 keeps only the flags the fry reads (walls, ceiling, floor, the top-left water corner). The fry's parent check uses the parent pointer instead of + 0x37. The global pause gEwramData + 0x4BE, the death palette bits and the hit spark sub_08042B8C are not ported.  
+Next action: Compare the swim, the attack and the fry frenzy against an emulator.
+Evidence: in game: `aria area_00_room_016 (--spawn 340 184 --hp 9999): the Killer Fish swims, attacks Soma in the water and blows bubbles`.
 
 [+] **`aos.enemies.lightning_doll` — Lightning Doll.** The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported. Its spark loop 0x75 is held (sub_08013D60) when the charge starts and again every 16 frames of the spark countdown above 0x20, and released (sub_08013E18) when the attack ends, while it flashes from a blow and at death; sub_080C8FBC then plays 0x6E, and each floor bounce of piece 1 plays 0x153 (sub_080C9284); all unit-tested. sub_080C997C's step-0 path (0x6E as well) is not reached by the code read.
 

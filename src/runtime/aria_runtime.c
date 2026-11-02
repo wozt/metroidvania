@@ -2164,6 +2164,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_BEAM_FLASH ||
                  e->enemy.role == AOS_ROLE_NEMESIS_HELPER ||
                  e->enemy.role == AOS_ROLE_NEMESIS_EFFECT ||
+                 e->enemy.role == AOS_ROLE_FRY ||
                  e->enemy.role == AOS_ROLE_IMP_HELPER ||
                  e->enemy.role == AOS_ROLE_RIPPER_BLADE ||
                  e->enemy.role == AOS_ROLE_PEEPING_SEGMENT ||
@@ -2285,6 +2286,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_DOLL_PIECE ||
                                        hit.children[c].role == AOS_ROLE_NEMESIS_HELPER ||
                                        hit.children[c].role == AOS_ROLE_NEMESIS_EFFECT ||
+                                       hit.children[c].role == AOS_ROLE_FRY ||
                                        hit.children[c].role == AOS_ROLE_IMP_HELPER ||
                                        hit.children[c].role == AOS_ROLE_RIPPER_BLADE ||
                                        hit.children[c].role == AOS_ROLE_PEEPING_SEGMENT ||

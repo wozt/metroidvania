@@ -772,12 +772,9 @@ aos:asm:asm/code/code_08060B98.s:sub_08069048	sub_08069048	enemies	referrers			a
 aos:asm:asm/code/code_08060B98.s:sub_08069134	sub_08069134	enemies	referrers			asm_function	0x08069134	asm/code/code_08060B98.s	17021	0	7
 aos:asm:asm/code/code_08060B98.s:sub_08069200	sub_08069200	unclassified		technical	exclusive_callees	asm_function	0x08069200	asm/code/code_08060B98.s	17125	0	8
 aos:asm:asm/code/code_08060B98.s:sub_080692E0	sub_080692E0	unclassified		technical	exclusive_callees	asm_function	0x080692E0	asm/code/code_08060B98.s	17239	0	7
-aos:asm:asm/code/code_08060B98.s:sub_080693E4	sub_080693E4	enemies	referrers			asm_function	0x080693E4	asm/code/code_08060B98.s	17373	4	1
 aos:asm:asm/code/code_08060B98.s:sub_080695B4	sub_080695B4	enemies	referrers			asm_function	0x080695B4	asm/code/code_08060B98.s	17619	3	4
-aos:asm:asm/code/code_08060B98.s:sub_08069B70	sub_08069B70	enemies	referrers			asm_function	0x08069B70	asm/code/code_08060B98.s	18378	1	7
 aos:asm:asm/code/code_08060B98.s:sub_08069F18	sub_08069F18	enemies	referrers			asm_function	0x08069F18	asm/code/code_08060B98.s	18863	2	7
 aos:asm:asm/code/code_08060B98.s:sub_0806A0B4	sub_0806A0B4	enemies	referrers			asm_function	0x0806A0B4	asm/code/code_08060B98.s	19075	1	7
-aos:asm:asm/code/code_08060B98.s:sub_0806A224	sub_0806A224	unclassified				asm_function	0x0806A224	asm/code/code_08060B98.s	19263	3	8
 aos:asm:asm/code/code_08060B98.s:sub_0806A6C4	sub_0806A6C4	enemies	referrers			asm_function	0x0806A6C4	asm/code/code_08060B98.s	19859	2	9
 aos:asm:asm/code/code_08060B98.s:sub_0806ADBC	sub_0806ADBC	enemies	referrers			asm_function	0x0806ADBC	asm/code/code_08060B98.s	20762	7	0
 aos:asm:asm/code/code_08060B98.s:sub_0806B04C	sub_0806B04C	enemies	referrers			asm_function	0x0806B04C	asm/code/code_08060B98.s	21104	98	0
@@ -867,16 +864,6 @@ aos:asm:asm/code/code_08060B98.s:sub_0806F6D4	sub_0806F6D4	enemies	referrers			a
 aos:asm:asm/code/code_08060B98.s:sub_0806F71C	sub_0806F71C	enemies	referrers			asm_function	0x0806F71C	asm/code/code_08060B98.s	30468	1	2
 aos:asm:asm/code/code_08060B98.s:sub_0806F750	sub_0806F750	enemies	referrers			asm_function	0x0806F750	asm/code/code_08060B98.s	30493	0	2
 aos:asm:asm/code/code_08060B98.s:sub_0806F818	sub_0806F818	enemies	referrers			asm_function	0x0806F818	asm/code/code_08060B98.s	30590	1	3
-aos:asm:asm/code/code_08060B98.s:sub_0806FA50	sub_0806FA50	enemies	referrers			asm_function	0x0806FA50	asm/code/code_08060B98.s	30871	1	8
-aos:asm:asm/code/code_08060B98.s:sub_0806FCA4	sub_0806FCA4	enemies	referrers			asm_function	0x0806FCA4	asm/code/code_08060B98.s	31173	1	11
-aos:asm:asm/code/code_08060B98.s:sub_0806FF70	sub_0806FF70	enemies	referrers			asm_function	0x0806FF70	asm/code/code_08060B98.s	31513	1	7
-aos:asm:asm/code/code_08060B98.s:sub_080700CC	sub_080700CC	enemies	referrers			asm_function	0x080700CC	asm/code/code_08060B98.s	31685	0	6
-aos:asm:asm/code/code_08060B98.s:sub_08070218	sub_08070218	enemies	referrers			asm_function	0x08070218	asm/code/code_08060B98.s	31853	0	18
-aos:asm:asm/code/code_08060B98.s:sub_08070774	sub_08070774	enemies	referrers			asm_function	0x08070774	asm/code/code_08060B98.s	32535	1	3
-aos:asm:asm/code/code_08060B98.s:sub_080707BC	sub_080707BC	enemies	referrers			asm_function	0x080707BC	asm/code/code_08060B98.s	32569	2	6
-aos:asm:asm/code/code_08060B98.s:sub_080708B0	sub_080708B0	enemies	referrers			asm_function	0x080708B0	asm/code/code_08060B98.s	32685	0	3
-aos:asm:asm/code/code_08060B98.s:sub_0807091C	sub_0807091C	enemies	referrers			asm_function	0x0807091C	asm/code/code_08060B98.s	32743	0	2
-aos:asm:asm/code/code_08060B98.s:sub_08070988	sub_08070988	enemies	referrers			asm_function	0x08070988	asm/code/code_08060B98.s	32804	1	4
 aos:asm:asm/code/code_080709D8.s:EnemyAluraUneCreate	EnemyAluraUneCreate	enemies	name			asm_function		asm/code/code_080709D8.s	23434	0	11
 aos:asm:asm/code/code_080709D8.s:EnemyAluraUneUpdate	EnemyAluraUneUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	25338	0	10
 aos:asm:asm/code/code_080709D8.s:EnemyArachneCreate	EnemyArachneCreate	enemies	name			asm_function		asm/code/code_080709D8.s	18453	0	11

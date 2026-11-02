@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0707 - Killer Fish AI from the native routines
+
+- Killer Fish's AI is ported from its traced routines, replacing the old
+  bounded swim:
+  - the swim with its bob, turn and surface push (`sub_0806FA50`, the
+    swimmer walker `sub_08069CF4`, `sub_0806E5FC`);
+  - the attack at a target in water (`sub_0806FCA4`): four spat bubbles
+    and a dart;
+  - the death floating up to the surface (`sub_0806FF70`, 0x6C), or the
+    generic death for a fish lying out of water;
+  - its fry (`sub_08070218`: following, frenzy, bursting when struck) and
+    its bubbles (`sub_080708B0`, `sub_0807091C`).
+- The bubble frames 14-16 are exported (`aria_objects` v45).
+- New `killer_fish_tests`; a local capture of area 0 room 16 shows it
+  swimming, attacking and blowing bubbles. It becomes the 42nd complete
+  monster. Zero Mission is unchanged.
+
 ## Patch 0706 - Rock Armor AI from the native routines
 
 - Rock Armor's AI is ported from its traced routines, replacing the old

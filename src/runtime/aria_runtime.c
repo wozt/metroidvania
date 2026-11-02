@@ -34,6 +34,7 @@
 #include "aos_skill_merman.h"
 #include "aos_skill_needles.h"
 #include "aos_guardian_imp.h"
+#include "aos_skill_lightning.h"
 #include "aos_skill_ripper.h"
 #include "aos_skill_millione.h"
 #include "aos_skill_shot.h"
@@ -222,7 +223,8 @@ static int enemy_bank(const AosEnemy *enemy) {
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
-       SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP, SKILL_ARTS };
+       SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
+       SKILL_ART_LIGHTNING, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -231,7 +233,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_ripper", "skill_killer_fish",
                                                          "skill_fish_head",
                                                          "skill_cagnazzo", "skill_buer",
-                                                         "skill_catoblepas", "skill_imp"};
+                                                         "skill_catoblepas", "skill_imp",
+                                                         "skill_lightning"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -680,7 +683,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
-       SKILL_KILLER_FISH, SKILL_GLADIATOR };
+       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING };
 
 typedef struct {
     bool alive, started;
@@ -713,6 +716,7 @@ typedef struct {
     AosFishHeadSoul fish_head; /* SKILL_FISH_HEAD */
     AosKillerFishSoul killer_fish; /* SKILL_KILLER_FISH */
     AosGladiatorSoul gladiator; /* SKILL_GLADIATOR */
+    AosLightning lightning; /* SKILL_LIGHTNING */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -742,6 +746,7 @@ typedef struct {
 #define SKILL_FISH_HEAD_ROUTINE 0x0802B351u
 #define SKILL_KILLER_FISH_ROUTINE 0x08027C59u
 #define SKILL_GLADIATOR_ROUTINE 0x0802B4C9u
+#define SKILL_LIGHTNING_ROUTINE 0x080277B1u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -759,6 +764,7 @@ typedef struct {
     const AosAnimSet *fish_head;    /* resource 17, sequence 0 */
     const AosAnimSet *killer_fish;  /* resource 11, sequences 0-1 */
     const AosAnimSet *gladiator;    /* resource 24, sequence/frame 0 */
+    const AosAnimSet *lightning;    /* resource 9, sequence 0 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
     int bone_count;
@@ -854,6 +860,7 @@ static int cast_red_soul(void *context) {
                          static_index(souls->shared_ids, souls->shared_count, 3) >= 0
                    ? SKILL_SIREN
                : routine == SKILL_SKULL_ROUTINE && souls->skull ? SKILL_SKULL
+               : routine == SKILL_LIGHTNING_ROUTINE && souls->lightning ? SKILL_LIGHTNING
                : routine == SKILL_VALKYRIE_ROUTINE && souls->valkyrie ? SKILL_VALKYRIE
                : routine == SKILL_NEEDLES_ROUTINE && souls->needles ? SKILL_NEEDLES
                : routine == SKILL_RIPPER_ROUTINE && souls->ripper && record->parameter < 2
@@ -922,6 +929,12 @@ static int cast_red_soul(void *context) {
     } else if (kind == SKILL_SKULL) {
         skill->skull = aos_skull_create(souls->soma->facing_left);
         skill->facing_left = skill->skull.facing_left;
+    } else if (kind == SKILL_LIGHTNING) {
+        skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
+                                                souls->soma->facing_left, aos_random() & 1);
+        skill->x = skill->lightning.x;
+        skill->y = skill->lightning.y;
+        skill->facing_left = skill->lightning.facing_left;
     }
     else if (kind == SKILL_GHOST)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x18);
@@ -1727,6 +1740,28 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->skull.x;
             skill->y = skill->skull.y;
             break;
+        case SKILL_LIGHTNING:
+            /* SkillLightningDollUse: counted with sounds 0x1A9 (sub_080213F4
+             * is false: 0x13220 is never set) and 0xE9 and sequence 0 once
+             * on its first update; deleted when it ends or beyond the
+             * screen margins of entry 2 (sub_0806D128). */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1A9);
+                aos_audio_play_song(0xE9);
+                aos_anim_start(&skill->anim, souls->lightning, 0, false);
+            }
+            aos_lightning_update(&skill->lightning, (uint8_t)skill->anim.frame,
+                                 souls->soma->flags, souls->soma->x, souls->soma->y,
+                                 souls->soma->facing_left);
+            skill->x = skill->lightning.x;
+            skill->y = skill->lightning.y;
+            skill->facing_left = skill->lightning.facing_left;
+            if (aos_anim_step(&skill->anim, souls->lightning) == 3 ||
+                skill_outside(souls, skill, 2))
+                end_skill(souls, skill);
+            break;
         case SKILL_CROW:
             /* sub_SkillBlueCrowUse: counted with sound 0xEE on its first
              * update, looping sequence 2 (sub_08042A54(1, 0x14) is not
@@ -1965,6 +2000,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->valkyrie_kind->attack[0][skill->anim.frame];
+        else if (skill->kind == SKILL_LIGHTNING)
+            box = aos_lightning_box(&skill->lightning);
         else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->skull_kind->attack[0][skill->anim.frame];
@@ -4426,6 +4463,10 @@ int main(int argc, char **argv) {
             const __typeof__(objects.skills[0]) *skull = &objects.skills[SKILL_ART_SKULL];
             souls.skull = objects_ok && skull->loaded && skull->defs[0].count ? &skull->set : NULL;
             souls.skull_kind = souls.skull ? &skull->kind : NULL;
+            const __typeof__(objects.skills[0]) *lightning = &objects.skills[SKILL_ART_LIGHTNING];
+            souls.lightning = objects_ok && lightning->loaded && lightning->defs[0].count
+                                  ? &lightning->set
+                                  : NULL;
             const __typeof__(objects.skills[0]) *crow = &objects.skills[SKILL_ART_CROW];
             souls.crow = objects_ok && crow->set.count > AOS_CROW_SEQUENCE &&
                                  crow->defs[AOS_CROW_SEQUENCE].count
@@ -4682,6 +4723,8 @@ int main(int argc, char **argv) {
                     ? (skill->valkyrie.hidden
                            ? NULL
                            : &objects.skills[SKILL_ART_VALKYRIE].frames[0][skill->anim.frame])
+                : skill->kind == SKILL_LIGHTNING
+                    ? &objects.skills[SKILL_ART_LIGHTNING].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_SKULL
                     ? &objects.skills[SKILL_ART_SKULL].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_CROW
@@ -4729,8 +4772,9 @@ int main(int argc, char **argv) {
             /* The afterimages are semi-transparent objects (+ 0x5A mode 1);
              * the blend weights in force are not traced: half here. */
             if (skill->kind == SKILL_AXE_TRAIL) SDL_SetTextureAlphaMod(art->texture, 128);
-            bool vertical_flip = skill->kind == SKILL_KILLER_FISH &&
-                                 skill->killer_fish.vertical_flip;
+            bool vertical_flip = (skill->kind == SKILL_KILLER_FISH &&
+                                  skill->killer_fish.vertical_flip) ||
+                                 (skill->kind == SKILL_LIGHTNING && skill->lightning.vflip);
             if (vertical_flip)
                 rect.y = (float)(py - art->offset_y - cam_y) - art->h;
             SDL_FlipMode flip = (SDL_FlipMode)(

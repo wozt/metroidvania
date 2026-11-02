@@ -1355,7 +1355,10 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                            enemy->id == AOS_ENEMY_LIGHTNING_DOLL) {
                     /* sub_080C81AC / sub_080C8FBC (sound 0x6E): hidden,
                      * five pieces counted in + 0x1C, state 0xFF until
-                     * they are gone. */
+                     * they are gone; the Lightning Doll first ends its
+                     * spark loop 0x75. */
+                    if (enemy->id == AOS_ENEMY_LIGHTNING_DOLL) aos_audio_release(0x75);
+                    aos_audio_play_song(0x6E);
                     enemy->state = 0xFF;
                     enemy->step = 1;
                     enemy->hidden = true;
@@ -3833,6 +3836,7 @@ static void doll_piece_update(AosEnemy *p, const AosSoma *soma, const AosCollisi
             if (p->vy >= 0) {
                 int depth = aos_floor_depth(layer, x, y - 15, 0, false);
                 if (depth) {
+                    aos_audio_play_song(0x153);
                     p->y += (int32_t)((uint32_t)depth << 16);
                     p->vy = -p->vy / 2;
                     if (abs(p->vy) <= 0x5FFF) p->vx = p->vy = p->ax = p->ay = 0;
@@ -3997,6 +4001,7 @@ static void doll_act(AosEnemy *d, const AosSoma *soma, const AosCollision *layer
             d->vx = d->vy = d->ax = d->ay = 0;
             d->timer = (uint8_t)((random() & 0xFF) + 0x80);
             d->substep = 1;
+            aos_audio_hold(0x75);
             /* fall through */
         case 1:
             if (!d->cycle_done) break;
@@ -4004,9 +4009,12 @@ static void doll_act(AosEnemy *d, const AosSoma *soma, const AosCollision *layer
             d->substep = 2;
             break;
         case 2:
+            /* The spark's loop is held again every 16 frames above 0x20. */
+            if ((d->timer & 0xF) == 0 && d->timer > 0x20) aos_audio_hold(0x75);
             if (d->timer-- == 0) d->substep = 3;
             break;
         case 3:
+            aos_audio_release(0x75);
             d->step = 2;
             d->substep = 0;
             d->attack_wait = (uint16_t)((random() & 0x1F) + 0x10);
@@ -4095,6 +4103,7 @@ static AosHitReport doll_update(AosEnemy *d, AosSoma *soma, const AosCollision *
         return report;
     }
     if (d->hp > 0 && d->hit_flash && d->state != 0xFF) {
+        aos_audio_release(0x75);
         d->hit_flash--;
         report = collide(d, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         aos_combat_tick(&d->combat);

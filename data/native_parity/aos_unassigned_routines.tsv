@@ -60,7 +60,6 @@ aos:asm:asm/code/code_080211F0.s:SkillHeadhunterUse	SkillHeadhunterUse	abilities
 aos:asm:asm/code/code_080211F0.s:SkillKillerMantleUse	SkillKillerMantleUse	abilities	name			asm_function		asm/code/code_080211F0.s	20960	0	12
 aos:asm:asm/code/code_080211F0.s:SkillKyomaDemonUse	SkillKyomaDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	21159	0	11
 aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13
-aos:asm:asm/code/code_080211F0.s:SkillLightningDollUse	SkillLightningDollUse	abilities	name			asm_function		asm/code/code_080211F0.s	12841	0	14
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:SkillMandragoraUse	SkillMandragoraUse	abilities	name			asm_function		asm/code/code_080211F0.s	19459	0	19
 aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	name			asm_function		asm/code/code_080211F0.s	19018	0	20

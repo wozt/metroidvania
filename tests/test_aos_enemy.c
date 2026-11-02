@@ -5995,10 +5995,13 @@ static void killer_doll_tests(void) {
     const AosHitbox blade_box[] = {{20, -40, 20, 30, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
+    aos_audio_clear();
     AosHitReport hit = aos_enemy_update(&dead, &soma, &layer, &kind, &weapon, &blade, 999, 4,
                                         0, 0, always_zero);
     assert(hit.killed && dead.state == 0xFF && dead.hidden && hit.child_count == 5 &&
            dead.spawned_count == 5);
+    /* sub_080C81AC: sound 0x6E. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1);
     for (int i = 0; i < 5; ++i) {
         AosEnemy piece = hit.children[i];
         aos_enemy_update(&piece, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
@@ -6180,8 +6183,11 @@ static void doll_tests(void) {
     soma.y = d.y;
     aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(d.step == 3 && d.substep == 0);
+    aos_audio_clear();
     aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(d.anim.id == 3 && d.vx == 0 && d.vy == 0 && d.timer == 0x80);
+    /* sub_080C8B3C holds the spark loop 0x75 (sub_08013D60). */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x75) == 1);
     frames = 0;
     while (d.anim.id != 4 && frames < 100) {
         aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
@@ -6199,6 +6205,10 @@ static void doll_tests(void) {
         ++frames;
     }
     assert(boxed && sparked && frames == 0x80 + 2 && d.step == 2);
+    /* Held again at 0x80, 0x70 ... 0x30 of the countdown, then released
+     * (sub_08013E18) when the attack ends. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x75) == 7);
+    for (int slot = 0; slot < 4; ++slot) assert(aos_audio_held(slot) != 0x75);
 
     /* Out of flight it sinks a pixel a frame to a cell, rests (animation 5)
      * and rises again. */
@@ -6235,10 +6245,15 @@ static void doll_tests(void) {
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
     d.hit_flash = 0;
+    aos_audio_hold(0x75);
+    aos_audio_clear();
     AosHitReport hit =
         aos_enemy_update(&d, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0, always_zero);
     assert(hit.killed && d.state == 0xFF && d.hidden && hit.child_count == 5 &&
            d.spawned_count == 5);
+    /* sub_080C8FBC: the loop released, then 0x6E. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1);
+    for (int slot = 0; slot < 4; ++slot) assert(aos_audio_held(slot) != 0x75);
     AosEnemy pieces[5];
     for (int i = 0; i < 5; ++i) pieces[i] = hit.children[i];
     /* First update: frame, speed (pointing right: the player is left of
@@ -6252,6 +6267,7 @@ static void doll_tests(void) {
     /* Piece 1 bounces on the floor and comes to rest; the others fall
      * through. Each ends hidden and goes once its glow has cycled. */
     int flames = 0, dust = 0;
+    aos_audio_clear();
     for (int f = 0; f < 200; ++f)
         for (int i = 0; i < 5; ++i) {
             if (pieces[i].removed) continue;
@@ -6268,6 +6284,8 @@ static void doll_tests(void) {
      * below timer 0x30, so four flames and dust puffs. */
     assert((pieces[1].y >> 16) >= 170 && (pieces[1].y >> 16) <= 175 && flames == 4 &&
            dust == 4);
+    /* sub_080C9284: 0x153 at each of piece 1's floor bounces. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x153) >= 1);
     aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(d.removed);
 

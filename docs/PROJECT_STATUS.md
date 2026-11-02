@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0697 - Lightning Doll soul and doll sounds
+
+- `SkillLightningDollUse` (red 45; resource 9 exported as
+  `Enemy/skill_lightning`, `aria_objects` v40) places a bolt 16 pixels
+  ahead of Soma with a random vertical flip and plays 0x1A9 and 0xE9.
+  Its attack box (0, -16, reach x 32) grows by 8 a frame from 16 to 128
+  pixels; it follows Soma while he casts, up to frame 3, and ends with its
+  animation.
+- The source audit of both dolls finds their sounds. Lightning Doll's
+  spark loop 0x75 is held and released as `sub_080C8B3C` does; both
+  dolls play 0x6E at death and 0x153 for each piece bounce. Nemesis' 0x85
+  cues are not placed, because its port does not follow the native
+  states.
+- New `tests/test_aos_skill_lightning.c` and sound assertions in
+  `tests/test_aos_enemy.c`. Local captures show the bolt growing, and it
+  kills a Skeleton in area 0 room 6. Lightning Doll becomes the 32nd
+  complete monster. Zero Mission is unchanged.
+
 ## Patch 0696 - Imp blue soul
 
 - `SkillImpUse` (soul 22, toggled, 3 MP per second, sound 0x19E) now

@@ -143,8 +143,10 @@ are ported: `SkillMedusaHeadUse` holds an airborne Soma still through his
 vy, gravity and the `0x131B8 & 0x20` flag (`hold_still`, read at the end
 of his update), `SkillCagnazzoUse` carries an attacking guardian
 (collision type 6) 16 pixels ahead of him and 32 above his feet, and
-`SkillBuerUse` turns two attacking flames around a point above him. The
-other 21 routines are refused before they start,
+`SkillBuerUse` turns two attacking flames around a point above him, and
+`SkillCatoblepasUse` holds him in the breath pose of state 10 (which
+returns to state 0 once no guardian is alive) while gas clouds drift
+ahead. The other 20 routines are refused before they start,
 and `--blue-soul N` equips a soul for diagnostics.
 
 ## Yellow soul effects

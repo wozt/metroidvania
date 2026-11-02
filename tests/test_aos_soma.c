@@ -553,6 +553,17 @@ static void hit_tests(void) {
     assert(soma.state == 0 && soma.vy > 0 && soma.vy < 0x4000);
     soma.abilities = 0;
 
+    /* A guardian's pose (state 10) holds Soma until no guardian is alive. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.guardian_alive = true;
+    aos_soma_guardian_pose(&soma, 0x35);
+    assert(soma.state == 10 && soma.anim.id == 0x35);
+    frame(&soma, AOS_KEY_RIGHT | AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 10 && soma.vy == 0);
+    soma.guardian_alive = false;
+    frame(&soma, 0, 0);
+    assert(soma.state == 0);
+
     /* sub_08021654: (6 * 4 - 4 * 2) / 2 = 8; HP never drops below 0, and
      * Soma dies: animation 0x33, no hurtbox, a drift that stops. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);

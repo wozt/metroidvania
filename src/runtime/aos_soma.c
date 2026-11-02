@@ -802,6 +802,13 @@ static void hard_landing_state(AosSoma *soma) {
     }
 }
 
+void aos_soma_guardian_pose(AosSoma *soma, unsigned anim) {
+    soma->state = 10;
+    aos_anim_start(&soma->anim, soma->anims, anim, true);
+    soma->anim.id = (uint8_t)anim;
+    soma->flags &= 0xEFFFFBFFu;
+}
+
 AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
     AosSoma soma = {
         .x = x, .y = y,
@@ -989,6 +996,12 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
         if (soma->flags & AOS_FLAG_ANIM_DONE) soma->state = 0;
         break;
     case 7: dive_kick_state(soma, layer); break;
+    case 10:    /* _0801CC68: a guardian's pose, until no guardian is alive */
+        if (!soma->guardian_alive) {
+            soma->anim_request = AOS_ANIM_NONE;
+            soma->state = 0;
+        }
+        break;
     case 12: hit_state(soma, layer); break;
     case 13: knockback_state(soma, layer, pressed); break;
     case 16: death_state(soma); break;

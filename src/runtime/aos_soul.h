@@ -218,4 +218,44 @@ void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
 /* sub_08021654's Mimic rule (0x13260 bit 0x40000): damage * 5 gold,
  * at most 999999 (sub_08044F80). */
 void aos_yellow_soul_hit(AosStats *stats, int damage);
+/* SkillCatoblepasUse (soul 9, held, 15 MP per second) and its gas clouds
+ * sub_08030D6C (guardian slots 1-7 of sub_0802DD00). */
+enum { AOS_CATOBLEPAS_GASES = 7, AOS_CATOBLEPAS_POWER = 10, AOS_CATOBLEPAS_ELEMENTS = 0x100,
+       AOS_CATOBLEPAS_POSE = 0x35 };
+
+typedef struct {
+    bool alive;
+    bool facing_left;       /* + 0x58 bit 6 */
+    bool started;           /* its first update (the animation starts) */
+    int32_t x, y;           /* + 0x40, + 0x44 (16.16) */
+    int32_t vx, vy, ax, ay; /* + 0x48, + 0x4C, + 0x50, + 0x54 */
+    uint8_t timer;          /* + 0x0D */
+} AosCatoblepasGas;
+
+typedef struct {
+    int32_t x, y;           /* whole pixels: Soma's x +/- 16, his y - 28 */
+    bool facing_left;
+    uint8_t timer;          /* + 0x0D: frames to the next cloud */
+    bool sound;             /* + 0x0B: 0x8E with every other cloud */
+    int16_t cycle;          /* + 0x26: index into 0x080E1A64 */
+    AosCatoblepasGas gases[AOS_CATOBLEPAS_GASES];
+} AosCatoblepasGuardian;
+
+/* One update of the parent, then of its clouds. After the upkeep it needs
+ * Soma grounded and still (+ 0x10 & 0x1001A2 == 0x100000), else it ends;
+ * it sets 0x131B8 & 0x820 (`hold_still`; bit 0x800 is not modelled). Its
+ * first update asks for Soma's pose (`pose`: state 10, animation 0x35;
+ * sub_08042A54(2, 0x1E) is not run) with power 10 and elements 0x100.
+ * Every update it sits 16 pixels ahead of Soma and 28 above his feet, and
+ * every fifth frame it breathes a cloud (0x8E with every other): 1.5
+ * forward plus Soma's vx, 0x400 more each frame up to 8.0, vy 0.5 plus
+ * 0, -0x2000, 0x2000 in turn, gravity 0x200, for 26 frames, each a
+ * -10, -10, 20 x 20 type-6 attack. Returns false once the soul has ended
+ * (its clouds gone). */
+bool aos_catoblepas_guardian_update(AosCatoblepasGuardian *catoblepas, AosGuardian *guardian,
+                                    AosStats *stats,
+                                    const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                    uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                    int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                    int32_t soma_vx, bool *hold_still, bool *pose);
 #endif

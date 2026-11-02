@@ -221,7 +221,7 @@ static int enemy_bank(const AosEnemy *enemy) {
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
-       SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ARTS };
+       SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -229,7 +229,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_valkyrie", "skill_needles",
                                                          "skill_ripper", "skill_killer_fish",
                                                          "skill_fish_head",
-                                                         "skill_cagnazzo", "skill_buer"};
+                                                         "skill_cagnazzo", "skill_buer",
+                                                         "skill_catoblepas"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -994,18 +995,22 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_MEDUSA_ROUTINE 0x08030CC9u
 #define GUARDIAN_CAGNAZZO_ROUTINE 0x0802E4EDu
 #define GUARDIAN_BUER_ROUTINE 0x0802FF41u
+#define GUARDIAN_CATOBLEPAS_ROUTINE 0x08030E65u
 typedef struct {
     AosGuardian core;
     uint32_t routine;
     AosMedusaGuardian medusa;
     AosCagnazzoGuardian cagnazzo;
     AosBuerGuardian buer;
+    AosCatoblepasGuardian catoblepas;
     AosAnimState anim;           /* Cagnazzo, or both Buer flames (same steps) */
+    AosAnimState gas_anims[AOS_CATOBLEPAS_GASES];
     AosStats *stats;
     const AosBlueSoulRecord *records;
     AosSoma *soma;
     const AosAnimSet *cagnazzo_art;  /* Enemy/skill_cagnazzo, NULL when missing */
     const AosAnimSet *buer_art;      /* Enemy/skill_buer, NULL when missing */
+    const AosAnimSet *catoblepas_art; /* Enemy/skill_catoblepas, NULL when missing */
 } AriaGuardian;
 
 /* Soma's guardian hook: sub_0802E0C4 for the souls whose routine is
@@ -1017,7 +1022,8 @@ static void start_guardian(void *context) {
     uint32_t routine = guardian->records[stats->blue_soul].routine;
     if (routine != GUARDIAN_MEDUSA_ROUTINE &&
         !(routine == GUARDIAN_CAGNAZZO_ROUTINE && guardian->cagnazzo_art) &&
-        !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art))
+        !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
+        !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art))
         return;
     if (aos_guardian_try(&guardian->core, stats, guardian->records, guardian->soma->held,
                          guardian->soma->pressed, false, &guardian->soma->flags)) {
@@ -1025,6 +1031,7 @@ static void start_guardian(void *context) {
         guardian->medusa = (AosMedusaGuardian){0};
         guardian->cagnazzo = (AosCagnazzoGuardian){0};
         guardian->buer = (AosBuerGuardian){0};
+        guardian->catoblepas = (AosCatoblepasGuardian){0};
     }
 }
 
@@ -1058,12 +1065,32 @@ static void update_guardian(AriaGuardian *guardian) {
             return;
         if (first) aos_anim_start(&guardian->anim, guardian->buer_art, 0, true);
         aos_anim_step(&guardian->anim, guardian->buer_art);
+    } else if (guardian->routine == GUARDIAN_CATOBLEPAS_ROUTINE) {
+        bool pose = false;
+        if (!aos_catoblepas_guardian_update(&guardian->catoblepas, &guardian->core,
+                                            guardian->stats, guardian->records, soma->held,
+                                            soma->pressed, &soma->flags, soma->x >> 16,
+                                            soma->y >> 16, soma->facing_left, soma->vx,
+                                            &soma->hold_still, &pose))
+            return;
+        if (pose) aos_soma_guardian_pose(soma, AOS_CATOBLEPAS_POSE);
+        /* Each cloud plays sequence 0 once from its first update. */
+        for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
+            AosCatoblepasGas *gas = &guardian->catoblepas.gases[k];
+            if (!gas->alive) continue;
+            if (!gas->started) {
+                gas->started = true;
+                aos_anim_start(&guardian->gas_anims[k], guardian->catoblepas_art, 0, false);
+            }
+            aos_anim_step(&guardian->gas_anims[k], guardian->catoblepas_art);
+        }
     }
 }
 
 /* The guardian's attacks this frame (type 6, sub_08021530(6) with the
  * 0x131C2 power and the 0x131C4 elements). Returns their count. */
-static int guardian_attacks(const AriaGuardian *guardian, AosSoulAttack attacks[2]) {
+static int guardian_attacks(const AriaGuardian *guardian,
+                            AosSoulAttack attacks[AOS_CATOBLEPAS_GASES]) {
     if (!guardian->core.active || guardian->core.state == 0) return 0;
     if (guardian->routine == GUARDIAN_CAGNAZZO_ROUTINE) {
         const AosCagnazzoGuardian *cagnazzo = &guardian->cagnazzo;
@@ -1083,6 +1110,19 @@ static int guardian_attacks(const AriaGuardian *guardian, AosSoulAttack attacks[
                 aos_guardian_power(guardian->stats, AOS_BUER_POWER, false), AOS_BUER_ELEMENTS,
                 false, NULL, AOS_TYPE_GUARDIAN};
         return AOS_BUER_FLAMES;
+    }
+    if (guardian->routine == GUARDIAN_CATOBLEPAS_ROUTINE) {
+        int count = 0;
+        for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
+            const AosCatoblepasGas *gas = &guardian->catoblepas.gases[k];
+            if (!gas->alive) continue;
+            attacks[count++] = (AosSoulAttack){
+                aos_entity_rect((AosBox){-10, -10, 20, 20}, gas->x >> 16, gas->y >> 16,
+                                gas->facing_left, false),                    /* 0x1414F6F6 */
+                aos_guardian_power(guardian->stats, AOS_CATOBLEPAS_POWER, false),
+                AOS_CATOBLEPAS_ELEMENTS, false, NULL, AOS_TYPE_GUARDIAN};
+        }
+        return count;
     }
     return 0;
 }
@@ -3927,6 +3967,9 @@ int main(int argc, char **argv) {
     if (objects_ok && objects.skills[SKILL_ART_BUER].loaded &&
         objects.skills[SKILL_ART_BUER].defs[0].count)
         guardian.buer_art = &objects.skills[SKILL_ART_BUER].set;
+    if (objects_ok && objects.skills[SKILL_ART_CATOBLEPAS].loaded &&
+        objects.skills[SKILL_ART_CATOBLEPAS].defs[0].count)
+        guardian.catoblepas_art = &objects.skills[SKILL_ART_CATOBLEPAS].set;
     if (load_blue_souls(DEFAULT_BLUE_SOULS, blue_souls)) {
         guardian.records = blue_souls;
         soma.guardian = start_guardian;
@@ -4260,6 +4303,7 @@ int main(int argc, char **argv) {
                                                                 aria_input.player_new_input);
             /* Soma reads gEwramData + 0x13260 (the yellow souls' bits). */
             soma.abilities = progress.flags;
+            soma.guardian_alive = guardian.core.active;
             aos_soma_update(&soma, &layer, player_held, player_new);
             /* sub_08021FA4 and sub_08021C44 at the end of Soma's update,
              * then the yellow soul entity (slot 0x11). */
@@ -4416,8 +4460,8 @@ int main(int argc, char **argv) {
                     if (combat.effects[weapon_entity.effects[k].kind])
                         room.effects[room.effect_count++] = weapon_entity.effects[k];
             }
-            AosSoulAttack attacks[MAX_SKILLS + 2];
-            AriaSkill *owners[MAX_SKILLS + 2];
+            AosSoulAttack attacks[MAX_SKILLS + AOS_CATOBLEPAS_GASES];
+            AriaSkill *owners[MAX_SKILLS + AOS_CATOBLEPAS_GASES];
             int attack_count = soul_attacks(&souls, souls.bat ? &objects.skills[SKILL_ART_BAT].kind : NULL,
                                             attacks, owners);
             for (int k = guardian_attacks(&guardian, &attacks[attack_count]); k > 0; --k)
@@ -4654,6 +4698,23 @@ int main(int argc, char **argv) {
                 SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
                                          cagnazzo->facing_left ? SDL_FLIP_HORIZONTAL
                                                                : SDL_FLIP_NONE);
+            }
+        }
+        /* Catoblepas' clouds (sub_08030D6C's sequence 0). */
+        if (guardian.core.active && guardian.routine == GUARDIAN_CATOBLEPAS_ROUTINE) {
+            for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
+                const AosCatoblepasGas *gas = &guardian.catoblepas.gases[k];
+                if (!gas->alive || guardian.gas_anims[k].frame >= AOS_ENEMY_MAX_FRAMES) continue;
+                const AriaFrame *art = &objects.skills[SKILL_ART_CATOBLEPAS]
+                                            .frames[0][guardian.gas_anims[k].frame];
+                if (!art->texture) continue;
+                int gx = gas->x >> 16, gy = gas->y >> 16;
+                float x = gas->facing_left ? (float)(gx - art->offset_x) - art->w
+                                           : (float)(gx + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(gy + art->offset_y - cam_y), art->w,
+                                  art->h};
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         gas->facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
             }
         }
         /* Buer's two flames (sub_0802FDE4's sequence 0, unmirrored). */

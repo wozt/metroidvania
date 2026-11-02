@@ -159,6 +159,7 @@ typedef struct {
      * 13. NULL: no blue souls. */
     void (*guardian)(void *context);
     void *guardian_context;
+    bool guardian_alive;    /* gEwramData + 0x13144 is set (state 10 waits on it) */
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF
@@ -218,5 +219,9 @@ AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
  * are ported; other states do nothing. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
+/* A guardian's pose (SkillCatoblepasUse): state 10 with looping animation
+ * `anim` and flags 0x10000000 and 0x400 cleared. State 10 (_0801CC68)
+ * returns to state 0 (no pending animation) once no guardian is alive. */
+void aos_soma_guardian_pose(AosSoma *soma, unsigned anim);
 
 #endif /* AOS_SOMA_H */

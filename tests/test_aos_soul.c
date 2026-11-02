@@ -288,6 +288,47 @@ int main(void) {
     ys.yellow_soul = 0;
     aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
     assert(!yellow_soul.active && ys.flags == 0x100);
+    /* SkillCatoblepasUse (soul 9, held, 15 MP/s): Soma grounded and still,
+     * the pose on the first update, a cloud every fifth frame (0x8E with
+     * every other), 26 frames each. */
+    blue[9] = (AosBlueSoulRecord){0x08030E65, 15, 1, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 9, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosCatoblepasGuardian cato = {0};
+    bool pose = false;
+    still = false;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    assert(aos_catoblepas_guardian_update(&cato, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                          &soma_flags, 100, 200, false, 0x4000, &still, &pose));
+    assert(pose && still && cato.x == 116 && cato.y == 172 && cato.timer == 4);
+    assert(cato.gases[0].alive && cato.gases[0].vx == 0x18000 + 0x4000 + 0x400 &&
+           cato.gases[0].vy == 0x8000 + 0x200 && cato.gases[0].timer == 0x19 &&
+           cato.gases[0].x == (116 << 16) + cato.gases[0].vx);
+    assert(!aos_audio_requested(AOS_AUDIO_START_SONG, 0x8E));
+    int clouds = 1;
+    for (int frame = 0; frame < 25; ++frame) {
+        assert(aos_catoblepas_guardian_update(&cato, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                              &soma_flags, 100, 200, false, 0, &still, &pose));
+        assert(!pose);
+        if (frame % 5 == 4) ++clouds;
+    }
+    int alive = 0;
+    for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) alive += cato.gases[k].alive;
+    assert(clouds == 6 && alive == 5 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x8E) == 3);
+    assert(cato.gases[1].vy == 0x6000 + 0x200 * 21 && cato.gases[2].vy == 0xA000 + 0x200 * 16);
+    /* The first cloud lasts 26 frames. */
+    assert(!cato.gases[0].alive || cato.gases[0].timer == 0);
+    /* Facing left the clouds go left. */
+    assert(aos_catoblepas_guardian_update(&cato, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                          &soma_flags, 100, 200, true, 0, &still, &pose));
+    assert(cato.x == 84);
+    /* Airborne, it ends and its clouds go with it. */
+    soma_flags = 0x100002 | 0x200;
+    assert(!aos_catoblepas_guardian_update(&cato, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                           &soma_flags, 100, 200, true, 0, &still, &pose));
+    assert(!guardian.active && soma_flags == 0x100002 && !cato.gases[1].alive);
     puts("Aria red, blue and yellow soul tests passed");
     return 0;
 }

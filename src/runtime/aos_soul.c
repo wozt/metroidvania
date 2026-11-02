@@ -237,3 +237,65 @@ void aos_yellow_soul_hit(AosStats *stats, int damage) {
     uint32_t gold = stats->gold + (uint32_t)damage * 5u;
     stats->gold = gold > 999999u ? 999999u : gold;
 }
+
+/* sub_0806D3D8 with its 8.0 clamp. */
+static void gas_move(AosCatoblepasGas *gas) {
+    const int32_t cap = 0x80000;
+    gas->vx += gas->ax;
+    if (gas->ax >= 0 ? gas->vx > cap : gas->vx < -cap) gas->vx = gas->ax >= 0 ? cap : -cap;
+    gas->vy += gas->ay;
+    if (gas->ay >= 0 ? gas->vy > cap : gas->vy < -cap) gas->vy = gas->ay >= 0 ? cap : -cap;
+    gas->x += gas->vx;
+    gas->y += gas->vy;
+}
+
+bool aos_catoblepas_guardian_update(AosCatoblepasGuardian *catoblepas, AosGuardian *guardian,
+                                    AosStats *stats,
+                                    const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                    uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                    int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                    int32_t soma_vx, bool *hold_still, bool *pose) {
+    static const int32_t rise[3] = {0, (int32_t)0xFFFFE000, 0x2000};   /* 0x080E1A64 */
+    *pose = false;
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed) ||
+        (*soma_flags & 0x1001A2u) != 0x100000u) {
+        aos_guardian_end(guardian, soma_flags);
+        for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) catoblepas->gases[k].alive = false;
+        return false;
+    }
+    *hold_still = true;
+    if (guardian->state == 0) {
+        *pose = true;
+        guardian->state = 1;
+    }
+    catoblepas->facing_left = soma_facing_left;
+    catoblepas->x = (int16_t)(soma_x + (soma_facing_left ? -0x10 : 0x10));
+    catoblepas->y = (int16_t)(soma_y - 0x1C);
+    if (catoblepas->timer == 0) {
+        AosCatoblepasGas *gas = NULL;
+        for (int k = 0; k < AOS_CATOBLEPAS_GASES && !gas; ++k)
+            if (!catoblepas->gases[k].alive) gas = &catoblepas->gases[k];
+        if (gas) {
+            if (catoblepas->sound) aos_audio_play_song(0x8E);
+            catoblepas->sound = !catoblepas->sound;
+            bool left = catoblepas->facing_left;
+            *gas = (AosCatoblepasGas){
+                .alive = true, .facing_left = left,
+                .x = (int32_t)((uint32_t)(uint16_t)catoblepas->x << 16),
+                .y = (int32_t)((uint32_t)(uint16_t)catoblepas->y << 16),
+                .vx = (left ? -0x18000 : 0x18000) + soma_vx, .ax = left ? -0x400 : 0x400,
+                .vy = rise[catoblepas->cycle] + 0x8000, .ay = 0x200, .timer = 0x1A};
+        }
+        if (++catoblepas->cycle > 2) catoblepas->cycle = 0;
+        catoblepas->timer = 5;
+    }
+    catoblepas->timer--;
+    /* sub_08030D6C: each cloud moves, then counts its 26 frames down. */
+    for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
+        AosCatoblepasGas *gas = &catoblepas->gases[k];
+        if (!gas->alive) continue;
+        gas_move(gas);
+        if (--gas->timer == 0) gas->alive = false;
+    }
+    return true;
+}

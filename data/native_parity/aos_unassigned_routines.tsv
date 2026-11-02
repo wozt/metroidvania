@@ -42,7 +42,6 @@ aos:asm:asm/code/code_080211F0.s:SkillBigGolemUse	SkillBigGolemUse	abilities	nam
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
 aos:asm:asm/code/code_080211F0.s:SkillBlackPantherUse	SkillBlackPantherUse	abilities	name			asm_function		asm/code/code_080211F0.s	26316	0	6
 aos:asm:asm/code/code_080211F0.s:SkillBonePillarUse	SkillBonePillarUse	abilities	name			asm_function		asm/code/code_080211F0.s	26724	0	11
-aos:asm:asm/code/code_080211F0.s:SkillCatoblepasUse	SkillCatoblepasUse	abilities	name			asm_function		asm/code/code_080211F0.s	31568	0	10
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
 aos:asm:asm/code/code_080211F0.s:SkillDeathUse	SkillDeathUse	abilities	name			asm_function		asm/code/code_080211F0.s	30402	0	8
@@ -123,7 +122,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802F8CC	sub_0802F8CC	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_08030238	sub_08030238	abilities	referrers			asm_function	0x08030238	asm/code/code_080211F0.s	30049	0	18
 aos:asm:asm/code/code_080211F0.s:sub_08030650	sub_08030650	abilities	referrers			asm_function	0x08030650	asm/code/code_080211F0.s	30550	0	3
 aos:asm:asm/code/code_080211F0.s:sub_08030754	sub_08030754	abilities	referrers			asm_function	0x08030754	asm/code/code_080211F0.s	30682	0	9
-aos:asm:asm/code/code_080211F0.s:sub_08030D6C	sub_08030D6C	abilities	referrers			asm_function	0x08030D6C	asm/code/code_080211F0.s	31451	0	8
 aos:asm:asm/code/code_080211F0.s:sub_08031394	sub_08031394	unclassified		technical	exclusive_callees	asm_function	0x08031394	asm/code/code_080211F0.s	32213	0	1
 aos:asm:asm/code/code_080211F0.s:sub_08031400	sub_08031400	unclassified		technical	exclusive_callees	asm_function	0x08031400	asm/code/code_080211F0.s	32272	0	4
 aos:asm:asm/code/code_080211F0.s:sub_08031D6C	sub_08031D6C	unclassified				asm_function	0x08031D6C	asm/code/code_080211F0.s	33439	0	0

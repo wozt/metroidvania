@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0695 - Catoblepas blue soul
+
+- `SkillCatoblepasUse` (soul 9, held, 15 MP per second) needs Soma
+  grounded and still. It puts him in state 10 with the breath pose 0x35,
+  newly ported: state 10 waits until no guardian is alive. Every fifth
+  frame it breathes a `sub_08030D6C` gas cloud (art 0x081E2978 exported
+  as `Enemy/skill_catoblepas`, `aria_objects` v38). Each cloud drifts
+  forward for 26 frames as a type-6 attack of power 10 with elements
+  0x100, and every other cloud plays 0x8E.
+- Unit tests cover the clouds' rhythm, motion and lifetime, the ending,
+  and Soma's state 10. A local capture shows the pose and clouds, which
+  kill Skeletons in area 0 room 6. Catoblepas becomes the 30th complete
+  monster. Zero Mission is unchanged.
+
 ## Patch 0694 - Enemy sound audit for nine monsters
 
 - A source audit of the enemy blocks of Medusa Head, Mimic, Skeleton

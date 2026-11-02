@@ -36,6 +36,7 @@
 #include "aos_guardian_imp.h"
 #include "aos_skill_lightning.h"
 #include "aos_skill_killer_doll.h"
+#include "aos_skill_nemesis.h"
 #include "aos_skill_ripper.h"
 #include "aos_skill_millione.h"
 #include "aos_skill_shot.h"
@@ -685,7 +686,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
-       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY };
+       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS };
 
 typedef struct {
     bool alive, started;
@@ -720,6 +721,7 @@ typedef struct {
     AosGladiatorSoul gladiator; /* SKILL_GLADIATOR */
     AosLightning lightning; /* SKILL_LIGHTNING */
     AosDecoy decoy;         /* SKILL_DECOY */
+    AosNemesisSoul nemesis; /* SKILL_NEMESIS */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -751,6 +753,7 @@ typedef struct {
 #define SKILL_GLADIATOR_ROUTINE 0x0802B4C9u
 #define SKILL_LIGHTNING_ROUTINE 0x080277B1u
 #define SKILL_KILLER_DOLL_ROUTINE 0x08024F39u
+#define SKILL_NEMESIS_ROUTINE 0x080251F1u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -867,6 +870,9 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_SKULL_ROUTINE && souls->skull ? SKILL_SKULL
                : routine == SKILL_LIGHTNING_ROUTINE && souls->lightning ? SKILL_LIGHTNING
                : routine == SKILL_KILLER_DOLL_ROUTINE && souls->killer_doll ? SKILL_DECOY
+               : routine == SKILL_NEMESIS_ROUTINE && souls->devil &&
+                         souls->devil->count > AOS_NEMESIS_SOUL_SEQUENCE
+                   ? SKILL_NEMESIS
                : routine == SKILL_VALKYRIE_ROUTINE && souls->valkyrie ? SKILL_VALKYRIE
                : routine == SKILL_NEEDLES_ROUTINE && souls->needles ? SKILL_NEEDLES
                : routine == SKILL_RIPPER_ROUTINE && souls->ripper && record->parameter < 2
@@ -941,6 +947,9 @@ static int cast_red_soul(void *context) {
         skill->x = skill->decoy.x;
         skill->y = skill->decoy.y;
         skill->facing_left = souls->soma->facing_left;
+    } else if (kind == SKILL_NEMESIS) {
+        skill->nemesis = aos_nemesis_soul_create();
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -8);
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
                                                 souls->soma->facing_left, aos_random() & 1);
@@ -1814,6 +1823,25 @@ static void update_skills(AriaSouls *souls) {
                 break;
             }
             aos_anim_step(&skill->anim, souls->killer_doll);
+            break;
+        case SKILL_NEMESIS:
+            /* SkillNemesisUse: counted with sound 0x97 and looping
+             * sequence 2 of resource 21 on its first update, the enemies
+             * without target (0x13168 = 0) while it exists; it rises over
+             * Soma (sub_08031EA4) and is deleted after its blink. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x97);
+                aos_anim_start(&skill->anim, souls->devil, AOS_NEMESIS_SOUL_SEQUENCE, true);
+            }
+            if (!aos_nemesis_soul_update(&skill->nemesis)) {
+                end_skill(souls, skill);
+                break;
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0,
+                  aos_nemesis_soul_dy(&skill->nemesis));
+            aos_anim_step(&skill->anim, souls->devil);
             break;
         case SKILL_LIGHTNING:
             /* SkillLightningDollUse: counted with sounds 0x1A9 (sub_080213F4
@@ -4671,6 +4699,12 @@ int main(int argc, char **argv) {
                         souls.skills[k].started)
                         decoy = &souls.skills[k];
                 aos_enemy_set_decoy(decoy != NULL, decoy ? decoy->x : 0, decoy ? decoy->y : 0);
+                /* The Nemesis soul clears it. */
+                bool none = false;
+                for (int k = 0; k < MAX_SKILLS && !none; ++k)
+                    none = souls.skills[k].alive && souls.skills[k].kind == SKILL_NEMESIS &&
+                           souls.skills[k].started;
+                aos_enemy_set_no_target(none);
             }
             homing_room = &room;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
@@ -4799,6 +4833,7 @@ int main(int argc, char **argv) {
             if (skill->kind == SKILL_RIPPER && skill->ripper.blink == 2 && (step & 1)) continue;
             if (skill->kind == SKILL_THROW && skill->thrown.blinking && (step & 1)) continue;
             if (skill->kind == SKILL_DECOY && skill->decoy.blinking && (step & 1)) continue;
+            if (skill->kind == SKILL_NEMESIS && skill->nemesis.blinking && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
@@ -4848,6 +4883,9 @@ int main(int argc, char **argv) {
                            : &objects.skills[SKILL_ART_FLEA]
                                   .frames[AOS_FLEA_END_SEQUENCE][skill->anim.frame])
                 : skill->kind == SKILL_GHOST ? NULL
+                : skill->kind == SKILL_NEMESIS
+                    ? &objects.skills[SKILL_ART_DEVIL]
+                           .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]
                 : skill->kind == SKILL_GHOST_SOUL
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_GHOST_SEQUENCE][skill->anim.frame]

@@ -275,8 +275,20 @@ void aos_enemy_set_decoy(bool active, int32_t x, int32_t y) {
     decoy.y = y;
 }
 
-static int32_t target_x(const AosSoma *soma) { return decoy.active ? decoy.x : soma->x; }
-static int32_t target_y(const AosSoma *soma) { return decoy.active ? decoy.y : soma->y; }
+/* The entity being updated, the target while 0x13168 is 0. */
+static bool no_target;
+static const AosEnemy *aim_self;
+
+void aos_enemy_set_no_target(bool none) { no_target = none; }
+
+static int32_t target_x(const AosSoma *soma) {
+    if (no_target && aim_self) return aim_self->x;
+    return decoy.active ? decoy.x : soma->x;
+}
+static int32_t target_y(const AosSoma *soma) {
+    if (no_target && aim_self) return aim_self->y;
+    return decoy.active ? decoy.y : soma->y;
+}
 
 /* sub_0806BC40 */
 static void face_player(AosEnemy *enemy, const AosSoma *soma) {
@@ -472,9 +484,22 @@ static bool is_early_enemy(uint8_t id) {
 static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma);
 static void nemesis_appear(AosEnemy *n, const AosSoma *soma);
 
+static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
+                         int16_t param1, const AosSoma *soma, const AosCollision *layer,
+                         const AosEnemyKind *kind, const AosEnemyStats *stats);
+
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
+    aim_self = enemy;
+    bool created = enemy_create(enemy, id, x, y, param0, param1, soma, layer, kind, stats);
+    aim_self = NULL;
+    return created;
+}
+
+static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
+                         int16_t param1, const AosSoma *soma, const AosCollision *layer,
+                         const AosEnemyKind *kind, const AosEnemyStats *stats) {
     if (id != AOS_ENEMY_BAT && id != AOS_ENEMY_ZOMBIE && !is_early_enemy(id) &&
         id != AOS_ENEMY_BLUE_CROW &&
         id != AOS_ENEMY_MERMAN && id != AOS_ENEMY_SIREN && id != AOS_ENEMY_TINY_DEVIL &&
@@ -1957,6 +1982,8 @@ static void nemesis_helper_set(AosEnemy *n, uint8_t state) {
 }
 
 static void helper_face(AosNemesisHelper *h, const AosSoma *soma) {
+    /* With no target the linked sprite aims at itself. */
+    if (no_target) return;
     if (target_x(soma) != h->x) h->mirrored = h->x < target_x(soma);
 }
 
@@ -9779,8 +9806,10 @@ AosHitReport aos_enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision
                               const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                               const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                               int cam_x, int cam_y, uint32_t (*random)(void)) {
+    aim_self = enemy;
     AosHitReport report = enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                        soma_def, cam_x, cam_y, random);
+    aim_self = NULL;
     int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
     report.targetable = enemy->role == AOS_ROLE_ENEMY && !enemy->removed && !enemy->defeated &&
                         !enemy->hidden && enemy->hp > 0 && (uint16_t)(sx + 0x10) <= 0x110 &&

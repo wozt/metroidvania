@@ -333,6 +333,10 @@ typedef struct {
  * Killer Doll soul's decoy) instead of Soma; contact, knockback and the
  * routines that read Soma (0x13110) directly keep his position. */
 void aos_enemy_set_decoy(bool active, int32_t x, int32_t y);
+/* gEwramData + 0x13168 = 0 (the Nemesis soul): sub_0806CD38 / sub_0806CD78
+ * and the helpers built on them then return the asking entity's own
+ * position, so the enemies lose their target. */
+void aos_enemy_set_no_target(bool none);
 /* The soul attacks the next enemy updates test after the weapon (type 5
  * collisions); NULL for none. */
 void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count);

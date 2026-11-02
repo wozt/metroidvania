@@ -6378,6 +6378,17 @@ static void nemesis_tests(void) {
     aos_enemy_update(&helper, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     assert(helper.removed);
 
+    /* With 0x13168 cleared (the Nemesis soul) the target helpers return
+     * the enemy's own position: Soma far away, it still appears. */
+    soma.x = AOS_FIXED(600);
+    assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(n.step == 1);
+    aos_enemy_set_no_target(true);
+    aos_enemy_update(&n, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    aos_enemy_set_no_target(false);
+    assert(n.step == 2);
+
     aos_enemy_set_flag_8e_40(true);
     assert(aos_enemy_create(&n, AOS_ENEMY_NEMESIS, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     aos_enemy_set_flag_8e_40(false);

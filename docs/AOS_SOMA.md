@@ -1069,7 +1069,9 @@ flames until below screen row 0xAA or after 65 frames. The linked sprite
 the body's. The three technical effect slots created by `sub_080C7B54`
 (sequence identities 9, 12 and 6) keep the 24-record history of
 `sub_08045748` and render delayed trails until the fall. The hit spark
-`sub_08042B8C` and the death palette bits are not ported, nor its red soul.
+`sub_08042B8C` and the death palette bits are not ported. Its red soul
+(`SkillNemesisUse`) clears the enemies' target for 300 frames: the target
+helpers then return each enemy's own position.
 
 Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63) share
 `sub_080B7E80` (create: tiles `0x081F4214`, palette `0x0820BCA0`, the

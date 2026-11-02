@@ -17,9 +17,13 @@ Last updated: **2026-11-02**.
 - The runtime draws its affine tilt; the linked sprite (`sub_080C7784`)
   runs at the end of the body's update and the trails go at the fall.
 - Rewritten `nemesis_tests`; a local capture of area 3 room 0 shows it
-  tilted with its trails and hitting Soma. Its sounds aspect is now
-  ported; its red soul skill still is not, so it stays incomplete. Zero
-  Mission is unchanged.
+  tilted with its trails and hitting Soma.
+- Its red soul is ported (`SkillNemesisUse`, sound 0x97): the eye of
+  sequence 2 of skill resource 21 rises over Soma while
+  `gEwramData + 0x13168` is cleared for 300 frames, so the enemies' target
+  helpers return their own position; then 30 frames of blinking. New
+  `aos_skill_nemesis` test; a local capture shows the eye over Soma.
+- Nemesis becomes the 40th complete monster. Zero Mission is unchanged.
 
 ## Patch 0704 - Winged Skeleton AI from the native routines
 

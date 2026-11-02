@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0710 - Misplaced sprite pixels fixed
+
+- Compressed Aria object, HUD and weapon tile sheets start with the
+  4-byte header of an uncompressed resource once expanded; the object and
+  weapon exporters copied it as tile data, shifting every tile down one
+  row, which left stray one-pixel rows on many sprites (the Skeleton, the
+  White Dragon, the life and mana bars). Both now skip it, as the room
+  and graphics loaders already did (`aria_objects` v47, `aria_weapons`
+  v3).
+
 ## Patch 0709 - White Dragon rewritten from the native routines
 
 - The White Dragon is rewritten from its traced routines: a head on a neck

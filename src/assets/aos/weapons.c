@@ -261,7 +261,12 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
             set_error(error, error_size, "invalid compressed object tiles");
             goto failed;
         }
-        memcpy(sheet->data, decoded, sheet->size);
+        /* The decompressed resource starts with the 4-byte header of an
+         * uncompressed one (encoding 0, depth, size / 256), which the game
+         * skips (aos_rom_load_graphics_resource does the same); copying it
+         * shifted every tile down one row. */
+        size_t skip = written >= sheet->size + 4 && decoded[0] == 0 ? 4 : 0;
+        memcpy(sheet->data, decoded + skip, sheet->size);
         free(decoded);
         return true;
     }

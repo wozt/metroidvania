@@ -35,6 +35,7 @@
 #include "aos_skill_needles.h"
 #include "aos_guardian_imp.h"
 #include "aos_skill_lightning.h"
+#include "aos_skill_killer_doll.h"
 #include "aos_skill_ripper.h"
 #include "aos_skill_millione.h"
 #include "aos_skill_shot.h"
@@ -224,7 +225,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
-       SKILL_ART_LIGHTNING, SKILL_ARTS };
+       SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -234,7 +235,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_fish_head",
                                                          "skill_cagnazzo", "skill_buer",
                                                          "skill_catoblepas", "skill_imp",
-                                                         "skill_lightning"};
+                                                         "skill_lightning",
+                                                         "skill_killer_doll"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -683,7 +685,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
-       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING };
+       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY };
 
 typedef struct {
     bool alive, started;
@@ -717,6 +719,7 @@ typedef struct {
     AosKillerFishSoul killer_fish; /* SKILL_KILLER_FISH */
     AosGladiatorSoul gladiator; /* SKILL_GLADIATOR */
     AosLightning lightning; /* SKILL_LIGHTNING */
+    AosDecoy decoy;         /* SKILL_DECOY */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -747,6 +750,7 @@ typedef struct {
 #define SKILL_KILLER_FISH_ROUTINE 0x08027C59u
 #define SKILL_GLADIATOR_ROUTINE 0x0802B4C9u
 #define SKILL_LIGHTNING_ROUTINE 0x080277B1u
+#define SKILL_KILLER_DOLL_ROUTINE 0x08024F39u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -765,6 +769,7 @@ typedef struct {
     const AosAnimSet *killer_fish;  /* resource 11, sequences 0-1 */
     const AosAnimSet *gladiator;    /* resource 24, sequence/frame 0 */
     const AosAnimSet *lightning;    /* resource 9, sequence 0 */
+    const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
     int bone_count;
@@ -861,6 +866,7 @@ static int cast_red_soul(void *context) {
                    ? SKILL_SIREN
                : routine == SKILL_SKULL_ROUTINE && souls->skull ? SKILL_SKULL
                : routine == SKILL_LIGHTNING_ROUTINE && souls->lightning ? SKILL_LIGHTNING
+               : routine == SKILL_KILLER_DOLL_ROUTINE && souls->killer_doll ? SKILL_DECOY
                : routine == SKILL_VALKYRIE_ROUTINE && souls->valkyrie ? SKILL_VALKYRIE
                : routine == SKILL_NEEDLES_ROUTINE && souls->needles ? SKILL_NEEDLES
                : routine == SKILL_RIPPER_ROUTINE && souls->ripper && record->parameter < 2
@@ -929,6 +935,12 @@ static int cast_red_soul(void *context) {
     } else if (kind == SKILL_SKULL) {
         skill->skull = aos_skull_create(souls->soma->facing_left);
         skill->facing_left = skill->skull.facing_left;
+    } else if (kind == SKILL_DECOY) {
+        skill->decoy = aos_decoy_create(souls->soma->x, souls->soma->y,
+                                        souls->soma->facing_left);
+        skill->x = skill->decoy.x;
+        skill->y = skill->decoy.y;
+        skill->facing_left = souls->soma->facing_left;
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
                                                 souls->soma->facing_left, aos_random() & 1);
@@ -1739,6 +1751,29 @@ static void update_skills(AriaSouls *souls) {
             if (aos_anim_step(&skill->anim, souls->skull) == 3) aos_skull_end(&skill->skull);
             skill->x = skill->skull.x;
             skill->y = skill->skull.y;
+            break;
+        case SKILL_DECOY:
+            /* SkillKillerDollUse: counted with sound 0xE5 and looping
+             * sequence 0 or 1 at random on its first update, the enemies'
+             * aim (0x13168) while it exists; deleted when its time is out
+             * or beyond the margins of entry 2. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0xE5);
+                aos_anim_start(&skill->anim, souls->killer_doll, aos_random() & 1, true);
+            }
+            if (!aos_decoy_update(&skill->decoy, souls->layer)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->decoy.x;
+            skill->y = skill->decoy.y;
+            if (skill_outside(souls, skill, 2)) {
+                end_skill(souls, skill);
+                break;
+            }
+            aos_anim_step(&skill->anim, souls->killer_doll);
             break;
         case SKILL_LIGHTNING:
             /* SkillLightningDollUse: counted with sounds 0x1A9 (sub_080213F4
@@ -4467,6 +4502,13 @@ int main(int argc, char **argv) {
             souls.lightning = objects_ok && lightning->loaded && lightning->defs[0].count
                                   ? &lightning->set
                                   : NULL;
+            const __typeof__(objects.skills[0]) *killer_doll =
+                &objects.skills[SKILL_ART_KILLER_DOLL];
+            souls.killer_doll = objects_ok && killer_doll->loaded &&
+                                        killer_doll->set.count > 1 &&
+                                        killer_doll->defs[0].count && killer_doll->defs[1].count
+                                    ? &killer_doll->set
+                                    : NULL;
             const __typeof__(objects.skills[0]) *crow = &objects.skills[SKILL_ART_CROW];
             souls.crow = objects_ok && crow->set.count > AOS_CROW_SEQUENCE &&
                                  crow->defs[AOS_CROW_SEQUENCE].count
@@ -4563,6 +4605,15 @@ int main(int argc, char **argv) {
             for (int k = guardian_attacks(&guardian, &attacks[attack_count]); k > 0; --k)
                 owners[attack_count++] = NULL;
             aos_enemy_set_soul_attacks(attacks, attack_count);
+            /* gEwramData + 0x13168: the Killer Doll soul's decoy, else Soma. */
+            {
+                const AriaSkill *decoy = NULL;
+                for (int k = 0; k < MAX_SKILLS && !decoy; ++k)
+                    if (souls.skills[k].alive && souls.skills[k].kind == SKILL_DECOY &&
+                        souls.skills[k].started)
+                        decoy = &souls.skills[k];
+                aos_enemy_set_decoy(decoy != NULL, decoy ? decoy->x : 0, decoy ? decoy->y : 0);
+            }
             homing_room = &room;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
             homing_age();
@@ -4689,6 +4740,7 @@ int main(int argc, char **argv) {
             if (skill->kind == SKILL_KILLER_FISH && skill->killer_fish.hidden) continue;
             if (skill->kind == SKILL_RIPPER && skill->ripper.blink == 2 && (step & 1)) continue;
             if (skill->kind == SKILL_THROW && skill->thrown.blinking && (step & 1)) continue;
+            if (skill->kind == SKILL_DECOY && skill->decoy.blinking && (step & 1)) continue;
             const AriaFrame *art =
                 skill->kind == SKILL_BAT     ? &objects.skills[SKILL_ART_BAT].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BOW   ? &objects.skills[SKILL_ART_ARCHER].frames[0][skill->anim.frame]
@@ -4725,6 +4777,9 @@ int main(int argc, char **argv) {
                            : &objects.skills[SKILL_ART_VALKYRIE].frames[0][skill->anim.frame])
                 : skill->kind == SKILL_LIGHTNING
                     ? &objects.skills[SKILL_ART_LIGHTNING].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_DECOY
+                    ? &objects.skills[SKILL_ART_KILLER_DOLL]
+                           .frames[skill->anim.id][skill->anim.frame]
                 : skill->kind == SKILL_SKULL
                     ? &objects.skills[SKILL_ART_SKULL].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_CROW

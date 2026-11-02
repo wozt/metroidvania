@@ -5484,6 +5484,20 @@ static void knight_tests(void) {
     x0 = k.x;
     aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_one_hundred);
     assert(k.x == x0 - 0x8000);
+    /* gEwramData + 0x13168: with the Killer Doll soul's decoy to its right
+     * the knight's attack faces the decoy (sub_0806CF2C), not Soma on its
+     * left; without it, it faces Soma. */
+    soma.x = k.x - AOS_FIXED(30);
+    k.state = 1;
+    k.step = 0;
+    aos_enemy_set_decoy(true, k.x + AOS_FIXED(30), k.y);
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(k.mirrored);
+    aos_enemy_set_decoy(false, 0, 0);
+    k.state = 1;
+    k.step = 0;
+    aos_enemy_update(&k, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!k.mirrored);
 }
 
 static void crusader_tests(void) {

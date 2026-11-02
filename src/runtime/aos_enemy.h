@@ -298,6 +298,10 @@ typedef struct {
     uint8_t type;           /* + 0x70: AOS_TYPE_SOUL when 0, 6 for a guardian */
 } AosSoulAttack;
 
+/* gEwramData + 0x13168: while `active`, the enemies aim at (x, y) (the
+ * Killer Doll soul's decoy) instead of Soma; contact, knockback and the
+ * routines that read Soma (0x13110) directly keep his position. */
+void aos_enemy_set_decoy(bool active, int32_t x, int32_t y);
 /* The soul attacks the next enemy updates test after the weapon (type 5
  * collisions); NULL for none. */
 void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count);

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0700 - Killer Doll decoy soul
+
+- `SkillKillerDollUse` (red 51; resource 6 exported as
+  `Enemy/skill_killer_doll`, `aria_objects` v41) throws a doll with sound
+  0xE5. It bounces on floors, ceilings and walls, lasts 180 frames, then
+  blinks for 30.
+- While the doll exists, gEwramData + 0x13168 points at it, and the
+  enemies aim at it. Each port routine was matched with its native
+  routines: 86 Soma position reads that natively go through 0x13168 or
+  its helpers now use `target_x` / `target_y`. Contact, knockback, the
+  Lightning Doll spark and the Ghost and Zombie producers keep Soma, as
+  their native routines read 0x13110.
+- New `tests/test_aos_skill_killer_doll.c` and a decoy assertion in
+  `tests/test_aos_enemy.c`. Killer Doll becomes the 34th complete monster.
+  Zero Mission is unchanged.
+
 ## Patch 0699 - Zombie death sound and aspect corrections
 
 - Zombie's death (`sub_0807B0DC`) now plays 0x70 before its gore, which

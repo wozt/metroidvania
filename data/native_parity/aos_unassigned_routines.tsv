@@ -2062,7 +2062,6 @@ aos:c:src/code/code_08014548.c:sub_08014720	sub_08014720	unclassified		technical
 aos:c:src/code/code_08014548.c:sub_0801487C	sub_0801487C	unclassified		technical	exclusive_callees	c_function	0x0801487C	src/code/code_08014548.c	183	1	6
 aos:c:src/code/code_080211F0.c:CheckUnk_53C_6	CheckUnk_53C_6	unclassified				c_function		src/code/code_080211F0.c	2873	1	0
 aos:c:src/code/code_080211F0.c:SkillChronomageUse	SkillChronomageUse	abilities	name			c_function	0x08024950	src/code/code_080211F0.c	3076	0	11
-aos:c:src/code/code_080211F0.c:SkillKillerDollUse	SkillKillerDollUse	abilities	name			c_function	0x08024F38	src/code/code_080211F0.c	3341	0	14
 aos:c:src/code/code_080211F0.c:SkillLoadGraphicsInline	SkillLoadGraphicsInline	unclassified		technical	exclusive_callees	c_function		src/code/code_080211F0.c	2389	9	3
 aos:c:src/code/code_080211F0.c:SkillNemesisUse	SkillNemesisUse	abilities	name			c_function	0x080251F0	src/code/code_080211F0.c	3488	0	6
 aos:c:src/code/code_080211F0.c:sub_080211F0	sub_080211F0	technical	referrers			c_function	0x080211F0	src/code/code_080211F0.c	35	1	0

@@ -260,10 +260,28 @@ static void step_anim(AosEnemy *enemy, const AosAnimSet *anims) {
     if (result == 4 || (result == 3 && !ended)) enemy->cycle_done = true;
 }
 
+/* gEwramData + 0x13168, the entity the enemies aim at (sub_0806CD38 /
+ * sub_0806CD78 and the helpers built on them): Soma, or the Killer Doll
+ * soul's decoy while it exists. Contact boxes and the routines that read
+ * Soma (0x13110) directly keep his position. */
+static struct {
+    bool active;
+    int32_t x, y;
+} decoy;
+
+void aos_enemy_set_decoy(bool active, int32_t x, int32_t y) {
+    decoy.active = active;
+    decoy.x = x;
+    decoy.y = y;
+}
+
+static int32_t target_x(const AosSoma *soma) { return decoy.active ? decoy.x : soma->x; }
+static int32_t target_y(const AosSoma *soma) { return decoy.active ? decoy.y : soma->y; }
+
 /* sub_0806BC40 */
 static void face_player(AosEnemy *enemy, const AosSoma *soma) {
-    if (soma->x == enemy->x) return;
-    enemy->mirrored = enemy->x < soma->x;
+    if (target_x(soma) == enemy->x) return;
+    enemy->mirrored = enemy->x < target_x(soma);
 }
 
 /* sub_0806E120 */
@@ -273,12 +291,12 @@ static int32_t toward_facing(const AosEnemy *enemy, int32_t speed) {
 
 /* sub_0806BDEC */
 static int16_t player_dy(const AosEnemy *enemy, const AosSoma *soma) {
-    return (int16_t)((enemy->y >> 16) - (soma->y >> 16));
+    return (int16_t)((enemy->y >> 16) - (target_y(soma) >> 16));
 }
 
 /* sub_08068AD4 with the player as the entity. */
 static bool player_in(const AosSoma *soma, int32_t x, int32_t y, int w, int h) {
-    return (uint16_t)((soma->x >> 16) - x) <= w && (uint16_t)((soma->y >> 16) - y) <= h;
+    return (uint16_t)((target_x(soma) >> 16) - x) <= w && (uint16_t)((target_y(soma) >> 16) - y) <= h;
 }
 
 /* sub_080AD700: the player in a w x h box centred on X, below the bat. */
@@ -435,7 +453,7 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
     int32_t y0 = zombie->y;
     snap_to_floor(zombie, layer);
     zombie->state = 0;
-    zombie->mirrored = (zombie->x >> 16) < (soma->x >> 16);
+    zombie->mirrored = (zombie->x >> 16) < (target_x(soma) >> 16);
     if (on_slope(layer, zombie->x >> 16, zombie->y >> 16)) zombie_vanish(zombie);
     if (zombie->y <= y0 - 0x80000) zombie_vanish(zombie);
 }
@@ -474,7 +492,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
                         .param0 = param0, .param1 = param1, .static_frame = -1};
     /* sub_0800F1FC: mirrored when the record lies left of the player. */
-    enemy->mirrored = enemy->x < soma->x;
+    enemy->mirrored = enemy->x < target_x(soma);
     /* sub_0806B04C / sub_0806D244: stats and the type 8 collision block. */
     enemy->stats = *stats;
     enemy->hp = stats->hp;
@@ -638,7 +656,7 @@ bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t
             return true;
         }
         enemy->state = 0;
-        enemy->mirrored = (enemy->x >> 16) < (soma->x >> 16);
+        enemy->mirrored = (enemy->x >> 16) < (target_x(soma) >> 16);
         int32_t speed = (int32_t)(aos_random() & 0x3FFF) + 0xC000;
         enemy->vx = enemy->mirrored ? speed : -speed;
         enemy->ay = 0xC00;
@@ -1846,7 +1864,7 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
 
 /* sub_0806BF78: the player within `range` of the entity on both axes. */
 static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
-    int32_t dx = e->x - soma->x, dy = e->y - soma->y;
+    int32_t dx = e->x - target_x(soma), dy = e->y - target_y(soma);
     return (uint32_t)(dx < 0 ? -dx : dx) <= range && (uint32_t)(dy < 0 ? -dy : dy) <= range;
 }
 
@@ -2022,7 +2040,7 @@ static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
             n->step = 1;
         }
         face_player(n, soma);
-        (void)move_toward(n, soma->x, soma->y - 0x180000, 0x8000);
+        (void)move_toward(n, target_x(soma), target_y(soma) - 0x180000, 0x8000);
         integrate(n);
         if (n->timer == 0 || --n->timer == 0 || player_within(n, soma, 0x180000)) {
             n->state = 2;
@@ -2033,7 +2051,7 @@ static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
         if (n->anim.id != 2) play(n, kind->anims, 2);
         if (n->step == 0) {
             face_player(n, soma);
-            (void)move_toward(n, soma->x, soma->y, 0x18000);
+            (void)move_toward(n, target_x(soma), target_y(soma), 0x18000);
             n->timer = 0x18;
             n->step = 1;
         }
@@ -2129,7 +2147,7 @@ static void stop(AosEnemy *e) {
  * vertically. Step 2 (a glide from the current velocity) is not entered by
  * any code read and is not ported. */
 static void crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *anims) {
-    int32_t ty = soma->y - 0x2A0000;
+    int32_t ty = target_y(soma) - 0x2A0000;
     switch (c->step) {
     case 0:
         c->phase = 0;
@@ -2159,14 +2177,14 @@ static void crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *anims) 
             if (--c->timer == 0xFF) c->substep = 2;
             break;
         case 2: {
-            int32_t dx = c->x - soma->x, dy = c->y - soma->y;
+            int32_t dx = c->x - target_x(soma), dy = c->y - target_y(soma);
             if ((dx < 0 ? -dx : dx) > 0x480000 && (dy < 0 ? -dy : dy) > 0x100000) c->substep = 3;
             break;
         }
         case 3: {
             if (c->anim.id != 1) play(c, anims, 1);
             /* The player's + 0x58 bit 0x40: behind him is to his right. */
-            int32_t tx = soma->x + (soma->facing_left ? 0x200000 : -0x200000);
+            int32_t tx = target_x(soma) + (soma->facing_left ? 0x200000 : -0x200000);
             if (move_toward(c, tx, ty, 0x1A000)) {
                 if (c->anim.id != 2) play(c, anims, 2);
                 stop(c);
@@ -2519,7 +2537,7 @@ static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollisio
 
 /* sub_0806CF2C: facing the player, mirrored when he is to the right. */
 static void soldier_face(AosEnemy *z, const AosSoma *soma) {
-    z->mirrored = (z->x >> 16) < (soma->x >> 16);
+    z->mirrored = (z->x >> 16) < (target_x(soma) >> 16);
 }
 
 /* sub_08092A28 steps 1 / 0xB: back to walking. */
@@ -2583,7 +2601,7 @@ static void soldier_attack(AosEnemy *z, const AosSoma *soma, const AosAnimSet *a
         soldier_face(z, soma);
         if (z->anim.frame == 10 && z->anim.tick == 0) {
             int32_t offset = z->mirrored ? 0x100000 : (int32_t)0xFFF00000;
-            int32_t vx = (soma->x - (z->x + offset)) / 0x2C;
+            int32_t vx = (target_x(soma) - (z->x + offset)) / 0x2C;
             if (z->mirrored ? vx > 0x13FFF : vx <= (int32_t)0xFFFEC000)
                 vx = z->mirrored ? 0x14000 : (int32_t)0xFFFEC000;
             report->children[report->child_count++] =
@@ -2684,7 +2702,7 @@ static void accel_move(AosEnemy *e, int32_t limit) {
 /* sub_080689F8 / sub_0806CEF8(e, range): the player's distance (whole
  * pixels, through Sqrt) within `range` (16.16). */
 static bool player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
-    int32_t dx = (e->x - soma->x) >> 16, dy = (e->y - soma->y) >> 16;
+    int32_t dx = (e->x - target_x(soma)) >> 16, dy = (e->y - target_y(soma)) >> 16;
     return (uint32_t)isqrt((uint32_t)(dx * dx + dy * dy)) << 16 <= range;
 }
 
@@ -2711,14 +2729,14 @@ static void valkyrie_hover(AosEnemy *v, const AosSoma *soma) {
         if (player_in_range(v, soma, 0x780000) || v->hp < v->stats.hp) v->step = 1;
         return;
     }
-    int32_t tx = soma->x + (v->mirrored ? (int32_t)0xFFC00000 : 0x400000);
-    if (head_toward(v, tx, soma->y + (int32_t)0xFFD00000, 0x20000)) {
+    int32_t tx = target_x(soma) + (v->mirrored ? (int32_t)0xFFC00000 : 0x400000);
+    if (head_toward(v, tx, target_y(soma) + (int32_t)0xFFD00000, 0x20000)) {
         v->state = 1;
         v->step = 0;
         return;
     }
-    int32_t dx = soma->x - v->x, dy = soma->y - v->y;
-    if ((dx < 0 ? -dx : dx) <= 0x3BFFFF && v->y < soma->y - 0x200000 &&
+    int32_t dx = target_x(soma) - v->x, dy = target_y(soma) - v->y;
+    if ((dx < 0 ? -dx : dx) <= 0x3BFFFF && v->y < target_y(soma) - 0x200000 &&
         (dy < 0 ? -dy : dy) <= 0x3BFFFF) {
         v->state = 1;
         v->step = 0;
@@ -2808,7 +2826,7 @@ static void valkyrie_attack(AosEnemy *v, const AosSoma *soma, const AosAnimSet *
  * 11/12, facing him again below -1.25 and back to state 0 above -0.125. */
 static void valkyrie_recoil(AosEnemy *v, const AosSoma *soma) {
     if (v->step == 0) {
-        v->mirrored = !((v->x >> 16) < (soma->x >> 16));
+        v->mirrored = !((v->x >> 16) < (target_x(soma) >> 16));
         v->vx = v->mirrored ? 0x30000 : -0x30000;
         v->vy = -0x30000;
         v->step = 1;
@@ -3296,7 +3314,7 @@ static void flea_hop(AosEnemy *f, const AosSoma *soma, const AosCollision *layer
         return;
     case 4: {
         f->x += f->vx;
-        f->mirrored = (f->x >> 16) < (soma->x >> 16);
+        f->mirrored = (f->x >> 16) < (target_x(soma) >> 16);
         uint32_t pick = random() % 0x1E;
         if (pick <= 9) {
             f->vx = 0xD000;
@@ -3595,7 +3613,7 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
     switch (d->step) {
     case 0:
         if (d->anim.id != 0) play(d, anims, 0);
-        if (player_within(d, soma, 0x3C0000) && (soma->x != d->x || soma->y != d->y)) {
+        if (player_within(d, soma, 0x3C0000) && (target_x(soma) != d->x || target_y(soma) != d->y)) {
             if (d->anim.id != 1) play_loop(d, anims, 1, false);
             d->timer = 0;
             d->step = 1;
@@ -3620,7 +3638,7 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
     case 3:
         if (d->substep == 0) {
             d->vx = d->vy = d->ax = d->ay = 0;
-            int dx = (int16_t)((d->x >> 16) - (soma->x >> 16));
+            int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
             if ((random() & 3) == 0) {
                 face_player(d, soma);
                 d->mirrored = !d->mirrored;
@@ -3654,12 +3672,12 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
         switch (d->substep) {
         case 0: {
             if (d->anim.id != 5) play_loop(d, anims, 5, false);
-            int16_t dx = (int16_t)((soma->x >> 16) - (d->x >> 16));
-            int16_t dy = (int16_t)((soma->y >> 16) - (d->y >> 16) - 0x10);
+            int16_t dx = (int16_t)((target_x(soma) >> 16) - (d->x >> 16));
+            int16_t dy = (int16_t)((target_y(soma) >> 16) - (d->y >> 16) - 0x10);
             uint16_t angle = aos_arctan2(dx, dy);
             d->vx = fixed_mul(aos_sine(angle + 0x14000u), 0x10000);
             d->vy = fixed_mul(aos_sine(angle + 0x10000u), 0x10000);
-            int32_t frames = d->vx ? (soma->x - d->x) / d->vx : 0;
+            int32_t frames = d->vx ? (target_x(soma) - d->x) / d->vx : 0;
             d->timer = (uint8_t)(frames < 0 ? -frames : frames);
             d->substep = 1;
             break;
@@ -3670,7 +3688,7 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
             break;
         }
         case 2: {
-            int dx = (int16_t)((d->x >> 16) - (soma->x >> 16));
+            int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
             bool ahead = d->mirrored ? dx < 0 : dx > 0;
             d->step = ahead ? 3 : 4;
             d->substep = 0;
@@ -3721,7 +3739,7 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
         d->substep = 0;
     }
     if ((int16_t)d->attack_wait != 0) return;
-    int dx = (int16_t)((d->x >> 16) - (soma->x >> 16));
+    int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
     bool ahead = d->mirrored ? dx < 0 : dx > 0;
     if (ahead && player_within(d, soma, 0x280000)) {
         d->step = 5;
@@ -3824,7 +3842,7 @@ static void doll_piece_update(AosEnemy *p, const AosSoma *soma, const AosCollisi
         p->vy = -(r[4] * 0x1000);
         p->ay = 0x1800;
         p->timer = (uint8_t)r[5];
-        if (p->x < soma->x) p->vx = -abs(p->vx);
+        if (p->x < target_x(soma)) p->vx = -abs(p->vx);
         p->glow = (AosEffect){.kind = AOS_EFFECT_FLAME, .x = p->x, .y = p->y - 0x100000};
         p->glow.mirrored = random() & 1;
         if (kind->flame_anims && aos_anim_start(&p->glow.anim, kind->flame_anims, 0, true))
@@ -3904,7 +3922,7 @@ static void doll_new_drift(AosEnemy *d, const AosSoma *soma, uint32_t (*random)(
     face_player(d, soma);
     d->vx = d->vy = d->ax = d->ay = 0;
     unsigned pattern = random() % 6;
-    int dx = (int16_t)((d->x >> 16) - (soma->x >> 16));
+    int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
     if (pattern <= 2) {
         d->vx = d->vy = 0x8000;
         if (dx > 0) d->vx = -d->vx;
@@ -3916,12 +3934,12 @@ static void doll_new_drift(AosEnemy *d, const AosSoma *soma, uint32_t (*random)(
         if (dx < 0) d->vx = -d->vx;
         d->leg = (int16_t)((random() & 0xFF) + 0x80);
     } else {
-        int16_t ax = (int16_t)((soma->x >> 16) - (d->x >> 16));
-        int16_t ay = (int16_t)((soma->y >> 16) - (d->y >> 16) - 0x10);
+        int16_t ax = (int16_t)((target_x(soma) >> 16) - (d->x >> 16));
+        int16_t ay = (int16_t)((target_y(soma) >> 16) - (d->y >> 16) - 0x10);
         uint16_t angle = aos_arctan2(ax, ay);
         d->vx = fixed_mul(aos_sine(angle + 0x14000u), 0x10000);
         d->vy = fixed_mul(aos_sine(angle + 0x10000u), 0x10000);
-        int32_t frames = d->vx ? (soma->x - d->x) / d->vx : 0;
+        int32_t frames = d->vx ? (target_x(soma) - d->x) / d->vx : 0;
         d->leg = (int16_t)(frames < 0 ? -frames : frames);
     }
 }
@@ -3982,7 +4000,7 @@ static void doll_act(AosEnemy *d, const AosSoma *soma, const AosCollision *layer
     switch (d->step) {
     case 0:
         if (d->anim.id != 0) play(d, anims, 0);
-        if (player_in_centred(d, soma, 0xF0, 0x80) && (soma->x != d->x || soma->y != d->y)) {
+        if (player_in_centred(d, soma, 0xF0, 0x80) && (target_x(soma) != d->x || target_y(soma) != d->y)) {
             if (d->anim.id != 1) play_loop(d, anims, 1, false);
             d->step = 1;
             d->substep = 0;
@@ -4069,7 +4087,7 @@ static void doll_act(AosEnemy *d, const AosSoma *soma, const AosCollision *layer
         d->substep = 0;
     }
     if (d->attack_wait) return;
-    int dx = (int16_t)((d->x >> 16) - (soma->x >> 16));
+    int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
     if (d->mirrored ? dx >= 0 : dx <= 0) return;
     if (player_within(d, soma, 0x140000) || (random() & 0x3FF) == 0) {
         d->step = 3;
@@ -4170,7 +4188,7 @@ static const int8_t beam_bones[7][5] = {
  * facing its own), + 0x54 0x3000; with the player to its right
  * (sub_0806BBC4 > 0) their x offsets and vx point left. */
 static void beam_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report) {
-    bool right = e->x < soma->x;
+    bool right = e->x < target_x(soma);
     for (int i = 0; i < 7 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
         AosEnemy b = {0};
         b.id = e->id;
@@ -4265,7 +4283,7 @@ static void beam_close_in(AosEnemy *e, const AosSoma *soma, const AosCollision *
             }
             e->patience++;
             if (random() % 0x28 < e->patience) {
-                int dx = (int16_t)((e->x >> 16) - (soma->x >> 16));
+                int dx = (int16_t)((e->x >> 16) - (target_x(soma) >> 16));
                 if (abs(dx) > 0x30) {
                     e->patience = 0;
                     if (random() % 0x32 <= 0x0E) {
@@ -4562,9 +4580,9 @@ static void skull_chase(AosEnemy *e, const AosSoma *soma) {
     }
     if (e->anim.tick == 0) face_player(e, soma);
     if (e->speed < r->top_speed) e->speed += 0x2000;
-    int32_t tx = (int32_t)((uint32_t)(soma->x >> 16) << 16);
-    int32_t ty = (int32_t)((uint32_t)((soma->y >> 16) - 0x50) << 16);
-    tx += soma->x > e->x ? -e->speed : e->speed;
+    int32_t tx = (int32_t)((uint32_t)(target_x(soma) >> 16) << 16);
+    int32_t ty = (int32_t)((uint32_t)((target_y(soma) >> 16) - 0x50) << 16);
+    tx += target_x(soma) > e->x ? -e->speed : e->speed;
     tx += soma->vx * r->lead;
     bool arrived = move_toward(e, tx, ty, e->speed);
     e->x += e->vx;
@@ -4638,8 +4656,8 @@ static void skull_dive(AosEnemy *e, const AosSoma *soma, const AosAnimSet *anims
         return;
     case 5:
         if (e->anim.frame == 0 && e->anim.tick == 0) face_player(e, soma);
-        e->ax = soma->x > e->x ? 0x3000 : -0x3000;
-        if (soma->y - 0x680000 > e->y) {
+        e->ax = target_x(soma) > e->x ? 0x3000 : -0x3000;
+        if (target_y(soma) - 0x680000 > e->y) {
             e->ay = 0x1800;
         } else {
             if (e->vy > -0x1000) e->vy = -0x1000;
@@ -5134,7 +5152,7 @@ static void ghost_dance(AosEnemy *g, const AosSoma *soma, const AosAnimSet *anim
     if (g->step == 0) {
         play(g, anims, 0);
         g->vx = g->vy = 0;
-        g->mirrored = (g->x >> 16) < (soma->x >> 16);
+        g->mirrored = (g->x >> 16) < (target_x(soma) >> 16);
         g->phase = 0;
         g->timer = 0;
         g->step = 1;
@@ -5240,8 +5258,8 @@ static void gargoyle_fly(AosEnemy *g, const AosSoma *soma, const AosAnimSet *ani
         g->step = 1;
         /* fall through */
     case 1:
-        dx = soma->x - g->x;
-        dy = soma->y - (g->y + 0x400000);
+        dx = target_x(soma) - g->x;
+        dy = target_y(soma) - (g->y + 0x400000);
         gargoyle_chase(&g->vx, dx, g->ax, g->ay);
         gargoyle_chase(&g->vy, dy, g->ax, g->ay);
         g->mirrored = g->vx >= 0;
@@ -5292,8 +5310,8 @@ static void gargoyle_fly(AosEnemy *g, const AosSoma *soma, const AosAnimSet *ani
         play(g, anims, 0);
         return;
     case 5:
-        dx = soma->x - g->x;
-        dy = soma->y - (g->y + 0x400000);
+        dx = target_x(soma) - g->x;
+        dy = target_y(soma) - (g->y + 0x400000);
         gargoyle_chase(&g->vx, dx, g->ax, g->ay);
         if (dy < 0) {
             g->vy -= g->ax;
@@ -5553,9 +5571,9 @@ int aos_enemy_probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes
 /* sub_0806BBC4 and sub_0806D044: the player ahead (by the facing) within
  * `range` pixels (the BIOS Sqrt of the squared whole-pixel distance). */
 static bool player_ahead_within(const AosEnemy *e, const AosSoma *soma, int range) {
-    int side = e->x < soma->x ? 1 : e->x > soma->x ? -1 : 0;
+    int side = e->x < target_x(soma) ? 1 : e->x > target_x(soma) ? -1 : 0;
     if (side != (e->mirrored ? 1 : -1)) return false;
-    int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
+    int32_t dx = pixel_delta(target_x(soma), e->x), dy = pixel_delta(target_y(soma), e->y);
     return (int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) <= range;
 }
 
@@ -5872,7 +5890,7 @@ static void archer_patrol(AosEnemy *a, const AosSoma *soma, const AosCollision *
         return;
     }
     ground_walk(a, soma, layer, &kind->probes, (int32_t)0xFFFF4000, 0xD);
-    int32_t dx = pixel_delta(soma->x, a->x), dy = pixel_delta(soma->y, a->y);
+    int32_t dx = pixel_delta(target_x(soma), a->x), dy = pixel_delta(target_y(soma), a->y);
     if ((int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) > 0x63) archer_volley(a, kind->anims);
 }
 
@@ -5900,8 +5918,8 @@ static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyK
         report = collide(arrow, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         break;
     case 1:
-        arrow->x = soma->x + arrow->ax;
-        arrow->y = soma->y + arrow->ay;
+        arrow->x = target_x(soma) + arrow->ax;
+        arrow->y = target_y(soma) + arrow->ay;
         if (arrow->timer) arrow->timer--;
         else arrow->removed = true;
         break;
@@ -6054,7 +6072,7 @@ static void medusa_spawner(AosEnemy *spawner, const AosSoma *soma, int cam_x, in
     if (random() & 0x1F) return;
     if (spawner->spawned_count >= spawner->param0) return;
     spawner->spawned_count++;
-    int px = (soma->x >> 16) - cam_x;
+    int px = (target_x(soma) >> 16) - cam_x;
     int sx = px <= 0x67 || (px <= 0x88 && !soma->facing_left) ? 256 : -16;
     report->spawn = true;
     report->spawn_x = cam_x + sx;
@@ -6617,7 +6635,7 @@ static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
         if (e->anim.frame == 1 && e->anim.tick == 0) aos_audio_play_song(0x8B);
         e->y += aos_sine(e->phase) / 32;
         e->phase = (uint16_t)(e->phase + 0x180);
-        int dx = (int)((soma->x - e->x) >> 16);
+        int dx = (int)((target_x(soma) - e->x) >> 16);
         if (dx < 0) dx = -dx;
         if (++e->timer >= 30 && dx <= 0x59) {
             stop(e);
@@ -6633,8 +6651,8 @@ static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
                  * above him, then brake back into the idle state. */
                 play_loop(e, kind->anims, 2, false);
                 aos_audio_play_song(0x87);
-                e->walk_timer = soma->x;
-                e->speed = soma->y - 0x180000;
+                e->walk_timer = target_x(soma);
+                e->speed = target_y(soma) - 0x180000;
                 e->step = 1;
             } else {
                 play(e, kind->anims, 1);
@@ -6797,8 +6815,8 @@ static AosHitReport gorgon_update(AosEnemy *e, AosSoma *soma, const AosCollision
             e->mirrored = !e->mirrored;
             e->vx = toward_facing(e, 0x8000);
         }
-        int dx = (int)((soma->x - e->x) >> 16);
-        int dy = (int)((soma->y - e->y) >> 16);
+        int dx = (int)((target_x(soma) - e->x) >> 16);
+        int dy = (int)((target_y(soma) - e->y) >> 16);
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
         if (++e->timer >= 45 && dx <= 0x50 && dy <= 0x18 && random() % 100 <= 50) {
@@ -6844,9 +6862,9 @@ static void tiny_devil_orb(AosEnemy *owner, const AosSoma *soma,
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
     AosEnemy orb;
     make_static_child(&orb, owner, AOS_ROLE_TINY_DEVIL_ORB, -1);
-    orb.x += owner->x < soma->x ? 0x100000 : -0x100000;
+    orb.x += owner->x < target_x(soma) ? 0x100000 : -0x100000;
     orb.y += 0x80000;
-    (void)move_toward(&orb, soma->x, soma->y - 0x200000, 0x20000);
+    (void)move_toward(&orb, target_x(soma), target_y(soma) - 0x200000, 0x20000);
     orb.state = 0;
     orb.variant = (uint8_t)((random() % 5) + 1);
     orb.hp = 1;
@@ -6921,8 +6939,8 @@ static void imp_helper_update(AosEnemy *helper, const AosSoma *soma,
     if (active && helper->hidden) play(helper, kind->anims, 3);
     helper->hidden = !active;
     if (active) {
-        helper->x = soma->x;
-        helper->y = soma->y - 0x280000;
+        helper->x = target_x(soma);
+        helper->y = target_y(soma) - 0x280000;
         step_anim(helper, kind->anims);
     }
 }
@@ -6954,8 +6972,8 @@ static void devil_idle(AosEnemy *e, const AosSoma *soma, const AosEnemyKind *kin
     if (e->step == 0) {
         if (!e->rest) e->rest = (uint16_t)(100 + random() % (imp ? 360 : 500));
         int32_t side = imp ? 0x460000 : 0x190000;
-        e->walk_timer = soma->x + (e->mirrored ? -side : side);
-        e->speed = soma->y + (imp ? -0x2D0000 : -0x460000);
+        e->walk_timer = target_x(soma) + (e->mirrored ? -side : side);
+        e->speed = target_y(soma) + (imp ? -0x2D0000 : -0x460000);
         e->timer = 0;
         e->step = 1;
     }
@@ -6976,7 +6994,7 @@ static void tiny_devil_attack(AosEnemy *e, const AosSoma *soma,
                               const AosEnemyKind *kind, int cam_x, int cam_y,
                               AosHitReport *report, uint32_t (*random)(void)) {
     if (e->step == 0) {
-        bool player_right = soma->x > e->x;
+        bool player_right = target_x(soma) > e->x;
         e->vx = player_right ? 0x20000 : -0x20000;
         e->ax = player_right ? -0x800 : 0x800;
         e->vy = -0x10000;
@@ -7008,7 +7026,7 @@ static void tiny_devil_attack(AosEnemy *e, const AosSoma *soma,
 
 static void imp_approach(AosEnemy *e, const AosSoma *soma) {
     if (e->step == 0) {
-        bool player_right = soma->x > e->x;
+        bool player_right = target_x(soma) > e->x;
         e->vx = player_right ? 0x20000 : -0x20000;
         e->ax = player_right ? -0x800 : 0x800;
         e->vy = 0x20000;
@@ -7019,8 +7037,8 @@ static void imp_approach(AosEnemy *e, const AosSoma *soma) {
         integrate(e);
         if (++e->timer > 30) {
             stop(e);
-            e->walk_timer = soma->x;
-            e->speed = soma->y - 0x200000;
+            e->walk_timer = target_x(soma);
+            e->speed = target_y(soma) - 0x200000;
             (void)move_toward(e, e->walk_timer, e->speed, 0x4000);
             e->timer = 0;
             e->step = 2;
@@ -7054,8 +7072,8 @@ static void imp_control(AosEnemy *e, AosSoma *soma, AosHitReport *report) {
         e->patience = 0;
         e->step = 1;
     } else if (e->step == 1) {
-        int32_t tx = soma->x + (soma->facing_left ? -0x100000 : 0x100000);
-        bool arrived = move_toward(e, tx, soma->y - 0x200000, 0x20000);
+        int32_t tx = target_x(soma) + (soma->facing_left ? -0x100000 : 0x100000);
+        bool arrived = move_toward(e, tx, target_y(soma) - 0x200000, 0x20000);
         integrate(e);
         if (arrived) {
             report->force_input = true;
@@ -7065,7 +7083,7 @@ static void imp_control(AosEnemy *e, AosSoma *soma, AosHitReport *report) {
              * outside his neutral states 0, 4 and 8 for 20 frames. */
             if (soma->state != 0 && soma->state != 4 && soma->state != 8 &&
                 ++e->patience > 20) {
-                e->vx = e->x < soma->x ? -0x10000 : 0x10000;
+                e->vx = e->x < target_x(soma) ? -0x10000 : 0x10000;
                 e->vy = -0x10000;
                 e->timer = 0;
                 e->step = 2;
@@ -7264,7 +7282,7 @@ static AosHitReport ripper_update(AosEnemy *e, AosSoma *soma,
             e->phase = 0;
             e->step = 6;
         }
-        int dx = (e->x >> 16) - (soma->x >> 16);
+        int dx = (e->x >> 16) - (target_x(soma) >> 16);
         if (dx >= -63 && dx <= 63 && (e->x >> 16) > 0 && (e->x >> 16) < 239)
             e->vx = -e->vx;
     } else if (e->step == 5 || e->step == 6) {
@@ -7458,7 +7476,7 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
 
 static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma,
                                    uint32_t (*random)(void)) {
-    int32_t dx = pixel_delta(soma->x, e->x), dy = pixel_delta(soma->y, e->y);
+    int32_t dx = pixel_delta(target_x(soma), e->x), dy = pixel_delta(target_y(soma), e->y);
     e->angle = aos_arctan2((int16_t)dx, (int16_t)dy);
     /* sub_08088168 begins its attack when Soma enters the 180 by 200
      * window centred 90 pixels left and 100 pixels above the eye. */
@@ -7541,8 +7559,8 @@ static void white_dragon_controller(AosEnemy *e, const AosSoma *soma) {
  * The GBA's alternate controlled entity is not yet represented here. */
 static bool buer_player_in_window(const AosEnemy *e, const AosSoma *soma,
                                   uint16_t width, uint16_t height) {
-    uint16_t dx = (uint16_t)((soma->x >> 16) - ((e->x >> 16) - (int)(width / 2)));
-    uint16_t dy = (uint16_t)((soma->y >> 16) - ((e->y >> 16) - (int)(height / 2)));
+    uint16_t dx = (uint16_t)((target_x(soma) >> 16) - ((e->x >> 16) - (int)(width / 2)));
+    uint16_t dy = (uint16_t)((target_y(soma) >> 16) - ((e->y >> 16) - (int)(height / 2)));
     return dx <= width && dy <= height;
 }
 
@@ -7693,7 +7711,7 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
          * The timer increment still executes on this wake-up frame, and
          * the 0xFF RNG branch can override the newly selected step. */
         if (buer_player_in_window(e, soma, 0xC0, 0x30)) {
-            int direction = (soma->x > e->x) - (soma->x < e->x);
+            int direction = (target_x(soma) > e->x) - (target_x(soma) < e->x);
             if ((e->buer_fire_mirrored && direction == 1) ||
                 (!e->buer_fire_mirrored && direction == -1)) {
                 e->step = 1;
@@ -7718,7 +7736,7 @@ static void buer_attack_timing(AosEnemy *e, const AosSoma *soma,
              * 0x080CBCBA. `away` encodes that acceleration sign, not
              * the source byte. Same-pixel X ties belong to side 1. */
             const int16_t native_side = (int16_t)(uint16_t)(
-                (uint16_t)(e->x >> 16) - (uint16_t)(soma->x >> 16));
+                (uint16_t)(e->x >> 16) - (uint16_t)(target_x(soma) >> 16));
             e->away = native_side > 0 ? -1 : 1;
             e->timer = 0x50;
             e->substep = 1;
@@ -8171,7 +8189,7 @@ static void rock_armor_controller(AosEnemy *e, const AosSoma *soma) {
 }
 
 static void giant_ghost_controller(AosEnemy *e, const AosSoma *soma) {
-    move_toward(e, soma->x, soma->y - AOS_FIXED(24), 0x4000);
+    move_toward(e, target_x(soma), target_y(soma) - AOS_FIXED(24), 0x4000);
     e->phase = (uint16_t)(e->phase + 0x180);
     e->x += e->vx;
     e->y += e->vy + aos_sine(e->phase) / 32;
@@ -8205,8 +8223,8 @@ static void ghost_controller(AosEnemy *g, const AosSoma *soma, const AosEnemyKin
     }
 
     face_player(g, soma);
-    int32_t dx = soma->x - g->x;
-    int32_t dy = soma->y - g->y + g->speed -
+    int32_t dx = target_x(soma) - g->x;
+    int32_t dy = target_y(soma) - g->y + g->speed -
                  ((dx < 0 ? -dx : dx) <= 0x5FFFFF ? 0x100000 : 0x200000);
     g->ax = dx > 0x40000 ? 0x400 : dx < -0x40000 ? -0x400 : 0;
     g->ay = dy > 0x40000 ? 0x400 : dy < -0x40000 ? -0x400 : 0;
@@ -8222,8 +8240,8 @@ static void ghost_controller(AosEnemy *g, const AosSoma *soma, const AosEnemyKin
     g->y += g->vy;
 
     if ((dx < 0 ? -dx : dx) > 0x3FFFF || (dy < 0 ? -dy : dy) > 0x3FFFF) return;
-    int16_t away_x = (int16_t)pixel_delta(g->x, soma->x);
-    int16_t away_y = (int16_t)pixel_delta(g->y + 0x400000, soma->y);
+    int16_t away_x = (int16_t)pixel_delta(g->x, target_x(soma));
+    int16_t away_y = (int16_t)pixel_delta(g->y + 0x400000, target_y(soma));
     uint16_t angle = aos_arctan2(away_x, away_y);
     angle = (uint16_t)(angle - 0x1000 + (random() & 0x1FFF));
     g->vx = fixed_mul(aos_sine(angle + 0x4000u), 0x20000);
@@ -8436,7 +8454,7 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
          * owned by this room producer, which decrements on their removal. */
         if ((random() & 31) == 0 && e->param0 > 0 &&
             e->spawned_count < e->param0) {
-            int sx = (soma->x >> 16) - cam_x;
+            int sx = (target_x(soma) >> 16) - cam_x;
             int sy = (int)(soma->vy >> 16);
             report.spawn_x = cam_x + (sx <= 31 ? 256 : sx > 208 ? -16 :
                                       ((random() & 1) ? 256 : -16));
@@ -8540,8 +8558,8 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
         if (e->attack_wait) --e->attack_wait;
         else if (kind->anims && kind->anims->count > 4 &&
                  kind->anims->anims[4].count > 2 &&
-                 abs((e->x >> 16) - (soma->x >> 16)) <= 0xC4 &&
-                 abs((e->y >> 16) - (soma->y >> 16)) <= 0x80) {
+                 abs((e->x >> 16) - (target_x(soma) >> 16)) <= 0xC4 &&
+                 abs((e->y >> 16) - (target_y(soma) >> 16)) <= 0x80) {
             face_player(e, soma);
             e->state = 4;
             e->step = 0;

@@ -867,8 +867,8 @@ frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming and
 hovering loops. The dedicated parent motion controllers are now dispatched
-for Peeping Eye, White Dragon and Giant Ghost; Rock Armor, Buer and the
-Winged Skeleton now have their own ports. Ghost now has its complete specialized state machine: animation 0
+for Peeping Eye and Giant Ghost; Rock Armor, Buer, the White Dragon and
+the Winged Skeleton now have their own ports. Ghost now has its complete specialized state machine: animation 0
 appears without collision, animation 1 enables its attack and accelerates
 toward a random height 16 to 32 pixels above Soma with 31/32 damping; inside
 four pixels it takes a two-pixel impulse away from a point below him. Its
@@ -1038,6 +1038,25 @@ is above 0x400, is drawn scaled (`sub_0803E058`: 1 / scale, nothing at
 seven bones (`sub_080CB1B4`, records at `0x08528B17`: x, y, frame, vx /
 0x1000, -vy / 0x1000, a byte their update `sub_0806C5AC` ignores; with the
 player to its right their x and vx point left).
+
+The White Dragon (enemy 0x0B, `EnemyWhiteDragonCreate` /
+`EnemyWhiteDragonUpdate`) is a head on a neck rooted at its record. Its
+draw callback (`sub_08077080`) places the head at the neck length `+ 0x4E`
+along the heading `+ 0x4A` plus sin(swing `+ 0x48`) times the amplitude
+`+ 0x1C` / 4096 plus sin(wobble `+ 0x1E`) / 16; its ten segments
+(`sub_080771C8`) sit at (9 - i) / 10 of the neck with the swing of (i + 1)
+* 8 frames ago from a 100-word history. Idle (`sub_08076824`) the neck
+eases to 72 pixels, the swing rate to 0x400 and the amplitude to 0x80; two
+countdowns may start a bite at a target in the 84 x 200 box 40 pixels
+ahead of the root, or a breath at one in the 80 x 200 box ahead of the
+head. The bite (`sub_08076B34`) draws the neck in to 32 and turns the
+heading to the target, then lunges to 100 (0x87); a breath spits flames
+for 60 frames (0x77; the second kind also draws sparks into the mouth),
+then eight 4.0 fireballs (0x77 each, `sub_08077644`: frames 5-9, growing
+boxes), the second kind sweeping them by 0x300. A weapon blow while idle
+makes it recoil 30 frames (`sub_08076ED8`); dead (`sub_08076F20`) it
+flails 120 frames in flames (0x6E), then the head falls (0x6B, two
+pieces) and the segments come apart one by one into pieces.
 
 Buer (enemy 0x0A, `EnemyBuerCreate` / `EnemyBuerUpdate`) is a rolling,
 affine-turned body (frame 0 of `0x0824FDB0`) with a fire sprite (frame 1,

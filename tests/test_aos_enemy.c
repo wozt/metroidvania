@@ -348,45 +348,169 @@ static void peeping_eye_native_steering_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
-/* White Dragon state 3 (sub_08076ED8) holds its position for
- * thirty updates and resets on update 31, retaining shared contact. */
-static void white_dragon_recovery_tests(void) {
-    memset(cells, 0, sizeof cells);
-    static const uint8_t ticks[] = {2, 2};
+static void white_dragon_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t ticks[2] = {4, 4};
     const AosAnimDef defs[2] = {{2, ticks}, {2, ticks}};
     const AosAnimSet anims = {defs, 2};
-    AosEnemyKind kind = {.anims = &anims};
-    kind.margins[0][0] = kind.margins[0][1] = 32;
-    for (int animation = 0; animation < 2; ++animation)
-        for (int frame = 0; frame < 2; ++frame) {
-            kind.modes[animation][frame] = 1;
-            kind.hurt[animation][frame] = kind.attack[animation][frame] =
-                (AosBox){-8, -8, 16, 16};
-        }
-    const AosEnemyStats stats = {30, 10, 2, 0, 0, 4};
-    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
-    AosEnemy dragon;
-    assert(aos_enemy_create(&dragon, AOS_ENEMY_WHITE_DRAGON,
-                            100, 100, 0, 0, &soma, &layer, &kind, &stats));
-    dragon.spawned_count = 9; /* Body linkage is tested separately. */
-    dragon.state = 3;
-    dragon.step = 4;
-    dragon.timer = 0;
-    int32_t x = dragon.x, y = dragon.y;
-    for (int frame = 0; frame < 30; ++frame) {
-        aos_enemy_update(&dragon, &soma, &layer, &kind,
-                         NULL, NULL, 10, 4, 0, 0, never_zero);
-        assert(dragon.state == 3 && dragon.x == x && dragon.y == y);
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {200, 20, 4, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(500), AOS_FIXED(100), NULL);
+
+    /* Facing right (parameter 0 set): heading 0, frame 0, its root at the
+     * record; the first two updates make the ten segments. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_WHITE_DRAGON, 100, 100, 1, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(d.mirrored && d.wd_heading == 0 && d.static_frame == 0 && d.wd_home_x == 100 &&
+           d.state == 0 && d.own_hurt.h == 12);
+    AosHitReport first = aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+    assert(first.child_count == 8 && first.children[0].variant == 9 &&
+           first.children[0].role == AOS_ROLE_WHITE_DRAGON_PART);
+    AosEnemy seg0 = first.children[7];
+    AosHitReport second = aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                           always_zero);
+    assert(second.child_count == 2 && second.children[1].variant == 0);
+    AosEnemy seg_last = second.children[1];
+    /* Two updates: neck 2, rate 0x20, swing 0x30, phase 0x280, amplitude 2;
+     * the head at its neck length along the heading. */
+    assert(d.wd_radius == 2 && d.wd_rate == 0x20 && d.wd_angle == 0x30 &&
+           d.wd_phase == 0x280 && d.wd_swing == 2 && d.wd_history[0] == 0x30 &&
+           d.wd_history[1] == 0x10);
+    /* The neck grows to 72 pixels, the rate to 0x400, the amplitude to 0x80. */
+    for (int i = 0; i < 200; ++i)
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(d.wd_radius == 0x48 && d.wd_rate == 0x400 && d.wd_swing == 0x80);
+    int dx = (d.x >> 16) - 100, dy = (d.y >> 16) - 100;
+    assert(dx * dx + dy * dy <= 73 * 73 && dx * dx + dy * dy >= 70 * 70 && dx > 0);
+    /* Segment 0 sits at 9 / 10 of the neck, segment 9 at the root. */
+    seg_last.parent = &d;
+    aos_enemy_update(&seg_last, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    int sdx = (seg_last.x >> 16) - 100, sdy = (seg_last.y >> 16) - 100;
+    assert(sdx * sdx + sdy * sdy >= 62 * 62 && sdx * sdx + sdy * sdy <= 66 * 66);
+    AosEnemy root = first.children[0];
+    root.parent = &d;
+    aos_enemy_update(&root, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(root.x == AOS_FIXED(100) && root.y == AOS_FIXED(100));
+    (void)seg0;
+
+    /* A target in the bite box (84 x 200, 40 pixels ahead of the root):
+     * the bite. The neck draws in, the heading turns to the target, then
+     * the lunge (0x87) grows it to 100. */
+    soma.x = AOS_FIXED(100 + 0x28 + 0x20);
+    soma.y = d.y;
+    d.wd_cool_a = 0;
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.state == 1 && d.step == 0 && d.wd_cool_a == 100 + 0x48);
+    aos_audio_clear();
+    int frames = 0;
+    while (d.step == 0 && frames < 200) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
     }
-    assert(dragon.timer == 30 && dragon.step == 4);
-    aos_enemy_update(&dragon, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(dragon.state == 0 && dragon.step == 0 && dragon.timer == 0);
-    assert(dragon.static_frame == 0 && dragon.x == x && dragon.y == y);
-    aos_enemy_update(&dragon, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(dragon.x != x); /* Normal controller resumed after recovery. */
-    memset(cells, 0, sizeof cells);
+    assert(d.step == 1 && d.wd_radius == 0x20 && d.wd_rate == 0x800 && d.wd_swing == 0 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) == 1);
+    while (d.state == 1 && frames < 400) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.state == 0 && d.wd_radius >= 0x60 && d.wd_cool_a == 0x3C && d.wd_cool_b == 0);
+
+    /* The fireball breath (step 20): 60 frames of flames (0x77, frame 1)
+     * and sparks, one opening frame (frame 2), then a fireball every fourth
+     * of 30 frames (eight, 0x77 each) sweeping by 0x300. */
+    d.state = 1;
+    d.step = 20;
+    d.timer = 0;
+    d.wd_aim = 0;
+    aos_audio_clear();
+    int flames = 0, sparks = 0, balls = 0;
+    AosEnemy ball = {0};
+    frames = 0;
+    while (d.state == 1 && frames < 300) {
+        AosHitReport r = aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        for (int c = 0; c < r.child_count; ++c) {
+            flames += r.children[c].role == AOS_ROLE_DRAGON_FLAME;
+            sparks += r.children[c].role == AOS_ROLE_DRAGON_SPARK;
+            if (r.children[c].role == AOS_ROLE_DRAGON_FIREBALL) {
+                if (!balls) ball = r.children[c];
+                balls++;
+            }
+        }
+        ++frames;
+    }
+    assert(flames == 4 + 8 && sparks == 8 && balls == 8 && frames == 61 + 1 + 61 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x77) == 2 + 8 && d.static_frame == 0);
+    assert(ball.static_frame == 5 && ball.contact_elements == 2 && ball.vx == 0x40000);
+    /* The fireball: 7 frames moving at 4.0, growing through frames 6-9. */
+    int32_t bx = ball.x;
+    for (frames = 0; !ball.removed && frames < 60; ++frames)
+        aos_enemy_update(&ball, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(frames == 7 + 7 + 15 + 5 + 5 && ball.static_frame == 9 && ball.x > bx + AOS_FIXED(50));
+
+    /* Struck by the weapon while idle: the recoil (state 3, frame 1) for
+     * 31 frames (its flash does not hold state 3). */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    d.state = d.step = 0;
+    d.wd_cool_a = d.wd_cool_b = 100;
+    soma.x = d.x;
+    soma.y = d.y + AOS_FIXED(16);
+    const AosCombat fresh = d.combat;
+    AosHitReport hit = aos_enemy_update(&d, &soma, &layer, &kind, &weapon, &blade, 30, 4, 0, 0,
+                                        always_zero);
+    assert(hit.enemy_hit && d.state == 3 && d.static_frame == 1 && d.hit_flash == 8);
+    for (frames = 0; d.state == 3 && frames < 100; ++frames)
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.state == 0 && d.static_frame == 0 && frames == 31);
+
+    /* A lethal blow: 0x6E, 120 frames dying with flames, then the head goes
+     * (0x6B, two pieces) and the segments fall apart; gone 50 frames on. */
+    d.combat = fresh;
+    d.hit_flash = 0;
+    soma.x = d.x;
+    soma.y = d.y + AOS_FIXED(16);
+    aos_audio_clear();
+    hit = aos_enemy_update(&d, &soma, &layer, &kind, &weapon, &blade, 9999, 4, 0, 0,
+                           always_zero);
+    assert(hit.killed && d.state == 2 && d.timer == 0x78 && d.static_frame == 1);
+    for (frames = 0; d.step == 0 && frames < 300; ++frames)
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(frames == 0x78 && d.hidden && aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    seg_last.parent = &d;
+    AosHitReport fall = {0};
+    for (frames = 0; !seg_last.removed && frames < 60; ++frames) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        fall = aos_enemy_update(&seg_last, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                always_zero);
+    }
+    assert(seg_last.removed && d.timer == 4 && fall.child_count >= 1 &&
+           fall.children[fall.child_count - 1].role == AOS_ROLE_DRAGON_PIECE);
+    while (!d.removed && frames < 200) {
+        aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(d.removed && d.timer == 0x33);
+
+    /* The global 0x8E & 0x40: state 4, it only swings. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&d, AOS_ENEMY_WHITE_DRAGON, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(d.state == 4 && d.wd_rate == 0x400 && d.wd_heading == 0x8000);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(d.state == 4 && d.wd_rate == 0x400 && d.wd_angle == 0x400);
 }
 
 static void early_enemy_batch_tests(void) {
@@ -411,7 +535,7 @@ static void early_enemy_batch_tests(void) {
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
     const uint8_t ids[] = {AOS_ENEMY_SKELETON, AOS_ENEMY_PEEPING_EYE,
                            AOS_ENEMY_KILLER_FISH, AOS_ENEMY_BONE_PILLAR,
-                           AOS_ENEMY_WHITE_DRAGON, AOS_ENEMY_GHOST,
+                           AOS_ENEMY_GHOST,
                            AOS_ENEMY_ROCK_ARMOR, AOS_ENEMY_GIANT_GHOST,
                            AOS_ENEMY_WINGED_SKELETON};
     for (unsigned i = 0; i < sizeof ids; ++i) {
@@ -464,27 +588,6 @@ static void early_enemy_batch_tests(void) {
     eye.target_y = eye.y;
     aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(eye.step == 3);
-
-    AosEnemy dragon;
-    assert(aos_enemy_create(&dragon, AOS_ENEMY_WHITE_DRAGON, 100, 100, 0, 0, &soma, &layer,
-                            &kind, &stats));
-    AosHitReport dragon_parts = aos_enemy_update(&dragon, &soma, &layer, &kind, NULL, NULL, 10,
-                                                 4, 0, 0, never_zero);
-    assert(dragon_parts.child_count == 8 && dragon.spawned_count == 8);
-    assert(dragon.x != AOS_FIXED(100) && dragon.phase == 0x100);
-    for (unsigned i = 0; i < dragon_parts.child_count; ++i)
-        assert(dragon_parts.children[i].role == AOS_ROLE_WHITE_DRAGON_PART &&
-               dragon_parts.children[i].anim.id == 1);
-    assert(dragon_parts.children[5].scaled && dragon_parts.children[5].scale == 0xFFFF);
-    dragon_parts = aos_enemy_update(&dragon, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
-                                    never_zero);
-    assert(dragon_parts.child_count == 1 && dragon.spawned_count == 9);
-    AosEnemy part = dragon_parts.children[0];
-    part.parent = &dragon;
-    int32_t part_x = part.x;
-    aos_enemy_update(&part, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(part.x != part_x || part.y != dragon.y);
-    assert(part.angle != 0);
 
     /* Source-derived Winged Skeleton producer: 1/32, cap, right-side
      * entry when Soma is near the left camera border. */
@@ -4613,7 +4716,6 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
-    white_dragon_recovery_tests();
     peeping_eye_native_steering_tests();
     giant_ghost_death_cue_tests();
     skeleton_bone_tests();
@@ -4826,6 +4928,7 @@ int main(void) {
     armor_tests();
     rock_armor_tests();
     buer_tests();
+    white_dragon_tests();
     killer_fish_tests();
     archer_tests();
     needles_tests();

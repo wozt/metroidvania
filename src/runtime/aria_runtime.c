@@ -3180,7 +3180,6 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         double degrees = 0;
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
-            e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
             ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS) &&
              e->enemy.role == AOS_ROLE_ENEMY))

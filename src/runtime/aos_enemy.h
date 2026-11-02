@@ -181,7 +181,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_SKELETON_HELD = 33, AOS_ROLE_WINGED_BONE = 34,
        AOS_ROLE_WINGED_PIECE = 35, AOS_ROLE_ROCK = 36,
        AOS_ROLE_ROCK_PIECE = 37, AOS_ROLE_FRY = 38, AOS_ROLE_BUBBLE = 39,
-       AOS_ROLE_BUBBLE_POP = 40 };
+       AOS_ROLE_BUBBLE_POP = 40, AOS_ROLE_DRAGON_FIREBALL = 41, AOS_ROLE_DRAGON_FLAME = 42,
+       AOS_ROLE_DRAGON_SPARK = 43, AOS_ROLE_DRAGON_PIECE = 44 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -242,6 +243,15 @@ typedef struct AosEnemy {
     /* Buer's fire sprite (sub_080CC3C8): its position, kept by the body,
      * on the body while it follows it (its + 0x0A = 0), gone in death
      * stage two. */
+    /* White Dragon (EnemyWhiteDragonCreate): + 0x10 / + 0x12 (countdowns,
+     * then the attack target), its root (room pixels), + 0x1C (swing
+     * amplitude), + 0x1E (wobble phase), + 0x48 (swing angle), + 0x4A
+     * (heading), + 0x4C (swing rate), + 0x4E (neck length), + 0x50 (breath
+     * sweep up), + 0x52 (breath angle) and the 100 past swing angles. */
+    int16_t wd_cool_a, wd_cool_b, wd_home_x, wd_home_y, wd_swing, wd_radius;
+    uint16_t wd_phase, wd_angle, wd_heading, wd_rate, wd_aim;
+    bool wd_sweep_up;
+    uint16_t wd_history[100];
     int32_t buer_fire_x, buer_fire_y;
     bool buer_fire_following, buer_fire_gone;
     bool technical_effects_spawned; /* the three Nemesis visual effect slots */

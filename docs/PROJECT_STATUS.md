@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0709 - White Dragon rewritten from the native routines
+
+- The White Dragon is rewritten from its traced routines: a head on a neck
+  rooted at its record, whose ten segments trail its swing through a
+  100-word history (`sub_08077080`, `sub_080771C8`); the idle swing, the
+  bite (0x87) and the two breaths with flames, sparks and fireballs
+  (0x77); the recoil after a weapon blow; the death dropping the head and
+  then each segment into pieces (0x6E, 0x6B).
+- Its direct frames 0-11 are exported (`aria_objects` v46).
+- New `white_dragon_tests`; a local capture of area 0 room 13 shows the
+  neck swinging out and lunging at Soma. It becomes the 44th complete
+  monster. Zero Mission is unchanged.
+
 ## Patch 0708 - Buer rewritten from the native routines
 
 - Buer's AI is rewritten from its traced routines, replacing about 40

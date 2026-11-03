@@ -357,7 +357,9 @@ timings and frames, and the SDL-free ports `aos_collision.c`, `aos_soma.c`
 and `aos_anim.c`. Its simulation frames pass through the host-neutral native
 game-mode table in `aos_game_lifecycle.c`; explicit room/save launches enter
 IN_GAME directly while the incomplete boot/title path remains independently
-testable. `fusion_aria_title_preview` now selects that boot path and reaches
+testable. `fusion_aria_title_preview` now selects that boot path, shows the
+native title screen (`aos_title_screen.c` with the ROM layers of
+`aos_title_graphics.c`; its objects are not drawn yet) and reaches
 the native main-menu operation selector
 in `aos_main_menu.c`, including PLAY/CREATE/LOAD, COPY and DELETE, their
 confirmation controllers, special completed-file positions and final direct

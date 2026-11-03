@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0725 - Aria's native title screen (backgrounds and flow)
+
+- New `aos_title_screen` ports GameModeTitleScreenUpdate with its display
+  registers and palette system (the row and colour fades of
+  sub_0803BE04), the 49-frame cycle of BG row 0, the decaying BG1 wave,
+  entity 0x12's OBJ palette sweep that ends stage 4 and the menu entity;
+  `aos_title_graphics` decodes its three layers from the ROM, including the
+  256-colour affine moon (BG2). The Aria preview now shows the native title
+  through a small GBA-style compositor instead of a placeholder.
+- The menu has no SOUL TRADE entry (no link cable on a PC): GAME START, and
+  the extra entry once unlocked.
+- The partial title controllers (aos_title_motion, aos_title_stages,
+  aos_title_input) are replaced by the new module.
+- Not yet drawn: the title objects (the disc over the moon, bats,
+  sparkles, logo sprite, menu and copyright), so the final frame is still
+  incomplete; MUS_27 is requested but the preview has no audio.
+
 ## Patch 0724 - Big Golem blue soul
 
 - `SkillBigGolemUse` (blue soul 12) shares the Shadow Knight's stretched

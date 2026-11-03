@@ -13,6 +13,7 @@
 #include "aos_intro_graphics.h"
 #include "aos_intro_resources.h"
 #include "aos_main_menu_graphics.h"
+#include "aos_title_graphics.h"
 #include "aos_game_over_graphics.h"
 #include "aos_text_window.h"
 #include "aos_menu_bg0.h"
@@ -502,6 +503,25 @@ int main(int argc, char **argv) {
     AosGameLifecycle lifecycle;
     AosMenuSaveBridge save_bridge;
     aos_game_lifecycle_init(&lifecycle, false);
+    /* The native title screen: its layers and its palette rows (0x08209308
+     * for the objects, 0x080E622C for the cycle of BG row 0). */
+    static AosTitleGraphics title_graphics;
+    SDL_Texture *title_texture = NULL;
+    if (intro_rom.data) {
+        char title_error[256];
+        if (aos_title_graphics_init(&title_graphics, &intro_rom, title_error,
+                                    sizeof title_error) &&
+            intro_rom.size > 0x20A000) {
+            lifecycle.title.graphics = &title_graphics;
+            lifecycle.title.obj_palette_rows = intro_rom.data + 0x209308;
+            lifecycle.title.cycle_rows = intro_rom.data + 0x0E622C;
+            title_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                              SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
+            if (title_texture) SDL_SetTextureScaleMode(title_texture, SDL_SCALEMODE_NEAREST);
+        } else {
+            fprintf(stderr, "No native Aria title: %s\n", title_error);
+        }
+    }
     /* --game-over: the runtime's Soma died; GAME_OVER then the Konami logo. */
     if (start_game_over) aos_game_lifecycle_start_game_over(&lifecycle);
     static AosGameOverGraphics game_over_graphics;
@@ -702,6 +722,12 @@ int main(int argc, char **argv) {
                 SDL_RenderFillRect(renderer, &whole);
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
+        } else if (title_texture && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
+            static uint8_t title_pixels[GBA_W * GBA_H * 4];
+            aos_title_screen_render(&lifecycle.title, title_pixels);
+            SDL_UpdateTexture(title_texture, NULL, title_pixels, GBA_W * 4);
+            SDL_FRect dst = {0, 0, GBA_W, GBA_H};
+            SDL_RenderTexture(renderer, title_texture, NULL, &dst);
         } else if (art && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
             SDL_FRect dst = {0, 0, GBA_W, GBA_H};
             SDL_RenderTexture(renderer, art, NULL, &dst);
@@ -820,7 +846,7 @@ int main(int argc, char **argv) {
                                         "ADD --rom FOR NATIVE TEXT");
                 }
                 SDL_RenderDebugText(renderer, 62, 132, "A OR START: SKIP");
-            } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
+            } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN && !title_texture) {
                 SDL_RenderDebugText(renderer, 72, 122, "PRESS START");
             } else if (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO) {
                 SDL_RenderDebugText(renderer, 48, 76, "LICENSED BY NINTENDO");
@@ -833,7 +859,7 @@ int main(int argc, char **argv) {
             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE ?
                 lifecycle.intro_cutscene.brightness :
             lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN ?
-                lifecycle.title_fade.brightness : lifecycle.startup_logo.brightness;
+                (title_texture ? 0 : lifecycle.title.bldy) : lifecycle.startup_logo.brightness;
         uint8_t darkness = brightness > 16 ? 16 : (uint8_t)brightness;
         if (darkness > 0) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -858,6 +884,7 @@ int main(int argc, char **argv) {
     destroy_main_menu_textures(main_menu_textures);
     aos_main_menu_graphics_free(&main_menu_graphics);
     if (menu_bg0_texture) SDL_DestroyTexture(menu_bg0_texture);
+    if (title_texture) SDL_DestroyTexture(title_texture);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);

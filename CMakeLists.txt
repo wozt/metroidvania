@@ -193,18 +193,17 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_au
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_main_menu.c
                src/runtime/aos_intro_cutscene.c src/runtime/aos_intro_entities.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
-               src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
+               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
-               src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
+               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
                src/runtime/aos_intro_font.c src/runtime/aos_intro_graphics.c
                src/runtime/aos_rom_graphics.c src/runtime/aos_main_menu_graphics.c
+               src/runtime/aos_title_graphics.c
                src/runtime/aos_input.c src/runtime/aos_text_window.c
                src/runtime/aos_menu_bg0.c
                src/runtime/aos_game_over_graphics.c
@@ -587,11 +586,6 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_save_room_tests)
     add_test(NAME aos_save_room COMMAND fusion_aos_save_room_tests)
 
-    add_executable(fusion_aos_title_stages_tests tests/test_aos_title_stages.c src/runtime/aos_title_stages.c)
-    target_include_directories(fusion_aos_title_stages_tests PRIVATE src/runtime)
-    fusion_enable_warnings(fusion_aos_title_stages_tests)
-    add_test(NAME aos_title_stages COMMAND fusion_aos_title_stages_tests)
-
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_pickup.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
@@ -879,20 +873,10 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_text_window_tests)
     add_test(NAME aos_text_window COMMAND fusion_aos_text_window_tests)
 
-    add_executable(fusion_aos_title_motion_tests tests/test_aos_title_motion.c src/runtime/aos_title_motion.c)
-    target_include_directories(fusion_aos_title_motion_tests PRIVATE src/runtime)
-    fusion_enable_warnings(fusion_aos_title_motion_tests)
-    add_test(NAME aos_title_motion COMMAND fusion_aos_title_motion_tests)
-
     add_executable(fusion_aos_title_fade_tests tests/test_aos_title_fade.c src/runtime/aos_title_fade.c)
     target_include_directories(fusion_aos_title_fade_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_title_fade_tests)
     add_test(NAME aos_title_fade COMMAND fusion_aos_title_fade_tests)
-
-    add_executable(fusion_aos_title_input_tests tests/test_aos_title_input.c src/runtime/aos_title_input.c)
-    target_include_directories(fusion_aos_title_input_tests PRIVATE src/runtime)
-    fusion_enable_warnings(fusion_aos_title_input_tests)
-    add_test(NAME aos_title_input COMMAND fusion_aos_title_input_tests)
 
     add_executable(fusion_aos_game_mode_tests tests/test_aos_game_mode.c
                    src/runtime/aos_game_mode.c src/runtime/aos_title_fade.c
@@ -901,11 +885,17 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)
 
+    add_executable(fusion_aos_title_screen_tests tests/test_aos_title_screen.c
+                   src/runtime/aos_title_screen.c)
+    target_include_directories(fusion_aos_title_screen_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_title_screen_tests PRIVATE m)
+    fusion_enable_warnings(fusion_aos_title_screen_tests)
+    add_test(NAME aos_title_screen COMMAND fusion_aos_title_screen_tests)
+
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_game_mode.c
                    src/runtime/aos_main_menu.c
-                   src/runtime/aos_title_fade.c src/runtime/aos_title_input.c
-                   src/runtime/aos_title_motion.c src/runtime/aos_title_stages.c
+                   src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c
                    src/runtime/aos_input.c src/runtime/aos_intro_cutscene.c
                    src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)

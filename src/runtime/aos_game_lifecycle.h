@@ -9,10 +9,7 @@
 #include "aos_game_over.h"
 #include "aos_intro_cutscene.h"
 #include "aos_main_menu.h"
-#include "aos_title_fade.h"
-#include "aos_title_input.h"
-#include "aos_title_motion.h"
-#include "aos_title_stages.h"
+#include "aos_title_screen.h"
 
 /* Host-neutral owner of Aria's native game-mode dispatcher. The SDL runtime
  * consumes the frame requests while the individual controllers retain their
@@ -23,23 +20,15 @@ typedef struct {
     AosStartupLogoMode startup_logo;
     AosIntroCutscene intro_cutscene;
     AosMainMenu main_menu;
-    AosTitleFade title_fade;
-    AosTitleMotion title_motion;
-    AosTitleStages title_stages;
-    AosTitleInput title_input;
+    AosTitleScreen title;       /* its graphics and palette rows are the host's */
     AosGameOver game_over;
     AosInput input;
     uint32_t progress_flags;
-    uint8_t title_destination_index;
     int save_language_requested;
     bool title_frame_requested;
     bool intro_frame_requested;
     bool in_game_frame_requested;
     bool game_over_frame_requested;
-    bool title_submenu_open;
-    bool title_exit_blocked;
-    bool title_submenu_requested;
-    bool title_back_requested;
     bool title_cleanup_requested;
 } AosGameLifecycle;
 

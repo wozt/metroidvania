@@ -228,7 +228,8 @@ typedef struct {
     int sequence;
 } AosShadowKnightGuardian;
 
-enum { AOS_SHADOW_KNIGHT_POWER = 0x23, AOS_SHADOW_KNIGHT_ELEMENTS = 1 };
+enum { AOS_SHADOW_KNIGHT_POWER = 0x23, AOS_SHADOW_KNIGHT_ELEMENTS = 1,
+       AOS_BIG_GOLEM_POWER = 0x1E, AOS_BIG_GOLEM_ELEMENTS = 0 };
 
 bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuardian *guardian,
                                        AosStats *stats,
@@ -236,6 +237,19 @@ bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuard
                                        uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                                        int32_t soma_x, int32_t soma_y, bool soma_facing_left,
                                        bool weapon_out, bool sequence_ended);
+/* SkillBigGolemUse (blue soul 12, toggled): the same stretched guardian as
+ * the Shadow Knight (power 0x1E, elements 0, sound 0x1A6), facing like
+ * Soma, 12 pixels behind him and 4 above his feet, idling in sequence 0
+ * and punching (sequence 1 once) whenever his weapon entity exists, sound
+ * 0xC5 when its punch enters frame 4 (`frame`, `tick`: its + 0x6E before
+ * this update's step). */
+bool aos_big_golem_guardian_update(AosShadowKnightGuardian *golem, AosGuardian *guardian,
+                                   AosStats *stats,
+                                   const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                   uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                   int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                   bool weapon_out, bool sequence_ended, uint8_t frame,
+                                   uint8_t tick);
 
 /* SkillAluraUneUse (blue soul 17, held): at full HP it ends before its
  * upkeep (sub_0802DD84). Otherwise a translucent fairy (art 0x081DE154,

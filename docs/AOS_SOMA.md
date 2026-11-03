@@ -166,7 +166,8 @@ with its maid's frame box and heals Soma 5 HP per strike;
 Devil and Manticore souls share Curly's transformation with their own
 power, elements and sound (0x080E1A74) and leave sparks behind Soma.
 `SkillShadowKnightUse` keeps a knight behind Soma that swings with each
-of his weapon attacks; `SkillAluraUneUse` heals 10 HP every 17 frames
+of his weapon attacks, as `SkillBigGolemUse`'s golem punches;
+`SkillAluraUneUse` heals 10 HP every 17 frames
 below full HP.
 An ending guardian clears the 0x13260 bits 8-13. The other routines are
 refused before they start,

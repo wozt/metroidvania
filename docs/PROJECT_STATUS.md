@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0724 - Big Golem blue soul
+
+- `SkillBigGolemUse` (blue soul 12) shares the Shadow Knight's stretched
+  guardian (now one helper for both): a translucent golem behind Soma that
+  punches with each of his weapon attacks (power 0x1E, sound 0xC5). Its
+  art is exported (`skill_big_golem`, `aria_objects` v59); unit-tested and
+  seen in a local capture.
+
 ## Patch 0723 - Shadow Knight and Alura Une blue souls
 
 - `SkillShadowKnightUse` (blue soul 13): a translucent knight facing

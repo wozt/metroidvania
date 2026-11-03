@@ -335,6 +335,37 @@ int main(void) {
     assert(!aos_shadow_knight_guardian_update(&knight, &guardian, &guard_stats, blue, AOS_KEY_R,
                                               AOS_KEY_R, &soma_flags, 100, 200, true, false,
                                               false));
+    /* SkillBigGolemUse (soul 12, toggled): idle sequence 0, a punch
+     * (sequence 1) with Soma's weapon, 0xC5 entering its frame 4; 12
+     * behind him and 4 above, facing like him. */
+    blue[12] = (AosBlueSoulRecord){0x08031ACD, 5, 2, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 12, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosShadowKnightGuardian golem = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    assert(aos_big_golem_guardian_update(&golem, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                         AOS_KEY_R, &soma_flags, 100, 200, true, false, false, 0,
+                                         0));
+    assert(golem.sequence == 0 && golem.x == 112 && golem.y == 196 && golem.mirrored);
+    for (int f = 0; f < 32; ++f)
+        aos_big_golem_guardian_update(&golem, &guardian, &guard_stats, blue, 0, 0, &soma_flags,
+                                      100, 200, true, false, false, 0, 0);
+    assert(guardian.state == 2);
+    assert(aos_big_golem_guardian_update(&golem, &guardian, &guard_stats, blue, 0, 0,
+                                         &soma_flags, 100, 200, true, true, false, 0, 0));
+    assert(golem.sequence == 1 && guardian.state == 3);
+    assert(aos_big_golem_guardian_update(&golem, &guardian, &guard_stats, blue, 0, 0,
+                                         &soma_flags, 100, 200, true, true, false, 4, 0));
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xC5) == 1);
+    assert(aos_big_golem_guardian_update(&golem, &guardian, &guard_stats, blue, 0, 0,
+                                         &soma_flags, 100, 200, true, false, true, 6, 2));
+    assert(golem.sequence == 0 && guardian.state == 2);
+    assert(!aos_big_golem_guardian_update(&golem, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                          AOS_KEY_R, &soma_flags, 100, 200, true, false, false,
+                                          0, 0));
     /* SkillAluraUneUse (soul 17, held, 60 MP/s): 16 behind Soma and 26
      * above, 10 HP (sound 0x140) every 17th frame; at full HP it ends. */
     blue[17] = (AosBlueSoulRecord){0x0802E961, 60, 1, 0, 0};

@@ -233,12 +233,12 @@ bool aos_great_armor_guardian_update(AosGreatArmorGuardian *armor, AosGuardian *
     return true;
 }
 
-bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuardian *guardian,
-                                       AosStats *stats,
-                                       const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
-                                       uint16_t held, uint16_t pressed, uint32_t *soma_flags,
-                                       int32_t soma_x, int32_t soma_y, bool soma_facing_left,
-                                       bool weapon_out, bool sequence_ended) {
+/* The stretched guardians of SkillShadowKnightUse and SkillBigGolemUse. */
+static bool stretch_guardian_update(AosShadowKnightGuardian *knight, AosGuardian *guardian,
+                                    AosStats *stats,
+                                    const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                    uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                    bool weapon_out, bool sequence_ended, int idle, int swing) {
     knight->sequence = -1;
     if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
         aos_guardian_end(guardian, soma_flags);
@@ -246,7 +246,7 @@ bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuard
     }
     switch (guardian->state) {
     case 0:
-        knight->sequence = 1;
+        knight->sequence = idle;
         knight->timer = 0x20;
         knight->scale_x = knight->scale_y = 0;
         aos_audio_play_song(0x1A6);
@@ -264,22 +264,52 @@ bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuard
         /* fall through */
     case 2:
         if (weapon_out) {
-            knight->sequence = 0;
+            knight->sequence = swing;
             guardian->state = 3;
         }
         break;
     case 3:
         if (sequence_ended) {
-            knight->sequence = 1;
+            knight->sequence = idle;
             guardian->state = 2;
         }
         break;
     default:
         break;
     }
+    return true;
+}
+
+bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuardian *guardian,
+                                       AosStats *stats,
+                                       const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                       uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                       int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                       bool weapon_out, bool sequence_ended) {
+    if (!stretch_guardian_update(knight, guardian, stats, records, held, pressed, soma_flags,
+                                 weapon_out, sequence_ended, 1, 0))
+        return false;
     knight->mirrored = !soma_facing_left;
     knight->x = soma_x;
     knight->y = soma_y;
+    return true;
+}
+
+bool aos_big_golem_guardian_update(AosShadowKnightGuardian *golem, AosGuardian *guardian,
+                                   AosStats *stats,
+                                   const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                   uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                   int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                   bool weapon_out, bool sequence_ended, uint8_t frame,
+                                   uint8_t tick) {
+    bool punching = guardian->state == 3;
+    if (!stretch_guardian_update(golem, guardian, stats, records, held, pressed, soma_flags,
+                                 weapon_out, sequence_ended, 0, 1))
+        return false;
+    if (punching && frame == 4 && tick == 0) aos_audio_play_song(0xC5);
+    golem->mirrored = soma_facing_left;
+    golem->x = soma_x + (soma_facing_left ? 0xC : -0xC);
+    golem->y = soma_y - 4;
     return true;
 }
 

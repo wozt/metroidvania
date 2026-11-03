@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0729 - The launcher in one window
+
+- The line now turns at 20 degrees a second, and the two musics cross-fade
+  over 40 frames when the game at the top changes.
+- A first START skips both titles' openings; the next one sends START to
+  the title of the game at the bottom, which plays its exit.
+- New `fusion_host`: the three SDL frontends (`fusion_room_runtime`,
+  `fusion_aria_title_preview`, `fusion_aria_runtime`) ask it for SDL, their
+  window and their launches. Standalone nothing changes; built into
+  `fusion_metroidvania` (FUSION_EMBEDDED) they share the launcher's window,
+  never quit SDL, and a launch runs the next frontend's main in the same
+  process, so the game continues in the same window.
+- The launcher holds Aria's idle timeout and Zero Mission's demo timer (no
+  introduction or demo from it).
+- Checked: headless captures with scripted presses, and both launches into
+  the embedded frontends under SDL's dummy video driver. The Aria menu to
+  gameplay chain inside the launcher was not run.
+
 ## Patch 0728 - Metroid Vania shared title screen launcher
 
 - New `fusion_metroidvania` runs the native title screens of Aria and Zero

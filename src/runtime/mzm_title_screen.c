@@ -676,6 +676,16 @@ static void title_init(MzmTitleScreen *t, MzmScreen *s) {
     gba_ppu_write16(s->ppu, GBA_REG_DISPCNT, t->dispcnt);
 }
 
+bool mzm_title_skippable(const MzmTitleScreen *t) {
+    return t->sub_mode1 == 2 &&
+           ((t->oam_timings[2].stage == IDLE_COMETS && t->unk_e == 0) ||
+            t->oam_timings[2].stage == IDLE_TITLE_FADING);
+}
+
+bool mzm_title_ready(const MzmTitleScreen *t) {
+    return t->sub_mode1 == 2 && t->oam_timings[2].stage == IDLE_IDLE;
+}
+
 void mzm_title_enter(MzmTitleScreen *t, bool after_demo) {
     memset(t, 0, sizeof *t);
     t->sub_mode2 = after_demo ? 2 : 0;

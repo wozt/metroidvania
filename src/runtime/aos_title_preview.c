@@ -2,6 +2,7 @@
 /* Diagnostic presentation host for the integrated native Aria boot and menu
  * controllers. All original artwork stays outside Git; rendering is not the
  * native GBA renderer. */
+#include "fusion_host.h"
 #include <SDL3/SDL.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -133,12 +134,10 @@ static bool launch_runtime(const char *runtime, const char *load_path,
         arguments[count++] = frontend_argv[i];
     }
     arguments[count] = NULL;
-    SDL_Process *process = SDL_CreateProcess(arguments, false);
-    if (!process) {
+    if (!fusion_host_launch(arguments)) {
         snprintf(error, error_size, "LAUNCH FAILED: %.90s", SDL_GetError());
         return false;
     }
-    SDL_DestroyProcess(process);
     error[0] = '\0';
     return true;
 }
@@ -363,7 +362,7 @@ static void render_main_menu_backgrounds(
     }
 }
 
-int main(int argc, char **argv) {
+int aria_title_preview_main(int argc, char **argv) {
     const char *image_path = NULL;
     const char *rom_path = NULL;
     const char *runtime_path = NULL, *save_directory_arg = NULL;
@@ -385,7 +384,7 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
-    if (!SDL_Init(SDL_INIT_VIDEO | (mute ? 0 : SDL_INIT_AUDIO))) {
+    if (!fusion_host_init(SDL_INIT_VIDEO | (mute ? 0 : SDL_INIT_AUDIO))) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
@@ -416,14 +415,14 @@ int main(int argc, char **argv) {
         const char *base_path = SDL_GetBasePath();
         if (!base_path) {
             fprintf(stderr, "Cannot resolve runtime directory: %s\n", SDL_GetError());
-            SDL_Quit();
+            fusion_host_quit();
             return 2;
         }
         int used = snprintf(runtime_buffer, sizeof runtime_buffer, "%sfusion_aria_runtime",
                             base_path);
         if (used < 0 || (size_t)used >= sizeof runtime_buffer) {
             fprintf(stderr, "Runtime path is too long\n");
-            SDL_Quit();
+            fusion_host_quit();
             return 2;
         }
         runtime_path = runtime_buffer;
@@ -435,7 +434,7 @@ int main(int argc, char **argv) {
         save_directory = preference_path;
     } else if (!SDL_CreateDirectory(save_directory)) {
         fprintf(stderr, "Cannot create save directory: %s\n", SDL_GetError());
-        SDL_Quit();
+        fusion_host_quit();
         return 2;
     }
     SlotView slots[AOS_SAVE_SLOT_COUNT] = {0};
@@ -444,17 +443,17 @@ int main(int argc, char **argv) {
         !slot_paths(slots, quicks, save_directory)) {
         fprintf(stderr, "Cannot prepare Aria save slots\n");
         SDL_free(preference_path);
-        SDL_Quit();
+        fusion_host_quit();
         return 2;
     }
-    SDL_Window *window = SDL_CreateWindow("Aria title - reconstruction preview",
+    SDL_Window *window = fusion_host_create_window("Aria title - reconstruction preview",
                                            GBA_W * SCALE, GBA_H * SCALE, 0);
     SDL_Renderer *renderer = window ? SDL_CreateRenderer(window, NULL) : NULL;
     if (!renderer) {
         fprintf(stderr, "Unable to create SDL renderer: %s\n", SDL_GetError());
-        if (window) SDL_DestroyWindow(window);
+        if (window) fusion_host_destroy_window(window);
         SDL_free(preference_path);
-        SDL_Quit();
+        fusion_host_quit();
         return 1;
     }
     SDL_SetRenderLogicalPresentation(renderer, GBA_W, GBA_H,
@@ -465,9 +464,9 @@ int main(int argc, char **argv) {
         if (!surface) {
             fprintf(stderr, "Cannot load local title BMP: %s\n", SDL_GetError());
             SDL_DestroyRenderer(renderer);
-            SDL_DestroyWindow(window);
+            fusion_host_destroy_window(window);
             SDL_free(preference_path);
-            SDL_Quit();
+            fusion_host_quit();
             return 2;
         }
         art = SDL_CreateTextureFromSurface(renderer, surface);
@@ -475,9 +474,9 @@ int main(int argc, char **argv) {
         if (!art) {
             fprintf(stderr, "Cannot create title texture: %s\n", SDL_GetError());
             SDL_DestroyRenderer(renderer);
-            SDL_DestroyWindow(window);
+            fusion_host_destroy_window(window);
             SDL_free(preference_path);
-            SDL_Quit();
+            fusion_host_quit();
             return 2;
         }
     }
@@ -527,9 +526,9 @@ int main(int argc, char **argv) {
             fusion_rom_close(&intro_rom);
             if (art) SDL_DestroyTexture(art);
             SDL_DestroyRenderer(renderer);
-            SDL_DestroyWindow(window);
+            fusion_host_destroy_window(window);
             SDL_free(preference_path);
-            SDL_Quit();
+            fusion_host_quit();
             return 2;
         }
         aos_intro_text_tiles_clear(&intro_tiles);
@@ -981,8 +980,14 @@ int main(int argc, char **argv) {
     aos_mp2k_engine_destroy(&mp2k);
     if (art) SDL_DestroyTexture(art);
     SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+    fusion_host_destroy_window(window);
     SDL_free(preference_path);
-    SDL_Quit();
+    fusion_host_quit();
     return 0;
 }
+
+#ifndef FUSION_EMBEDDED
+int main(int argc, char **argv) {
+    return aria_title_preview_main(argc, argv);
+}
+#endif

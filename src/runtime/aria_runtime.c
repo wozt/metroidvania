@@ -9,6 +9,7 @@
  * animation timing. Room transitions and a portable frontend save can select
  * the active room; complete inventory, soul and native SRAM parity remain
  * separate reconstruction work. */
+#include "fusion_host.h"
 #include "aos_audio.h"
 #include "aos_mp2k.h"
 #include "aos_room_music.h"
@@ -4199,7 +4200,7 @@ static void usage(const char *name) {
             name);
 }
 
-int main(int argc, char **argv) {
+int aria_runtime_main(int argc, char **argv) {
     const char *folder = NULL, *library_path = DEFAULT_LIBRARY, *capture_path = NULL;
     const char *audio_wav_path = NULL;
     long start_song = -1;
@@ -4409,7 +4410,7 @@ int main(int argc, char **argv) {
         return ok ? 0 : 1;
     }
 
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | (mute ? 0 : SDL_INIT_AUDIO))) {
+    if (!fusion_host_init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | (mute ? 0 : SDL_INIT_AUDIO))) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&mp2k);
@@ -4436,7 +4437,7 @@ int main(int argc, char **argv) {
     AosRoomMusic room_music = {0};
     int music_area = -1, music_room = -1;
     int rc = 1;
-    SDL_Window *window = SDL_CreateWindow("Metroid Vania - experimental Aria runtime",
+    SDL_Window *window = fusion_host_create_window("Metroid Vania - experimental Aria runtime",
                                           VIEW_W * 4, VIEW_H * 4, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = window ? SDL_CreateRenderer(window, NULL) : NULL;
     SDL_Texture *background = NULL;
@@ -4921,10 +4922,9 @@ int main(int argc, char **argv) {
             if (soul_menu_event & AOS_SOUL_MENU_SLEEP_FINISHED) {
                 printf("Sleep reset completed (frame %ld)\n", step);
                 if (frontend_command[0]) {
-                    SDL_Process *process = SDL_CreateProcess(frontend_command, false);
-                    if (process) SDL_DestroyProcess(process);
-                    else fprintf(stderr, "Cannot return to the frontend: %s\n",
-                                 SDL_GetError());
+                    if (!fusion_host_launch(frontend_command))
+                        fprintf(stderr, "Cannot return to the frontend: %s\n",
+                                SDL_GetError());
                 }
                 running = false;
                 break;
@@ -5113,9 +5113,8 @@ int main(int argc, char **argv) {
                 if (frontend_command[0]) {
                     frontend_command[frontend_count] = "--game-over";
                     frontend_command[frontend_count + 1] = NULL;
-                    SDL_Process *process = SDL_CreateProcess(frontend_command, false);
-                    if (process) SDL_DestroyProcess(process);
-                    else fprintf(stderr, "Cannot return to the frontend: %s\n", SDL_GetError());
+                    if (!fusion_host_launch(frontend_command))
+                        fprintf(stderr, "Cannot return to the frontend: %s\n", SDL_GetError());
                 }
                 running = false;
                 break;
@@ -5821,8 +5820,14 @@ cleanup:
     free_objects(&objects);
     if (background) SDL_DestroyTexture(background);
     if (renderer) SDL_DestroyRenderer(renderer);
-    if (window) SDL_DestroyWindow(window);
-    SDL_Quit();
+    if (window) fusion_host_destroy_window(window);
+    fusion_host_quit();
     free_room(&room);
     return rc;
 }
+
+#ifndef FUSION_EMBEDDED
+int main(int argc, char **argv) {
+    return aria_runtime_main(argc, argv);
+}
+#endif

@@ -2,6 +2,7 @@
 /* Experimental C11/SDL3 Zero Mission room runtime. Samus, weapons and
  * collision types follow the pinned decompilation; rooms, entities and the
  * room lifecycle are still incomplete. */
+#include "fusion_host.h"
 #include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -4440,7 +4441,7 @@ static uint16_t runtime_native_keys(uint16_t held, const bool *keys, const GbaIn
     return native;
 }
 
-int main(int argc, char **argv) {
+int room_runtime_main(int argc, char **argv) {
     const char *room_path=NULL, *background=NULL, *native_source=NULL;
     const char *library_index=NULL, *animation_map_index=NULL;
     const char *projectile_index=NULL, *cannon_index=NULL, *palette_index=NULL;
@@ -4763,7 +4764,7 @@ int main(int argc, char **argv) {
                bx, by, blocked(room, bx, by + 1.f, bw, bh) ? "yes" : "no");
         free(room); return 0;
     }
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError());free(room);return 1; }
+    if (!fusion_host_init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) { fprintf(stderr,"SDL_Init: %s\n",SDL_GetError());free(room);return 1; }
     /* Sound: none in captures (deterministic, no device) or with --mute. */
     SDL_AudioStream *audio=NULL;
     if (!capture_path && !mute) {
@@ -4886,7 +4887,7 @@ int main(int argc, char **argv) {
             mzm_title_enter(&title_screen, false);
         }
     }
-    SDL_Window *window=SDL_CreateWindow("Metroid Vania - experimental C11 runtime",
+    SDL_Window *window=fusion_host_create_window("Metroid Vania - experimental C11 runtime",
                                        960,640,SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer=window ? SDL_CreateRenderer(window,NULL) : NULL;
     SDL_Surface *surface=NULL; SDL_Texture *texture=NULL;
@@ -6990,7 +6991,13 @@ cleanup:
     mzm_rom_close();
     if (surface) SDL_DestroySurface(surface);
     if (renderer) SDL_DestroyRenderer(renderer);
-    if (window) SDL_DestroyWindow(window);
-    SDL_Quit();free(room);return rc;
+    if (window) fusion_host_destroy_window(window);
+    fusion_host_quit();free(room);return rc;
 }
 #endif /* FUSION_RUNTIME_TEST */
+
+#if !defined(FUSION_EMBEDDED) && !defined(FUSION_RUNTIME_TEST)
+int main(int argc, char **argv) {
+    return room_runtime_main(argc, argv);
+}
+#endif

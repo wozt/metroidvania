@@ -168,7 +168,7 @@ add_executable(fusion_room_package_viewer src/tools/room_package_viewer.c)
 target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_package_viewer)
 
-add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_samus.c
+add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion_host.c src/runtime/mzm_samus.c
                src/runtime/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
                src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c src/runtime/mzm_imago_cocoon.c src/runtime/mzm_mecha_ridley.c src/runtime/mzm_hive.c src/runtime/mzm_baristute.c src/runtime/mzm_tangle_vine.c src/runtime/mzm_ruins_test.c src/runtime/mzm_chozodia_scripted.c src/runtime/mzm_elevator_statue.c src/runtime/mzm_imago.c src/runtime/mzm_escape_ship.c src/runtime/mzm_crocomire.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
@@ -184,7 +184,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/mzm_sa
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c
                src/runtime/aos_stats.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos_soul_menu.c
                src/runtime/aos_bestiary.c
                src/runtime/aos_button_config.c
@@ -196,7 +196,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_au
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
-add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
+add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_anim.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
@@ -213,19 +213,24 @@ target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets m)
 fusion_enable_warnings(fusion_aria_title_preview)
 
-add_executable(fusion_metroidvania src/runtime/metroidvania_launcher.c
-               src/runtime/metroidvania_split.c
-               src/runtime/aos_title_screen.c src/runtime/aos_anim.c
-               src/runtime/aos_title_graphics.c src/runtime/aos_rom_graphics.c
-               src/runtime/aos_audio.c src/runtime/aos_mp2k.c
-               src/runtime/gba_ppu.c src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c
-               src/runtime/mzm_rom.c src/runtime/mzm_sfx.c src/runtime/mzm_audio.c src/runtime/gba_psg.c)
-target_include_directories(fusion_metroidvania PRIVATE src/runtime)
-target_link_libraries(fusion_metroidvania PRIVATE SDL3::SDL3 fusion_assets m)
-fusion_enable_warnings(fusion_metroidvania)
 
 target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_aria_runtime)
+
+# The launcher runs the three frontends above in its own process and window
+# (fusion_host), so it builds their sources with FUSION_EMBEDDED.
+get_target_property(fusion_mzm_frontend_sources fusion_room_runtime SOURCES)
+get_target_property(fusion_aria_frontend_sources fusion_aria_runtime SOURCES)
+get_target_property(fusion_aria_menu_sources fusion_aria_title_preview SOURCES)
+set(fusion_metroidvania_sources src/runtime/metroidvania_launcher.c
+    src/runtime/metroidvania_split.c ${fusion_mzm_frontend_sources}
+    ${fusion_aria_frontend_sources} ${fusion_aria_menu_sources})
+list(REMOVE_DUPLICATES fusion_metroidvania_sources)
+add_executable(fusion_metroidvania ${fusion_metroidvania_sources})
+target_compile_definitions(fusion_metroidvania PRIVATE FUSION_EMBEDDED=1)
+target_include_directories(fusion_metroidvania PRIVATE src/runtime)
+target_link_libraries(fusion_metroidvania PRIVATE SDL3::SDL3 fusion_assets m)
+fusion_enable_warnings(fusion_metroidvania)
 
 include(CTest)
 find_package(PkgConfig QUIET)
@@ -896,6 +901,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_game_mode_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)
+
+    add_executable(fusion_host_tests tests/test_fusion_host.c src/runtime/fusion_host.c)
+    target_include_directories(fusion_host_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_host_tests PRIVATE SDL3::SDL3)
+    fusion_enable_warnings(fusion_host_tests)
+    add_test(NAME fusion_host COMMAND fusion_host_tests)
 
     add_executable(fusion_metroidvania_split_tests tests/test_metroidvania_split.c
                    src/runtime/metroidvania_split.c)

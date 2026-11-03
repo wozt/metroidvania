@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0730 - Slower split, gamepad in the Aria menu
+
+- The launcher's line now turns at 10 degrees a second (a turn in 36 s).
+- `fusion_aria_title_preview` reads the first gamepad (gba_input, the
+  default map, hot-plug) as well as the keyboard, so the Aria menu reached
+  from the launcher answers the gamepad.
+- New `--screenshot FRAME FILE` on the preview (the rendered window as a
+  BMP). It shows the Aria main menu still drawing its labels, file entries
+  and cursor as host overlays over the native backgrounds.
+
 ## Patch 0729 - The launcher in one window
 
 - The line now turns at 20 degrees a second, and the two musics cross-fade

@@ -15,9 +15,9 @@ static int aria_in_top(uint16_t angle) {
 }
 
 int main(void) {
-    /* A third of a degree a frame: a quarter turn in 4.5 seconds. */
-    assert(mv_split_angle(0) == 0 && mv_split_angle(270) == 0x4000 &&
-           mv_split_angle(540) == 0x8000 && mv_split_angle(1080) == 0);
+    /* A sixth of a degree a frame: a quarter turn in 9 seconds. */
+    assert(mv_split_angle(0) == 0 && mv_split_angle(540) == 0x4000 &&
+           mv_split_angle(1080) == 0x8000 && mv_split_angle(2160) == 0);
     /* Frame 0: Aria above the horizontal line, Zero Mission below. */
     assert(mv_split_pixel(0, 120, 10) == MV_GAME_ARIA && mv_split_pixel(0, 120, 150) == MV_GAME_MZM);
     assert(mv_split_top(0) == MV_GAME_ARIA && mv_split_bottom(0) == MV_GAME_MZM);
@@ -33,7 +33,7 @@ int main(void) {
     for (uint32_t frame = 0; frame < MV_FRAMES_PER_TURN; ++frame) {
         uint16_t a = mv_split_angle(frame);
         int aria = aria_in_top(a);
-        if (frame == 270 || frame == 810) {
+        if (frame == 540 || frame == 1620) {
             assert(aria == half / 2);
             continue;
         }

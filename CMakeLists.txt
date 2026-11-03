@@ -196,7 +196,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
-add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c
+add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_anim.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c

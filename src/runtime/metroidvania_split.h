@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Metroid Vania launcher's split screen: the two title screens share
  * the 240 x 160 screen across an invisible line through its centre that
- * turns clockwise at 20 degrees a second (a turn in 18 seconds). Aria is
+ * turns clockwise at 10 degrees a second (a turn in 36 seconds). Aria is
  * on the side the line's normal points to, upward at frame 0; the game
  * covering most of the top half gives the music, START launches the game
  * covering most of the bottom half. No SDL. */
@@ -13,7 +13,7 @@
 
 typedef enum { MV_GAME_ARIA = 0, MV_GAME_MZM = 1 } MvGame;
 
-enum { MV_SCREEN_W = 240, MV_SCREEN_H = 160, MV_FRAMES_PER_TURN = 1080 };
+enum { MV_SCREEN_W = 240, MV_SCREEN_H = 160, MV_FRAMES_PER_TURN = 2160 };
 
 /* The line's angle after `frame` frames, in 1/65536 of a turn. */
 uint16_t mv_split_angle(uint32_t frame);

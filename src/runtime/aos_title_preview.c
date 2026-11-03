@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "aos_audio.h"
 #include "aos_game_lifecycle.h"
@@ -17,6 +18,7 @@
 #include "aos_logo_graphics.h"
 #include "aos_main_menu_graphics.h"
 #include "aos_title_graphics.h"
+#include "gba_input.h"
 #include "aos_game_over_graphics.h"
 #include "aos_text_window.h"
 #include "aos_menu_bg0.h"
@@ -367,6 +369,8 @@ int aria_title_preview_main(int argc, char **argv) {
     const char *rom_path = NULL;
     const char *runtime_path = NULL, *save_directory_arg = NULL;
     bool start_game_over = false, start_main_menu = false, mute = false;
+    long screenshot_frame = -1;
+    const char *screenshot_path = NULL;
     frontend_argc = argc;
     frontend_argv = argv;
     for (int i = 1; i < argc; ++i) {
@@ -377,14 +381,19 @@ int aria_title_preview_main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--game-over")) start_game_over = true;
         else if (!strcmp(argv[i], "--mute")) mute = true;
         else if (!strcmp(argv[i], "--main-menu")) start_main_menu = true;
+        else if (!strcmp(argv[i], "--screenshot") && i + 2 < argc) {
+            /* --screenshot FRAME FILE: that frame as a BMP, then quit. */
+            screenshot_frame = strtol(argv[++i], NULL, 10);
+            screenshot_path = argv[++i];
+        }
         else {
             fprintf(stderr,
                     "Usage: fusion_aria_title_preview [--title-bmp FILE] [--rom FILE] "
-                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--main-menu] [--mute]\n");
+                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--main-menu] [--mute] [--screenshot FRAME FILE]\n");
             return 2;
         }
     }
-    if (!fusion_host_init(SDL_INIT_VIDEO | (mute ? 0 : SDL_INIT_AUDIO))) {
+    if (!fusion_host_init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | (mute ? 0 : SDL_INIT_AUDIO))) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
@@ -591,6 +600,11 @@ int aria_title_preview_main(int argc, char **argv) {
         save_bridge.quicks[i] = quicks[i].data;
     }
     aos_menu_save_bridge_sync(&save_bridge, &lifecycle.main_menu);
+    /* The keyboard and the first gamepad (AOS_KEY_* are the GBA key bits). */
+    GbaPadMap pad_map;
+    gba_pad_map_default(&pad_map);
+    GbaInput gamepad = {0};
+    gba_input_init(&gamepad, &pad_map);
     bool running = true;
     bool interactive = true;
     uint64_t next_frame = SDL_GetTicksNS();
@@ -598,15 +612,21 @@ int aria_title_preview_main(int argc, char **argv) {
     int pending_launch_slot = -1;
     bool pending_launch_quick = false;
     AosPortableStart pending_start = AOS_PORTABLE_START_NONE;
+    long preview_frame = 0;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT ||
                 (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE))
                 running = false;
+            gba_input_handle_event(&gamepad, &event);
         }
         if (!running) break;
-        const uint16_t held = keymask(SDL_GetKeyboardState(NULL));
+        uint16_t held = (uint16_t)(keymask(SDL_GetKeyboardState(NULL)) | gba_input_buttons(&gamepad));
+        if ((held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) == (AOS_KEY_LEFT | AOS_KEY_RIGHT))
+            held &= (uint16_t)~(AOS_KEY_LEFT | AOS_KEY_RIGHT);
+        if ((held & (AOS_KEY_UP | AOS_KEY_DOWN)) == (AOS_KEY_UP | AOS_KEY_DOWN))
+            held &= (uint16_t)~(AOS_KEY_UP | AOS_KEY_DOWN);
         aos_input_update(&lifecycle.input, held);
         aos_game_lifecycle_update(&lifecycle);
         /* The title's PlaySong requests (MUS_27, then SONG_MUTE). */
@@ -961,6 +981,14 @@ int aria_title_preview_main(int argc, char **argv) {
             SDL_FRect marker = {227, 147, 5, 5};
             SDL_RenderFillRect(renderer, &marker);
         }
+        if (screenshot_path && preview_frame == screenshot_frame) {
+            SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);
+            if (!shot || !SDL_SaveBMP(shot, screenshot_path))
+                fprintf(stderr, "Cannot save %s: %s\n", screenshot_path, SDL_GetError());
+            SDL_DestroySurface(shot);
+            running = false;
+        }
+        ++preview_frame;
         SDL_RenderPresent(renderer);
         next_frame += 1000000000ull / 60ull;
         uint64_t now = SDL_GetTicksNS();
@@ -975,6 +1003,7 @@ int aria_title_preview_main(int argc, char **argv) {
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);
+    gba_input_close(&gamepad);
     if (audio_stream) SDL_DestroyAudioStream(audio_stream);
     aos_audio_set_start_sink(NULL, NULL);
     aos_mp2k_engine_destroy(&mp2k);

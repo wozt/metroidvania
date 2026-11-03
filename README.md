@@ -250,7 +250,7 @@ screen (`src/runtime/mzm_credits.c`); the ending image and the unlocked
 options are not ported, so the runtime then returns to the intro. The demos and the other cutscenes are not ported yet.
 
 The Metroid Vania launcher shows both native title screens at once, split by
-a line through the screen centre that turns clockwise (20 degrees a second,
+a line through the screen centre that turns clockwise (10 degrees a second,
 Aria on top at the start). The music is the one of the game covering most of
 the top half, cross-faded when it changes. A first START (Enter, or a
 gamepad's START) skips both titles' openings; the next one goes to the game

@@ -85,12 +85,7 @@ typedef struct {
  * thresholds 6, 7 and 0x16 of sub_0803DD14), its OBJ mode (0 normal, 1
  * semi-transparent, 2 OBJ window) and, when affine, the 8.8 matrix of
  * sub_0803E058 mapping screen offsets to frame offsets (double size). */
-typedef struct {
-    uint8_t sheet, record, palette_row, priority, mode;
-    bool affine;
-    int16_t pa, pb, pc, pd;
-    int16_t x, y;
-} AosTitleSprite;
+typedef AosObjSprite AosTitleSprite;
 
 /* The menu's entries (frame numbers of sUnk_084F0D2C) and the game modes
  * they lead to (sTitleScreenNextGameMode). */

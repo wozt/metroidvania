@@ -63,6 +63,25 @@ int main(void) {
     menu.music_idle = true;
     assert(aos_game_mode_main_menu_update(&mode, &menu, &input) == AOS_MODE_TITLE_SCREEN);
     assert(menu.cleanup_requested);
+    /* Without the host: the title once the 0x20-frame palette fade is over,
+     * with SONG_MUTE at the cancel and STOP_SONG | MUS_14 at the end. */
+    menu = (AosMainMenu){0};
+    mode = (AosGameMode){AOS_MODE_MAIN_MENU, 3, 4};
+    input = (AosInput){.repeated_input = AOS_KEY_B};
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(menu.sound_count == 2 && menu.sounds[0] == 240 && menu.sounds[1] == 0x1010);
+    input.repeated_input = 0;
+    int fade = 1;
+    while (aos_game_mode_main_menu_update(&mode, &menu, &input) == AOS_MODE_SAME && fade < 100) ++fade;
+    assert(fade == 0x20 && menu.sound_count == 1 && menu.sounds[0] == (0x8000 | 14));
+    /* Stage 0 plays MUS_14; the cursor's moves play SE_241. */
+    mode = (AosGameMode){AOS_MODE_MAIN_MENU, 0, 0};
+    aos_game_mode_main_menu_update(&mode, &menu, &input);
+    assert(menu.sound_count == 1 && menu.sounds[0] == 14);
+    menu.slot_present_mask = 1;
+    input.repeated_input = AOS_KEY_DOWN;
+    menu.sound_count = 0;
+    assert(aos_main_menu_input(&menu, &input) == 0 && menu.sound_count == 1 && menu.sounds[0] == 241);
 
     /* PLAY starts on a valid quicksave, filters unavailable quicksaves and
      * exposes completed-file special modes six positions above a main file. */

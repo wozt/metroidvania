@@ -43,7 +43,7 @@ typedef struct {
     bool selection_confirmed;
     bool selection_cancelled;
     bool music_mute_requested;
-    bool music_idle;
+    bool music_idle;            /* the host ends stage 0x63's palette fade early */
     bool selected_slot_init_requested;
     bool selected_slot_active;
     bool confirm_active;
@@ -66,6 +66,11 @@ typedef struct {
     bool delete_rejected;
     uint8_t delete_slots_mask;
     bool cleanup_requested;
+    /* This frame's PlaySong requests, in order: MUS_14 (stage 0),
+     * SONG_MUTE, STOP_SONG | MUS_14 (sub_080049C4) and the menu sounds
+     * (SE_239-SE_244, the name codes' 0x1E5, 0x1B5, 0x199). */
+    uint16_t sounds[4];
+    uint8_t sound_count;
 } AosMainMenu;
 
 enum { AOS_MAIN_MENU_NO_PROMPT = 0xFFFF };

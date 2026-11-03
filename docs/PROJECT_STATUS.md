@@ -2,6 +2,28 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0731 - Aria's native main menu
+
+- New shared `aos_obj` (sheets, OAM sprites, the OBJ layer) and
+  `aos_obj_rom` (sheet decoding); the title screen now uses them.
+- New `aos_main_menu_objects` (entity 0's three sheets per language and
+  the OBJ palette), `aos_main_menu_sprites` (sub_080069C4's OAM list: the
+  labels and their ornament, the hand cursor, the file icons and names, the
+  NEW GAME and quicksave marks, the name-entry grid) and
+  `aos_main_menu_files` (sub_08006D9C's level, map completion, play time,
+  gold and area-name line on BG0, and BG1's H-blank offset that hides an
+  empty file's labels). The preview's placeholder texts are gone when the
+  ROM is given.
+- The main-menu controller queues its PlaySong calls (MUS_14, the menu
+  sounds, SONG_MUTE, STOP_SONG | MUS_14), and its cancel now returns to the
+  title after the 0x20-frame palette fade instead of waiting forever for a
+  host flag.
+- The preview hides its diagnostic marker on native screens and gains
+  `--press KEY@FRAME,...` for scripted checks.
+- Known gaps: the portable saves keep no completion flag, icon set or map
+  completion (shown as 0); the area name's lower rows are cut as the code
+  reads; not compared with the game.
+
 ## Patch 0730 - Slower split, gamepad in the Aria menu
 
 - The launcher's line now turns at 10 degrees a second (a turn in 36 s).

@@ -49,3 +49,6 @@ decode both games' data), so target it while working and run it in full only onc
   them. Run plain `ctest` only when the dashboard is not being regenerated.
 - A failing test is fixed and its targeted test rerun; repeat the full run
   only if the fix touched code that other tests cover.
+
+NO JULIUS MODE and NO SOUL TRADE in aria of sorrow
+NO NES METROID in metroid zero mission

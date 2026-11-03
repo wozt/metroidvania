@@ -202,11 +202,11 @@ int main(void) {
     graphics.text[1][10 * AOS_TITLE_LAYER_SIZE + 30] = 0x14;
     memset(graphics.affine, 0x15, sizeof graphics.affine);
     for (int s = 0; s < AOS_TITLE_SHEETS; ++s) {
-        AosTitleSheet *sheet = &graphics.sheets[s];
+        AosObjSheet *sheet = &graphics.sheets[s];
         sheet->frame_count = 1;
         sheet->frames[0].count = 1;
-        sheet->frames[0].pieces[0] = (AosTitlePiece){0, 0, 8, 8, 0, 0, false, false};
-        for (int k = 0; k < 64; ++k) sheet->pixels[(k / 8) * AOS_TITLE_SHEET_SIZE + k % 8] = 1;
+        sheet->frames[0].pieces[0] = (AosObjPiece){0, 0, 8, 8, 0, 0, false, false};
+        for (int k = 0; k < 64; ++k) sheet->pixels[(k / 8) * AOS_OBJ_SHEET_SIZE + k % 8] = 1;
     }
     aos_title_screen_render(&p, rgba);
     const uint8_t *px = rgba + (10 * AOS_TITLE_W + 20) * 4;

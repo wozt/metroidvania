@@ -21,6 +21,16 @@ static const uint8_t no_use_code[8] = {0x0F, 0x10, 0x16, 0x14,
 static const uint8_t no_soul_code[8] = {0x0F, 0x10, 0x14, 0x10,
                                         0x16, 0x0D, 0, 0};
 
+enum {
+    MUS_14 = 14, SONG_MUTE = 0x1010, STOP_SONG = 0x8000,
+    SE_239 = 239, SE_240 = 240, SE_241 = 241, SE_242 = 242, SE_243 = 243, SE_244 = 244,
+};
+
+static void play(AosMainMenu *menu, uint16_t song) {
+    if (menu->sound_count < sizeof menu->sounds / sizeof menu->sounds[0])
+        menu->sounds[menu->sound_count++] = song;
+}
+
 static uint16_t alpha_pack(unsigned first, unsigned second) {
     return (uint16_t)(((first & 0x1Fu) << 8) | (second & 0x1Fu));
 }
@@ -78,6 +88,7 @@ int32_t aos_main_menu_name_update(AosMainMenu *menu, const AosInput *input) {
         action = 1;
     } else if (repeated & AOS_KEY_A) {
         if (cursor < 0x22) {
+            play(menu, SE_243);
             menu->name_buffer[menu->name_position++] = (uint8_t)(cursor + 2);
             menu->name_changed = true;
             if (menu->name_position > 7) cursor = 0x23;
@@ -87,6 +98,7 @@ int32_t aos_main_menu_name_update(AosMainMenu *menu, const AosInput *input) {
     } else if (repeated & AOS_KEY_B) {
         action = 3;
     } else if (repeated & (AOS_KEY_R | AOS_KEY_L)) {
+        play(menu, SE_242);
         menu->name_position = (uint8_t)(menu->name_position +
                                         ((repeated & AOS_KEY_R) ? 1 : 7));
     } else if (repeated & (AOS_KEY_RIGHT | AOS_KEY_LEFT)) {
@@ -119,18 +131,26 @@ int32_t aos_main_menu_name_update(AosMainMenu *menu, const AosInput *input) {
             }
         }
         menu->name_committed = true;
+        /* 0xF4, or the codes' 0x1E5 (Julius), 0x1B5, 0x199. */
+        static const uint16_t end_sounds[4] = {0xF4, 0x1E5, 0x1B5, 0x199};
+        play(menu, end_sounds[menu->name_code < 4 ? menu->name_code : 0]);
         return 1;
     }
     if (action == 4) {
         if (menu->name_position != 0) --menu->name_position;
-        if (name_has_character(menu->name_buffer)) name_erase_at(menu);
+        if (name_has_character(menu->name_buffer)) {
+            play(menu, SE_240);
+            name_erase_at(menu);
+        }
     } else if (action == 3) {
         if (menu->name_position != 0) --menu->name_position;
         if (!name_has_character(menu->name_buffer)) return -1;
+        play(menu, SE_240);
         name_erase_at(menu);
     }
 
     menu->name_position &= 7;
+    if (menu->name_cursor != cursor) play(menu, SE_241);
     menu->name_cursor = cursor;
     return 0;
 }
@@ -151,6 +171,7 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
     uint8_t base_slot = cursor >= 6 ? (uint8_t)(cursor - 6) : cursor;
     if (menu->confirm_active) {
         if (repeated & AOS_KEY_B) {
+            play(menu, SE_240);
             menu->confirm_active = false;
             menu->confirm_choice = 0;
             return 0;
@@ -168,10 +189,13 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
             menu->intro_requested = true;
             return -3;
         }
+        uint8_t choice = menu->confirm_choice;
         if (repeated & AOS_KEY_RIGHT)
-            menu->confirm_choice = 1;
+            choice = 1;
         else if (repeated & AOS_KEY_LEFT)
-            menu->confirm_choice = 0;
+            choice = 0;
+        if (choice != menu->confirm_choice) play(menu, SE_241);
+        menu->confirm_choice = choice;
         return 0;
     }
 
@@ -182,6 +206,7 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
         bool empty = cursor >= 6 || !slot_present(menu, cursor);
         if (empty) {
             if (menu->slot_mode_choice_mask & (1u << base_slot)) {
+                play(menu, SE_243);
                 menu->confirm_active = true;
                 menu->confirm_choice = 0;
             } else if (cursor >= 6 &&
@@ -237,6 +262,7 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
 
     menu->selection_changed = cursor != previous;
     if (menu->selection_changed) {
+        play(menu, SE_241);
         menu->file_cursor = cursor;
         menu->prompt_timer = 0;
         menu->prompt_alternate = true;
@@ -267,6 +293,7 @@ int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input) {
     uint8_t cursor = menu->file_cursor;
     if (menu->file_phase == 0) {
         if (repeated & AOS_KEY_A) {
+            play(menu, SE_243);
             menu->source_slot = cursor;
             if (menu->destination_slot == cursor)
                 menu->destination_slot = rotate_regular_slot(cursor, true);
@@ -283,12 +310,14 @@ int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input) {
         }
     } else if (menu->file_phase == 1) {
         if (repeated & AOS_KEY_A) {
+            play(menu, SE_243);
             menu->destination_slot = cursor;
             menu->file_cursor = 1;
             menu->file_phase = 2;
             return 0;
         }
         if (repeated & AOS_KEY_B) {
+            play(menu, SE_240);
             menu->file_cursor = menu->source_slot;
             menu->file_phase = 0;
             return 0;
@@ -300,6 +329,7 @@ int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input) {
         }
     } else {
         if ((repeated & AOS_KEY_A) && cursor == 0) {
+            play(menu, SE_244);
             menu->copy_slots_requested = true;
             menu->slot_present_mask |= (uint8_t)(1u << menu->destination_slot);
             menu->delete_slots_mask = (uint8_t)(1u << (menu->destination_slot + 1));
@@ -309,6 +339,7 @@ int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input) {
             return 0;
         }
         if (repeated & (AOS_KEY_A | AOS_KEY_B)) {
+            play(menu, SE_240);
             menu->file_cursor = menu->destination_slot;
             menu->file_phase = 1;
             return 0;
@@ -316,6 +347,7 @@ int32_t aos_main_menu_copy_update(AosMainMenu *menu, const AosInput *input) {
         if (repeated & (AOS_KEY_LEFT | AOS_KEY_RIGHT))
             cursor = (repeated & AOS_KEY_RIGHT) ? 1 : 0;
     }
+    if (menu->file_cursor != cursor) play(menu, SE_241);
     menu->file_cursor = cursor;
     return 0;
 }
@@ -333,9 +365,11 @@ int32_t aos_main_menu_delete_update(AosMainMenu *menu, const AosInput *input) {
         if (repeated & AOS_KEY_B) return -1;
         if (repeated & AOS_KEY_A) {
             if (!(menu->slot_present_mask & (1u << cursor))) {
+                play(menu, SE_239);
                 menu->delete_rejected = true;
                 return 0;
             }
+            play(menu, SE_243);
             menu->source_slot = cursor;
             menu->file_cursor = 1;
             menu->file_phase = 1;
@@ -345,6 +379,7 @@ int32_t aos_main_menu_delete_update(AosMainMenu *menu, const AosInput *input) {
             cursor = rotate_regular_slot(cursor, (repeated & AOS_KEY_RIGHT) != 0);
     } else {
         if ((repeated & AOS_KEY_A) && cursor == 0) {
+            play(menu, SE_244);
             menu->delete_slots_mask = (uint8_t)((1u << menu->source_slot) |
                                                 (1u << (menu->source_slot + 1)));
             menu->slot_present_mask &= (uint8_t)~menu->delete_slots_mask;
@@ -353,6 +388,7 @@ int32_t aos_main_menu_delete_update(AosMainMenu *menu, const AosInput *input) {
             return 0;
         }
         if (repeated & (AOS_KEY_A | AOS_KEY_B)) {
+            play(menu, SE_240);
             menu->file_cursor = menu->source_slot;
             menu->file_phase = 0;
             return 0;
@@ -360,15 +396,23 @@ int32_t aos_main_menu_delete_update(AosMainMenu *menu, const AosInput *input) {
         if (repeated & (AOS_KEY_LEFT | AOS_KEY_RIGHT))
             cursor = (repeated & AOS_KEY_RIGHT) ? 1 : 0;
     }
+    if (menu->file_cursor != cursor) play(menu, SE_241);
     menu->file_cursor = cursor;
     return 0;
 }
 
 int32_t aos_main_menu_input(AosMainMenu *menu, const AosInput *input) {
     uint16_t repeated = input ? input->repeated_input : 0;
-    if (repeated & (AOS_KEY_START | AOS_KEY_A)) return 1;
-    if (repeated & AOS_KEY_B) return -1;
+    if (repeated & (AOS_KEY_START | AOS_KEY_A)) {
+        play(menu, SE_243);
+        return 1;
+    }
+    if (repeated & AOS_KEY_B) {
+        play(menu, SE_240);
+        return -1;
+    }
     if (!menu->slot_present_mask) return 0;
+    if (repeated & (AOS_KEY_DOWN | AOS_KEY_UP)) play(menu, SE_241);
     uint8_t previous = menu->selected_slot;
     if (repeated & AOS_KEY_DOWN)
         menu->selected_slot = menu->selected_slot == 2 ? 0 :
@@ -439,8 +483,10 @@ int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
     menu->delete_rejected = false;
     menu->delete_slots_mask = 0;
     menu->cleanup_requested = false;
+    menu->sound_count = 0;
     switch (mode->update_stage) {
         case 0:
+            play(menu, MUS_14);
             menu->display_control = AOS_MAIN_DISPLAY_ALL_LAYERS;
             menu->blend_control = AOS_MAIN_BLEND_BRIGHTNESS_DECREASE_ALL;
             menu->brightness = AOS_MAIN_BRIGHTNESS_MAX;
@@ -468,8 +514,11 @@ int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
             if (action < 0) {
                 menu->selection_cancelled = true;
                 menu->music_mute_requested = true;
+                play(menu, SONG_MUTE);
                 menu->brightness = AOS_MAIN_BRIGHTNESS_MAX;
-                menu->fade_counter = 0;
+                /* sub_0803D18C / sub_0803CDF0: both palettes to black in
+                 * 0x20 frames; stage 0x63 waits for them (sub_0803D06C). */
+                menu->fade_counter = 0x20;
                 mode->update_stage = 0x63;
                 mode->stage_timer = 0;
             } else if (action > 0) {
@@ -531,17 +580,21 @@ int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
             else if (menu->selected_slot == 2)
                 result = aos_main_menu_delete_update(menu, input);
             if (result == -1) {
+                play(menu, SE_240);
                 mode->update_stage = 0x46;
                 mode->stage_timer = 0;
             } else if (result == 1) {
+                play(menu, SE_244);
                 mode->update_stage = 7;
                 mode->stage_timer = 0;
             } else if (result == -2) {
+                play(menu, SE_244);
                 menu->blend_control = AOS_MAIN_BLEND_BRIGHTNESS_DECREASE_ALL;
                 menu->fade_counter = 0;
                 mode->update_stage = 0x14;
                 mode->stage_timer = 0;
             } else if (result == -3) {
+                play(menu, SE_244);
                 menu->blend_control = AOS_MAIN_BLEND_BRIGHTNESS_DECREASE_ALL;
                 menu->fade_counter = 0;
                 mode->update_stage = 0x1E;
@@ -575,6 +628,7 @@ int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
         case 9: {
             int32_t name_result = aos_main_menu_name_update(menu, input);
             if (name_result < 0) {
+                play(menu, SE_240);
                 menu->name_entry_active = false;
                 mode->update_stage = 0x0A;
                 mode->stage_timer = 0;
@@ -653,6 +707,7 @@ int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
             menu->brightness = (uint16_t)++menu->fade_counter;
             if (menu->brightness >= AOS_MAIN_BRIGHTNESS_MAX) {
                 menu->cleanup_requested = true;
+                play(menu, STOP_SONG | MUS_14);    /* sub_080049C4 */
                 return AOS_MODE_IN_GAME;
             }
             break;
@@ -660,12 +715,15 @@ int32_t aos_game_mode_main_menu_update(AosGameMode *mode, AosMainMenu *menu,
             menu->brightness = (uint16_t)++menu->fade_counter;
             if (menu->brightness >= AOS_MAIN_BRIGHTNESS_MAX) {
                 menu->cleanup_requested = true;
+                play(menu, STOP_SONG | MUS_14);    /* sub_080049C4 */
                 return AOS_MODE_INTRO_CUTSCENE;
             }
             break;
         case 0x63:
-            if (menu->music_idle) {
+            if (menu->fade_counter > 0) --menu->fade_counter;
+            if (menu->music_idle || menu->fade_counter == 0) {
                 menu->cleanup_requested = true;
+                play(menu, STOP_SONG | MUS_14);    /* sub_080049C4 */
                 return AOS_MODE_TITLE_SCREEN;
             }
             break;

@@ -17,6 +17,10 @@
 #include "aos_intro_resources.h"
 #include "aos_logo_graphics.h"
 #include "aos_main_menu_graphics.h"
+#include "aos_main_menu_objects.h"
+#include "aos_main_menu_sprites.h"
+#include "aos_main_menu_files.h"
+#include "aos_stats.h"
 #include "aos_title_graphics.h"
 #include "gba_input.h"
 #include "aos_game_over_graphics.h"
@@ -91,6 +95,27 @@ static void display_name(char out[9], const uint8_t encoded[8]) {
                  value == 0 ? ' ' : '?';
     }
     out[8] = '\0';
+}
+
+/* A file's summary as SRAM's + 0x190 would hold it, from a portable save.
+ * Not kept by the portable format: the completion flag (+ 0x2D), the icon
+ * set (+ 0x2E) and the map completion (+ 0x32), here 0. */
+static AosMenuFileSummary file_summary(const SlotView *view) {
+    AosMenuFileSummary summary = {0};
+    if (!view->present) return summary;
+    uint64_t frames = view->data.play_frames;
+    summary.play_time = frames == 0 ? 1u : frames > UINT32_MAX ? UINT32_MAX : (uint32_t)frames;
+    memcpy(summary.name, view->data.name, sizeof summary.name);
+    summary.area = view->data.area;
+    summary.room = (uint8_t)view->data.room;
+    summary.character = view->data.character;
+    summary.gold = view->data.gold;
+    /* sub_08033CAC's levels from the experience. */
+    int32_t level = 1;
+    while (level < 99 && (uint32_t)aos_stats_experience_for_level(level + 1) <= view->data.experience)
+        ++level;
+    summary.level = (uint8_t)level;
+    return summary;
 }
 
 static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT],
@@ -200,6 +225,16 @@ static bool render_menu_texts(AosIntroResources *resources,
             snprintf(error, error_size, "MENU TEXT 0x%X OUTSIDE THE ROM",
                      texts[index].id);
             return false;
+        }
+        if (texts[index].row >= 6) {
+            /* The area names: context B (8-pixel rows), sub_08040970(0, row,
+             * 0x1E, 1), sub_08041204, then sub_08041338. */
+            AosTextCursor line;
+            aos_text_cursor_init_b(&line);
+            aos_text_set_window(&line, 0, texts[index].row, 0x1E, 1);
+            aos_text_clear_window(&line, menu_text_clear, &target);
+            aos_text_print(&line, font->metrics, entry, entry_size, 0, menu_text_glyph, &target);
+            continue;
         }
         aos_text_set_cursor(&cursor, texts[index].column, texts[index].row);
         aos_text_print(&cursor, font->metrics, entry, entry_size, 0,
@@ -344,11 +379,33 @@ static AosMainGraphicsScreen main_menu_graphics_screen(
     return AOS_MAIN_GRAPHICS_PLAY;
 }
 
+/* BG1 with the H-blank BG1VOFS of the file panels on its split lines. */
+static void render_split_layer(SDL_Renderer *renderer, SDL_Texture *texture,
+                               const FusionAosRenderedBackground *background,
+                               const AosMainMenuFilePanel *panel) {
+    int width = (int)background->width_pixels, height = (int)background->height_pixels;
+    for (int y = 0; y < GBA_H;) {
+        bool split = y >= panel->split_first && y < panel->split_first + panel->split_count;
+        int end = split ? panel->split_first + panel->split_count
+                        : y < panel->split_first ? panel->split_first : GBA_H;
+        if (end > GBA_H) end = GBA_H;
+        int source = (y + (split ? panel->split_vofs : 0)) % height;
+        int rows = end - y;
+        if (rows > height - source) rows = height - source;
+        for (int x = 0; x < GBA_W; x += width) {
+            SDL_FRect from = {0, (float)source, (float)width, (float)rows};
+            SDL_FRect to = {(float)x, (float)y, (float)width, (float)rows};
+            SDL_RenderTexture(renderer, texture, &from, &to);
+        }
+        y += rows;
+    }
+}
+
 static void render_main_menu_backgrounds(
     SDL_Renderer *renderer, const AosMainMenuGraphics *graphics,
     SDL_Texture *textures[AOS_MAIN_GRAPHICS_SCREEN_COUNT]
                          [AOS_MAIN_GRAPHICS_LAYER_COUNT],
-    const AosMainMenu *menu, int32_t stage) {
+    const AosMainMenu *menu, int32_t stage, const AosMainMenuFilePanel *panel) {
     AosMainGraphicsScreen screen = main_menu_graphics_screen(menu, stage);
     SDL_SetRenderDrawColor(renderer, graphics->backdrop_rgb[0],
                            graphics->backdrop_rgb[1],
@@ -358,9 +415,12 @@ static void render_main_menu_backgrounds(
     for (int layer = AOS_MAIN_GRAPHICS_LAYER_COUNT - 1; layer >= 0; --layer) {
         uint8_t alpha = layer == 1 ? 159 : 255;
         SDL_SetTextureAlphaMod(textures[screen][layer], alpha);
-        render_wrapped_background(renderer, textures[screen][layer],
-                                  &graphics->backgrounds[screen][layer],
-                                  0, 0);
+        if (layer == 0 && panel && panel->split_vofs)
+            render_split_layer(renderer, textures[screen][layer],
+                               &graphics->backgrounds[screen][layer], panel);
+        else
+            render_wrapped_background(renderer, textures[screen][layer],
+                                      &graphics->backgrounds[screen][layer], 0, 0);
     }
 }
 
@@ -370,6 +430,11 @@ int aria_title_preview_main(int argc, char **argv) {
     const char *runtime_path = NULL, *save_directory_arg = NULL;
     bool start_game_over = false, start_main_menu = false, mute = false;
     long screenshot_frame = -1;
+    /* --press KEY@FRAME,...: scripted presses (a, b, start, up, down,
+     * left, right) for headless checks. */
+    long press_frames[32];
+    uint16_t press_keys[32];
+    int press_count = 0;
     const char *screenshot_path = NULL;
     frontend_argc = argc;
     frontend_argv = argv;
@@ -381,6 +446,24 @@ int aria_title_preview_main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--game-over")) start_game_over = true;
         else if (!strcmp(argv[i], "--mute")) mute = true;
         else if (!strcmp(argv[i], "--main-menu")) start_main_menu = true;
+        else if (!strcmp(argv[i], "--press") && i + 1 < argc) {
+            static const struct { const char *name; uint16_t key; } names[] = {
+                {"a", AOS_KEY_A}, {"b", AOS_KEY_B}, {"start", AOS_KEY_START},
+                {"up", AOS_KEY_UP}, {"down", AOS_KEY_DOWN}, {"left", AOS_KEY_LEFT},
+                {"right", AOS_KEY_RIGHT}};
+            for (char *p = argv[++i]; *p && press_count < 32;) {
+                char *at = strchr(p, '@');
+                if (!at) break;
+                uint16_t key = 0;
+                for (size_t k = 0; k < sizeof names / sizeof names[0]; ++k)
+                    if ((size_t)(at - p) == strlen(names[k].name) &&
+                        !strncmp(p, names[k].name, (size_t)(at - p)))
+                        key = names[k].key;
+                press_keys[press_count] = key;
+                press_frames[press_count++] = strtol(at + 1, &p, 10);
+                if (*p == ',') ++p;
+            }
+        }
         else if (!strcmp(argv[i], "--screenshot") && i + 2 < argc) {
             /* --screenshot FRAME FILE: that frame as a BMP, then quit. */
             screenshot_frame = strtol(argv[++i], NULL, 10);
@@ -389,7 +472,7 @@ int aria_title_preview_main(int argc, char **argv) {
         else {
             fprintf(stderr,
                     "Usage: fusion_aria_title_preview [--title-bmp FILE] [--rom FILE] "
-                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--main-menu] [--mute] [--screenshot FRAME FILE]\n");
+                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--main-menu] [--mute] [--screenshot FRAME FILE] [--press KEY@FRAME,...]\n");
             return 2;
         }
     }
@@ -496,13 +579,24 @@ int aria_title_preview_main(int argc, char **argv) {
     AosIntroTextTiles menu_prompt_tiles = {0};
     static AosMenuBg0 menu_bg0;
     bool have_menu_bg0 = false;
+    /* Entity 0's objects (the labels, cursors, file icons and names). */
+    static AosMainMenuObjects menu_objects;
+    static AosMainMenuSpriteState menu_sprite_state;
+    bool have_menu_objects = false;
+    SDL_Texture *menu_objects_texture = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
+    if (menu_objects_texture) {
+        SDL_SetTextureBlendMode(menu_objects_texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(menu_objects_texture, SDL_SCALEMODE_NEAREST);
+    }
     SDL_Texture *menu_bg0_texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
     if (menu_bg0_texture) {
         SDL_SetTextureBlendMode(menu_bg0_texture, SDL_BLENDMODE_BLEND);
         SDL_SetTextureScaleMode(menu_bg0_texture, SDL_SCALEMODE_NEAREST);
     }
-    AosMainMenuText menu_texts[AOS_MAIN_MENU_TEXT_MAX];
+    AosMainMenuText menu_texts[AOS_MAIN_MENU_TEXT_MAX + 2];
+    static AosMainMenuFilePanel file_panel;
     size_t menu_text_count = 0;
     uint8_t menu_prompt_language = 0;
     bool have_menu_prompt = false;
@@ -627,8 +721,14 @@ int aria_title_preview_main(int argc, char **argv) {
             held &= (uint16_t)~(AOS_KEY_LEFT | AOS_KEY_RIGHT);
         if ((held & (AOS_KEY_UP | AOS_KEY_DOWN)) == (AOS_KEY_UP | AOS_KEY_DOWN))
             held &= (uint16_t)~(AOS_KEY_UP | AOS_KEY_DOWN);
+        for (int k = 0; k < press_count; ++k)
+            if (press_frames[k] == preview_frame) held |= press_keys[k];
         aos_input_update(&lifecycle.input, held);
         aos_game_lifecycle_update(&lifecycle);
+        /* The main menu's PlaySong requests (MUS_14, its sounds). */
+        for (unsigned k = 0; k < lifecycle.main_menu.sound_count; ++k)
+            aos_audio_play_song(lifecycle.main_menu.sounds[k]);
+        lifecycle.main_menu.sound_count = 0;
         /* The title's PlaySong requests (MUS_27, then SONG_MUTE). */
         if (lifecycle.title.song >= 0) {
             aos_audio_play_song((uint16_t)lifecycle.title.song);
@@ -662,6 +762,10 @@ int aria_title_preview_main(int argc, char **argv) {
             if (!have_main_menu_graphics && !launch_error[0])
                 snprintf(launch_error, sizeof launch_error,
                          "MAIN MENU TEXTURE ERROR: %.80s", SDL_GetError());
+            have_menu_objects = have_main_menu_graphics && menu_objects_texture &&
+                aos_main_menu_objects_init(&menu_objects, &intro_rom,
+                                           lifecycle.main_menu.language, launch_error,
+                                           sizeof launch_error);
             have_menu_bg0 = menu_bg0_texture &&
                 aos_menu_bg0_init(&menu_bg0, &intro_rom, lifecycle.main_menu.language,
                                   launch_error, sizeof launch_error);
@@ -693,8 +797,24 @@ int aria_title_preview_main(int argc, char **argv) {
         }
         if (have_intro_resources &&
             lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU) {
-            AosMainMenuText texts[AOS_MAIN_MENU_TEXT_MAX];
+            /* The file panels (BG0 statistics, area names, BG1 split). */
+            AosMenuFileSummary files[AOS_MENU_FILES];
+            for (unsigned i = 0; i < AOS_SAVE_SLOT_COUNT; ++i) {
+                files[2 * i] = file_summary(&slots[i]);
+                files[2 * i + 1] = file_summary(&quicks[i]);
+            }
+            bool panel_name_entry = lifecycle.main_menu.name_entry_active ||
+                                    lifecycle.game_mode.update_stage == 9;
+            if (have_menu_bg0)
+                aos_main_menu_file_panels(&menu_bg0, &lifecycle.main_menu, panel_name_entry,
+                                          files, &file_panel);
+            else
+                memset(&file_panel, 0, sizeof file_panel);
+            AosMainMenuText texts[AOS_MAIN_MENU_TEXT_MAX + 2];
             size_t count = aos_main_menu_text_layout(&lifecycle.main_menu, texts);
+            for (int k = 0; k < file_panel.area_count; ++k)
+                texts[count++] = (AosMainMenuText){file_panel.area_text[k], 0,
+                                                   file_panel.area_row[k]};
             if (!have_menu_prompt || count != menu_text_count ||
                 memcmp(texts, menu_texts, count * sizeof texts[0]) ||
                 lifecycle.main_menu.language != menu_prompt_language) {
@@ -703,13 +823,12 @@ int aria_title_preview_main(int argc, char **argv) {
                     lifecycle.main_menu.language, texts, count, launch_error,
                     sizeof launch_error);
                 memcpy(menu_texts, texts, count * sizeof texts[0]);
-                if (have_menu_bg0 && have_menu_prompt) {
+                if (have_menu_bg0 && have_menu_prompt)
                     aos_menu_bg0_set_text(&menu_bg0, &menu_prompt_tiles);
-                    upload_menu_bg0(menu_bg0_texture, &menu_bg0);
-                }
                 menu_text_count = count;
                 menu_prompt_language = lifecycle.main_menu.language;
             }
+            if (have_menu_bg0 && have_menu_prompt) upload_menu_bg0(menu_bg0_texture, &menu_bg0);
         }
         if (!aos_menu_save_bridge_consume(&save_bridge, &lifecycle.main_menu)) {
             snprintf(launch_error, sizeof launch_error, "INVALID SLOT OPERATION");
@@ -762,7 +881,7 @@ int aria_title_preview_main(int argc, char **argv) {
         } else if (in_main_menu && have_main_menu_graphics) {
             render_main_menu_backgrounds(
                 renderer, &main_menu_graphics, main_menu_textures,
-                &lifecycle.main_menu, lifecycle.game_mode.update_stage);
+                &lifecycle.main_menu, lifecycle.game_mode.update_stage, &file_panel);
         } else if (lifecycle.game_mode.mode == AOS_MODE_GAME_OVER && intro_rom.data) {
             if (!have_game_over_graphics) {
                 have_game_over_graphics = aos_game_over_graphics_init(
@@ -845,13 +964,15 @@ int aria_title_preview_main(int argc, char **argv) {
         }
         /* Host state labels remain until the native menu entities and their
          * dynamic text/OAM streams are rendered. */
-        if (in_main_menu) {
+        if (in_main_menu && !have_menu_objects) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(renderer, 10, 12, 24,
                                    have_main_menu_graphics ? 125 : 235);
             SDL_FRect sheet = {12, 15, 216, 130};
             SDL_RenderFillRect(renderer, &sheet);
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+        }
+        if (in_main_menu) {
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
             AosMainMenu *native_menu = &lifecycle.main_menu;
             bool native_prompt = have_menu_bg0 && have_menu_prompt && menu_text_count > 0;
@@ -859,8 +980,39 @@ int aria_title_preview_main(int argc, char **argv) {
                 SDL_FRect whole_screen = {0, 0, GBA_W, GBA_H};
                 SDL_RenderTexture(renderer, menu_bg0_texture, NULL, &whole_screen);
             }
+            bool name_entry = native_menu->name_entry_active ||
+                              lifecycle.game_mode.update_stage == 9;
+            if (have_menu_objects) {
+                AosMenuFileSummary files[AOS_MENU_FILES];
+                for (unsigned i = 0; i < AOS_SAVE_SLOT_COUNT; ++i) {
+                    files[2 * i] = file_summary(&slots[i]);
+                    files[2 * i + 1] = file_summary(&quicks[i]);
+                }
+                static AosObjSprite sprites[AOS_MENU_MAX_SPRITES];
+                int count = aos_main_menu_sprites(native_menu, name_entry, files,
+                                                  (uint32_t)preview_frame,
+                                                  &menu_objects.sheets[AOS_MENU_SHEET_ICONS],
+                                                  &menu_sprite_state, sprites);
+                static AosObjLayer layer;
+                static uint8_t object_pixels[GBA_W * GBA_H * 4];
+                aos_obj_layer_clear(&layer);
+                for (int k = 0; k < count; ++k)
+                    aos_obj_layer_draw(&layer, menu_objects.sheets, &sprites[k]);
+                for (int k = 0; k < GBA_W * GBA_H; ++k) {
+                    uint16_t c = menu_objects.palette[layer.index[k]];
+                    object_pixels[k * 4] = (uint8_t)((c & 31) * 255 / 31);
+                    object_pixels[k * 4 + 1] = (uint8_t)(((c >> 5) & 31) * 255 / 31);
+                    object_pixels[k * 4 + 2] = (uint8_t)(((c >> 10) & 31) * 255 / 31);
+                    object_pixels[k * 4 + 3] = layer.index[k] ? 255 : 0;
+                }
+                SDL_UpdateTexture(menu_objects_texture, NULL, object_pixels, GBA_W * 4);
+                SDL_FRect whole_screen = {0, 0, GBA_W, GBA_H};
+                SDL_RenderTexture(renderer, menu_objects_texture, NULL, &whole_screen);
+            }
+            /* Without the ROM's objects: the host's diagnostic labels. */
             SDL_SetRenderDrawColor(renderer, 245, 235, 210, 255);
-            if (native_menu->name_entry_active || lifecycle.game_mode.update_stage == 9) {
+            if (have_menu_objects) {
+            } else if (name_entry) {
                 char name[9];
                 char cursor[48];
                 display_name(name, native_menu->name_buffer);
@@ -975,8 +1127,14 @@ int aria_title_preview_main(int argc, char **argv) {
             SDL_RenderFillRect(renderer, &whole);
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
         }
-        /* Diagnostic 'ready' light; not part of native GBA imagery. */
-        if (interactive) {
+        /* Diagnostic 'ready' light; not part of native GBA imagery, so not
+         * drawn over the screens shown natively (logos, title, main menu). */
+        bool native_frame =
+            (in_main_menu && have_menu_objects) ||
+            (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN && title_texture) ||
+            (have_logos && (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO ||
+                            lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO));
+        if (interactive && !native_frame) {
             SDL_SetRenderDrawColor(renderer, 120, 200, 145, 255);
             SDL_FRect marker = {227, 147, 5, 5};
             SDL_RenderFillRect(renderer, &marker);
@@ -999,6 +1157,7 @@ int aria_title_preview_main(int argc, char **argv) {
     aos_main_menu_graphics_free(&main_menu_graphics);
     if (menu_bg0_texture) SDL_DestroyTexture(menu_bg0_texture);
     if (title_texture) SDL_DestroyTexture(title_texture);
+    if (menu_objects_texture) SDL_DestroyTexture(menu_objects_texture);
     if (logo_texture) SDL_DestroyTexture(logo_texture);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);

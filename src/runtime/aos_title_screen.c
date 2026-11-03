@@ -292,12 +292,12 @@ static uint16_t title_arctan2(int16_t x16, int16_t y16) {
 }
 
 /* The animations of a sheet as aos_anim sees them. */
-static const AosTitleSheet *sheet_of(const AosTitleScreen *t, unsigned sheet) {
+static const AosObjSheet *sheet_of(const AosTitleScreen *t, unsigned sheet) {
     return t->graphics ? &t->graphics->sheets[sheet] : NULL;
 }
 
-static AosAnimSet anim_set(const AosTitleSheet *sheet, AosAnimDef defs[AOS_TITLE_MAX_ANIMS]) {
-    for (unsigned k = 0; k < sheet->anim_count && k < AOS_TITLE_MAX_ANIMS; ++k)
+static AosAnimSet anim_set(const AosObjSheet *sheet, AosAnimDef defs[AOS_OBJ_MAX_ANIMS]) {
+    for (unsigned k = 0; k < sheet->anim_count && k < AOS_OBJ_MAX_ANIMS; ++k)
         defs[k] = (AosAnimDef){sheet->anim_length[k], sheet->anim_duration[k]};
     return (AosAnimSet){defs, sheet->anim_count};
 }
@@ -305,10 +305,10 @@ static AosAnimSet anim_set(const AosTitleSheet *sheet, AosAnimDef defs[AOS_TITLE
 /* sub_0803F2C8. */
 static void anim_start(const AosTitleScreen *t, unsigned sheet, AosAnimState *state, unsigned id,
                        bool loop) {
-    const AosTitleSheet *s = sheet_of(t, sheet);
+    const AosObjSheet *s = sheet_of(t, sheet);
     memset(state, 0, sizeof *state);
     if (!s) return;
-    AosAnimDef defs[AOS_TITLE_MAX_ANIMS];
+    AosAnimDef defs[AOS_OBJ_MAX_ANIMS];
     AosAnimSet set = anim_set(s, defs);
     aos_anim_start(state, &set, id, loop);
 }
@@ -317,11 +317,11 @@ static void anim_start(const AosTitleScreen *t, unsigned sheet, AosAnimState *st
  * then the step's timer advances. */
 static void anim_step(const AosTitleScreen *t, unsigned sheet, AosAnimState *state,
                       uint8_t *record) {
-    const AosTitleSheet *s = sheet_of(t, sheet);
+    const AosObjSheet *s = sheet_of(t, sheet);
     if (!s || state->id >= s->anim_count || !s->anim_length[state->id]) return;
     unsigned length = s->anim_length[state->id];
     *record = s->anim_frame[state->id][state->frame < length ? state->frame : length - 1];
-    AosAnimDef defs[AOS_TITLE_MAX_ANIMS];
+    AosAnimDef defs[AOS_OBJ_MAX_ANIMS];
     AosAnimSet set = anim_set(s, defs);
     aos_anim_step(state, &set);
 }
@@ -871,67 +871,6 @@ static uint16_t brightness(uint16_t c, int evy, bool increase) {
     return (uint16_t)(ch[0] | ch[1] << 5 | ch[2] << 10);
 }
 
-/* The OBJ layer of one sprite: each screen pixel the frame covers (the
- * first piece on top), through the sprite's matrix when affine (the
- * double-size box of each piece is not clipped). */
-typedef struct {
-    uint8_t index[AOS_TITLE_W * AOS_TITLE_H];     /* OBJ palette index, 0: none */
-    uint8_t priority[AOS_TITLE_W * AOS_TITLE_H];
-    bool semi[AOS_TITLE_W * AOS_TITLE_H];
-    bool window[AOS_TITLE_W * AOS_TITLE_H];
-} ObjLayer;
-
-static uint8_t frame_pixel(const AosTitleSheet *sheet, const AosTitleFrame *frame, int fx, int fy) {
-    for (unsigned k = 0; k < frame->count; ++k) {
-        const AosTitlePiece *p = &frame->pieces[k];
-        int px = fx - p->x, py = fy - p->y;
-        if (px < 0 || py < 0 || px >= p->width || py >= p->height) continue;
-        int sx = p->source_x + (p->hflip ? p->width - 1 - px : px);
-        int sy = p->source_y + (p->vflip ? p->height - 1 - py : py);
-        uint8_t c = sheet->pixels[sy * AOS_TITLE_SHEET_SIZE + sx];
-        if (c) return c;
-    }
-    return 0;
-}
-
-static void draw_sprite(ObjLayer *layer, const AosTitleGraphics *g, const AosTitleSprite *s) {
-    const AosTitleSheet *sheet = &g->sheets[s->sheet];
-    if (s->record >= sheet->frame_count) return;
-    const AosTitleFrame *frame = &sheet->frames[s->record];
-    int reach = 0;
-    for (unsigned k = 0; k < frame->count; ++k) {
-        const AosTitlePiece *p = &frame->pieces[k];
-        int e[4] = {abs(p->x), abs(p->y), abs(p->x + p->width), abs(p->y + p->height)};
-        for (int j = 0; j < 4; ++j)
-            if (e[j] > reach) reach = e[j];
-    }
-    if (s->affine) reach *= 3;
-    for (int dy = -reach; dy <= reach; ++dy) {
-        int y = s->y + dy;
-        if (y < 0 || y >= AOS_TITLE_H) continue;
-        for (int dx = -reach; dx <= reach; ++dx) {
-            int x = s->x + dx;
-            if (x < 0 || x >= AOS_TITLE_W) continue;
-            int fx = dx, fy = dy;
-            if (s->affine) {
-                int32_t tx = s->pa * dx + s->pb * dy, ty = s->pc * dx + s->pd * dy;
-                fx = tx >> 8;
-                fy = ty >> 8;
-            }
-            uint8_t c = frame_pixel(sheet, frame, fx, fy);
-            if (!c) continue;
-            size_t at = (size_t)y * AOS_TITLE_W + (size_t)x;
-            if (s->mode == 2) {
-                layer->window[at] = true;
-            } else if (!layer->index[at] || s->priority < layer->priority[at]) {
-                layer->index[at] = (uint8_t)(s->palette_row * 16 + c);
-                layer->priority[at] = s->priority;
-                layer->semi[at] = s->mode == 1;
-            }
-        }
-    }
-}
-
 void aos_title_screen_render(const AosTitleScreen *t, uint8_t rgba[AOS_TITLE_W * AOS_TITLE_H * 4]) {
     const AosTitleGraphics *g = t->graphics;
     int eva = t->bldalpha & 0x1F, evb = (t->bldalpha >> 8) & 0x1F, evy = t->bldy;
@@ -939,12 +878,12 @@ void aos_title_screen_render(const AosTitleScreen *t, uint8_t rgba[AOS_TITLE_W *
     if (evb > 16) evb = 16;
     if (evy > 16) evy = 16;
     int effect = (t->bldcnt >> 6) & 3;
-    static ObjLayer obj;
-    memset(&obj, 0, sizeof obj);
+    static AosObjLayer obj;
+    aos_obj_layer_clear(&obj);
     if (g) {
         AosTitleSprite sprites[AOS_TITLE_MAX_SPRITES];
         int count = aos_title_screen_sprites(t, sprites);
-        for (int k = 0; k < count; ++k) draw_sprite(&obj, g, &sprites[k]);
+        for (int k = 0; k < count; ++k) aos_obj_layer_draw(&obj, g->sheets, &sprites[k]);
     }
     for (int y = 0; y < AOS_TITLE_H; ++y)
         for (int x = 0; x < AOS_TITLE_W; ++x) {

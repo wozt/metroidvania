@@ -50,9 +50,15 @@ With `--rom FILE`, the same frontend now loads the main menu's native palette,
 two shared character banks, language-specific character bank and three
 background planes directly from the verified ROM. It selects the English,
 French or German bank chosen by Reset and renders the base, PLAY, COPY, DELETE
-and name-entry layouts with the native BG2-over-BG3 alpha ratio. File names,
-slot statistics, cursors and prompts remain a host text overlay until their
-dynamic entity/OAM streams are ported; the menu therefore remains partial.
+and name-entry layouts with the native BG2-over-BG3 alpha ratio. Entity 0's
+objects are drawn natively (`aos_main_menu_sprites`, sub_080069C4: the PLAY /
+COPY / DELETE labels and their ornament, the hand cursor, the file icons and
+names, the NEW GAME and quicksave marks, the name-entry grid), the file
+statistics and area names are written to BG0 as sub_08006D9C does
+(`aos_main_menu_files`), with BG1's H-blank offset hiding the labels of an
+empty file, and the menu plays MUS_14 and its sounds. The portable saves keep
+no completion flag, icon set or map completion, which show as 0; the menu
+remains partial (not compared with the game).
 
 The room runtime now routes every simulation frame through the native
 `aos_game_mode_update` lifecycle and its IN_GAME handler. Its explicit

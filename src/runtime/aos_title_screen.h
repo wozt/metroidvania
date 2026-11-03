@@ -5,9 +5,11 @@
  * TitleScreen_sub_08002FF8, the BG1 H-blank wave of
  * TitleScreen_sub_08002F44, entity 0x12's OBJ palette sequencer
  * (sub_08004004, whose end lets stage 4 go on) and the menu entity 0x14
- * (sub_080043CC / sub_0800432C), and a GBA-style compositor for its three
- * backgrounds (aos_title_graphics). The title objects (the window disc,
- * the bats, the sparkles, the menu and copyright sprites) are not drawn yet.
+ * (sub_080043CC / sub_0800432C), the title's objects (the disc of entity
+ * 0x12, its OBJ window, the 34 bats of sub_08003DBC, the swooping bat of
+ * sub_08003CF8, the two sparkles of sub_08003F08, the menu of sub_0800427C,
+ * the ring and copyright of sub_080044DC) as an OAM list, and a GBA-style
+ * compositor for its three backgrounds (aos_title_graphics) and objects.
  *
  * Deliberate divergence: the menu has no SOUL TRADE entry (there is no
  * link cable on a PC); its entries are GAME START, then the extra entry
@@ -18,9 +20,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "aos_anim.h"
 #include "aos_title_layers.h"
 
-enum { AOS_TITLE_W = 240, AOS_TITLE_H = 160, AOS_TITLE_WAVE_LINES = 120 };
+enum { AOS_TITLE_W = 240, AOS_TITLE_H = 160, AOS_TITLE_WAVE_LINES = 120,
+       AOS_TITLE_BATS = 34, AOS_TITLE_SPARKLES = 2, AOS_TITLE_MAX_SPRITES = 64 };
 
 /* The palette effects of one palette (gEwramData + 0x123E4 of 0x11DDC for
  * the objects, 0x1261C for the backgrounds): per row (0-15) a blend toward
@@ -38,6 +42,55 @@ typedef struct {
     uint16_t shown[256];    /* after the effects (sub_0803BE04) */
     AosTitlePaletteFx fx;
 } AosTitlePalette;
+
+/* A bat (sub_08003A9C, updated by sub_080039D4): the entity's + 0x524 /
+ * + 0x528 position, its drift (+ 0x4FC, + 0x504), the amplitudes (+ 0x534,
+ * + 0x538), phases (+ 0x50C, + 0x50E) and speeds (+ 0x52E, + 0x532) of
+ * its wobble, and animation 0 of the bat sheet. `record` is + 0x549. */
+typedef struct {
+    bool active, hidden, semi;  /* + 0x53C bit 5, + 0x53E bits 1-2 == 1 */
+    uint8_t state;              /* + 0x4EE */
+    int32_t x, y, vx, vy, ax, ay;
+    uint16_t phase_x, phase_y, speed_x, speed_y;
+    AosAnimState anim;
+    uint8_t record;
+} AosTitleBat;
+
+/* The swooping bat (sub_08003CF8, sub_08003C18): animation 4 of the bat
+ * sheet, affine, spiralling in to (0x7A, 0x1A). */
+typedef struct {
+    bool active, hidden;
+    uint8_t state;
+    uint16_t angle;             /* + 0x4FC */
+    int32_t radius, scale;      /* + 0x500, + 0x504 */
+    int32_t x, y;
+    AosAnimState anim;
+    uint8_t record;
+} AosTitleSwoop;
+
+/* A sparkle (sub_08003F08, sub_08003E64): animation 4 of the disc sheet,
+ * affine and semi-transparent at (0x4E, 0x26); sparkle 0 drives BLDALPHA. */
+typedef struct {
+    bool active;
+    uint8_t state, kind;        /* + 0x4EE, + 0x508 */
+    int32_t size, scale, timer; /* + 0x500, + 0x504, + 0x4F8 */
+    uint16_t angle, spin;       /* + 0x4FC, + 0x4FE */
+    int32_t x, y;
+    AosAnimState anim;
+    uint8_t record;
+} AosTitleSparkle;
+
+/* One sprite of the OAM list (sub_0804311C / sub_0804342C): a frame record
+ * of a sheet, its palette row, its priority (from its layer + 0x540 by the
+ * thresholds 6, 7 and 0x16 of sub_0803DD14), its OBJ mode (0 normal, 1
+ * semi-transparent, 2 OBJ window) and, when affine, the 8.8 matrix of
+ * sub_0803E058 mapping screen offsets to frame offsets (double size). */
+typedef struct {
+    uint8_t sheet, record, palette_row, priority, mode;
+    bool affine;
+    int16_t pa, pb, pc, pd;
+    int16_t x, y;
+} AosTitleSprite;
 
 /* The menu's entries (frame numbers of sUnk_084F0D2C) and the game modes
  * they lead to (sTitleScreenNextGameMode). */
@@ -82,6 +135,11 @@ typedef struct {
     int32_t slide;          /* + 0x504 */
     bool chosen;            /* + 0x4FE */
     bool copyright_shown;   /* entity 0x15 */
+    /* The objects of sub_08003DBC and sub_08003F08. */
+    uint32_t random;        /* gEwramData->randomNumber, 0x1967 at stage 1 */
+    AosTitleBat bats[AOS_TITLE_BATS];
+    AosTitleSwoop swoop;
+    AosTitleSparkle sparkles[AOS_TITLE_SPARKLES];
     /* Requests for the host. */
     int song;               /* PlaySong this frame, -1 for none */
 } AosTitleScreen;
@@ -95,6 +153,10 @@ int32_t aos_title_screen_update(AosTitleScreen *title, uint16_t new_input,
                                 uint16_t repeated_input);
 /* The entries shown and the entry under the cursor. */
 int aos_title_screen_entries(const AosTitleScreen *title, uint8_t entries[3]);
+/* The sprites drawn this frame in OAM order (the first on top among equal
+ * priorities); returns their count. */
+int aos_title_screen_sprites(const AosTitleScreen *title,
+                             AosTitleSprite sprites[AOS_TITLE_MAX_SPRITES]);
 /* The screen as 240 x 160 RGBA pixels. */
 void aos_title_screen_render(const AosTitleScreen *title, uint8_t rgba[AOS_TITLE_W * AOS_TITLE_H * 4]);
 

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The decoded layers of Aria's title screen and the BG2 affine transform
- * (filled by aos_title_graphics; no ROM access here). No SDL. */
+/* The decoded layers and object sheets of Aria's title screen and the BG2
+ * affine transform (filled by aos_title_graphics; no ROM access here).
+ * No SDL. */
 #ifndef AOS_TITLE_LAYERS_H
 #define AOS_TITLE_LAYERS_H
 
@@ -9,12 +10,48 @@
 
 enum { AOS_TITLE_TEXT_LAYERS = 2, AOS_TITLE_LAYER_SIZE = 256 };
 
+/* The title's three object sets (graphics resource, frame descriptor):
+ * the disc and sparkles (0x08160488, 0x0820CB1C), the bats, the copyright
+ * and its ring (0x08160480, 0x0820C8A8), the English menu (0x0825EAD4,
+ * 0x0826693C). */
+enum { AOS_TITLE_SHEET_DISC = 0, AOS_TITLE_SHEET_BATS = 1, AOS_TITLE_SHEET_MENU = 2,
+       AOS_TITLE_SHEETS = 3 };
+enum { AOS_TITLE_SHEET_SIZE = 128, AOS_TITLE_MAX_FRAMES = 16, AOS_TITLE_MAX_PIECES = 9,
+       AOS_TITLE_MAX_ANIMS = 13, AOS_TITLE_MAX_STEPS = 8 };
+
+/* One OAM component of a frame record (12 bytes): its offset from the
+ * entity, its size and its place on the sheet in pixels, and its flips
+ * (+ 0x0A bit 1: horizontal, bit 0: vertical). */
+typedef struct {
+    int8_t x, y;
+    uint8_t width, height, source_x, source_y;
+    bool hflip, vflip;
+} AosTitlePiece;
+
+typedef struct {
+    uint8_t count;   /* record + 5; the first piece is drawn on top */
+    AosTitlePiece pieces[AOS_TITLE_MAX_PIECES];
+} AosTitleFrame;
+
+/* A tile sheet as 128 x 128 colour indices (0-15, 0 transparent), its
+ * frame records and its animations (encoding 1: frame, duration). */
+typedef struct {
+    uint8_t pixels[AOS_TITLE_SHEET_SIZE * AOS_TITLE_SHEET_SIZE];
+    uint8_t frame_count;
+    AosTitleFrame frames[AOS_TITLE_MAX_FRAMES];
+    uint8_t anim_count;
+    uint8_t anim_length[AOS_TITLE_MAX_ANIMS];
+    uint8_t anim_frame[AOS_TITLE_MAX_ANIMS][AOS_TITLE_MAX_STEPS];
+    uint8_t anim_duration[AOS_TITLE_MAX_ANIMS][AOS_TITLE_MAX_STEPS];
+} AosTitleSheet;
+
 /* Each layer as 256 x 256 palette indices (0: transparent): BG0 and BG1
  * hold row * 16 + colour, BG2 a 256-colour index. */
 typedef struct {
     uint8_t text[AOS_TITLE_TEXT_LAYERS][AOS_TITLE_LAYER_SIZE * AOS_TITLE_LAYER_SIZE];
     uint8_t affine[AOS_TITLE_LAYER_SIZE * AOS_TITLE_LAYER_SIZE];
     uint16_t palette[256];  /* the BG palette resource (sub_0803C8B0) */
+    AosTitleSheet sheets[AOS_TITLE_SHEETS];
 } AosTitleGraphics;
 
 

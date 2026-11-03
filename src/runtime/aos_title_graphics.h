@@ -5,7 +5,7 @@
  * sub_0803F8A8: BG0 (0x080E9024) and BG1 (0x080E90B4), 4bpp text layers on
  * character block 2, and BG2 (0x080E8F94), the 256-colour affine layer of
  * mode 1 on block 0 (sub_0803F7C8: an 8 x 8 map of 4 x 4-tile blocks, one
- * byte a tile). No SDL. */
+ * byte a tile); and the three object sheets of aos_title_layers.h. No SDL. */
 #ifndef AOS_TITLE_GRAPHICS_H
 #define AOS_TITLE_GRAPHICS_H
 

@@ -2,6 +2,27 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0726 - Aria's title screen objects and music
+
+- `aos_title_graphics` now decodes the title's three object sheets (disc
+  and sparkles, bats and copyright, English menu) with their frame records
+  and animations; `aos_title_screen` ports the objects: entity 0x12's disc
+  eclipsing the moon, then its OBJ window hiding BG2 inside it; the 34 bats
+  of sub_08003DBC from the seed 0x1967; the swooping bat of sub_08003CF8;
+  the two rotating sparkles of sub_08003F08 (sparkle 0 drives BLDALPHA);
+  their deletion at the reveal (sub_08000EA8); the menu sprites and entity
+  0x15's ring and copyright. `aos_title_screen_sprites` builds the OAM list
+  with the layer priorities of sub_0803DD14.
+- sub_0803FD60 ranks the backgrounds by their layers: BG1 (the logo) has
+  priority 0, BG0 (the castle) 1, BG2 (the moon) 2, so the logo is now in
+  front of the castle as in the game.
+- The compositor draws the objects (OBJ window, semi-transparent objects,
+  affine sprites as whole frames). SONG_MUTE is now 0x1010 (it was 0x7FFF).
+- `fusion_aria_title_preview` plays MUS_27 and SONG_MUTE through the
+  exported song table and the native MP2K mixer (`--mute` to disable).
+- The final menu frame matches the game's screenshot by eye, except for the
+  absent SOUL TRADE; the sequence is not emulator-compared.
+
 ## Patch 0725 - Aria's native title screen (backgrounds and flow)
 
 - New `aos_title_screen` ports GameModeTitleScreenUpdate with its display

@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "aos_audio.h"
 #include "aos_game_lifecycle.h"
 #include "aos_intro_font.h"
 #include "aos_intro_graphics.h"
@@ -18,9 +19,18 @@
 #include "aos_text_window.h"
 #include "aos_menu_bg0.h"
 #include "aos_menu_save_bridge.h"
+#include "aos_mp2k.h"
 #include "aos_save.h"
 
 enum { GBA_W = 240, GBA_H = 160, SCALE = 3 };
+
+#define AUDIO_TABLE "assets/extracted/aria/sound/runtime/song_table.tsv"
+#define AUDIO_BANK "assets/extracted/aria/sound/runtime/sound_bank.bin"
+
+static void start_mp2k_song(void *context, uint16_t song, const AosAudioSongInfo *info) {
+    (void)song;
+    (void)aos_mp2k_player_start(context, info->player, info->header_pointer);
+}
 
 typedef struct {
     bool present;
@@ -356,7 +366,7 @@ int main(int argc, char **argv) {
     const char *image_path = NULL;
     const char *rom_path = NULL;
     const char *runtime_path = NULL, *save_directory_arg = NULL;
-    bool start_game_over = false;
+    bool start_game_over = false, mute = false;
     frontend_argc = argc;
     frontend_argv = argv;
     for (int i = 1; i < argc; ++i) {
@@ -365,16 +375,39 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--runtime") && i + 1 < argc) runtime_path = argv[++i];
         else if (!strcmp(argv[i], "--save-dir") && i + 1 < argc) save_directory_arg = argv[++i];
         else if (!strcmp(argv[i], "--game-over")) start_game_over = true;
+        else if (!strcmp(argv[i], "--mute")) mute = true;
         else {
             fprintf(stderr,
                     "Usage: fusion_aria_title_preview [--title-bmp FILE] [--rom FILE] "
-                    "[--runtime FILE] [--save-dir DIR] [--game-over]\n");
+                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--mute]\n");
             return 2;
         }
     }
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | (mute ? 0 : SDL_INIT_AUDIO))) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
+    }
+    /* PlaySong through the exported song table and MP2K bank (the title's
+     * MUS_27), mixed as SoundMainRAM's signed 8-bit mono at 10512 Hz. */
+    char audio_error[256];
+    aos_audio_reset();
+    static AosMp2kEngine mp2k;
+    aos_mp2k_engine_init(&mp2k);
+    bool have_audio = !mute &&
+                      aos_audio_load_song_table(AUDIO_TABLE, audio_error, sizeof audio_error) &&
+                      aos_mp2k_engine_load_bank(&mp2k, AUDIO_BANK, audio_error,
+                                                sizeof audio_error);
+    SDL_AudioStream *audio_stream = NULL;
+    if (have_audio) {
+        aos_audio_set_start_sink(start_mp2k_song, &mp2k);
+        SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_MIX_RATE};
+        audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL,
+                                                 NULL);
+        if (audio_stream) SDL_ResumeAudioStreamDevice(audio_stream);
+        else fprintf(stderr, "No audio output: %s\n", SDL_GetError());
+    } else if (!mute) {
+        fprintf(stderr, "No Aria audio: ./build/fusion_rebuild --task aria_sound (%s)\n",
+                audio_error);
     }
     char runtime_buffer[1024];
     if (!runtime_path) {
@@ -553,6 +586,18 @@ int main(int argc, char **argv) {
         const uint16_t held = keymask(SDL_GetKeyboardState(NULL));
         aos_input_update(&lifecycle.input, held);
         aos_game_lifecycle_update(&lifecycle);
+        /* The title's PlaySong requests (MUS_27, then SONG_MUTE). */
+        if (lifecycle.title.song >= 0) {
+            aos_audio_play_song((uint16_t)lifecycle.title.song);
+            lifecycle.title.song = -1;
+        }
+        aos_audio_volume_update();
+        if (have_audio) {
+            aos_mp2k_engine_frame(&mp2k);
+            int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
+            aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
+            if (audio_stream) SDL_PutAudioStreamData(audio_stream, pcm, sizeof pcm);
+        }
         if (intro_rom.data &&
             lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU &&
             lifecycle.main_menu.assets_requested &&
@@ -888,6 +933,9 @@ int main(int argc, char **argv) {
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);
+    if (audio_stream) SDL_DestroyAudioStream(audio_stream);
+    aos_audio_set_start_sink(NULL, NULL);
+    aos_mp2k_engine_destroy(&mp2k);
     if (art) SDL_DestroyTexture(art);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

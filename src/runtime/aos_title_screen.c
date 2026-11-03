@@ -3,6 +3,7 @@
 #include "aos_title_screen.h"
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "aos_game_mode.h"
@@ -13,7 +14,7 @@ enum {
     DCNT_OBJ = 1 << 12, DCNT_WINOBJ = 1 << 15,
     BLD_FIRST_ALL = 0x3F, BLD_ALPHA = 0x40, BLD_DECREASE = 0xC0, BLD_SECOND_ALL = 0x3F00,
     BLD_BG1_FIRST = 0x02, BLD_BG2_SECOND = 0x400, BLD_OBJ_SECOND = 0x1000,
-    MUS_27 = 27, SONG_MUTE = 0x7FFF,
+    MUS_27 = 27, SONG_MUTE = 0x1010,
     GLOBAL = 16,
 };
 
@@ -251,6 +252,330 @@ static void e12_update(AosTitleScreen *t) {
     }
 }
 
+/* RandomNumberGenerator. */
+static uint32_t title_random(AosTitleScreen *t) {
+    return t->random = (t->random >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+}
+
+/* sub_0802D5EC: (random & (n - 1)) - n / 2. */
+static int32_t random_centered(AosTitleScreen *t, int32_t n) {
+    return (int32_t)(title_random(t) & (uint32_t)(n - 1)) - n / 2;
+}
+
+/* ArcTan2 (BIOS call 0x0A), as aos_arctan2 of aos_enemy.c. */
+static int32_t arctan(int32_t i) {
+    int32_t a = -((i * i) >> 14);
+    int32_t b = ((0xA9 * a) >> 14) + 0x390;
+    b = ((b * a) >> 14) + 0x91C;
+    b = ((b * a) >> 14) + 0xFB6;
+    b = ((b * a) >> 14) + 0x16AA;
+    b = ((b * a) >> 14) + 0x2081;
+    b = ((b * a) >> 14) + 0x3651;
+    b = ((b * a) >> 14) + 0xA2F9;
+    return (int16_t)((i * b) >> 16);
+}
+
+static uint16_t title_arctan2(int16_t x16, int16_t y16) {
+    int32_t x = x16, y = y16, r;
+    if (!y) return x >= 0 ? 0 : 0x8000;
+    if (!x) return y >= 0 ? 0x4000 : 0xC000;
+    if (y >= 0) {
+        if (x >= 0 && x >= y) r = arctan(y * 0x4000 / x);
+        else if (x < 0 && -x >= y) r = arctan(y * 0x4000 / x) + 0x8000;
+        else r = 0x4000 - arctan(x * 0x4000 / y);
+    } else {
+        if (x <= 0 && -x > -y) r = arctan(y * 0x4000 / x) + 0x8000;
+        else if (x > 0 && x >= -y) r = arctan(y * 0x4000 / x) + 0x10000;
+        else r = 0xC000 - arctan(x * 0x4000 / y);
+    }
+    return (uint16_t)r;
+}
+
+/* The animations of a sheet as aos_anim sees them. */
+static const AosTitleSheet *sheet_of(const AosTitleScreen *t, unsigned sheet) {
+    return t->graphics ? &t->graphics->sheets[sheet] : NULL;
+}
+
+static AosAnimSet anim_set(const AosTitleSheet *sheet, AosAnimDef defs[AOS_TITLE_MAX_ANIMS]) {
+    for (unsigned k = 0; k < sheet->anim_count && k < AOS_TITLE_MAX_ANIMS; ++k)
+        defs[k] = (AosAnimDef){sheet->anim_length[k], sheet->anim_duration[k]};
+    return (AosAnimSet){defs, sheet->anim_count};
+}
+
+/* sub_0803F2C8. */
+static void anim_start(const AosTitleScreen *t, unsigned sheet, AosAnimState *state, unsigned id,
+                       bool loop) {
+    const AosTitleSheet *s = sheet_of(t, sheet);
+    memset(state, 0, sizeof *state);
+    if (!s) return;
+    AosAnimDef defs[AOS_TITLE_MAX_ANIMS];
+    AosAnimSet set = anim_set(s, defs);
+    aos_anim_start(state, &set, id, loop);
+}
+
+/* sub_0803F17C / sub_0803EC34: + 0x549 takes the current step's frame,
+ * then the step's timer advances. */
+static void anim_step(const AosTitleScreen *t, unsigned sheet, AosAnimState *state,
+                      uint8_t *record) {
+    const AosTitleSheet *s = sheet_of(t, sheet);
+    if (!s || state->id >= s->anim_count || !s->anim_length[state->id]) return;
+    unsigned length = s->anim_length[state->id];
+    *record = s->anim_frame[state->id][state->frame < length ? state->frame : length - 1];
+    AosAnimDef defs[AOS_TITLE_MAX_ANIMS];
+    AosAnimSet set = anim_set(s, defs);
+    aos_anim_step(state, &set);
+}
+
+/* sub_08003CF8, then sub_08003DBC's 34 bats (sub_08003A9C), from the seed
+ * 0x1967 of sub_08004160. */
+static void create_objects(AosTitleScreen *t) {
+    t->random = 0x1967;
+    AosTitleSwoop *w = &t->swoop;
+    memset(w, 0, sizeof *w);
+    w->active = true;
+    anim_start(t, AOS_TITLE_SHEET_BATS, &w->anim, 4, true);
+    anim_step(t, AOS_TITLE_SHEET_BATS, &w->anim, &w->record);
+    w->hidden = true;
+    w->angle = 0x9800;
+    w->radius = 0xC00000;
+    for (int i = 0; i < AOS_TITLE_BATS; ++i) {
+        AosTitleBat *b = &t->bats[i];
+        memset(b, 0, sizeof *b);
+        b->active = true;
+        b->x = i * 0x3C3C3 + 0x380000 + (int32_t)((uint32_t)random_centered(t, 0x10) << 16);
+        b->y = (int32_t)((uint32_t)(uint16_t)(random_centered(t, 0x20) + 0x60) << 16);
+        anim_start(t, AOS_TITLE_SHEET_BATS, &b->anim, 0, true);
+        anim_step(t, AOS_TITLE_SHEET_BATS, &b->anim, &b->record);
+        b->anim.frame = (uint8_t)(title_random(t) & 3);
+        b->anim.tick = (uint8_t)(title_random(t) & 3);
+        b->semi = true;
+        b->hidden = true;
+        b->ax = (int32_t)((title_random(t) & 0xFF) * 0x10) + 0x400;
+        b->ay = (int32_t)((title_random(t) & 0xFF) * 0x10) + 0x400;
+        uint16_t a = title_arctan2((int16_t)((int16_t)(b->x >> 16) - 0x78),
+                                   (int16_t)((int16_t)(b->y >> 16) - 0x60));
+        b->vx = title_sine(a + 0x4000u);
+        b->vy = title_sine(a);
+        b->x += b->vx * 32;
+        b->y += b->vy * 32;
+        b->vx = round_shift(-b->vx, 4);
+        b->vy = round_shift(-b->vy, 4);
+        b->phase_x = (uint16_t)((title_random(t) & 0xFF) << 8);
+        b->phase_y = (uint16_t)(b->phase_x + 0x8000 + ((title_random(t) & 0x1F) << 4));
+        b->speed_x = (uint16_t)((title_random(t) & 0xFF) + 0x800);
+        b->speed_y = (uint16_t)((title_random(t) & 0xFF) + 0xA00);
+    }
+}
+
+/* sub_08003F08(kind, size, spin). */
+static void create_sparkle(AosTitleScreen *t, int index, uint8_t kind, int32_t size,
+                           uint16_t spin) {
+    AosTitleSparkle *k = &t->sparkles[index];
+    memset(k, 0, sizeof *k);
+    k->active = true;
+    anim_start(t, AOS_TITLE_SHEET_DISC, &k->anim, 4, false);
+    anim_step(t, AOS_TITLE_SHEET_DISC, &k->anim, &k->record);
+    k->kind = kind;
+    k->size = size;
+    k->spin = spin;
+    k->x = 0x4E << 16;
+    k->y = 0x26 << 16;
+}
+
+/* sub_08000EA8(1): the objects of + 0x547 == 1 are deleted. */
+static void delete_objects(AosTitleScreen *t) {
+    for (int i = 0; i < AOS_TITLE_BATS; ++i) t->bats[i].active = false;
+    t->swoop.active = false;
+    for (int i = 0; i < AOS_TITLE_SPARKLES; ++i) t->sparkles[i].active = false;
+}
+
+/* sub_08003C18, sub_080039D4 and sub_08003E64, in slot order. */
+static void objects_update(AosTitleScreen *t) {
+    AosTitleSwoop *w = &t->swoop;
+    if (w->active && (w->state != 0 || (t->e13_flags & 2))) {
+        uint16_t angle = w->angle;
+        if (w->state == 0) {
+            w->hidden = false;
+            w->state = 1;
+        }
+        if (w->radius != 0) {
+            w->angle = (uint16_t)(w->angle - 0xA0);
+            int32_t r = w->radius;
+            w->radius = (r - 0x8000) - round_shift(r, 6);
+            if (w->radius <= 0xFFF) w->radius = 0;
+        }
+        w->scale = w->radius / 160 + 0x10000;
+        w->x = (title_sine(angle + 0x4000u) >> 8) * (w->radius >> 8) + 0x7A0000;
+        w->y = (title_sine(angle) >> 8) * (w->radius >> 8) + 0x1A0000;
+        anim_step(t, AOS_TITLE_SHEET_BATS, &w->anim, &w->record);
+    }
+    for (int i = 0; i < AOS_TITLE_BATS; ++i) {
+        AosTitleBat *b = &t->bats[i];
+        if (!b->active) continue;
+        if (b->state == 0) {
+            if (!(t->e13_flags & 1)) continue;
+            b->state = 1;
+            b->hidden = false;
+        }
+        if (b->semi && (t->e13_flags & 4)) b->semi = false;
+        b->phase_x = (uint16_t)(b->phase_x + b->speed_x);
+        b->phase_y = (uint16_t)(b->phase_y + b->speed_y);
+        b->x += round_shift(b->ax * title_sine(b->phase_x + 0x4000u), 12);
+        int32_t y = b->y + round_shift(b->ay * title_sine(b->phase_y), 12);
+        b->x += b->vx;
+        b->y = y + b->vy;
+        anim_step(t, AOS_TITLE_SHEET_BATS, &b->anim, &b->record);
+    }
+    for (int i = 0; i < AOS_TITLE_SPARKLES; ++i) {
+        AosTitleSparkle *k = &t->sparkles[i];
+        if (!k->active) continue;
+        if (k->state == 0) {
+            k->state = 1;
+            k->scale = 0x20000;
+            k->timer = 0x8000;
+        }
+        k->scale = k->size << 12;
+        if (k->kind == 0) {
+            int32_t v = 16 - (title_sine((uint32_t)k->timer) >> 12);
+            t->bldalpha = (uint16_t)((v << 8) | (16 - v));
+        }
+        k->angle = (uint16_t)(k->angle + k->spin);
+        anim_step(t, AOS_TITLE_SHEET_DISC, &k->anim, &k->record);
+        if (k->timer > 0) k->timer -= 0x180;
+        else k->active = false;   /* + 0x53D bit 3: deleted after its update */
+    }
+}
+
+/* sub_0803E86C: a 16.16 product from the operands' top 24 bits, rounded
+ * toward zero to a multiple of 0x100 (as fixed_mul of aos_enemy.c). */
+static int32_t fixed_mul(int32_t a, int32_t b) {
+    if (!a || !b) return 0;
+    if (a == 0x10000) return b;
+    if (b == 0x10000) return a;
+    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
+    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
+    int32_t p = a8 * b8;
+    if (p < 0) p += 0xFF;
+    return (int32_t)((uint32_t)(p >> 8) << 8);
+}
+
+/* sub_0803E8FC: 1 / x in 16.16. */
+static int32_t reciprocal(int32_t x) {
+    if (x == 0x10000) return 0x10000;
+    int32_t d = x < 0 ? -((-x) >> 8) : x >> 8;
+    return (0x10000 / d) * 256;
+}
+
+static int16_t toward_zero_8(int32_t v) {
+    return (int16_t)(v < 0 ? -((-v) >> 8) : v >> 8);
+}
+
+/* sub_0803E058(angle, sx, sy, 0, 0, slot). */
+static void sprite_affine(AosTitleSprite *sprite, uint16_t angle, int32_t sx, int32_t sy) {
+    int32_t sine = title_sine(angle), cosine = title_sine(angle + 0x4000u);
+    int32_t rx = sx > 0x400 ? reciprocal(sx) : 0x7FFFFF;
+    int32_t ry = sy > 0x400 ? reciprocal(sy) : 0x7FFFFF;
+    sprite->affine = true;
+    sprite->pa = toward_zero_8(fixed_mul(cosine, rx));
+    sprite->pb = toward_zero_8(fixed_mul(sine, rx));
+    sprite->pc = toward_zero_8(fixed_mul(-sine, ry));
+    sprite->pd = toward_zero_8(fixed_mul(cosine, ry));
+}
+
+/* The layers of sub_0803DD14 (stage 1): BG0 at 7, BG1 at 6, BG2 at 0x16,
+ * BG3 at 0x1F (sub_0803DC18's default). An object layer up to 6 gets
+ * priority 0, 7 priority 1, up to 0x16 priority 2, the others 3
+ * (sub_0803DE10). */
+static uint8_t layer_priority(unsigned layer) {
+    return (uint8_t)(layer <= 6 ? 0 : layer == 7 ? 1 : layer <= 0x16 ? 2 : 3);
+}
+
+typedef struct {
+    AosTitleSprite *sprites;
+    uint8_t layers[AOS_TITLE_MAX_SPRITES];
+    int count;
+} SpriteList;
+
+static int16_t pixel_of(int32_t v) {
+    return (int16_t)(v < 0 ? -((-v) >> 16) : v >> 16);
+}
+
+/* sub_0803AC40: the culling box of the entity's position, then the OAM
+ * list of its layer (sub_0803E528 appends). */
+static AosTitleSprite *emit(SpriteList *list, unsigned layer, unsigned sheet, uint8_t record,
+                            uint8_t palette_row, uint8_t mode, int32_t x, int32_t y) {
+    int16_t hx = (int16_t)((uint32_t)x >> 16), hy = (int16_t)((uint32_t)y >> 16);
+    if (hx < -0x40 || hx > 0x130 || hy < -0x20 || hy > 0xE0) return NULL;
+    if (list->count >= AOS_TITLE_MAX_SPRITES) return NULL;
+    AosTitleSprite *sprite = &list->sprites[list->count];
+    *sprite = (AosTitleSprite){(uint8_t)sheet, record, palette_row, layer_priority(layer), mode,
+                               false, 0x100, 0, 0, 0x100, pixel_of(x), pixel_of(y)};
+    list->layers[list->count++] = (uint8_t)layer;
+    return sprite;
+}
+
+/* sUnk_084F0CEC: the four quarters of entity 0x12's disc (frames 0-3,
+ * rows 4-7) and of entity 0x15's ring (frames 0x0C-0x0F, row 0x0B). */
+static const struct { uint8_t frame, row; int8_t x, y; } quarters[8] = {
+    {0x0, 0x4, -32, -32}, {0x1, 0x5, 32, -32}, {0x2, 0x6, -32, 32}, {0x3, 0x7, 32, 32},
+    {0xC, 0xB, -32, -32}, {0xD, 0xB, 32, -32}, {0xE, 0xB, -32, 32}, {0xF, 0xB, 32, 32},
+};
+
+int aos_title_screen_sprites(const AosTitleScreen *t,
+                             AosTitleSprite sprites[AOS_TITLE_MAX_SPRITES]) {
+    if (!(t->dispcnt & DCNT_OBJ) || t->stage < 2) return 0;
+    SpriteList list = {sprites, {0}, 0};
+    /* Entity 0x12 (sub_080046D0): its OBJ mode is + 0x53E bits 1-2. */
+    if (!t->e12_hidden)
+        for (int k = 0; k < 4; ++k)
+            emit(&list, 0x11, AOS_TITLE_SHEET_DISC, quarters[k].frame, quarters[k].row,
+                 t->e12_blend, t->e12_x + quarters[k].x * 0x10000,
+                 t->e12_y + quarters[k].y * 0x10000);
+    /* Entity 0x14 (sub_0800427C): rows 9 pixels apart from 0x8C - 4 * count,
+     * sliding apart left and right; the selected entry on row 0x0B. */
+    uint8_t entries[3];
+    int n = aos_title_screen_entries(t, entries);
+    for (int k = 0; k < n; ++k) {
+        int32_t slide = ((t->first + k) & 1) ? -t->slide : t->slide;
+        emit(&list, 0x11, AOS_TITLE_SHEET_MENU, entries[k], k == t->cursor ? 0xB : 0xC, 0,
+             0x780000 + slide, (0x8C - 4 * n + 9 * k) * 0x10000);
+    }
+    /* Entity 0x15 (sub_080044DC): the ring around the moon, the copyright. */
+    if (t->copyright_shown) {
+        for (int k = 4; k < 8; ++k)
+            emit(&list, 0x12, AOS_TITLE_SHEET_BATS, quarters[k].frame, quarters[k].row, 0,
+                 (120 + quarters[k].x) * 0x10000, (80 + quarters[k].y) * 0x10000);
+        emit(&list, 0x12, AOS_TITLE_SHEET_BATS, 0xB, 0xB, 0, 120 * 0x10000, 160 * 0x10000);
+    }
+    const AosTitleSwoop *w = &t->swoop;
+    if (w->active && !w->hidden) {
+        AosTitleSprite *s = emit(&list, 6, AOS_TITLE_SHEET_BATS, w->record, 0xC, 0, w->x, w->y);
+        if (s) sprite_affine(s, 0, w->scale, w->scale);
+    }
+    for (int i = 0; i < AOS_TITLE_BATS; ++i) {
+        const AosTitleBat *b = &t->bats[i];
+        if (b->active && !b->hidden)
+            emit(&list, 7, AOS_TITLE_SHEET_BATS, b->record, 0xD, b->semi ? 1 : 0, b->x, b->y);
+    }
+    for (int i = 0; i < AOS_TITLE_SPARKLES; ++i) {
+        const AosTitleSparkle *k = &t->sparkles[i];
+        if (!k->active) continue;
+        AosTitleSprite *s = emit(&list, 6, AOS_TITLE_SHEET_DISC, k->record, 0xB, 1, k->x, k->y);
+        if (s) sprite_affine(s, k->angle, k->scale, k->scale);
+    }
+    /* sub_0803DE10: layer 0 first, each layer in drawing order. */
+    for (int i = 1; i < list.count; ++i)
+        for (int j = i; j > 0 && list.layers[j - 1] > list.layers[j]; --j) {
+            AosTitleSprite s = sprites[j];
+            sprites[j] = sprites[j - 1];
+            sprites[j - 1] = s;
+            uint8_t l = list.layers[j];
+            list.layers[j] = list.layers[j - 1];
+            list.layers[j - 1] = l;
+        }
+    return list.count;
+}
+
 /* The menu's entries (sub_080043CC's counts) without SOUL TRADE. */
 int aos_title_screen_entries(const AosTitleScreen *t, uint8_t entries[3]) {
     if (!t->menu_shown) return 0;
@@ -321,6 +646,7 @@ static void menu_update(AosTitleScreen *t, uint16_t repeated) {
 /* The end of stage 7 and the START shortcut: the castle (BG0), the menu
  * and copyright, the white flash of the backgrounds and the objects' tint. */
 static void reveal(AosTitleScreen *t, uint8_t tint) {
+    delete_objects(t);
     t->dispcnt |= DCNT_BG0;
     t->e12_hidden = true;
     t->e12_blend = 0;
@@ -379,6 +705,7 @@ int32_t aos_title_screen_update(AosTitleScreen *t, uint16_t newly, uint16_t repe
         t->e12_x = 0x980000;
         t->e12_y = 0x700000;
         set_affine(t, 0x108 - round_shift(t->motion, 15));
+        create_objects(t);
         t->stage = 2;
         /* fall through */
     case 2:
@@ -397,7 +724,11 @@ int32_t aos_title_screen_update(AosTitleScreen *t, uint16_t newly, uint16_t repe
             t->motion -= 0x2000;
             t->e12_x -= 0x2000;
             t->e12_y -= 0x2000;
-            if (t->motion == 0x40000) t->bldy = 16;     /* (the sparkles: not drawn) */
+            if (t->motion == 0x40000) {
+                t->bldy = 16;
+                create_sparkle(t, 0, 0, 0x18, 0xEF);
+                create_sparkle(t, 1, 1, 0x20, 0x89);
+            }
             if (t->motion < 0x30000) {
                 t->e12_flags |= 1;
                 t->stage = 4;
@@ -515,6 +846,7 @@ int32_t aos_title_screen_update(AosTitleScreen *t, uint16_t newly, uint16_t repe
      * palettes. */
     e12_update(t);
     menu_update(t, repeated);
+    objects_update(t);
     apply_palette(&t->bg);
     apply_palette(&t->obj);
     t->frame++;
@@ -539,6 +871,67 @@ static uint16_t brightness(uint16_t c, int evy, bool increase) {
     return (uint16_t)(ch[0] | ch[1] << 5 | ch[2] << 10);
 }
 
+/* The OBJ layer of one sprite: each screen pixel the frame covers (the
+ * first piece on top), through the sprite's matrix when affine (the
+ * double-size box of each piece is not clipped). */
+typedef struct {
+    uint8_t index[AOS_TITLE_W * AOS_TITLE_H];     /* OBJ palette index, 0: none */
+    uint8_t priority[AOS_TITLE_W * AOS_TITLE_H];
+    bool semi[AOS_TITLE_W * AOS_TITLE_H];
+    bool window[AOS_TITLE_W * AOS_TITLE_H];
+} ObjLayer;
+
+static uint8_t frame_pixel(const AosTitleSheet *sheet, const AosTitleFrame *frame, int fx, int fy) {
+    for (unsigned k = 0; k < frame->count; ++k) {
+        const AosTitlePiece *p = &frame->pieces[k];
+        int px = fx - p->x, py = fy - p->y;
+        if (px < 0 || py < 0 || px >= p->width || py >= p->height) continue;
+        int sx = p->source_x + (p->hflip ? p->width - 1 - px : px);
+        int sy = p->source_y + (p->vflip ? p->height - 1 - py : py);
+        uint8_t c = sheet->pixels[sy * AOS_TITLE_SHEET_SIZE + sx];
+        if (c) return c;
+    }
+    return 0;
+}
+
+static void draw_sprite(ObjLayer *layer, const AosTitleGraphics *g, const AosTitleSprite *s) {
+    const AosTitleSheet *sheet = &g->sheets[s->sheet];
+    if (s->record >= sheet->frame_count) return;
+    const AosTitleFrame *frame = &sheet->frames[s->record];
+    int reach = 0;
+    for (unsigned k = 0; k < frame->count; ++k) {
+        const AosTitlePiece *p = &frame->pieces[k];
+        int e[4] = {abs(p->x), abs(p->y), abs(p->x + p->width), abs(p->y + p->height)};
+        for (int j = 0; j < 4; ++j)
+            if (e[j] > reach) reach = e[j];
+    }
+    if (s->affine) reach *= 3;
+    for (int dy = -reach; dy <= reach; ++dy) {
+        int y = s->y + dy;
+        if (y < 0 || y >= AOS_TITLE_H) continue;
+        for (int dx = -reach; dx <= reach; ++dx) {
+            int x = s->x + dx;
+            if (x < 0 || x >= AOS_TITLE_W) continue;
+            int fx = dx, fy = dy;
+            if (s->affine) {
+                int32_t tx = s->pa * dx + s->pb * dy, ty = s->pc * dx + s->pd * dy;
+                fx = tx >> 8;
+                fy = ty >> 8;
+            }
+            uint8_t c = frame_pixel(sheet, frame, fx, fy);
+            if (!c) continue;
+            size_t at = (size_t)y * AOS_TITLE_W + (size_t)x;
+            if (s->mode == 2) {
+                layer->window[at] = true;
+            } else if (!layer->index[at] || s->priority < layer->priority[at]) {
+                layer->index[at] = (uint8_t)(s->palette_row * 16 + c);
+                layer->priority[at] = s->priority;
+                layer->semi[at] = s->mode == 1;
+            }
+        }
+    }
+}
+
 void aos_title_screen_render(const AosTitleScreen *t, uint8_t rgba[AOS_TITLE_W * AOS_TITLE_H * 4]) {
     const AosTitleGraphics *g = t->graphics;
     int eva = t->bldalpha & 0x1F, evb = (t->bldalpha >> 8) & 0x1F, evy = t->bldy;
@@ -546,43 +939,55 @@ void aos_title_screen_render(const AosTitleScreen *t, uint8_t rgba[AOS_TITLE_W *
     if (evb > 16) evb = 16;
     if (evy > 16) evy = 16;
     int effect = (t->bldcnt >> 6) & 3;
+    static ObjLayer obj;
+    memset(&obj, 0, sizeof obj);
+    if (g) {
+        AosTitleSprite sprites[AOS_TITLE_MAX_SPRITES];
+        int count = aos_title_screen_sprites(t, sprites);
+        for (int k = 0; k < count; ++k) draw_sprite(&obj, g, &sprites[k]);
+    }
     for (int y = 0; y < AOS_TITLE_H; ++y)
         for (int x = 0; x < AOS_TITLE_W; ++x) {
-            /* Front to back: BG0 (priority 0), BG1 (1), BG2 (2), backdrop. */
+            size_t at = (size_t)y * AOS_TITLE_W + (size_t)x;
+            /* sub_08004160's windows: inside the OBJ window (WINOUT high
+             * byte) everything but BG2, outside (WINOUT low byte) all. */
+            bool bg2 = !((t->dispcnt & DCNT_WINOBJ) && obj.window[at]);
+            uint8_t bgi[3] = {0, 0, 0};
+            if (g && (t->dispcnt & DCNT_BG0)) bgi[0] = g->text[0][y * AOS_TITLE_LAYER_SIZE + x];
+            if (g && (t->dispcnt & DCNT_BG1)) {
+                int sx = x + (y < AOS_TITLE_WAVE_LINES ? t->wave[y] : 0);
+                bgi[1] = g->text[1][y * AOS_TITLE_LAYER_SIZE + (sx & (AOS_TITLE_LAYER_SIZE - 1))];
+            }
+            if (g && bg2 && (t->dispcnt & DCNT_BG2))
+                bgi[2] = aos_title_affine_index(g, &t->affine, x, y);
+            bool has_obj = obj.index[at] != 0;
+            /* Front to back by priority, an object before a background of
+             * its priority. sub_0803FD60 ranks the backgrounds by their
+             * layers (7, 6, 0x16): BG1 has priority 0, BG0 1, BG2 2. */
+            static const int bg_of_priority[3] = {1, 0, 2};
             uint16_t colors[2] = {t->bg.shown[0], t->bg.shown[0]};
             int layers[2] = {5, 5};
             int found = 0;
-            if (g && (t->dispcnt & DCNT_BG0)) {
-                uint8_t i = g->text[0][y * AOS_TITLE_LAYER_SIZE + x];
-                if (i) {
-                    colors[found] = t->bg.shown[i];
-                    layers[found++] = 0;
+            for (int prio = 0; prio < 4 && found < 2; ++prio) {
+                if (has_obj && obj.priority[at] == prio) {
+                    colors[found] = t->obj.shown[obj.index[at]];
+                    layers[found++] = 4;
+                }
+                if (prio < 3 && found < 2 && bgi[bg_of_priority[prio]]) {
+                    colors[found] = t->bg.shown[bgi[bg_of_priority[prio]]];
+                    layers[found++] = bg_of_priority[prio];
                 }
             }
-            if (g && found < 2 && (t->dispcnt & DCNT_BG1)) {
-                int sx = x + (y < AOS_TITLE_WAVE_LINES ? t->wave[y] : 0);
-                sx &= AOS_TITLE_LAYER_SIZE - 1;
-                uint8_t i = g->text[1][y * AOS_TITLE_LAYER_SIZE + sx];
-                if (i) {
-                    colors[found] = t->bg.shown[i];
-                    layers[found++] = 1;
-                }
-            }
-            if (g && found < 2 && (t->dispcnt & DCNT_BG2)) {
-                uint8_t i = aos_title_affine_index(g, &t->affine, x, y);
-                if (i) {
-                    colors[found] = t->bg.shown[i];
-                    layers[found++] = 2;
-                }
-            }
-            if (found < 2) layers[found] = 5;
             uint16_t c = colors[0];
             bool first = (t->bldcnt >> layers[0]) & 1;
-            if (effect == 1 && first && ((t->bldcnt >> (8 + layers[1])) & 1))
+            bool second = (t->bldcnt >> (8 + layers[1])) & 1;
+            if (layers[0] == 4 && obj.semi[at] && second)
+                c = blend(colors[0], colors[1], eva, evb);
+            else if (effect == 1 && first && second)
                 c = blend(colors[0], colors[1], eva, evb);
             else if ((effect == 2 || effect == 3) && first)
                 c = brightness(c, evy, effect == 2);
-            uint8_t *out = rgba + ((size_t)y * AOS_TITLE_W + (size_t)x) * 4;
+            uint8_t *out = rgba + at * 4;
             out[0] = (uint8_t)(((c & 31) * 255) / 31);
             out[1] = (uint8_t)((((c >> 5) & 31) * 255) / 31);
             out[2] = (uint8_t)((((c >> 10) & 31) * 255) / 31);

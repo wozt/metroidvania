@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0732 - No Julius mode
+
+- Following the project rule in AGENTS.md (no Julius mode and no SOUL
+  TRADE in Aria, no NES Metroid in Zero Mission), the name entry no longer
+  turns the name JULIUS into Julius mode: it is an ordinary name. SOUL TRADE
+  was already absent; Zero Mission's options menu, the only way to the NES
+  Metroid, is not ported.
+
 ## Patch 0731 - Aria's native main menu
 
 - New shared `aos_obj` (sheets, OAM sprites, the OBJ layer) and

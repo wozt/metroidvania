@@ -171,7 +171,12 @@ int main(void) {
                          .name_buffer = {0x0B, 0x16, 0x0D, 0x0A,
                                          0x16, 0x14, 0, 0}};
     assert(aos_main_menu_name_update(&menu, &input) == 1);
-    assert(menu.name_code == 1 && menu.current_character == 1);
+    /* No Julius mode in the port: JULIUS is an ordinary name. */
+    assert(menu.name_code == 0 && menu.current_character == 0 && menu.sounds[0] == 0xF4);
+    menu = (AosMainMenu){.selected_slot = 0, .name_codes_enabled = true,
+                         .name_buffer = {0x0F, 0x10, 0x16, 0x14, 0x06, 0, 0, 0}};
+    assert(aos_main_menu_name_update(&menu, &input) == 1);
+    assert(menu.name_code == 2 && (menu.name_unlock_flags & 0x100000) && menu.sounds[0] == 0x1B5);
 
     /* Native COPY uses the even entries as the three visible files and the
      * adjacent odd entries as their companions. */

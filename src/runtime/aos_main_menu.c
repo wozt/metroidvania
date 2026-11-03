@@ -14,8 +14,6 @@ enum {
 };
 
 static const uint8_t default_name[8] = {0x14, 0x10, 0x0E, 0x02, 0, 0, 0, 0};
-static const uint8_t julius_code[8] = {0x0B, 0x16, 0x0D, 0x0A,
-                                       0x16, 0x14, 0, 0};
 static const uint8_t no_use_code[8] = {0x0F, 0x10, 0x16, 0x14,
                                        0x06, 0, 0, 0};
 static const uint8_t no_soul_code[8] = {0x0F, 0x10, 0x14, 0x10,
@@ -119,10 +117,10 @@ int32_t aos_main_menu_name_update(AosMainMenu *menu, const AosInput *input) {
         menu->name_code = 0;
         if (menu->name_codes_enabled && menu->selected_slot == 0) {
             menu->current_character = 0;
-            if (name_equals(menu->committed_name, julius_code)) {
-                menu->current_character = 1;
-                menu->name_code = 1;
-            } else if (name_equals(menu->committed_name, no_use_code)) {
+            /* Deliberate divergence: no Julius mode in this port, so the
+             * name JULIUS (sub_080083C8's first code, character 1) is an
+             * ordinary name. */
+            if (name_equals(menu->committed_name, no_use_code)) {
                 menu->name_unlock_flags |= 0x100000u;
                 menu->name_code = 2;
             } else if (name_equals(menu->committed_name, no_soul_code)) {
@@ -131,7 +129,7 @@ int32_t aos_main_menu_name_update(AosMainMenu *menu, const AosInput *input) {
             }
         }
         menu->name_committed = true;
-        /* 0xF4, or the codes' 0x1E5 (Julius), 0x1B5, 0x199. */
+        /* 0xF4, or the codes' 0x1B5 and 0x199 (Julius' 0x1E5 is unused). */
         static const uint16_t end_sounds[4] = {0xF4, 0x1E5, 0x1B5, 0x199};
         play(menu, end_sounds[menu->name_code < 4 ? menu->name_code : 0]);
         return 1;

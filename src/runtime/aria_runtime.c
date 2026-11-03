@@ -231,7 +231,8 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
        SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
        SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
-       SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK, SKILL_ARTS };
+       SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
+       SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -248,7 +249,9 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_flying_armor",
                                                          "skill_death", "skill_persephone",
                                                          "skill_great_armor",
-                                                         "skill_devil_spark"};
+                                                         "skill_devil_spark",
+                                                         "skill_shadow_knight",
+                                                         "skill_alura_une"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1057,6 +1060,8 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_DEATH_ROUTINE 0x08030519u
 #define GUARDIAN_PERSEPHONE_ROUTINE 0x080300A5u
 #define GUARDIAN_GREAT_ARMOR_ROUTINE 0x08031949u
+#define GUARDIAN_SHADOW_KNIGHT_ROUTINE 0x0802F549u
+#define GUARDIAN_ALURA_UNE_ROUTINE 0x0802E961u
 enum { GUARDIAN_ATTACKS = 8 };
 typedef struct {
     AosGuardian core;
@@ -1073,6 +1078,9 @@ typedef struct {
     AosDeathGuardian death;
     AosPersephoneGuardian persephone;
     AosGreatArmorGuardian great_armor;
+    AosShadowKnightGuardian shadow_knight;
+    AosAluraUneGuardian alura_une;
+    bool anim_ended;             /* the guardian's sequence ended (+ 0x6C bit 2) */
     struct {
         bool alive;
         int32_t x, y;            /* + 0x40, + 0x44 */
@@ -1102,6 +1110,9 @@ typedef struct {
     const AosAnimSet *persephone_art; /* Enemy/skill_persephone, NULL when missing */
     const AosEnemyKind *persephone_kind; /* its frame attack boxes */
     const AosAnimSet *great_armor_art; /* Enemy/skill_great_armor, NULL when missing */
+    const AosAnimSet *shadow_knight_art; /* Enemy/skill_shadow_knight, NULL when missing */
+    const AosAnimSet *alura_une_art; /* Enemy/skill_alura_une, NULL when missing */
+    const AosEnemyKind *shadow_knight_kind; /* its frame attack boxes */
     const int16_t (*margins)[2];     /* the screen margins of sub_0806D128 */
     const AosEnemyKind *imp_kind;    /* its frame attack boxes */
 } AriaGuardian;
@@ -1119,6 +1130,8 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_DEATH_ROUTINE && guardian->death_art) &&
         !(routine == GUARDIAN_PERSEPHONE_ROUTINE && guardian->persephone_art) &&
         !(routine == GUARDIAN_GREAT_ARMOR_ROUTINE && guardian->great_armor_art) &&
+        !(routine == GUARDIAN_SHADOW_KNIGHT_ROUTINE && guardian->shadow_knight_art) &&
+        !(routine == GUARDIAN_ALURA_UNE_ROUTINE && guardian->alura_une_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
         !(routine == GUARDIAN_PILLAR_ROUTINE && guardian->pillar_art) &&
@@ -1148,6 +1161,9 @@ static void start_guardian(void *context) {
         guardian->death = (AosDeathGuardian){0};
         guardian->persephone = (AosPersephoneGuardian){0};
         guardian->great_armor = (AosGreatArmorGuardian){0};
+        guardian->shadow_knight = (AosShadowKnightGuardian){0};
+        guardian->alura_une = (AosAluraUneGuardian){0};
+        guardian->anim_ended = false;
         guardian->imp_target = -1;
     }
 }
@@ -1184,6 +1200,29 @@ static void update_guardian(AriaGuardian *guardian) {
             return;
         if (first) aos_anim_start(&guardian->anim, guardian->flying_armor_art, 0, true);
         aos_anim_step(&guardian->anim, guardian->flying_armor_art);
+    } else if (guardian->routine == GUARDIAN_ALURA_UNE_ROUTINE) {
+        bool first = guardian->core.state == 0;
+        if (!aos_alura_une_guardian_update(&guardian->alura_une, &guardian->core,
+                                           guardian->stats, guardian->records, soma->held,
+                                           soma->pressed, &soma->flags, soma->x >> 16,
+                                           soma->y >> 16, soma->facing_left, &soma->hp,
+                                           soma->max_hp, aos_random))
+            return;
+        /* Its looping sequence 0, started on creation (no step: it is drawn
+         * through its affine slot only). */
+        if (first) aos_anim_start(&guardian->anim, guardian->alura_une_art, 0, true);
+    } else if (guardian->routine == GUARDIAN_SHADOW_KNIGHT_ROUTINE) {
+        if (!aos_shadow_knight_guardian_update(&guardian->shadow_knight, &guardian->core,
+                                               guardian->stats, guardian->records, soma->held,
+                                               soma->pressed, &soma->flags, soma->x >> 16,
+                                               soma->y >> 16, soma->facing_left,
+                                               soma->weapon_active, guardian->anim_ended))
+            return;
+        int seq = guardian->shadow_knight.sequence;
+        if (seq >= 0) aos_anim_start(&guardian->anim, guardian->shadow_knight_art, (unsigned)seq,
+                                     seq == 1);
+        /* sub_0802E1D0: the step (and the frame's attack box). */
+        guardian->anim_ended = aos_anim_step(&guardian->anim, guardian->shadow_knight_art) == 3;
     } else if (guardian->routine == GUARDIAN_GREAT_ARMOR_ROUTINE) {
         /* Its looping sequence 1 starts on the first update and steps. */
         bool first = guardian->core.state == 0;
@@ -1393,6 +1432,20 @@ static int guardian_attacks(const AriaGuardian *guardian,
                             cagnazzo->facing_left, false),
             aos_guardian_power(guardian->stats, AOS_CAGNAZZO_POWER, false), 0, false, NULL,
             AOS_TYPE_GUARDIAN};
+        return 1;
+    }
+    if (guardian->routine == GUARDIAN_SHADOW_KNIGHT_ROUTINE) {
+        /* sub_0802E1D0: the frame's attack box in the current sequence. */
+        if (!guardian->shadow_knight_kind || guardian->anim.id >= AOS_ENEMY_MAX_ANIMS ||
+            guardian->anim.frame >= AOS_ENEMY_MAX_FRAMES)
+            return 0;
+        AosBox box = guardian->shadow_knight_kind->attack[guardian->anim.id][guardian->anim.frame];
+        if (box.w <= 1 || box.h <= 1) return 0;
+        attacks[0] = (AosSoulAttack){
+            aos_entity_rect(box, guardian->shadow_knight.x, guardian->shadow_knight.y,
+                            guardian->shadow_knight.mirrored, false),
+            aos_guardian_power(guardian->stats, AOS_SHADOW_KNIGHT_POWER, false),
+            AOS_SHADOW_KNIGHT_ELEMENTS, false, NULL, AOS_TYPE_GUARDIAN};
         return 1;
     }
     if (guardian->routine == GUARDIAN_PERSEPHONE_ROUTINE) {
@@ -4496,6 +4549,14 @@ int main(int argc, char **argv) {
     static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
     static AriaGuardian guardian;
     guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
+    if (objects_ok && objects.skills[SKILL_ART_ALURA_UNE].loaded &&
+        objects.skills[SKILL_ART_ALURA_UNE].defs[0].count)
+        guardian.alura_une_art = &objects.skills[SKILL_ART_ALURA_UNE].set;
+    if (objects_ok && objects.skills[SKILL_ART_SHADOW_KNIGHT].loaded &&
+        objects.skills[SKILL_ART_SHADOW_KNIGHT].defs[1].count) {
+        guardian.shadow_knight_art = &objects.skills[SKILL_ART_SHADOW_KNIGHT].set;
+        guardian.shadow_knight_kind = &objects.skills[SKILL_ART_SHADOW_KNIGHT].kind;
+    }
     if (objects_ok && objects.skills[SKILL_ART_DEVIL_SPARK].loaded &&
         objects.skills[SKILL_ART_DEVIL_SPARK].defs[3].count)
         guardian.spark_art = &objects.skills[SKILL_ART_DEVIL_SPARK].set;
@@ -5379,6 +5440,46 @@ int main(int argc, char **argv) {
                                      (double)s->angle * 360.0 / 65536.0, &centre,
                                      s->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
             SDL_SetTextureAlphaMod(art->texture, 255);
+        }
+        /* Alura Une (translucent, its affine scale about its position). */
+        if (guardian.core.active && guardian.routine == GUARDIAN_ALURA_UNE_ROUTINE &&
+            guardian.core.state && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES &&
+            guardian.alura_une.scale_x > 0x400) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_ALURA_UNE].frames[0][guardian.anim.frame];
+            const AosAluraUneGuardian *fairy = &guardian.alura_une;
+            if (art->texture) {
+                float zx = (float)fairy->scale_x / 65536.0f, zy = (float)fairy->scale_y / 65536.0f;
+                float ox = fairy->facing_left ? -(float)art->offset_x - art->w : (float)art->offset_x;
+                SDL_FRect rect = {(float)(fairy->x - cam_x) + ox * zx,
+                                  (float)(fairy->y - cam_y) + (float)art->offset_y * zy,
+                                  art->w * zx, art->h * zy};
+                SDL_SetTextureAlphaMod(art->texture, 128);
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         fairy->facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+                SDL_SetTextureAlphaMod(art->texture, 255);
+            }
+        }
+        /* The Shadow Knight (translucent; stretched in by its affine scale
+         * about its position while + 0x28 / + 0x2C are set). */
+        if (guardian.core.active && guardian.routine == GUARDIAN_SHADOW_KNIGHT_ROUTINE &&
+            guardian.core.state && guardian.anim.id < AOS_ENEMY_MAX_ANIMS &&
+            guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_SHADOW_KNIGHT].frames[guardian.anim.id][guardian.anim.frame];
+            const AosShadowKnightGuardian *knight = &guardian.shadow_knight;
+            float zx = knight->scale_x ? (float)knight->scale_x / 65536.0f : 1.0f;
+            float zy = knight->scale_y ? (float)knight->scale_y / 65536.0f : 1.0f;
+            if (art->texture && (!knight->scale_x || knight->scale_x > 0x400)) {
+                float ox = knight->mirrored ? -(float)art->offset_x - art->w : (float)art->offset_x;
+                SDL_FRect rect = {(float)(knight->x - cam_x) + ox * zx,
+                                  (float)(knight->y - cam_y) + (float)art->offset_y * zy,
+                                  art->w * zx, art->h * zy};
+                SDL_SetTextureAlphaMod(art->texture, 128);
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         knight->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+                SDL_SetTextureAlphaMod(art->texture, 255);
+            }
         }
         /* The Great Armor (translucent, sequence 1). */
         if (guardian.core.active && guardian.routine == GUARDIAN_GREAT_ARMOR_ROUTINE &&

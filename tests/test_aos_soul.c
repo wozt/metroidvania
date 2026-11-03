@@ -301,6 +301,68 @@ int main(void) {
     assert(sparks == 4 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x94) == 1);
     assert(!aos_great_armor_guardian_update(&great, &guardian, &guard_stats, blue, 0, 0,
                                             &soma_flags, 100, 200, false, zero_random));
+    /* SkillShadowKnightUse (soul 13, toggled, 5 MP/s): sound 0x1A6, sequence
+     * 1 while it stretches in over 32 frames, then a swing (sequence 0)
+     * whenever Soma's weapon is out, back to 1 at its end; facing against
+     * him. */
+    blue[13] = (AosBlueSoulRecord){0x0802F549, 5, 2, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 13, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosShadowKnightGuardian knight = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    assert(aos_shadow_knight_guardian_update(&knight, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                             AOS_KEY_R, &soma_flags, 100, 200, false, true,
+                                             false));
+    assert(knight.sequence == 1 && guardian.state == 1 && knight.scale_x == 0x1000 &&
+           knight.scale_y == 0x800 && knight.timer == 0x1F && knight.mirrored &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1A6) == 1);
+    int stretch = 1;
+    while (guardian.state == 1 && stretch < 100) {
+        assert(aos_shadow_knight_guardian_update(&knight, &guardian, &guard_stats, blue, 0, 0,
+                                                 &soma_flags, 100, 200, true, false, false));
+        ++stretch;
+    }
+    assert(stretch == 33 && knight.scale_x == 0 && !knight.mirrored && knight.sequence == -1);
+    assert(aos_shadow_knight_guardian_update(&knight, &guardian, &guard_stats, blue, 0, 0,
+                                             &soma_flags, 100, 200, true, true, false));
+    assert(knight.sequence == 0 && guardian.state == 3);
+    assert(aos_shadow_knight_guardian_update(&knight, &guardian, &guard_stats, blue, 0, 0,
+                                             &soma_flags, 100, 200, true, true, true));
+    assert(knight.sequence == 1 && guardian.state == 2);
+    assert(!aos_shadow_knight_guardian_update(&knight, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                              AOS_KEY_R, &soma_flags, 100, 200, true, false,
+                                              false));
+    /* SkillAluraUneUse (soul 17, held, 60 MP/s): 16 behind Soma and 26
+     * above, 10 HP (sound 0x140) every 17th frame; at full HP it ends. */
+    blue[17] = (AosBlueSoulRecord){0x0802E961, 60, 1, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 17, .mp = 200, .max_mp = 200};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosAluraUneGuardian fairy = {0};
+    int16_t fairy_hp = 50;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    int heals = 0;
+    for (int f = 1; f <= 34; ++f) {
+        int16_t before = fairy_hp;
+        assert(aos_alura_une_guardian_update(&fairy, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                             &soma_flags, 100, 200, false, &fairy_hp, 100,
+                                             zero_random));
+        if (fairy_hp != before) {
+            assert(f % 17 == 0 && fairy_hp == before + 10);
+            ++heals;
+        }
+    }
+    assert(heals == 2 && fairy.x == 84 && fairy.y == 174 && fairy.scale_x == 0x10000 &&
+           fairy.scale_y == 0x10000 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x140) == 2);
+    fairy_hp = 100;
+    assert(!aos_alura_une_guardian_update(&fairy, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                          &soma_flags, 100, 200, false, &fairy_hp, 100, zero_random) &&
+           !guardian.active);
     /* sub_08021530(6): 12 + 12 / 8 * (INT / 2); 8 / 10 when reduced. */
     guard_stats.current[AOS_STAT_INT] = 21;
     assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, false) == 22);

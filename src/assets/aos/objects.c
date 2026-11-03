@@ -248,6 +248,11 @@ static const EntitySpec entities[] = {
     /* The Devil and Manticore souls' sparks (sub_0802ECF4: sequences 0-3,
      * palette bank 0 into OBJ row 3). */
     ENTITY("skill_devil_spark", 0x081DD14C, 0x0820B52C, 0, 0x0823641C),
+    /* SkillAluraUneUse's fairy (palette bank 0 into OBJ row 3). */
+    ENTITY("skill_alura_une", 0x081DE154, 0x0820B574, 0, 0x082368A8),
+    /* SkillShadowKnightUse's knight (sequences 0 and 1, palette bank 0 into
+     * OBJ row 3). */
+    ENTITY("skill_shadow_knight", 0x081DF15C, 0x0820B5BC, 0, 0x0823717C),
     /* SkillGreatArmorUse's armor (sequence 1, palette bank 0 into OBJ row 3). */
     ENTITY("skill_great_armor", 0x081E116C, 0x0820B64C, 0, 0x0823760C),
     /* SkillPersephoneUse's maid (palette bank 0 into OBJ row 3). */

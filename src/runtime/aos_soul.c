@@ -233,6 +233,85 @@ bool aos_great_armor_guardian_update(AosGreatArmorGuardian *armor, AosGuardian *
     return true;
 }
 
+bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuardian *guardian,
+                                       AosStats *stats,
+                                       const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                       uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                       int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                       bool weapon_out, bool sequence_ended) {
+    knight->sequence = -1;
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    switch (guardian->state) {
+    case 0:
+        knight->sequence = 1;
+        knight->timer = 0x20;
+        knight->scale_x = knight->scale_y = 0;
+        aos_audio_play_song(0x1A6);
+        guardian->state = 1;
+        /* fall through */
+    case 1:
+        if (knight->scale_x <= 0xFFFF) knight->scale_x += 0x1000;
+        if (knight->scale_y <= 0xFFFF) knight->scale_y += 0x800;
+        if (knight->timer) {
+            knight->timer--;
+            break;
+        }
+        knight->scale_x = knight->scale_y = 0;     /* the affine slot freed */
+        guardian->state = 2;
+        /* fall through */
+    case 2:
+        if (weapon_out) {
+            knight->sequence = 0;
+            guardian->state = 3;
+        }
+        break;
+    case 3:
+        if (sequence_ended) {
+            knight->sequence = 1;
+            guardian->state = 2;
+        }
+        break;
+    default:
+        break;
+    }
+    knight->mirrored = !soma_facing_left;
+    knight->x = soma_x;
+    knight->y = soma_y;
+    return true;
+}
+
+bool aos_alura_une_guardian_update(AosAluraUneGuardian *fairy, AosGuardian *guardian,
+                                   AosStats *stats,
+                                   const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                   uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                   int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                   int16_t *hp, int16_t max_hp, uint32_t (*random)(void)) {
+    if (*hp >= max_hp || aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    if (guardian->state == 0) {
+        fairy->scale_x = fairy->scale_y = 0;
+        guardian->state = 1;
+    }
+    fairy->facing_left = soma_facing_left;
+    fairy->x = soma_x + (soma_facing_left ? 0x10 : -0x10);
+    fairy->y = soma_y - 0x1A;
+    if (fairy->scale_x <= 0xFFFF) fairy->scale_x += 0x1000;
+    if (fairy->scale_y <= 0xFFFF) fairy->scale_y += 0x2000;
+    if (fairy->timer++ > 0xF) {
+        fairy->timer = 0;
+        aos_audio_play_song(0x140);
+        *hp = (int16_t)(*hp + 10);
+        if (*hp > max_hp) *hp = max_hp;
+        if (*hp >= max_hp && (random() & 0x3F) <= 7) aos_audio_play_song(0x1AC);
+    }
+    return true;
+}
+
 bool aos_panther_guardian_update(AosPantherGuardian *panther, AosGuardian *guardian,
                                  AosStats *stats,
                                  const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],

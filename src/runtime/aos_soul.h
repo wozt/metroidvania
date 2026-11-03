@@ -211,6 +211,53 @@ bool aos_great_armor_guardian_update(AosGreatArmorGuardian *armor, AosGuardian *
                                      int32_t soma_x, int32_t soma_y, bool soma_facing_left,
                                      uint32_t (*random)(void));
 
+/* SkillShadowKnightUse (blue soul 13): a translucent knight on Soma facing
+ * against him (+ 0x58 bit 6 his inverted), guardian power 0x23 and
+ * elements 1, sound 0x1A6 (sub_08042A54(2, 0x3C) is not run). For its
+ * first 32 frames (state 1) it stretches in with an affine scale (+ 0x28
+ * by 0x1000, + 0x2C by 0x800 a frame up to 1.0) in sequence 1; then
+ * (state 2) whenever Soma's weapon entity exists it swings (sequence 0
+ * once, state 3) and back to sequence 1 at the swing's end. It strikes as
+ * type 6 with its frame's attack box (sub_0802E1D0). `sequence` is the
+ * sequence to start this update (-1 for none). Returns false once ended. */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool mirrored;          /* + 0x58 bit 6 */
+    uint8_t timer;          /* + 0x0D */
+    int32_t scale_x, scale_y; /* + 0x28, + 0x2C (0 once normal) */
+    int sequence;
+} AosShadowKnightGuardian;
+
+enum { AOS_SHADOW_KNIGHT_POWER = 0x23, AOS_SHADOW_KNIGHT_ELEMENTS = 1 };
+
+bool aos_shadow_knight_guardian_update(AosShadowKnightGuardian *knight, AosGuardian *guardian,
+                                       AosStats *stats,
+                                       const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                       uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                       int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                       bool weapon_out, bool sequence_ended);
+
+/* SkillAluraUneUse (blue soul 17, held): at full HP it ends before its
+ * upkeep (sub_0802DD84). Otherwise a translucent fairy (art 0x081DE154,
+ * looping sequence 0, priority 0xD) 16 pixels behind Soma (his facing)
+ * and 26 above his feet, growing by an affine scale (+ 0x28 by 0x1000,
+ * + 0x2C by 0x2000 a frame up to 1.0); every 17th frame of its + 0x0D it
+ * plays 0x140 and heals 10 HP (sub_08021FEC), then at full HP one chance
+ * in eight of sound 0x1AC. Returns false once the guardian has ended. */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool facing_left;
+    uint8_t timer;          /* + 0x0D */
+    int32_t scale_x, scale_y; /* + 0x28, + 0x2C */
+} AosAluraUneGuardian;
+
+bool aos_alura_une_guardian_update(AosAluraUneGuardian *fairy, AosGuardian *guardian,
+                                   AosStats *stats,
+                                   const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                   uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                   int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                   int16_t *hp, int16_t max_hp, uint32_t (*random)(void));
+
 enum { AOS_PANTHER_POWER = 8, AOS_PANTHER_ELEMENTS = 1, AOS_PANTHER_RUN_ANIM = 3 };
 
 bool aos_panther_guardian_update(AosPantherGuardian *panther, AosGuardian *guardian,

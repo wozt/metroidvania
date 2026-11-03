@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0723 - Shadow Knight and Alura Une blue souls
+
+- `SkillShadowKnightUse` (blue soul 13): a translucent knight facing
+  against Soma stretches in over 32 frames, then swings (its frame attack
+  box, power 0x23) whenever Soma's weapon is out.
+- `SkillAluraUneUse` (blue soul 17): below full HP a translucent fairy
+  behind Soma heals 10 HP every 17 frames, ending at full HP.
+- Arts exported (`skill_shadow_knight`, `skill_alura_une`, `aria_objects`
+  v58); unit-tested and seen in local captures.
+
 ## Patch 0722 - Devil and Manticore blue souls
 
 - The transformation of Skill_Devil_Manticore_Curly_Use now reads its

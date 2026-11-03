@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-03T19:32:38+00:00",
+ "generated_at": "2026-11-03T19:36:35+00:00",
  "git": {
-  "commit": "d907a89",
+  "commit": "d6581e9",
   "branch": "main",
   "dirty": true
  },
@@ -13407,7 +13407,7 @@
     "sub_08019BB0",
     "sub_08021994"
    ],
-   "limitations": "Movement and the currently traced ability states are ported; the full native player state machine is not complete. State 9 (sub_0801A94C) is ported: the guardian transformation with its pose, start, loop and end animations of 0x084F10A0, the forward charge with the 0x080E12EF wall probes, the ceiling test that ends the soul (sub_0802DFF0) and the invulnerability it keeps. + 0x1E is now the invulnerability counter: sub_08021654 ignores hits while it is set and _0801CCC0 counts it down, clearing the recent-hit slots at 0. sub_08021654 takes the hit's elements (aos_soma_take_elemental_hit): resisted elements quarter the damage, the stone status doubles it, 0x13260 bit 0x2000 evades it (0x13B), 0xB3 is the hurt sound, and the elements' bits 6-8 set poison, curse or stone (unless all resisted) with the 0x080E1338 timers and sounds. A petrified Soma reacts with state 15 (sub_08019BB0, animations 0x49 / 0x4A) until A, B and D-pad presses wear the 15 stone points off (sub_08021994, 0xB0 / 0xAF); poison quarters STR, CON and INT and curse drains max MP / 128 every 4 frames instead of regenerating, each for 600 frames. The contact elements are set for the grenade (2), a gold Medusa Head and the Gorgon breath (0x100); the other enemies' contact callbacks (about 150 with their own constants) default to 0.",
+   "limitations": "Movement and the currently traced ability states are ported; the full native player state machine is not complete. State 9 (sub_0801A94C) is ported: the guardian transformation with its pose, start, loop and end animations of 0x084F10A0, the forward charge with the 0x080E12EF wall probes, the ceiling test that ends the soul (sub_0802DFF0) and the invulnerability it keeps. + 0x1E is now the invulnerability counter: sub_08021654 ignores hits while it is set and _0801CCC0 counts it down, clearing the recent-hit slots at 0. sub_08021654 takes the hit's elements (aos_soma_take_elemental_hit): resisted elements quarter the damage, the stone status doubles it, 0x13260 bit 0x2000 evades it (0x13B), 0xB3 is the hurt sound, and the elements' bits 6-8 set poison, curse or stone (unless all resisted) with the 0x080E1338 timers and sounds. A petrified Soma reacts with state 15 (sub_08019BB0, animations 0x49 / 0x4A) until A, B and D-pad presses wear the 15 stone points off (sub_08021994, 0xB0 / 0xAF); poison quarters STR, CON and INT and curse drains max MP / 128 every 4 frames instead of regenerating, each for 600 frames. The contact elements are set for the grenade (2), a gold Medusa Head and the Gorgon breath (0x100); the other enemies' contact callbacks (about 150 with their own constants) default to 0. Soma's sounds are played where his routines call PlaySong: 0xB9 for the ground jump, the mid-air jump (sub_080190E0), the dive kick's bounce (sub_08017F94) and the air recovery (sub_080199A0), 0xBA for the high jump, 0xA9 for the backdash (also from an attack, _0801C6A0) and the dive kick (sub_08017D90), 0xBD for the slide, 0xB8 for the ceiling crash (sub_08017CC8), the cries 0x19B (flinch, _0801B780) and 0x195 (knockback, _0801B9AC), the hard landing's 0x199 three times in four (_0801C9BC, through the new random callback, RandomNumberGenerator in the runtime) and the death's 0x197 (sub_0801AF20). Not played: the grab state's 0x196 and the red soul recoil's 0xEB, whose states are not ported; Julius' routines (sub_0801F*) are excluded with Julius mode. Unit-tested for the jump, backdash, slide, flinch, knockback and death.",
    "next_action": "Port the remaining native Soma states.",
    "evidence": {
     "unit_tests": [
@@ -15236,7 +15236,7 @@
     "sub_08042884",
     "sub_0803E058"
    ],
-   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported; the native C11 asset path exports all 59 records, frame boxes and sprite sequences byte-identically.",
+   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported; the native C11 asset path exports all 59 records, frame boxes and sprite sequences byte-identically. The entity's creation plays the weapon's sound (record + 0x18, now exported as the sound column of weapons.tsv schema v3; the runtime still reads v2 tables, without it) and one time in two one of Soma's voices 0x191-0x194 (0x084F1264, chosen by RandomNumberGenerator) for classes 0-3 and 5 (sub_080221CC, sub_080224BC, sub_08022DEC); class 4 plays only the weapon's sound, without sub_08022A54's condition on its first byte (not traced). Unit-tested.",
    "next_action": "Port sub_08033F58's player copy if its data source is traced; play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
@@ -19271,6 +19271,12 @@
  },
  "timeline": [
   {
+   "commit": "d6581e9",
+   "date": "2026-11-03",
+   "subject": "Play the bottom game's music in the launcher, pause the other",
+   "scope": "project"
+  },
+  {
    "commit": "d907a89",
    "date": "2026-11-03",
    "subject": "Fix the launcher's START freeze, return to its title, fix Aria's audio delay",
@@ -19742,12 +19748,6 @@
    "commit": "c67f980",
    "date": "2026-10-30",
    "subject": "Port bounded Aria Buer solid-wall rolling bounce response",
-   "scope": "project"
-  },
-  {
-   "commit": "a5d0695",
-   "date": "2026-10-30",
-   "subject": "0658",
    "scope": "project"
   }
  ],

@@ -2,6 +2,8 @@
 /* Aria of Sorrow weapon entity; comments name the cvaos routine. */
 #include "aos_weapon.h"
 
+#include "aos_audio.h"
+
 static void delete_weapon(AosWeaponEntity *weapon, AosSoma *soma) {
     weapon->active = false;
     soma->weapon_active = false;    /* gEwramData + 0x1311C = NULL */
@@ -98,6 +100,13 @@ void aos_weapon_update(AosWeaponEntity *weapon, AosSoma *soma, const AosWeaponFr
         *weapon = (AosWeaponEntity){.active = true, .facing_left = soma->facing_left,
                                     .weapon_class = soma->weapon.weapon_class};
         weapon->y_offset = (soma->flags & AOS_FLAG_CROUCH) ? 13 : 0;
+        /* sub_080221CC / sub_080224BC / sub_08022DEC: the weapon's sound,
+         * then one time in two one of Soma's voices (0x084F1264). Class 4
+         * (sub_08022A54) plays only the weapon's. */
+        static const uint16_t voices[4] = {0x191, 0x192, 0x193, 0x194};
+        if (soma->weapon.sound) aos_audio_play_song(soma->weapon.sound);
+        uint32_t (*draw)(void) = random ? random : soma->random;
+        if (weapon->weapon_class != 4 && draw && (draw() & 1)) aos_audio_play_song(voices[draw() & 3]);
         if (weapon->weapon_class == 1) start_swing(weapon, soma);
         if (weapon->weapon_class == 4) start_shot(weapon, soma, random);
         aos_anim_start(&weapon->anim, frames->anims, 0, false);

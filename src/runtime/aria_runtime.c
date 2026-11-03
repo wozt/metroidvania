@@ -4072,24 +4072,28 @@ static bool load_weapon(const char *path, const char *name, AosWeapon *weapon) {
     if (!f) { perror(path); return false; }
     char line[256];
     bool found = false;
-    static const char schema[] = "schema\tmetroidvania-aos-weapons-v2";
-    if (!fgets(line, sizeof line, f) || strncmp(line, schema, strlen(schema))) {
+    /* v3 adds the sound (record + 0x18); a v2 table has none. */
+    static const char schema[] = "schema\tmetroidvania-aos-weapons-v";
+    if (!fgets(line, sizeof line, f) || strncmp(line, schema, strlen(schema)) ||
+        (line[strlen(schema)] != '2' && line[strlen(schema)] != '3')) {
         fclose(f);
         fprintf(stderr, "Not a weapon table: %s\n", path);
         return false;
     }
     while (!found && fgets(line, sizeof line, f)) {
         char key[16];
-        unsigned item, flags;
+        unsigned item, flags, sound = 0;
         int cls, variant, a[5], interval;
         if (line[0] == '#' ||
-            sscanf(line, "%15s\t%x\t%d\t%d\t%x\t%d\t%d\t%d\t%d\t%d\t%d", key, &item, &cls,
-                   &variant, &flags, &a[0], &a[1], &a[2], &a[3], &a[4], &interval) != 11 ||
+            sscanf(line, "%15s\t%x\t%d\t%d\t%x\t%d\t%d\t%d\t%d\t%d\t%d\t%x", key, &item,
+                   &cls, &variant, &flags, &a[0], &a[1], &a[2], &a[3], &a[4], &interval,
+                   &sound) < 11 ||
             strcmp(key, name))
             continue;
         *weapon = (AosWeapon){(uint8_t)cls, (uint16_t)flags,
                               {(uint8_t)a[0], (uint8_t)a[1], (uint8_t)a[2], (uint8_t)a[3],
-                               (uint8_t)a[4]}, (uint8_t)interval, (uint8_t)variant};
+                               (uint8_t)a[4]}, (uint8_t)interval, (uint8_t)variant,
+                              (uint16_t)sound};
         found = true;
     }
     fclose(f);
@@ -4562,6 +4566,7 @@ int aria_runtime_main(int argc, char **argv) {
     soma.cast = cast_red_soul;
     soma.cast_context = &souls;
     soma.stats = &progress;
+    soma.random = aos_random;      /* the random voices */
     static AosYellowSoulRecord yellow_souls[AOS_YELLOW_SOUL_RECORDS];
     bool have_yellow_souls = load_yellow_souls(DEFAULT_YELLOW_SOULS, yellow_souls);
     if (!have_yellow_souls)

@@ -168,7 +168,7 @@ static void weapon_tests(void) {
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(190), AOS_FIXED(150), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     assert(aos_wall_weapon_hit(&wall, &weapon, &soma, &blade));
     assert(!aos_wall_weapon_hit(&wall, &weapon, &soma, &blade));   /* the recent-hit slot */
     for (int k = 0; k < 20; ++k) aos_combat_tick(&wall.combat);

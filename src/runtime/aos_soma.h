@@ -112,6 +112,7 @@ typedef struct {
     uint8_t anims[5];
     uint8_t interval;       /* record + 0x17: recent-hit cooldown (0x1307C) */
     uint8_t variant;        /* record + 0x16 */
+    uint16_t sound;         /* record + 0x18: played when its entity is created */
 } AosWeapon;
 
 enum { AOS_WEAPON_LANDING_ATTACK = 0x2000 };
@@ -172,6 +173,9 @@ typedef struct {
     uint8_t transform_variant;  /* + 0x27: 0 Devil, 1 Manticore, 2 Curly */
     /* sub_0802DFF0 when the transformed body meets a ceiling. NULL: none. */
     void (*guardian_cancel)(void *context);
+    /* RandomNumberGenerator, for the random voices (the hard landing's
+     * 0x199; the weapon's attack voices). NULL: no random voice. */
+    uint32_t (*random)(void);
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF

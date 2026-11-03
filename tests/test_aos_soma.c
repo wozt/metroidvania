@@ -16,7 +16,9 @@ static AosSoma grounded(void) {
 static int jump_arc(uint16_t held_frames, int32_t *peak) {
     AosSoma soma = grounded();
     int32_t start = soma.y;
+    aos_audio_clear();
     assert(aos_soma_jump(&soma, 0, AOS_KEY_JUMP));
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xB9) == 1);   /* sub_08019180 */
     *peak = soma.y;
     for (int frame = 0; frame < 600; ++frame) {
         aos_soma_integrate(&soma);
@@ -331,8 +333,9 @@ static void ability_tests(void) {
      * its one-shot animation. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);
     soma.moves = all;
+    aos_audio_clear();
     frame(&soma, AOS_KEY_ABILITY, AOS_KEY_ABILITY);
-    assert(soma.flags & AOS_FLAG_BACKDASH);
+    assert(soma.flags & AOS_FLAG_BACKDASH && aos_audio_requested(AOS_AUDIO_START_SONG, 0xA9) == 1);
     assert(soma.anim.id == AOS_SOMA_ANIM_BACKDASH);
     assert(soma.vx == -0x3C000 + AOS_FRICTION && !soma.facing_left);
     for (int i = 0; i < 6; ++i) frame(&soma, AOS_KEY_RIGHT, 0);
@@ -341,8 +344,10 @@ static void ability_tests(void) {
     /* Slide: Down + jump, 3.125 decreasing by 0.09375 for 32 frames. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);
     soma.moves = all;
+    aos_audio_clear();
     frame(&soma, AOS_KEY_DOWN | AOS_KEY_JUMP, AOS_KEY_JUMP);
-    assert(soma.state == 3 && soma.anim.id == AOS_SOMA_ANIM_SLIDE);
+    assert(soma.state == 3 && soma.anim.id == AOS_SOMA_ANIM_SLIDE &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0xBD) == 1);
     assert(soma.vx == 0x32000 && (soma.flags & 0x20u) && (soma.flags & AOS_FLAG_CROUCH));
     assert(soma.vy == 0 && (soma.flags & AOS_FLAG_GROUNDED));
     int slide = 1;
@@ -419,7 +424,7 @@ static void ability_tests(void) {
 
 static void attack_tests(void) {
     fill(0, 20, W - 1, H - 1, 0x03);
-    const AosWeapon sword = {0, 0x0001, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0};
+    const AosWeapon sword = {0, 0x0001, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0, 0};
 
     /* Standing attack: state 1, Soma brakes, the attack animation plays to
      * its end, then the recovery animation is requested. */
@@ -459,7 +464,7 @@ static void attack_tests(void) {
 
     /* With weapon flag 0x2000 the landing keeps the attack and switches to
      * the standing animation at the same frame. */
-    const AosWeapon heavy = {1, 0x2001, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0};
+    const AosWeapon heavy = {1, 0x2001, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0, 0};
     anim_defs[0x32] = (AosAnimDef){4, landing_steps};       /* 27 frames */
     anim_defs[0x30] = (AosAnimDef){4, landing_steps};
     soma = at(100, 150, AOS_FLAG_AIRBORNE);
@@ -494,7 +499,7 @@ static void attack_tests(void) {
 
     /* Class 5 weapons do not attack. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);
-    soma.weapon = (AosWeapon){5, 0, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0};
+    soma.weapon = (AosWeapon){5, 0, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0, 0};
     frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
     assert(soma.state == 0);
     memset(cells, 0, sizeof(cells));
@@ -507,8 +512,10 @@ static void hit_tests(void) {
     AosSoma soma = at(100, 159, AOS_FLAG_GROUNDED);
     soma.hp = soma.max_hp = 320;
     assert(aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(120), 0) == 8 && soma.hp == 312);
+    aos_audio_clear();
     frame(&soma, 0, 0);
-    assert(soma.state == 12 && soma.anim.id == AOS_SOMA_ANIM_HIT_FRONT);
+    assert(soma.state == 12 && soma.anim.id == AOS_SOMA_ANIM_HIT_FRONT &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x19B) == 1);     /* the flinch's cry */
     assert(soma.combat.recent[0] == AOS_TYPE_ENEMY && soma.combat.cooldown[0] == 50);
     for (int i = 0; i < 6 && soma.state == 12; ++i) frame(&soma, 0, 0);
     assert(soma.state == 0 && !(soma.flags & AOS_FLAG_STOP_AT_WALL));
@@ -532,8 +539,10 @@ static void hit_tests(void) {
     soma.hp = soma.max_hp = 40;
     aos_soma_take_hit(&soma, 12, 0, AOS_FIXED(120), 0);      /* 24 of 40 HP */
     assert(soma.pending_type == 1 && soma.hp == 16);
+    aos_audio_clear();
     frame(&soma, 0, 0);
-    assert(soma.state == 13 && soma.anim.id == AOS_SOMA_ANIM_KNOCKED);
+    assert(soma.state == 13 && soma.anim.id == AOS_SOMA_ANIM_KNOCKED &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x195) == 1);     /* the knockback's */
     assert(soma.flags & AOS_FLAG_STOP_AT_WALL);
     AosLanding landing = AOS_LANDING_NONE;
     int32_t x0 = soma.x;
@@ -603,8 +612,10 @@ static void hit_tests(void) {
     soma.max_hp = 320;
     aos_soma_take_hit(&soma, 6, 4, AOS_FIXED(90), 0);
     assert(soma.hp == 0);
+    aos_audio_clear();
     frame(&soma, 0, 0);
-    assert(soma.state == 16 && soma.anim.id == AOS_SOMA_ANIM_DEATH && soma.combat.hurt_off);
+    assert(soma.state == 16 && soma.anim.id == AOS_SOMA_ANIM_DEATH && soma.combat.hurt_off &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x197) == 1);     /* sub_0801AF20 */
     assert(soma.vx == -0x10000 + 0x200 && soma.vy == -0x18000 + 0x2000);
     for (int i = 0; i < 200; ++i) frame(&soma, AOS_KEY_JUMP | AOS_KEY_RIGHT, AOS_KEY_JUMP);
     assert(soma.state == 16 && soma.vx == 0 && soma.vy == 0);

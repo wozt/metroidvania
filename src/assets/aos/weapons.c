@@ -47,6 +47,7 @@ typedef struct {
     uint8_t bank;
     uint8_t variant;
     uint8_t interval;
+    uint16_t sound;     /* + 0x18: PlaySong at the weapon entity's creation */
 } WeaponRecord;
 
 typedef struct {
@@ -177,7 +178,7 @@ static bool read_weapon_record(const FusionRom *rom, uint32_t pointer,
     if (!bytes) return false;
     *record = (WeaponRecord){
         bytes[0], bytes[8], read_u16(bytes + 0x10), bytes[0x12], bytes[0x13],
-        bytes[0x14], bytes[0x15], bytes[0x16], bytes[0x17]};
+        bytes[0x14], bytes[0x15], bytes[0x16], bytes[0x17], read_u16(bytes + 0x18)};
     return true;
 }
 
@@ -498,17 +499,17 @@ bool fusion_aos_export_weapons(const FusionRom *rom, const char *metadata_output
     FusionSpriteLibrary library = {0};
     bool success = read_weapon_rows(rom, rows, &row_count, error, error_size) &&
         text_append(&weapons,
-            "schema\tmetroidvania-aos-weapons-v2\n"
+            "schema\tmetroidvania-aos-weapons-v3\n"
             "# weapon\titem\tclass\tvariant\tflags\tstand\tcrouch\tair\trecover\t"
-            "crouch_recover\tinterval\n");
+            "crouch_recover\tinterval\tsound\n");
     for (size_t index = 0; success && index < row_count; ++index) {
         const WeaponRow *row = &rows[index];
         success = text_append(&weapons,
-            "%s\t0x%02x\t%u\t%u\t0x%04x\t%u\t%u\t%u\t%u\t%u\t%u\n",
+            "%s\t0x%02x\t%u\t%u\t0x%04x\t%u\t%u\t%u\t%u\t%u\t%u\t0x%03x\n",
             row->name, row->record.item, row->record.class_id,
             row->record.variant, row->record.flags, row->postures[0],
             row->postures[1], row->postures[2], row->postures[3],
-            row->postures[4], row->record.interval);
+            row->postures[4], row->record.interval, row->record.sound);
     }
     if (success) success = fusion_export_ensure_directory(metadata_output, error,
                                                            error_size) &&

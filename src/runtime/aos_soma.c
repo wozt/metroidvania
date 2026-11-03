@@ -84,6 +84,7 @@ static void dive_kick(AosSoma *soma, uint16_t held, uint16_t pressed) {
         !(pressed & AOS_KEY_JUMP))
         return;
     soma->state = 7;
+    aos_audio_play_song(0xA9);
     soma->vy = 0x4E000;                                 /* 4.875 */
     soma->gravity_mod = 0x2000;
     if (held & AOS_KEY_LEFT) {
@@ -107,6 +108,7 @@ static void dive_kick(AosSoma *soma, uint16_t held, uint16_t pressed) {
 static bool air_jump(AosSoma *soma, uint16_t pressed) {
     if (!(soma->flags & AOS_FLAG_HEAD_SPECIAL) && (soma->flags & 0x04000004u)) return false;
     if (!(pressed & AOS_KEY_JUMP) || soma->drop_timer) return false;
+    aos_audio_play_song(0xB9);
     soma->anim_request = AOS_SOMA_ANIM_AIR_JUMP;
     soma->hurtbox = aos_soma_low_box;
     soma->flags = (soma->flags | 4u) & ~0x10u;
@@ -139,6 +141,7 @@ bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed) {
         /* High jump (ability 4). */
         soma->anim_request = AOS_ANIM_NONE;
         soma->state = 5;
+        aos_audio_play_song(0xBA);
         soma->flags = (flags | 0x12u) & 0xFFEFFBFBu;
         soma->gravity_mod = 0;
         soma->vy = (soma->flags & AOS_FLAG_HEAVY) ? (int32_t)0xFFFD8000   /* -2.5 */
@@ -159,6 +162,7 @@ bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed) {
     }
     if (!(flags & AOS_FLAG_AIRBORNE) || soma->air_frames <= 3) {
         if (pressed & AOS_KEY_JUMP) {
+            aos_audio_play_song(0xB9);
             soma->flags = (flags | AOS_FLAG_AIRBORNE) & 0xFFEFFBFFu;
             soma->air_frames = 16;
             soma->gravity_mod = 0;
@@ -186,6 +190,7 @@ void aos_soma_leave_ground(AosSoma *soma) {
  * the ceiling (state 6; the screen shake is not modelled). */
 static bool ceiling_crash(AosSoma *soma) {
     if (soma->vy > (int32_t)0xFFFB1000 || (soma->flags & 0x90u) != 0x10u) return false;
+    aos_audio_play_song(0xB8);
     play(soma, AOS_SOMA_ANIM_CEILING_CRASH, false, STAND);
     soma->state = 6;
     soma->vx = soma->vy = soma->gravity_mod = 0;
@@ -628,6 +633,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     if ((pressed & AOS_KEY_ABILITY) && !(held & AOS_KEY_UP) &&
         (soma->moves & AOS_MOVE_BACKDASH) && !(soma->flags & 0x10008402u)) {
         /* Backdash (ability 0, sound 0xA9): ends with its animation. */
+        aos_audio_play_song(0xA9);
         soma->anim_request = AOS_SOMA_ANIM_BACKDASH;
         soma->hurtbox = aos_soma_stand_box;
         soma->flags = (soma->flags & ~(uint32_t)AOS_FLAG_ANIM_DONE) | AOS_FLAG_BACKDASH;
@@ -667,6 +673,7 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         (held & AOS_KEY_DOWN) && (pressed & AOS_KEY_JUMP)) {
         /* Slide (ability 1, state 3, sound 0xBD). */
         soma->state = 3;
+        aos_audio_play_song(0xBD);
         soma->anim_request = AOS_ANIM_NONE;
         play(soma, AOS_SOMA_ANIM_SLIDE, false, SLIDE);
         soma->vx = soma->facing_left ? (int32_t)0xFFFCE000 : 0x32000;   /* 3.125 */
@@ -739,6 +746,7 @@ static void attack_state(AosSoma *soma, const AosCollision *layer, uint16_t held
         soma->state = 0;
     } else if ((pressed & AOS_KEY_ABILITY) && !(held & AOS_KEY_UP) &&
                (soma->moves & AOS_MOVE_BACKDASH) && !(soma->flags & 0x10008402u)) {
+        aos_audio_play_song(0xA9);         /* _0801C6A0 */
         soma->anim_request = AOS_SOMA_ANIM_BACKDASH;
         soma->hurtbox = aos_soma_stand_box;
         soma->flags = (soma->flags & 0xFFDFFF9Fu) | AOS_FLAG_BACKDASH;
@@ -784,6 +792,7 @@ static void dive_kick_state(AosSoma *soma, const AosCollision *layer) {
     if (soma->flags & AOS_FLAG_SLOW_FALL) {
         soma->state = 0;
     } else if (soma->flags & AOS_FLAG_KICK_HIT) {
+        aos_audio_play_song(0xB9);
         soma->flags = (soma->flags | 8u) & ~4u;
         soma->anim_request = AOS_SOMA_ANIM_AIR_JUMP;
         soma->hurtbox = aos_soma_low_box;
@@ -801,6 +810,12 @@ static void dive_kick_state(AosSoma *soma, const AosCollision *layer) {
 static void hard_landing_state(AosSoma *soma) {
     soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFD000 : 0x3000; /* 0.1875 */
     apply_friction(soma);
+    /* _0801C9BC: on its seventh frame a fast hard landing (flag 0x80,
+     * |vx| above 0.125) cries out three times in four (sound 0x199). */
+    int32_t speed = soma->vx < 0 ? -soma->vx : soma->vx;
+    if (soma->frame_counter == 6 && (soma->flags & AOS_FLAG_STOP_AT_WALL) && speed > 0x2000 &&
+        soma->random && (soma->random() & 3))
+        aos_audio_play_song(0x199);
     if (soma->frame_counter <= 7) soma->frame_counter++;
     if (!(soma->flags & AOS_FLAG_HARD_LANDING)) return;
     soma->flags |= AOS_FLAG_CROUCH;
@@ -1027,6 +1042,7 @@ static void set_enemy_cooldown(AosSoma *soma, uint8_t frames) {
  * his hurtbox is switched off and state 16 runs; the game-over mode
  * (gEwramData + 0x42C |= 0x10) belongs to the caller. */
 static void die(AosSoma *soma) {
+    aos_audio_play_song(0x197);
     play(soma, AOS_SOMA_ANIM_DEATH, false, STAND);
     soma->combat.hurt_off = true;
     soma->flags &= 0xEFFFFE9Fu;
@@ -1098,6 +1114,7 @@ static void react_to_hit(AosSoma *soma) {
         set_enemy_cooldown(soma, 50);
         soma->flags |= AOS_FLAG_STOP_AT_WALL;
         soma->state = 12;
+        aos_audio_play_song(0x19B);         /* _0801B780 */
     } else {
         /* Knockback: 1.5 away from the source, -2.0 up, state 13. */
         bool facing_source = soma->facing_left ? !from_right : from_right;
@@ -1108,6 +1125,7 @@ static void react_to_hit(AosSoma *soma) {
         soma->gravity_mod = (int32_t)0xFFFFF000;
         soma->flags |= 0x82u;
         soma->state = 13;
+        aos_audio_play_song(0x195);         /* _0801B9AC */
     }
     soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
 }
@@ -1137,6 +1155,7 @@ static void knockback_state(AosSoma *soma, const AosCollision *layer, uint16_t p
         soma->state = 0;
     } else if ((soma->abilities & 0x400000u) && (pressed & AOS_KEY_JUMP)) {
         /* Recovery in the air (an ability bit of 0x13260, sound 0xB9). */
+        aos_audio_play_song(0xB9);
         soma->gravity_mod = 0;
         soma->flags = (soma->flags & 0xFFEFFB7Fu) | 6u;
         soma->vy = 0;

@@ -19,7 +19,9 @@
  * ejected at creation. Class 5 (sub_08022DEC) is class 0 without the
  * deletion on Soma's 0x20; only sub_08033F58 (a player copy driven by
  * gEwramData + 0x4DC) creates it, as the attack refuses class 5. Damage
- * (sub_0802346C / sub_080234B0) and the sounds are not ported. No SDL. */
+ * (sub_0802346C / sub_080234B0) is not ported. At its creation the entity
+ * plays the weapon's sound (record + 0x18) and, one time in two (not for
+ * class 4), one of Soma's voices 0x191-0x194 (0x084F1264). No SDL. */
 #ifndef AOS_WEAPON_H
 #define AOS_WEAPON_H
 

@@ -547,7 +547,7 @@ static void bone_pillar_tests(void) {
     const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = s[0].x;
     soma.y = s[0].y + AOS_FIXED(10);
     aos_audio_clear();
@@ -661,7 +661,7 @@ static void giant_ghost_tests(void) {
     const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     g.state = 0;
     g.step = 2;
     soma.x = g.x;
@@ -818,7 +818,7 @@ static void white_dragon_tests(void) {
     const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     d.state = d.step = 0;
     d.wd_cool_a = d.wd_cool_b = 100;
     soma.x = d.x;
@@ -1098,7 +1098,7 @@ static void buer_tests(void) {
     const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = b.x;
     soma.y = b.y + AOS_FIXED(16);
     b.step = 0;
@@ -1685,7 +1685,7 @@ static void zombie_tests(void) {
     z.walk_timer = 600;
     z.hp = 1;
     soma.x = AOS_FIXED(240);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -1854,7 +1854,7 @@ static void crow_tests(void) {
     assert(ex >= -2 && ex <= 2);
 
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = crow.x;
     soma.y = crow.y + AOS_FIXED(30);
     static const uint8_t blade_steps[] = {8};
@@ -2037,7 +2037,7 @@ static void mimic_tests(void) {
     AosEnemy c;
     assert(aos_enemy_create(&c, AOS_ENEMY_MIMIC, 100, 150, 1, 0, &soma, &layer, &kind, &stats));
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = AOS_FIXED(70);
     soma.y = c.y + AOS_FIXED(30);
     static const uint8_t blade_steps[] = {8};
@@ -2216,7 +2216,7 @@ static void soldier_tests(void) {
     assert(direct.removed && burst == 12);
 
     /* A killing blow: death animation 3, state 2 and the generic death. */
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = z.x;
     soma.y = z.y + AOS_FIXED(20);
     soma.facing_left = false;
@@ -2401,7 +2401,7 @@ static void rock_armor_tests(void) {
     const AosHitbox blade_box[] = {{-16, -40, 32, 40, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     AosEnemy struck = rock;
     struck.removed = false;
     struck.state = 1;
@@ -2579,7 +2579,7 @@ static void killer_fish_tests(void) {
     const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     fry.x = soma.x;
     fry.y = soma.y - AOS_FIXED(16);
     AosHitReport hit = aos_enemy_update(&fry, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0,
@@ -2713,7 +2713,7 @@ static void armor_tests(void) {
     assert(hit.soma_hit && hit.soma_damage == aos_player_damage(15, 4) && soma.pending_type == 0);
 
     /* A weapon destroys it. */
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.facing_left = false;
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
@@ -2954,7 +2954,7 @@ static void archer_tests(void) {
     assert(p.state == 1 && p.anim.id == 2);
 
     /* Killed, it shatters on the next update. */
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.facing_left = false;
     soma.x = a.x - AOS_FIXED(5);
     soma.y = a.y + AOS_FIXED(20);
@@ -3156,7 +3156,7 @@ static void valkyrie_tests(void) {
 
     /* Struck during its attack, it recoils (state 3) up and away. */
     soma = aos_soma_spawn(v.x, v.y + AOS_FIXED(20), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -3185,7 +3185,7 @@ static void valkyrie_tests(void) {
     v.hp = 1;
     v.combat = (AosCombat){.type = AOS_TYPE_ENEMY};
     soma = aos_soma_spawn(v.x, v.y + AOS_FIXED(20), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     cam = (v.x >> 16) - 120;
     cam_y = (v.y >> 16) - 80;
     aos_audio_clear();
@@ -3210,7 +3210,7 @@ static void valkyrie_tests(void) {
     e.step = 4;
     e.hp = 60;
     soma = aos_soma_spawn(e.x, e.y + AOS_FIXED(20), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     cam = (e.x >> 16) - 120;
     cam_y = (e.y >> 16) - 80;
     hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 10, 4, cam, cam_y,
@@ -3374,7 +3374,7 @@ static void flea_tests(void) {
     /* The killing blow: state 0xFF, animation 2, the blink and flames of
      * sub_0806BE74 from timer 50. */
     soma = aos_soma_spawn(f.x, f.y, NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -3447,7 +3447,7 @@ static void warrior_tests(void) {
 
     /* The killing blow: thrown back and up, fire every 4 frames. */
     soma = aos_soma_spawn(w.x, w.y, NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -3631,7 +3631,7 @@ static void crusader_tests(void) {
      * damage; after 61 frames it walks on. */
     soma.flags |= AOS_FLAG_ATTACKING;
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = k.x - AOS_FIXED(30);
     soma.y = AOS_FIXED(159);
     static const uint8_t blade_steps[] = {8};
@@ -3745,7 +3745,7 @@ static void skull_tests(void) {
     /* A killing blow: animation 2, three blood splashes over 33 frames,
      * the fin flung off, then the sinking generic death. */
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = l.x - AOS_FIXED(30);
     soma.y = l.y + AOS_FIXED(30);
     static const uint8_t blade_steps[] = {8};
@@ -3922,7 +3922,7 @@ static void beam_tests(void) {
     /* A killing blow: hidden, seven bones flung away from the player (to
      * its right here), deleted on the next update. */
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = b.x - AOS_FIXED(30);
     soma.y = b.y;
     static const uint8_t blade_steps[] = {8};
@@ -4065,7 +4065,7 @@ static void killer_doll_tests(void) {
     assert(aos_enemy_create(&dead, AOS_ENEMY_KILLER_DOLL, 100, 140, 0, 0, &soma, &layer, &kind,
                             &stats));
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -4240,7 +4240,7 @@ static void nemesis_tests(void) {
     const AosHitbox blade_box[] = {{-8, -16, 16, 24, true}};
     const AosWeaponFrames blade = {&blade_set, blade_box};
     AosWeaponEntity weapon = {.active = true};
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     n.state = 1;
     n.step = 3;
     n.x = soma.x;
@@ -4431,7 +4431,7 @@ static void doll_tests(void) {
 
     /* A killing blow: hidden, five pieces (the doll waits for them). */
     soma.facing_left = false;
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     soma.x = d.x - AOS_FIXED(30);
     soma.y = d.y + AOS_FIXED(10);
     static const uint8_t blade_steps[] = {8};
@@ -4556,7 +4556,7 @@ static void ghost_tests(void) {
     /* The killing blow: animation 2 once, semi-transparent, deleted when it
      * ends; no flames. */
     soma = aos_soma_spawn(g.x, g.y + AOS_FIXED(20), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -4643,7 +4643,7 @@ static void gargoyle_tests(void) {
 
     /* The killing blow: state 1, 9/10 of vx, falling, 40 frames. */
     soma = aos_soma_spawn(g.x, g.y + AOS_FIXED(20), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -4733,7 +4733,7 @@ static void officer_tests(void) {
     /* The killing blow: animation 2, then three gibs (0x10, 0x11, 0x0F at
      * (+6 mirrored, -13)) and the 40-frame generic death. */
     soma = aos_soma_spawn(z.x, z.y, NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -4827,7 +4827,7 @@ static void medusa_tests(void) {
     /* A blow it survives stuns it 8 frames; the killing blow plays the
      * death animation 3 and the 40-frame generic death. */
     soma = aos_soma_spawn(head.x, head.y + AOS_FIXED(20), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -4904,7 +4904,7 @@ static void needles_tests(void) {
     /* One hit point: the weapon shatters it into five pieces from
      * 0x08528B44, then it waits for them (+ 0x13). */
     soma = aos_soma_spawn(n.x, n.y + AOS_FIXED(10), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     static const uint8_t blade_steps[] = {8};
     const AosAnimDef blade_def = {1, blade_steps};
     const AosAnimSet blade_set = {&blade_def, 1};
@@ -5096,7 +5096,7 @@ int main(void) {
     /* The weapon's hitbox kills it: power 10 * 1.25 (weak to element 1),
      * defence 0 -> 12 damage against 10 HP; it falls, blinks and goes. */
     soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(200), NULL);
-    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     bat.y = AOS_FIXED(170);
     static const uint8_t blade_steps[] = {8};

@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0735 - Soma's sounds and voices
+
+- Soma now plays his sounds: the jumps (0xB9, the high jump 0xBA), the
+  backdash and dive kick (0xA9), the slide (0xBD), the ceiling crash
+  (0xB8), the cries of a flinch (0x19B), a knockback (0x195), a hard
+  landing (0x199, three times in four) and his death (0x197).
+- Each attack plays its weapon's swing sound (record + 0x18, exported as a
+  new column of weapons.tsv, schema v3; rerun `./build/fusion_rebuild --task
+  aria_weapons`) and, one time in two, one of Soma's attack shouts
+  (0x191-0x194).
+- New `random` callback on AosSoma (RandomNumberGenerator in the runtime).
+
 ## Patch 0734 - The launcher's music follows the bottom half
 
 - The music heard is now the one of the game covering most of the bottom

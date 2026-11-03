@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0717 - Four more yellow soul effects
+
+- Traced the readers of the remaining 0x13260 bits and ported them: Iron
+  Golem (0x20000, without 0x200) turns a hit's flinch or knockback into 30
+  frames of the enemy slot (`sub_0801B0D8`); Succubus (0x10000) heals 5 HP
+  on a frame whose attack struck; Flesh Golem (0x100000) makes a harmful
+  item heal like a potion (`sub_0804B36C`); Arc Demon (0x80000) gives twice
+  the damage taken as MP (`sub_08021654`). Each is unit-tested in the soma,
+  soul and pause-menu tests.
+- No reader of Tsuchinoko's 0x200000 was found in the disassembly (every
+  0x200000 test found reads another word), so that soul still does nothing.
+  Succubus's heal popup is not drawn.
+
 ## Patch 0716 - Breakable walls and the Peeping Eye soul
 
 - The breakable walls (special objects 0x08 and 0x09) are ported in the new

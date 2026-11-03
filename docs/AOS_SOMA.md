@@ -168,7 +168,13 @@ after him, then adds its effect (`aos_yellow_soul_update`). Flag souls set
 bits of gEwramData + 0x13260, which the runtime hands to Soma as
 `abilities` before each update; stat souls add to STR, CON, INT or LCK;
 Lubicant and Zombie scale stats with lost HP or poison; Mimic turns damage
-into gold. Records come from `metadata/yellow_souls.tsv`, and
+into gold and Arc Demon into twice as much MP (`sub_08021654`); Iron
+Golem (bit 0x20000, without 0x200) replaces a hit's flinch or knockback
+with 30 frames of the enemy slot (`sub_0801B0D8`); Succubus (0x10000)
+heals 5 HP on each frame whose attack struck; Flesh Golem (0x100000) makes
+harmful food heal (`sub_0804B36C`); Peeping Eye (0x1000000) makes the
+breakable walls sparkle. No reader of Tsuchinoko's bit 0x200000 was found
+in the disassembly. Records come from `metadata/yellow_souls.tsv`, and
 `--yellow-soul N` equips one for diagnostics.
 
 ## Hits, elements and statuses

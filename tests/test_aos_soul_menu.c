@@ -196,6 +196,16 @@ int main(void) {
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK &&
            menu.page == AOS_SOUL_MENU_PAGE_HUB);
+    /* With Flesh Golem's soul (0x13260 bit 0x100000) a harmful item heals
+     * like kind 0 (sub_0804B36C), refused at full HP. */
+    stats.item_counts[23] = 2;
+    stats.flags |= 0x100000u;
+    vitals.hp = 100;
+    assert(aos_item_use(&stats, items, &vitals, 23) && vitals.hp == 300 &&
+           stats.item_counts[23] == 1);
+    vitals.hp = vitals.max_hp;
+    assert(!aos_item_use(&stats, items, &vitals, 23) && stats.item_counts[23] == 1);
+    stats.flags &= ~0x100000u;
 
     /* CONFIG stages native A/B/R/L indices, refuses duplicates and changes
      * the semantic player controls only after a valid apply. */

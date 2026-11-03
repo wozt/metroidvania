@@ -220,6 +220,7 @@ int main(void) {
     yellow[13] = (AosYellowSoulRecord){AOS_YELLOW_LUBICANT_ROUTINE, 1, 0, 0};
     yellow[16] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x2000000};
     yellow[17] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x40000};
+    yellow[18] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x80000};
     yellow[21] = (AosYellowSoulRecord){AOS_YELLOW_RESIST_ROUTINE, 0, 0, 0x100};
     yellow[22] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 0, 4};
     yellow[29] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 1, 0x10};
@@ -286,6 +287,16 @@ int main(void) {
     assert(ys.gold == 999995);
     aos_yellow_soul_hit(&ys, 3);
     assert(ys.gold == 999999);
+    /* Arc Demon (soul 18, bit 0x80000): damage * 2 MP, up to the maximum. */
+    ys.yellow_soul = 18;
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert((ys.flags & 0x80000) && !(ys.flags & 0x40000));
+    ys.max_mp = 50;
+    ys.mp = 10;
+    aos_yellow_soul_hit(&ys, 7);
+    assert(ys.mp == 24 && ys.gold == 999999);
+    aos_yellow_soul_hit(&ys, 40);
+    assert(ys.mp == 50);
     /* Unequipped: the bits go and nothing runs. */
     ys.yellow_soul = 0;
     aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);

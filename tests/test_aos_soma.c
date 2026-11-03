@@ -555,6 +555,36 @@ static void hit_tests(void) {
     assert(soma.state == 0 && soma.vy > 0 && soma.vy < 0x4000);
     soma.abilities = 0;
 
+    /* Iron Golem's soul (0x13260 bit 0x20000, without 0x200): a strong hit
+     * only takes the enemy slot for 30 frames, no knockback. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 40;
+    soma.abilities = 0x20000u;
+    aos_soma_take_hit(&soma, 12, 0, AOS_FIXED(120), 0);
+    frame(&soma, 0, 0);
+    assert(soma.state == 0 && soma.hp == 16 && soma.pending_damage == 0 &&
+           soma.combat.recent[0] == AOS_TYPE_ENEMY && soma.combat.cooldown[0] == 0x1E);
+    /* With bit 0x200 as well it reacts as usual. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 40;
+    soma.abilities = 0x20200u;
+    aos_soma_take_hit(&soma, 12, 0, AOS_FIXED(120), 0);
+    frame(&soma, 0, 0);
+    assert(soma.state == 13);
+    /* Succubus's soul (bit 0x10000): 5 HP on a frame whose attack struck,
+     * up to the maximum. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = 30;
+    soma.max_hp = 33;
+    soma.abilities = 0x10000u;
+    soma.flags |= AOS_FLAG_KICK_HIT;
+    frame(&soma, 0, 0);
+    assert(soma.hp == 33 && !(soma.flags & AOS_FLAG_KICK_HIT));
+    soma.hp = 20;
+    frame(&soma, 0, 0);
+    assert(soma.hp == 20);
+    soma.abilities = 0;
+
     /* A guardian's pose (state 10) holds Soma until no guardian is alive. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);
     soma.guardian_alive = true;

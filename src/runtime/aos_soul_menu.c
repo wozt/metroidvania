@@ -157,7 +157,11 @@ bool aos_item_use(AosStats *stats, const AosItemUseRecord items[AOS_ITEM_RECORDS
                   AosItemVitals *vitals, uint8_t item) {
     if (!items || !vitals || item >= AOS_ITEM_RECORDS || !stats->item_counts[item]) return false;
     const AosItemUseRecord *record = &items[item];
-    switch (record->effect) {
+    /* sub_0804B36C: with the Flesh Golem soul (0x13260 bit 0x100000) a
+     * harmful item (kind 3) heals like kind 0. */
+    uint8_t effect = record->effect;
+    if (effect == 3 && (stats->flags & 0x100000u)) effect = 0;
+    switch (effect) {
     case 0:
         if (vitals->hp >= vitals->max_hp) return false;
         vitals->hp = (int16_t)(vitals->hp + record->amount);

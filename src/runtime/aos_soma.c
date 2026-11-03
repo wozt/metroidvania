@@ -1054,8 +1054,9 @@ static void death_state(AosSoma *soma) {
 }
 
 /* sub_0801B0D8 (_0801B3C2 .. _0801B9C8): the reaction to a pending hit.
- * The curse and grab types and the 0x13260 & 0x20200 immunity are not
- * ported. */
+ * With the Iron Golem soul (0x13260 & 0x20200 == 0x20000) a hit only takes
+ * the enemy slot for 30 frames, without the flinch or knockback. The curse
+ * and grab types are not ported. */
 static void react_to_hit(AosSoma *soma) {
     if (!soma->pending_damage) return;
     if (soma->hp <= 0) {
@@ -1080,6 +1081,10 @@ static void react_to_hit(AosSoma *soma) {
         return;
     }
     if (soma->pending_type > 1) return;
+    if ((soma->abilities & 0x20200u) == 0x20000u) {
+        set_enemy_cooldown(soma, 0x1E);
+        return;
+    }
     if (soma->pending_type == 0 && !(soma->flags & AOS_FLAG_AIRBORNE)) {
         /* Hit on the ground: a flinch, 50 frames of immunity, state 12. */
         soma->anim.id = AOS_ANIM_NONE;
@@ -1214,6 +1219,13 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
         for (int k = 0; k < 3; ++k) soma->combat.recent[k] = soma->combat.cooldown[k] = 0;
     }
     if (soma->hold_still) soma->vx = soma->friction = 0;
+    /* _0801CF04: the Succubus soul (0x13260 bit 0x10000) heals 5 HP
+     * (sub_08021FEC; its number popup sub_08042A7C is not drawn) on a frame
+     * whose attack struck (+ 0x10 bit 0x80000). */
+    if ((soma->abilities & 0x10000u) && (soma->flags & AOS_FLAG_KICK_HIT) && soma->hp > 0) {
+        soma->hp = (int16_t)(soma->hp + 5);
+        if (soma->hp > soma->max_hp) soma->hp = soma->max_hp;
+    }
     /* _0801CF2C: per-frame flags are dropped at the end of the update. */
     soma->flags &= 0xFBF7FFFFu;
     soma->air_anim_locked = false;

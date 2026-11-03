@@ -223,8 +223,10 @@ bool aos_yellow_soul_ported(uint32_t routine);
 void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
                             const AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS],
                             int16_t hp, int16_t max_hp);
-/* sub_08021654's Mimic rule (0x13260 bit 0x40000): damage * 5 gold,
- * at most 999999 (sub_08044F80). */
+/* sub_08021654's yellow soul rules after a hit of `damage`: Mimic
+ * (0x13260 bit 0x40000) gives damage * 5 gold, at most 999999
+ * (sub_08044F80); Arc Demon (bit 0x80000) gives damage * 2 MP (at least 1,
+ * up to the maximum, sub_08022028). */
 void aos_yellow_soul_hit(AosStats *stats, int damage);
 /* SkillCatoblepasUse (soul 9, held, 15 MP per second) and its gas clouds
  * sub_08030D6C (guardian slots 1-7 of sub_0802DD00). */

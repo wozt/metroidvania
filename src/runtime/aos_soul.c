@@ -233,9 +233,17 @@ void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
 }
 
 void aos_yellow_soul_hit(AosStats *stats, int damage) {
-    if (!(stats->flags & 0x40000u) || damage <= 0) return;
-    uint32_t gold = stats->gold + (uint32_t)damage * 5u;
-    stats->gold = gold > 999999u ? 999999u : gold;
+    if (damage <= 0) return;
+    if (stats->flags & 0x40000u) {
+        uint32_t gold = stats->gold + (uint32_t)damage * 5u;
+        stats->gold = gold > 999999u ? 999999u : gold;
+    }
+    if (stats->flags & 0x80000u) {
+        /* Arc Demon: sub_08022028(damage * 2), at least 1, up to max MP. */
+        int gain = damage * 2;
+        int mp = stats->mp + (gain ? gain : 1);
+        stats->mp = (int16_t)(mp > (int)stats->max_mp ? stats->max_mp : mp);
+    }
 }
 
 /* sub_0806D3D8 with its 8.0 clamp. */

@@ -246,6 +246,7 @@ typedef struct {
     uint8_t timer;          /* + 0x0D: frames to the next cloud */
     bool sound;             /* + 0x0B: 0x8E with every other cloud */
     int16_t cycle;          /* + 0x26: index into 0x080E1A64 */
+    uint8_t step;           /* + 0x0B of the Bone Pillar soul: 0-4 */
     AosCatoblepasGas gases[AOS_CATOBLEPAS_GASES];
 } AosCatoblepasGuardian;
 
@@ -266,6 +267,22 @@ bool aos_catoblepas_guardian_update(AosCatoblepasGuardian *catoblepas, AosGuardi
                                     uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                                     int32_t soma_x, int32_t soma_y, bool soma_facing_left,
                                     int32_t soma_vx, bool *hold_still, bool *pose);
+/* SkillBonePillarUse (soul 10, held, 30 MP per second): the same as the
+ * Catoblepas soul (the same grounded-and-still rule, hold, pose and place)
+ * with its own art, power 20 and elements 2 (sub_08042A54(2, 0xF) is not
+ * run), its fires (sub_0802E638: animation 0 once, box 0x1414F6F6, 26
+ * frames) at 1.5 forward plus Soma's vx, 0x400 more each frame, vy 1.25
+ * plus 0, -0x2000, 0x2000 in turn and gravity -0x1800, sound 0x91 with the
+ * first of every five fires and, at random, the third. */
+enum { AOS_PILLAR_SOUL_POWER = 0x14, AOS_PILLAR_SOUL_ELEMENTS = 2 };
+
+bool aos_pillar_guardian_update(AosCatoblepasGuardian *pillar, AosGuardian *guardian,
+                                AosStats *stats,
+                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                int32_t soma_vx, bool *hold_still, bool *pose,
+                                uint32_t (*random)(void));
 /* Skill_Devil_Manticore_Curly_Use with Curly's record (soul 20, held, 30
  * MP per second, + 0x1C 2): it turns Soma into its state 9 and, once he is
  * transformed (+ 0x0B 3), attacks around him while its child sub_0802EE40

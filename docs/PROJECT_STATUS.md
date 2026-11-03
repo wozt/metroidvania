@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-02**.
 
+## Patch 0714 - The Bone Pillar blue soul
+
+- `SkillBonePillarUse` (blue soul 10) is ported in `aos_soul`: like the
+  Catoblepas soul, Soma stands still in his pose and breathes a fire
+  every fifth frame (power 20, elements 2, sound 0x91), its own art now
+  exported (`aria_objects` v49). A local capture shows the breath. The
+  Bone Pillar becomes the 46th complete monster.
+
 ## Patch 0713 - Bone Pillar rewritten from the native routines
 
 - The Bone Pillar is rewritten from its traced routines: an unseen

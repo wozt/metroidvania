@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+static uint32_t zero_random(void) { return 0; }
+
 int main(void) {
     /* Records 2 and 3 as on the ROM: the bat's (5 MP, 3 at once) and
      * another with a skill (8 MP, 3 at once); record 4 has no skill. */
@@ -329,6 +331,28 @@ int main(void) {
     assert(!aos_catoblepas_guardian_update(&cato, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
                                            &soma_flags, 100, 200, true, 0, &still, &pose));
     assert(!guardian.active && soma_flags == 0x100002 && !cato.gases[1].alive);
+    /* SkillBonePillarUse (soul 10, held, 30 MP/s): the same rule and pose;
+     * a fire every fifth frame at vy 1.25 rising by 0x1800 a frame, 0x91
+     * with the first of every five (the zero random skips the third). */
+    blue[10] = (AosBlueSoulRecord){0x0802E731, 30, 1, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 10, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosCatoblepasGuardian pillar = {0};
+    still = pose = false;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    assert(aos_pillar_guardian_update(&pillar, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                      &soma_flags, 100, 200, false, 0, &still, &pose,
+                                      zero_random));
+    assert(pose && still && pillar.x == 116 && pillar.y == 172 && pillar.step == 1 &&
+           pillar.gases[0].vy == 0x14000 - 0x1800 && pillar.gases[0].vx == 0x18000 + 0x400 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x91) == 1);
+    for (int frame = 0; frame < 25; ++frame)
+        assert(aos_pillar_guardian_update(&pillar, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                          &soma_flags, 100, 200, false, 0, &still, &pose,
+                                          zero_random));
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x91) == 2 && pillar.step == 1);
     /* Curly (soul 20, held, 30 MP/s, variant 2): it starts Soma's state 9,
      * attacks once he is transformed, and its end clears 0x13260 bits 8-13. */
     blue[20] = (AosBlueSoulRecord){0x0802EFB1, 30, 1, 0, 2};

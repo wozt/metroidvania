@@ -247,6 +247,9 @@ static const EntitySpec entities[] = {
      * Giant Ghost (looping sequence 1) and the Student Witch (sequence 0). */
     ENTITY("skill_giant_ghost", 0x081E0968, 0x0820B628, 0, 0x08237464),
     ENTITY("skill_witch", 0x081DE958, 0x0820B598, 0, 0x0823693C),
+    /* SkillBonePillarUse's own resource (palette row 3): its fires
+     * (sub_0802E638: sequence 0 once). */
+    ENTITY("skill_bone_pillar", 0x081DC948, 0x0820B508, 0, 0x082362B8),
     /* sub_0802FDE4's own resource (graphics 0x081E0164, palette row 3):
      * the Buer soul's flames (looping sequence 0). */
     ENTITY("skill_buer", 0x081E0164, 0x0820B604, 0, 0x08237304),

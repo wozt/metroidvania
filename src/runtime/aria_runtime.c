@@ -228,7 +228,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
        SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
-       SKILL_ART_WITCH, SKILL_ARTS };
+       SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -240,7 +240,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_catoblepas", "skill_imp",
                                                          "skill_lightning",
                                                          "skill_killer_doll", "skill_curly",
-                                                         "skill_giant_ghost", "skill_witch"};
+                                                         "skill_giant_ghost", "skill_witch",
+                                                         "skill_bone_pillar"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1034,6 +1035,7 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_CAGNAZZO_ROUTINE 0x0802E4EDu
 #define GUARDIAN_BUER_ROUTINE 0x0802FF41u
 #define GUARDIAN_CATOBLEPAS_ROUTINE 0x08030E65u
+#define GUARDIAN_PILLAR_ROUTINE 0x0802E731u
 #define GUARDIAN_IMP_ROUTINE 0x080310ADu
 #define GUARDIAN_TRANSFORM_ROUTINE 0x0802EFB1u
 #define GUARDIAN_GHOST_ROUTINE 0x0802F96Du
@@ -1057,6 +1059,7 @@ typedef struct {
     const AosAnimSet *cagnazzo_art;  /* Enemy/skill_cagnazzo, NULL when missing */
     const AosAnimSet *buer_art;      /* Enemy/skill_buer, NULL when missing */
     const AosAnimSet *catoblepas_art; /* Enemy/skill_catoblepas, NULL when missing */
+    const AosAnimSet *pillar_art;    /* Enemy/skill_bone_pillar, NULL when missing */
     const AosAnimSet *imp_art;       /* Enemy/skill_imp, NULL when missing */
     const AosAnimSet *curly_art;     /* Enemy/skill_curly, NULL when missing */
     const AosAnimSet *ghost_art;     /* Enemy/skill_giant_ghost, NULL when missing */
@@ -1075,6 +1078,7 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_CAGNAZZO_ROUTINE && guardian->cagnazzo_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
+        !(routine == GUARDIAN_PILLAR_ROUTINE && guardian->pillar_art) &&
         !(routine == GUARDIAN_IMP_ROUTINE && guardian->imp_art) &&
         !(routine == GUARDIAN_GHOST_ROUTINE &&
           (guardian->records[stats->blue_soul].argument ? guardian->ghost_art
@@ -1140,24 +1144,34 @@ static void update_guardian(AriaGuardian *guardian) {
             return;
         if (first) aos_anim_start(&guardian->anim, guardian->buer_art, 0, true);
         aos_anim_step(&guardian->anim, guardian->buer_art);
-    } else if (guardian->routine == GUARDIAN_CATOBLEPAS_ROUTINE) {
+    } else if (guardian->routine == GUARDIAN_CATOBLEPAS_ROUTINE ||
+               guardian->routine == GUARDIAN_PILLAR_ROUTINE) {
         bool pose = false;
-        if (!aos_catoblepas_guardian_update(&guardian->catoblepas, &guardian->core,
-                                            guardian->stats, guardian->records, soma->held,
-                                            soma->pressed, &soma->flags, soma->x >> 16,
-                                            soma->y >> 16, soma->facing_left, soma->vx,
-                                            &soma->hold_still, &pose))
+        bool pillar = guardian->routine == GUARDIAN_PILLAR_ROUTINE;
+        if (pillar ? !aos_pillar_guardian_update(&guardian->catoblepas, &guardian->core,
+                                                 guardian->stats, guardian->records,
+                                                 soma->held, soma->pressed, &soma->flags,
+                                                 soma->x >> 16, soma->y >> 16,
+                                                 soma->facing_left, soma->vx,
+                                                 &soma->hold_still, &pose, aos_random)
+                   : !aos_catoblepas_guardian_update(&guardian->catoblepas, &guardian->core,
+                                                     guardian->stats, guardian->records,
+                                                     soma->held, soma->pressed, &soma->flags,
+                                                     soma->x >> 16, soma->y >> 16,
+                                                     soma->facing_left, soma->vx,
+                                                     &soma->hold_still, &pose))
             return;
         if (pose) aos_soma_guardian_pose(soma, AOS_CATOBLEPAS_POSE);
+        const AosAnimSet *gas_art = pillar ? guardian->pillar_art : guardian->catoblepas_art;
         /* Each cloud plays sequence 0 once from its first update. */
         for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
             AosCatoblepasGas *gas = &guardian->catoblepas.gases[k];
             if (!gas->alive) continue;
             if (!gas->started) {
                 gas->started = true;
-                aos_anim_start(&guardian->gas_anims[k], guardian->catoblepas_art, 0, false);
+                aos_anim_start(&guardian->gas_anims[k], gas_art, 0, false);
             }
-            aos_anim_step(&guardian->gas_anims[k], guardian->catoblepas_art);
+            aos_anim_step(&guardian->gas_anims[k], gas_art);
         }
     } else if (guardian->routine == GUARDIAN_TRANSFORM_ROUTINE) {
         bool had_child = guardian->curly.child;
@@ -1285,7 +1299,9 @@ static int guardian_attacks(const AriaGuardian *guardian,
             NULL, AOS_TYPE_GUARDIAN};
         return 1;
     }
-    if (guardian->routine == GUARDIAN_CATOBLEPAS_ROUTINE) {
+    if (guardian->routine == GUARDIAN_CATOBLEPAS_ROUTINE ||
+        guardian->routine == GUARDIAN_PILLAR_ROUTINE) {
+        bool pillar = guardian->routine == GUARDIAN_PILLAR_ROUTINE;
         int count = 0;
         for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
             const AosCatoblepasGas *gas = &guardian->catoblepas.gases[k];
@@ -1293,8 +1309,10 @@ static int guardian_attacks(const AriaGuardian *guardian,
             attacks[count++] = (AosSoulAttack){
                 aos_entity_rect((AosBox){-10, -10, 20, 20}, gas->x >> 16, gas->y >> 16,
                                 gas->facing_left, false),                    /* 0x1414F6F6 */
-                aos_guardian_power(guardian->stats, AOS_CATOBLEPAS_POWER, false),
-                AOS_CATOBLEPAS_ELEMENTS, false, NULL, AOS_TYPE_GUARDIAN};
+                aos_guardian_power(guardian->stats,
+                                   pillar ? AOS_PILLAR_SOUL_POWER : AOS_CATOBLEPAS_POWER, false),
+                pillar ? AOS_PILLAR_SOUL_ELEMENTS : AOS_CATOBLEPAS_ELEMENTS, false, NULL,
+                AOS_TYPE_GUARDIAN};
         }
         return count;
     }
@@ -4242,6 +4260,9 @@ int main(int argc, char **argv) {
     if (objects_ok && objects.skills[SKILL_ART_CATOBLEPAS].loaded &&
         objects.skills[SKILL_ART_CATOBLEPAS].defs[0].count)
         guardian.catoblepas_art = &objects.skills[SKILL_ART_CATOBLEPAS].set;
+    if (objects_ok && objects.skills[SKILL_ART_PILLAR].loaded &&
+        objects.skills[SKILL_ART_PILLAR].defs[0].count)
+        guardian.pillar_art = &objects.skills[SKILL_ART_PILLAR].set;
     if (objects_ok && objects.skills[SKILL_ART_CURLY].loaded &&
         objects.skills[SKILL_ART_CURLY].defs[0].count)
         guardian.curly_art = &objects.skills[SKILL_ART_CURLY].set;
@@ -5101,11 +5122,14 @@ int main(int argc, char **argv) {
             }
         }
         /* Catoblepas' clouds (sub_08030D6C's sequence 0). */
-        if (guardian.core.active && guardian.routine == GUARDIAN_CATOBLEPAS_ROUTINE) {
+        if (guardian.core.active && (guardian.routine == GUARDIAN_CATOBLEPAS_ROUTINE ||
+                                     guardian.routine == GUARDIAN_PILLAR_ROUTINE)) {
+            int gas_art = guardian.routine == GUARDIAN_PILLAR_ROUTINE ? SKILL_ART_PILLAR
+                                                                      : SKILL_ART_CATOBLEPAS;
             for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
                 const AosCatoblepasGas *gas = &guardian.catoblepas.gases[k];
                 if (!gas->alive || guardian.gas_anims[k].frame >= AOS_ENEMY_MAX_FRAMES) continue;
-                const AriaFrame *art = &objects.skills[SKILL_ART_CATOBLEPAS]
+                const AriaFrame *art = &objects.skills[gas_art]
                                             .frames[0][guardian.gas_anims[k].frame];
                 if (!art->texture) continue;
                 int gx = gas->x >> 16, gy = gas->y >> 16;

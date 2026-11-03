@@ -300,6 +300,59 @@ bool aos_catoblepas_guardian_update(AosCatoblepasGuardian *catoblepas, AosGuardi
     return true;
 }
 
+bool aos_pillar_guardian_update(AosCatoblepasGuardian *pillar, AosGuardian *guardian,
+                                AosStats *stats,
+                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                int32_t soma_vx, bool *hold_still, bool *pose,
+                                uint32_t (*random)(void)) {
+    static const int32_t rise[3] = {0, (int32_t)0xFFFFE000, 0x2000};   /* 0x080E1A64 */
+    *pose = false;
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed) ||
+        (*soma_flags & 0x1001A2u) != 0x100000u) {
+        aos_guardian_end(guardian, soma_flags);
+        for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) pillar->gases[k].alive = false;
+        return false;
+    }
+    *hold_still = true;
+    if (guardian->state == 0) {
+        *pose = true;
+        guardian->state = 1;
+    }
+    pillar->facing_left = soma_facing_left;
+    pillar->x = (int16_t)(soma_x + (soma_facing_left ? -0x10 : 0x10));
+    pillar->y = (int16_t)(soma_y - 0x1C);
+    if (pillar->timer == 0) {
+        AosCatoblepasGas *fire = NULL;
+        for (int k = 0; k < AOS_CATOBLEPAS_GASES && !fire; ++k)
+            if (!pillar->gases[k].alive) fire = &pillar->gases[k];
+        if (fire) {
+            if (pillar->step == 0 || (pillar->step == 2 && (random() & 1)))
+                aos_audio_play_song(0x91);
+            if (++pillar->step > 4) pillar->step = 0;
+            bool left = pillar->facing_left;
+            *fire = (AosCatoblepasGas){
+                .alive = true, .facing_left = left,
+                .x = (int32_t)((uint32_t)(uint16_t)pillar->x << 16),
+                .y = (int32_t)((uint32_t)(uint16_t)pillar->y << 16),
+                .vx = (left ? -0x18000 : 0x18000) + soma_vx, .ax = left ? -0x400 : 0x400,
+                .vy = rise[pillar->cycle] + 0x14000, .ay = -0x1800, .timer = 0x1A};
+        }
+        if (++pillar->cycle > 2) pillar->cycle = 0;
+        pillar->timer = 5;
+    }
+    pillar->timer--;
+    /* sub_0802E638: each fire moves, then counts its 26 frames down. */
+    for (int k = 0; k < AOS_CATOBLEPAS_GASES; ++k) {
+        AosCatoblepasGas *fire = &pillar->gases[k];
+        if (!fire->alive) continue;
+        gas_move(fire);
+        if (--fire->timer == 0) fire->alive = false;
+    }
+    return true;
+}
+
 void aos_curly_guardian_end(AosCurlyGuardian *curly, AosGuardian *guardian, uint32_t *soma_flags,
                             uint32_t *abilities) {
     aos_guardian_end(guardian, soma_flags);

@@ -145,7 +145,8 @@ of his update), `SkillCagnazzoUse` carries an attacking guardian
 (collision type 6) 16 pixels ahead of him and 32 above his feet, and
 `Skill_Witch_GiantGhost_Use` (blue souls 5 and 6) grows a Student Witch or a
 translucent Giant Ghost over Soma whose touches throw spirits at the
-enemies (power 30, elements 0x20). `SkillBuerUse` turns two attacking flames around a point above him, and
+enemies (power 30, elements 0x20). `SkillBonePillarUse` (blue soul 10) holds Soma still breathing fires like the
+Catoblepas soul (power 20, elements 2). `SkillBuerUse` turns two attacking flames around a point above him, and
 `SkillCatoblepasUse` holds him in the breath pose of state 10 (which
 returns to state 0 once no guardian is alive) while gas clouds drift
 ahead. `SkillImpUse` sends a familiar that follows him and dives at the

@@ -231,7 +231,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
        SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
        SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
-       SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ARTS };
+       SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -247,7 +247,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_bone_pillar",
                                                          "skill_flying_armor",
                                                          "skill_death", "skill_persephone",
-                                                         "skill_great_armor"};
+                                                         "skill_great_armor",
+                                                         "skill_devil_spark"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1072,6 +1073,14 @@ typedef struct {
     AosDeathGuardian death;
     AosPersephoneGuardian persephone;
     AosGreatArmorGuardian great_armor;
+    struct {
+        bool alive;
+        int32_t x, y;            /* + 0x40, + 0x44 */
+        bool facing_left;
+        uint8_t sequence;        /* r & 3 */
+        AosAnimState anim;
+    } sparks[7];                 /* sub_0802ECF4 in the guardian slots 1-7 */
+    const AosAnimSet *spark_art; /* Enemy/skill_devil_spark, NULL when missing */
     int effect_count;            /* effects of this update for the room */
     AosEffect effects[2];
     int imp_target;              /* the room entity of the chased homing slot */
@@ -1117,8 +1126,11 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_GHOST_ROUTINE &&
           (guardian->records[stats->blue_soul].argument ? guardian->ghost_art
                                                         : guardian->witch_art)) &&
-        !(routine == GUARDIAN_TRANSFORM_ROUTINE && guardian->curly_art &&
-          guardian->records[stats->blue_soul].argument == AOS_CURLY_VARIANT))
+        !(routine == GUARDIAN_TRANSFORM_ROUTINE &&
+          (guardian->records[stats->blue_soul].argument == AOS_CURLY_VARIANT
+               ? guardian->curly_art != NULL
+               : guardian->records[stats->blue_soul].argument < AOS_TRANSFORM_VARIANTS &&
+                     guardian->spark_art != NULL)))
         return;
     if (aos_guardian_try(&guardian->core, stats, guardian->records, guardian->soma->held,
                          guardian->soma->pressed, false, &guardian->soma->flags)) {
@@ -1129,6 +1141,7 @@ static void start_guardian(void *context) {
         guardian->catoblepas = (AosCatoblepasGuardian){0};
         guardian->imp = (AosImpGuardian){.target = -1};
         guardian->curly = (AosCurlyGuardian){0};
+        for (int k = 0; k < 7; ++k) guardian->sparks[k].alive = false;
         guardian->ghost = (AosGhostGuardian){0};
         guardian->panther = (AosPantherGuardian){0};
         guardian->flying_armor = (AosFlyingArmorGuardian){0};
@@ -1273,10 +1286,30 @@ static void update_guardian(AriaGuardian *guardian) {
         AosTransformTarget target = {&soma->flags, &guardian->stats->flags, &soma->state,
                                      &soma->transform_step, &soma->transform_variant,
                                      &soma->friction, &soma->gravity_mod};
-        if (!aos_curly_guardian_update(&guardian->curly, &guardian->core, guardian->stats,
-                                       guardian->records, soma->held, soma->pressed, soma->x,
-                                       soma->y, soma->facing_left, target))
-            return;
+        bool alive = aos_curly_guardian_update(&guardian->curly, &guardian->core, guardian->stats,
+                                               guardian->records, soma->held, soma->pressed,
+                                               soma->x, soma->y, soma->facing_left, target);
+        /* sub_0802ECF4: a translucent spark at Soma with his facing, its
+         * sequence r & 3 played once, deleted at its end; the guardian's
+         * end deletes them (sub_0802DD84). */
+        for (int k = 0; k < 7; ++k)
+            if (guardian->sparks[k].alive &&
+                (!alive || aos_anim_step(&guardian->sparks[k].anim, guardian->spark_art) == 3))
+                guardian->sparks[k].alive = false;
+        if (alive && guardian->curly.spawn_spark && guardian->spark_art)
+            for (int k = 0; k < 7; ++k) {
+                if (guardian->sparks[k].alive) continue;
+                uint8_t seq = (uint8_t)(aos_random() & 3);
+                guardian->sparks[k].alive = true;
+                guardian->sparks[k].x = soma->x;
+                guardian->sparks[k].y = soma->y;
+                guardian->sparks[k].facing_left = soma->facing_left;
+                guardian->sparks[k].sequence = seq;
+                aos_anim_start(&guardian->sparks[k].anim, guardian->spark_art, seq, false);
+                break;
+            }
+        if (!alive) return;
+        if (aos_transform_variants[guardian->curly.variant].sparks) return;
         /* sub_0802EE40: the shell's looping sequence 0. */
         if (guardian->curly.child && !had_child)
             aos_anim_start(&guardian->anim, guardian->curly_art, 0, true);
@@ -1416,8 +1449,10 @@ static int guardian_attacks(const AriaGuardian *guardian,
             aos_entity_rect((AosBox){-24, -64, 48, 68}, guardian->curly.x >> 16,
                             guardian->curly.y >> 16, guardian->curly.facing_left,
                             false),                                          /* 0x4430C0E8 */
-            aos_guardian_power(guardian->stats, AOS_CURLY_POWER, false), AOS_CURLY_ELEMENTS,
-            false, NULL, AOS_TYPE_GUARDIAN};
+            aos_guardian_power(guardian->stats,
+                               aos_transform_variants[guardian->curly.variant].power, false),
+            aos_transform_variants[guardian->curly.variant].elements, false, NULL,
+            AOS_TYPE_GUARDIAN};
         return 1;
     }
     if (guardian->routine == GUARDIAN_IMP_ROUTINE) {
@@ -4461,6 +4496,9 @@ int main(int argc, char **argv) {
     static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
     static AriaGuardian guardian;
     guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
+    if (objects_ok && objects.skills[SKILL_ART_DEVIL_SPARK].loaded &&
+        objects.skills[SKILL_ART_DEVIL_SPARK].defs[3].count)
+        guardian.spark_art = &objects.skills[SKILL_ART_DEVIL_SPARK].set;
     if (objects_ok && objects.skills[SKILL_ART_GREAT_ARMOR].loaded &&
         objects.skills[SKILL_ART_GREAT_ARMOR].defs[1].count)
         guardian.great_armor_art = &objects.skills[SKILL_ART_GREAT_ARMOR].set;
@@ -5397,9 +5435,27 @@ int main(int argc, char **argv) {
                 SDL_SetTextureAlphaMod(art->texture, 255);
             }
         }
+        /* The Devil and Manticore sparks (translucent). */
+        for (int k = 0; guardian.routine == GUARDIAN_TRANSFORM_ROUTINE && k < 7; ++k) {
+            const __typeof__(guardian.sparks[0]) *spark = &guardian.sparks[k];
+            if (!spark->alive || spark->anim.frame >= AOS_ENEMY_MAX_FRAMES) continue;
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_DEVIL_SPARK].frames[spark->sequence][spark->anim.frame];
+            if (!art->texture) continue;
+            int sx = spark->x >> 16, sy = spark->y >> 16;
+            float x = spark->facing_left ? (float)(sx - art->offset_x) - art->w
+                                         : (float)(sx + art->offset_x);
+            SDL_FRect rect = {x - (float)cam_x, (float)(sy + art->offset_y - cam_y), art->w,
+                              art->h};
+            SDL_SetTextureAlphaMod(art->texture, 128);
+            SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                     spark->facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+            SDL_SetTextureAlphaMod(art->texture, 255);
+        }
         /* Curly's shell around the transformed Soma. */
         if (guardian.core.active && guardian.routine == GUARDIAN_TRANSFORM_ROUTINE &&
-            guardian.curly.child && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            guardian.curly.child && guardian.curly.variant == AOS_CURLY_VARIANT &&
+            guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
             const AriaFrame *art =
                 &objects.skills[SKILL_ART_CURLY].frames[0][guardian.anim.frame];
             if (art->texture) {

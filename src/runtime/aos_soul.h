@@ -385,21 +385,34 @@ bool aos_pillar_guardian_update(AosCatoblepasGuardian *pillar, AosGuardian *guar
                                 int32_t soma_x, int32_t soma_y, bool soma_facing_left,
                                 int32_t soma_vx, bool *hold_still, bool *pose,
                                 uint32_t (*random)(void));
-/* Skill_Devil_Manticore_Curly_Use with Curly's record (soul 20, held, 30
- * MP per second, + 0x1C 2): it turns Soma into its state 9 and, once he is
- * transformed (+ 0x0B 3), attacks around him while its child sub_0802EE40
- * (the Curly sprite) follows him. Devil (18) and Manticore (19) share it
- * with the spark children of SkillDevilManticoreSparksUpdate, not ported. */
+/* Skill_Devil_Manticore_Curly_Use (souls 18, 19 and 20, held, 30 MP per
+ * second, + 0x1C the variant 0 Devil, 1 Manticore, 2 Curly): it turns Soma
+ * into its state 9 and, once he is transformed (+ 0x0B 3), attacks around
+ * him with the power, elements and start sound of 0x080E1A74[variant]
+ * while that entry's child follows him: Curly's sub_0802EE40 (its sprite,
+ * sound 0x93 every eighth frame) or SkillDevilManticoreSparksUpdate (sound
+ * 0x90 every eighth frame and a spark sub_0802ECF4 every fourth, from its
+ * first: `spawn_spark`). */
 enum { AOS_CURLY_POWER = 0x32, AOS_CURLY_ELEMENTS = 1, AOS_CURLY_VARIANT = 2,
-       AOS_TRANSFORM_FLAGS = 0x3F00 };
+       AOS_TRANSFORM_FLAGS = 0x3F00, AOS_TRANSFORM_VARIANTS = 3 };
+
+/* 0x080E1A74: the child routine (sparks or the Curly sprite), the guardian
+ * power (0x131C2) and elements (0x131C4) and the start sound. */
+typedef struct {
+    bool sparks;
+    uint16_t power, elements, sound;
+} AosTransformVariant;
+extern const AosTransformVariant aos_transform_variants[AOS_TRANSFORM_VARIANTS];
 
 typedef struct {
     int32_t x, y;           /* Soma's (+ 0x42, + 0x46 copied) */
     bool facing_left;
     uint8_t timer;          /* + 0x0D */
     bool attacking;         /* type 6 with box 0x4430C0E8 (-24, -64, 48 x 68) */
-    bool child;             /* sub_0802EE40 exists */
-    uint8_t child_timer;    /* its + 0x0D: 0x93 every 8 frames */
+    bool child;             /* the variant's child exists */
+    uint8_t child_timer;    /* its + 0x0D */
+    uint8_t variant;        /* + 0x1C */
+    bool spawn_spark;       /* the sparks child made a spark this update */
 } AosCurlyGuardian;
 
 /* What the soul changes on Soma (gEwramData + 0x13110). */

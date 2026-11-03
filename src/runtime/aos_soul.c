@@ -499,6 +499,10 @@ void aos_curly_guardian_end(AosCurlyGuardian *curly, AosGuardian *guardian, uint
     curly->child = curly->attacking = false;
 }
 
+const AosTransformVariant aos_transform_variants[AOS_TRANSFORM_VARIANTS] = {
+    {true, 0x3C, 1, 0x1B1}, {true, 0x46, 0, 0x1B2}, {false, 0x32, 1, 0x1B0},
+};
+
 bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, AosStats *stats,
                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
                                uint16_t held, uint16_t pressed, int32_t soma_x, int32_t soma_y,
@@ -518,12 +522,14 @@ bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, A
         guardian->state = 1;
         *soma.step = 0;
         *soma.variant = (uint8_t)records[guardian->soul].argument;
+        curly->variant = *soma.variant < AOS_TRANSFORM_VARIANTS ? *soma.variant : AOS_CURLY_VARIANT;
     } else if (guardian->state == 1) {
         if (*soma.step == 3) {
             curly->child = true;
             curly->child_timer = 0;
             curly->attacking = true;
-            aos_audio_play_song(0x1B0);
+            /* The sound 0x19F of sub_080213F4 is not modelled. */
+            aos_audio_play_song(aos_transform_variants[curly->variant].sound);
             guardian->state = 2;
         }
     } else if (guardian->state == 2) {
@@ -531,8 +537,17 @@ bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, A
     }
     *soma.state = 9;
     *soma.abilities |= 0x1000u;
-    /* sub_0802EE40: the child follows Soma, 0x93 every eighth frame. */
-    if (curly->child && (++curly->child_timer & 7) == 0) aos_audio_play_song(0x93);
+    curly->spawn_spark = false;
+    if (curly->child && aos_transform_variants[curly->variant].sparks) {
+        /* SkillDevilManticoreSparksUpdate, from its creation frame as the
+         * Curly child. */
+        if ((curly->child_timer & 7) == 0) aos_audio_play_song(0x90);
+        if ((curly->child_timer & 3) == 0) curly->spawn_spark = true;
+        curly->child_timer++;
+    } else if (curly->child && (++curly->child_timer & 7) == 0) {
+        /* sub_0802EE40: the child follows Soma, 0x93 every eighth frame. */
+        aos_audio_play_song(0x93);
+    }
     return true;
 }
 

@@ -245,6 +245,9 @@ static const EntitySpec entities[] = {
     /* SkillCagnazzoUse's own resource (graphics 0x081DC144, palette row 3):
      * Cagnazzo's guardian (looping sequence 0). */
     ENTITY("skill_cagnazzo", 0x081DC144, 0x0820B4E4, 0, 0x082361A4),
+    /* The Devil and Manticore souls' sparks (sub_0802ECF4: sequences 0-3,
+     * palette bank 0 into OBJ row 3). */
+    ENTITY("skill_devil_spark", 0x081DD14C, 0x0820B52C, 0, 0x0823641C),
     /* SkillGreatArmorUse's armor (sequence 1, palette bank 0 into OBJ row 3). */
     ENTITY("skill_great_armor", 0x081E116C, 0x0820B64C, 0, 0x0823760C),
     /* SkillPersephoneUse's maid (palette bank 0 into OBJ row 3). */

@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0722 - Devil and Manticore blue souls
+
+- The transformation of Skill_Devil_Manticore_Curly_Use now reads its
+  variant's entry of 0x080E1A74 (power, elements, start sound), so the
+  Devil (18) and Manticore (19) souls run: their child
+  SkillDevilManticoreSparksUpdate plays 0x90 every eighth frame and leaves
+  a translucent spark every fourth (art `skill_devil_spark`,
+  `aria_objects` v56). Unit-tested; a local capture shows both
+  transformations (their palettes are still not modelled).
+
 ## Patch 0721 - Persephone and Great Armor blue souls
 
 - `SkillPersephoneUse` (blue soul 16): a translucent maid on Soma, holding

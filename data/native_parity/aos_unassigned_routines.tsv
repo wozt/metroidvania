@@ -41,7 +41,6 @@ aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name	
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
 aos:asm:asm/code/code_080211F0.s:SkillDemonLordUse	SkillDemonLordUse	abilities	name			asm_function		asm/code/code_080211F0.s	21665	0	10
-aos:asm:asm/code/code_080211F0.s:SkillDevilManticoreSparksUpdate	SkillDevilManticoreSparksUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	27541	0	2
 aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	12290	0	13
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
@@ -96,7 +95,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802DB3C	sub_0802DB3C	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_0802DBD0	sub_0802DBD0	abilities	referrers			asm_function	0x0802DBD0	asm/code/code_080211F0.s	25292	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DC10	sub_0802DC10	abilities	referrers			asm_function	0x0802DC10	asm/code/code_080211F0.s	25327	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DCB0	sub_0802DCB0	abilities	referrers			asm_function	0x0802DCB0	asm/code/code_080211F0.s	25410	0	1
-aos:asm:asm/code/code_080211F0.s:sub_0802ECF4	sub_0802ECF4	abilities	referrers			asm_function	0x0802ECF4	asm/code/code_080211F0.s	27438	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802EF28	sub_0802EF28	unclassified				asm_function	0x0802EF28	asm/code/code_080211F0.s	27708	0	1
 aos:asm:asm/code/code_080211F0.s:sub_08030650	sub_08030650	abilities	referrers			asm_function	0x08030650	asm/code/code_080211F0.s	30550	0	3
 aos:asm:asm/code/code_080211F0.s:sub_08030754	sub_08030754	abilities	referrers			asm_function	0x08030754	asm/code/code_080211F0.s	30682	0	9

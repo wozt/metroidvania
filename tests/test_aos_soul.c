@@ -530,6 +530,33 @@ int main(void) {
     assert(!aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, 0, 0, 100 << 16,
                                       200 << 16, true, target));
     assert(!guardian.active && abilities == 0 && !curly.child && !(soma_flags & 0x200));
+    /* Devil (soul 18, variant 0): its start sound 0x1B1 and the sparks
+     * child: 0x90 every eighth frame and a spark every fourth, from its
+     * first. */
+    blue[18] = (AosBlueSoulRecord){0x0802EFB1, 30, 1, 0, 0};
+    aos_audio_clear();
+    guard_stats.blue_soul = 18;
+    guardian = (AosGuardian){0};
+    curly = (AosCurlyGuardian){0};
+    soma_flags = 0x100000;
+    soma_step = 7;
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
+    assert(aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                     100 << 16, 200 << 16, false, target));
+    assert(variant == 0 && curly.variant == 0 && !curly.spawn_spark);
+    soma_step = 3;
+    int devil_sparks = 0;
+    for (int k = 0; k < 9; ++k) {
+        assert(aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                         100 << 16, 200 << 16, false, target));
+        devil_sparks += curly.spawn_spark;
+    }
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1B1) == 1 && devil_sparks == 3 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x90) == 2 &&
+           !aos_audio_requested(AOS_AUDIO_START_SONG, 0x93) &&
+           aos_transform_variants[1].power == 0x46);
+    assert(!aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, 0, 0, 100 << 16,
+                                      200 << 16, false, target));
     /* sub_08021994's statuses: poison quarters STR, CON and INT (Zombie's
      * soul then multiplies them by 5.5); curse drains max MP / 128 every
      * 4 frames instead of regenerating; both run out. */

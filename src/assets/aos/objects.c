@@ -31,7 +31,7 @@ enum {
     TILE_BYTES = 32,
     MAX_ANIMATIONS = 256,
     MAX_FRAMES = 128,
-    MAX_STATIC_FRAMES = 16,
+    MAX_STATIC_FRAMES = 20,
     CANVAS_SIZE = 512,
     CANVAS_ORIGIN = 256,
 };
@@ -121,8 +121,10 @@ static const EntitySpec entities[] = {
     {"skeleton", 0x081F424C, 0x0820BE3C, 0, 0x0824C910, 0x08528948, 0, 0, 8,
      {0x12, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B}},
     ENTITY("merman", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4),
-    STATIC("peeping_eye", 0x081CBFEC, 0x0820A86C, 0, 0x0821D7B4, 6,
-           11, 12, 13, 14, 15, 16),
+    /* The Peeping Eye's direct frames: the eyelid (0-10, + 0x19), the
+     * segments (11-14), the eyeball (15) and the pupil (16). */
+    STATIC("peeping_eye", 0x081CBFEC, 0x0820A86C, 0, 0x0821D7B4, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8,
+           9, 10, 11, 12, 13, 14, 15, 16),
     /* The Killer Fish (the Merman's descriptor): its bubbles show sprite
      * frames 15 and 16, bursting one frame lower (14). */
     STATIC("killer_fish", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4, 3, 14, 15, 16),

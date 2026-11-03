@@ -869,8 +869,7 @@ their native sheets, palettes, animation descriptors, direct child frames and
 frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming and
-hovering loops. The dedicated parent motion controllers are now dispatched
-for Peeping Eye; Rock Armor, Buer, the White Dragon, the Giant Ghost and
+hovering loops. Peeping Eye, Rock Armor, Buer, the White Dragon, the Giant Ghost and
 the Winged Skeleton now have their own ports. Ghost now has its complete specialized state machine: animation 0
 appears without collision, animation 1 enables its attack and accelerates
 toward a random height 16 to 32 pixels above Soma with 31/32 damping; inside
@@ -879,22 +878,11 @@ event-state animation, eight-frame flame/blink death, and hidden room producer
 are connected. The producer observes its native delay, random attempt, active
 cap, coordinate ranges and 48-pixel exclusion. A local area 0 room 18 run
 showed a produced Ghost home into Soma and deal 17 damage. This is
-source-derived and unit-tested, not emulator-compared. The Peeping Eye still
-emits its two eye overlays and six parent-linked static segments. Its segments
-now use a target-oriented polar
-angle and fixed-point radius; the White Dragon emits all nine animation-1 body
+source-derived and unit-tested, not emulator-compared.
+The Peeping Eye is described below; the White Dragon emits all nine animation-1 body
 parts in two linked batches, with a curved chain and per-part affine angle
 forwarded to the renderer. Its middle body record also owns the native shared
-unit-scale affine slot. Bone Pillar now constructs its linked 22-pixel tower,
-The Peeping Eye's first controller gate uses the
-native 180 by 200 proximity window and its ten-stage, 40-frame extension
-sequence; it then chooses a random point 64 to 112 pixels sideways and 32 to
-80 pixels upward, steering toward it with the native damping, acceleration,
-speed cap and timeout. Its state-3 visual variant table, ceiling probes and
-callbacks are still open. The other nine parity rows remain partial because
-of those Peeping Eye gaps, White Dragon's complete affine choreography and
-damage callbacks, Giant Ghost visual children, Bone Pillar tower, attacks, fades, sounds and rewards still need their own native
-state machines.
+unit-scale affine slot. The Bone Pillar's tower is described below.
 
 Ghost's red soul is separate from its enemy controller.
 `SkillGhostUse` places an invisible owner 24 pixels above Soma, requests song
@@ -1052,6 +1040,26 @@ target inside a skull's 160 x 120 box makes it attack (`sub_080B36A0`):
 even skulls breathe fire (`sub_080B33C8`, 0x6E) with smoke, odd ones spit
 a fireball (`sub_080B350C`, 0x7A); then it turns toward the target or
 rests. Struck down it shatters into three pieces (`sub_080B3954`, 0x6B).
+
+The Peeping Eye (enemy 0x06, `EnemyPeepingEyeCreate` /
+`EnemyPeepingEyeUpdate`) is an eyelid over an eyeball and a pupil, with a
+tail of six segments. It waits for its target inside a 180 x 200 box (or a
+first wound), opens (`0x08527400`, 40 frames) and steers (`sub_08088168`:
++- 0x800 per axis beyond 4 pixels, 31/32 damping, `sub_0806D3D8` at 2.0,
+back to a new point within 4 pixels or after 120 frames) first toward a
+point 64 pixels short of the target and 64 above, then toward random
+points 16 to 63 pixels to a side of it and 32 to 79 above. Its eyelid runs
+the looks of `0x08527450`: a blink, looking up or down when the target
+lies there, and the hurt look, facing the target, after a blow. A blow
+pushes it 2.0 away (`sub_08088638`); dying it plays 0x6E, flames once and
+vanishes for 45 frames. The pupil (`sub_08088724`) slides 0x4000 a frame
+toward 3 pixels from the centre in the target's direction; the segments
+(`sub_08088A64`) sway between 0x800 and 0x7800, grow to their reach (12 to
+3 pixels) and hang from each other, holding still while it flashes, and
+flame in turn at its death. Drawing order follows the native priorities:
+segments, then eyeball and pupil, then the eyelid. Its yellow soul sets
+the 0x13260 bit 0x1000000, read only by the breakable walls `Object08Update`
+and `Object09Update` (a sparkle every 16 frames), which are not ported.
 
 The Giant Ghost (enemy 0x13, `EnemyGiantGhostCreate` /
 `EnemyGiantGhostUpdate`) is a skull with a translucent aura and two eyes.

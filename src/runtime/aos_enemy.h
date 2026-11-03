@@ -264,6 +264,17 @@ typedef struct AosEnemy {
     bool bp_active, bp_seen;
     int8_t bp_top;
     struct AosEnemy *bp_skull[8];
+    /* Peeping Eye: + 0x18 (bit 0 a direct frame + 0x19, bit 1 open), its
+     * frame sequence (+ 0x14), index (+ 0x1A), tick (+ 0x1B) and hurt flag
+     * (+ 0x15); a segment's radius (+ 0x14) toward + 0x18, the pupil's
+     * offset (+ 0x48 / + 0x4C) and the eye's segments (each registered by
+     * its segment). */
+    uint8_t pe_flags, pe_frame, pe_seq, pe_tick;
+    int8_t pe_index;
+    bool pe_hurt, pe_reverse;      /* + 0x15; the creation's r & 1 (segment angles) */
+    uint16_t pe_rotation;           /* the tip segment's affine angle */
+    int32_t pe_radius, pe_radius_target, pe_off_x, pe_off_y;
+    struct AosEnemy *pe_seg[6];
     bool gg_touched, gg_scan_back;
     uint8_t gg_scan;
     int32_t affine_sx, affine_sy;

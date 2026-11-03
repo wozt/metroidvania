@@ -361,7 +361,6 @@ static void test_bestiary(const FusionJson *data) {
     }
     EXPECT(!row_named(mzm_items, "Long Beam Hint (Chozo statue)"), "hint statue listed");
     EXPECT(!row_named(mzm_items, "Water Drop"), "water drop listed");
-    static const char *const partial[] = {"Peeping Eye"};
     static const char *const working[] = {
         "Bat", "Zombie", "Blue Crow", "Zombie Soldier", "Axe Armor", "Skull Archer", "Needles",
         "Medusa Head", "Zombie Officer", "Gargoyle", "Ghost Dancer", "Curly", "Durga", "Valkyrie",
@@ -370,21 +369,21 @@ static void test_bestiary(const FusionJson *data) {
         "Nemesis", "Beam Skeleton", "Siren", "Catoblepas", "Gorgon", "Harpy", "Tiny Devil", "Imp",
         "Merman", "Ripper", "Ghost", "Skeleton", "Winged Skeleton", "Rock Armor",
         "Killer Fish", "Buer", "White Dragon",
-        "Giant Ghost", "Bone Pillar"};
+        "Giant Ghost", "Bone Pillar", "Peeping Eye"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];
         const char *status = text_of(monster, "status"), *name = text_of(monster, "name");
         if (!strcmp(status, "partial")) {
             ++partial_count;
-            EXPECT(known(name, partial, COUNT(partial)), "unexpected partial %s", name);
+            EXPECT(false, "unexpected partial %s", name);
         } else if (!strcmp(status, "functional")) {
             ++working_count;
             EXPECT(known(name, working, COUNT(working)), "unexpected functional %s", name);
         } else if (!strcmp(status, "not_started"))
             EXPECT(strncmp(name, "Enemy 0x", 8), "unnamed %s", name);
     }
-    EXPECT(partial_count == COUNT(partial), "partial Aria count %zu", partial_count);
+    EXPECT(partial_count == 0, "partial Aria count %zu", partial_count);
     EXPECT(working_count == COUNT(working), "functional Aria count %zu", working_count);
     static const char *const bosses[] = {"Creaking Skull", "Manticore", "Great Armor",
         "Big Golem", "Headhunter", "Death", "Legion", "Balore", "Julius Belmont",

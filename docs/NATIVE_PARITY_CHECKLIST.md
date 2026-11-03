@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 821 | 2752 |
+| Castlevania: Aria of Sorrow | 830 | 2743 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1643,15 +1643,15 @@ Known divergences: The body runs its linked sprite at the end of its own update 
 Next action: Compare the dash, swoop and dive paths and the trails against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis renders tilted with its trails and Soma takes 45-damage contact hits by frame 330`.
 
-[~] **`aos.enemies.peeping_eye` — Peeping Eye.** The Peeping Eye's 40-frame entry, three-draw upper-side target selection and symmetric +/-0x800 steering acceleration are source-aligned and covered by ROM-free tests. Movement now resets its 120-frame timeout at the correct state transition and preserves its vertical position between targets. The visual variant ROM table, ceiling probes, linked callbacks and yellow:6 soul effect remain incomplete.
+[+] **`aos.enemies.peeping_eye` — Peeping Eye.** EnemyPeepingEyeUpdate is ported from its traced routines: the wait for the target in its 180 x 200 box or a first wound, the opening (0x08527400, 40 frames), the steering toward a point 64 pixels short of the target and 64 above it then toward random points 16 to 63 pixels to a side and 32 to 79 above (sub_08088168: +- 0x800 beyond 4 pixels, 31/32 damping, sub_0806D3D8 at 2.0, 120-frame timeout), its eyelid looks (0x08527450: blink, looking up or down toward the target, the hurt look facing it after a blow), the 2.0 push of a blow and the death (sub_08088638: 0x6E, 45 hidden frames with a flame), the eyeball (sub_080888D4), the pupil looking at the target (sub_08088724) and the six swaying, growing segments flaming in turn at its death (sub_08088A64), and the state-4 showcase (sub_08088510) under the global 0x8E & 0x40.
 
-Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`.  
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeCreateEyeball`, `aos:asm:asm/code/code_080809C0.s:EnemyPeepingEyeUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08088168`, `aos:asm:asm/code/code_080809C0.s:sub_08088510`, `aos:asm:asm/code/code_080809C0.s:sub_08088638`, `aos:asm:asm/code/code_080809C0.s:sub_08088724`, `aos:asm:asm/code/code_080809C0.s:sub_080888D4`, `aos:asm:asm/code/code_080809C0.s:sub_08088978`, `aos:asm:asm/code/code_080809C0.s:sub_08088A64`, `aos:asm:asm/code/code_080809C0.s:sub_08088D28`, `aos:asm:asm/code/code_080809C0.s:sub_08088E08`, `aos:asm:asm/code/code_080809C0.s:sub_08088E54`, `aos:asm:asm/code/code_080809C0.s:sub_08088E78`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
-Known divergences: The state-3 visual variant table, ceiling probing, sounds and callbacks are not ported.  
-Next action: Trace the state-3 visual variant selection and ceiling probe.
-Evidence: in game: `aria area_00_room_018: Peeping Eye record at x 568, y 176`.
+Known divergences: Rewritten from the native routines, replacing the earlier polar approximation. The parts are made by its first update (native: at creation). The knockback of a blow pushes away from Soma, whose position stands in for the weapon entity. The tip segment's affine angle (sub_0803E238) is drawn with the convention of sub_0803E058. The palette bits, the hit spark sub_08042B8C, the tracking list sub_08021924 and the global pause 0x4BE (taken as 0) are not modelled. Its yellow soul sets the 0x13260 bit 0x1000000, read only by the breakable walls Object08Update and Object09Update, which are not ported.  
+Next action: Port the breakable walls Object08 and Object09 and their yellow soul sparkle; compare the eye against an emulator.
+Evidence: in game: `aria area_00_room_018 (--spawn 520 176): the Peeping Eye opens, rises toward Soma with its pupil on him and sways its tail`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40. Its swoop plays 0x8B (sub_080CA0D4) and its death 0x72 (sub_080CA308), unit-tested.
 

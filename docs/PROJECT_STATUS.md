@@ -1,6 +1,20 @@
 # Project status
 
-Last updated: **2026-11-02**.
+Last updated: **2026-11-03**.
+
+## Patch 0715 - The Peeping Eye from its native routines
+
+- `EnemyPeepingEyeUpdate` is rewritten from its traced routines, replacing
+  the polar approximation: the wait and opening, the steering toward points
+  near the target (`sub_08088168`), the eyelid looks of `0x08527450`, the
+  blow's push and the death (`sub_08088638`, 0x6E), the eyeball and pupil
+  (`sub_080888D4`, `sub_08088724`), the six swaying segments
+  (`sub_08088A64`) and the showcase state (`sub_08088510`). The eyelid
+  frames 0-10 are exported (`aria_objects` v50) and the parts are drawn
+  behind the eyelid. A local capture shows it open and rise toward Soma.
+- Its yellow soul still has no visible effect: the only readers of its flag
+  are the breakable walls Object08 and Object09, not yet ported. The
+  Peeping Eye stays the one partial monster (46 complete).
 
 ## Patch 0714 - The Bone Pillar blue soul
 

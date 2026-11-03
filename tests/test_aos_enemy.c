@@ -235,79 +235,240 @@ static void skeleton_bone_tests(void) {
 }
 
 
-/* Peeping Eye sub_080882D2/sub_08088478: exactly three target draws,
- * symmetric 0x800 axis acceleration and no return-to-home teleport. */
-static void peeping_eye_native_steering_tests(void) {
-    memset(cells, 0, sizeof cells);
-    static const uint8_t ticks[] = {2, 2};
-    const AosAnimDef defs[1] = {{2, ticks}};
-    const AosAnimSet anims = {defs, 1};
-    AosEnemyKind kind = {.anims = &anims};
-    kind.margins[0][0] = kind.margins[0][1] = 32;
-    const AosEnemyStats stats = {30, 10, 2, 0, 0, 4};
-    AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
-    AosEnemy eye;
-    assert(aos_enemy_create(&eye, AOS_ENEMY_PEEPING_EYE, 100, 100,
-                            0, 0, &soma, &layer, &kind, &stats));
-    eye.helper_spawned = true;
-    eye.x = AOS_FIXED(100);
-    eye.y = AOS_FIXED(100);
-    eye.home = 140;
-    eye.step = 2;
-    eye.timer = 73;
-    const uint32_t target_draws[] = {0, 1, 0, 0xFF};
-    script = target_draws;
-    script_at = 0;
-    aos_enemy_update(&eye, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, scripted);
-    assert(script_at == 3 && eye.step == 3 && eye.timer == 0);
-    assert(eye.target_x == AOS_FIXED(164) && eye.target_y == AOS_FIXED(68));
-    assert(eye.y == AOS_FIXED(100));
-
-    eye.target_x = eye.x + AOS_FIXED(20);
-    eye.target_y = eye.y - AOS_FIXED(20);
-    eye.vx = eye.vy = 0;
-    aos_enemy_update(&eye, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.ax == 0x800 && eye.ay == -0x800);
-    assert(eye.vx == 0x800 && eye.vy == -0x800);
-
-    eye.target_x = eye.x - AOS_FIXED(20);
-    eye.target_y = eye.y + AOS_FIXED(20);
-    eye.vx = eye.vy = 0;
-    aos_enemy_update(&eye, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.ax == -0x800 && eye.ay == 0x800);
-    assert(eye.vx == -0x800 && eye.vy == 0x800);
-
-    eye.step = 3;
-    eye.timer = 0;
-    eye.vx = eye.vy = 0;
-    eye.target_x = eye.x + AOS_FIXED(3);
-    eye.target_y = eye.y - AOS_FIXED(3);
-    int32_t y_before = eye.y;
-    aos_enemy_update(&eye, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.step == 2 && eye.y == y_before);
-
-    eye.step = 0;
-    eye.phase = 0x2000;
-    y_before = eye.y;
-    aos_enemy_update(&eye, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.step == 0 && eye.y == y_before);
-
-    eye.step = 3;
-    eye.timer = 120;
-    eye.target_x = eye.x + AOS_FIXED(80);
-    eye.target_y = eye.y - AOS_FIXED(80);
-    eye.vx = eye.vy = 0;
-    aos_enemy_update(&eye, &soma, &layer, &kind,
-                     NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.step == 2); /* 120-frame native timeout */
-    memset(cells, 0, sizeof cells);
+/* sub_0803E86C as the runtime computes it (aos_enemy.c fixed_mul). */
+static int32_t fixed_mul_of(int32_t a, int32_t b) {
+    if (!a || !b) return 0;
+    if (a == 0x10000) return b;
+    if (b == 0x10000) return a;
+    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
+    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
+    int32_t p = a8 * b8;
+    if (p < 0) p += 0xFF;
+    return (int32_t)((uint32_t)(p >> 8) << 8);
 }
 
+/* Peeping Eye from its traced routines (EnemyPeepingEyeCreate / Update,
+ * sub_08088168, sub_08088638, sub_08088724, sub_080888D4, sub_08088A64). */
+static void peeping_eye_tests(void) {
+    aos_audio_clear();
+    memset(cells, 0, sizeof cells);
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;     /* floor top 160 */
+    static const uint8_t ticks[] = {200};
+    const AosAnimDef defs[2] = {{1, ticks}, {1, ticks}};
+    const AosAnimSet anims = {defs, 2};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    kind.margins[0][0] = kind.margins[0][1] = 32;
+    kind.margins[3][0] = kind.margins[3][1] = 32;
+    const AosEnemyStats stats = {30, 10, 2, 0, 0, 4};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(150), NULL);
+
+    /* Creation: animation 0, boxes (-7, -7, 14, 14), on the floor and 8
+     * pixels up, state 0. */
+    AosEnemy eye;
+    aos_random_seed(0);
+    assert(aos_enemy_create(&eye, AOS_ENEMY_PEEPING_EYE, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(eye.state == 0 && eye.step == 0 && eye.anim.id == 0 && eye.own_boxes &&
+           eye.own_hurt.x == -7 && eye.own_hurt.w == 14 && eye.y == AOS_FIXED(151));
+    eye.pe_reverse = false;
+
+    /* The first update makes, in order, the eyeball (frame 0xF), the pupil
+     * (0x10) and six hidden segments. Soma outside (x - 90, y - 100, 180,
+     * 200): it waits, showing its animation. */
+    AosHitReport first = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          never_zero);
+    assert(first.child_count == 8 && eye.step == 0 && eye.static_frame == -1);
+    static const int16_t frames[6] = {0xB, 0xB, 0xC, 0xC, 0xD, 0xE};
+    static const int32_t reach[6] = {0xC0000, 0xA0000, 0x80000, 0x80000, 0x70000, 0x30000};
+    assert(first.children[0].static_frame == 0xF && first.children[0].variant == 6 &&
+           first.children[1].static_frame == 0x10 && first.children[1].variant == 7);
+    AosEnemy part[8];
+    for (int c = 0; c < 8; ++c) {
+        part[c] = first.children[c];
+        part[c].parent = &eye;
+        assert(part[c].role == AOS_ROLE_PEEPING_SEGMENT && part[c].combat.hurt_off);
+        if (c < 2) continue;
+        int k = c - 2;
+        assert(part[c].variant == k && part[c].static_frame == frames[k] && part[c].hidden &&
+               part[c].angle == (uint32_t)(k + 1) * 5000 && part[c].timer == 6 * (k + 1) &&
+               part[c].pe_radius == 0 && part[c].pe_radius_target == reach[k]);
+    }
+    /* Closed, the segments stay hidden and the pupil centred. */
+    for (int c = 0; c < 8; ++c)
+        aos_enemy_update(&part[c], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[2].hidden && part[2].x == eye.x && part[1].x == eye.x && !part[0].hidden);
+
+    /* Soma within the box: the opening (40 frames of 0x08527400), then
+     * facing him, a point 64 pixels short of him and 64 above. */
+    soma.x = AOS_FIXED(160);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 1 && eye.pe_tick == 0);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.static_frame == 3 && eye.pe_tick == 1);
+    int count = 1;
+    while (eye.step == 1 && count < 100) {
+        aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++count;
+    }
+    assert(count == 40 && eye.step == 3 && (eye.pe_flags & 2) && eye.static_frame == 0 &&
+           eye.mirrored && eye.target_x == soma.x - AOS_FIXED(64) &&
+           eye.target_y == soma.y - AOS_FIXED(64) && eye.pe_tick == 1);
+
+    /* Open, a segment sways in from its angle (the first pulled a quarter
+     * toward 0x4000) and grows by a 64th of its reach; the pupil moves its
+     * offset 0x4000 toward 3 * (cos, sin) of its aim. */
+    aos_enemy_update(&part[2], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    int32_t r0 = reach[0] / 64, bent = 5000 - (5000 - 0x4000) / 4;
+    assert(!part[2].hidden && part[2].step == 1 && part[2].angle == 5000 &&
+           part[2].pe_radius == r0 &&
+           part[2].x == eye.x + fixed_mul_of(aos_sine((uint32_t)bent + 0x4000u), r0) &&
+           part[2].y == eye.y + fixed_mul_of(aos_sine((uint32_t)bent), r0) &&
+           eye.pe_seg[0] == &part[2]);
+    aos_enemy_update(&part[2], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[2].angle == 5500 && part[2].pe_radius == 2 * r0);
+    aos_enemy_update(&part[3], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[3].x == part[2].x + fixed_mul_of(aos_sine(10000u + 0x4000u), reach[1] / 64));
+    aos_enemy_update(&part[1], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[1].pe_off_x == 0x4000 && part[1].pe_off_y == -0x4000 &&
+           part[1].x == eye.x + 0x4000 && part[1].mirrored == eye.mirrored);
+    /* The tip turns by its angle plus half its distance from 0x4000. */
+    aos_enemy_update(&part[7], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[7].pe_rotation == (uint16_t)(30000 + (30000 - 0x4000) / 2));
+
+    /* Steering: no push within 4 pixels (x), -0x800 beyond (y). */
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.ax == 0 && eye.ay == -0x800 && eye.vy == -0x800 && eye.timer == 1 &&
+           eye.static_frame == 0);
+    /* Speeds keep 31/32 before the push. */
+    eye.vx = 0x20000;
+    eye.target_x = eye.x + AOS_FIXED(40);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.vx == 0x20000 * 31 / 32 + 0x800 && eye.ax == 0x800);
+    /* Within 2.0 (sub_0806D3D8). */
+    eye.vx = 0x21000;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.vx == 0x20000);
+    /* Within 4 pixels it picks again; so does the 120-frame timeout. */
+    eye.target_x = eye.x + 0x3FFFF;
+    eye.target_y = eye.y - 0x3FFFF;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 2);
+    /* Step 2: 16 + r % 48 pixels to a side of Soma (r & 1), 32 + r % 48
+     * above him; the three draws in order. */
+    const uint32_t picks[] = {0x10, 1, 0x20, 0xFF};
+    script = picks;
+    script_at = 0;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, scripted);
+    assert(script_at == 3 && eye.step == 3 && eye.timer == 1 &&
+           eye.target_x == soma.x + 0x100010 && eye.target_y == soma.y - 0x200020);
+    eye.timer = 0x78;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.step == 2);
+
+    /* A finished blink with Soma below looks down (look 2, frame 10). */
+    eye.step = 3;
+    eye.pe_seq = 0;
+    eye.pe_index = 6;
+    eye.pe_tick = 19;
+    soma.x = eye.x + AOS_FIXED(1);
+    soma.y = eye.y + AOS_FIXED(80);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.pe_seq == 2 && eye.pe_index == 0 && eye.pe_tick == 1 && eye.static_frame == 10);
+    /* A finished other look blinks again. */
+    eye.pe_index = 1;
+    eye.pe_tick = 19;
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.pe_seq == 0 && eye.static_frame == 0);
+
+    /* A blow: the hurt flag and a 2.0 push away from Soma; next frame the
+     * hurt look (frame 8), facing him. */
+    soma.x = eye.x - AOS_FIXED(20);
+    soma.y = eye.y;
+    eye.vx = eye.vy = 0;
+    AosSoulAttack blow = {{0, 0, 2000, 2000}, 20, 0, false, NULL, AOS_TYPE_SOUL};
+    aos_enemy_set_soul_attacks(&blow, 1);
+    AosHitReport hit = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                        never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(hit.enemy_hit && !hit.killed && eye.pe_hurt && eye.hit_flash == 8 &&
+           eye.vx == fixed_mul_of(aos_sine(0x4000), 0x20000) && eye.vy == 0);
+    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(!eye.pe_hurt && eye.pe_seq == 1 && eye.static_frame == 8 && !eye.mirrored &&
+           eye.hit_flash == 7);
+    /* While it flashes the segments hold their sway. */
+    uint32_t held = part[2].angle;
+    aos_enemy_update(&part[2], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[2].angle == held);
+
+    /* A lethal blow: sound 0x6E, state 2 for 45 frames (hidden, frame 0,
+     * one flame), state 3 for four, then gone. */
+    eye.hit_flash = 0;
+    memset(&eye.combat, 0, sizeof eye.combat);
+    eye.combat.type = AOS_TYPE_ENEMY;
+    aos_audio_clear();
+    blow.power = 255;
+    aos_enemy_set_soul_attacks(&blow, 1);
+    hit = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_set_soul_attacks(NULL, 0);
+    assert(hit.killed && eye.defeated && eye.state == 2 && eye.timer == 0x2D &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1);
+    hit = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(eye.hidden && eye.static_frame == 0 && hit.effect_count == 1 &&
+           hit.effects[0].kind == AOS_EFFECT_FLAME && hit.effects[0].x == eye.x);
+    /* The eyeball and pupil go; each segment flames after 6 (k + 1) + 1
+     * frames and again 4 later, 4 pixels down. */
+    aos_enemy_update(&part[0], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    aos_enemy_update(&part[1], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[0].removed && part[1].removed);
+    int flames[2] = {0}, lit = 0;
+    for (int f = 1; f <= 20; ++f) {
+        AosHitReport r =
+            aos_enemy_update(&part[2], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        if (r.effect_count) {
+            assert(r.effects[0].y == part[2].y + 0x40000 && lit < 2);
+            flames[lit++] = f;
+        }
+        if (f == 1) assert(part[2].state == 1 && !part[2].hidden);
+    }
+    assert(flames[0] == 7 && flames[1] == 11 && part[2].hidden && !part[2].removed);
+    count = 1;
+    while (eye.state == 2 && count < 100) {
+        aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++count;
+    }
+    assert(count == 45 && eye.state == 3);
+    aos_enemy_update(&part[2], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+    assert(part[2].removed);
+    count = 0;
+    while (!eye.removed && count < 10) {
+        aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++count;
+    }
+    assert(count == 4);
+
+    /* Under the global 0x8E & 0x40: state 4, 48 pixels up, no boxes; 31
+     * frames, the opening, then the looks. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy shown;
+    assert(aos_enemy_create(&shown, AOS_ENEMY_PEEPING_EYE, 100, 100, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    count = 0;
+    while (shown.step == 0 && count < 100) {
+        aos_enemy_update(&shown, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++count;
+    }
+    assert(shown.state == 4 && shown.y == AOS_FIXED(52) && shown.combat.hurt_off && count == 31);
+    count = 0;
+    while (shown.step == 1 && count < 100) {
+        aos_enemy_update(&shown, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++count;
+    }
+    assert(count == 40 && shown.step == 2 && (shown.pe_flags & 2));
+    aos_enemy_set_flag_8e_40(false);
+    memset(cells, 0, sizeof cells);
+}
 static void bone_pillar_tests(void) {
     aos_audio_clear();
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
@@ -728,7 +889,7 @@ static void early_enemy_batch_tests(void) {
         }
     const AosEnemyStats stats = {30, 16, 2, 0, 0, 0};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(220), AOS_FIXED(120), NULL);
-    const uint8_t ids[] = {AOS_ENEMY_SKELETON, AOS_ENEMY_PEEPING_EYE,
+    const uint8_t ids[] = {AOS_ENEMY_SKELETON,
                            AOS_ENEMY_KILLER_FISH,
                            AOS_ENEMY_GHOST,
                            AOS_ENEMY_ROCK_ARMOR,
@@ -743,46 +904,6 @@ static void early_enemy_batch_tests(void) {
         aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
         assert(e.x != x0 || e.y != y0 || e.anim.frame != frame0 || e.anim.tick != tick0);
     }
-
-    AosEnemy eye;
-    assert(aos_enemy_create(&eye, AOS_ENEMY_PEEPING_EYE, 100, 100, 0, 0, &soma, &layer, &kind,
-                            &stats));
-    soma.x = AOS_FIXED(170);
-    AosHitReport eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
-                                              0, never_zero);
-    assert(eye_parts.child_count == 8 && eye.helper_spawned && eye.angle != 0);
-    assert(eye.step == 1 && eye.timer == 1);
-    assert(eye_parts.children[0].role == AOS_ROLE_PEEPING_SEGMENT &&
-           eye_parts.children[0].static_frame == 0xF &&
-           eye_parts.children[7].static_frame == 0xE);
-    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.step == 1 && eye.substep == 1 && eye.timer == 0);
-    for (int frame = 0; frame < 18; ++frame)
-        eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
-                                     never_zero);
-    assert(eye.step == 1 && eye.substep == 9 && eye.timer == 0);
-    for (int frame = 0; frame < 19; ++frame)
-        eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
-                                     never_zero);
-    assert(eye.step == 1 && eye.substep == 9 && eye.timer == 19);
-    eye_parts = aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
-                                 never_zero);
-    assert(eye.step == 2 && eye.timer == 0);
-    assert(eye_parts.child_count == 0);
-    int32_t eye_x = eye.x, eye_y = eye.y;
-    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.step == 3 && eye.target_x > eye.x && eye.target_y < eye.y);
-    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.x > eye_x && eye.y < eye_y);
-    /* At exactly four pixels, the native <0x40000 threshold does not
-     * complete the steering state (the old <= test returned too early). */
-    eye.step = 3;
-    eye.vx = eye.vy = 0;
-    eye.timer = 0;
-    eye.target_x = eye.x + AOS_FIXED(4);
-    eye.target_y = eye.y;
-    aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
-    assert(eye.step == 3);
 
     /* Source-derived Winged Skeleton producer: 1/32, cap, right-side
      * entry when Soma is near the left camera border. */
@@ -4879,7 +5000,7 @@ static void soul_attack_tests(void) {
 }
 
 int main(void) {
-    peeping_eye_native_steering_tests();
+    peeping_eye_tests();
     skeleton_bone_tests();
     soul_attack_tests();
     death_sound_tests();

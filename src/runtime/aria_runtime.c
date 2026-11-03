@@ -221,7 +221,7 @@ static int enemy_bank(const AosEnemy *enemy) {
     if (enemy->id == AOS_ENEMY_GHOST_DANCER) return enemy->param0 & 0xFF;
     return 0;
 }
-#define ENEMY_STATIC_FRAMES 16 /* single sprite frames of child entities per kind */
+#define ENEMY_STATIC_FRAMES 20 /* single sprite frames of child entities per kind */
 /* The red soul skills' sprites (Enemy/skill_<name>). */
 enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_ART_BLADES,
        SKILL_ART_DEVIL, SKILL_ART_CROW, SKILL_ART_FLEA, SKILL_ART_SKULL, SKILL_ART_VALKYRIE,
@@ -3203,14 +3203,22 @@ static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void 
     }
 }
 
-/* Enemies: sprites face left; mirrored ones are flipped around x. The
- * zombie's puddles (priority + 1) are drawn first, behind the others. */
+/* The drawing pass of an enemy: the zombie's puddles (priority + 1) first,
+ * then the Peeping Eye's segments (the eye's + 2), its eyeball and pupil
+ * (+ 1), then the others. */
+static size_t enemy_pass(const AosEnemy *e) {
+    if (e->role == AOS_ROLE_PUDDLE) return 0;
+    if (e->role == AOS_ROLE_PEEPING_SEGMENT) return e->variant < 6 ? 1 : 2;
+    return 3;
+}
+
+/* Enemies: sprites face left; mirrored ones are flipped around x. */
 static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                          int cam_x, int cam_y) {
-    for (size_t n = 0; n < 2 * room->entity_count; ++n) {
+    for (size_t n = 0; n < 4 * room->entity_count; ++n) {
         size_t i = n % room->entity_count;
         const AriaEntity *e = &room->entities[i];
-        if ((e->enemy.role == AOS_ROLE_PUDDLE) != (n < room->entity_count)) continue;
+        if (enemy_pass(&e->enemy) != n / room->entity_count) continue;
         if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->id >= ENEMY_KINDS ||
             e->enemy.removed || e->enemy.hidden || e->enemy.anim.id >= AOS_ENEMY_MAX_ANIMS ||
             e->enemy.anim.frame >= MAX_FRAMES)
@@ -3270,6 +3278,10 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS) &&
              e->enemy.role == AOS_ROLE_ENEMY))
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
+        /* The Peeping Eye's tip segment: its own affine angle (sub_0803E238,
+         * taken with the convention of sub_0803E058). */
+        if (e->enemy.role == AOS_ROLE_PEEPING_SEGMENT && e->enemy.variant == 5)
+            degrees = (double)e->enemy.pe_rotation * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
          * coefficients are not traced, half alpha stands for them. */
         if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 128);

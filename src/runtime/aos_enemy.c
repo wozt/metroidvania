@@ -482,8 +482,7 @@ static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollis
 /* Constructor and update must agree on validity of ROM-local Buer probes. */
 
 static bool is_early_enemy(uint8_t id) {
-    return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_PEEPING_EYE ||
-           id == AOS_ENEMY_GHOST ||
+    return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_GHOST ||
            id == AOS_ENEMY_WINGED_SKELETON;
 }
 
@@ -523,7 +522,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MIMIC && id != AOS_ENEMY_DEAD_CRUSADER && id != AOS_ENEMY_CAGNAZZO &&
         id != AOS_ENEMY_SKULL_MILLIONE && id != AOS_ENEMY_LUBICANT &&
         id != AOS_ENEMY_BEAM_SKELETON && id != AOS_ENEMY_LIGHTNING_DOLL &&
-        id != AOS_ENEMY_KILLER_DOLL && id != AOS_ENEMY_NEMESIS)
+        id != AOS_ENEMY_KILLER_DOLL && id != AOS_ENEMY_NEMESIS && id != AOS_ENEMY_PEEPING_EYE)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -580,13 +579,6 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->home_left = enemy->home - 32;
             enemy->home_right = enemy->home + 32;
             enemy->state = 1;
-            break;
-        case AOS_ENEMY_PEEPING_EYE:
-            enemy->own_boxes = true;
-            enemy->own_hurt = enemy->own_attack = (AosBox){-7, -7, 14, 14};
-            snap_to_floor(enemy, layer);
-            enemy->y -= AOS_FIXED(8);
-            enemy->home = (int16_t)(enemy->y >> 16);
             break;
         case AOS_ENEMY_GHOST:
             enemy->state = 0;
@@ -680,6 +672,29 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->state = 2;
             play(enemy, anims, 1);
         }
+        return true;
+    }
+    if (id == AOS_ENEMY_PEEPING_EYE) {
+        /* EnemyPeepingEyeCreate: animation 0 and one step; its parts (made
+         * by its first update) after one random draw (r & 1 reverses the
+         * segments' angles). State 4, 48 pixels up, under the global
+         * 0x8E & 0x40; otherwise the plain contact sub_08088E78, both
+         * boxes the bytes of 0x0E0EF9F9 (-7, -7, 14, 14), the floor snap,
+         * 8 pixels up and state 0. */
+        play(enemy, anims, 0);
+        step_anim(enemy, anims);
+        enemy->pe_reverse = (aos_random() & 1) != 0;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->y -= AOS_FIXED(48);
+            enemy->combat.attack_off = enemy->combat.hurt_off = true;
+            return true;
+        }
+        enemy->own_boxes = true;
+        enemy->own_hurt = enemy->own_attack = (AosBox){-7, -7, 14, 14};
+        snap_to_floor(enemy, layer);
+        enemy->y -= AOS_FIXED(8);
+        enemy->state = 0;
         return true;
     }
     if (id == AOS_ENEMY_BONE_PILLAR) {
@@ -1252,6 +1267,7 @@ static void doll_shatter(AosEnemy *e, AosHitReport *report);
 
 static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 static void nemesis_struck(AosEnemy *n);
+static void peeping_struck(AosEnemy *e, const AosSoma *soma);
 static void fish_struck(AosEnemy *f, const AosEnemyKind *kind);
 static void dragon_struck(AosEnemy *d, uint8_t attacker);
 static void skeleton_merge(AosHitReport *report, const AosHitReport *hit);
@@ -1399,6 +1415,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             if (enemy->id == AOS_ENEMY_WHITE_DRAGON && enemy->role == AOS_ROLE_ENEMY) {
                 if (enemy->hp <= 0) report.killed = enemy->defeated = true;
                 dragon_struck(enemy, attacker);
+                goto contact;
+            }
+            if (enemy->id == AOS_ENEMY_PEEPING_EYE && enemy->role == AOS_ROLE_ENEMY) {
+                /* sub_08088638: sub_080683BC at a lethal blow, then its
+                 * own reaction. */
+                if (enemy->hp <= 0) report.killed = enemy->defeated = true;
+                peeping_struck(enemy, soma);
                 goto contact;
             }
             if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY) {
@@ -7044,81 +7067,6 @@ static void make_static_child(AosEnemy *child, const AosEnemy *owner, uint8_t ro
     child->combat.type = AOS_TYPE_ENEMY;
 }
 
-/* The Peeping Eye creates two eye overlays and six linked tendrils. The
- * native tendril updater uses a polar chain; the compact representation keeps
- * the same parent lifetime and frame order while the attack choreography is
- * still being reconstructed. */
-static void peeping_eye_children(const AosEnemy *owner, AosHitReport *report) {
-    static const int frames[] = {0xF, 0x10, 0xB, 0xB, 0xC, 0xC, 0xD, 0xE};
-    for (unsigned i = 0; i < sizeof frames / sizeof frames[0] &&
-                         report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
-        AosEnemy child;
-        make_static_child(&child, owner, AOS_ROLE_PEEPING_SEGMENT, frames[i]);
-        child.variant = (uint8_t)i;
-        child.hp = owner->hp;
-        child.angle = owner->angle + i * 0x1800u;
-        child.speed = 0x50000 + (int32_t)i * 0x18000;
-        child.x += fixed_mul(aos_sine(child.angle + 0x4000u), child.speed);
-        child.y += fixed_mul(aos_sine(child.angle), child.speed);
-        report->children[report->child_count++] = child;
-    }
-}
-
-typedef struct {
-    uint8_t extension;
-    uint8_t duration;
-} PeepingEyeIntroStage;
-
-/* sub_08088168's initial state walks this traced, terminating sequence before
- * choosing a movement target.  The extension value is consumed by the linked
- * tendril presentation below; the later random target and ceiling-probe
- * branches are still deliberately outside this pass. */
-static const PeepingEyeIntroStage peeping_eye_intro[] = {
-    {3, 2}, {2, 2}, {1, 2}, {0, 4}, {1, 2},
-    {2, 2}, {3, 2}, {2, 2}, {1, 2}, {0, 20},
-};
-
-static int32_t peeping_eye_radius(const AosEnemy *owner, unsigned i) {
-    int32_t radius = 0x50000 + (int32_t)i * 0x18000;
-    if (owner->step == 1 && owner->substep < sizeof peeping_eye_intro / sizeof peeping_eye_intro[0])
-        return radius + radius * peeping_eye_intro[owner->substep].extension / 3;
-    return radius;
-}
-
-
-
-static AosHitReport linked_early_child_update(AosEnemy *child, AosSoma *soma,
-                                               const AosEnemyKind *kind) {
-    AosHitReport report = {0};
-    (void)soma;
-    (void)kind;
-    const AosEnemy *owner = child->parent;
-    /* sub_080CC3C8 is a separately allocated linked visual: Buer's
-     * staged death still references it. Only the owner slot's actual
-     * removal retires that child. Other linked enemies retain the previous
-     * defeated-owner cleanup semantics. */
-    if (!owner || owner->removed || owner->defeated) {
-        child->removed = true;
-        return report;
-    }
-    /* Buer's linked direct frame carries its own native facing bit. */
-    child->mirrored = owner->mirrored;
-    child->hidden = owner->hidden;
-    if (child->role == AOS_ROLE_PEEPING_SEGMENT) {
-        unsigned i = child->variant;
-        /* The native child stores its own polar angle/radius. The parent
-         * target angle supplies the attack direction while phase keeps the
-         * chain moving between target updates. */
-        uint16_t angle = (uint16_t)(owner->angle + owner->phase + i * 0x1800u);
-        int32_t radius = peeping_eye_radius(owner, i);
-        child->angle = angle;
-        child->x = owner->x + fixed_mul(aos_sine(angle + 0x4000), radius);
-        child->y = owner->y + fixed_mul(aos_sine(angle), radius);
-        return report;
-    }
-    return report;
-}
-
 /* Skeleton's thrown bone, sub_080C3BD8. The native attack frame 2
  * creates a projectile with its own OAM frame, sound, 8x8 hurt box and a
  * 2x2 contact box. Its loot and experience must never be awarded: only
@@ -9473,78 +9421,398 @@ static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
     return report;
 }
 
-static void peeping_eye_controller(AosEnemy *e, const AosSoma *soma,
-                                   uint32_t (*random)(void)) {
-    int32_t dx = pixel_delta(target_x(soma), e->x), dy = pixel_delta(target_y(soma), e->y);
-    e->angle = aos_arctan2((int16_t)dx, (int16_t)dy);
-    /* sub_08088168 begins its attack when Soma enters the 180 by 200
-     * window centred 90 pixels left and 100 pixels above the eye. */
-    if (e->step == 0 &&
-        player_in(soma, (e->x >> 16) - 90, (e->y >> 16) - 100, 180, 200)) {
-        e->step = 1;
-        e->timer = 0;
-        e->substep = 0;
-    }
-    if (e->step == 1) {
-        e->phase = (uint16_t)(e->phase + 0x300);
-        const PeepingEyeIntroStage *stage = &peeping_eye_intro[e->substep];
-        if (++e->timer >= stage->duration) {
-            e->timer = 0;
-            if (++e->substep == sizeof peeping_eye_intro / sizeof peeping_eye_intro[0]) {
-                e->substep = 0;
-                /* State 2 below picks the next random target. The following
-                 * state-3 visual-variant table remains outside this compact
-                 * motion pass. */
-                e->step = 2;
-            }
-        }
-    } else if (e->step == 2) {
-        /* Native state 2 chooses its next point 64..112 pixels left or
-         * right and 32..80 pixels upward, then immediately enters the
-         * steering state. */
-        int32_t horizontal = AOS_FIXED(64) + (int32_t)(random() % AOS_FIXED(48));
-        e->target_x = e->x + ((random() & 1) ? horizontal : -horizontal);
-        e->target_y = e->y - AOS_FIXED(32) - (int32_t)(random() % AOS_FIXED(48));
-        e->vx = e->vy = 0;
-        e->phase = (uint16_t)(e->phase + 0x200);
-        /* sub_080882D2 resets the 0x0D movement timeout on entry.
-         * Random & 0x3F belongs to the separate 0x1B sprite-table timer,
-         * not to this 120-frame steering timeout. */
-        e->timer = 0;
-        e->step = 3;
-    } else if (e->step == 3) {
-        /* sub_08088478 selects -0x800/0/+0x800 per axis outside the
-         * four-pixel dead zone, then damps both velocities by 31/32 and
-         * caps them to +/-0x20000. The old positive 0x8000 was tenfold
-         * too high and made right/down movement direction-dependent. */
-        int32_t dx = e->target_x - e->x;
-        int32_t dy = e->target_y - e->y;
-        e->ax = dx > AOS_FIXED(4) ? 0x800 : dx < -AOS_FIXED(4) ? -0x800 : 0;
-        e->ay = dy > AOS_FIXED(4) ? 0x800 : dy < -AOS_FIXED(4) ? -0x800 : 0;
-        e->vx = e->vx * 31 / 32 + e->ax;
-        e->vy = e->vy * 31 / 32 + e->ay;
-        if (e->vx > 0x20000) e->vx = 0x20000;
-        if (e->vx < -0x20000) e->vx = -0x20000;
-        if (e->vy > 0x20000) e->vy = 0x20000;
-        if (e->vy < -0x20000) e->vy = -0x20000;
-        e->x += e->vx;
-        e->y += e->vy;
-        e->phase = (uint16_t)(e->phase + 0x200);
-        if ((dx < 0 ? -dx : dx) < AOS_FIXED(4) &&
-            (dy < 0 ? -dy : dy) < AOS_FIXED(4)) {
-            e->step = 2;
-        } else if (e->timer++ >= 120) {
-            e->step = 2;
-        }
-    } else {
-        e->phase = (uint16_t)(e->phase + 0x180);
-    }
-    /* The native state machine never snaps the entity back to its
-     * spawn height on arrival or while waiting. 'phase' remains available
-     * for linked polar sprites, not for parent-position oscillation. */
-    face_player(e, soma);
+/* Peeping Eye. A sequence is (frame, ticks) pairs ending at 0xFF: the
+ * opening (0x08527400) and the four looks of 0x08527450 (0 blink, 1 hurt,
+ * 2 and 3 looking up and down). */
+typedef struct {
+    uint8_t frame, ticks;
+} PeepingStage;
+
+static const PeepingStage peeping_opening[] = {
+    {3, 2}, {2, 2}, {1, 2}, {0, 4}, {1, 2}, {2, 2}, {3, 2}, {2, 2}, {1, 2}, {0, 20}, {0xFF, 0},
+};
+static const PeepingStage peeping_look_blink[] = {
+    {0, 96}, {1, 4}, {2, 4}, {3, 6}, {2, 4}, {1, 4}, {0, 20}, {0xFF, 8},
+};
+static const PeepingStage peeping_look_hurt[] = {
+    {8, 2}, {7, 2}, {6, 2}, {4, 2}, {5, 2}, {0, 2}, {8, 2}, {7, 2}, {6, 2},
+    {4, 2}, {5, 2}, {0, 2}, {8, 6}, {7, 20}, {8, 7}, {0, 20}, {0xFF, 10},
+};
+static const PeepingStage peeping_look_up[] = {{10, 96}, {0, 20}, {0xFF, 9}};
+static const PeepingStage peeping_look_down[] = {{9, 96}, {0, 20}, {0xFF, 0}};
+static const PeepingStage *const peeping_looks[4] = {
+    peeping_look_blink, peeping_look_hurt, peeping_look_up, peeping_look_down,
+};
+
+/* The angle from the eye's centre (1 and 23 pixels from it) to the target,
+ * in whole pixels (truncated toward zero). */
+static uint16_t peeping_aim(const AosEnemy *eye, const AosSoma *soma) {
+    return aos_arctan2((int16_t)pixel_delta(target_x(soma), eye->x + 0x10000),
+                       (int16_t)pixel_delta(target_y(soma), eye->y + 0x170000));
 }
 
+/* The opening's tick: true once it ended (the eye open, + 0x18 bit 1, a
+ * blink starting at a random tick r & 0x3F). */
+static bool peeping_open(AosEnemy *e, uint32_t (*random)(void)) {
+    e->pe_flags |= 1;
+    if (++e->pe_tick >= peeping_opening[e->pe_index].ticks) {
+        e->pe_tick = 0;
+        int8_t last = e->pe_index++;
+        if (peeping_opening[e->pe_index].frame == 0xFF) {
+            e->pe_flags |= 2;
+            e->pe_frame = peeping_opening[last].frame;
+            e->pe_index = 0;
+            e->pe_seq = 0;
+            e->pe_tick = (uint8_t)(random() & 0x3F);
+            e->pe_hurt = false;
+            return true;
+        }
+    }
+    e->pe_frame = peeping_opening[e->pe_index].frame;
+    return false;
+}
+
+/* A look's tick; a finished one starts again at a random tick. */
+static bool peeping_look_tick(AosEnemy *e, uint32_t (*random)(void)) {
+    e->pe_flags |= 1;
+    const PeepingStage *look = peeping_looks[e->pe_seq];
+    if (++e->pe_tick >= look[e->pe_index].ticks) {
+        e->pe_tick = 0;
+        if (look[++e->pe_index].frame == 0xFF) {
+            e->pe_index = 0;
+            e->pe_tick = (uint8_t)(random() & 0x3F);
+            return true;
+        }
+    }
+    return false;
+}
+
+/* sub_08088168 (state 0). Step 0 waits for the target in (x - 90, y - 100,
+ * 180, 200) or a first wound (sub_0806D54C); step 1 opens, faces the
+ * target and heads 64 pixels short of it, 64 above; step 2 picks a point
+ * 16 to 63 pixels to either side of the target and 32 to 79 above it; step
+ * 3 looks (a finished blink looks up or down when the target lies in those
+ * quarters, any other look blinks again; a wound starts the hurt look,
+ * facing the target) and steers: +- 0x800 per axis beyond 4 pixels, the
+ * speeds keeping 31/32, moved by sub_0806D3D8(e, 2.0), back to step 2 once
+ * within 4 pixels or after 120 frames. */
+static void peeping_watch(AosEnemy *e, const AosSoma *soma, uint32_t (*random)(void)) {
+    switch (e->step) {
+    case 0:
+        if (player_near(soma, (int16_t)((e->x >> 16) - 90), (int16_t)((e->y >> 16) - 100), 180,
+                        200) ||
+            e->hp < e->stats.hp) {
+            e->step = 1;
+            e->timer = 0;
+            e->pe_tick = 0;
+            e->pe_index = 0;
+        }
+        return;
+    case 1:
+        if (!peeping_open(e, random)) return;
+        soldier_face(e, soma);
+        e->target_x = target_x(soma) + (e->mirrored ? -0x400000 : 0x400000);
+        e->target_y = target_y(soma) - 0x400000;
+        e->vx = e->vy = 0;
+        e->step = 3;
+        e->timer = 0;
+        return;
+    case 2: {
+        int32_t side = (int32_t)(random() % 0x300000u) + 0x100000;
+        int32_t tx = target_x(soma);
+        e->target_x = (random() & 1) ? tx + side : tx - side;
+        e->target_y = target_y(soma) - (int32_t)(random() % 0x300000u) - 0x200000;
+        e->step = 3;
+        e->timer = 0;
+    }
+        /* fall through */
+    default:
+        break;
+    }
+    if (peeping_look_tick(e, random)) {
+        if (e->pe_seq == 0) {
+            uint16_t a = peeping_aim(e, soma);
+            if ((uint16_t)(a - 0x2000) <= 0x4000) e->pe_seq = 2;
+            else if ((uint16_t)(a - 0xA000) <= 0x4000) e->pe_seq = 3;
+        } else {
+            e->pe_seq = 0;
+        }
+    }
+    if (e->pe_hurt) {
+        e->pe_hurt = false;
+        if (e->pe_seq != 1) {
+            soldier_face(e, soma);
+            e->pe_seq = 1;
+            e->pe_index = 0;
+            e->pe_tick = 0;
+        }
+    }
+    e->pe_frame = peeping_looks[e->pe_seq][e->pe_index].frame;
+    int32_t dx = e->target_x - e->x, dy = e->target_y - e->y;
+    e->ax = dx > 0x40000 ? 0x800 : dx < -0x40000 ? -0x800 : 0;
+    e->ay = dy > 0x40000 ? 0x800 : dy < -0x40000 ? -0x800 : 0;
+    e->vx = e->vx * 31 / 32;                    /* sub_0806D490(e, 32) */
+    e->vy = e->vy * 31 / 32;                    /* sub_0806D4A8(e, 32) */
+    accel_move(e, 0x20000);
+    if ((dx < 0 ? -dx : dx) <= 0x3FFFF && (dy < 0 ? -dy : dy) <= 0x3FFFF) e->step = 2;
+    if (e->timer++ > 0x77) e->step = 2;
+}
+
+/* sub_08088510 (state 4, under the global 0x8E & 0x40): 31 frames, the
+ * opening, then looks in turn (a finished look blinks again). */
+static void peeping_showcase(AosEnemy *e, uint32_t (*random)(void)) {
+    switch (e->step) {
+    case 0:
+        if (e->timer++ > 0x1D) e->step = 1;
+        return;
+    case 1:
+        if (peeping_open(e, random)) e->step = 2;
+        return;
+    case 2:
+    case 3:
+        if (peeping_look_tick(e, random)) e->pe_seq = 0;
+        e->pe_frame = peeping_looks[e->pe_seq][e->pe_index].frame;
+        return;
+    default:
+        return;
+    }
+}
+
+/* sub_08088638, the hit callback (the damage and flash are collide's): the
+ * hurt flag, a 2.0 push away from the attacker (Soma, whose position
+ * stands in for the weapon entity) and, at a lethal blow, sound 0x6E and
+ * the death (state 2, 45 frames). */
+static void peeping_struck(AosEnemy *e, const AosSoma *soma) {
+    e->pe_hurt = true;
+    uint16_t a = aos_arctan2((int16_t)pixel_delta(e->x, soma->x),
+                             (int16_t)pixel_delta(e->y, soma->y));
+    e->vx = fixed_mul(aos_sine(a + 0x4000u), 0x20000);
+    e->vy = fixed_mul(aos_sine(a), 0x20000);
+    if (e->hp <= 0) {
+        aos_audio_play_song(0x6E);
+        e->timer = 0x2D;
+        e->state = 2;
+        e->step = e->substep = 0;
+    }
+}
+
+/* sub_0806D578(x, y, priority): a flame there, mirrored at random. */
+static void peeping_flame(int32_t x, int32_t y, uint32_t (*random)(void), AosHitReport *report) {
+    if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
+    AosEffect *flame = &report->effects[report->effect_count++];
+    *flame = (AosEffect){.kind = AOS_EFFECT_FLAME, .x = x, .y = y};
+    flame->mirrored = (random() & 1u) != 0;
+}
+
+/* EnemyPeepingEyeCreate's parts, in its order: the eyeball (frame 0xF,
+ * EnemyPeepingEyeCreateEyeball), the pupil (0x10, sub_08088D28) and six
+ * segments (sub_08088978: frames 0xB, 0xB, 0xC, 0xC, 0xD, 0xE reaching 12,
+ * 10, 8, 8, 7 and 3 pixels, angle (k + 1) * 5000 or, with the creation's
+ * r & 1, (6 - k) * 5000, death delay 6 (k + 1), hidden). */
+static void peeping_parts(const AosEnemy *eye, AosHitReport *report) {
+    static const uint8_t frames[6] = {0xB, 0xB, 0xC, 0xC, 0xD, 0xE};
+    static const int32_t reach[6] = {0xC0000, 0xA0000, 0x80000, 0x80000, 0x70000, 0x30000};
+    for (int i = 0; i < 8 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
+        AosEnemy c;
+        make_static_child(&c, eye, AOS_ROLE_PEEPING_SEGMENT, i == 6 ? 0xF : i == 7 ? 0x10 : 0);
+        c.mirrored = false;
+        c.combat.attack_off = c.combat.hurt_off = true;
+        if (i == 0 || i == 1) {
+            c.variant = (uint8_t)(i + 6);
+            c.static_frame = i == 0 ? 0xF : 0x10;
+        } else {
+            int k = i - 2;
+            c.variant = (uint8_t)k;
+            c.static_frame = frames[k];
+            c.angle = (uint16_t)((eye->pe_reverse ? 6 - k : k + 1) * 5000);
+            c.timer = (uint8_t)(6 * (k + 1));
+            c.pe_radius = 0;
+            c.pe_radius_target = reach[k];
+            c.hidden = true;
+        }
+        report->children[report->child_count++] = c;
+    }
+}
+
+/* EnemyPeepingEyeUpdate: + 0x18 bit 0 cleared; alive (not dying) beyond
+ * sub_0806D128(e, 4) a placed eye (parameter 0 == 0) does nothing, and it
+ * is hidden there; the flash counts down (sub_0806AE54) outside states 2
+ * and 3. State 0 watches, 1 plays animation 0 once, 2 dies (frame 0,
+ * hidden, one flame, 45 frames), 3 is removed on its fourth frame, 4 (the
+ * global 0x8E & 0x40) only looks. + 0x18 bit 0 shows the frame + 0x19
+ * instead of the animation; then the animation step and, outside states 2
+ * and 3 for a placed eye, the collision pass. The hit stun of sub_0806D4C0
+ * needs the global pause 0x4BE (taken as 0) and the tracking list of
+ * sub_08021924 is not ported. */
+static AosHitReport peeping_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames, int soma_atk,
+                                   int soma_def, int cam_x, int cam_y,
+                                   uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    if (!e->helper_spawned) {
+        e->helper_spawned = true;
+        peeping_parts(e, &spawned);
+    }
+    e->pe_flags &= (uint8_t)~1u;
+    bool outside = outside_margins(kind, 4, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y);
+    if (e->state != 2 && e->param0 == 0 && outside) return spawned;
+    e->hidden = outside;
+    if ((uint8_t)(e->state - 2) > 1 && e->hit_flash) e->hit_flash--;
+    switch (e->state) {
+    case 0: peeping_watch(e, soma, random); break;
+    case 1:
+        if (e->step == 0) {
+            play_loop(e, kind->anims, 0, false);
+            e->step = 1;
+        }
+        break;
+    case 2:
+        e->pe_flags |= 1;
+        e->pe_frame = 0;
+        e->hidden = true;
+        if (e->substep == 0) {
+            e->substep = 1;
+            peeping_flame(e->x, e->y, random, &spawned);
+        }
+        if ((int8_t)--e->timer <= 0) {
+            e->state = 3;
+            e->timer = 0;
+        }
+        break;
+    case 3:
+        e->hidden = true;
+        if (e->timer++ > 2) e->removed = true;
+        break;
+    case 4: peeping_showcase(e, random); break;
+    default: break;
+    }
+    e->static_frame = (e->pe_flags & 1) ? e->pe_frame : -1;
+    if (e->static_frame < 0) step_anim(e, kind->anims);
+    if (e->state != 4 && (uint8_t)(e->state - 2) > 1 && e->param0 == 0 && !e->removed) {
+        AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        merge_enemy_hit(&report, hit);
+    }
+    aos_combat_tick(&e->combat);
+    for (int c = 0; c < spawned.child_count && report.child_count < AOS_ENEMY_MAX_CHILDREN; ++c)
+        report.children[report.child_count++] = spawned.children[c];
+    take_effects(&report, &spawned);
+    return report;
+}
+
+/* The parts. The eyeball (sub_080888D4) sits on the eye with its
+ * visibility; the pupil (sub_08088724) also takes its facing and, once the
+ * eye is open, moves its offset 0x4000 a frame toward 3 * (cos, sin) of the
+ * angle to the target (exactly onto it within 0x3FFF). Both go when the
+ * eye dies. A segment (sub_08088A64), unless the eye flashes
+ * (sub_0806ADBC), sways once the eye is open (its angle 500 a frame between
+ * 0x800 and 0x7800) while its radius grows by a 64th of its reach; it is
+ * shown only while the eye is open. It hangs from the previous segment (the
+ * eye for the first) at its angle, pulled toward 0x4000 by a quarter
+ * (first), as is (second) or pushed away by a quarter (the others); the
+ * tip turns by its angle + half its distance from 0x4000. When the eye
+ * dies each segment flames after 6 (k + 1) frames and again 4 frames
+ * later, then hides until the eye goes. Hidden beyond sub_0806D128(e, 1). */
+static void peeping_part_update(AosEnemy *p, const AosEnemyKind *kind, const AosSoma *soma,
+                                int cam_x, int cam_y, uint32_t (*random)(void),
+                                AosHitReport *report) {
+    AosEnemy *eye = (AosEnemy *)p->parent;
+    if (!eye || eye->removed || eye->id != AOS_ENEMY_PEEPING_EYE) {
+        p->removed = true;
+        return;
+    }
+    if (p->variant >= 6) {
+        if (p->state != 0) {
+            p->removed = true;
+            return;
+        }
+        p->hidden = eye->hidden;
+        if (p->variant == 6) {
+            p->x = eye->x;
+            p->y = eye->y;
+        } else {
+            p->mirrored = eye->mirrored;
+            if (!flag_8e_40 && (eye->pe_flags & 2)) {
+                uint16_t a = peeping_aim(eye, soma);
+                int32_t cx = aos_sine(a + 0x4000u) * 3, cy = aos_sine(a) * 3;
+                int32_t d = p->pe_off_x - cx;
+                p->pe_off_x = (d < 0 ? -d : d) <= 0x3FFF ? cx : p->pe_off_x + (d > 0 ? -0x4000 : 0x4000);
+                d = p->pe_off_y - cy;
+                p->pe_off_y = (d < 0 ? -d : d) <= 0x3FFF ? cy : p->pe_off_y + (d > 0 ? -0x4000 : 0x4000);
+            }
+            p->x = eye->x + p->pe_off_x;
+            p->y = eye->y + p->pe_off_y;
+        }
+        if (eye->state == 2) {
+            p->state = 1;
+            p->removed = true;
+        }
+        return;
+    }
+    unsigned k = p->variant;
+    eye->pe_seg[k] = p;
+    const AosEnemy *prev = k ? eye->pe_seg[k - 1] : NULL;
+    if (!prev || prev->removed || prev->parent != eye || prev->role != AOS_ROLE_PEEPING_SEGMENT)
+        prev = eye;
+    if (!(eye->hp > 0 && eye->hit_flash)) {
+        if (p->step == 0) {
+            if (eye->pe_flags & 2) p->step = 1;
+        } else if (p->step == 1) {
+            p->angle = (uint16_t)(p->angle + 500);
+            if ((int16_t)p->angle > 0x7800) {
+                p->angle = 0x7800;
+                p->step = 2;
+            }
+        } else if (p->step == 2) {
+            p->angle = (uint16_t)(p->angle - 500);
+            if ((int16_t)p->angle <= 0x7FF) {
+                p->angle = 0x800;
+                p->step = 1;
+            }
+        }
+        if (eye->pe_flags & 2) {
+            p->hidden = false;
+            if (p->pe_radius < p->pe_radius_target) {
+                p->pe_radius += p->pe_radius_target / 64;
+                if (p->pe_radius >= p->pe_radius_target) p->pe_radius = p->pe_radius_target;
+            }
+        } else {
+            p->hidden = true;
+        }
+    }
+    int32_t a = (int16_t)p->angle;
+    int32_t pull = (a - 0x4000) / 4;
+    int32_t bent = k == 0 ? a - pull : k == 1 ? a : a + pull;
+    p->x = prev->x + fixed_mul(aos_sine((uint32_t)bent + 0x4000u), p->pe_radius);
+    p->y = prev->y + fixed_mul(aos_sine((uint32_t)bent), p->pe_radius);
+    if (k == 5) p->pe_rotation = (uint16_t)(a + (a - 0x4000) / 2);
+    if (p->state == 0 && eye->state == 2) {
+        p->state = 1;
+        p->hidden = false;
+    }
+    if (p->state == 1) {
+        p->hidden = false;
+        if (p->timer-- == 0) {
+            peeping_flame(p->x, p->y + 0x40000, random, report);
+            p->state = 2;
+            p->timer = 4;
+        }
+    }
+    if (p->state == 2) {
+        p->hidden = false;
+        if (p->timer-- == 0) {
+            peeping_flame(p->x, p->y + 0x40000, random, report);
+            p->state = 3;
+            p->hidden = true;
+        }
+    }
+    if (p->state == 3) {
+        p->hidden = true;
+        if (eye->state == 3) p->removed = true;
+    }
+    if (!p->hidden && outside_margins(kind, 1, (p->x >> 16) - cam_x, (p->y >> 16) - cam_y))
+        p->hidden = true;
+}
 
 /* sub_0806E29C(e, w, h): the target inside the w x h box centred on the
  * entity (unsigned 16-bit whole-pixel compares, inclusive). */
@@ -11289,8 +11557,7 @@ static bool early_enemy_inert(const AosEnemy *e) {
         return true;
     if (e->id == AOS_ENEMY_WINGED_SKELETON && e->state == 4)
         return true;
-    return (e->id == AOS_ENEMY_PEEPING_EYE ||
-            e->id == AOS_ENEMY_GHOST) && e->state == 2;
+    return e->id == AOS_ENEMY_GHOST && e->state == 2;
 }
 
 /* First observable loops for the remaining constructor-table enemies. The
@@ -11337,17 +11604,6 @@ static AosHitReport early_enemy_update(AosEnemy *e, AosSoma *soma,
     int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
 
-    if (e->id == AOS_ENEMY_PEEPING_EYE && !e->helper_spawned) {
-        peeping_eye_children(e, &report);
-        e->helper_spawned = true;
-    }
-
-    switch (e->id) {
-    case AOS_ENEMY_PEEPING_EYE:
-        peeping_eye_controller(e, soma, random);
-        break;
-    default: break;
-    }
     if (e->static_frame < 0) step_anim(e, kind->anims);
     sx = (e->x >> 16) - cam_x;
     sy = (e->y >> 16) - cam_y;
@@ -11540,8 +11796,13 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
             enemy->removed = true;
         return report;
     }
-    if (enemy->role == AOS_ROLE_PEEPING_SEGMENT)
-        return linked_early_child_update(enemy, soma, kind);
+    if (enemy->role == AOS_ROLE_PEEPING_SEGMENT) {
+        peeping_part_update(enemy, kind, soma, cam_x, cam_y, random, &report);
+        return report;
+    }
+    if (enemy->id == AOS_ENEMY_PEEPING_EYE && enemy->role == AOS_ROLE_ENEMY)
+        return peeping_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+                              cam_y, random);
     if (enemy->id == AOS_ENEMY_GHOST && enemy->role == AOS_ROLE_ENEMY)
         return enemy_ghost_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                   cam_x, cam_y, random);

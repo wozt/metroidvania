@@ -7,7 +7,7 @@
  * their clearing sub_0804FE20, the debris of sub_0804FA88 (sub_0804F8A0),
  * the dust spawner sub_0804FB78 (sub_080503E0) and the pieces of
  * sub_0804F9B4. Parameter 0 selects an entry of 0x08526064 (its sprite,
- * box and block shape), parameter 1 the gEwramData + 0x33C event bit that
+ * box and block shape), parameter 1 the gEwramData + 0x344 event bit that
  * records the break (none when 0).
  *
  * Object 0x08 (+ 0x34 = 3) takes three blows of Soma's weapon (sound 0xD3
@@ -74,7 +74,7 @@ typedef struct {
     bool struck, broke;
 } AosWallReport;
 
-/* gEwramData + 0x33C: the event bit n. */
+/* gEwramData + 0x344: the event bit n. */
 bool aos_wall_event(const uint32_t events[AOS_WALL_EVENT_WORDS], int n);
 
 /* Object08Create / Object09Create at room pixel (x, y): false (deleted)

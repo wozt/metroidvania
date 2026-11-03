@@ -221,6 +221,8 @@ int main(void) {
     yellow[16] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x2000000};
     yellow[17] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x40000};
     yellow[18] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x80000};
+    yellow[10] = (AosYellowSoulRecord){AOS_YELLOW_GIANT_WORM_ROUTINE, 0, 0, 0};
+    yellow[14] = (AosYellowSoulRecord){AOS_YELLOW_HEADHUNTER_ROUTINE, 1, 0, 0};
     yellow[21] = (AosYellowSoulRecord){AOS_YELLOW_RESIST_ROUTINE, 0, 0, 0x100};
     yellow[22] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 0, 4};
     yellow[29] = (AosYellowSoulRecord){AOS_YELLOW_STAT_ROUTINE, 1, 1, 0x10};
@@ -297,6 +299,37 @@ int main(void) {
     assert(ys.mp == 24 && ys.gold == 999999);
     aos_yellow_soul_hit(&ys, 40);
     assert(ys.mp == 50);
+    /* Headhunter (soul 14): 1 + souls / 16 (at most 33) to STR, CON, INT. */
+    ys.yellow_soul = 14;
+    ys.souls_collected = 100;
+    aos_stats_frame_reset(&ys);
+    int16_t str0 = ys.current[AOS_STAT_STR], int0 = ys.current[AOS_STAT_INT],
+            lck0 = ys.current[AOS_STAT_LCK];
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_STR] == str0 + 7 && ys.current[AOS_STAT_INT] == int0 + 7 &&
+           ys.current[AOS_STAT_LCK] == lck0);
+    ys.souls_collected = 999;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(ys.current[AOS_STAT_STR] == str0 + 33);
+    /* Giant Worm (soul 10): standing still below full HP, 5 HP every 61st
+     * frame; walking, a door's hold or full HP pause it. */
+    ys.yellow_soul = 10;
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    int16_t hp = 50;
+    for (int f = 0; f < 60; ++f)
+        aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0, 0, false);
+    assert(hp == 50);
+    aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0x10000, 0, false);
+    aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0, 0x20, false);
+    aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0, 0, true);
+    assert(hp == 50);
+    aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0, 0, false);
+    assert(hp == 55 && yellow_soul.timer == 0);
+    hp = 98;
+    for (int f = 0; f < 61; ++f)
+        aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0, 0, false);
+    assert(hp == 100);
     /* Unequipped: the bits go and nothing runs. */
     ys.yellow_soul = 0;
     aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);

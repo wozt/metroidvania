@@ -68,11 +68,39 @@ int main(void) {
     source.defeated[3] = 1u << (111 - 96);
     source.dropped[0][1] = 1u << (33 - 32);
     source.dropped[1][2] = 1u << (65 - 64);
+    /* Schema v10: the event words (bits 34 and 255, two broken walls). */
+    source.events[1] = 1u << 2;
+    source.events[7] = 1u << 31;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
     assert(aos_save_load(path, &loaded, error, sizeof error));
     assert(memcmp(&source, &loaded, sizeof source) == 0);
+    {
+        FILE *text = fopen(path, "rb");
+        char head[64] = {0}, all[2048] = {0};
+        assert(text && fgets(head, sizeof head, text));
+        rewind(text);
+        size_t n = fread(all, 1, sizeof all - 1, text);
+        assert(fclose(text) == 0 && n > 0);
+        assert(!strcmp(head, AOS_SAVE_SCHEMA "\n") &&
+               strstr(all, "events=00000000,00000004,00000000,00000000,00000000,00000000,"
+                           "00000000,80000000\n"));
+        /* The same file as schema v9 (no event line) loads without events. */
+        char v9[2048];
+        int size = snprintf(v9, sizeof v9, "%s\n", AOS_SAVE_SCHEMA_V9);
+        const char *body = strchr(all, '\n') + 1, *events = strstr(all, "events=");
+        memcpy(v9 + size, body, (size_t)(events - body));
+        size += (int)(events - body);
+        size += snprintf(v9 + size, sizeof v9 - (size_t)size, "checksum=%08x\n",
+                         test_checksum(v9, (size_t)size));
+        FILE *old_file = fopen(path, "wb");
+        assert(old_file && fwrite(v9, 1, (size_t)size, old_file) == (size_t)size);
+        assert(fclose(old_file) == 0);
+        AosSaveData old = {0};
+        assert(aos_save_load(path, &old, error, sizeof error));
+        assert(old.events[1] == 0 && old.events[7] == 0 && old.dropped[1][2] == loaded.dropped[1][2]);
+    }
 
     FILE *bad = fopen(bad_path, "wb");
     assert(bad);

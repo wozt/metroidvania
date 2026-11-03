@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v9"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v10"
+#define AOS_SAVE_SCHEMA_V9 "metroidvania-aos-save-v9"
 #define AOS_SAVE_SCHEMA_V8 "metroidvania-aos-save-v8"
 #define AOS_SAVE_SCHEMA_V7 "metroidvania-aos-save-v7"
 #define AOS_SAVE_SCHEMA_V6 "metroidvania-aos-save-v6"
@@ -63,6 +64,9 @@ typedef struct {
      * matching 0x133A0, 0x133B0 and 0x133C0. */
     uint32_t defeated[4];
     uint32_t dropped[2][4];
+    /* Schema v10: the event words of gEwramData + 0x344 (a breakable
+     * wall's break, aos_wall). */
+    uint32_t events[8];
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

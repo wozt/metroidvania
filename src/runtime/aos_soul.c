@@ -159,6 +159,7 @@ bool aos_yellow_soul_ported(uint32_t routine) {
     case AOS_YELLOW_RESIST_ROUTINE: case AOS_YELLOW_ZOMBIE_ROUTINE:
     case AOS_YELLOW_LUBICANT_ROUTINE: case AOS_YELLOW_WOODEN_GOLEM_ROUTINE:
     case AOS_YELLOW_BASILISK_ROUTINE: case AOS_YELLOW_DOUBLE_ROUTINE:
+    case AOS_YELLOW_GIANT_WORM_ROUTINE: case AOS_YELLOW_HEADHUNTER_ROUTINE:
         return true;
     default:
         return false;
@@ -227,9 +228,31 @@ void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
         if (record->argument == 0) stats->atk = (int16_t)(stats->atk * 2);
         else stats->def = (int16_t)(stats->def * 2);
         break;
+    case AOS_YELLOW_HEADHUNTER_ROUTINE: {
+        int bonus = stats->souls_collected >> 4;
+        if (bonus > 0x20) bonus = 0x20;
+        for (int stat = AOS_STAT_STR; stat <= AOS_STAT_INT; ++stat)
+            current[stat] = (int16_t)(current[stat] + bonus + 1);
+        aos_stats_derive(stats);
+        break;
+    }
     default:
         break;
     }
+}
+
+void aos_yellow_soul_regen(AosYellowSoul *soul, const AosStats *stats,
+                           const AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS],
+                           int16_t *hp, int16_t max_hp, int32_t soma_vx, uint32_t soma_flags,
+                           bool held) {
+    if (!soul->active || stats->yellow_soul >= AOS_YELLOW_SOUL_RECORDS ||
+        records[stats->yellow_soul].routine != AOS_YELLOW_GIANT_WORM_ROUTINE)
+        return;
+    if (held || *hp >= max_hp || soma_vx != 0 || (soma_flags & 0x360u)) return;
+    if (++soul->timer <= 0x3C) return;
+    soul->timer = 0;
+    *hp = (int16_t)(*hp + 5);
+    if (*hp > max_hp) *hp = max_hp;
 }
 
 void aos_yellow_soul_hit(AosStats *stats, int damage) {

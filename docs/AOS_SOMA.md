@@ -100,11 +100,12 @@ build/fusion_aria_title_preview \
 ```
 
 `aos_save.c` deliberately uses the small, checksummed
-`metroidvania-aos-save-v9` text schema instead of claiming compatibility with
+`metroidvania-aos-save-v10` text schema instead of claiming compatibility with
 the original six 0x47C-byte SRAM records. It reads every earlier portable
 version and stores the encoded player identity, room and spawn, vitals,
 movement, experience, gold, equipment, inventory, souls, MP and configurable
-buttons, plus bestiary and common/rare drop-discovery bitsets. The runtime
+buttons, plus bestiary and common/rare drop-discovery bitsets and the
+event words of gEwramData + 0x344 (schema v10). The runtime
 accepts `--save FILE` and restores that state. New files
 record the native first-room player position rather than using the earlier
 diagnostic floor search. Runtime compatibility also
@@ -173,8 +174,10 @@ Golem (bit 0x20000, without 0x200) replaces a hit's flinch or knockback
 with 30 frames of the enemy slot (`sub_0801B0D8`); Succubus (0x10000)
 heals 5 HP on each frame whose attack struck; Flesh Golem (0x100000) makes
 harmful food heal (`sub_0804B36C`); Peeping Eye (0x1000000) makes the
-breakable walls sparkle. No reader of Tsuchinoko's bit 0x200000 was found
-in the disassembly. Records come from `metadata/yellow_souls.tsv`, and
+breakable walls sparkle. Giant Worm heals 5 HP every 61st frame while Soma
+stands still below full HP; Headhunter adds 1 + souls / 16 (at most 33) to
+STR, CON and INT. No reader of Tsuchinoko's bit 0x200000 was found in the
+disassembly. Records come from `metadata/yellow_souls.tsv`, and
 `--yellow-soul N` equips one for diagnostics.
 
 ## Hits, elements and statuses
@@ -634,7 +637,7 @@ Breakable walls (special objects 0x08 and 0x09, `Object08Create` /
 `src/runtime/aos_wall.c`). Parameter 0 picks an entry of `0x08526064` (a
 sprite frame of a descriptor of `0x08526004` with its palette bank, a block
 offset, a box and a shape); parameter 1 is a bit of the event words at
-gEwramData + 0x33C, which records the break. Creation deletes the wall when
+gEwramData + 0x344, which records the break. Creation deletes the wall when
 that bit is already set; otherwise `sub_0804FCA0` makes its 16 x 16 blocks
 solid (a grid, a column, a column 16 pixels left, or a row). An object 0x08
 with a bit takes three blows of Soma's weapon (only the weapon slots of
@@ -646,8 +649,8 @@ object 0x08 without a bit does nothing. An object 0x09 breaks when its bit
 gets set elsewhere (nothing in the port sets one yet), a grid into 21 pieces
 of its art (`sub_0804F9B4`). While the Peeping Eye soul sets 0x13260 bit
 0x1000000, both kinds sparkle every 16 frames (`sub_08045CEC` animation 12,
-row 6). The event bits last for the session only (the save does not carry
-them yet), and the map update of `sub_08012154` is not ported.
+row 6). The event words are stored in the portable save (schema v10), and
+the map update of `sub_08012154` is not ported.
 
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,

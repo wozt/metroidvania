@@ -191,6 +191,8 @@ enum {
     AOS_YELLOW_WOODEN_GOLEM_ROUTINE = 0x080322E9,
     AOS_YELLOW_BASILISK_ROUTINE = 0x08032155,
     AOS_YELLOW_DOUBLE_ROUTINE = 0x0803222D,
+    AOS_YELLOW_GIANT_WORM_ROUTINE = 0x080320D9,
+    AOS_YELLOW_HEADHUNTER_ROUTINE = 0x080323DD,
 };
 
 /* The yellow soul entity of gEwramData + 0x13164. */
@@ -217,12 +219,23 @@ bool aos_yellow_soul_ported(uint32_t routine);
  *   that for CON, then sub_08021C44;
  * - Wooden Golem gives one MP every 32 frames;
  * - Basilisk adds DEF / 4 and takes ATK / 2 away;
- * - record 36 doubles ATK (+ 0x1C 0) or DEF.
- * Giant Worm and Headhunter, and the 0x131B8 & 0x400 and 0x344 limits,
- * are not ported. */
+ * - record 36 doubles ATK (+ 0x1C 0) or DEF;
+ * - Headhunter (SkillHeadhunterUse) adds 1 + totalNbrSoulsCollected / 16
+ *   (at most 32 + 1) to STR, CON and INT, then sub_08021C44;
+ * - Giant Worm's heal is aos_yellow_soul_regen.
+ * The 0x131B8 & 0x400 and 0x344 limits are not ported. */
 void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
                             const AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS],
                             int16_t hp, int16_t max_hp);
+/* SkillGiantWormUse (soul 10), part of the yellow soul entity's update: with
+ * HP below the maximum, Soma still (+ 0x48 = 0, + 0x10 & 0x360 clear) and
+ * gEwramData + 0x42C bit 0 clear (`held`: a door walking him through), its
+ * + 0x0D counts and every 61st frame heals 5 HP (sub_08021FEC; the number
+ * popup sub_08042A7C is not drawn). */
+void aos_yellow_soul_regen(AosYellowSoul *soul, const AosStats *stats,
+                           const AosYellowSoulRecord records[AOS_YELLOW_SOUL_RECORDS],
+                           int16_t *hp, int16_t max_hp, int32_t soma_vx, uint32_t soma_flags,
+                           bool held);
 /* sub_08021654's yellow soul rules after a hit of `damage`: Mimic
  * (0x13260 bit 0x40000) gives damage * 5 gold, at most 999999
  * (sub_08044F80); Arc Demon (bit 0x80000) gives damage * 2 MP (at least 1,

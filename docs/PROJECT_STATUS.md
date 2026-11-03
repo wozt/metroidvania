@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0718 - Giant Worm, Headhunter and saved wall breaks
+
+- `SkillGiantWormUse` (yellow soul 10) heals 5 HP every 61st frame while
+  Soma stands still below full HP and no door walks him through;
+  `SkillHeadhunterUse` (14) adds 1 + souls collected / 16 (at most 33) to
+  STR, CON and INT. Both run in `aos_soul` and are unit-tested; every
+  yellow soul record but Tsuchinoko's now has an effect.
+- Portable saves move to schema v10: they store the eight event words of
+  gEwramData + 0x344, so broken walls stay broken after a reload (v1-v9
+  files load with no events). The event base is 0x344, not 0x33C as the
+  previous patch wrote; comments and docs are corrected.
+- The only inline writers of those words are Object08 (the walls) and
+  Object35 (bit 48); the setters of the object 0x09 bits 45-47 are not
+  traced.
+
 ## Patch 0717 - Four more yellow soul effects
 
 - Traced the readers of the remaining 0x13260 bits and ported them: Iron

@@ -438,8 +438,8 @@ is knocked back, or dies at 0 HP) and dies to his weapon with native rules
 at ATK 15 and DEF 11; `--atk/--def/--hp` override them for diagnosis);
 wooden doors open natively with
 their native sprite and palette cycle (`./build/fusion_rebuild --task aria_objects`);
-breakable walls take three weapon blows and break at the fourth, and sparkle
-under the Peeping Eye soul.
+breakable walls take three weapon blows and break at the fourth (the save
+remembers them), and sparkle under the Peeping Eye soul.
 Leaving a room
 through its edge loads the native neighbour at the native arrival position;
 `--audit-transitions` checks every exported transition. The spawn

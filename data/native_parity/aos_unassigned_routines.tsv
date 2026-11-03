@@ -51,9 +51,7 @@ aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abi
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUse	SkillFlameDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	16280	0	11
 aos:asm:asm/code/code_080211F0.s:SkillFlyingArmorUse	SkillFlyingArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	26120	0	9
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
-aos:asm:asm/code/code_080211F0.s:SkillGiantWormUse	SkillGiantWormUse	abilities	name			asm_function		asm/code/code_080211F0.s	33890	0	1
 aos:asm:asm/code/code_080211F0.s:SkillGreatArmorUse	SkillGreatArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	32927	0	12
-aos:asm:asm/code/code_080211F0.s:SkillHeadhunterUse	SkillHeadhunterUse	abilities	name			asm_function		asm/code/code_080211F0.s	34280	0	1
 aos:asm:asm/code/code_080211F0.s:SkillKillerMantleUse	SkillKillerMantleUse	abilities	name			asm_function		asm/code/code_080211F0.s	20960	0	12
 aos:asm:asm/code/code_080211F0.s:SkillKyomaDemonUse	SkillKyomaDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	21159	0	11
 aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13

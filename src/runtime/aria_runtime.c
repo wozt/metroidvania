@@ -2212,8 +2212,8 @@ static void clear_skills(AriaSouls *souls) {
     souls->caster = (AosRedSoulCaster){.last_used = souls->caster.last_used};
 }
 
-/* gEwramData + 0x33C: the event bits (a breakable wall's break), kept for
- * the session; the save does not carry them yet. */
+/* gEwramData + 0x344: the event bits (a breakable wall's break), stored
+ * in the save (schema v10). */
 static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
@@ -2985,6 +2985,7 @@ static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
     save->gold = progress->gold;
     memcpy(save->defeated, progress->defeated, sizeof save->defeated);
     memcpy(save->dropped, progress->dropped, sizeof save->dropped);
+    memcpy(save->events, aria_events, sizeof save->events);
     save->weapon = progress->weapon;
     save->armor = progress->armor;
     save->accessory = progress->accessory;
@@ -4226,6 +4227,7 @@ int main(int argc, char **argv) {
         progress.gold = active_save.gold;
         memcpy(progress.defeated, active_save.defeated, sizeof progress.defeated);
         memcpy(progress.dropped, active_save.dropped, sizeof progress.dropped);
+        memcpy(aria_events, active_save.events, sizeof aria_events);
         for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
             progress.buttons.action[action] =
                 aos_button_config_button(active_save.buttons[action]);
@@ -4703,9 +4705,18 @@ int main(int argc, char **argv) {
              * MP regeneration, then sub_08021C44. */
             aos_stats_status_update(&progress, player_new, (uint16_t)(soma.ticks - 1));
             aos_stats_derive(&progress);
-            if (have_yellow_souls)
+            if (have_yellow_souls) {
                 aos_yellow_soul_update(&yellow_soul, &progress, yellow_souls, soma.hp,
                                        soma.max_hp);
+                /* gEwramData + 0x42C bit 0: a door walking Soma through. */
+                bool held = false;
+                for (size_t k = 0; k < room.entity_count && !held; ++k)
+                    held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
+                           room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
+                           room.entities[k].spawned && room.entities[k].door.holding;
+                aos_yellow_soul_regen(&yellow_soul, &progress, yellow_souls, &soma.hp,
+                                      soma.max_hp, soma.vx, soma.flags, held);
+            }
             if (have_equipment && !atk_override) player_stats.atk = progress.atk;
             if (have_equipment && !def_override) player_stats.def = progress.def;
             /* sub_0800DC70: the HUD chases the current values. */

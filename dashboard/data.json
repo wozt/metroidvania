@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-03T14:58:02+00:00",
+ "generated_at": "2026-11-03T15:07:21+00:00",
  "git": {
-  "commit": "cc4b311",
+  "commit": "d28e6ff",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 215,
+   "total": 216,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 48,
+    "partial": 49,
     "functional": 156,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 156,
-   "functional_or_better_percent": 72.6,
-   "with_passing_tests": 202,
+   "functional_or_better_percent": 72.2,
+   "with_passing_tests": 203,
    "with_passing_tests_percent": 94.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -281,6 +281,7 @@
     "mv.event_orchestration",
     "mv.overlays_in_runtime",
     "mv.synergies",
+    "mv.title_launcher",
     "mv.world_transitions",
     "story.bible",
     "story.cutscenes",
@@ -634,11 +635,11 @@
    "areas": [
     "metroidvania"
    ],
-   "total": 7,
+   "total": 8,
    "by_status": {
     "not_started": 7,
     "in_progress": 0,
-    "partial": 0,
+    "partial": 1,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -647,8 +648,8 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 1,
+   "with_passing_tests_percent": 12.5,
    "unknown_or_blocked": 0,
    "features": [
     "mv.character_state",
@@ -657,6 +658,7 @@
     "mv.event_orchestration",
     "mv.overlays_in_runtime",
     "mv.synergies",
+    "mv.title_launcher",
     "mv.world_transitions"
    ]
   },
@@ -15440,6 +15442,70 @@
    }
   },
   {
+   "id": "mv.title_launcher",
+   "area": "metroidvania",
+   "category": "frontend",
+   "title": "Shared title screen launcher",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "src/runtime/metroidvania_launcher.c",
+    "src/runtime/metroidvania_split.c",
+    "src/runtime/aos_title_screen.c",
+    "src/runtime/mzm_title_screen.c",
+    "src/runtime/aos_title_preview.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_metroidvania_split.c",
+    "tests/test_aos_game_lifecycle.c"
+   ],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "fusion_metroidvania runs both native title screens at once, split by a line through the screen centre turning clockwise at 30 degrees a second (Aria on top at the start), plays the music of the game covering most of the top half (both sound engines keep running; the other stream is silent) and launches the game covering most of the bottom half with START, as a separate process: fusion_aria_title_preview --main-menu or fusion_room_runtime --file-select. The startup sequences (Nintendo and Konami logos, Zero Mission's introduction) are deliberately skipped; the titles get no input, and each restarts itself where it would leave for its idle introduction or demo. Checked on headless captures (--capture); the split's geometry is unit-tested.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_metroidvania_split.c",
+     "tests/test_aos_game_lifecycle.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-11-03",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_metroidvania_split.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "metroidvania_split"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_game_lifecycle.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_game_lifecycle"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-03"
+   }
+  },
+  {
    "id": "mv.world_transitions",
    "area": "metroidvania",
    "category": "rooms",
@@ -18937,6 +19003,13 @@
     "outcome": "passed"
    },
    {
+    "name": "metroidvania_split",
+    "files": [
+     "tests/test_metroidvania_split.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_title_screen",
     "files": [
      "tests/test_aos_title_screen.c"
@@ -19134,12 +19207,18 @@
    }
   ],
   "summary": {
-   "passed": 121,
+   "passed": 122,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d28e6ff",
+   "date": "2026-11-03",
+   "subject": "Draw Aria's Nintendo and Konami startup logos",
+   "scope": "project"
+  },
   {
    "commit": "cc4b311",
    "date": "2026-11-03",
@@ -19612,12 +19691,6 @@
    "commit": "4a8d759",
    "date": "2026-10-30",
    "subject": "Port Aria Buer native room-exit state transition with boundary regressions",
-   "scope": "project"
-  },
-  {
-   "commit": "1e6602d",
-   "date": "2026-10-30",
-   "subject": "Match Aria Buer linked fire facing flips and native exit velocity sign",
    "scope": "project"
   }
  ],

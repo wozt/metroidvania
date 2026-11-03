@@ -249,6 +249,22 @@ with "MISSION ACCOMPLISHED!", followed by the credits and Samus's end
 screen (`src/runtime/mzm_credits.c`); the ending image and the unlocked
 options are not ported, so the runtime then returns to the intro. The demos and the other cutscenes are not ported yet.
 
+The Metroid Vania launcher shows both native title screens at once, split by
+a line through the screen centre that turns clockwise (30 degrees a second,
+Aria on top at the start). The music is the one of the game covering most of
+the top half; START (Enter, or a gamepad's START) launches the game covering
+most of the bottom half, straight to its file screen
+(`fusion_aria_title_preview --main-menu` or `fusion_room_runtime
+--file-select`). It needs the local Aria ROM and the exported Zero Mission ROM
+bank and sounds:
+
+```sh
+./build/fusion_metroidvania --aria-rom "roms/Castlevania - Aria of Sorrow (USA).gba"
+```
+
+`--mute` silences it and `--capture DIR FRAME,...` writes those frames as BMP
+files without opening a window.
+
 Run the experimental SDL3 Zero Mission room/animation integration with:
 
 ```sh

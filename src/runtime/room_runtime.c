@@ -4448,6 +4448,9 @@ int main(int argc, char **argv) {
     /* Boot on the title screen (also without any argument); START then
      * begins the game in Brinstar's first room. */
     bool title_mode=argc==1, intro_mode=argc==1;
+    /* --file-select: straight to the file select screen, as after START on
+     * the title (the Metroid Vania launcher's entry point). */
+    bool file_select_start=false;
     int start_cutscene=0;     /* --cutscene N: a cutscene before the game */
     bool start_tourian_escape=false; /* --tourian-escape: post-Tourian diagnostic */
     bool start_chozodia_escape=false; /* --chozodia-escape: the ending sequence */
@@ -4517,6 +4520,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--room") && !room_alias && i+1<argc) room_alias=argv[++i];
         else if (!strcmp(argv[i],"--title")) title_mode=true;
         else if (!strcmp(argv[i],"--intro")) title_mode=intro_mode=true;
+        else if (!strcmp(argv[i],"--file-select")) title_mode=file_select_start=true;
         else if (!strcmp(argv[i],"--cutscene") && i+1<argc) start_cutscene=atoi(argv[++i]);
         else if (!strcmp(argv[i],"--tourian-escape")) start_tourian_escape=true;
         else if (!strcmp(argv[i],"--chozodia-escape")) start_chozodia_escape=true;
@@ -4586,7 +4590,7 @@ int main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--title | --intro | --file-select] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -4715,7 +4719,7 @@ int main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--title | --intro | --file-select] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4868,6 +4872,16 @@ int main(int argc, char **argv) {
             /* GM_SOFT_RESET leads to GM_INTRO, which leads to the title. */
             title_mode = false;
             mzm_intro_enter(&intro);
+        } else if (file_select_start) {
+            title_mode = false;
+            file_select_mode = true;
+            MzmSaveFileInfo infos[3];
+            for (int i = 0; i < 3; i++) infos[i] = runtime_save_info(save_paths[i]);
+            mzm_file_select_enter(&file_select, infos, save_slot);
+            file_select.time_attack_unlocked = unlocks.time_attack;
+            file_select.copy_file = runtime_copy_save;
+            file_select.erase_file_callback = runtime_erase_save;
+            file_select.context = save_paths;
         } else {
             mzm_title_enter(&title_screen, false);
         }

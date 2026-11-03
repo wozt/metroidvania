@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0728 - Metroid Vania shared title screen launcher
+
+- New `fusion_metroidvania` runs the native title screens of Aria and Zero
+  Mission at once, split by a line through the screen centre turning
+  clockwise at 30 degrees a second (`metroidvania_split`, unit-tested), Aria
+  on top at the start. Both sound engines keep running; the game covering
+  most of the top half is heard. START launches the game covering most of
+  the bottom half as a separate process.
+- New entry points for it: `fusion_aria_title_preview --main-menu` and
+  `fusion_room_runtime --file-select`, past the logos, intro and title.
+- The startup sequences are deliberately skipped; each title restarts itself
+  where it would leave for its idle introduction or demo.
+- Checked on headless captures; the window, the sound switch and the launches
+  were run briefly without errors, not watched or heard.
+
 ## Patch 0727 - Aria's startup logos
 
 - New `aos_logo_graphics` decodes the "Licensed by Nintendo" and Konami

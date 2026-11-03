@@ -137,5 +137,14 @@ int main(void) {
         ++over_frames;
     }
     assert(over.game_mode.mode == AOS_MODE_KONAMI_LOGO && !over.game_over.sprite_shown);
+
+    /* fusion_aria_title_preview --main-menu (the launcher's entry point):
+     * MAIN_MENU set at once runs its first stage as after the title. */
+    static AosGameLifecycle direct;
+    aos_game_lifecycle_init(&direct, false);
+    aos_game_mode_set(&direct.game_mode, AOS_MODE_MAIN_MENU);
+    aos_game_lifecycle_update(&direct);
+    assert(direct.game_mode.mode == AOS_MODE_MAIN_MENU && direct.game_mode.update_stage == 1 &&
+           direct.main_menu.display_control == 0x1F00);
     return 0;
 }

@@ -213,6 +213,17 @@ target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets m)
 fusion_enable_warnings(fusion_aria_title_preview)
 
+add_executable(fusion_metroidvania src/runtime/metroidvania_launcher.c
+               src/runtime/metroidvania_split.c
+               src/runtime/aos_title_screen.c src/runtime/aos_anim.c
+               src/runtime/aos_title_graphics.c src/runtime/aos_rom_graphics.c
+               src/runtime/aos_audio.c src/runtime/aos_mp2k.c
+               src/runtime/gba_ppu.c src/runtime/mzm_screen.c src/runtime/mzm_title_screen.c
+               src/runtime/mzm_rom.c src/runtime/mzm_sfx.c src/runtime/mzm_audio.c src/runtime/gba_psg.c)
+target_include_directories(fusion_metroidvania PRIVATE src/runtime)
+target_link_libraries(fusion_metroidvania PRIVATE SDL3::SDL3 fusion_assets m)
+fusion_enable_warnings(fusion_metroidvania)
+
 target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_aria_runtime)
 
@@ -885,6 +896,13 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_game_mode_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)
+
+    add_executable(fusion_metroidvania_split_tests tests/test_metroidvania_split.c
+                   src/runtime/metroidvania_split.c)
+    target_include_directories(fusion_metroidvania_split_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_metroidvania_split_tests PRIVATE m)
+    fusion_enable_warnings(fusion_metroidvania_split_tests)
+    add_test(NAME metroidvania_split COMMAND fusion_metroidvania_split_tests)
 
     add_executable(fusion_aos_title_screen_tests tests/test_aos_title_screen.c
                    src/runtime/aos_title_screen.c src/runtime/aos_anim.c)

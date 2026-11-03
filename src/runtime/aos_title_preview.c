@@ -367,7 +367,7 @@ int main(int argc, char **argv) {
     const char *image_path = NULL;
     const char *rom_path = NULL;
     const char *runtime_path = NULL, *save_directory_arg = NULL;
-    bool start_game_over = false, mute = false;
+    bool start_game_over = false, start_main_menu = false, mute = false;
     frontend_argc = argc;
     frontend_argv = argv;
     for (int i = 1; i < argc; ++i) {
@@ -377,10 +377,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--save-dir") && i + 1 < argc) save_directory_arg = argv[++i];
         else if (!strcmp(argv[i], "--game-over")) start_game_over = true;
         else if (!strcmp(argv[i], "--mute")) mute = true;
+        else if (!strcmp(argv[i], "--main-menu")) start_main_menu = true;
         else {
             fprintf(stderr,
                     "Usage: fusion_aria_title_preview [--title-bmp FILE] [--rom FILE] "
-                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--mute]\n");
+                    "[--runtime FILE] [--save-dir DIR] [--game-over] [--main-menu] [--mute]\n");
             return 2;
         }
     }
@@ -575,6 +576,9 @@ int main(int argc, char **argv) {
             fprintf(stderr, "No native Aria logos: %s\n", logo_error);
         }
     }
+    /* --main-menu: as after START on the title (the Metroid Vania
+     * launcher's entry point), past the logos and the title. */
+    if (start_main_menu) aos_game_mode_set(&lifecycle.game_mode, AOS_MODE_MAIN_MENU);
     /* --game-over: the runtime's Soma died; GAME_OVER then the Konami logo. */
     if (start_game_over) aos_game_lifecycle_start_game_over(&lifecycle);
     static AosGameOverGraphics game_over_graphics;

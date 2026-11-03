@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0720 - The Death blue soul
+
+- `SkillDeathUse` (blue soul 24) is ported in the new `aos_guardian_death`
+  module: an unseen owner above Soma throws a sickle every 56 frames; each
+  grows and spins (sound 0x96), then seeks the nearest homing target
+  (turning 0x555 a frame, up to 2.0, 64 frames) or curves away, striking
+  as type 6 (power 20). Its art is exported (`skill_death`, `aria_objects`
+  v53); unit-tested, and a local capture shows the sickles.
+
 ## Patch 0719 - Black Panther and Flying Armor blue souls
 
 - `SkillBlackPantherUse` (blue soul 3) sets the fast walk and keeps an

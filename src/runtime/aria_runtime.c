@@ -35,6 +35,7 @@
 #include "aos_skill_merman.h"
 #include "aos_skill_needles.h"
 #include "aos_guardian_imp.h"
+#include "aos_guardian_death.h"
 #include "aos_guardian_ghost.h"
 #include "aos_skill_lightning.h"
 #include "aos_skill_killer_doll.h"
@@ -229,7 +230,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
        SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
-       SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ARTS };
+       SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -243,7 +244,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_killer_doll", "skill_curly",
                                                          "skill_giant_ghost", "skill_witch",
                                                          "skill_bone_pillar",
-                                                         "skill_flying_armor"};
+                                                         "skill_flying_armor",
+                                                         "skill_death"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1048,6 +1050,7 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_GHOST_ROUTINE 0x0802F96Du
 #define GUARDIAN_PANTHER_ROUTINE 0x0802E3DDu
 #define GUARDIAN_FLYING_ARMOR_ROUTINE 0x0802E23Du
+#define GUARDIAN_DEATH_ROUTINE 0x08030519u
 enum { GUARDIAN_ATTACKS = 8 };
 typedef struct {
     AosGuardian core;
@@ -1061,6 +1064,7 @@ typedef struct {
     AosGhostGuardian ghost;
     AosPantherGuardian panther;
     AosFlyingArmorGuardian flying_armor;
+    AosDeathGuardian death;
     int imp_target;              /* the room entity of the chased homing slot */
     AosAnimState anim;           /* Cagnazzo, or both Buer flames (same steps) */
     AosAnimState gas_anims[AOS_CATOBLEPAS_GASES];
@@ -1076,6 +1080,8 @@ typedef struct {
     const AosAnimSet *ghost_art;     /* Enemy/skill_giant_ghost, NULL when missing */
     const AosAnimSet *witch_art;     /* Enemy/skill_witch, NULL when missing */
     const AosAnimSet *flying_armor_art; /* Enemy/skill_flying_armor, NULL when missing */
+    const AosAnimSet *death_art;     /* Enemy/skill_death, NULL when missing */
+    const int16_t (*margins)[2];     /* the screen margins of sub_0806D128 */
     const AosEnemyKind *imp_kind;    /* its frame attack boxes */
 } AriaGuardian;
 
@@ -1089,6 +1095,7 @@ static void start_guardian(void *context) {
     if (routine != GUARDIAN_MEDUSA_ROUTINE && routine != GUARDIAN_PANTHER_ROUTINE &&
         !(routine == GUARDIAN_CAGNAZZO_ROUTINE && guardian->cagnazzo_art) &&
         !(routine == GUARDIAN_FLYING_ARMOR_ROUTINE && guardian->flying_armor_art) &&
+        !(routine == GUARDIAN_DEATH_ROUTINE && guardian->death_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
         !(routine == GUARDIAN_PILLAR_ROUTINE && guardian->pillar_art) &&
@@ -1111,6 +1118,7 @@ static void start_guardian(void *context) {
         guardian->ghost = (AosGhostGuardian){0};
         guardian->panther = (AosPantherGuardian){0};
         guardian->flying_armor = (AosFlyingArmorGuardian){0};
+        guardian->death = (AosDeathGuardian){0};
         guardian->imp_target = -1;
     }
 }
@@ -1147,6 +1155,22 @@ static void update_guardian(AriaGuardian *guardian) {
             return;
         if (first) aos_anim_start(&guardian->anim, guardian->flying_armor_art, 0, true);
         aos_anim_step(&guardian->anim, guardian->flying_armor_art);
+    } else if (guardian->routine == GUARDIAN_DEATH_ROUTINE) {
+        AosSkillTarget targets[AOS_DEATH_TARGETS] = {{0}};
+        for (int slot = 0; slot < AOS_DEATH_TARGETS; ++slot) {
+            int index = homing.index[slot];
+            if (index < 0 || !homing_room || (size_t)index >= homing_room->entity_count) continue;
+            const AriaEntity *entity = &homing_room->entities[index];
+            targets[slot] = (AosSkillTarget){entity->spawned && !entity->enemy.removed,
+                                             entity->enemy.x, entity->enemy.y, entity->enemy.hp};
+        }
+        int mx = guardian->margins ? guardian->margins[1][0] : 16;
+        int my = guardian->margins ? guardian->margins[1][1] : 16;
+        aos_death_guardian_update(&guardian->death, &guardian->core, guardian->stats,
+                                  guardian->records, soma->held, soma->pressed, &soma->flags,
+                                  soma->x >> 16, soma->y >> 16, soma->facing_left, targets,
+                                  guardian->death_art, guardian_cam_x, guardian_cam_y, mx, my,
+                                  aos_random);
     } else if (guardian->routine == GUARDIAN_PANTHER_ROUTINE) {
         aos_panther_guardian_update(&guardian->panther, &guardian->core, guardian->stats,
                                     guardian->records, soma->held, soma->pressed, &soma->flags,
@@ -1296,6 +1320,19 @@ static int guardian_attacks(const AriaGuardian *guardian,
             aos_guardian_power(guardian->stats, AOS_CAGNAZZO_POWER, false), 0, false, NULL,
             AOS_TYPE_GUARDIAN};
         return 1;
+    }
+    if (guardian->routine == GUARDIAN_DEATH_ROUTINE) {
+        int count = 0;
+        for (int k = 0; k < AOS_DEATH_SICKLES; ++k) {
+            const AosDeathSickle *s = &guardian->death.sickles[k];
+            if (!s->alive || !s->attacking || s->state > 3) continue;
+            attacks[count++] = (AosSoulAttack){
+                aos_entity_rect((AosBox){-8, -8, 16, 16}, s->x >> 16, s->y >> 16,  /* 0x1010F8F8 */
+                                s->mirrored, false),
+                aos_guardian_power(guardian->stats, AOS_DEATH_POWER, false), AOS_DEATH_ELEMENTS,
+                false, NULL, AOS_TYPE_GUARDIAN};
+        }
+        return count;
     }
     if (guardian->routine == GUARDIAN_PANTHER_ROUTINE) {
         if (!guardian->panther.attacking) return 0;
@@ -4368,6 +4405,9 @@ int main(int argc, char **argv) {
     static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
     static AriaGuardian guardian;
     guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
+    if (objects_ok && objects.skills[SKILL_ART_DEATH].loaded &&
+        objects.skills[SKILL_ART_DEATH].defs[0].count)
+        guardian.death_art = &objects.skills[SKILL_ART_DEATH].set;
     if (objects_ok && objects.skills[SKILL_ART_FLYING_ARMOR].loaded &&
         objects.skills[SKILL_ART_FLYING_ARMOR].defs[0].count)
         guardian.flying_armor_art = &objects.skills[SKILL_ART_FLYING_ARMOR].set;
@@ -4844,6 +4884,7 @@ int main(int argc, char **argv) {
                                ? &merman->set
                                : NULL;
             souls.margins = objects_ok ? (const int16_t(*)[2])objects.enemies[0].kind.margins : NULL;
+            guardian.margins = souls.margins;
             souls.cam_x = cam_x;
             souls.cam_y = cam_y;
             souls.layer = &layer;
@@ -5196,6 +5237,30 @@ int main(int argc, char **argv) {
                                          cagnazzo->facing_left ? SDL_FLIP_HORIZONTAL
                                                                : SDL_FLIP_NONE);
             }
+        }
+        /* Death's sickles: translucent, their affine scale and spin
+         * (sub_0803E058, about their position). */
+        for (int k = 0; guardian.core.active && guardian.routine == GUARDIAN_DEATH_ROUTINE &&
+                        k < AOS_DEATH_SICKLES;
+             ++k) {
+            const AosDeathSickle *s = &guardian.death.sickles[k];
+            if (!s->alive || s->state == 0 || s->scale <= 0x400 ||
+                s->anim.frame >= AOS_ENEMY_MAX_FRAMES)
+                continue;
+            const AriaFrame *art = &objects.skills[SKILL_ART_DEATH].frames[0][s->anim.frame];
+            if (!art->texture) continue;
+            float zoom = (float)s->scale / 65536.0f;
+            int sx = s->x >> 16, sy = s->y >> 16;
+            float ox = s->mirrored ? -(float)art->offset_x - art->w : (float)art->offset_x;
+            SDL_FRect rect = {(float)(sx - cam_x) + ox * zoom,
+                              (float)(sy - cam_y) + (float)art->offset_y * zoom, art->w * zoom,
+                              art->h * zoom};
+            SDL_FPoint centre = {(float)(sx - cam_x) - rect.x, (float)(sy - cam_y) - rect.y};
+            SDL_SetTextureAlphaMod(art->texture, 128);
+            SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect,
+                                     (double)s->angle * 360.0 / 65536.0, &centre,
+                                     s->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+            SDL_SetTextureAlphaMod(art->texture, 255);
         }
         /* The Flying Armor (translucent, + 0x59 bit 1: half alpha). */
         if (guardian.core.active && guardian.routine == GUARDIAN_FLYING_ARMOR_ROUTINE &&

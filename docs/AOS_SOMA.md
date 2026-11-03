@@ -158,7 +158,9 @@ until the soul ends or a ceiling meets the body, then 0x4D and braking
 back to state 0. Soma's + 0x1E is an invulnerability counter that
 `sub_08021654` honours. `SkillBlackPantherUse` sets the fast walk (0x13260
 bit 0x400) and an unseen body that strikes while Soma runs (power 8);
-`SkillFlyingArmorUse` sets the slow fall (0x100) under a translucent armor.
+`SkillFlyingArmorUse` sets the slow fall (0x100) under a translucent armor;
+`SkillDeathUse` throws a spinning sickle every 56 frames that seeks the
+nearest homing target (`aos_guardian_death`).
 An ending guardian clears the 0x13260 bits 8-13. The other routines are
 refused before they start,
 and `--blue-soul N` equips a soul for diagnostics.

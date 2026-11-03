@@ -38,7 +38,6 @@ aos:asm:asm/code/code_080211F0.s:SkillArachneUse	SkillArachneUse	abilities	name	
 aos:asm:asm/code/code_080211F0.s:SkillBaloreUse	SkillBaloreUse	abilities	name			asm_function		asm/code/code_080211F0.s	22070	0	12
 aos:asm:asm/code/code_080211F0.s:SkillBigGolemUse	SkillBigGolemUse	abilities	name			asm_function		asm/code/code_080211F0.s	33111	0	13
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
-aos:asm:asm/code/code_080211F0.s:SkillBlackPantherUse	SkillBlackPantherUse	abilities	name			asm_function		asm/code/code_080211F0.s	26316	0	6
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
 aos:asm:asm/code/code_080211F0.s:SkillDeathUse	SkillDeathUse	abilities	name			asm_function		asm/code/code_080211F0.s	30402	0	8
@@ -49,7 +48,6 @@ aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			as
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	21386	0	13
 aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUse	SkillFlameDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	16280	0	11
-aos:asm:asm/code/code_080211F0.s:SkillFlyingArmorUse	SkillFlyingArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	26120	0	9
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
 aos:asm:asm/code/code_080211F0.s:SkillGreatArmorUse	SkillGreatArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	32927	0	12
 aos:asm:asm/code/code_080211F0.s:SkillKillerMantleUse	SkillKillerMantleUse	abilities	name			asm_function		asm/code/code_080211F0.s	20960	0	12

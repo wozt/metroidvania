@@ -206,6 +206,50 @@ int main(void) {
     assert(!aos_cagnazzo_guardian_update(&cagnazzo, &guardian, &guard_stats, blue, AOS_KEY_R,
                                          AOS_KEY_R, &soma_flags, 100, 200, true) &&
            !guardian.active && soma_flags == 0x100000);
+    /* SkillBlackPantherUse (soul 3, held, 2 MP/s): on Soma, the fast-walk
+     * bit each update, striking only while he runs (animation 3), sound
+     * 0x9A on each run's first frame; releasing R ends it. */
+    blue[3] = (AosBlueSoulRecord){0x0802E3DD, 2, 1, 0, 0x400};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 3, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosPantherGuardian panther = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    assert(aos_panther_guardian_update(&panther, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                       &soma_flags, 100, 200, true, 0));
+    assert(!panther.attacking && (guard_stats.flags & 0x400) && panther.x == 100 &&
+           panther.facing_left && !aos_audio_requested(AOS_AUDIO_START_SONG, 0x9A));
+    for (int f = 0; f < 3; ++f)
+        assert(aos_panther_guardian_update(&panther, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                           0, &soma_flags, 100, 200, true,
+                                           AOS_PANTHER_RUN_ANIM));
+    assert(panther.attacking && aos_audio_requested(AOS_AUDIO_START_SONG, 0x9A) == 1);
+    assert(aos_panther_guardian_update(&panther, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                       &soma_flags, 100, 200, true, 1));
+    assert(aos_panther_guardian_update(&panther, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                       &soma_flags, 100, 200, true, AOS_PANTHER_RUN_ANIM));
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x9A) == 2);
+    assert(!aos_panther_guardian_update(&panther, &guardian, &guard_stats, blue, 0, 0,
+                                        &soma_flags, 100, 200, true, 0) &&
+           !guardian.active);
+    /* SkillFlyingArmorUse (soul 1, held, 5 MP/s): on Soma, facing like him,
+     * the slow-fall bit 0x100 each update; releasing R ends it. */
+    blue[1] = (AosBlueSoulRecord){0x0802E23D, 5, 1, 0, 0x100};
+    guard_stats = (AosStats){.blue_soul = 1, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 2;
+    AosFlyingArmorGuardian armor = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    assert(aos_flying_armor_guardian_update(&armor, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                            0, &soma_flags, 120, 90, false));
+    assert(guardian.state == 1 && armor.x == 120 && armor.y == 90 && !armor.facing_left &&
+           (guard_stats.flags & 0x100));
+    assert(!aos_flying_armor_guardian_update(&armor, &guardian, &guard_stats, blue, 0, 0,
+                                             &soma_flags, 120, 90, false) &&
+           !guardian.active);
     /* sub_08021530(6): 12 + 12 / 8 * (INT / 2); 8 / 10 when reduced. */
     guard_stats.current[AOS_STAT_INT] = 21;
     assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, false) == 22);

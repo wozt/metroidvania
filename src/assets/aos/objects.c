@@ -245,6 +245,8 @@ static const EntitySpec entities[] = {
     /* SkillCagnazzoUse's own resource (graphics 0x081DC144, palette row 3):
      * Cagnazzo's guardian (looping sequence 0). */
     ENTITY("skill_cagnazzo", 0x081DC144, 0x0820B4E4, 0, 0x082361A4),
+    /* SkillFlyingArmorUse's armor (palette bank 0 loaded into OBJ row 3). */
+    ENTITY("skill_flying_armor", 0x0825E08C, 0x0825E914, 0, 0x0825EAC4),
     /* Skill_Witch_GiantGhost_Use's own resources (palette row 3): the
      * Giant Ghost (looping sequence 1) and the Student Witch (sequence 0). */
     ENTITY("skill_giant_ghost", 0x081E0968, 0x0820B628, 0, 0x08237464),

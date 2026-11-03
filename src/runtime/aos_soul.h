@@ -133,6 +133,45 @@ typedef struct {
 
 enum { AOS_CAGNAZZO_POWER = 12 };
 
+/* SkillBlackPantherUse (blue soul 3): an unseen type-6 body (box
+ * 0x3030D8F4: -12, -40, 48 x 48) on Soma, power 8 and elements 1 (0x131C2,
+ * 0x131C4), striking only while Soma runs (his animation 3, the first frame
+ * of a run playing sound 0x9A), and the record's 0x13260 bit (0x400, the
+ * fast walk) each update. sub_08042A54(2, 0x3C) is not run. Returns false
+ * once the guardian has ended (its cleanup done). */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool facing_left;
+    bool attacking;         /* + 0x72 bit 1 clear */
+    bool sounded;           /* + 0x0B */
+} AosPantherGuardian;
+
+/* SkillFlyingArmorUse (blue soul 1): a translucent armor on Soma (art
+ * 0x0825E08C, looping sequence 0, priority 0xD), facing like him, and the
+ * record's 0x13260 bit (0x100, the slow fall) each update. Its sparkles
+ * (sub_08045B44 type 8, row 9, every fourth frame) are not ported: their
+ * animation record 0x08525194 is not exported. Returns false once the
+ * guardian has ended. */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool facing_left;
+} AosFlyingArmorGuardian;
+
+bool aos_flying_armor_guardian_update(AosFlyingArmorGuardian *armor, AosGuardian *guardian,
+                                      AosStats *stats,
+                                      const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                      uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                      int32_t soma_x, int32_t soma_y, bool soma_facing_left);
+
+enum { AOS_PANTHER_POWER = 8, AOS_PANTHER_ELEMENTS = 1, AOS_PANTHER_RUN_ANIM = 3 };
+
+bool aos_panther_guardian_update(AosPantherGuardian *panther, AosGuardian *guardian,
+                                 AosStats *stats,
+                                 const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                 uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                 int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                 uint8_t soma_anim);
+
 bool aos_cagnazzo_guardian_update(AosCagnazzoGuardian *cagnazzo, AosGuardian *guardian,
                                   AosStats *stats,
                                   const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],

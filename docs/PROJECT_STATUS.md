@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0719 - Black Panther and Flying Armor blue souls
+
+- `SkillBlackPantherUse` (blue soul 3) sets the fast walk and keeps an
+  unseen body on Soma that strikes while he runs (power 8, sound 0x9A per
+  run); a local run shows it hit the Zombie Soldiers of area 0 room 18.
+- `SkillFlyingArmorUse` (blue soul 1) sets the slow fall under its
+  translucent armor, exported as `skill_flying_armor` (`aria_objects`
+  v52); a local capture shows Soma still gliding at frame 70 where he
+  otherwise landed. Its type-8 sparkles are not exported yet.
+- An ending guardian now clears the 0x13260 bits 8-13 (sub_0802DD84), so
+  both abilities stop with their soul.
+
 ## Patch 0718 - Giant Worm, Headhunter and saved wall breaks
 
 - `SkillGiantWormUse` (yellow soul 10) heals 5 HP every 61st frame while

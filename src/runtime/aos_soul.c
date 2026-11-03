@@ -153,6 +153,51 @@ bool aos_cagnazzo_guardian_update(AosCagnazzoGuardian *cagnazzo, AosGuardian *gu
     return true;
 }
 
+bool aos_flying_armor_guardian_update(AosFlyingArmorGuardian *armor, AosGuardian *guardian,
+                                      AosStats *stats,
+                                      const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                      uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                      int32_t soma_x, int32_t soma_y, bool soma_facing_left) {
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    if (guardian->state == 0) guardian->state = 1;
+    armor->facing_left = soma_facing_left;
+    armor->x = soma_x;
+    armor->y = soma_y;
+    stats->flags |= records[guardian->soul].argument;
+    return true;
+}
+
+bool aos_panther_guardian_update(AosPantherGuardian *panther, AosGuardian *guardian,
+                                 AosStats *stats,
+                                 const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                 uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                 int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                 uint8_t soma_anim) {
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    if (guardian->state == 0) guardian->state = 1;
+    if (soma_anim == AOS_PANTHER_RUN_ANIM) {
+        if (!panther->sounded) {
+            panther->sounded = true;
+            aos_audio_play_song(0x9A);
+        }
+        panther->attacking = true;
+    } else {
+        panther->sounded = false;
+        panther->attacking = false;
+    }
+    panther->facing_left = soma_facing_left;
+    panther->x = soma_x;
+    panther->y = soma_y;
+    stats->flags |= records[guardian->soul].argument;
+    return true;
+}
+
 bool aos_yellow_soul_ported(uint32_t routine) {
     switch (routine) {
     case AOS_YELLOW_FLAG_ROUTINE: case AOS_YELLOW_STAT_ROUTINE:

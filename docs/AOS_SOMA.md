@@ -139,8 +139,8 @@ Soma's states 0, 12 and 13 end with the blue soul start `sub_0802E0C4`
 button held (and newly pressed for a toggled soul) and at least max MP /
 128 + 1 MP, it creates the guardian entity of the equipped blue soul's
 record (0x080E192C, `metadata/blue_souls.tsv`) and sets Soma's flag
-`0x200`. The upkeep drains one MP every 60 / rate frames. Three routines
-are ported: `SkillMedusaHeadUse` holds an airborne Soma still through his
+`0x200`. The upkeep drains one MP every 60 / rate frames. Among the ported routines,
+`SkillMedusaHeadUse` holds an airborne Soma still through his
 vy, gravity and the `0x131B8 & 0x20` flag (`hold_still`, read at the end
 of his update), `SkillCagnazzoUse` carries an attacking guardian
 (collision type 6) 16 pixels ahead of him and 32 above his feet, and
@@ -156,8 +156,11 @@ nearest enemy of the homing list. Curly's soul puts Soma in state 9
 forward up to 6.0 with the tall wall probes 0x080E12EF, invulnerable,
 until the soul ends or a ceiling meets the body, then 0x4D and braking
 back to state 0. Soma's + 0x1E is an invulnerability counter that
-`sub_08021654` honours. The other 18 routines are refused before they
-start,
+`sub_08021654` honours. `SkillBlackPantherUse` sets the fast walk (0x13260
+bit 0x400) and an unseen body that strikes while Soma runs (power 8);
+`SkillFlyingArmorUse` sets the slow fall (0x100) under a translucent armor.
+An ending guardian clears the 0x13260 bits 8-13. The other routines are
+refused before they start,
 and `--blue-soul N` equips a soul for diagnostics.
 
 ## Yellow soul effects

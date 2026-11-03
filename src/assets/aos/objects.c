@@ -245,6 +245,10 @@ static const EntitySpec entities[] = {
     /* SkillCagnazzoUse's own resource (graphics 0x081DC144, palette row 3):
      * Cagnazzo's guardian (looping sequence 0). */
     ENTITY("skill_cagnazzo", 0x081DC144, 0x0820B4E4, 0, 0x082361A4),
+    /* SkillGreatArmorUse's armor (sequence 1, palette bank 0 into OBJ row 3). */
+    ENTITY("skill_great_armor", 0x081E116C, 0x0820B64C, 0, 0x0823760C),
+    /* SkillPersephoneUse's maid (palette bank 0 into OBJ row 3). */
+    ENTITY("skill_persephone", 0x081E0968, 0x0820B628, 0, 0x08237464),
     /* SkillDeathUse's sickle (sub_08030238, palette bank 0 into OBJ row 3). */
     ENTITY("skill_death", 0x081E2174, 0x0820B694, 0, 0x08237770),
     /* SkillFlyingArmorUse's armor (palette bank 0 loaded into OBJ row 3). */
@@ -302,6 +306,8 @@ static const EffectSpec effects[] = {
     {"dark_smoke", 0x081C15F4, 0x082099FC, 1, 0x0820ED60, 1, {5}, -1},
     {"fire", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {1}, -1},
     {"spark", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {16}, -1},
+    /* SkillGreatArmorUse's sparks: animation 16 on OBJ row 7 (bank 3). */
+    {"spark_7", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {16}, -1},
     {"dust", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {4}, -1},
     {"impact", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {7}, -1},
     {"ember", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {1}, -1},

@@ -170,6 +170,69 @@ bool aos_flying_armor_guardian_update(AosFlyingArmorGuardian *armor, AosGuardian
     return true;
 }
 
+bool aos_persephone_guardian_update(AosPersephoneGuardian *maid, AosGuardian *guardian,
+                                    AosStats *stats,
+                                    const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                    uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                    int32_t soma_x, int32_t soma_y, bool soma_facing_left) {
+    if (guardian->state < AOS_PERSEPHONE_LEAVING &&
+        aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        guardian->state = AOS_PERSEPHONE_LEAVING;
+        aos_audio_release(0x9C);
+        maid->blinking = true;
+        maid->timer = 0x10;
+    }
+    if (guardian->state == AOS_PERSEPHONE_LEAVING) {
+        if (maid->timer == 0) {
+            aos_guardian_end(guardian, soma_flags);
+            return false;
+        }
+        maid->timer--;
+        return true;
+    }
+    aos_audio_hold(0x9C);
+    guardian->state = 2;
+    maid->facing_left = soma_facing_left;
+    maid->x = soma_x;
+    maid->y = soma_y;
+    return true;
+}
+
+bool aos_great_armor_guardian_update(AosGreatArmorGuardian *armor, AosGuardian *guardian,
+                                     AosStats *stats,
+                                     const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                     uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                     int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                     uint32_t (*random)(void)) {
+    if (aos_guardian_upkeep(guardian, stats, records, held, pressed)) {
+        aos_guardian_end(guardian, soma_flags);
+        return false;
+    }
+    if (guardian->state == 0) guardian->state = 1;
+    armor->facing_left = soma_facing_left;
+    armor->x = soma_x;
+    armor->y = soma_y;
+    armor->spark = false;
+    uint8_t t = ++armor->timer;
+    if ((t & 0x1F) == 0) aos_audio_play_song(0x94);
+    else if ((t & 0xF) == 0 && (random() & 1)) aos_audio_play_song(0x94);
+    if ((t & 7) == 0) {
+        int32_t dx = (int32_t)(random() & 0xF) - 8;          /* sub_0802D5EC(0x10) */
+        int32_t dy = (int32_t)(random() & 0xF) - 8 - 0x10;
+        armor->spark = true;
+        armor->spark_x = (int32_t)((uint32_t)soma_x << 16) + dx * 0x10000;
+        armor->spark_y = (int32_t)((uint32_t)soma_y << 16) + dy * 0x10000;
+    }
+    uint32_t stat = records[guardian->soul].argument;
+    if (stat < AOS_STAT_COUNT) {
+        int32_t v = stats->current[stat] * 0x133;
+        if (v < 0) v += 0xFF;
+        stats->current[stat] = (int16_t)(v >> 8);
+    }
+    aos_stats_derive(stats);
+    return true;
+}
+
 bool aos_panther_guardian_update(AosPantherGuardian *panther, AosGuardian *guardian,
                                  AosStats *stats,
                                  const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],

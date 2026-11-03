@@ -250,6 +250,57 @@ int main(void) {
     assert(!aos_flying_armor_guardian_update(&armor, &guardian, &guard_stats, blue, 0, 0,
                                              &soma_flags, 120, 90, false) &&
            !guardian.active);
+    /* SkillPersephoneUse (soul 16, toggled, 15 MP/s): on Soma, holding
+     * 0x9C; a second press releases it and blinks 16 frames before the
+     * cleanup. */
+    blue[16] = (AosBlueSoulRecord){0x080300A5, 15, 2, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 16, .mp = 80, .max_mp = 80};
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosPersephoneGuardian maid = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    assert(aos_persephone_guardian_update(&maid, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                          AOS_KEY_R, &soma_flags, 100, 200, true));
+    assert(guardian.state == 2 && maid.x == 100 && maid.facing_left && !maid.blinking &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x9C) == 1);
+    assert(aos_persephone_guardian_update(&maid, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                          AOS_KEY_R, &soma_flags, 100, 200, true));
+    assert(guardian.state == AOS_PERSEPHONE_LEAVING && maid.blinking && maid.timer == 0x0F);
+    int left = 1;
+    while (aos_persephone_guardian_update(&maid, &guardian, &guard_stats, blue, 0, 0,
+                                          &soma_flags, 100, 200, true))
+        ++left;
+    assert(left == 0x10 && !guardian.active);
+    /* SkillGreatArmorUse (soul 8, held, 60 MP/s): STR * 0x133 / 256 each
+     * update, sound 0x94 every 32nd frame, a spark every 8th. */
+    blue[8] = (AosBlueSoulRecord){0x08031949, 60, 1, 0, 0};
+    aos_audio_clear();
+    guard_stats = (AosStats){.blue_soul = 8, .mp = 200, .max_mp = 200};
+    guard_stats.current[AOS_STAT_STR] = 40;
+    guardian = (AosGuardian){0};
+    soma_flags = 0x100000;
+    AosGreatArmorGuardian great = {0};
+    assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, AOS_KEY_R, false,
+                            &soma_flags));
+    assert(aos_great_armor_guardian_update(&great, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
+                                           &soma_flags, 100, 200, false, zero_random));
+    assert(guard_stats.current[AOS_STAT_STR] == 40 * 0x133 / 256 && !great.spark &&
+           great.x == 100);
+    int sparks = 0;
+    for (int f = 2; f <= 32; ++f) {
+        guard_stats.current[AOS_STAT_STR] = 40;
+        assert(aos_great_armor_guardian_update(&great, &guardian, &guard_stats, blue, AOS_KEY_R,
+                                               0, &soma_flags, 100, 200, false, zero_random));
+        if (great.spark) {
+            assert(f % 8 == 0 && great.spark_x == (92 << 16) && great.spark_y == (176 << 16));
+            ++sparks;
+        }
+    }
+    assert(sparks == 4 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x94) == 1);
+    assert(!aos_great_armor_guardian_update(&great, &guardian, &guard_stats, blue, 0, 0,
+                                            &soma_flags, 100, 200, false, zero_random));
     /* sub_08021530(6): 12 + 12 / 8 * (INT / 2); 8 / 10 when reduced. */
     guard_stats.current[AOS_STAT_INT] = 21;
     assert(aos_guardian_power(&guard_stats, AOS_CAGNAZZO_POWER, false) == 22);

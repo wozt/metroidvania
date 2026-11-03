@@ -163,6 +163,54 @@ bool aos_flying_armor_guardian_update(AosFlyingArmorGuardian *armor, AosGuardian
                                       uint16_t held, uint16_t pressed, uint32_t *soma_flags,
                                       int32_t soma_x, int32_t soma_y, bool soma_facing_left);
 
+/* SkillPersephoneUse (blue soul 16, toggled): a translucent guardian on
+ * Soma with his facing (art 0x081E0968, looping sequence 0, priority 0xD),
+ * guardian power 10 and elements 0 (0x131C2, 0x131C4), striking as type 6
+ * with its frame's attack box (sub_0802E1D0), its hit callback
+ * sub_08031F28 healing Soma 5 HP for each enemy it strikes. It holds sound
+ * 0x9C each update (sub_08013DA8). Below state 3 the upkeep sub_0802DF2C
+ * runs first; its end releases 0x9C (sub_08013E18) and starts state 3:
+ * blinking (+ 0x0F) for 16 frames, then the cleanup.
+ * sub_08042A54(2, 0x14) is not run. Returns false once it has ended. */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool facing_left;
+    bool blinking;          /* + 0x0F */
+    uint8_t timer;          /* + 0x0D */
+} AosPersephoneGuardian;
+
+enum { AOS_PERSEPHONE_POWER = 10, AOS_PERSEPHONE_ELEMENTS = 0, AOS_PERSEPHONE_LEAVING = 3,
+       AOS_PERSEPHONE_HEAL = 5 };
+
+bool aos_persephone_guardian_update(AosPersephoneGuardian *maid, AosGuardian *guardian,
+                                    AosStats *stats,
+                                    const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                    uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                    int32_t soma_x, int32_t soma_y, bool soma_facing_left);
+
+/* SkillGreatArmorUse (blue soul 8, held): a translucent armor on Soma with
+ * his facing (art 0x081E116C, looping sequence 1, priority 0xD). Its
+ * + 0x0D counts: every 32nd frame sound 0x94, on the other 16th frames one
+ * chance in two of it; every 8th frame a drifting spark (sub_08045CEC
+ * animation 16, row 7) up to 8 pixels from Soma's x and 8 to 24 above his
+ * feet (`spark`). Each update multiplies the current stat of its + 0x1C
+ * (0: STR) by 0x133 / 256 (rounded toward zero), then sub_08021C44.
+ * Returns false once the guardian has ended. */
+typedef struct {
+    int32_t x, y;           /* whole pixels */
+    bool facing_left;
+    uint8_t timer;          /* + 0x0D */
+    bool spark;             /* a spark this update at (spark_x, spark_y) */
+    int32_t spark_x, spark_y; /* 16.16 */
+} AosGreatArmorGuardian;
+
+bool aos_great_armor_guardian_update(AosGreatArmorGuardian *armor, AosGuardian *guardian,
+                                     AosStats *stats,
+                                     const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
+                                     uint16_t held, uint16_t pressed, uint32_t *soma_flags,
+                                     int32_t soma_x, int32_t soma_y, bool soma_facing_left,
+                                     uint32_t (*random)(void));
+
 enum { AOS_PANTHER_POWER = 8, AOS_PANTHER_ELEMENTS = 1, AOS_PANTHER_RUN_ANIM = 3 };
 
 bool aos_panther_guardian_update(AosPantherGuardian *panther, AosGuardian *guardian,

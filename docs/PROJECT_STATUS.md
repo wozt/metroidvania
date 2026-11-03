@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0721 - Persephone and Great Armor blue souls
+
+- `SkillPersephoneUse` (blue soul 16): a translucent maid on Soma, holding
+  sound 0x9C, strikes with its frame's attack box (power 10); each strike
+  heals Soma 5 HP (sub_08031F28); its end blinks it for 16 frames.
+- `SkillGreatArmorUse` (blue soul 8): a translucent armor raising STR by
+  0x133 / 256 each frame, with sound 0x94 and sparks (new effect
+  `spark_7`); the runtime now copies ATK and DEF again after the guardian's
+  update so the boost counts.
+- Both arts are exported (`aria_objects` v55), unit-tested and seen in
+  local captures.
+
 ## Patch 0720 - The Death blue soul
 
 - `SkillDeathUse` (blue soul 24) is ported in the new `aos_guardian_death`

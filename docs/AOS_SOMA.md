@@ -160,7 +160,9 @@ back to state 0. Soma's + 0x1E is an invulnerability counter that
 bit 0x400) and an unseen body that strikes while Soma runs (power 8);
 `SkillFlyingArmorUse` sets the slow fall (0x100) under a translucent armor;
 `SkillDeathUse` throws a spinning sickle every 56 frames that seeks the
-nearest homing target (`aos_guardian_death`).
+nearest homing target (`aos_guardian_death`); `SkillPersephoneUse` strikes
+with its maid's frame box and heals Soma 5 HP per strike;
+`SkillGreatArmorUse` raises STR by a fifth while its armor sparks.
 An ending guardian clears the 0x13260 bits 8-13. The other routines are
 refused before they start,
 and `--blue-soul N` equips a soul for diagnostics.

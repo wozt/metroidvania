@@ -230,7 +230,8 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_NEEDLES, SKILL_ART_RIPPER, SKILL_ART_KILLER_FISH, SKILL_ART_FISH_HEAD,
        SKILL_ART_CAGNAZZO, SKILL_ART_BUER, SKILL_ART_CATOBLEPAS, SKILL_ART_IMP,
        SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
-       SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH, SKILL_ARTS };
+       SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
+       SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -245,7 +246,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_giant_ghost", "skill_witch",
                                                          "skill_bone_pillar",
                                                          "skill_flying_armor",
-                                                         "skill_death"};
+                                                         "skill_death", "skill_persephone",
+                                                         "skill_great_armor"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -261,7 +263,8 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "rock_fragment_0",
                                                           "rock_fragment_1",
                                                           "rock_fragment_2",
-                                                          "wall_piece_1", "wall_piece_2"};
+                                                          "wall_piece_1", "wall_piece_2",
+                                                          "spark_7"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 #define ARIA_OBJECT_WALL 0x08           /* Object08: a breakable wall */
@@ -1051,6 +1054,8 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_PANTHER_ROUTINE 0x0802E3DDu
 #define GUARDIAN_FLYING_ARMOR_ROUTINE 0x0802E23Du
 #define GUARDIAN_DEATH_ROUTINE 0x08030519u
+#define GUARDIAN_PERSEPHONE_ROUTINE 0x080300A5u
+#define GUARDIAN_GREAT_ARMOR_ROUTINE 0x08031949u
 enum { GUARDIAN_ATTACKS = 8 };
 typedef struct {
     AosGuardian core;
@@ -1065,6 +1070,10 @@ typedef struct {
     AosPantherGuardian panther;
     AosFlyingArmorGuardian flying_armor;
     AosDeathGuardian death;
+    AosPersephoneGuardian persephone;
+    AosGreatArmorGuardian great_armor;
+    int effect_count;            /* effects of this update for the room */
+    AosEffect effects[2];
     int imp_target;              /* the room entity of the chased homing slot */
     AosAnimState anim;           /* Cagnazzo, or both Buer flames (same steps) */
     AosAnimState gas_anims[AOS_CATOBLEPAS_GASES];
@@ -1081,6 +1090,9 @@ typedef struct {
     const AosAnimSet *witch_art;     /* Enemy/skill_witch, NULL when missing */
     const AosAnimSet *flying_armor_art; /* Enemy/skill_flying_armor, NULL when missing */
     const AosAnimSet *death_art;     /* Enemy/skill_death, NULL when missing */
+    const AosAnimSet *persephone_art; /* Enemy/skill_persephone, NULL when missing */
+    const AosEnemyKind *persephone_kind; /* its frame attack boxes */
+    const AosAnimSet *great_armor_art; /* Enemy/skill_great_armor, NULL when missing */
     const int16_t (*margins)[2];     /* the screen margins of sub_0806D128 */
     const AosEnemyKind *imp_kind;    /* its frame attack boxes */
 } AriaGuardian;
@@ -1096,6 +1108,8 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_CAGNAZZO_ROUTINE && guardian->cagnazzo_art) &&
         !(routine == GUARDIAN_FLYING_ARMOR_ROUTINE && guardian->flying_armor_art) &&
         !(routine == GUARDIAN_DEATH_ROUTINE && guardian->death_art) &&
+        !(routine == GUARDIAN_PERSEPHONE_ROUTINE && guardian->persephone_art) &&
+        !(routine == GUARDIAN_GREAT_ARMOR_ROUTINE && guardian->great_armor_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
         !(routine == GUARDIAN_PILLAR_ROUTINE && guardian->pillar_art) &&
@@ -1119,6 +1133,8 @@ static void start_guardian(void *context) {
         guardian->panther = (AosPantherGuardian){0};
         guardian->flying_armor = (AosFlyingArmorGuardian){0};
         guardian->death = (AosDeathGuardian){0};
+        guardian->persephone = (AosPersephoneGuardian){0};
+        guardian->great_armor = (AosGreatArmorGuardian){0};
         guardian->imp_target = -1;
     }
 }
@@ -1155,6 +1171,31 @@ static void update_guardian(AriaGuardian *guardian) {
             return;
         if (first) aos_anim_start(&guardian->anim, guardian->flying_armor_art, 0, true);
         aos_anim_step(&guardian->anim, guardian->flying_armor_art);
+    } else if (guardian->routine == GUARDIAN_GREAT_ARMOR_ROUTINE) {
+        /* Its looping sequence 1 starts on the first update and steps. */
+        bool first = guardian->core.state == 0;
+        if (!aos_great_armor_guardian_update(&guardian->great_armor, &guardian->core,
+                                             guardian->stats, guardian->records, soma->held,
+                                             soma->pressed, &soma->flags, soma->x >> 16,
+                                             soma->y >> 16, soma->facing_left, aos_random))
+            return;
+        if (first) aos_anim_start(&guardian->anim, guardian->great_armor_art, 1, true);
+        aos_anim_step(&guardian->anim, guardian->great_armor_art);
+        if (guardian->great_armor.spark && guardian->effect_count < 2)
+            guardian->effects[guardian->effect_count++] = (AosEffect){
+                .kind = AOS_EFFECT_SPARK_ROW7, .drift = true, .x = guardian->great_armor.spark_x,
+                .y = guardian->great_armor.spark_y};
+    } else if (guardian->routine == GUARDIAN_PERSEPHONE_ROUTINE) {
+        bool first = guardian->core.state == 0;
+        if (!aos_persephone_guardian_update(&guardian->persephone, &guardian->core,
+                                            guardian->stats, guardian->records, soma->held,
+                                            soma->pressed, &soma->flags, soma->x >> 16,
+                                            soma->y >> 16, soma->facing_left))
+            return;
+        /* sub_0802E1D0 (not while leaving): the looping sequence 0. */
+        if (first) aos_anim_start(&guardian->anim, guardian->persephone_art, 0, true);
+        if (guardian->core.state != AOS_PERSEPHONE_LEAVING)
+            aos_anim_step(&guardian->anim, guardian->persephone_art);
     } else if (guardian->routine == GUARDIAN_DEATH_ROUTINE) {
         AosSkillTarget targets[AOS_DEATH_TARGETS] = {{0}};
         for (int slot = 0; slot < AOS_DEATH_TARGETS; ++slot) {
@@ -1319,6 +1360,21 @@ static int guardian_attacks(const AriaGuardian *guardian,
                             cagnazzo->facing_left, false),
             aos_guardian_power(guardian->stats, AOS_CAGNAZZO_POWER, false), 0, false, NULL,
             AOS_TYPE_GUARDIAN};
+        return 1;
+    }
+    if (guardian->routine == GUARDIAN_PERSEPHONE_ROUTINE) {
+        /* sub_0802E1D0: the frame's attack box, none without one or while
+         * leaving. */
+        if (guardian->core.state == AOS_PERSEPHONE_LEAVING || !guardian->persephone_kind ||
+            guardian->anim.frame >= AOS_ENEMY_MAX_FRAMES)
+            return 0;
+        AosBox box = guardian->persephone_kind->attack[0][guardian->anim.frame];
+        if (box.w <= 1 || box.h <= 1) return 0;
+        attacks[0] = (AosSoulAttack){
+            aos_entity_rect(box, guardian->persephone.x, guardian->persephone.y,
+                            guardian->persephone.facing_left, false),
+            aos_guardian_power(guardian->stats, AOS_PERSEPHONE_POWER, false),
+            AOS_PERSEPHONE_ELEMENTS, false, NULL, AOS_TYPE_GUARDIAN};
         return 1;
     }
     if (guardian->routine == GUARDIAN_DEATH_ROUTINE) {
@@ -4405,6 +4461,14 @@ int main(int argc, char **argv) {
     static AosBlueSoulRecord blue_souls[AOS_BLUE_SOUL_RECORDS];
     static AriaGuardian guardian;
     guardian = (AriaGuardian){.stats = &progress, .soma = &soma};
+    if (objects_ok && objects.skills[SKILL_ART_GREAT_ARMOR].loaded &&
+        objects.skills[SKILL_ART_GREAT_ARMOR].defs[1].count)
+        guardian.great_armor_art = &objects.skills[SKILL_ART_GREAT_ARMOR].set;
+    if (objects_ok && objects.skills[SKILL_ART_PERSEPHONE].loaded &&
+        objects.skills[SKILL_ART_PERSEPHONE].defs[0].count) {
+        guardian.persephone_art = &objects.skills[SKILL_ART_PERSEPHONE].set;
+        guardian.persephone_kind = &objects.skills[SKILL_ART_PERSEPHONE].kind;
+    }
     if (objects_ok && objects.skills[SKILL_ART_DEATH].loaded &&
         objects.skills[SKILL_ART_DEATH].defs[0].count)
         guardian.death_art = &objects.skills[SKILL_ART_DEATH].set;
@@ -4898,7 +4962,15 @@ int main(int argc, char **argv) {
             guardian_cam_y = cam_y;
             {
                 bool was_active = guardian.core.active;
+                guardian.effect_count = 0;
                 update_guardian(&guardian);
+                for (int k = 0; k < guardian.effect_count && room.effect_count < MAX_EFFECTS; ++k)
+                    if (combat.effects[guardian.effects[k].kind])
+                        room.effects[room.effect_count++] = guardian.effects[k];
+                /* A guardian changing the current stats (the Great Armor)
+                 * reaches ATK and DEF after its update. */
+                if (have_equipment && !atk_override) player_stats.atk = progress.atk;
+                if (have_equipment && !def_override) player_stats.def = progress.def;
                 /* sub_0802DD84: an ending guardian clears 0x13260 bits 8-13. */
                 if (was_active && !guardian.core.active) progress.flags &= 0xFFFFC0FFu;
             }
@@ -4996,6 +5068,14 @@ int main(int argc, char **argv) {
                     int cx, cy;
                     aos_enemy_soul_attack_contact(k, &cx, &cy);
                     aos_ghost_guardian_touch(&guardian.ghost, cx, cy, aos_random);
+                }
+            /* sub_08031F28: a struck enemy heals Soma 5 HP (once a frame
+             * here: the struck flag does not count the enemies). */
+            for (int k = guardian_first; k < attack_count; ++k)
+                if (attacks[k].struck && guardian.routine == GUARDIAN_PERSEPHONE_ROUTINE &&
+                    soma.hp > 0) {
+                    soma.hp = (int16_t)(soma.hp + AOS_PERSEPHONE_HEAL);
+                    if (soma.hp > soma.max_hp) soma.hp = soma.max_hp;
                 }
             for (int k = 0; k < attack_count; ++k)
                 if (attacks[k].struck && owners[k]) {
@@ -5261,6 +5341,43 @@ int main(int argc, char **argv) {
                                      (double)s->angle * 360.0 / 65536.0, &centre,
                                      s->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
             SDL_SetTextureAlphaMod(art->texture, 255);
+        }
+        /* The Great Armor (translucent, sequence 1). */
+        if (guardian.core.active && guardian.routine == GUARDIAN_GREAT_ARMOR_ROUTINE &&
+            guardian.core.state && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_GREAT_ARMOR].frames[1][guardian.anim.frame];
+            if (art->texture) {
+                const AosGreatArmorGuardian *armor = &guardian.great_armor;
+                float x = armor->facing_left ? (float)(armor->x - art->offset_x) - art->w
+                                             : (float)(armor->x + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(armor->y + art->offset_y - cam_y),
+                                  art->w, art->h};
+                SDL_SetTextureAlphaMod(art->texture, 128);
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         armor->facing_left ? SDL_FLIP_HORIZONTAL
+                                                            : SDL_FLIP_NONE);
+                SDL_SetTextureAlphaMod(art->texture, 255);
+            }
+        }
+        /* Persephone (translucent; blinking on odd frames while leaving). */
+        if (guardian.core.active && guardian.routine == GUARDIAN_PERSEPHONE_ROUTINE &&
+            guardian.core.state && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES &&
+            !(guardian.persephone.blinking && (step & 1))) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_PERSEPHONE].frames[0][guardian.anim.frame];
+            if (art->texture) {
+                const AosPersephoneGuardian *maid = &guardian.persephone;
+                float x = maid->facing_left ? (float)(maid->x - art->offset_x) - art->w
+                                            : (float)(maid->x + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(maid->y + art->offset_y - cam_y),
+                                  art->w, art->h};
+                SDL_SetTextureAlphaMod(art->texture, 128);
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         maid->facing_left ? SDL_FLIP_HORIZONTAL
+                                                           : SDL_FLIP_NONE);
+                SDL_SetTextureAlphaMod(art->texture, 255);
+            }
         }
         /* The Flying Armor (translucent, + 0x59 bit 1: half alpha). */
         if (guardian.core.active && guardian.routine == GUARDIAN_FLYING_ARMOR_ROUTINE &&

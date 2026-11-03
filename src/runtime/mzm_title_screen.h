@@ -43,7 +43,8 @@ bool mzm_title_update(MzmTitleScreen *t, MzmScreen *s);
 /* A press of A or START now would skip the comets (not skipped yet) or the
  * title's fade-in (TitleScreenIdle's first two stages). */
 bool mzm_title_skippable(const MzmTitleScreen *t);
-/* The title is shown, waiting for START (TITLE_SCREEN_IDLE_STAGE_IDLE). */
+/* The title is shown and reads START (TITLE_SCREEN_IDLE_STAGE_IDLE, its
+ * first 30 frames past). */
 bool mzm_title_ready(const MzmTitleScreen *t);
 
 #endif

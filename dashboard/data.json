@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-03T15:54:30+00:00",
+ "generated_at": "2026-11-03T16:17:07+00:00",
  "git": {
-  "commit": "ebb2161",
+  "commit": "d405225",
   "branch": "main",
   "dirty": true
  },
@@ -15494,7 +15494,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "fusion_metroidvania runs both native title screens at once, split by a line through the screen centre turning clockwise at 10 degrees a second (Aria on top at the start), and plays the music of the game covering most of the top half: both sound engines keep running and their gains cross-fade over 40 frames. A first START skips both titles' openings (Aria's START shortcut of stages 2-7; Zero Mission's comets and title fade-in); once both wait for START, START goes to the title of the game covering most of the bottom half (the line stops), which plays its own exit, then that game's frontend runs in the launcher's process and window through fusion_host (fusion_aria_title_preview --main-menu or fusion_room_runtime --file-select, and fusion_aria_runtime with its returns to the menu). The Aria menu it reaches still draws its labels, file entries and cursor as host overlays (aos.title.input_stage8); it reads the keyboard and the first gamepad. Limitations: the startup sequences, the idle introduction and the demos are deliberately skipped (the titles' idle timers are held); quitting the game quits the launcher; the Aria menu-to-gameplay chain inside the launcher was not run (only the launches into both frontends, with a scripted --press under SDL's dummy video driver). Checked on headless captures (--capture, --press); the split's geometry and the launch queue are unit-tested.",
+   "limitations": "fusion_metroidvania runs both native title screens at once, split by a line through the screen centre turning clockwise at 10 degrees a second (Aria on top at the start), and plays the music of the game covering most of the top half: both sound engines keep running and their gains cross-fade over 40 frames. A first START skips both titles' openings (Aria's START shortcut of stages 2-7; Zero Mission's comets and title fade-in); once both wait for START, START goes to the title of the game covering most of the bottom half (the line stops), which plays its own exit, then that game's frontend runs in the launcher's process and window through fusion_host (fusion_aria_title_preview --main-menu or fusion_room_runtime --file-select, and fusion_aria_runtime with its returns to the menu). The Aria menu it reaches still draws its labels, file entries and cursor as host overlays (aos.title.input_stage8); it reads the keyboard and the first gamepad. A frontend going back to its own title (B in a file screen, the Aria menu's way out, a game over's return) goes back to the shared title instead, in the same window; a START that the chosen title misses gives the line back after 3 s, and Zero Mission counts as ready only once its title reads START (its first 30 idle frames past). Limitations: the startup sequences, the idle introduction and the demos are deliberately skipped (the titles' idle timers are held); the Aria menu-to-gameplay chain inside the launcher was not run (only the launches into both frontends and their round trips back to the shared title, with scripted presses under SDL's dummy video driver). Checked on headless captures (--capture, --press); the split's geometry and the launch queue are unit-tested.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -19271,6 +19271,12 @@
  },
  "timeline": [
   {
+   "commit": "d405225",
+   "date": "2026-11-03",
+   "subject": "Drop Julius mode from the Aria main menu",
+   "scope": "project"
+  },
+  {
    "commit": "ebb2161",
    "date": "2026-11-03",
    "subject": "Draw Aria's main menu natively",
@@ -19742,12 +19748,6 @@
    "commit": "7923a1b",
    "date": "2026-10-30",
    "subject": "Port Aria Buer native no-contact rolling angular damping",
-   "scope": "project"
-  },
-  {
-   "commit": "4ba2998",
-   "date": "2026-10-30",
-   "subject": "Synchronize Aria Buer rolling fire facing with native velocity sign",
    "scope": "project"
   }
  ],

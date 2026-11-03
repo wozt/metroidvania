@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0733 - Launcher fixes and Aria's audio delay
+
+- Spamming START at the start no longer freezes the shared title: the press
+  sent to Zero Mission's title now waits for a released key, Zero Mission
+  counts as ready only once its title reads START (unk_f, after 30 idle
+  frames), and a chosen title that does not leave gives the line back after
+  3 s.
+- The launcher now loops: B in Aria's menu or in Zero Mission's file
+  select (and any return to a game's own title) comes back to the shared
+  title in the same window, as many times as wanted (checked with scripted
+  round trips). New `--frontend-arg` for such scripted runs.
+- Aria's sound streams (menu preview, gameplay runtime, launcher) are fed
+  one 176-sample frame a host frame, so they are now declared at 60 x 176 =
+  10560 Hz (AOS_MP2K_HOST_RATE) instead of 10512 Hz, whose queue grew by
+  48 samples a second (a delay of a quarter second after a minute), and
+  their queue is capped at four frames.
+
 ## Patch 0732 - No Julius mode
 
 - Following the project rule in AGENTS.md (no Julius mode and no SOUL

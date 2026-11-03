@@ -265,9 +265,11 @@ exported Zero Mission ROM bank and sounds:
 ./build/fusion_metroidvania --aria-rom "roms/Castlevania - Aria of Sorrow (USA).gba"
 ```
 
-`--mute` silences it, `--capture DIR FRAME,...` writes those frames as BMP
-files without opening a window and `--press FRAME,...` presses START at those
-frames.
+A game's way back to its own title (B in its file screen, for example)
+returns to the shared title. `--mute` silences it, `--capture DIR FRAME,...`
+writes those frames as BMP files without opening a window, `--press
+FRAME,...` presses START at those frames and `--frontend-arg ARG` passes an
+argument to the launched game (scripted checks).
 
 Run the experimental SDL3 Zero Mission room/animation integration with:
 

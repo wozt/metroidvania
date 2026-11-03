@@ -5107,6 +5107,14 @@ int room_runtime_main(int argc, char **argv) {
     debug.open=debug_at_start;
     uint16_t menu_previous=0;
     while (running) {
+        /* Inside the Metroid Vania launcher, the way back to the title (the
+         * file select's B, a game over's quit) leads to its shared title. */
+        if (fusion_host_embedded() && (intro_mode || title_mode)) {
+            const char *launcher[] = {"fusion_metroidvania", NULL};
+            fusion_host_launch(launcher);
+            running = false;
+            continue;
+        }
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             gba_input_handle_event(&gamepad,&event);

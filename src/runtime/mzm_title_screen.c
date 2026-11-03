@@ -683,7 +683,9 @@ bool mzm_title_skippable(const MzmTitleScreen *t) {
 }
 
 bool mzm_title_ready(const MzmTitleScreen *t) {
-    return t->sub_mode1 == 2 && t->oam_timings[2].stage == IDLE_IDLE;
+    /* TitleScreenCheckPlayEffects reads A and START once unk_f is set,
+     * half a second into the idle stage. */
+    return t->sub_mode1 == 2 && t->oam_timings[2].stage == IDLE_IDLE && t->unk_f;
 }
 
 void mzm_title_enter(MzmTitleScreen *t, bool after_demo) {

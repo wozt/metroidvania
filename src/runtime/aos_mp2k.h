@@ -27,6 +27,12 @@ enum {
      * master volume 15. */
     AOS_MP2K_MIX_RATE = 10512,
     AOS_MP2K_SAMPLES_PER_FRAME = 176,
+    /* A host running one GBA frame every 1/60 s plays 60 frames of 176
+     * samples a second: streams fed one frame a host frame are declared at
+     * this rate, so their queue neither grows (a rising delay) nor runs dry.
+     * Hosts also keep at most AOS_MP2K_HOST_QUEUE_FRAMES queued. */
+    AOS_MP2K_HOST_RATE = AOS_MP2K_SAMPLES_PER_FRAME * 60,
+    AOS_MP2K_HOST_QUEUE_FRAMES = 4,
     AOS_MP2K_DIV_FREQ = 798,
     AOS_MP2K_MASTER_VOLUME = 15,
 };

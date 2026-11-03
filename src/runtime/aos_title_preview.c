@@ -493,7 +493,7 @@ int aria_title_preview_main(int argc, char **argv) {
     SDL_AudioStream *audio_stream = NULL;
     if (have_audio) {
         aos_audio_set_start_sink(start_mp2k_song, &mp2k);
-        SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_MIX_RATE};
+        SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_HOST_RATE};
         audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL,
                                                  NULL);
         if (audio_stream) SDL_ResumeAudioStreamDevice(audio_stream);
@@ -725,6 +725,18 @@ int aria_title_preview_main(int argc, char **argv) {
             if (press_frames[k] == preview_frame) held |= press_keys[k];
         aos_input_update(&lifecycle.input, held);
         aos_game_lifecycle_update(&lifecycle);
+        /* Inside the Metroid Vania launcher, the menu's way back to the
+         * title (B, a game over's Konami logo) leads to its shared title. */
+        if (fusion_host_embedded() &&
+            (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN ||
+             lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO ||
+             lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO ||
+             lifecycle.game_mode.mode == AOS_MODE_RESET)) {
+            const char *launcher[] = {"fusion_metroidvania", NULL};
+            fusion_host_launch(launcher);
+            running = false;
+            break;
+        }
         /* The main menu's PlaySong requests (MUS_14, its sounds). */
         for (unsigned k = 0; k < lifecycle.main_menu.sound_count; ++k)
             aos_audio_play_song(lifecycle.main_menu.sounds[k]);
@@ -744,7 +756,9 @@ int aria_title_preview_main(int argc, char **argv) {
             aos_mp2k_engine_frame(&mp2k);
             int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
             aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
-            if (audio_stream) SDL_PutAudioStreamData(audio_stream, pcm, sizeof pcm);
+            if (audio_stream &&
+                SDL_GetAudioStreamQueued(audio_stream) < (int)sizeof pcm * AOS_MP2K_HOST_QUEUE_FRAMES)
+                SDL_PutAudioStreamData(audio_stream, pcm, sizeof pcm);
         }
         if (intro_rom.data &&
             lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU &&

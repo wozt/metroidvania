@@ -4420,7 +4420,7 @@ int aria_runtime_main(int argc, char **argv) {
     /* SoundMainRAM's output: signed 8-bit mono at the mode's 10512 Hz. */
     SDL_AudioStream *audio_stream = NULL;
     if (!mute && have_audio_bank) {
-        SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_MIX_RATE};
+        SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_HOST_RATE};
         audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL,
                                                  NULL);
         if (audio_stream) SDL_ResumeAudioStreamDevice(audio_stream);
@@ -4839,7 +4839,9 @@ int aria_runtime_main(int argc, char **argv) {
                 aos_mp2k_engine_frame(&mp2k);
                 int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
                 aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
-                if (audio_stream) SDL_PutAudioStreamData(audio_stream, pcm, sizeof pcm);
+                if (audio_stream &&
+                    SDL_GetAudioStreamQueued(audio_stream) < (int)sizeof pcm * AOS_MP2K_HOST_QUEUE_FRAMES)
+                    SDL_PutAudioStreamData(audio_stream, pcm, sizeof pcm);
                 wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;

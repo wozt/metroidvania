@@ -47,7 +47,7 @@ enum {
     MZM_AUDIO_RATE = 65536,
     PIXELS = MV_SCREEN_W * MV_SCREEN_H,
     CROSSFADE_FRAMES = 40,      /* the music's cross-fade, about 0.7 s */
-    MAX_PRESSES = 32
+    MAX_PRESSES = 1024
 };
 
 /* Zero Mission's sound is pulled by the device, one GBA frame at a time, as
@@ -161,38 +161,31 @@ static int run_frontend(const char *program, int argc, char **argv) {
     return 1;
 }
 
-int main(int argc, char **argv) {
-    const char *aria_rom_path = DEFAULT_ARIA_ROM, *capture_dir = NULL;
-    bool mute = false;
+typedef struct {
+    const char *aria_rom_path, *capture_dir;
+    bool mute;
     long capture_frames[MAX_PRESSES], presses[MAX_PRESSES];
-    int capture_count = 0, press_count = 0;
-    for (int i = 1; i < argc; ++i) {
-        if (!strcmp(argv[i], "--aria-rom") && i + 1 < argc) aria_rom_path = argv[++i];
-        else if (!strcmp(argv[i], "--mute")) mute = true;
-        else if (!strcmp(argv[i], "--capture") && i + 2 < argc) {
-            /* --capture DIR F1,F2,...: headless, BMPs of those frames. */
-            capture_dir = argv[++i];
-            capture_count = parse_frames(argv[++i], capture_frames);
-            mute = true;
-        } else if (!strcmp(argv[i], "--press") && i + 1 < argc) {
-            /* --press F1,F2,...: START at those frames (scripted runs). */
-            press_count = parse_frames(argv[++i], presses);
-        } else {
-            fprintf(stderr, "Usage: fusion_metroidvania [--aria-rom FILE] [--mute] "
-                            "[--capture DIR FRAME,... [--press FRAME,...]]\n");
-            return 2;
-        }
-    }
+    int capture_count, press_count;
+    const char *frontend_args[16];   /* --frontend-arg: appended (scripted runs) */
+    int frontend_arg_count;
+} Options;
 
+enum { TITLE_QUIT = 0, TITLE_CHOSEN = 1, TITLE_ERROR = -1,
+       CHOOSING_FRAMES = 180 };    /* the chosen title's exit, at most 3 s */
+
+/* The shared title screen until a game is chosen (*chosen) or the window
+ * closes; `window` is NULL for headless captures. */
+static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_game) {
     /* Aria: the title's layers, sheets and palette rows from the ROM. */
     FusionRom aria_rom = {0};
     static AosTitleGraphics aria_graphics;
     char error[256] = "";
-    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, aria_rom_path, &aria_rom, error, sizeof error) ||
+    if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, o->aria_rom_path, &aria_rom, error, sizeof error) ||
         !aos_title_graphics_init(&aria_graphics, &aria_rom, error, sizeof error) ||
         aria_rom.size < 0x20A000) {
-        fprintf(stderr, "No Aria title (%s): %s\n", aria_rom_path, error);
-        return 1;
+        fprintf(stderr, "No Aria title (%s): %s\n", o->aria_rom_path, error);
+        fusion_rom_close(&aria_rom);
+        return TITLE_ERROR;
     }
     static AosTitleScreen aria;
     aos_title_screen_init(&aria, &aria_graphics, aria_rom.data + 0x209308,
@@ -204,15 +197,10 @@ int main(int argc, char **argv) {
     if (!mzm_rom_open(MZM_ROM_BANK, MZM_ROM_SYMBOLS) || !mzm_screen_init(&mzm_screen, &mzm_ppu)) {
         fprintf(stderr, "No Zero Mission ROM bank: ./build/fusion_rebuild (%s)\n", MZM_ROM_BANK);
         fusion_rom_close(&aria_rom);
-        return 1;
+        return TITLE_ERROR;
     }
     mzm_title_enter(&mzm, false);
 
-    if (!SDL_Init((capture_dir ? 0 : SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) |
-                  (mute ? 0 : SDL_INIT_AUDIO))) {
-        fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
-        return 1;
-    }
     /* Both games' sound runs all the time; the gains cross-fade toward the
      * game at the top. */
     static AosMp2kEngine mp2k;
@@ -220,7 +208,8 @@ int main(int argc, char **argv) {
     aos_audio_reset();
     SDL_AudioStream *aria_stream = NULL;
     static MzmPull pull;
-    if (!mute) {
+    memset(&pull, 0, sizeof pull);
+    if (!o->mute) {
         SDL_AudioSpec mzm_spec = {SDL_AUDIO_S16, 2, MZM_AUDIO_RATE};
         if (mzm_audio_open(MZM_SOUND_BANK, MZM_SOUND_TABLES)) {
             mzm_audio_initialize();
@@ -236,7 +225,7 @@ int main(int argc, char **argv) {
         if (aos_audio_load_song_table(ARIA_SONG_TABLE, error, sizeof error) &&
             aos_mp2k_engine_load_bank(&mp2k, ARIA_SOUND_BANK, error, sizeof error)) {
             aos_audio_set_start_sink(aria_start_song, &mp2k);
-            SDL_AudioSpec aria_spec = {SDL_AUDIO_S8, 1, AOS_MP2K_MIX_RATE};
+            SDL_AudioSpec aria_spec = {SDL_AUDIO_S8, 1, AOS_MP2K_HOST_RATE};
             aria_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &aria_spec,
                                                     NULL, NULL);
             if (aria_stream) SDL_ResumeAudioStreamDevice(aria_stream);
@@ -245,54 +234,65 @@ int main(int argc, char **argv) {
         }
     }
 
-    SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
     SDL_Texture *texture = NULL;
-    if (!capture_dir) {
-        window = SDL_CreateWindow("Metroid Vania", MV_SCREEN_W * 4, MV_SCREEN_H * 4,
-                                  SDL_WINDOW_RESIZABLE);
-        renderer = window ? SDL_CreateRenderer(window, NULL) : NULL;
+    SDL_Gamepad *pads[8] = {0};
+    if (window) {
+        SDL_Renderer *previous = SDL_GetRenderer(window);
+        if (previous) SDL_DestroyRenderer(previous);
+        SDL_SetWindowTitle(window, "Metroid Vania");
+        renderer = SDL_CreateRenderer(window, NULL);
         texture = renderer ? SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                                                SDL_TEXTUREACCESS_STREAMING, MV_SCREEN_W,
                                                MV_SCREEN_H)
                            : NULL;
         if (!texture) {
             fprintf(stderr, "No window: %s\n", SDL_GetError());
-            return 1;
+            return TITLE_ERROR;
         }
         SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
         SDL_SetRenderLogicalPresentation(renderer, MV_SCREEN_W, MV_SCREEN_H,
                                          SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        /* The gamepads already connected (a frontend may have closed them). */
+        int count = 0;
+        SDL_JoystickID *ids = SDL_GetGamepads(&count);
+        for (int k = 0; ids && k < count && k < 8; ++k) pads[k] = SDL_OpenGamepad(ids[k]);
+        SDL_free(ids);
     }
 
     static uint8_t aria_pixels[PIXELS * 4], mzm_pixels[PIXELS * 4], pixels[PIXELS * 4];
     static uint32_t mzm_argb[PIXELS];
     bool running = true;
     long last_frame = 0;
-    for (int k = 0; k < capture_count; ++k)
-        if (capture_frames[k] > last_frame) last_frame = capture_frames[k];
+    for (int k = 0; k < o->capture_count; ++k)
+        if (o->capture_frames[k] > last_frame) last_frame = o->capture_frames[k];
     /* START's state: the openings being skipped, then the chosen game's
      * title playing its exit (the line stops turning). */
-    bool skipping = false, choosing = false, chosen_done = false;
+    bool skipping = false, choosing = false, chosen_done = false, mzm_pending = false;
+    int choosing_frames = 0;
     MvGame chosen = MV_GAME_ARIA;
     uint16_t mzm_held = 0;
     uint32_t turn = 0;          /* the line's frames */
     float gain[2] = {1.0f, 0.0f};
     uint64_t next_frame = SDL_GetTicksNS();
     for (long frame = 0; running; ++frame) {
-        bool start = listed(presses, press_count, frame);
+        bool start = listed(o->presses, o->press_count, frame);
         SDL_Event event;
-        while (!capture_dir && SDL_PollEvent(&event)) {
+        while (window && SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT ||
                 (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE))
                 running = false;
             else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                      (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER))
                 start = true;
-            else if (event.type == SDL_EVENT_GAMEPAD_ADDED)
-                SDL_OpenGamepad(event.gdevice.which);
-            else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
-                     event.gbutton.button == SDL_GAMEPAD_BUTTON_START)
+            else if (event.type == SDL_EVENT_GAMEPAD_ADDED) {
+                for (int k = 0; k < 8; ++k)
+                    if (!pads[k]) {
+                        pads[k] = SDL_OpenGamepad(event.gdevice.which);
+                        break;
+                    }
+            } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
+                       event.gbutton.button == SDL_GAMEPAD_BUTTON_START)
                 start = true;
         }
         if (!running) break;
@@ -303,9 +303,10 @@ int main(int argc, char **argv) {
             if (both_ready) {
                 /* START to the game at the bottom, through its own title. */
                 choosing = true;
+                choosing_frames = 0;
                 chosen = mv_split_bottom(angle);
                 if (chosen == MV_GAME_ARIA) aria_input = AOS_KEY_START;
-                else mzm_press = GBA_KEY_START;
+                else mzm_pending = true;
                 skipping = false;
             } else {
                 skipping = true;
@@ -317,7 +318,15 @@ int main(int argc, char **argv) {
             if (mzm_title_skippable(&mzm) && !mzm_held) mzm_press = GBA_KEY_START;
             if (both_ready) skipping = false;
         }
+        /* A press to Zero Mission's title needs a released key before it. */
+        if (mzm_pending && !mzm_held) {
+            mzm_press = GBA_KEY_START;
+            mzm_pending = false;
+        }
         mzm_held = mzm_press;
+        /* A chosen title that does not leave (it may have missed the
+         * press) gives the line back. */
+        if (choosing && ++choosing_frames > CHOOSING_FRAMES && !chosen_done) choosing = false;
 
         /* No idle introduction or demo here: their timers are held. */
         if (aria.stage == 8 && !aria.chosen) aria.counter = 10 * 60;
@@ -339,7 +348,9 @@ int main(int argc, char **argv) {
             aos_mp2k_engine_frame(&mp2k);
             int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
             aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
-            SDL_PutAudioStreamData(aria_stream, pcm, sizeof pcm);
+            /* A slow frame never builds up a delay. */
+            if (SDL_GetAudioStreamQueued(aria_stream) < (int)sizeof pcm * AOS_MP2K_HOST_QUEUE_FRAMES)
+                SDL_PutAudioStreamData(aria_stream, pcm, sizeof pcm);
         }
         MvGame heard = choosing ? chosen : mv_split_top(angle);
         for (int g = 0; g < 2; ++g) {
@@ -364,10 +375,10 @@ int main(int argc, char **argv) {
         }
         mv_split_compose(angle, aria_pixels, mzm_pixels, pixels);
 
-        if (capture_dir) {
-            if (listed(capture_frames, capture_count, frame)) {
+        if (!window) {
+            if (listed(o->capture_frames, o->capture_count, frame)) {
                 char path[1024];
-                snprintf(path, sizeof path, "%s/mv_%04ld.bmp", capture_dir, frame);
+                snprintf(path, sizeof path, "%s/mv_%04ld.bmp", o->capture_dir, frame);
                 if (!write_bmp(path, pixels)) fprintf(stderr, "Cannot write %s\n", path);
                 printf("frame %ld: aria stage %u, zero mission %s, %s\n", frame, aria.stage,
                        mzm_title_ready(&mzm) ? "ready" : "opening",
@@ -403,25 +414,90 @@ int main(int argc, char **argv) {
     mzm_screen_free(&mzm_screen);
     mzm_rom_close();
     fusion_rom_close(&aria_rom);
+    for (int k = 0; k < 8; ++k)
+        if (pads[k]) SDL_CloseGamepad(pads[k]);
     if (texture) SDL_DestroyTexture(texture);
+    if (renderer) SDL_DestroyRenderer(renderer);
+    *chosen_game = chosen;
+    return chosen_done ? TITLE_CHOSEN : TITLE_QUIT;
+}
+
+int main(int argc, char **argv) {
+    static Options o = {DEFAULT_ARIA_ROM, NULL, false, {0}, {0}, 0, 0, {NULL}, 0};
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "--aria-rom") && i + 1 < argc) o.aria_rom_path = argv[++i];
+        else if (!strcmp(argv[i], "--mute")) o.mute = true;
+        else if (!strcmp(argv[i], "--capture") && i + 2 < argc) {
+            /* --capture DIR F1,F2,...: headless, BMPs of those frames. */
+            o.capture_dir = argv[++i];
+            o.capture_count = parse_frames(argv[++i], o.capture_frames);
+            o.mute = true;
+        } else if (!strcmp(argv[i], "--press") && i + 1 < argc) {
+            /* --press F1,F2,...: START at those frames (scripted runs). */
+            o.press_count = parse_frames(argv[++i], o.presses);
+        } else if (!strcmp(argv[i], "--frontend-arg") && i + 1 < argc && o.frontend_arg_count < 16) {
+            o.frontend_args[o.frontend_arg_count++] = argv[++i];
+        } else {
+            fprintf(stderr, "Usage: fusion_metroidvania [--aria-rom FILE] [--mute] "
+                            "[--capture DIR FRAME,...] [--press FRAME,...] [--frontend-arg ARG]\n");
+            return 2;
+        }
+    }
+    if (!SDL_Init((o.capture_dir ? 0 : SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) |
+                  (o.mute ? 0 : SDL_INIT_AUDIO))) {
+        fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+        return 1;
+    }
+    SDL_Window *window = NULL;
+    if (!o.capture_dir) {
+        window = SDL_CreateWindow("Metroid Vania", MV_SCREEN_W * 4, MV_SCREEN_H * 4,
+                                  SDL_WINDOW_RESIZABLE);
+        if (!window) {
+            fprintf(stderr, "No window: %s\n", SDL_GetError());
+            SDL_Quit();
+            return 1;
+        }
+    }
     int rc = 0;
-    if (chosen_done && window) {
-        /* The chosen game in this window, then whatever it launches. */
+    for (;;) {
+        MvGame chosen;
+        int title = shared_title(&o, window, &chosen);
+        if (title != TITLE_CHOSEN || !window) {
+            rc = title == TITLE_ERROR ? 1 : 0;
+            break;
+        }
+        /* The chosen game in this window, then whatever it launches, until
+         * one of them comes back to the shared title (or the window closes). */
         fusion_host_embed(window);
-        const char *aria_args[] = {"fusion_aria_title_preview", "--rom", aria_rom_path,
-                                   "--main-menu", NULL};
-        const char *mzm_args[] = {"fusion_room_runtime", "--file-select", NULL};
-        fusion_host_launch(chosen == MV_GAME_ARIA ? aria_args : mzm_args);
+        const char *args[24] = {NULL};
+        int count = 0;
+        if (chosen == MV_GAME_ARIA) {
+            args[count++] = "fusion_aria_title_preview";
+            args[count++] = "--rom";
+            args[count++] = o.aria_rom_path;
+            args[count++] = "--main-menu";
+        } else {
+            args[count++] = "fusion_room_runtime";
+            args[count++] = "--file-select";
+        }
+        for (int k = 0; k < o.frontend_arg_count; ++k) args[count++] = o.frontend_args[k];
+        args[count] = NULL;
+        fusion_host_launch(args);
         int frontend_argc;
         char **frontend_argv;
         const char *program;
+        bool back = false;
         while (fusion_host_take_launch(&frontend_argc, &frontend_argv, &program)) {
+            if (!strcmp(program, "fusion_metroidvania")) {
+                back = true;
+                break;
+            }
             fprintf(stderr, "Metroid Vania: %s\n", program);
             rc = run_frontend(program, frontend_argc, frontend_argv);
         }
         fusion_host_embed(NULL);
-    } else if (renderer) {
-        SDL_DestroyRenderer(renderer);
+        if (!back) break;
+        fprintf(stderr, "Metroid Vania: back to the shared title\n");
     }
     if (window) SDL_DestroyWindow(window);
     SDL_Quit();

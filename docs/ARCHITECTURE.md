@@ -358,6 +358,7 @@ and `aos_anim.c`. Its simulation frames pass through the host-neutral native
 game-mode table in `aos_game_lifecycle.c`; explicit room/save launches enter
 IN_GAME directly while the incomplete boot/title path remains independently
 testable. `fusion_aria_title_preview` now selects that boot path, shows the
+two startup logos (`aos_logo_graphics.c`), the
 native title screen (`aos_title_screen.c`, with the ROM layers and object
 sheets of `aos_title_graphics.c`, its objects as an OAM list and MUS_27
 through the native MP2K mixer) and reaches

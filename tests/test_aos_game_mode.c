@@ -261,12 +261,14 @@ int main(void) {
     assert(logo.cleanup_requested && logo.konami_code_counter == 1);
     assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
     assert(game.update_stage == 2 && logo.asset_request == AOS_STARTUP_ASSETS_KONAMI_LOGO);
-    for (unsigned frame = 0; frame < 16; ++frame) {
+    /* "if (bldY > 1) bldY -= 1; else { bldY = 0; next }": 15 frames down
+     * to 1, then BLDY 0 and stage 3 on the 16th. */
+    for (unsigned frame = 0; frame < 15; ++frame) {
         assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
         assert(logo.brightness == 15 - frame && game.update_stage == 2);
     }
     assert(aos_game_mode_konami_logo_update(&game, &logo, &input, 1) == AOS_MODE_SAME);
-    assert(game.update_stage == 3 && logo.duration_timer == 240);
+    assert(logo.brightness == 0 && game.update_stage == 3 && logo.duration_timer == 240);
 
     static const uint16_t konami_code[] = {
         AOS_KEY_UP, AOS_KEY_UP, AOS_KEY_DOWN, AOS_KEY_DOWN, AOS_KEY_LEFT,

@@ -41,18 +41,19 @@ static const uint8_t *rom_at(const FusionRom *rom, uint32_t pointer, size_t size
     return rom->data + offset;
 }
 
-/* sub_0803F710 for a 4bpp layer on character block 2: each tile word's
- * index, flips and row into row * 16 + colour. */
-static bool decode_text(uint8_t *out, const FusionRom *rom, uint32_t metadata,
-                        const uint8_t *vram, char *error, size_t error_size) {
-    FusionAosBackground background = {.control = 2 << 2, .metadata_pointer = metadata};
+bool aos_title_decode_text_layer(uint8_t *out, const FusionRom *rom, uint32_t metadata,
+                                 unsigned character_block, const uint8_t *vram, char *error,
+                                 size_t error_size) {
+    FusionAosBackground background = {.control = (uint16_t)(character_block << 2),
+                                      .metadata_pointer = metadata};
     FusionAosBackgroundTilemap tilemap = {0};
     bool ok = fusion_aos_read_background_tiles(rom, &background, &tilemap, error, error_size) &&
               tilemap.status == FUSION_AOS_TILEMAP_DECODED;
     for (size_t ty = 0; ok && ty < 32 && ty < tilemap.height_tiles; ++ty)
         for (size_t tx = 0; tx < 32 && tx < tilemap.width_tiles; ++tx) {
             uint16_t word = tilemap.cells[ty * tilemap.width_tiles + tx];
-            const uint8_t *tile = vram + 2 * CHARACTER_BLOCK + (size_t)(word & 0x3FF) * 32;
+            const uint8_t *tile =
+                vram + character_block * CHARACTER_BLOCK + (size_t)(word & 0x3FF) * 32;
             uint8_t row = (uint8_t)((word >> 12) & 0xF);
             for (int y = 0; y < 8; ++y)
                 for (int x = 0; x < 8; ++x) {
@@ -204,8 +205,10 @@ bool aos_title_graphics_init(AosTitleGraphics *graphics, const FusionRom *rom, c
                                              memory->vram + 2 * CHARACTER_BLOCK,
                                              sizeof memory->vram - 2 * CHARACTER_BLOCK, error,
                                              error_size) &&
-              decode_text(graphics->text[0], rom, TITLE_BG0, memory->vram, error, error_size) &&
-              decode_text(graphics->text[1], rom, TITLE_BG1, memory->vram, error, error_size) &&
+              aos_title_decode_text_layer(graphics->text[0], rom, TITLE_BG0, 2, memory->vram,
+                                          error, error_size) &&
+              aos_title_decode_text_layer(graphics->text[1], rom, TITLE_BG1, 2, memory->vram,
+                                          error, error_size) &&
               decode_affine(graphics, rom, memory->vram, error, error_size) &&
               decode_sheet(&graphics->sheets[AOS_TITLE_SHEET_DISC], rom, TITLE_DISC_GRAPHICS,
                            TITLE_DISC_FRAMES, error, error_size) &&

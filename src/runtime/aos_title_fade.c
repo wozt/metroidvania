@@ -4,9 +4,9 @@
 enum { AOS_BRIGHTNESS_MAX = 16 };
 
 int aos_title_brightness_lower(uint16_t *brightness, uint16_t step) {
-    if (!step) return *brightness == 0;
-    if (*brightness >= step) {
-        *brightness = (uint16_t)(*brightness - step);
+    /* "if (bldY > 1) bldY -= step; else { bldY = 0; next stage; }" */
+    if (*brightness > 1) {
+        *brightness = (uint16_t)(*brightness > step ? *brightness - step : 0);
         return 0;
     }
     *brightness = 0;

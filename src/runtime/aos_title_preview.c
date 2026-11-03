@@ -13,6 +13,7 @@
 #include "aos_intro_font.h"
 #include "aos_intro_graphics.h"
 #include "aos_intro_resources.h"
+#include "aos_logo_graphics.h"
 #include "aos_main_menu_graphics.h"
 #include "aos_title_graphics.h"
 #include "aos_game_over_graphics.h"
@@ -555,6 +556,25 @@ int main(int argc, char **argv) {
             fprintf(stderr, "No native Aria title: %s\n", title_error);
         }
     }
+    /* The two startup logos (Licensed by Nintendo, Konami) from the ROM. */
+    static AosLogoGraphics logo_graphics[2];
+    bool have_logos = false;
+    SDL_Texture *logo_texture = NULL;
+    if (intro_rom.data) {
+        char logo_error[256];
+        have_logos = aos_logo_graphics_init(&logo_graphics[AOS_LOGO_NINTENDO], &intro_rom,
+                                            AOS_LOGO_NINTENDO, logo_error, sizeof logo_error) &&
+                     aos_logo_graphics_init(&logo_graphics[AOS_LOGO_KONAMI], &intro_rom,
+                                            AOS_LOGO_KONAMI, logo_error, sizeof logo_error);
+        if (have_logos) {
+            logo_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                             SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
+            if (logo_texture) SDL_SetTextureScaleMode(logo_texture, SDL_SCALEMODE_NEAREST);
+            else have_logos = false;
+        } else {
+            fprintf(stderr, "No native Aria logos: %s\n", logo_error);
+        }
+    }
     /* --game-over: the runtime's Soma died; GAME_OVER then the Konami logo. */
     if (start_game_over) aos_game_lifecycle_start_game_over(&lifecycle);
     static AosGameOverGraphics game_over_graphics;
@@ -590,6 +610,11 @@ int main(int argc, char **argv) {
         if (lifecycle.title.song >= 0) {
             aos_audio_play_song((uint16_t)lifecycle.title.song);
             lifecycle.title.song = -1;
+        }
+        /* GameModeKonamiLogoUpdate's PlaySong(SE_428) after the code. */
+        if (lifecycle.startup_logo.konami_code_sound_requested) {
+            aos_audio_play_song(428);
+            lifecycle.startup_logo.konami_code_sound_requested = false;
         }
         aos_audio_volume_update();
         if (have_audio) {
@@ -767,6 +792,16 @@ int main(int argc, char **argv) {
                 SDL_RenderFillRect(renderer, &whole);
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
+        } else if (have_logos && (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO ||
+                                  lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO)) {
+            static uint8_t logo_pixels[GBA_W * GBA_H * 4];
+            AosLogo logo = lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO ? AOS_LOGO_KONAMI
+                                                                            : AOS_LOGO_NINTENDO;
+            aos_logo_render(&logo_graphics[logo], lifecycle.startup_logo.blend_control,
+                            lifecycle.startup_logo.brightness, logo_pixels);
+            SDL_UpdateTexture(logo_texture, NULL, logo_pixels, GBA_W * 4);
+            SDL_FRect dst = {0, 0, GBA_W, GBA_H};
+            SDL_RenderTexture(renderer, logo_texture, NULL, &dst);
         } else if (title_texture && lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN) {
             static uint8_t title_pixels[GBA_W * GBA_H * 4];
             aos_title_screen_render(&lifecycle.title, title_pixels);
@@ -893,9 +928,9 @@ int main(int argc, char **argv) {
                 SDL_RenderDebugText(renderer, 62, 132, "A OR START: SKIP");
             } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN && !title_texture) {
                 SDL_RenderDebugText(renderer, 72, 122, "PRESS START");
-            } else if (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO) {
+            } else if (!have_logos && lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO) {
                 SDL_RenderDebugText(renderer, 48, 76, "LICENSED BY NINTENDO");
-            } else if (lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO) {
+            } else if (!have_logos && lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO) {
                 SDL_RenderDebugText(renderer, 86, 76, "KONAMI");
             }
         }
@@ -904,7 +939,10 @@ int main(int argc, char **argv) {
             lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE ?
                 lifecycle.intro_cutscene.brightness :
             lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN ?
-                (title_texture ? 0 : lifecycle.title.bldy) : lifecycle.startup_logo.brightness;
+                (title_texture ? 0 : lifecycle.title.bldy) :
+            have_logos && (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO ||
+                           lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO)
+                ? 0 : lifecycle.startup_logo.brightness;
         uint8_t darkness = brightness > 16 ? 16 : (uint8_t)brightness;
         if (darkness > 0) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -930,6 +968,7 @@ int main(int argc, char **argv) {
     aos_main_menu_graphics_free(&main_menu_graphics);
     if (menu_bg0_texture) SDL_DestroyTexture(menu_bg0_texture);
     if (title_texture) SDL_DestroyTexture(title_texture);
+    if (logo_texture) SDL_DestroyTexture(logo_texture);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);
     fusion_rom_close(&intro_rom);

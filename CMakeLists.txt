@@ -203,7 +203,7 @@ add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
                src/runtime/aos_intro_font.c src/runtime/aos_intro_graphics.c
                src/runtime/aos_rom_graphics.c src/runtime/aos_main_menu_graphics.c
-               src/runtime/aos_title_graphics.c
+               src/runtime/aos_title_graphics.c src/runtime/aos_logo_graphics.c
                src/runtime/aos_input.c src/runtime/aos_text_window.c
                src/runtime/aos_menu_bg0.c
                src/runtime/aos_game_over_graphics.c
@@ -946,6 +946,14 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_aos_intro_graphics_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_intro_graphics_tests)
     add_test(NAME aos_intro_graphics COMMAND fusion_aos_intro_graphics_tests)
+
+    add_executable(fusion_aos_logo_graphics_tests tests/test_aos_logo_graphics.c
+                   src/runtime/aos_logo_graphics.c src/runtime/aos_title_graphics.c
+                   src/runtime/aos_rom_graphics.c)
+    target_include_directories(fusion_aos_logo_graphics_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_logo_graphics_tests PRIVATE fusion_assets)
+    fusion_enable_warnings(fusion_aos_logo_graphics_tests)
+    add_test(NAME aos_logo_graphics COMMAND fusion_aos_logo_graphics_tests)
 
     add_executable(fusion_aos_main_menu_graphics_tests
                    tests/test_aos_main_menu_graphics.c

@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0727 - Aria's startup logos
+
+- New `aos_logo_graphics` decodes the "Licensed by Nintendo" and Konami
+  screens from the ROM (stage 1 of their game modes: character resource,
+  palette, BG0 layer) and renders them through BLDCNT's brightness effect.
+  The Aria preview now shows both logos instead of debug text, with their
+  native fades: from and to white for Nintendo, from white and to black
+  for Konami.
+- The BLDY fade-in helper now ends as the original does (on the frame BLDY
+  reaches 1 or 0); the Konami logo's fade-in was one frame too long.
+- The preview plays SE_428 after the Konami code.
+- Checked by eye on rendered images; not emulator-compared.
+
 ## Patch 0726 - Aria's title screen objects and music
 
 - `aos_title_graphics` now decodes the title's three object sheets (disc

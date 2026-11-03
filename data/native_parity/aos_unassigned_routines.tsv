@@ -2151,8 +2151,6 @@ aos:c:src/code/code_08039340.c:sub_0803F3F8	sub_0803F3F8	unclassified		technical
 aos:c:src/code/code_08039340.c:sub_0803F4C8	sub_0803F4C8	unclassified		technical	exclusive_callees	c_function	0x0803F4C8	src/code/code_08039340.c	5233	2	2
 aos:c:src/code/code_08039340.c:sub_0803F580	sub_0803F580	unclassified		technical	exclusive_callees	c_function	0x0803F580	src/code/code_08039340.c	5281	1	2
 aos:c:src/code/code_08039340.c:sub_0803F650	sub_0803F650	unclassified		technical	exclusive_callees	c_function	0x0803F650	src/code/code_08039340.c	5330	1	2
-aos:c:src/code/code_08039340.c:sub_0803F710	sub_0803F710	unclassified				c_function	0x0803F710	src/code/code_08039340.c	5370	2	1
-aos:c:src/code/code_08039340.c:sub_0803F8A8	sub_0803F8A8	unclassified		technical	exclusive_callees	c_function	0x0803F8A8	src/code/code_08039340.c	5463	27	3
 aos:c:src/code/code_08039340.c:sub_0803F970	sub_0803F970	unclassified				c_function	0x0803F970	src/code/code_08039340.c	5510	1	2
 aos:c:src/code/code_08039340.c:sub_0803FA10	sub_0803FA10	unclassified		technical	exclusive_callees	c_function	0x0803FA10	src/code/code_08039340.c	5549	1	2
 aos:c:src/code/code_08039340.c:sub_0803FAE0	sub_0803FAE0	unclassified		technical	exclusive_callees	c_function	0x0803FAE0	src/code/code_08039340.c	5598	1	2

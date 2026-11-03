@@ -17,6 +17,12 @@
 
 #include "aos_title_layers.h"
 
+/* sub_0803F710 for a 4bpp text layer (metadata as sub_0803F8A8 reads it)
+ * whose tiles sit on `character_block` of `vram`: 256 x 256 indices, each
+ * row * 16 + colour, 0 where transparent (pixels not written). */
+bool aos_title_decode_text_layer(uint8_t *out, const FusionRom *rom, uint32_t metadata,
+                                 unsigned character_block, const uint8_t *vram, char *error,
+                                 size_t error_size);
 bool aos_title_graphics_init(AosTitleGraphics *graphics, const FusionRom *rom, char *error,
                              size_t error_size);
 

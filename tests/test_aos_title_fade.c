@@ -17,6 +17,11 @@ int main(void) {
     }
     assert(aos_title_brightness_raise(&brightness, 2));
     assert(brightness == 16);
+    /* Step 1 (the Konami logo): 15 frames down to 1, then 0 and the end. */
+    for (unsigned frame = 0; frame < 15; ++frame)
+        assert(!aos_title_brightness_lower(&brightness, 1));
+    assert(brightness == 1 && aos_title_brightness_lower(&brightness, 1) && brightness == 0);
+    brightness = 16;
 
     AosTitleFade state = {0};
     aos_title_fade_init(&state);

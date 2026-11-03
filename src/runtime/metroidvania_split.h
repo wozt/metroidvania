@@ -3,8 +3,8 @@
  * the 240 x 160 screen across an invisible line through its centre that
  * turns clockwise at 10 degrees a second (a turn in 36 seconds). Aria is
  * on the side the line's normal points to, upward at frame 0; the game
- * covering most of the top half gives the music, START launches the game
- * covering most of the bottom half. No SDL. */
+ * covering most of the bottom half gives the music and START launches it.
+ * No SDL. */
 #ifndef METROIDVANIA_SPLIT_H
 #define METROIDVANIA_SPLIT_H
 

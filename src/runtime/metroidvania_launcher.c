@@ -2,7 +2,8 @@
 /* The Metroid Vania launcher: the native title screens of Aria of Sorrow
  * (aos_title_screen) and of Zero Mission (mzm_title_screen) at once, split
  * by the rotating line of metroidvania_split. The music is the one of the
- * game covering most of the top half, cross-faded when it changes. A first
+ * game covering most of the bottom half (the one START launches); the other
+ * fades out and pauses until its turn comes back. A first
  * START skips both titles' openings; once both wait for START, START goes
  * to the game covering most of the bottom half: its title plays its own
  * exit, then that game's frontend (fusion_aria_title_preview --main-menu or
@@ -273,7 +274,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
     MvGame chosen = MV_GAME_ARIA;
     uint16_t mzm_held = 0;
     uint32_t turn = 0;          /* the line's frames */
-    float gain[2] = {1.0f, 0.0f};
+    float gain[2] = {0.0f, 1.0f};   /* Zero Mission is at the bottom first */
     uint64_t next_frame = SDL_GetTicksNS();
     for (long frame = 0; running; ++frame) {
         bool start = listed(o->presses, o->press_count, frame);
@@ -343,8 +344,31 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             else mzm_title_enter(&mzm, true);   /* its demo: back past the comets */
         }
 
-        aos_audio_volume_update();
-        if (aria_stream) {
+        /* The music of the game covering most of the bottom half, the one
+         * START launches. The other fades out, then pauses (its sequencer
+         * stops) until its turn comes back. */
+        MvGame heard = choosing ? chosen : mv_split_bottom(angle);
+        for (int g = 0; g < 2; ++g) {
+            const float step = 1.0f / CROSSFADE_FRAMES;
+            float target = g == (int)heard ? 1.0f : 0.0f;
+            if (gain[g] < target) gain[g] = gain[g] + step > target ? target : gain[g] + step;
+            else gain[g] = gain[g] - step < target ? target : gain[g] - step;
+        }
+        bool aria_plays = heard == MV_GAME_ARIA || gain[MV_GAME_ARIA] > 0.0f;
+        bool mzm_plays = heard == MV_GAME_MZM || gain[MV_GAME_MZM] > 0.0f;
+        if (mzm_stream) {
+            if (mzm_plays) SDL_ResumeAudioStreamDevice(mzm_stream);
+            else SDL_PauseAudioStreamDevice(mzm_stream);
+            SDL_SetAudioStreamGain(mzm_stream, gain[MV_GAME_MZM]);
+        }
+        /* MUS_27 plays once (the game leaves for its introduction before it
+         * ends); here the title stays, so it starts again. */
+        AosAudioSongInfo title_song;
+        if (aria_stream && aria.stage >= 2 && aria.stage <= 8 && !aria.chosen &&
+            aos_audio_song_info(27, &title_song) && mp2k.players[title_song.player].ended)
+            aos_audio_play_song(27);
+        if (aria_stream && aria_plays) {
+            aos_audio_volume_update();
             aos_mp2k_engine_frame(&mp2k);
             int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
             aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
@@ -352,15 +376,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             if (SDL_GetAudioStreamQueued(aria_stream) < (int)sizeof pcm * AOS_MP2K_HOST_QUEUE_FRAMES)
                 SDL_PutAudioStreamData(aria_stream, pcm, sizeof pcm);
         }
-        MvGame heard = choosing ? chosen : mv_split_top(angle);
-        for (int g = 0; g < 2; ++g) {
-            const float step = 1.0f / CROSSFADE_FRAMES;
-            float target = g == (int)heard ? 1.0f : 0.0f;
-            if (gain[g] < target) gain[g] = gain[g] + step > target ? target : gain[g] + step;
-            else gain[g] = gain[g] - step < target ? target : gain[g] - step;
-        }
         if (aria_stream) SDL_SetAudioStreamGain(aria_stream, gain[MV_GAME_ARIA]);
-        if (mzm_stream) SDL_SetAudioStreamGain(mzm_stream, gain[MV_GAME_MZM]);
         if (!choosing) ++turn;
 
         aos_title_screen_render(&aria, aria_pixels);

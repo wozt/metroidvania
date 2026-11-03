@@ -252,7 +252,8 @@ options are not ported, so the runtime then returns to the intro. The demos and 
 The Metroid Vania launcher shows both native title screens at once, split by
 a line through the screen centre that turns clockwise (10 degrees a second,
 Aria on top at the start). The music is the one of the game covering most of
-the top half, cross-faded when it changes. A first START (Enter, or a
+the bottom half, cross-faded when it changes; the other game's music pauses
+until its turn comes back. A first START (Enter, or a
 gamepad's START) skips both titles' openings; the next one goes to the game
 covering most of the bottom half: its title plays its exit, then the game
 continues in the same window, straight to its file screen (the

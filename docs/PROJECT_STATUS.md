@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0734 - The launcher's music follows the bottom half
+
+- The music heard is now the one of the game covering most of the bottom
+  half, the one START launches.
+- The other game's music fades out, then pauses (its sequencer stops) and
+  resumes where it stopped when its turn comes back.
+- Aria's MUS_27 plays once (the game leaves for its introduction before it
+  ends); the launcher, whose title stays, starts it again when it ends.
+  That is why Aria's music seemed not to come back after a turn.
+
 ## Patch 0733 - Launcher fixes and Aria's audio delay
 
 - Spamming START at the start no longer freezes the shared title: the press

@@ -623,6 +623,26 @@ runtime mirrors doors that face left, as Soma's frames are mirrored; the
 generic draw (`0x03004564` in IWRAM) is not traced, but this places both
 edge doors inside their doorway art (rooms 0/3 and 0/16).
 
+Breakable walls (special objects 0x08 and 0x09, `Object08Create` /
+`Object08Update`, `Object09Create` / `Object09Update`, in
+`src/runtime/aos_wall.c`). Parameter 0 picks an entry of `0x08526064` (a
+sprite frame of a descriptor of `0x08526004` with its palette bank, a block
+offset, a box and a shape); parameter 1 is a bit of the event words at
+gEwramData + 0x33C, which records the break. Creation deletes the wall when
+that bit is already set; otherwise `sub_0804FCA0` makes its 16 x 16 blocks
+solid (a grid, a column, a column 16 pixels left, or a row). An object 0x08
+with a bit takes three blows of Soma's weapon (only the weapon slots of
+`sub_080421AC`, collision bits 0x1A; the red soul skills do not count), each
+playing 0xD3 and raising 32 frames of dust (`sub_0804FB78`, `sub_080503E0`);
+the fourth breaks it: 0xAB, nine bouncing debris (`sub_0804FA88`,
+`sub_0804F8A0`), its blocks cleared (`sub_0804FE20`) and its bit set. An
+object 0x08 without a bit does nothing. An object 0x09 breaks when its bit
+gets set elsewhere (nothing in the port sets one yet), a grid into 21 pieces
+of its art (`sub_0804F9B4`). While the Peeping Eye soul sets 0x13260 bit
+0x1000000, both kinds sparkle every 16 frames (`sub_08045CEC` animation 12,
+row 6). The event bits last for the session only (the save does not carry
+them yet), and the map update of `sub_08012154` is not ported.
+
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,
 flags at +0x1C, +0x20). `sub_0806B04C` copies the stats into the entity (HP
@@ -1059,7 +1079,7 @@ toward 3 pixels from the centre in the target's direction; the segments
 flame in turn at its death. Drawing order follows the native priorities:
 segments, then eyeball and pupil, then the eyelid. Its yellow soul sets
 the 0x13260 bit 0x1000000, read only by the breakable walls `Object08Update`
-and `Object09Update` (a sparkle every 16 frames), which are not ported.
+and `Object09Update`, which sparkle every 16 frames while it is set.
 
 The Giant Ghost (enemy 0x13, `EnemyGiantGhostCreate` /
 `EnemyGiantGhostUpdate`) is a skull with a translucent aura and two eyes.

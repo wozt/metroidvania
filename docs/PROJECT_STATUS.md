@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-03**.
 
+## Patch 0716 - Breakable walls and the Peeping Eye soul
+
+- The breakable walls (special objects 0x08 and 0x09) are ported in the new
+  `aos_wall` module: their solid blocks from the entry table `0x08526064`,
+  three weapon blows (0xD3, with dust) and the break at the fourth (0xAB,
+  nine bouncing debris, the blocks cleared, the event bit set), the event
+  wall's 21 pieces, and the sparkle every 16 frames while the Peeping Eye
+  soul is set. Their 18 frames, the third debris frame and the pieces are
+  exported (`aria_objects` v51); three new effect modes (debris, rising
+  dust, pieces) and translucent effects are drawn. A local capture in area
+  2 room 1 shows the wall sparkle, break and open its corridor.
+- The Peeping Eye soul now has its effect: the Peeping Eye is the 47th
+  complete monster, and every monster of the dashboard is complete.
+- Limits: the event bits last for the session (not saved yet), nothing sets
+  an object 0x09's bit yet, and the map update is not ported.
+
 ## Patch 0715 - The Peeping Eye from its native routines
 
 - `EnemyPeepingEyeUpdate` is rewritten from its traced routines, replacing

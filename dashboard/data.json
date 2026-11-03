@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-03T04:49:42+00:00",
+ "generated_at": "2026-11-03T05:03:55+00:00",
  "git": {
-  "commit": "eb0116c",
+  "commit": "70a3729",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 214,
+   "total": 215,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 48,
-    "functional": 155,
+    "functional": 156,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 155,
-   "functional_or_better_percent": 72.4,
-   "with_passing_tests": 201,
-   "with_passing_tests_percent": 93.9,
+   "functional_or_better": 156,
+   "functional_or_better_percent": 72.6,
+   "with_passing_tests": 202,
+   "with_passing_tests_percent": 94.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -250,6 +250,7 @@
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
     "aos.enemies.zombie_soldier",
+    "aos.environment.breakable_walls",
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
     "aos.items.money_pickups",
@@ -448,20 +449,20 @@
    "areas": [
     "aos"
    ],
-   "total": 73,
+   "total": 74,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 24,
-    "functional": 49,
+    "functional": 50,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 49,
-   "functional_or_better_percent": 67.1,
-   "with_passing_tests": 73,
+   "functional_or_better": 50,
+   "functional_or_better_percent": 67.6,
+   "with_passing_tests": 74,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -514,6 +515,7 @@
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
     "aos.enemies.zombie_soldier",
+    "aos.environment.breakable_walls",
     "aos.environment.wooden_doors",
     "aos.input.gamepad",
     "aos.items.money_pickups",
@@ -12489,6 +12491,86 @@
    }
   },
   {
+   "id": "aos.environment.breakable_walls",
+   "area": "aos",
+   "category": "environment",
+   "title": "Breakable walls",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_wall.c",
+    "src/runtime/aos_effect.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_wall.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [
+    "aos.environment.wooden_doors"
+   ],
+   "native_routines": [
+    "Object08Create",
+    "Object08Update",
+    "Object09Create",
+    "Object09Update",
+    "sub_0804FCA0",
+    "sub_0804FE20",
+    "sub_0804FA88",
+    "sub_0804F8A0",
+    "sub_0804FB78",
+    "sub_080503E0",
+    "sub_0804F9B4",
+    "sub_0806E0D0"
+   ],
+   "limitations": "The entry table 0x08526064 (frame, block offset, box and shape) is a source constant. The event bits gEwramData + 0x33C live for the session only: the save does not carry them yet, so a broken wall comes back after reloading. Nothing in the port sets the bit of an object 0x09 yet. The map update of sub_08012154 / sub_08012048, the OBJ priorities (6 and 0x16) against the backgrounds and the weapon callback on a wall hit are not modelled; translucent effects use half alpha. Objects 0x08 and 0x09 are ported (aos_wall): creation from the entry of 0x08526064 with its solid 16 x 16 blocks (sub_0804FCA0: a grid, a column, a column 16 pixels left or a row), deleted when its event bit is already set. An object 0x08 with an event bit takes three blows of Soma's weapon (sound 0xD3, the weapon slots of sub_080421AC with the recent-hit cooldown) and breaks at the fourth (0xAB): nine bouncing debris (sub_0804FA88 / sub_0804F8A0), its blocks cleared (sub_0804FE20), its bit set; each blow raises dust for 32 frames (sub_0804FB78 / sub_080503E0). An object 0x09 breaks when its bit is set, a grid into 21 pieces of its art (sub_0804F9B4). Both sparkle (animation 12, row 6) every 16 frames while the Peeping Eye soul sets 0x13260 bit 0x1000000. The 18 wall frames and the pieces are exported.",
+   "next_action": "Persist the 0x33C event bits in the save, trace the setters of the object 0x09 bits and the map update.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_wall.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_02_room_001 (--spawn 90 120 --weapon 1, attacking left): the wall at x 16 breaks at the fourth blow and Soma walks into the corridor; with --yellow-soul 6 it sparkles"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_wall.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_wall"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-03"
+   }
+  },
+  {
    "id": "aos.environment.wooden_doors",
    "area": "aos",
    "category": "environment",
@@ -14434,8 +14516,8 @@
     "sub_0803222C",
     "sub_08044F80"
    ],
-   "limitations": "SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x800000 (Dead Warrior), 0x2000000 (Erinys) and 0x40000 (Mimic); the others (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. The resistance souls' status cure sub_08021E50 is not modelled, and no ported enemy poisons yet (SkillZombieUse is reachable through the ported status rules only). Each yellow soul record (0x080E1B08, 12 bytes, exported as metadata/yellow_souls.tsv with 37 records, 0 for none) gives the soul entity's routine (+ 0x0), + 0x4, its + 0x1A (+ 0x6) and + 0x1C (+ 0x8). Soma's update runs sub_08031F3C (the entity of 0x13164, slot 0x11, created for a record with a routine), then sub_08021FA4 copies the equipped stats 0x13200 and resistances 0x13208 into current and resist and sub_08021C44 derives ATK (STR + equipment ATK) and DEF (CON / 2 + equipment DEF, each at least 0); the soul entity, updated after Soma, then adds its effect. A soul change (sub_08031FC4 / sub_080321C4) clears the 0x13260 bits 14-26 (mask 0xF8003FFF) and the entity. The flag souls OR + 0x1C into 0x13260, which the runtime now hands to Soma before each update; the stat souls add + 0x1C to the current stat + 0x1A (STR, CON, INT, LCK) then run sub_08021C44; the resistance souls OR + 0x1C into resist; SkillZombieUse, while unk_13270 bit 0 is set, adds 4v + v / 2 to STR, CON and INT; SkillLubicantUse adds STR and INT times (max HP - HP) / max HP and an eighth of that to CON; SkillWoodenGolemUse gives one MP every 32 frames; SkillBasiliskUse adds DEF / 4 and takes ATK / 2; record 36 (sub_0803222C) doubles ATK or DEF. Mimic's bit 0x40000 makes sub_08021654 give damage * 5 gold (sub_08044F80, at most 999999). Diagnostic --yellow-soul N equips and grants a yellow soul. Dead Warrior's bit 0x800000 lets Soma cast a red soul during an attack: state 1 (_0801C494) runs sub_08019478 on Up and a new attack press without the 0x540 flags.",
-   "next_action": "Port the readers of the remaining 0x13260 bits (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), and SkillGiantWormUse and SkillHeadhunterUse.",
+   "limitations": "SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x800000 (Dead Warrior), 0x2000000 (Erinys), 0x40000 (Mimic) and 0x1000000 (Peeping Eye: the breakable walls sparkle); the others (Iron Golem, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. The resistance souls' status cure sub_08021E50 is not modelled, and no ported enemy poisons yet (SkillZombieUse is reachable through the ported status rules only). Each yellow soul record (0x080E1B08, 12 bytes, exported as metadata/yellow_souls.tsv with 37 records, 0 for none) gives the soul entity's routine (+ 0x0), + 0x4, its + 0x1A (+ 0x6) and + 0x1C (+ 0x8). Soma's update runs sub_08031F3C (the entity of 0x13164, slot 0x11, created for a record with a routine), then sub_08021FA4 copies the equipped stats 0x13200 and resistances 0x13208 into current and resist and sub_08021C44 derives ATK (STR + equipment ATK) and DEF (CON / 2 + equipment DEF, each at least 0); the soul entity, updated after Soma, then adds its effect. A soul change (sub_08031FC4 / sub_080321C4) clears the 0x13260 bits 14-26 (mask 0xF8003FFF) and the entity. The flag souls OR + 0x1C into 0x13260, which the runtime now hands to Soma before each update; the stat souls add + 0x1C to the current stat + 0x1A (STR, CON, INT, LCK) then run sub_08021C44; the resistance souls OR + 0x1C into resist; SkillZombieUse, while unk_13270 bit 0 is set, adds 4v + v / 2 to STR, CON and INT; SkillLubicantUse adds STR and INT times (max HP - HP) / max HP and an eighth of that to CON; SkillWoodenGolemUse gives one MP every 32 frames; SkillBasiliskUse adds DEF / 4 and takes ATK / 2; record 36 (sub_0803222C) doubles ATK or DEF. Mimic's bit 0x40000 makes sub_08021654 give damage * 5 gold (sub_08044F80, at most 999999). Diagnostic --yellow-soul N equips and grants a yellow soul. Dead Warrior's bit 0x800000 lets Soma cast a red soul during an attack: state 1 (_0801C494) runs sub_08019478 on Up and a new attack press without the 0x540 flags.",
+   "next_action": "Port the readers of the remaining 0x13260 bits (Iron Golem, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), and SkillGiantWormUse and SkillHeadhunterUse.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul.c",
@@ -16717,7 +16799,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 574 traced door, enemy, skill and shared-effect sequences, 1,855 indexed frames, 1,199 unique BMPs, frame boxes, anchors, probes (including the shared throw routine's 0x084F1388 and 0x084F139C tables), volleys and all 113 enemy stat records; all 1,200 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports each record's experience (u16 at 0x10) and drop fields (items at 0x08/0x0A, rates at 0x15/0x16, soul rarity, type and index at 0x12/0x17/0x18), which the runtime uses on defeat, metadata/money.tsv the money pickup table 0x085250E4, and metadata/equipment.tsv the weapon and armor records. Compressed tile sheets skip their 4-byte expanded header (before v47 every tile was shifted down one row, leaving stray one-pixel rows).",
+   "limitations": "The native C11 rebuild task exports 574 traced door, enemy, skill and shared-effect sequences, 1,855 indexed frames, 1,199 unique BMPs, frame boxes, anchors, probes (including the shared throw routine's 0x084F1388 and 0x084F139C tables), volleys and all 113 enemy stat records; all 1,200 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports each record's experience (u16 at 0x10) and drop fields (items at 0x08/0x0A, rates at 0x15/0x16, soul rarity, type and index at 0x12/0x17/0x18), which the runtime uses on defeat, metadata/money.tsv the money pickup table 0x085250E4, and metadata/equipment.tsv the weapon and armor records. Compressed tile sheets skip their 4-byte expanded header (before v47 every tile was shifted down one row, leaving stray one-pixel rows). It also exports the 18 breakable-wall frames of 0x08526064 (Enemy/wall_N), the third debris frame and the object 0x09 wall pieces.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -16732,7 +16814,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-10-29",
+   "last_validated": "2026-11-03",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -18927,6 +19009,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_wall",
+    "files": [
+     "tests/test_aos_wall.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_enemy",
     "files": [
      "tests/test_aos_enemy.c"
@@ -18991,12 +19080,18 @@
    }
   ],
   "summary": {
-   "passed": 120,
+   "passed": 121,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "70a3729",
+   "date": "2026-11-03",
+   "subject": "Rewrite the Peeping Eye from its native routines",
+   "scope": "project"
+  },
   {
    "commit": "eb0116c",
    "date": "2026-11-03",
@@ -19470,12 +19565,6 @@
    "date": "2026-10-30",
    "subject": "Fix dashboard tests using the native FusionJson number kind",
    "scope": "project"
-  },
-  {
-   "commit": "01a3070",
-   "date": "2026-10-30",
-   "subject": "meh",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -19536,9 +19625,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 830,
-    "routines_attached_to_features": 830,
-    "unassigned_routines": 2743,
+    "routines_cited_by_features": 842,
+    "routines_attached_to_features": 842,
+    "unassigned_routines": 2731,
     "call_edges": 14228
    }
   },
@@ -22035,9 +22124,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "n/a",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "yellow:6",
-       "notes": "Soul: drops and is collected; casting sets the 0x13260 bit 0x1000000 (the yellow soul flag routine 0x08032205), but its only readers, the breakable walls Object08Update and Object09Update (a burst sparkle every 16 frames), are not ported, so it has no visible effect. Animations: EnemyPeepingEyeUpdate is ported from its traced routines: the wait, the 40-frame opening, the steering toward points near the target, the eyelid looks (blink, up, down, hurt), the eyeball, the pupil following the target and the six swaying segments (sub_08088168, sub_08088724, sub_080888D4, sub_08088A64), unit-tested; a local capture shows it open and rise. Sounds: 0x6E at its death (sub_08088638) is requested and unit-tested (not listened to). Loot: the native record has none."
+       "notes": "Soul: drops and is collected; casting sets the 0x13260 bit 0x1000000 (the yellow soul flag routine 0x08032205), read by the breakable walls Object08Update and Object09Update (aos_wall), which sparkle every 16 frames while it is set (unit-tested; a local capture shows the sparkle). Animations: EnemyPeepingEyeUpdate is ported from its traced routines: the wait, the 40-frame opening, the steering toward points near the target, the eyelid looks (blink, up, down, hurt), the eyeball, the pupil following the target and the six swaying segments (sub_08088168, sub_08088724, sub_080888D4, sub_08088A64), unit-tested; a local capture shows it open and rise. Sounds: 0x6E at its death (sub_08088638) is requested and unit-tested (not listened to). Loot: the native record has none."
       }
      },
      {
@@ -23937,11 +24026,11 @@
       "missing": 0
      },
      "soul": {
-      "ported": 46,
-      "partial": 1,
+      "ported": 47,
+      "partial": 0,
       "missing": 0
      },
-     "complete": 46,
+     "complete": 47,
      "monsters": 47
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -28945,7 +29034,7 @@
        "id": "07:06",
        "name": "Peeping Eye",
        "status": "partial",
-       "note": "Soul: drops and is collected; casting sets the 0x13260 bit 0x1000000 (the yellow soul flag routine 0x08032205), but its only readers, the breakable walls Object08Update and Object09Update (a burst sparkle every 16 frames), are not ported, so it has no visible effect. Animations: EnemyPeepingEyeUpdate is ported from its traced routines: the wait, the 40-frame opening, the steering toward points near the target, the eyelid looks (blink, up, down, hurt), the eyeball, the pupil following the target and the six swaying segments (sub_08088168, sub_08088724, sub_080888D4, sub_08088A64), unit-tested; a local capture shows it open and rise. Sounds: 0x6E at its death (sub_08088638) is requested and unit-tested (not listened to). Loot: the native record has none.",
+       "note": "Soul: drops and is collected; casting sets the 0x13260 bit 0x1000000 (the yellow soul flag routine 0x08032205), read by the breakable walls Object08Update and Object09Update (aos_wall), which sparkle every 16 frames while it is set (unit-tested; a local capture shows the sparkle). Animations: EnemyPeepingEyeUpdate is ported from its traced routines: the wait, the 40-frame opening, the steering toward points near the target, the eyelid looks (blink, up, down, hurt), the eyeball, the pupil following the target and the six swaying segments (sub_08088168, sub_08088724, sub_080888D4, sub_08088A64), unit-tested; a local capture shows it open and rise. Sounds: 0x6E at its death (sub_08088638) is requested and unit-tested (not listened to). Loot: the native record has none.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

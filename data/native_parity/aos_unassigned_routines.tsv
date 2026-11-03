@@ -135,10 +135,6 @@ aos:asm:asm/code/code_08040A38.s:Object06Create	Object06Create	environment	name	
 aos:asm:asm/code/code_08040A38.s:Object06Update	Object06Update	environment	name			asm_function		asm/code/code_08040A38.s	27542	0	14
 aos:asm:asm/code/code_08040A38.s:Object07Create	Object07Create	environment	name			asm_function		asm/code/code_08040A38.s	28760	0	4
 aos:asm:asm/code/code_08040A38.s:Object07Update	Object07Update	environment	name			asm_function		asm/code/code_08040A38.s	28827	0	1
-aos:asm:asm/code/code_08040A38.s:Object08Create	Object08Create	environment	name			asm_function		asm/code/code_08040A38.s	29890	0	5
-aos:asm:asm/code/code_08040A38.s:Object08Update	Object08Update	environment	name			asm_function		asm/code/code_08040A38.s	30008	0	12
-aos:asm:asm/code/code_08040A38.s:Object09Create	Object09Create	environment	name			asm_function		asm/code/code_08040A38.s	30163	0	3
-aos:asm:asm/code/code_08040A38.s:Object09Update	Object09Update	environment	name			asm_function		asm/code/code_08040A38.s	30244	0	11
 aos:asm:asm/code/code_08040A38.s:Object0ACreate	Object0ACreate	environment	name			asm_function		asm/code/code_08040A38.s	30492	0	1
 aos:asm:asm/code/code_08040A38.s:Object0AUpdate	Object0AUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30541	0	0
 aos:asm:asm/code/code_08040A38.s:Object0BCreate	Object0BCreate	environment	name			asm_function		asm/code/code_08040A38.s	30546	0	2
@@ -325,13 +321,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804F690	sub_0804F690	environment	referrers
 aos:asm:asm/code/code_08040A38.s:sub_0804F7A4	sub_0804F7A4	unclassified				asm_function	0x0804F7A4	asm/code/code_08040A38.s	28858	1	2
 aos:asm:asm/code/code_08040A38.s:sub_0804F84C	sub_0804F84C	unclassified				asm_function	0x0804F84C	asm/code/code_08040A38.s	28945	1	0
 aos:asm:asm/code/code_08040A38.s:sub_0804F85C	sub_0804F85C	unclassified				asm_function	0x0804F85C	asm/code/code_08040A38.s	28955	1	0
-aos:asm:asm/code/code_08040A38.s:sub_0804F8A0	sub_0804F8A0	environment	referrers			asm_function	0x0804F8A0	asm/code/code_08040A38.s	28996	0	3
-aos:asm:asm/code/code_08040A38.s:sub_0804F9B4	sub_0804F9B4	environment	referrers			asm_function	0x0804F9B4	asm/code/code_08040A38.s	29138	0	5
-aos:asm:asm/code/code_08040A38.s:sub_0804FA88	sub_0804FA88	environment	referrers			asm_function	0x0804FA88	asm/code/code_08040A38.s	29241	2	5
-aos:asm:asm/code/code_08040A38.s:sub_0804FB78	sub_0804FB78	environment	referrers			asm_function	0x0804FB78	asm/code/code_08040A38.s	29357	0	7
-aos:asm:asm/code/code_08040A38.s:sub_0804FCA0	sub_0804FCA0	environment	referrers			asm_function	0x0804FCA0	asm/code/code_08040A38.s	29502	2	1
-aos:asm:asm/code/code_08040A38.s:sub_0804FE20	sub_0804FE20	environment	referrers			asm_function	0x0804FE20	asm/code/code_08040A38.s	29696	2	1
-aos:asm:asm/code/code_08040A38.s:sub_080503E0	sub_080503E0	environment	referrers			asm_function	0x080503E0	asm/code/code_08040A38.s	30426	0	3
 aos:asm:asm/code/code_08040A38.s:sub_08050510	sub_08050510	unclassified				asm_function	0x08050510	asm/code/code_08040A38.s	30591	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08050694	sub_08050694	unclassified				asm_function	0x08050694	asm/code/code_08040A38.s	30784	0	0
 aos:asm:asm/code/code_08040A38.s:sub_080506C0	sub_080506C0	unclassified				asm_function	0x080506C0	asm/code/code_08040A38.s	30809	0	0
@@ -831,7 +820,6 @@ aos:asm:asm/code/code_08060B98.s:sub_0806DFF8	sub_0806DFF8	unclassified		technic
 aos:asm:asm/code/code_08060B98.s:sub_0806E028	sub_0806E028	unclassified				asm_function	0x0806E028	asm/code/code_08060B98.s	27490	3	0
 aos:asm:asm/code/code_08060B98.s:sub_0806E064	sub_0806E064	unclassified				asm_function	0x0806E064	asm/code/code_08060B98.s	27518	1	0
 aos:asm:asm/code/code_08060B98.s:sub_0806E0A0	sub_0806E0A0	unclassified				asm_function	0x0806E0A0	asm/code/code_08060B98.s	27545	1	0
-aos:asm:asm/code/code_08060B98.s:sub_0806E0D0	sub_0806E0D0	unclassified		technical	exclusive_callees	asm_function	0x0806E0D0	asm/code/code_08060B98.s	27567	136	3
 aos:asm:asm/code/code_08060B98.s:sub_0806E120	sub_0806E120	enemies	referrers			asm_function	0x0806E120	asm/code/code_08060B98.s	27608	2	0
 aos:asm:asm/code/code_08060B98.s:sub_0806E140	sub_0806E140	unclassified				asm_function	0x0806E140	asm/code/code_08060B98.s	27629	8	2
 aos:asm:asm/code/code_08060B98.s:sub_0806E1B8	sub_0806E1B8	unclassified		technical	exclusive_callees	asm_function	0x0806E1B8	asm/code/code_08060B98.s	27694	0	1

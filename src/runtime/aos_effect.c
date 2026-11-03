@@ -177,8 +177,82 @@ static bool follow_update(AosEffect *e, const AosAnimSet *anims, const AosEffect
     return true;
 }
 
+/* sub_08068AD4(e, -16, -16, 0x110, 0xC0): on the screen widened by 16. */
+static bool wall_effect_on_screen(const AosEffect *e, const AosEffectWorld *world) {
+    int sx = (e->x >> 16) - world->cam_x, sy = (e->y >> 16) - world->cam_y;
+    return (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)(sy + 0x10) <= 0xC0;
+}
+
+static bool still_frame(AosEffect *e, const AosAnimSet *anims) {
+    if (e->started) return true;
+    if (!aos_anim_start(&e->anim, anims, 0, true)) return false;
+    e->anim.id = 0;
+    e->started = true;
+    return true;
+}
+
+/* sub_0804F8A0 */
+static bool debris_update(AosEffect *e, const AosAnimSet *anims, const AosEffectWorld *world) {
+    if (!world || !world->random || !still_frame(e, anims)) return false;
+    if (e->state == 0) {
+        e->vx = (int32_t)((world->random() & 0x1FFF) << 4) - 0x8000;
+        if (e->x < world->player_x) e->vx = -e->vx;
+        e->vy = -(int32_t)((world->random() & 0x3FFF) << 4);
+        e->state = 1;
+    } else if (e->state == 1 &&
+               (aos_collision_cell(world->layer, e->x >> 16, (e->y >> 16) + 4) & 1)) {
+        e->kind = (uint8_t)(AOS_EFFECT_ROCK_FRAGMENT_0 + (world->random() & 1));
+        e->vy = -(e->vy >> 1);
+        e->state = 2;
+    } else {
+        e->x += e->vx;
+        e->y += e->vy;
+        e->vy += 0x3000;
+    }
+    return wall_effect_on_screen(e, world);
+}
+
+/* sub_080503E0 (its creator started and stepped the animation). */
+static bool rise_update(AosEffect *e, const AosAnimSet *anims, const AosEffectWorld *world) {
+    if (!world || !world->random) return false;
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, false)) return false;
+        e->anim.id = 0;
+        aos_anim_step(&e->anim, anims);
+        e->started = true;
+    }
+    if (e->state == 0) {
+        e->vy = -0xC000 - (int32_t)((world->random() & 0xFF) << 4);
+        e->state = 1;
+    } else {
+        e->y += e->vy;
+    }
+    if (!wall_effect_on_screen(e, world)) return false;
+    return aos_anim_step(&e->anim, anims) != 3;
+}
+
+/* sub_0804F9B4 */
+static bool piece_update(AosEffect *e, const AosAnimSet *anims, const AosEffectWorld *world) {
+    if (!world || !world->random) return false;
+    if (e->state == 0) {
+        e->kind = (uint8_t)(AOS_EFFECT_WALL_PIECE_1 + (world->random() & 1));
+        e->vx = (int32_t)((world->random() & 0x1FFF) << 4) + 0x20000;
+        e->vy = -0x10000 - (int32_t)((world->random() & 0x3FFF) << 4);
+        e->ay = 0x3000;
+        e->state = 1;
+    }
+    /* Both kinds are one still frame: the art passed serves either. */
+    if (!still_frame(e, anims)) return false;
+    clamped_move(&e->x, &e->vx, e->ax);
+    clamped_move(&e->y, &e->vy, e->ay);
+    return wall_effect_on_screen(e, world);
+}
+
 bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t *blink,
                        const AosEffectWorld *world) {
+    if (effect->debris) return debris_update(effect, anims, world);
+    if (effect->rise) return rise_update(effect, anims, world);
+    if (effect->piece) return piece_update(effect, anims, world);
     if (effect->casing) return casing_update(effect, anims, world);
     if (effect->follow) return follow_update(effect, anims, world);
     if (effect->particle) return particle_update(effect, anims, blink);

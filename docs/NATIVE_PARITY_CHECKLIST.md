@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 73 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 74 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 830 | 2743 |
+| Castlevania: Aria of Sorrow | 842 | 2731 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1305,8 +1305,8 @@ Native evidence: `aos:asm:asm/code/code_080211F0.s:SkillBasiliskUse`, `aos:asm:a
 Local implementation: [`src/runtime/aos_soul.c`](../src/runtime/aos_soul.c), [`src/runtime/aos_stats.c`](../src/runtime/aos_stats.c), [`src/runtime/aos_soma.c`](../src/runtime/aos_soma.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_soul.c`](../tests/test_aos_soul.c), [`tests/test_aos_soma.c`](../tests/test_aos_soma.c).
 Dependencies: `aos.souls.inventory_pickups`, `aos.souls.equipment_menu`, `aos.progression.equipment_stats`, `aos.player.soma_controller`.  
-Known divergences: SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x800000 (Dead Warrior), 0x2000000 (Erinys) and 0x40000 (Mimic); the others (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. The resistance souls' status cure sub_08021E50 is not modelled, and no ported enemy poisons yet (SkillZombieUse is reachable through the ported status rules only).  
-Next action: Port the readers of the remaining 0x13260 bits (Iron Golem, Peeping Eye, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), and SkillGiantWormUse and SkillHeadhunterUse.
+Known divergences: SkillGiantWormUse and SkillHeadhunterUse are not ported (their records are cleared on load, so those souls do nothing). The 0x131B8 & 0x400 lock and the gEwramData + 0x344 limit to souls 1-2 of sub_08031F3C are not modelled. Of the 0x13260 bits the flag souls set, the runtime reads 0x4000 and 0x8000 (Undine, Skula), 0x400000 (Zombie Officer), 0x800000 (Dead Warrior), 0x2000000 (Erinys), 0x40000 (Mimic) and 0x1000000 (Peeping Eye: the breakable walls sparkle); the others (Iron Golem, Succubus, Flesh Golem, Tsuchinoko, Arc Demon) have no ported reader. The resistance souls' status cure sub_08021E50 is not modelled, and no ported enemy poisons yet (SkillZombieUse is reachable through the ported status rules only).  
+Next action: Port the readers of the remaining 0x13260 bits (Iron Golem, Succubus, Flesh Golem, Tsuchinoko, Arc Demon), and SkillGiantWormUse and SkillHeadhunterUse.
 Evidence: in game: `aria area_00_room_006 (--hp 9999 --repeat 8, attack and Right): a knife hit on a Skeleton deals 15 damage, 19 with --yellow-soul 22 (STR + 4); a Skeleton's hit on Soma deals 13, 5 with --yellow-soul 29 (CON + 16)`.
 
 ### Physics
@@ -1809,6 +1809,16 @@ Evidence: in game: `aria area_00_room_015: knife kill at frame 241 (--spawn 250 
 ### Environment interactions
 
 [?] **`aos.environment.inventory-boundary` — source coverage.** The current classifier assigns 251 discovered routine(s) to this category (112 by native name, 139 by exclusive referrers). Category completeness has not been established.
+
+[+] **`aos.environment.breakable_walls` — Breakable walls.** Objects 0x08 and 0x09 are ported (aos_wall): creation from the entry of 0x08526064 with its solid 16 x 16 blocks (sub_0804FCA0: a grid, a column, a column 16 pixels left or a row), deleted when its event bit is already set. An object 0x08 with an event bit takes three blows of Soma's weapon (sound 0xD3, the weapon slots of sub_080421AC with the recent-hit cooldown) and breaks at the fourth (0xAB): nine bouncing debris (sub_0804FA88 / sub_0804F8A0), its blocks cleared (sub_0804FE20), its bit set; each blow raises dust for 32 frames (sub_0804FB78 / sub_080503E0). An object 0x09 breaks when its bit is set, a grid into 21 pieces of its art (sub_0804F9B4). Both sparkle (animation 12, row 6) every 16 frames while the Peeping Eye soul sets 0x13260 bit 0x1000000. The 18 wall frames and the pieces are exported.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object08Create`, `aos:asm:asm/code/code_08040A38.s:Object08Update`, `aos:asm:asm/code/code_08040A38.s:Object09Create`, `aos:asm:asm/code/code_08040A38.s:Object09Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804F8A0`, `aos:asm:asm/code/code_08040A38.s:sub_0804F9B4`, `aos:asm:asm/code/code_08040A38.s:sub_0804FA88`, `aos:asm:asm/code/code_08040A38.s:sub_0804FB78`, `aos:asm:asm/code/code_08040A38.s:sub_0804FCA0`, `aos:asm:asm/code/code_08040A38.s:sub_0804FE20`, `aos:asm:asm/code/code_08040A38.s:sub_080503E0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`.  
+Local implementation: [`src/runtime/aos_wall.c`](../src/runtime/aos_wall.c), [`src/runtime/aos_effect.c`](../src/runtime/aos_effect.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_wall.c`](../tests/test_aos_wall.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.environment.wooden_doors`.  
+Known divergences: The entry table 0x08526064 (frame, block offset, box and shape) is a source constant. The event bits gEwramData + 0x33C live for the session only: the save does not carry them yet, so a broken wall comes back after reloading. Nothing in the port sets the bit of an object 0x09 yet. The map update of sub_08012154 / sub_08012048, the OBJ priorities (6 and 0x16) against the backgrounds and the weapon callback on a wall hit are not modelled; translucent effects use half alpha.  
+Next action: Persist the 0x33C event bits in the save, trace the setters of the object 0x09 bits and the map update.
+Evidence: in game: `aria area_02_room_001 (--spawn 90 120 --weapon 1, attacking left): the wall at x 16 breaks at the fourth blow and Soma walks into the corridor; with --yellow-soul 6 it sparkles`.
 
 [+] **`aos.environment.wooden_doors` — Native wooden doors.** Object00 is ported: creation open or closed with its three blocks, opening on contact while facing it (not on a backdash), walking Soma through or out, closing, the off-screen hiding of sub_08068AD4(e, -32, 0, 0x130, 0xD0) and the global flags held while Soma passes; wooden and green door graphics with their palette cycles are exported.
 

@@ -42,14 +42,30 @@
  *   0x36, 12 frames; Effect/sparkle, row 6) updated by sub_08045000
  *   (`timed`): x += vx, y += vy, vx += ax, vy += ay, deleted when + 0x0D
  *   runs out. Its draw routine sub_08045E4C also shows it at a random
- *   offset (+ 0x1C, + 0x20), which the runtime models as a second sparkle. */
+ *   offset (+ 0x1C, + 0x20), which the runtime models as a second sparkle;
+ * - a breakable wall's (aos_wall) debris sub_0804F8A0 (`debris`, still
+ *   frames 0x40 to 0x42 with row 6: Effect/rock_fragment_0 to _2): its
+ *   first update throws it at -0.5 to 1.5 away from the player's x (vx
+ *   negated when it lies left of him) and up to 4.0 upward; then, unless a
+ *   solid cell lies 4 pixels below (where it shows frame 0x40 or 0x41 at
+ *   random and bounces at half its speed, once), it moves and falls by
+ *   0x3000; deleted outside sub_08068AD4(e, -16, -16, 0x110, 0xC0);
+ * - its rising dust sub_080503E0 (`rise`, animation 5, row 6: the smoke
+ *   art), started by its creator: the first update rises it at 0.75 to
+ *   0.81, then it moves; deleted when its animation ends or off the same
+ *   box;
+ * - the pieces of an object 0x09 grid sub_0804F9B4 (`piece`, the wall's
+ *   frames 1 and 2: Effect/wall_piece_1, _2): frame and speeds at random
+ *   (vx 2.0 to 2.5, vy -1.0 to -5.0, ay 0x3000), moved by sub_0806D3D8(e,
+ *   8.0) from their first update; deleted off the same box. */
 enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
        AOS_EFFECT_DUST = 6, AOS_EFFECT_IMPACT = 7, AOS_EFFECT_CASING = 8,
        AOS_EFFECT_EMBER = 9, AOS_EFFECT_BURST_1 = 10, AOS_EFFECT_BURST_12 = 11,
        AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_SPARKLE = 13,
        AOS_EFFECT_ROCK_FRAGMENT_0 = 14, AOS_EFFECT_ROCK_FRAGMENT_1 = 15,
-       AOS_EFFECT_KINDS = 16 };
+       AOS_EFFECT_ROCK_FRAGMENT_2 = 16, AOS_EFFECT_WALL_PIECE_1 = 17,
+       AOS_EFFECT_WALL_PIECE_2 = 18, AOS_EFFECT_KINDS = 19 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */
@@ -64,6 +80,10 @@ typedef struct {
     bool timed;             /* sub_08045000 */
     bool ballistic;         /* sub_0802DA98: acceleration, 8.0 clamps, margin 4 */
     bool wisp;              /* sub_08069134 (+ 0x18 = 0, + 0x19 = 3): random flips, a lifetime */
+    bool debris;            /* sub_0804F8A0: a wall's debris, one bounce */
+    bool rise;              /* sub_080503E0: a wall's rising dust */
+    bool piece;             /* sub_0804F9B4: a piece of an object 0x09 wall */
+    bool translucent;       /* + 0x59 bit 1 */
     bool vflip;             /* + 0x58 bit 0x80 */
     uint8_t state;          /* + 0x0A of a casing: 1 falling, 2 bounced */
     int32_t ax, ay;         /* + 0x50, + 0x54 of a drifting effect */

@@ -268,6 +268,27 @@ static const EntitySpec entities[] = {
     /* Its still frames 0 (the bone) and 3 (the grenade of parameter 5), with
      * the walker probes 0x084F1388 of the bouncing throws (flag 4). */
     {"skill_bone", 0x081CF8E0, 0x0820B140, 0, 0x08231740, 0x084F1388, 0, 0, 2, {0, 3}},
+    /* The breakable walls (objects 0x08 and 0x09): entry n of 0x08526064
+     * shows one frame of descriptor 0x08526004[+ 0] with palette bank
+     * + 2 (sub_0806E0D0). */
+    STATIC("wall_0", 0x081CBE1C, 0x08209C88, 0, 0x0820F314, 1, 0),
+    STATIC("wall_1", 0x081CBE1C, 0x08209C88, 1, 0x0820F314, 1, 1),
+    STATIC("wall_2", 0x081CBE1C, 0x08209C88, 2, 0x0820F314, 1, 2),
+    STATIC("wall_3", 0x081CBE24, 0x08209D6C, 0, 0x0820F3E8, 1, 0),
+    STATIC("wall_4", 0x081CBE24, 0x08209D6C, 1, 0x0820F3E8, 1, 1),
+    STATIC("wall_5", 0x081CBE24, 0x08209D6C, 2, 0x0820F3E8, 1, 1),
+    STATIC("wall_6", 0x081CBE2C, 0x08209DF0, 0, 0x0820F4D4, 1, 0),
+    STATIC("wall_7", 0x081CBE2C, 0x08209DF0, 1, 0x0820F4D4, 1, 1),
+    STATIC("wall_8", 0x081CBEC4, 0x0820A100, 4, 0x082112E8, 1, 0),
+    STATIC("wall_9", 0x082591D4, 0x0825C224, 0, 0x0825C3F4, 1, 0),
+    STATIC("wall_10", 0x082591D4, 0x0825C224, 0, 0x0825C3F4, 1, 1),
+    STATIC("wall_11", 0x082591CC, 0x08209C88, 4, 0x0820F314, 1, 3),
+    STATIC("wall_12", 0x082591CC, 0x08209C88, 5, 0x0820F314, 1, 4),
+    STATIC("wall_13", 0x082591CC, 0x08209C88, 3, 0x0820F314, 1, 5),
+    STATIC("wall_14", 0x081CBE24, 0x08209D6C, 2, 0x0820F3E8, 1, 3),
+    STATIC("wall_15", 0x0825E07C, 0x08209D6C, 3, 0x082669A8, 1, 1),
+    STATIC("wall_16", 0x0825E07C, 0x08209D6C, 3, 0x082669A8, 1, 0),
+    STATIC("wall_17", 0x0825EADC, 0x08209C88, 6, 0x0820F314, 1, 6),
 };
 
 static const EffectSpec effects[] = {
@@ -291,6 +312,12 @@ static const EffectSpec effects[] = {
      * four landing fragments, both on OBJ row 6 (palette bank 2). */
     {"rock_fragment_0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x40},
     {"rock_fragment_1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x41},
+    /* sub_0804FA88: the third still frame of a breakable wall's debris. */
+    {"rock_fragment_2", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x42},
+    /* sub_0804F9B4: the pieces of the object 0x09 grid wall (entry 8 of
+     * 0x08526064: descriptor 5 of 0x08526004, bank 4), its frames 1 and 2. */
+    {"wall_piece_1", 0x081CBEC4, 0x0820A100, 4, 0x082112E8, 0, {0}, 1},
+    {"wall_piece_2", 0x081CBEC4, 0x0820A100, 4, 0x082112E8, 0, {0}, 2},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows

@@ -13,6 +13,7 @@
 #include "aos_mp2k.h"
 #include "aos_room_music.h"
 #include "aos_door.h"
+#include "aos_wall.h"
 #include "aos_enemy.h"
 #include "aos_game_lifecycle.h"
 #include "aos_room.h"
@@ -255,15 +256,20 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "ember", "burst_1", "burst_12",
                                                           "burst_15", "sparkle",
                                                           "rock_fragment_0",
-                                                          "rock_fragment_1"};
+                                                          "rock_fragment_1",
+                                                          "rock_fragment_2",
+                                                          "wall_piece_1", "wall_piece_2"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
+#define ARIA_OBJECT_WALL 0x08           /* Object08: a breakable wall */
+#define ARIA_OBJECT_EVENT_WALL 0x09     /* Object09: a wall its event bit breaks */
 
 typedef struct {
     int kind, id, x, y, param0, param1, flags;
     bool spawned;           /* gEwramData + 0x3D0 bit of the record */
     int spawner;            /* entity index of a zombie's spawner, or -1 */
     AosDoor door;
+    AosWall wall;           /* objects 0x08 and 0x09 */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
 } AriaEntity;
@@ -2206,6 +2212,10 @@ static void clear_skills(AriaSouls *souls) {
     souls->caster = (AosRedSoulCaster){.last_used = souls->caster.last_used};
 }
 
+/* gEwramData + 0x33C: the event bits (a breakable wall's break), kept for
+ * the session; the save does not carry them yet. */
+static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
+
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; native enemies include hidden producers such
  * as the Ghost's, whose children retain their producer slot. */
@@ -2215,6 +2225,34 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         bool door = e->kind == ARIA_KIND_SPECIAL && e->id == ARIA_OBJECT_WOODEN_DOOR;
+        bool wall = e->kind == ARIA_KIND_SPECIAL &&
+                    (e->id == ARIA_OBJECT_WALL || e->id == ARIA_OBJECT_EVENT_WALL);
+        if (wall) {
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                if (!aos_wall_create(&e->wall, layer, e->x, e->y, e->param0, e->param1,
+                                     e->id == ARIA_OBJECT_EVENT_WALL, aria_events))
+                    e->wall.broken = true;   /* deleted: never drawn, never updated */
+                continue;
+            }
+            if (!aos_wall_alive(&e->wall)) continue;
+            bool struck = aos_wall_weapon_hit(&e->wall, combat->weapon, soma,
+                                              combat->weapon_frames);
+            AosWallReport report = {0};
+            aos_wall_update(&e->wall, layer, aria_events,
+                            combat->progress ? combat->progress->flags : 0, struck, aos_random,
+                            &report);
+            for (int k = 0; k < report.effect_count && room->effect_count < MAX_EFFECTS; ++k)
+                if (combat->effects[report.effects[k].kind])
+                    room->effects[room->effect_count++] = report.effects[k];
+            if (report.sound) {
+                aos_audio_play_song(report.sound);
+                printf("Wall %zu: %s (sound 0x%X)\n", i, report.broke ? "broken" : "struck",
+                       report.sound);
+            }
+            continue;
+        }
         bool enemy = e->kind == ARIA_KIND_ENEMY && e->id < ENEMY_KINDS && combat->kinds[e->id];
         if (enemy) {
             const AosEnemyKind *kind = combat->kinds[e->id];
@@ -2517,6 +2555,7 @@ typedef struct {
     } effects[AOS_EFFECT_KINDS],    /* Effect/<effect_names[k]>/anim_N */
       pickup_arts[PICKUP_ARTS];     /* Effect/<pickup_art_names[k]>/anim_N */
     AriaFrame icons[ITEM_ICONS];    /* Icon/i<n>/anim_0 */
+    AriaFrame walls[AOS_WALL_ENTRIES]; /* Enemy/wall_<n>/frame_<f>: an entry's frame */
     uint8_t item_icon[3][59];       /* item, weapon, armor record -> icon */
     AosMoneyKind money[AOS_MONEY_KINDS];
     bool money_loaded;
@@ -3039,6 +3078,13 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         char enemy_name[24];
         if (sscanf(line, "Enemy/%15[^/]/frame_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
                    &frame, &ticks, &ox, &oy, frame_path) == 7) {
+            int wall = -1;
+            if (sscanf(enemy_name, "wall_%d", &wall) == 1) {
+                if (wall < 0 || wall >= AOS_WALL_ENTRIES || frame != 0 ||
+                    !load_frame(&objects->walls[wall], frame_path, ox, oy, renderer))
+                    ok = false;
+                continue;
+            }
             for (int id = 0; id < ENEMY_KINDS + SKILL_ARTS; ++id) {
                 if (id >= ENEMY_KINDS ? strcmp(enemy_name, skill_art_names[id - ENEMY_KINDS])
                                       : !enemy_names[id] || strcmp(enemy_name, enemy_names[id]))
@@ -3166,6 +3212,8 @@ static void free_objects(AriaObjects *objects) {
         for (int i = 0; i < objects->enemies[id].static_count; ++i)
             if (objects->enemies[id].statics[i].texture)
                 SDL_DestroyTexture(objects->enemies[id].statics[i].texture);
+    for (int k = 0; k < AOS_WALL_ENTRIES; ++k)
+        if (objects->walls[k].texture) SDL_DestroyTexture(objects->walls[k].texture);
 }
 
 static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
@@ -3210,6 +3258,24 @@ static size_t enemy_pass(const AosEnemy *e) {
     if (e->role == AOS_ROLE_PUDDLE) return 0;
     if (e->role == AOS_ROLE_PEEPING_SEGMENT) return e->variant < 6 ? 1 : 2;
     return 3;
+}
+
+/* The breakable walls: their entry's frame at their position (behind the
+ * enemies; the OBJ priorities 6 and 0x16 against the backgrounds are not
+ * modelled). */
+static void draw_walls(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
+                       int cam_x, int cam_y) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL ||
+            (e->id != ARIA_OBJECT_WALL && e->id != ARIA_OBJECT_EVENT_WALL) || e->wall.broken)
+            continue;
+        const AriaFrame *frame = &objects->walls[e->wall.index];
+        if (!frame->texture) continue;
+        SDL_FRect rect = {(float)(e->x + frame->offset_x - cam_x),
+                          (float)(e->y + frame->offset_y - cam_y), frame->w, frame->h};
+        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+    }
 }
 
 /* Enemies: sprites face left; mirrored ones are flipped around x. */
@@ -3304,9 +3370,12 @@ static void draw_effect(SDL_Renderer *renderer, const AriaObjects *objects, cons
     float x = f->mirrored ? (float)(fx - frame->offset_x) - frame->w : (float)(fx + frame->offset_x);
     SDL_FRect rect = {x - (float)cam_x, (float)(fy + frame->offset_y - cam_y), frame->w, frame->h};
     if (f->vflip) rect.y = (float)(fy - frame->offset_y - cam_y) - frame->h;
+    /* + 0x59 bit 1: semi-transparent, half alpha standing for the blend. */
+    if (f->translucent) SDL_SetTextureAlphaMod(frame->texture, 128);
     SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
                              (SDL_FlipMode)((f->mirrored ? SDL_FLIP_HORIZONTAL : 0) |
                                             (f->vflip ? SDL_FLIP_VERTICAL : 0)));
+    if (f->translucent) SDL_SetTextureAlphaMod(frame->texture, 255);
 }
 
 static void draw_effects(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
@@ -4862,6 +4931,7 @@ int main(int argc, char **argv) {
         draw_save_point(renderer, &room, cam_x, cam_y,
                         aos_save_room_player_inside(sx, sy), step);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
+        if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)

@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0742 - Reconstruct the native opening portraits
+
+- Added the reusable, SDL-independent `aos_portrait` decoder for the eight
+  dialogue entries at `0x08526C78`. Each entry now reads its own graphics and
+  palette resource instead of recolouring an actor-sheet approximation.
+- The decoder reproduces `sub_080676BC`, `sub_08001800` and `sub_08001994`:
+  it skips the four-byte decompression prefix, expands the 4 x 4 metatile map,
+  applies the native `0xD100` tile/palette base and the `(8, 52)` BG0 scroll,
+  and leaves colour zero transparent. This reassembles Soma and Mina instead
+  of exposing their fragmented tile sheets, and also gives the other six
+  portraits their native palettes.
+- The runtime composites only the transparent portrait pixels over the room;
+  the artificial portrait backdrop and the double border around the dialogue
+  panel were removed. The lower dark text field, localized name and native
+  proportional font remain.
+- A ROM-free fixture covers palette selection, metatile placement and tile and
+  metatile flips. A private verified-ROM run decoded all eight portraits, and
+  a reviewed offscreen capture shows the recomposed Soma portrait in the
+  opening scene. This is source-derived and not emulator-compared, so the
+  opening feature remains partial.
+- The next presentation work remains the native dialogue-window tilemap,
+  remaining Object20 camera and actor choreography, combat hit feedback and
+  enemy-name panel, water blending, numeric HUD, and native pause/map screens.
+
 ## Patch 0741 - Match the opening dialogue composition
 
 - The opening dialogue now follows the reference composition more closely:

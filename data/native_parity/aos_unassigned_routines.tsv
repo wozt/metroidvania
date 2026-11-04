@@ -694,7 +694,6 @@ aos:asm:asm/code/code_08060B98.s:sub_0806724C	sub_0806724C	unclassified				asm_f
 aos:asm:asm/code/code_08060B98.s:sub_08067310	sub_08067310	unclassified		technical	exclusive_callees	asm_function	0x08067310	asm/code/code_08060B98.s	13132	1	10
 aos:asm:asm/code/code_08060B98.s:sub_08067488	sub_08067488	unclassified				asm_function	0x08067488	asm/code/code_08060B98.s	13308	1	9
 aos:asm:asm/code/code_08060B98.s:sub_08067660	sub_08067660	unclassified				asm_function	0x08067660	asm/code/code_08060B98.s	13537	5	1
-aos:asm:asm/code/code_08060B98.s:sub_080676BC	sub_080676BC	unclassified		technical	exclusive_callees	asm_function	0x080676BC	asm/code/code_08060B98.s	13587	1	5
 aos:asm:asm/code/code_08060B98.s:sub_08067804	sub_08067804	unclassified		technical	exclusive_callees	asm_function	0x08067804	asm/code/code_08060B98.s	13736	2	1
 aos:asm:asm/code/code_08060B98.s:sub_08067898	sub_08067898	unclassified		technical	exclusive_callees	asm_function	0x08067898	asm/code/code_08060B98.s	13808	10	1
 aos:asm:asm/code/code_08060B98.s:sub_08068104	sub_08068104	unclassified				asm_function	0x08068104	asm/code/code_08060B98.s	14828	1	1
@@ -2217,8 +2216,6 @@ aos:c:src/code_08001194.c:GetEntityRoomYPositionWhole	GetEntityRoomYPositionWhol
 aos:c:src/code_08001194.c:GetRoomFromMapPosition	GetRoomFromMapPosition	rooms	name			c_function	0x080018D0	src/code_08001194.c	562	9	0
 aos:c:src/code_08001194.c:GetRoomPointer	GetRoomPointer	rooms	name			c_function	0x08001980	src/code_08001194.c	609	4	0
 aos:c:src/code_08001194.c:HBlankEffectSetup	HBlankEffectSetup	unclassified				c_function	0x08001718	src/code_08001194.c	437	21	0
-aos:c:src/code_08001194.c:sub_08001800	sub_08001800	unclassified				c_function	0x08001800	src/code_08001194.c	500	2	0
-aos:c:src/code_08001194.c:sub_08001994	sub_08001994	unclassified				c_function	0x08001994	src/code_08001194.c	622	7	1
 aos:c:src/code_08001194.c:sub_08001B40	sub_08001B40	unclassified				c_function	0x08001B40	src/code_08001194.c	799	5	0
 aos:c:src/code_08001194.c:sub_08001BA0	sub_08001BA0	unclassified				c_function	0x08001BA0	src/code_08001194.c	850	5	0
 aos:c:src/code_08001194.c:sub_08001C1C	sub_08001C1C	unclassified				c_function	0x08001C1C	src/code_08001194.c	928	32	2

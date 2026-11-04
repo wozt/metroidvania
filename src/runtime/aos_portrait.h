@@ -8,18 +8,22 @@
 
 #include "fusion/assets/rom.h"
 
-enum { AOS_PORTRAIT_COUNT = 8, AOS_PORTRAIT_WIDTH = 128, AOS_PORTRAIT_HEIGHT = 128 };
+/* Aria draws dialogue portraits on BG0 (240x160), not as a 128x128 sprite.
+ * The native tile map places Soma's fragmented graphics on screen. */
+enum { AOS_PORTRAIT_COUNT = 8, AOS_PORTRAIT_WIDTH = 240, AOS_PORTRAIT_HEIGHT = 160 };
 
 typedef struct {
     uint8_t rgba[AOS_PORTRAIT_WIDTH * AOS_PORTRAIT_HEIGHT * 4];
 } AosPortraitImage;
 
-/* The dialogue resource table at 0x08526C78 indexes these native graphics
- * descriptors.  The global dialogue palette is shared by all eight entries. */
+/* The eight resource pointers originally referenced by 0x08526C78.
+ * Retained for the existing inventory tests. */
 uint32_t aos_portrait_graphics_pointer(uint8_t portrait);
 
-/* Decode one native 4bpp dialogue portrait to an RGBA image.  Colour index
- * zero is transparent, matching the portrait OBJ tiles. */
+/* Draw the actual BG0 portrait using three ROM pointers from its 12-byte
+ * descriptor: graphics, palette, and metatile-backed BG metadata.
+ * Index-zero pixels and tiles outside this portrait's graphics bank are
+ * transparent; this image can be composited over the live game scene. */
 bool aos_portrait_decode(const FusionRom *rom, uint8_t portrait,
                          AosPortraitImage *image, char *error, size_t error_size);
 

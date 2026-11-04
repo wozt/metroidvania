@@ -4337,24 +4337,17 @@ static void draw_opening_text(SDL_Renderer *renderer,
                               uint8_t *portrait_id) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    /* sub_080676BC selects the graphics descriptor from the portrait table at
-     * 0x08526C78 and combines it with the global dialogue palette at
-     * 0x0826664C.  The decoder keeps the native 4bpp tile order; the exact
-     * tilemap/OAM composition is still a later parity step. */
+    /* sub_080676BC draws the portrait as BG0, using the 12-byte descriptor
+     * at 0x08526C78: tiles, palette row 13 and native metatile map. The
+     * decoded texture is a full transparent 240x160 screen layer. */
     bool native_portrait = load_opening_portrait(renderer, rom, event->portrait,
                                                  portrait_texture, portrait_id);
     const AriaFrame *portrait = native_portrait ? NULL
         : opening_portrait_frame(event, objects, library, actors);
     if (native_portrait && portrait_texture && *portrait_texture) {
-        SDL_SetRenderDrawColor(renderer, 25, 31, 58, 190);
-        SDL_FRect portrait_backdrop = {156, 7, 79, 88};
-        SDL_RenderFillRect(renderer, &portrait_backdrop);
-        SDL_FRect destination = {156, 7, 79, 88};
+        SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
     } else if (portrait && portrait->texture) {
-        SDL_SetRenderDrawColor(renderer, 25, 31, 58, 190);
-        SDL_FRect portrait_backdrop = {156, 7, 79, 88};
-        SDL_RenderFillRect(renderer, &portrait_backdrop);
         SDL_FRect source = {0, 0, portrait->w, portrait->h * 0.68f};
         SDL_FRect destination = {162, 10, 68, 82};
         SDL_RenderTexture(renderer, portrait->texture, &source, &destination);
@@ -4362,22 +4355,12 @@ static void draw_opening_text(SDL_Renderer *renderer,
     SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
     SDL_FRect panel = {30, 96, VIEW_W - 34, 56};
     SDL_RenderFillRect(renderer, &panel);
-    SDL_SetRenderDrawColor(renderer, 214, 168, 71, 255);
-    SDL_RenderRect(renderer, &panel);
-    SDL_FRect inner = {32, 98, VIEW_W - 38, 52};
-    SDL_SetRenderDrawColor(renderer, 81, 64, 106, 255);
-    SDL_RenderRect(renderer, &inner);
-    SDL_SetRenderDrawColor(renderer, 35, 28, 68, 255);
-    SDL_FRect name_bar = {34, 99, VIEW_W - 42, 10};
-    SDL_RenderFillRect(renderer, &name_bar);
+
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
     for (unsigned y = 0; y < 54; ++y)
         for (unsigned x = 0; x < 200; ++x)
-            if (aos_intro_text_tiles_pixel(tiles, x, y)) {
-                if (y < 12) SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
-                else SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
+            if (aos_intro_text_tiles_pixel(tiles, x, y))
                 SDL_RenderPoint(renderer, 30.0f + (float)x, 99.0f + (float)y);
-            }
     if (event->waiting) {
         SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
         SDL_FRect prompt = {225, 145, 5, 3};

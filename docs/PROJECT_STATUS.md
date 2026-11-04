@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0740 - Add an exported-sheet dialogue thumbnail
+
+- The opening dialogue header now shows a small head crop selected from the
+  exported Soma, Mina or Arikado sprite sheet for the active speaker.
+- This is explicitly a presentation approximation: the native portrait tile
+  resources, OAM placement and text-window tilemap remain unported.
+- The runtime and generated registries keep the feature partial and do not
+  promote it to native portrait parity.
+
 ## Patch 0739 - Advance the opening actor entry movement
 
 - The opening scene now owns a compact actor controller with the native

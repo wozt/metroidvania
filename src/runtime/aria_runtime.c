@@ -4270,9 +4270,39 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
     return true;
 }
 
+/* The native dialogue uses portrait OAM. Until that table and its tilemap
+ * path are ported, show a small head crop from the already exported actor or
+ * Soma sheet. This is deliberately a thumbnail approximation, not native
+ * portrait parity. */
+static const AriaFrame *opening_thumbnail_frame(const AosOpeningEvent *event,
+                                                const AriaObjects *objects,
+                                                const AriaLibrary *library,
+                                                const AosOpeningActors *actors) {
+    if (event->speaker == 2 && objects && actors &&
+        objects->opening_actors[0].loaded) {
+        const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[0];
+        int animation = actors->animation[0];
+        if (animation >= 0 && animation < AOS_ENEMY_MAX_ANIMS && art->defs[animation].count)
+            return &art->frames[animation][0];
+    }
+    if (event->speaker == 7 && objects && actors &&
+        objects->opening_actors[1].loaded) {
+        const __typeof__(objects->opening_actors[1]) *art = &objects->opening_actors[1];
+        int animation = actors->animation[1];
+        if (animation >= 0 && animation < AOS_ENEMY_MAX_ANIMS && art->defs[animation].count)
+            return &art->frames[animation][0];
+    }
+    if (event->speaker == 1 && library && library->defs[0].count)
+        return &library->frames[0][0];
+    return NULL;
+}
+
 static void draw_opening_text(SDL_Renderer *renderer,
                               const AosOpeningEvent *event,
-                              const AosIntroTextTiles *tiles) {
+                              const AosIntroTextTiles *tiles,
+                              const AriaObjects *objects,
+                              const AriaLibrary *library,
+                              const AosOpeningActors *actors) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
@@ -4294,6 +4324,15 @@ static void draw_opening_text(SDL_Renderer *renderer,
                 else SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
                 SDL_RenderPoint(renderer, 12.0f + (float)x, 89.0f + (float)y);
             }
+    const AriaFrame *thumbnail = opening_thumbnail_frame(event, objects, library, actors);
+    if (thumbnail && thumbnail->texture) {
+        SDL_SetRenderDrawColor(renderer, 214, 168, 71, 255);
+        SDL_FRect frame = {207, 91, 27, 23};
+        SDL_RenderRect(renderer, &frame);
+        SDL_FRect source = {0, 0, thumbnail->w, thumbnail->h * 0.55f};
+        SDL_FRect destination = {209, 93, 23, 19};
+        SDL_RenderTexture(renderer, thumbnail->texture, &source, &destination);
+    }
     if (event->waiting) {
         SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
         SDL_FRect prompt = {225, 151, 5, 3};
@@ -6025,7 +6064,8 @@ int aria_runtime_main(int argc, char **argv) {
                        have_equipment ? &equipment : NULL,
                        have_item_use ? item_use : NULL, &soma, &objects);
         if (opening_text_ready)
-            draw_opening_text(renderer, &opening, &opening_tiles);
+            draw_opening_text(renderer, &opening, &opening_tiles, objects_ok ? &objects : NULL,
+                              &library, &opening_actors);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

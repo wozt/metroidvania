@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-04T12:31:37+00:00",
+ "generated_at": "2026-11-04T12:55:47+00:00",
  "git": {
-  "commit": "edb4cf8",
+  "commit": "5f4a81a",
   "branch": "main",
   "dirty": true
  },
@@ -12699,8 +12699,8 @@
     "sub_08012048",
     "sub_08012078"
    ],
-   "limitations": "The dialogue window is a source-isolated SDL overlay rather than the native tilemap and portrait OAM. Control 2 scene beats wait for player input because the actor callbacks are not ported. Mina, Arikado and Soma actor OAM, their animation and camera choreography, the enemy attack, sub_0805CCE4's room reveal and the later proximity conversations from states 10 and 11 remain absent. The scene is source-derived and verified against the local ROM script, but not emulator-compared. The room runtime identifies the native auto-spawn Object20 parameter 3 controller in area 0 room 0 and starts only for Soma while event 0x20 is clear. The title frontend forwards its verified ROM path to the runtime. The controller reads localized text entry 0x000C from the user's ROM, interprets its text controls, reveals the proportional native glyphs, freezes normal gameplay until completion, then sets event 0x20, grants and equips the Winged Skeleton red soul as sub_0805CED0 does, and returns control to the existing gameplay loop. Schema-v10 event words make a later save and reload suppress the one-time scene. The parser completes the verified English ROM entry in a local test; source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port sub_0805D410 and the three actor entities, native text-window graphics, camera timing, enemy attack and post-scene proximity conversations, then compare the complete sequence against an emulator.",
+   "limitations": "The dialogue window remains a source-isolated SDL overlay rather than the native tilemap and portrait OAM. It now follows the native lower-screen geometry with a double border, localized speaker names for Soma Cruz, Mina Hakuba and Genya Arikado, and the native proportional font; control 2 scene beats still wait for player input because actor callbacks are not ported. Mina, Arikado and Soma portrait OAM, their animation and camera choreography, the enemy attack, sub_0805CCE4's room reveal and the later proximity conversations from states 10 and 11 remain absent. The scene is source-derived and verified against the local ROM script, but not emulator-compared. The room runtime identifies the native auto-spawn Object20 parameter 3 controller in area 0 room 0 and starts only for Soma while event 0x20 is clear. The title frontend forwards its verified ROM path to the runtime. The controller reads localized ROM text entry 0x000C, interprets its text controls, holds Soma on native animation 0x51 in the lower floor pose, reveals the proportional dialogue, freezes normal gameplay until completion, then sets event 0x20, grants and equips the Winged Skeleton red soul as sub_0805CED0 does, and returns control to the existing gameplay loop. Schema-v10 event words make a later save and reload suppress the one-time scene. The parser completes the verified English entry in a local test; source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port sub_0805D410 and the three actor entities, portraits, native text-window tilemap, camera timing, enemy attack and post-scene proximity conversations, then compare the complete sequence against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_opening_event.c",
@@ -12709,7 +12709,7 @@
      "tests/test_aos_menu_save_bridge.c"
     ],
     "in_game_check": [
-     "area_00_room_000: a reviewed offscreen capture at frame 120 shows the first ROM dialogue in the frozen room; repeated A completes it before frame 1200, grants and equips the soul, and the capture then shows controllable Soma"
+     "area_00_room_000: a reviewed offscreen capture at frame 120 shows the first ROM dialogue, the lower floor pose and speaker header; repeated A completes it before frame 1200, grants and equips the soul, and the capture then shows controllable Soma"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -15734,7 +15734,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "A new file now continues from the scrolling introduction into area 0 room 0, where native Object20 parameter 3 starts ROM text entry 0x000C. Gameplay stays frozen while the proportional native font draws the dialogue; completion sets persistent event 0x20, grants and equips Winged Skeleton, then returns control to Soma. Reloading a later schema-v10 save does not replay it. Actor OAM, animation, camera choreography, the enemy attack, the native window and later proximity conversations are still missing; source-derived and verified against the local ROM script, not emulator-compared.",
+   "limitations": "A new file continues from the scrolling introduction into area 0 room 0, where native Object20 parameter 3 starts ROM text entry 0x000C. Gameplay stays frozen while the proportional native font draws the dialogue; the scene holds Soma on native animation 0x51 in the lower floor pose and shows a double-border lower dialogue panel with localized speaker names for Soma Cruz, Mina Hakuba and Genya Arikado. Completion sets persistent event 0x20, grants and equips Winged Skeleton, then returns control to Soma. Reloading a later schema-v10 save does not replay it. Native portrait OAM, actor animation, camera choreography, enemy choreography, the tilemap window and later proximity conversations remain missing; source-derived and verified against the local ROM script, not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -19499,6 +19499,12 @@
  },
  "timeline": [
   {
+   "commit": "5f4a81a",
+   "date": "2026-11-04",
+   "subject": "Connect Aria first-room opening story",
+   "scope": "project"
+  },
+  {
    "commit": "edb4cf8",
    "date": "2026-11-04",
    "subject": "Add Aria native recompilation reference as submodule",
@@ -19970,12 +19976,6 @@
    "commit": "fb3d296",
    "date": "2026-10-30",
    "subject": "Port bounded Aria Buer state-two idle ground-gated translation",
-   "scope": "project"
-  },
-  {
-   "commit": "375555a",
-   "date": "2026-10-30",
-   "subject": "Fix Aria Buer state-one horizontal room-boundary regression",
    "scope": "project"
   }
  ],

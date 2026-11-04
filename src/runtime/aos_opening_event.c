@@ -149,6 +149,15 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
     } while (advance && event->active && !event->waiting);
 }
 
+const char *aos_opening_event_speaker_name(uint8_t speaker) {
+    switch (speaker) {
+    case 1: return "Soma Cruz";
+    case 2: return "Mina Hakuba";
+    case 7: return "Genya Arikado";
+    default: return "";
+    }
+}
+
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats) {
     if (!event || !event->complete || !events || !stats || event_is_set(events))

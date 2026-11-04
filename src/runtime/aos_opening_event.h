@@ -54,6 +54,8 @@ void aos_opening_event_set_resolver(AosOpeningEvent *event,
                                     AosOpeningTextResolver resolve,
                                     void *context);
 void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
+/* Localized speaker ids used by the first-room Object20 script. */
+const char *aos_opening_event_speaker_name(uint8_t speaker);
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats);
 

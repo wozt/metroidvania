@@ -201,7 +201,10 @@ enum {
     AOS_SOMA_ANIM_DIVE_KICK = 0x26, AOS_SOMA_ANIM_DIVE_DROP = 0x27,
     AOS_SOMA_ANIM_HIT_FRONT = 0x0E, AOS_SOMA_ANIM_HIT_CROUCH = 0x0F,
     AOS_SOMA_ANIM_HIT_BACK = 0x10, AOS_SOMA_ANIM_KNOCKED = 0x11,
-    AOS_SOMA_ANIM_DEATH = 0x33
+    AOS_SOMA_ANIM_DEATH = 0x33,
+    /* Animation 0x51 is the native horizontal floor pose used by the
+     * first-room Object20 scene while Soma is unconscious. */
+    AOS_SOMA_ANIM_OPENING_LYING = 0x51
 };
 
 /* Spawn state of sub_08014548: grounded, animation-end flag set, no

@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0737 - Match the opening scene's floor pose and dialogue header
+
+- The first-room Object20 scene now pins Soma to native animation `0x51`, the
+  horizontal floor pose used while he is unconscious, instead of drawing the
+  ordinary standing idle frame at the same coordinates.
+- The lower dialogue panel now follows the native presentation more closely:
+  a dark double border, a gold speaker bar and the verified proportional ROM
+  font. Speaker ids from text entry `0x000C` resolve to `Soma Cruz`, `Mina
+  Hakuba` and `Genya Arikado`.
+- The deterministic opening-event test covers the new pose id and speaker
+  mapping. The opening remains partial and source-derived: native portrait
+  OAM, the other actors, camera choreography, hit effect, enemy-name panel,
+  water blending, numeric HUD and pause/menu presentation are separate work.
+- This cycle did not promote the parity status and did not claim emulator
+  fidelity. The next step is to import the native portrait/actor graphics and
+  wire the Object20 animation callbacks before tackling the hit/HUD systems.
+
 ## Patch 0736 - The first-room opening story hands control to Soma
 
 - The normal new-file path now forwards the verified Aria ROM from the title

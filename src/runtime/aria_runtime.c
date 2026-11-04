@@ -4190,9 +4190,13 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
                                  const AosIntroFont *font,
                                  AosIntroTextTiles *tiles) {
     aos_intro_text_tiles_clear(tiles);
+    const char *speaker = aos_opening_event_speaker_name(event->speaker);
+    if (!aos_intro_font_render_span(font, tiles, 8, 0, VIEW_W - 24, 15,
+                                    (const uint8_t *)speaker, strlen(speaker)))
+        return false;
     for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
-        if (!aos_intro_font_render_span(font, tiles, 0, line * 13, VIEW_W - 16,
-                                        8, event->glyphs[line],
+        if (!aos_intro_font_render_span(font, tiles, 0, 14 + line * 13,
+                                        VIEW_W - 16, 8, event->glyphs[line],
                                         event->glyph_counts[line]))
             return false;
     return true;
@@ -4203,18 +4207,28 @@ static void draw_opening_text(SDL_Renderer *renderer,
                               const AosIntroTextTiles *tiles) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 8, 6, 18, 224);
-    SDL_FRect panel = {4, 94, VIEW_W - 8, 66};
+    SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
+    SDL_FRect panel = {4, 86, VIEW_W - 8, 72};
     SDL_RenderFillRect(renderer, &panel);
-    SDL_SetRenderDrawColor(renderer, 118, 104, 148, 255);
+    SDL_SetRenderDrawColor(renderer, 214, 168, 71, 255);
     SDL_RenderRect(renderer, &panel);
+    SDL_FRect inner = {6, 88, VIEW_W - 12, 68};
+    SDL_SetRenderDrawColor(renderer, 81, 64, 106, 255);
+    SDL_RenderRect(renderer, &inner);
+    SDL_SetRenderDrawColor(renderer, 35, 28, 68, 255);
+    SDL_FRect name_bar = {8, 89, VIEW_W - 16, 12};
+    SDL_RenderFillRect(renderer, &name_bar);
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
-    for (unsigned y = 0; y < 52; ++y)
+    for (unsigned y = 0; y < 72; ++y)
         for (unsigned x = 0; x < VIEW_W - 16; ++x)
-            if (aos_intro_text_tiles_pixel(tiles, x, y))
-                SDL_RenderPoint(renderer, 12.0f + (float)x, 99.0f + (float)y);
+            if (aos_intro_text_tiles_pixel(tiles, x, y)) {
+                if (y < 12) SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
+                else SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
+                SDL_RenderPoint(renderer, 12.0f + (float)x, 89.0f + (float)y);
+            }
     if (event->waiting) {
-        SDL_FRect prompt = {225, 150, 5, 3};
+        SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
+        SDL_FRect prompt = {225, 151, 5, 3};
         SDL_RenderFillRect(renderer, &prompt);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
@@ -4652,6 +4666,9 @@ int aria_runtime_main(int argc, char **argv) {
                                        &opening_resources);
         soma.x = AOS_OPENING_SOMA_X << 16;
         soma.y = AOS_OPENING_SOMA_Y << 16;
+        soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
+        soma.anim.frame = 0;
+        soma.anim.tick = 0;
         spawn_x = AOS_OPENING_SOMA_X;
         spawn_y = AOS_OPENING_SOMA_Y;
         opening_text_ready = rebuild_opening_text(&opening, &opening_font,
@@ -4956,6 +4973,9 @@ int aria_runtime_main(int argc, char **argv) {
             }
             if (!lifecycle.in_game_frame_requested) continue;
             if (opening.active) {
+                /* The scene owns Soma's pose until Object20 commits. */
+                soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
+                soma.anim.frame = 0;
                 aos_opening_event_update(&opening, aria_input.new_input);
                 if (opening.advanced) aos_audio_play_song(0xF3);
                 if (opening.malformed) {

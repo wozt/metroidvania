@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_opening_event.h"
 #include "aos_intro_resources.h"
+#include "aos_soma.h"
 
 #include <assert.h>
 #include <string.h>
@@ -9,6 +10,11 @@
 
 static void test_trigger(void) {
     assert(AOS_OPENING_SOMA_X == 168 && AOS_OPENING_SOMA_Y == 704);
+    assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);
+    assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));
+    assert(!strcmp(aos_opening_event_speaker_name(2), "Mina Hakuba"));
+    assert(!strcmp(aos_opening_event_speaker_name(7), "Genya Arikado"));
+    assert(!strcmp(aos_opening_event_speaker_name(0), ""));
     uint32_t events[8] = {0};
     assert(aos_opening_event_should_start(0, 0, 0, events, true));
     assert(!aos_opening_event_should_start(1, 0, 0, events, true));

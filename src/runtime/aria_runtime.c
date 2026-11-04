@@ -20,6 +20,7 @@
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"
 #include "aos_opening_event.h"
+#include "aos_portrait.h"
 #include "aos_room.h"
 #include "aos_save.h"
 #include "aos_stats.h"
@@ -4270,9 +4271,8 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
     return true;
 }
 
-/* The native dialogue uses portrait OAM. Until that table and its tilemap
- * path are ported, select a source actor sheet for a large upper-screen
- * portrait approximation. */
+/* Fallback for dialogue entries whose native portrait resource cannot be
+ * decoded (for example when the runtime is launched without --rom). */
 static const AriaFrame *opening_portrait_frame(const AosOpeningEvent *event,
                                                const AriaObjects *objects,
                                                const AriaLibrary *library,
@@ -4296,16 +4296,62 @@ static const AriaFrame *opening_portrait_frame(const AosOpeningEvent *event,
     return NULL;
 }
 
+static bool load_opening_portrait(SDL_Renderer *renderer, const FusionRom *rom,
+                                  uint8_t portrait, SDL_Texture **texture,
+                                  uint8_t *loaded_portrait) {
+    if (!renderer || !rom || !texture || !loaded_portrait ||
+        portrait >= AOS_PORTRAIT_COUNT)
+        return false;
+    if (*texture && *loaded_portrait == portrait) return true;
+    if (*texture) {
+        SDL_DestroyTexture(*texture);
+        *texture = NULL;
+    }
+    AosPortraitImage image;
+    char error[128];
+    if (!aos_portrait_decode(rom, portrait, &image, error, sizeof error))
+        return false;
+    SDL_Texture *decoded = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                             SDL_TEXTUREACCESS_STATIC,
+                                             AOS_PORTRAIT_WIDTH, AOS_PORTRAIT_HEIGHT);
+    if (!decoded) return false;
+    if (!SDL_UpdateTexture(decoded, NULL, image.rgba, AOS_PORTRAIT_WIDTH * 4)) {
+        SDL_DestroyTexture(decoded);
+        return false;
+    }
+    SDL_SetTextureBlendMode(decoded, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(decoded, SDL_SCALEMODE_NEAREST);
+    *texture = decoded;
+    *loaded_portrait = portrait;
+    return true;
+}
+
 static void draw_opening_text(SDL_Renderer *renderer,
                               const AosOpeningEvent *event,
                               const AosIntroTextTiles *tiles,
                               const AriaObjects *objects,
                               const AriaLibrary *library,
-                              const AosOpeningActors *actors) {
+                              const AosOpeningActors *actors,
+                              const FusionRom *rom,
+                              SDL_Texture **portrait_texture,
+                              uint8_t *portrait_id) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    const AriaFrame *portrait = opening_portrait_frame(event, objects, library, actors);
-    if (portrait && portrait->texture) {
+    /* sub_080676BC selects the graphics descriptor from the portrait table at
+     * 0x08526C78 and combines it with the global dialogue palette at
+     * 0x0826664C.  The decoder keeps the native 4bpp tile order; the exact
+     * tilemap/OAM composition is still a later parity step. */
+    bool native_portrait = load_opening_portrait(renderer, rom, event->portrait,
+                                                 portrait_texture, portrait_id);
+    const AriaFrame *portrait = native_portrait ? NULL
+        : opening_portrait_frame(event, objects, library, actors);
+    if (native_portrait && portrait_texture && *portrait_texture) {
+        SDL_SetRenderDrawColor(renderer, 25, 31, 58, 190);
+        SDL_FRect portrait_backdrop = {156, 7, 79, 88};
+        SDL_RenderFillRect(renderer, &portrait_backdrop);
+        SDL_FRect destination = {156, 7, 79, 88};
+        SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
+    } else if (portrait && portrait->texture) {
         SDL_SetRenderDrawColor(renderer, 25, 31, 58, 190);
         SDL_FRect portrait_backdrop = {156, 7, 79, 88};
         SDL_RenderFillRect(renderer, &portrait_backdrop);
@@ -4625,6 +4671,8 @@ int aria_runtime_main(int argc, char **argv) {
     AosOpeningActors opening_actors = {0};
     static AosIntroTextTiles opening_tiles;
     bool opening_text_ready = false;
+    SDL_Texture *opening_portrait_texture = NULL;
+    uint8_t opening_portrait_id = 0xFF;
     int rc = 1;
     SDL_Window *window = fusion_host_create_window("Metroid Vania - experimental Aria runtime",
                                           VIEW_W * 4, VIEW_H * 4, SDL_WINDOW_RESIZABLE);
@@ -6064,7 +6112,8 @@ int aria_runtime_main(int argc, char **argv) {
                        have_item_use ? item_use : NULL, &soma, &objects);
         if (opening_text_ready)
             draw_opening_text(renderer, &opening, &opening_tiles, objects_ok ? &objects : NULL,
-                              &library, &opening_actors);
+                              &library, &opening_actors, &opening_rom,
+                              &opening_portrait_texture, &opening_portrait_id);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);
@@ -6082,6 +6131,7 @@ int aria_runtime_main(int argc, char **argv) {
     }
     rc = 0;
 cleanup:
+    if (opening_portrait_texture) SDL_DestroyTexture(opening_portrait_texture);
     fusion_rom_close(&opening_rom);
     if (audio_stream) SDL_DestroyAudioStream(audio_stream);
     wav_close(&wav);

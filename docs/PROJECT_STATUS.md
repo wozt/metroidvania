@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0739 - Advance the opening actor entry movement
+
+- The opening scene now owns a compact actor controller with the native
+  fixed-point starting positions and animation ids from `sub_0805D198`.
+- Arikado's `-0xA000` entry velocity and the Object20 `0x40`-frame entry
+  timer are advanced while the dialogue is active. A bounded stop point keeps
+  this partial controller deterministic until the remaining
+  `sub_0805D410` proximity branches are ported.
+- The opening test covers initialization, timer expiry, movement and the
+  bounded stop. The feature remains partial and source-derived; portraits,
+  native window tilemap, camera choreography and later actor callbacks are not
+  claimed.
+
 ## Patch 0738 - Draw the first-room Object20 actor sheets
 
 - The Aria object exporter now includes the three actor records used by the

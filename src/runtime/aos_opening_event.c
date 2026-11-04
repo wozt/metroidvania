@@ -158,6 +158,47 @@ const char *aos_opening_event_speaker_name(uint8_t speaker) {
     }
 }
 
+void aos_opening_actors_init(AosOpeningActors *actors) {
+    if (!actors) return;
+    *actors = (AosOpeningActors){
+        .x = {AOS_OPENING_MINA_X << 16, AOS_OPENING_ARIKADO_X << 16,
+              AOS_OPENING_SKELETON_X << 16},
+        .y = {AOS_OPENING_MINA_Y << 16, AOS_OPENING_ARIKADO_Y << 16,
+              AOS_OPENING_SKELETON_Y << 16},
+        .animation = {4, 1, 4},
+        .timer = 0x40,
+        .active = true,
+    };
+}
+
+void aos_opening_actors_update(AosOpeningActors *actors) {
+    if (!actors || !actors->active) return;
+    ++actors->frame;
+    /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
+    if (actors->state == 0) {
+        if (actors->timer) --actors->timer;
+        if (!actors->timer) {
+            actors->state = 1;
+            actors->step = 0;
+        }
+        return;
+    }
+    /* sub_0805D198 gives Arikado -0xA000 fixed-point velocity. The native
+     * callback eventually stops him when the scene's proximity condition is
+     * met; the source-position guard keeps this partial controller bounded
+     * until that condition is ported. */
+    if (actors->state == 1) {
+        const int32_t stop_x = 0xD0 << 16;
+        if (actors->x[1] > stop_x) {
+            actors->x[1] -= 0xA000;
+            if (actors->x[1] < stop_x) actors->x[1] = stop_x;
+        } else {
+            actors->state = 2;
+            actors->step = 0;
+        }
+    }
+}
+
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats) {
     if (!event || !event->complete || !events || !stats || event_is_set(events))

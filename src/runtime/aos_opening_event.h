@@ -53,6 +53,20 @@ typedef struct {
     void *resolve_context;
 } AosOpeningEvent;
 
+/* The three child entities created by Object20/sub_0805D198. This compact
+ * controller covers the source-visible entry movement while the complete
+ * sub_0805D410 callback graph remains a later parity slice. */
+typedef struct {
+    int32_t x[AOS_OPENING_ACTOR_COUNT];
+    int32_t y[AOS_OPENING_ACTOR_COUNT];
+    uint8_t animation[AOS_OPENING_ACTOR_COUNT];
+    uint8_t state;
+    uint8_t step;
+    uint8_t timer;
+    uint32_t frame;
+    bool active;
+} AosOpeningActors;
+
 bool aos_opening_event_should_start(uint8_t area, uint16_t room,
                                     uint8_t character,
                                     const uint32_t events[8],
@@ -65,6 +79,8 @@ void aos_opening_event_set_resolver(AosOpeningEvent *event,
 void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
 /* Localized speaker ids used by the first-room Object20 script. */
 const char *aos_opening_event_speaker_name(uint8_t speaker);
+void aos_opening_actors_init(AosOpeningActors *actors);
+void aos_opening_actors_update(AosOpeningActors *actors);
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats);
 

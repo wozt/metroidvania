@@ -3651,33 +3651,28 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
 
 /* Object20's first-room actors are ordinary object entities, not enemies.
  * sub_0805D198 starts Mina at animation 4, Arikado at animation 1 and the
- * distant winged skeleton at animation 4. Their native world positions are
- * kept in aos_opening_event.h; this renderer only advances the exported
- * frame timing and leaves the later controller choreography for a follow-up. */
+ * distant winged skeleton at animation 4. The compact actor controller keeps
+ * their fixed-point positions; the later callback branches remain a follow-up. */
 static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
-                                long frame_count, int cam_x, int cam_y) {
-    static const int animations[AOS_OPENING_ACTOR_COUNT] = {4, 1, 4};
-    static const int positions[AOS_OPENING_ACTOR_COUNT][2] = {
-        {AOS_OPENING_MINA_X, AOS_OPENING_MINA_Y},
-        {AOS_OPENING_ARIKADO_X, AOS_OPENING_ARIKADO_Y},
-        {AOS_OPENING_SKELETON_X, AOS_OPENING_SKELETON_Y},
-    };
+                                const AosOpeningActors *actors, int cam_x, int cam_y) {
+    if (!actors) return;
     for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
         const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[actor];
-        int animation = animations[actor];
+        int animation = actors->animation[actor];
         if (!art->loaded || animation >= AOS_ENEMY_MAX_ANIMS || !art->defs[animation].count)
             continue;
         unsigned total = 0;
         for (unsigned i = 0; i < art->defs[animation].count; ++i)
             total += art->ticks[animation][i];
         if (!total) continue;
-        unsigned t = (unsigned)(frame_count % total), index = 0;
+        unsigned t = (unsigned)(actors->frame % total), index = 0;
         while (index + 1 < art->defs[animation].count && t >= art->ticks[animation][index])
             t -= art->ticks[animation][index++];
         const AriaFrame *frame = &art->frames[animation][index];
         if (!frame->texture) continue;
-        SDL_FRect rect = {(float)(positions[actor][0] + frame->offset_x - cam_x),
-                          (float)(positions[actor][1] + frame->offset_y - cam_y), frame->w,
+        int x = actors->x[actor] >> 16, y = actors->y[actor] >> 16;
+        SDL_FRect rect = {(float)(x + frame->offset_x - cam_x),
+                          (float)(y + frame->offset_y - cam_y), frame->w,
                           frame->h};
         SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
     }
@@ -4589,6 +4584,7 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroResources opening_resources = {0};
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
+    AosOpeningActors opening_actors = {0};
     static AosIntroTextTiles opening_tiles;
     bool opening_text_ready = false;
     int rc = 1;
@@ -4737,6 +4733,7 @@ int aria_runtime_main(int argc, char **argv) {
         }
         aos_opening_event_set_resolver(&opening, resolve_opening_text,
                                        &opening_resources);
+        aos_opening_actors_init(&opening_actors);
         soma.x = AOS_OPENING_SOMA_X << 16;
         soma.y = AOS_OPENING_SOMA_Y << 16;
         soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
@@ -5049,6 +5046,7 @@ int aria_runtime_main(int argc, char **argv) {
                 /* The scene owns Soma's pose until Object20 commits. */
                 soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
                 soma.anim.frame = 0;
+                aos_opening_actors_update(&opening_actors);
                 aos_opening_event_update(&opening, aria_input.new_input);
                 if (opening.advanced) aos_audio_play_song(0xF3);
                 if (opening.malformed) {
@@ -5463,7 +5461,7 @@ int aria_runtime_main(int argc, char **argv) {
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
         if (opening.active && objects_ok)
-            draw_opening_actors(renderer, &objects, step, cam_x, cam_y);
+            draw_opening_actors(renderer, &objects, &opening_actors, cam_x, cam_y);
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);

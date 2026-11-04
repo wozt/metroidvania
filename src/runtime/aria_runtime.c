@@ -2800,6 +2800,13 @@ typedef struct {
         int static_count;
     } enemies[ENEMY_KINDS], variants[VARIANT_ARTS], skills[SKILL_ARTS]; /* Enemy/skill_* */
     struct {
+        AriaFrame frames[AOS_ENEMY_MAX_ANIMS][MAX_FRAMES];
+        uint8_t ticks[AOS_ENEMY_MAX_ANIMS][MAX_FRAMES];
+        AosAnimDef defs[AOS_ENEMY_MAX_ANIMS];
+        AosAnimSet set;
+        bool loaded;
+    } opening_actors[AOS_OPENING_ACTOR_COUNT]; /* Enemy/opening_actor_N */
+    struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
         AosAnimDef def;
@@ -3375,6 +3382,33 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             }
             continue;
         }
+        /* Object20's first-room actors share the object exporter format but
+         * are not enemies. Keep their animation tables separate so the
+         * actor sheets cannot be selected by an ordinary enemy id. */
+        int actor, actor_key;
+        if (sscanf(line, "Enemy/opening_actor_%d/anim_%d\t%d\t%d\t%d\t%d\t%511s", &actor_key,
+                   &style, &frame, &ticks, &ox, &oy, frame_path) == 7) {
+            /* The third record is index 8 in the native twelve-entry table;
+             * it occupies slot 2 in the compact runtime array. */
+            actor = actor_key == 8 ? 2 : actor_key;
+            if (actor < 0 || actor >= AOS_OPENING_ACTOR_COUNT || style < 0 ||
+                style >= AOS_ENEMY_MAX_ANIMS || frame != objects->opening_actors[actor].defs[style].count ||
+                frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
+                !load_frame(&objects->opening_actors[actor].frames[style][frame], frame_path,
+                            ox, oy, renderer)) {
+                ok = false;
+                break;
+            }
+            objects->opening_actors[actor].ticks[style][frame] = (uint8_t)ticks;
+            objects->opening_actors[actor].defs[style].durations =
+                objects->opening_actors[actor].ticks[style];
+            objects->opening_actors[actor].defs[style].count++;
+            objects->opening_actors[actor].loaded = true;
+            if (style + 1 > objects->opening_actors[actor].set.count)
+                objects->opening_actors[actor].set.count = (uint16_t)(style + 1);
+            objects->opening_actors[actor].set.anims = objects->opening_actors[actor].defs;
+            continue;
+        }
         if (sscanf(line, "Enemy/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
             for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS + SKILL_ARTS; ++id) {
@@ -3457,6 +3491,11 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->variants[v].frames[i][j].texture)
                     SDL_DestroyTexture(objects->variants[v].frames[i][j].texture);
+    for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor)
+        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+            for (int j = 0; j < MAX_FRAMES; ++j)
+                if (objects->opening_actors[actor].frames[i][j].texture)
+                    SDL_DestroyTexture(objects->opening_actors[actor].frames[i][j].texture);
     for (int k = 0; k < AOS_EFFECT_KINDS; ++k)
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
@@ -3607,6 +3646,40 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
                                  degrees != 0 ? &centre : NULL, mode);
         if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 255);
+    }
+}
+
+/* Object20's first-room actors are ordinary object entities, not enemies.
+ * sub_0805D198 starts Mina at animation 4, Arikado at animation 1 and the
+ * distant winged skeleton at animation 4. Their native world positions are
+ * kept in aos_opening_event.h; this renderer only advances the exported
+ * frame timing and leaves the later controller choreography for a follow-up. */
+static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
+                                long frame_count, int cam_x, int cam_y) {
+    static const int animations[AOS_OPENING_ACTOR_COUNT] = {4, 1, 4};
+    static const int positions[AOS_OPENING_ACTOR_COUNT][2] = {
+        {AOS_OPENING_MINA_X, AOS_OPENING_MINA_Y},
+        {AOS_OPENING_ARIKADO_X, AOS_OPENING_ARIKADO_Y},
+        {AOS_OPENING_SKELETON_X, AOS_OPENING_SKELETON_Y},
+    };
+    for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
+        const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[actor];
+        int animation = animations[actor];
+        if (!art->loaded || animation >= AOS_ENEMY_MAX_ANIMS || !art->defs[animation].count)
+            continue;
+        unsigned total = 0;
+        for (unsigned i = 0; i < art->defs[animation].count; ++i)
+            total += art->ticks[animation][i];
+        if (!total) continue;
+        unsigned t = (unsigned)(frame_count % total), index = 0;
+        while (index + 1 < art->defs[animation].count && t >= art->ticks[animation][index])
+            t -= art->ticks[animation][index++];
+        const AriaFrame *frame = &art->frames[animation][index];
+        if (!frame->texture) continue;
+        SDL_FRect rect = {(float)(positions[actor][0] + frame->offset_x - cam_x),
+                          (float)(positions[actor][1] + frame->offset_y - cam_y), frame->w,
+                          frame->h};
+        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
     }
 }
 
@@ -5389,6 +5462,8 @@ int aria_runtime_main(int argc, char **argv) {
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
+        if (opening.active && objects_ok)
+            draw_opening_actors(renderer, &objects, step, cam_x, cam_y);
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);

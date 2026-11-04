@@ -113,6 +113,13 @@ typedef struct {
     {name_, graphics_, palette_, bank_, frames_, probes_, 0, 0, 0, {0}}
 
 static const EntitySpec entities[] = {
+    /* Object20's first-room actors. The table at 0x081186DC stores these
+     * records as palette, frame descriptor, tile sheet; the exporter keeps
+     * their original resources separate so the scene can draw them without
+     * conflating them with enemy kinds. */
+    ENTITY("opening_actor_0", 0x08208304, 0x0820C598, 0, 0x082589FC),
+    ENTITY("opening_actor_1", 0x082052F8, 0x0820C52C, 0, 0x08258050),
+    ENTITY("opening_actor_8", 0x081CBF64, 0x0820A518, 0, 0x08215CBC),
     ENTITY("bat", 0x081F422C, 0x0820BD4C, 0, 0x0824B2C4),
     STATIC("zombie", 0x081CBF8C, 0x0820A62C, 0, 0x082178B8, 2, 0, 13),
     /* The Skeleton: its walker probes 0x08528948 (sub_0806CAF8 mode 12), the

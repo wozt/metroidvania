@@ -10,6 +10,11 @@
 
 static void test_trigger(void) {
     assert(AOS_OPENING_SOMA_X == 168 && AOS_OPENING_SOMA_Y == 704);
+    assert(AOS_OPENING_ACTOR_COUNT == 3);
+    assert(AOS_OPENING_MINA_X == AOS_OPENING_SOMA_X &&
+           AOS_OPENING_MINA_Y == AOS_OPENING_SOMA_Y);
+    assert(AOS_OPENING_ARIKADO_X == 0x119 && AOS_OPENING_ARIKADO_Y == 0x2C0);
+    assert(AOS_OPENING_SKELETON_X == 0x16F && AOS_OPENING_SKELETON_Y == 0x268);
     assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);
     assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));
     assert(!strcmp(aos_opening_event_speaker_name(2), "Mina Hakuba"));

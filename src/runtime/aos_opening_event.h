@@ -16,6 +16,15 @@ enum {
     /* sub_0805D198 places Soma here before the first-room scene. */
     AOS_OPENING_SOMA_X = 0xA8,
     AOS_OPENING_SOMA_Y = 0x2C0,
+    /* Object20's actor table places Mina, Arikado and the distant winged
+     * skeleton at these world coordinates before the dialogue starts. */
+    AOS_OPENING_ACTOR_COUNT = 3,
+    AOS_OPENING_MINA_X = 0xA8,
+    AOS_OPENING_MINA_Y = 0x2C0,
+    AOS_OPENING_ARIKADO_X = 0x119,
+    AOS_OPENING_ARIKADO_Y = 0x2C0,
+    AOS_OPENING_SKELETON_X = 0x16F,
+    AOS_OPENING_SKELETON_Y = 0x268,
     AOS_OPENING_LINES = 4,
     AOS_OPENING_GLYPHS_PER_LINE = 80,
 };

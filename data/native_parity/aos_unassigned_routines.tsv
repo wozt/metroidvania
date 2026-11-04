@@ -545,7 +545,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_0805C39C	sub_0805C39C	unclassified		technic
 aos:asm:asm/code/code_08050A3C.s:sub_0805CB08	sub_0805CB08	unclassified				asm_function	0x0805CB08	asm/code/code_08050A3C.s	24376	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_0805CB74	sub_0805CB74	unclassified				asm_function	0x0805CB74	asm/code/code_08050A3C.s	24438	1	0
 aos:asm:asm/code/code_08050A3C.s:sub_0805CCE4	sub_0805CCE4	unclassified		technical	exclusive_callees	asm_function	0x0805CCE4	asm/code/code_08050A3C.s	24628	2	1
-aos:asm:asm/code/code_08050A3C.s:sub_0805D198	sub_0805D198	unclassified				asm_function	0x0805D198	asm/code/code_08050A3C.s	25193	1	2
 aos:asm:asm/code/code_08050A3C.s:sub_0805D2C8	sub_0805D2C8	unclassified		technical	exclusive_callees	asm_function	0x0805D2C8	asm/code/code_08050A3C.s	25339	1	2
 aos:asm:asm/code/code_08050A3C.s:sub_0805D35C	sub_0805D35C	unclassified		technical	exclusive_callees	asm_function	0x0805D35C	asm/code/code_08050A3C.s	25410	1	2
 aos:asm:asm/code/code_08050A3C.s:sub_0805DAA0	sub_0805DAA0	unclassified				asm_function	0x0805DAA0	asm/code/code_08050A3C.s	26333	0	8

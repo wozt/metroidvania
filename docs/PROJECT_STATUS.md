@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0738 - Draw the first-room Object20 actor sheets
+
+- The Aria object exporter now includes the three actor records used by the
+  first-room Object20 controller: Mina, Arikado and the distant winged
+  skeleton. The task version is bumped so a local extraction refreshes the
+  ignored runtime sheets.
+- The room runtime loads those actor animations separately from enemy kinds
+  and draws the native source-positioned frames while the opening dialogue is
+  active. The fixed actor animation ids and world coordinates come directly
+  from `sub_0805D198`; the later actor callback choreography is still absent.
+- The opening test covers the actor coordinate contract. The parity remains
+  partial and source-derived; no emulator comparison or portrait-OAM claim is
+  made. Native portraits, the tilemap window, camera timing and post-scene
+  interactions remain the next presentation work.
+
 ## Patch 0737 - Match the opening scene's floor pose and dialogue header
 
 - The first-room Object20 scene now pins Soma to native animation `0x51`, the

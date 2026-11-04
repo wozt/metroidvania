@@ -17,6 +17,9 @@
 #include "aos_wall.h"
 #include "aos_enemy.h"
 #include "aos_game_lifecycle.h"
+#include "aos_intro_font.h"
+#include "aos_intro_resources.h"
+#include "aos_opening_event.h"
 #include "aos_room.h"
 #include "aos_save.h"
 #include "aos_stats.h"
@@ -56,6 +59,7 @@
 #include "debug_menu.h"
 #include "gba_input.h"
 #include "aos_input.h"
+#include "fusion/assets/rom.h"
 
 #include <SDL3/SDL.h>
 #include <errno.h>
@@ -405,6 +409,18 @@ failure:
     fclose(f);
     free_room(room);
     fprintf(stderr, "Invalid Aria runtime room: %s\n", path);
+    return false;
+}
+
+static bool room_has_opening_controller(const AriaRoom *room) {
+    if (!room) return false;
+    for (size_t index = 0; index < room->entity_count; ++index) {
+        const AriaEntity *entity = &room->entities[index];
+        if (entity->kind == ARIA_KIND_SPECIAL &&
+            entity->id == AOS_OPENING_OBJECT_ID &&
+            entity->param0 == AOS_OPENING_OBJECT_PARAMETER)
+            return true;
+    }
     return false;
 }
 
@@ -4164,6 +4180,46 @@ static void free_weapon_sprite(AriaWeaponSprite *sprite) {
         if (sprite->frames[i].texture) SDL_DestroyTexture(sprite->frames[i].texture);
 }
 
+static bool resolve_opening_text(void *context, uint8_t id,
+                                 const uint8_t **script,
+                                 size_t *script_size) {
+    return aos_intro_resources_entry(context, 1, id, script, script_size);
+}
+
+static bool rebuild_opening_text(const AosOpeningEvent *event,
+                                 const AosIntroFont *font,
+                                 AosIntroTextTiles *tiles) {
+    aos_intro_text_tiles_clear(tiles);
+    for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
+        if (!aos_intro_font_render_span(font, tiles, 0, line * 13, VIEW_W - 16,
+                                        8, event->glyphs[line],
+                                        event->glyph_counts[line]))
+            return false;
+    return true;
+}
+
+static void draw_opening_text(SDL_Renderer *renderer,
+                              const AosOpeningEvent *event,
+                              const AosIntroTextTiles *tiles) {
+    if (!event->active) return;
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 8, 6, 18, 224);
+    SDL_FRect panel = {4, 94, VIEW_W - 8, 66};
+    SDL_RenderFillRect(renderer, &panel);
+    SDL_SetRenderDrawColor(renderer, 118, 104, 148, 255);
+    SDL_RenderRect(renderer, &panel);
+    SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
+    for (unsigned y = 0; y < 52; ++y)
+        for (unsigned x = 0; x < VIEW_W - 16; ++x)
+            if (aos_intro_text_tiles_pixel(tiles, x, y))
+                SDL_RenderPoint(renderer, 12.0f + (float)x, 99.0f + (float)y);
+    if (event->waiting) {
+        SDL_FRect prompt = {225, 150, 5, 3};
+        SDL_RenderFillRect(renderer, &prompt);
+    }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
 /* Apply the equipment menu's weapon choice to the same runtime objects used
  * at launch. A missing sprite keeps the record equipped but disables its
  * still-unported weapon entity instead of retaining the previous art. */
@@ -4193,7 +4249,7 @@ static bool reload_equipped_weapon(uint8_t item, AosSoma *soma,
 static void usage(const char *name) {
     fprintf(stderr,
             "Usage: %s [--check] [--save slot.sav] [--save-target slot.sav]"
-            " [--consume-save] [--library index.tsv]\n"
+            " [--consume-save] [--rom aria.gba] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
@@ -4210,6 +4266,7 @@ int aria_runtime_main(int argc, char **argv) {
     long start_song = -1;
     bool mute = false;
     const char *weapon_name = "none", *load_save_path = NULL, *save_path = NULL;
+    const char *rom_path = NULL;
     bool consume_save = false;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
@@ -4244,6 +4301,7 @@ int aria_runtime_main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--save") && i + 1 < argc) load_save_path = argv[++i];
         else if (!strcmp(argv[i], "--save-target") && i + 1 < argc) save_path = argv[++i];
         else if (!strcmp(argv[i], "--consume-save")) consume_save = true;
+        else if (!strcmp(argv[i], "--rom") && i + 1 < argc) rom_path = argv[++i];
         else if (!strcmp(argv[i], "--library") && i + 1 < argc) library_path = argv[++i];
         else if (!strcmp(argv[i], "--area") && i + 1 < argc) area = strtol(argv[++i], &end, 10);
         else if (!strcmp(argv[i], "--room") && i + 1 < argc) room_number = strtol(argv[++i], &end, 10);
@@ -4440,6 +4498,12 @@ int aria_runtime_main(int argc, char **argv) {
         fprintf(stderr, "No Aria room music flags: ./build/fusion_rebuild --task aria_sound\n");
     AosRoomMusic room_music = {0};
     int music_area = -1, music_room = -1;
+    FusionRom opening_rom = {0};
+    AosIntroResources opening_resources = {0};
+    AosIntroFont opening_font = {0};
+    AosOpeningEvent opening = {0};
+    static AosIntroTextTiles opening_tiles;
+    bool opening_text_ready = false;
     int rc = 1;
     SDL_Window *window = fusion_host_create_window("Metroid Vania - experimental Aria runtime",
                                           VIEW_W * 4, VIEW_H * 4, SDL_WINDOW_RESIZABLE);
@@ -4559,6 +4623,47 @@ int aria_runtime_main(int argc, char **argv) {
     if (!load_bursts(DEFAULT_BURSTS)) fprintf(stderr, "No Aria burst list: %s\n", DEFAULT_BURSTS);
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
+    bool opening_needed = has_active_save &&
+        aos_opening_event_should_start((uint8_t)room.area, (uint16_t)room.number,
+                                       progress.character, aria_events,
+                                       room_has_opening_controller(&room));
+    if (opening_needed) {
+        char error[256];
+        const uint8_t *script = NULL;
+        size_t script_size = 0;
+        if (!rom_path) {
+            fprintf(stderr, "The unfinished Aria opening scene requires --rom\n");
+            goto cleanup;
+        }
+        if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &opening_rom,
+                             error, sizeof error) ||
+            !aos_intro_resources_init(&opening_resources, &opening_rom,
+                                      error, sizeof error) ||
+            !aos_intro_font_init(&opening_font, &opening_rom,
+                                 error, sizeof error) ||
+            !aos_intro_resources_entry(&opening_resources, 1,
+                                       AOS_OPENING_TEXT_ID, &script,
+                                       &script_size) ||
+            !aos_opening_event_init(&opening, script, script_size)) {
+            fprintf(stderr, "Cannot start the Aria opening scene: %s\n", error);
+            goto cleanup;
+        }
+        aos_opening_event_set_resolver(&opening, resolve_opening_text,
+                                       &opening_resources);
+        soma.x = AOS_OPENING_SOMA_X << 16;
+        soma.y = AOS_OPENING_SOMA_Y << 16;
+        spawn_x = AOS_OPENING_SOMA_X;
+        spawn_y = AOS_OPENING_SOMA_Y;
+        opening_text_ready = rebuild_opening_text(&opening, &opening_font,
+                                                  &opening_tiles);
+        if (!opening_text_ready) {
+            fprintf(stderr, "Cannot render the Aria opening dialogue\n");
+            goto cleanup;
+        }
+        opening.dirty = false;
+        aos_audio_play_song(0x1000);
+        printf("Aria opening story started from Object20 parameter 3\n");
+    }
     static AriaSouls souls;
     souls = (AriaSouls){.stats = &progress, .records = have_red_souls ? red_souls : NULL,
                         .throws = have_skill_throws ? skill_throws : NULL, .soma = &soma,
@@ -4850,6 +4955,32 @@ int aria_runtime_main(int argc, char **argv) {
                 wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;
+            if (opening.active) {
+                aos_opening_event_update(&opening, aria_input.new_input);
+                if (opening.advanced) aos_audio_play_song(0xF3);
+                if (opening.malformed) {
+                    fprintf(stderr, "Malformed Aria opening text entry 0x%04X\n",
+                            AOS_OPENING_TEXT_ID);
+                    goto cleanup;
+                }
+                if (opening.dirty) {
+                    opening_text_ready = rebuild_opening_text(
+                        &opening, &opening_font, &opening_tiles);
+                    opening.dirty = false;
+                    if (!opening_text_ready) {
+                        fprintf(stderr, "Cannot render the Aria opening dialogue\n");
+                        goto cleanup;
+                    }
+                }
+                if (opening.complete &&
+                    aos_opening_event_commit(&opening, aria_events, &progress)) {
+                    printf("Aria opening story completed; event 0x20 set and "
+                           "Winged Skeleton soul granted and equipped\n");
+                }
+                ++step;
+                if (has_active_save) active_save.play_frames++;
+                continue;
+            }
             uint8_t previous_weapon = progress.weapon;
             AosItemVitals item_vitals = {soma.hp, soma.max_hp};
             soul_menu.sleep_available = has_active_save;
@@ -5800,6 +5931,8 @@ int aria_runtime_main(int argc, char **argv) {
         draw_soul_menu(renderer, &soul_menu, &progress,
                        have_equipment ? &equipment : NULL,
                        have_item_use ? item_use : NULL, &soma, &objects);
+        if (opening_text_ready)
+            draw_opening_text(renderer, &opening, &opening_tiles);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);
@@ -5817,6 +5950,7 @@ int aria_runtime_main(int argc, char **argv) {
     }
     rc = 0;
 cleanup:
+    fusion_rom_close(&opening_rom);
     if (audio_stream) SDL_DestroyAudioStream(audio_stream);
     wav_close(&wav);
     aos_audio_set_start_sink(NULL, NULL);

@@ -1,0 +1,60 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+#ifndef AOS_OPENING_EVENT_H
+#define AOS_OPENING_EVENT_H
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "aos_stats.h"
+
+enum {
+    AOS_OPENING_TEXT_ID = 0x000C,
+    AOS_OPENING_EVENT_ID = 0x20,
+    AOS_OPENING_OBJECT_ID = 0x20,
+    AOS_OPENING_OBJECT_PARAMETER = 3,
+    /* sub_0805D198 places Soma here before the first-room scene. */
+    AOS_OPENING_SOMA_X = 0xA8,
+    AOS_OPENING_SOMA_Y = 0x2C0,
+    AOS_OPENING_LINES = 4,
+    AOS_OPENING_GLYPHS_PER_LINE = 80,
+};
+
+typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
+                                       const uint8_t **script,
+                                       size_t *script_size);
+
+typedef struct {
+    const uint8_t *script;
+    size_t script_size;
+    size_t position;
+    uint8_t glyphs[AOS_OPENING_LINES][AOS_OPENING_GLYPHS_PER_LINE];
+    uint8_t glyph_counts[AOS_OPENING_LINES];
+    uint8_t line;
+    uint8_t speaker;
+    uint8_t portrait;
+    uint8_t beat;
+    bool active;
+    bool waiting;
+    bool complete;
+    bool malformed;
+    bool dirty;
+    bool advanced;
+    AosOpeningTextResolver resolve;
+    void *resolve_context;
+} AosOpeningEvent;
+
+bool aos_opening_event_should_start(uint8_t area, uint16_t room,
+                                    uint8_t character,
+                                    const uint32_t events[8],
+                                    bool room_has_controller);
+bool aos_opening_event_init(AosOpeningEvent *event, const uint8_t *script,
+                            size_t script_size);
+void aos_opening_event_set_resolver(AosOpeningEvent *event,
+                                    AosOpeningTextResolver resolve,
+                                    void *context);
+void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
+bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
+                              AosStats *stats);
+
+#endif

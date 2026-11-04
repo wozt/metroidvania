@@ -193,6 +193,8 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_main_menu.c
                src/runtime/aos_intro_cutscene.c src/runtime/aos_intro_entities.c
+               src/runtime/aos_intro_resources.c src/runtime/aos_intro_font.c
+               src/runtime/aos_opening_event.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_obj.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
@@ -216,7 +218,7 @@ target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets
 fusion_enable_warnings(fusion_aria_title_preview)
 
 
-target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 m)
+target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 fusion_assets m)
 fusion_enable_warnings(fusion_aria_runtime)
 
 # The launcher runs the three frontends above in its own process and window
@@ -977,6 +979,16 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_aos_intro_font_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_intro_font_tests)
     add_test(NAME aos_intro_font COMMAND fusion_aos_intro_font_tests)
+
+    add_executable(fusion_aos_opening_event_tests
+                   tests/test_aos_opening_event.c
+                   src/runtime/aos_opening_event.c src/runtime/aos_stats.c
+                   src/runtime/aos_intro_resources.c
+                   src/runtime/aos_intro_entities.c)
+    target_include_directories(fusion_aos_opening_event_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_opening_event_tests PRIVATE fusion_assets m)
+    fusion_enable_warnings(fusion_aos_opening_event_tests)
+    add_test(NAME aos_opening_event COMMAND fusion_aos_opening_event_tests)
 
     add_executable(fusion_aos_intro_graphics_tests
                    tests/test_aos_intro_graphics.c

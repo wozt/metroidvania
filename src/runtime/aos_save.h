@@ -64,8 +64,8 @@ typedef struct {
      * matching 0x133A0, 0x133B0 and 0x133C0. */
     uint32_t defeated[4];
     uint32_t dropped[2][4];
-    /* Schema v10: the event words of gEwramData + 0x344 (a breakable
-     * wall's break, aos_wall). */
+    /* Schema v10: the event words of gEwramData + 0x344 (breakable walls,
+     * one-time story events and the other native event consumers). */
     uint32_t events[8];
 } AosSaveData;
 

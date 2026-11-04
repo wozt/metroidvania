@@ -1,6 +1,34 @@
 # Project status
 
-Last updated: **2026-11-03**.
+Last updated: **2026-11-04**.
+
+## Patch 0736 - The first-room opening story hands control to Soma
+
+- The normal new-file path now forwards the verified Aria ROM from the title
+  frontend to the room runtime. Area 0 room 0 identifies its native
+  auto-spawn `Object20` parameter 3 controller instead of guessing an
+  `Object07` or room-descriptor trigger.
+- `sub_0805D198`'s scene placement moves Soma from the save's initialization
+  point to `(0xA8, 0x2C0)`, on the lower floor, before the camera is placed.
+- The new modular `aos_opening_event` controller reads localized ROM text
+  entry `0x000C`, interprets its dialogue controls and reveals it with the
+  native proportional font. Normal player, enemy and pause updates remain
+  frozen until the scene ends; A or START advances its waits.
+- Completion follows `sub_0805CED0`: event `0x20` is set, the Winged Skeleton
+  red soul is granted and equipped when no red soul was selected, and the
+  existing gameplay loop gives control to Soma. The schema-v10 event words
+  make the scene stay completed after the next save-room or Sleep snapshot.
+- A deterministic C test covers trigger gating, text controls, fast-forward,
+  malformed data, idempotent completion, the soul and replay suppression. An
+  optional verified-ROM run also parses the complete English entry `0x000C`
+  without copying its proprietary text into the repository.
+- Reviewed offscreen captures show the first ROM dialogue at frame 120 and,
+  with repeated A input, normal controllable Soma after completion at frame
+  1200.
+- This remains partial and source-derived, not emulator-compared: the native
+  window and portrait OAM, Soma/Mina/Arikado actor animation, camera and enemy
+  choreography, control-2 callbacks and the controller's later proximity
+  conversations still need reconstruction.
 
 ## Patch 0735 - Soma's sounds and voices
 

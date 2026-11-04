@@ -140,14 +140,19 @@ static bool slot_paths(SlotView slots[AOS_SAVE_SLOT_COUNT],
 static int frontend_argc;
 static char **frontend_argv;
 
-static bool launch_runtime(const char *runtime, const char *load_path,
-                           const char *save_path, bool consume_save,
+static bool launch_runtime(const char *runtime, const char *rom_path,
+                           const char *load_path, const char *save_path,
+                           bool consume_save,
                            char *error, size_t error_size) {
     const char *arguments[64];
     int count = 0;
     arguments[count++] = runtime;
     arguments[count++] = "--save";
     arguments[count++] = load_path;
+    if (rom_path) {
+        arguments[count++] = "--rom";
+        arguments[count++] = rom_path;
+    }
     if (strcmp(load_path, save_path)) {
         arguments[count++] = "--save-target";
         arguments[count++] = save_path;
@@ -869,7 +874,7 @@ int aria_title_preview_main(int argc, char **argv) {
             const char *load_path = pending_launch_quick
                                         ? quicks[pending_launch_slot].path
                                         : slots[pending_launch_slot].path;
-            if (launch_runtime(runtime_path, load_path,
+            if (launch_runtime(runtime_path, rom_path, load_path,
                                slots[pending_launch_slot].path,
                                pending_launch_quick, launch_error,
                                sizeof launch_error)) {

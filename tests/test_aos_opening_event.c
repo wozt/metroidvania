@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+#include "aos_opening_event.h"
+#include "aos_intro_resources.h"
+
+#include <assert.h>
+#include <string.h>
+
+#include "aos_input.h"
+
+static void test_trigger(void) {
+    assert(AOS_OPENING_SOMA_X == 168 && AOS_OPENING_SOMA_Y == 704);
+    uint32_t events[8] = {0};
+    assert(aos_opening_event_should_start(0, 0, 0, events, true));
+    assert(!aos_opening_event_should_start(1, 0, 0, events, true));
+    assert(!aos_opening_event_should_start(0, 1, 0, events, true));
+    assert(!aos_opening_event_should_start(0, 0, 1, events, true));
+    assert(!aos_opening_event_should_start(0, 0, 0, events, false));
+    events[1] = 1;
+    assert(!aos_opening_event_should_start(0, 0, 0, events, true));
+}
+
+static void test_script_and_commit(void) {
+    static const uint8_t script[] = {
+        0, 0, 3, 4, 7, 2, 'A', 'B', 6, 'C', 5,
+        4, 7, 8, 'D', 2, 9, 9, 'E', 10,
+    };
+    AosOpeningEvent event;
+    assert(aos_opening_event_init(&event, script, sizeof script));
+    aos_opening_event_update(&event, 0);
+    assert(event.portrait == 4 && event.speaker == 2);
+    assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'A');
+    aos_opening_event_update(&event, AOS_KEY_A);
+    assert(event.waiting && event.line == 1);
+    assert(event.glyph_counts[0] == 2 && event.glyph_counts[1] == 1);
+    aos_opening_event_update(&event, AOS_KEY_A);
+    assert(event.waiting && event.beat == 9 && event.speaker == 8);
+    assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'D');
+    aos_opening_event_update(&event, AOS_KEY_A);
+    assert(event.complete && !event.active && !event.malformed);
+    assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'E');
+
+    uint32_t events[8] = {0};
+    AosStats stats = {0};
+    assert(aos_opening_event_commit(&event, events, &stats));
+    assert(events[1] == 1);
+    assert(aos_souls_total(&stats, AOS_SOUL_RED, 0) == 1);
+    assert(stats.red_soul == 1);
+    assert(!aos_opening_event_should_start(0, 0, 0, events, true));
+    assert(!aos_opening_event_commit(&event, events, &stats));
+    assert(aos_souls_total(&stats, AOS_SOUL_RED, 0) == 1);
+}
+
+static bool resolve_insert(void *context, uint8_t id, const uint8_t **script,
+                           size_t *script_size) {
+    static const uint8_t insert[] = {0, 0, 'X', 10};
+    (void)context;
+    if (id != 3) return false;
+    *script = insert;
+    *script_size = sizeof insert;
+    return true;
+}
+
+static void test_insert_and_malformed(void) {
+    static const uint8_t insert_command[] = {0, 0, 1, 3, 10};
+    AosOpeningEvent event;
+    assert(aos_opening_event_init(&event, insert_command,
+                                  sizeof insert_command));
+    aos_opening_event_update(&event, 0);
+    assert(event.malformed && !event.active && !event.complete);
+    assert(aos_opening_event_init(&event, insert_command,
+                                  sizeof insert_command));
+    aos_opening_event_set_resolver(&event, resolve_insert, NULL);
+    aos_opening_event_update(&event, AOS_KEY_A);
+    assert(event.complete && event.glyph_counts[0] == 1 &&
+           event.glyphs[0][0] == 'X');
+    assert(!aos_opening_event_init(&event, insert_command, 2));
+}
+
+static bool resolve_rom_text(void *context, uint8_t id,
+                             const uint8_t **script, size_t *script_size) {
+    return aos_intro_resources_entry(context, 1, id, script, script_size);
+}
+
+int main(int argc, char **argv) {
+    test_trigger();
+    test_script_and_commit();
+    test_insert_and_malformed();
+    if (argc == 2) {
+        FusionRom rom = {0};
+        AosIntroResources resources;
+        const uint8_t *script = NULL;
+        size_t script_size = 0;
+        char error[128];
+        assert(fusion_rom_open(FUSION_ASSET_GAME_ARIA, argv[1], &rom,
+                               error, sizeof error));
+        assert(aos_intro_resources_init(&resources, &rom, error, sizeof error));
+        assert(aos_intro_resources_entry(&resources, 1, AOS_OPENING_TEXT_ID,
+                                         &script, &script_size));
+        AosOpeningEvent event;
+        assert(aos_opening_event_init(&event, script, script_size));
+        aos_opening_event_set_resolver(&event, resolve_rom_text, &resources);
+        for (unsigned frame = 0; frame < 10000 && event.active; ++frame)
+            aos_opening_event_update(&event, AOS_KEY_A);
+        assert(event.complete && !event.malformed);
+        fusion_rom_close(&rom);
+    }
+    return 0;
+}

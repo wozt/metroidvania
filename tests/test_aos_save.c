@@ -68,8 +68,8 @@ int main(void) {
     source.defeated[3] = 1u << (111 - 96);
     source.dropped[0][1] = 1u << (33 - 32);
     source.dropped[1][2] = 1u << (65 - 64);
-    /* Schema v10: the event words (bits 34 and 255, two broken walls). */
-    source.events[1] = 1u << 2;
+    /* Schema v10: opening-story event 32, wall event 34 and event 255. */
+    source.events[1] = (1u << 0) | (1u << 2);
     source.events[7] = 1u << 31;
     assert(aos_save_store(path, &source, error, sizeof error));
 
@@ -84,7 +84,7 @@ int main(void) {
         size_t n = fread(all, 1, sizeof all - 1, text);
         assert(fclose(text) == 0 && n > 0);
         assert(!strcmp(head, AOS_SAVE_SCHEMA "\n") &&
-               strstr(all, "events=00000000,00000004,00000000,00000000,00000000,00000000,"
+               strstr(all, "events=00000000,00000005,00000000,00000000,00000000,00000000,"
                            "00000000,80000000\n"));
         /* The same file as schema v9 (no event line) loads without events. */
         char v9[2048];

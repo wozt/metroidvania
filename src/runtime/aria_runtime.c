@@ -4259,25 +4259,24 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
                                  AosIntroTextTiles *tiles) {
     aos_intro_text_tiles_clear(tiles);
     const char *speaker = aos_opening_event_speaker_name(event->speaker);
-    if (!aos_intro_font_render_span(font, tiles, 8, 0, VIEW_W - 24, 15,
+    if (!aos_intro_font_render_span(font, tiles, 6, 0, 190, 15,
                                     (const uint8_t *)speaker, strlen(speaker)))
         return false;
     for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
-        if (!aos_intro_font_render_span(font, tiles, 0, 14 + line * 13,
-                                        VIEW_W - 16, 8, event->glyphs[line],
+        if (!aos_intro_font_render_span(font, tiles, 6, 12 + line * 12,
+                                        190, 8, event->glyphs[line],
                                         event->glyph_counts[line]))
             return false;
     return true;
 }
 
 /* The native dialogue uses portrait OAM. Until that table and its tilemap
- * path are ported, show a small head crop from the already exported actor or
- * Soma sheet. This is deliberately a thumbnail approximation, not native
- * portrait parity. */
-static const AriaFrame *opening_thumbnail_frame(const AosOpeningEvent *event,
-                                                const AriaObjects *objects,
-                                                const AriaLibrary *library,
-                                                const AosOpeningActors *actors) {
+ * path are ported, select a source actor sheet for a large upper-screen
+ * portrait approximation. */
+static const AriaFrame *opening_portrait_frame(const AosOpeningEvent *event,
+                                               const AriaObjects *objects,
+                                               const AriaLibrary *library,
+                                               const AosOpeningActors *actors) {
     if (event->speaker == 2 && objects && actors &&
         objects->opening_actors[0].loaded) {
         const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[0];
@@ -4305,37 +4304,37 @@ static void draw_opening_text(SDL_Renderer *renderer,
                               const AosOpeningActors *actors) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    const AriaFrame *portrait = opening_portrait_frame(event, objects, library, actors);
+    if (portrait && portrait->texture) {
+        SDL_SetRenderDrawColor(renderer, 25, 31, 58, 190);
+        SDL_FRect portrait_backdrop = {156, 7, 79, 88};
+        SDL_RenderFillRect(renderer, &portrait_backdrop);
+        SDL_FRect source = {0, 0, portrait->w, portrait->h * 0.68f};
+        SDL_FRect destination = {162, 10, 68, 82};
+        SDL_RenderTexture(renderer, portrait->texture, &source, &destination);
+    }
     SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
-    SDL_FRect panel = {4, 86, VIEW_W - 8, 72};
+    SDL_FRect panel = {30, 96, VIEW_W - 34, 56};
     SDL_RenderFillRect(renderer, &panel);
     SDL_SetRenderDrawColor(renderer, 214, 168, 71, 255);
     SDL_RenderRect(renderer, &panel);
-    SDL_FRect inner = {6, 88, VIEW_W - 12, 68};
+    SDL_FRect inner = {32, 98, VIEW_W - 38, 52};
     SDL_SetRenderDrawColor(renderer, 81, 64, 106, 255);
     SDL_RenderRect(renderer, &inner);
     SDL_SetRenderDrawColor(renderer, 35, 28, 68, 255);
-    SDL_FRect name_bar = {8, 89, VIEW_W - 16, 12};
+    SDL_FRect name_bar = {34, 99, VIEW_W - 42, 10};
     SDL_RenderFillRect(renderer, &name_bar);
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
-    for (unsigned y = 0; y < 72; ++y)
-        for (unsigned x = 0; x < VIEW_W - 16; ++x)
+    for (unsigned y = 0; y < 54; ++y)
+        for (unsigned x = 0; x < 200; ++x)
             if (aos_intro_text_tiles_pixel(tiles, x, y)) {
                 if (y < 12) SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
                 else SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
-                SDL_RenderPoint(renderer, 12.0f + (float)x, 89.0f + (float)y);
+                SDL_RenderPoint(renderer, 30.0f + (float)x, 99.0f + (float)y);
             }
-    const AriaFrame *thumbnail = opening_thumbnail_frame(event, objects, library, actors);
-    if (thumbnail && thumbnail->texture) {
-        SDL_SetRenderDrawColor(renderer, 214, 168, 71, 255);
-        SDL_FRect frame = {207, 91, 27, 23};
-        SDL_RenderRect(renderer, &frame);
-        SDL_FRect source = {0, 0, thumbnail->w, thumbnail->h * 0.55f};
-        SDL_FRect destination = {209, 93, 23, 19};
-        SDL_RenderTexture(renderer, thumbnail->texture, &source, &destination);
-    }
     if (event->waiting) {
         SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
-        SDL_FRect prompt = {225, 151, 5, 3};
+        SDL_FRect prompt = {225, 145, 5, 3};
         SDL_RenderFillRect(renderer, &prompt);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);

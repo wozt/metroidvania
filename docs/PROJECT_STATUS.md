@@ -2,12 +2,15 @@
 
 Last updated: **2026-11-04**.
 
-## Patch 0740 - Add an exported-sheet dialogue thumbnail
+## Patch 0741 - Match the opening dialogue composition
 
-- The opening dialogue header now shows a small head crop selected from the
-  exported Soma, Mina or Arikado sprite sheet for the active speaker.
-- This is explicitly a presentation approximation: the native portrait tile
-  resources, OAM placement and text-window tilemap remain unported.
+- The opening dialogue now follows the reference composition more closely:
+  a large upper-right actor portrait area and a narrower lower dialogue panel
+  with the speaker name and text aligned inside it.
+- The large portrait is currently a scaled crop of the exported Soma, Mina or
+  Arikado sheet. It is explicitly a presentation approximation: the native
+  portrait tile resources, OAM placement and text-window tilemap remain
+  unported.
 - The runtime and generated registries keep the feature partial and do not
   promote it to native portrait parity.
 

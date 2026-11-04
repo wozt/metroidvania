@@ -21,12 +21,53 @@ static void test_trigger(void) {
     assert(actors.x[0] == (AOS_OPENING_MINA_X << 16));
     assert(actors.x[1] == (AOS_OPENING_ARIKADO_X << 16));
     assert(actors.animation[0] == 4 && actors.animation[1] == 1 && actors.animation[2] == 4);
-    for (unsigned frame = 0; frame < 64; ++frame) aos_opening_actors_update(&actors);
+    for (unsigned frame = 0; frame < 64; ++frame)
+        aos_opening_actors_update(&actors, NULL);
     assert(actors.state == 1 && actors.timer == 0 && actors.x[1] == (0x119 << 16));
-    aos_opening_actors_update(&actors);
+    aos_opening_actors_update(&actors, NULL);
     assert(actors.x[1] < (0x119 << 16));
-    for (unsigned frame = 0; frame < 128; ++frame) aos_opening_actors_update(&actors);
+    for (unsigned frame = 0; frame < 128; ++frame)
+        aos_opening_actors_update(&actors, NULL);
     assert(actors.state == 2 && actors.x[1] == (0xD0 << 16));
+    assert(actors.visible[0] && actors.visible[1] && actors.visible[2]);
+
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_CONFRONTATION);
+    assert(aos_opening_actors_update(&actors, NULL) ==
+           AOS_OPENING_CUE_CONFRONTATION);
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
+    for (unsigned frame = 0; frame < 31; ++frame)
+        assert(aos_opening_actors_update(&actors, NULL) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, NULL) ==
+           AOS_OPENING_CUE_ENEMY_APPEARS);
+    assert(actors.animation[0] == 5 && actors.animation_age[0] == 0);
+
+    const uint16_t durations[AOS_OPENING_ACTOR_COUNT] = {1, 3, 1};
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_ATTACKS);
+    assert(actors.animation[1] == 2);
+    assert(aos_opening_actors_update(&actors, durations) ==
+           AOS_OPENING_CUE_ENEMY_ATTACKS);
+    assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
+    for (unsigned frame = 0; frame < 15; ++frame)
+        assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations) ==
+           AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
+    assert(actors.animation[1] == 3 && actors.animation_age[1] == 0);
+
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_SOUL_ABSORBED);
+    for (unsigned frame = 0; frame < 18; ++frame) {
+        AosOpeningCue cue = aos_opening_actors_update(&actors, durations);
+        if (frame == 17) assert(cue == AOS_OPENING_CUE_ENEMY_DEFEATED);
+        else assert(cue == AOS_OPENING_CUE_NONE);
+    }
+    assert(!actors.visible[2]);
+    for (unsigned frame = 0; frame < 64; ++frame)
+        assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations) ==
+           AOS_OPENING_CUE_SOUL_ABSORBED);
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);
+    assert(aos_opening_actors_update(&actors, durations) ==
+           AOS_OPENING_CUE_AFTER_BATTLE);
     assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);
     assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));
     assert(!strcmp(aos_opening_event_speaker_name(2), "Mina Hakuba"));
@@ -45,21 +86,28 @@ static void test_trigger(void) {
 static void test_script_and_commit(void) {
     static const uint8_t script[] = {
         0, 0, 3, 4, 7, 2, 'A', 'B', 6, 'C', 5,
-        4, 7, 8, 'D', 2, 9, 9, 'E', 10,
+        4, 7, 8, 'D', 2, 9, 5, 9, 'E', 10,
     };
     AosOpeningEvent event;
     assert(aos_opening_event_init(&event, script, sizeof script));
     aos_opening_event_update(&event, 0);
     assert(event.portrait == 4 && event.speaker == 2);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'A');
-    aos_opening_event_update(&event, AOS_KEY_A);
+    for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
+        aos_opening_event_update(&event, 0);
     assert(event.waiting && event.line == 1);
     assert(event.glyph_counts[0] == 2 && event.glyph_counts[1] == 1);
     aos_opening_event_update(&event, AOS_KEY_A);
+    assert(!event.waiting && event.glyph_counts[0] == 1 &&
+           event.glyphs[0][0] == 'D');
+    for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
+        aos_opening_event_update(&event, 0);
     assert(event.waiting && event.beat == 9 && event.speaker == 8);
     assert(event.beat_count == 1 && event.cue == AOS_OPENING_CUE_NONE);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'D');
     aos_opening_event_update(&event, AOS_KEY_A);
+    for (unsigned frame = 0; frame < 16 && event.active; ++frame)
+        aos_opening_event_update(&event, 0);
     assert(event.complete && !event.active && !event.malformed);
     assert(event.cue == AOS_OPENING_CUE_COMPLETE);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'E');
@@ -96,6 +144,9 @@ static void test_insert_and_malformed(void) {
                                   sizeof insert_command));
     aos_opening_event_set_resolver(&event, resolve_insert, NULL);
     aos_opening_event_update(&event, AOS_KEY_A);
+    assert(event.active && event.glyph_counts[0] == 1 &&
+           event.glyphs[0][0] == 'X');
+    aos_opening_event_update(&event, 0);
     assert(event.complete && event.glyph_counts[0] == 1 &&
            event.glyphs[0][0] == 'X');
     assert(!aos_opening_event_init(&event, insert_command, 2));

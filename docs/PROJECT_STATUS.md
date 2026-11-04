@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0744 - Drive Object20's timed actor and audio beats
+
+- Corrected the dialogue protocol for control `02`: `sub_08067A04` advances
+  Object20's callback state and continues parsing, while the following control
+  `05` owns the input wait. The earlier controller incorrectly inserted a
+  second confirmation at every one of the seven scene beats. Printable text
+  now also exits after one visible glyph per frame instead of collapsing the
+  rest of a page into a single frame while A is pressed.
+- `AosOpeningActors` now accepts those semantic beats independently of SDL,
+  resets each actor's animation clock and consumes animation durations supplied
+  by the exported object library. Runtime and future editor previews therefore
+  share the same deterministic scene controller without embedding extracted
+  frames or timing manifests in source.
+- The source-visible `sub_0805D410` timing is connected: the reveal waits
+  `0x20` frames before Mina animation 5 and sound `0x1B4`; Arikado uses
+  animations 2 and 3 with sound `0x1DF`, the first animation's real duration,
+  a `0x10`-frame pause and sound `0x1E0`; the battle waits `0x10`, starts its
+  `0xD2` timer, hides the Winged Skeleton with `0x6B` at `0xD0`, then requests
+  the soul-impact sound `0x197` at `0x8F`.
+- Rendering now uses per-actor animation ages rather than one global modulo,
+  so every beat visibly restarts its selected animation. Deterministic tests
+  cover each boundary and the corrected no-extra-confirmation script flow; a
+  private verified-ROM pass still reaches all seven beats. The missing room
+  reveal transition, spawned visual effects, attack entity and soul particle
+  keep the feature partial and source-derived rather than emulator-validated.
+
 ## Patch 0743 - Match the opening dialogue type and music beats
 
 - The opening dialogue now uses both native Aria font contexts instead of

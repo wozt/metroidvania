@@ -3658,6 +3658,7 @@ static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objec
                                 const AosOpeningActors *actors, int cam_x, int cam_y) {
     if (!actors) return;
     for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
+        if (!actors->visible[actor]) continue;
         const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[actor];
         int animation = actors->animation[actor];
         if (!art->loaded || animation >= AOS_ENEMY_MAX_ANIMS || !art->defs[animation].count)
@@ -3666,7 +3667,7 @@ static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objec
         for (unsigned i = 0; i < art->defs[animation].count; ++i)
             total += art->ticks[animation][i];
         if (!total) continue;
-        unsigned t = (unsigned)(actors->frame % total), index = 0;
+        unsigned t = (unsigned)(actors->animation_age[actor] % total), index = 0;
         while (index + 1 < art->defs[animation].count && t >= art->ticks[animation][index])
             t -= art->ticks[animation][index++];
         const AriaFrame *frame = &art->frames[animation][index];
@@ -3676,6 +3677,24 @@ static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objec
                           (float)(y + frame->offset_y - cam_y), frame->w,
                           frame->h};
         SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+    }
+}
+
+static void opening_actor_durations(
+    const AriaObjects *objects, const AosOpeningActors *actors,
+    uint16_t durations[AOS_OPENING_ACTOR_COUNT]) {
+    memset(durations, 0, sizeof(uint16_t) * AOS_OPENING_ACTOR_COUNT);
+    if (!objects || !actors) return;
+    for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
+        int animation = actors->animation[actor];
+        const __typeof__(objects->opening_actors[0]) *art =
+            &objects->opening_actors[actor];
+        if (!art->loaded || animation < 0 || animation >= AOS_ENEMY_MAX_ANIMS)
+            continue;
+        unsigned total = 0;
+        for (unsigned frame = 0; frame < art->defs[animation].count; ++frame)
+            total += art->ticks[animation][frame];
+        durations[actor] = total > UINT16_MAX ? UINT16_MAX : (uint16_t)total;
     }
 }
 
@@ -4383,8 +4402,16 @@ static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
         aos_audio_play_song(0x1B4);
         break;
     case AOS_OPENING_CUE_ENEMY_ATTACKS:
-        /* State 4 starts the Winged Skeleton's attack animation. */
+        /* State 4 starts Arikado's first attack animation. */
         aos_audio_play_song(0x1DF);
+        break;
+    case AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN:
+        /* State 4, 0x10 frames after Arikado's first attack ends. */
+        aos_audio_play_song(0x1E0);
+        break;
+    case AOS_OPENING_CUE_ENEMY_DEFEATED:
+        /* State 5 removes the Winged Skeleton at timer 0xD0. */
+        aos_audio_play_song(0x6B);
         break;
     case AOS_OPENING_CUE_SOUL_ABSORBED:
         /* State 5's post-impact cue. */
@@ -5152,11 +5179,15 @@ int aria_runtime_main(int argc, char **argv) {
                 /* The scene owns Soma's pose until Object20 commits. */
                 soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
                 soma.anim.frame = 0;
-                aos_opening_actors_update(&opening_actors);
                 aos_opening_event_update(&opening, aria_input.new_input);
                 if (opening.advanced) aos_audio_play_song(0x132);
-                if (start_song < 0)
-                    play_opening_cue(opening.cue, &room_music);
+                aos_opening_actors_trigger(&opening_actors, opening.cue);
+                uint16_t actor_durations[AOS_OPENING_ACTOR_COUNT];
+                opening_actor_durations(objects_ok ? &objects : NULL,
+                                        &opening_actors, actor_durations);
+                AosOpeningCue actor_cue = aos_opening_actors_update(
+                    &opening_actors, actor_durations);
+                if (start_song < 0) play_opening_cue(actor_cue, &room_music);
                 if (opening.malformed) {
                     fprintf(stderr, "Malformed Aria opening text entry 0x%04X\n",
                             AOS_OPENING_TEXT_ID);

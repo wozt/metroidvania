@@ -40,6 +40,8 @@ typedef enum {
     AOS_OPENING_CUE_CONFRONTATION,
     AOS_OPENING_CUE_ENEMY_APPEARS,
     AOS_OPENING_CUE_ENEMY_ATTACKS,
+    AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN,
+    AOS_OPENING_CUE_ENEMY_DEFEATED,
     AOS_OPENING_CUE_SOUL_ABSORBED,
     AOS_OPENING_CUE_AFTER_BATTLE,
     AOS_OPENING_CUE_COMPLETE,
@@ -74,9 +76,15 @@ typedef struct {
     int32_t x[AOS_OPENING_ACTOR_COUNT];
     int32_t y[AOS_OPENING_ACTOR_COUNT];
     uint8_t animation[AOS_OPENING_ACTOR_COUNT];
+    uint16_t animation_age[AOS_OPENING_ACTOR_COUNT];
+    bool visible[AOS_OPENING_ACTOR_COUNT];
     uint8_t state;
     uint8_t step;
     uint8_t timer;
+    uint8_t scene_state;
+    uint8_t scene_step;
+    uint16_t scene_timer;
+    AosOpeningCue pending_cue;
     uint32_t frame;
     bool active;
 } AosOpeningActors;
@@ -94,7 +102,14 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
 /* Localized speaker ids used by the first-room Object20 script. */
 const char *aos_opening_event_speaker_name(uint8_t speaker);
 void aos_opening_actors_init(AosOpeningActors *actors);
-void aos_opening_actors_update(AosOpeningActors *actors);
+/* Connects a script control-2 beat to sub_0805D410's actor state. */
+void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
+/* Advances one frame and returns one audio cue due on that frame. Animation
+ * durations are supplied by the exported actor library, keeping this model
+ * independent from SDL and usable by editor previews. */
+AosOpeningCue aos_opening_actors_update(
+    AosOpeningActors *actors,
+    const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT]);
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats);
 

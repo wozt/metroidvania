@@ -33,6 +33,18 @@ typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
                                        const uint8_t **script,
                                        size_t *script_size);
 
+/* Semantic Object20 beats exposed to hosts and editor previews. The event
+ * parser does not play audio directly. */
+typedef enum {
+    AOS_OPENING_CUE_NONE,
+    AOS_OPENING_CUE_CONFRONTATION,
+    AOS_OPENING_CUE_ENEMY_APPEARS,
+    AOS_OPENING_CUE_ENEMY_ATTACKS,
+    AOS_OPENING_CUE_SOUL_ABSORBED,
+    AOS_OPENING_CUE_AFTER_BATTLE,
+    AOS_OPENING_CUE_COMPLETE,
+} AosOpeningCue;
+
 typedef struct {
     const uint8_t *script;
     size_t script_size;
@@ -43,6 +55,8 @@ typedef struct {
     uint8_t speaker;
     uint8_t portrait;
     uint8_t beat;
+    uint8_t beat_count;
+    AosOpeningCue cue;
     bool active;
     bool waiting;
     bool complete;

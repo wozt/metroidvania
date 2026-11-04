@@ -16,6 +16,8 @@ enum {
 typedef struct {
     const uint8_t *metrics;
     const uint8_t *glyphs;
+    const uint8_t *small_metrics;
+    const uint8_t *small_glyphs;
 } AosIntroFont;
 
 typedef struct {
@@ -33,6 +35,14 @@ bool aos_intro_font_render_span(const AosIntroFont *font,
                                 unsigned pixel_x, unsigned pixel_y,
                                 unsigned max_width, uint8_t color,
                                 const uint8_t *glyphs, size_t glyph_count);
+/* Context B's distinct 8-pixel font, used for dialogue speaker names by
+ * sub_08040C60/sub_08068104. */
+bool aos_intro_font_render_small_span(const AosIntroFont *font,
+                                      AosIntroTextTiles *tiles,
+                                      unsigned pixel_x, unsigned pixel_y,
+                                      unsigned max_width, uint8_t color,
+                                      const uint8_t *glyphs,
+                                      size_t glyph_count);
 /* Draws one glyph (code 0x20-0xFF) with its native left offset and width at
  * a pixel position: the glyph rows of sub_0803FF64/sub_08040048. */
 bool aos_intro_font_draw_glyph(const AosIntroFont *font, AosIntroTextTiles *tiles,

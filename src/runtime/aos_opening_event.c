@@ -56,6 +56,19 @@ static bool argument(AosOpeningEvent *event, uint8_t *value) {
     return true;
 }
 
+static AosOpeningCue beat_cue(uint8_t beat_count) {
+    switch (beat_count) {
+    /* The first control-2 beat releases Object20's actor-entry state. The
+     * following beats select sub_0805D410 states 2 through 6. */
+    case 2: return AOS_OPENING_CUE_CONFRONTATION;
+    case 3: return AOS_OPENING_CUE_ENEMY_APPEARS;
+    case 4: return AOS_OPENING_CUE_ENEMY_ATTACKS;
+    case 5: return AOS_OPENING_CUE_SOUL_ABSORBED;
+    case 6: return AOS_OPENING_CUE_AFTER_BATTLE;
+    default: return AOS_OPENING_CUE_NONE;
+    }
+}
+
 static void run_until_glyph_or_wait(AosOpeningEvent *event) {
     while (event->active && event->position < event->script_size) {
         uint8_t command = event->script[event->position++];
@@ -86,6 +99,8 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
             break;
         case 2:
             if (!argument(event, &event->beat)) return;
+            ++event->beat_count;
+            event->cue = beat_cue(event->beat_count);
             event->waiting = true;
             event->advanced = true;
             return;
@@ -119,6 +134,7 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
         case 10:
             event->active = false;
             event->complete = true;
+            event->cue = AOS_OPENING_CUE_COMPLETE;
             event->dirty = true;
             return;
         default:
@@ -136,6 +152,7 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
 void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
     if (!event || !event->active) return;
     event->advanced = false;
+    event->cue = AOS_OPENING_CUE_NONE;
     bool advance = (new_input & (AOS_KEY_A | AOS_KEY_START)) != 0;
     if (event->waiting) {
         if (!advance) return;

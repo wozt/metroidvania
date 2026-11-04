@@ -4260,11 +4260,12 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
                                  AosIntroTextTiles *tiles) {
     aos_intro_text_tiles_clear(tiles);
     const char *speaker = aos_opening_event_speaker_name(event->speaker);
-    if (!aos_intro_font_render_span(font, tiles, 6, 0, 190, 15,
-                                    (const uint8_t *)speaker, strlen(speaker)))
+    if (!aos_intro_font_render_small_span(font, tiles, 6, 0, 190, 15,
+                                          (const uint8_t *)speaker,
+                                          strlen(speaker)))
         return false;
     for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
-        if (!aos_intro_font_render_span(font, tiles, 6, 12 + line * 12,
+        if (!aos_intro_font_render_span(font, tiles, 6, 16 + line * 12,
                                         190, 8, event->glyphs[line],
                                         event->glyph_counts[line]))
             return false;
@@ -4353,20 +4354,49 @@ static void draw_opening_text(SDL_Renderer *renderer,
         SDL_RenderTexture(renderer, portrait->texture, &source, &destination);
     }
     SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
-    SDL_FRect panel = {30, 96, VIEW_W - 34, 56};
+    /* The portrait's lowest opaque row and the text field now meet. The
+     * field continues to the native 160-pixel screen edge. */
+    SDL_FRect panel = {32, 92, VIEW_W - 32, VIEW_H - 92};
     SDL_RenderFillRect(renderer, &panel);
 
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
-    for (unsigned y = 0; y < 54; ++y)
+    for (unsigned y = 0; y < 64; ++y)
         for (unsigned x = 0; x < 200; ++x)
             if (aos_intro_text_tiles_pixel(tiles, x, y))
-                SDL_RenderPoint(renderer, 30.0f + (float)x, 99.0f + (float)y);
+                SDL_RenderPoint(renderer, 34.0f + (float)x, 100.0f + (float)y);
     if (event->waiting) {
         SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
-        SDL_FRect prompt = {225, 145, 5, 3};
+        SDL_FRect prompt = {225, 154, 5, 3};
         SDL_RenderFillRect(renderer, &prompt);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
+    switch (cue) {
+    case AOS_OPENING_CUE_CONFRONTATION:
+        /* sub_0805D410 state 2: MUS_16, Confrontation. */
+        aos_room_music_change(music, 0x10);
+        break;
+    case AOS_OPENING_CUE_ENEMY_APPEARS:
+        /* State 3's monster reveal. */
+        aos_audio_play_song(0x1B4);
+        break;
+    case AOS_OPENING_CUE_ENEMY_ATTACKS:
+        /* State 4 starts the Winged Skeleton's attack animation. */
+        aos_audio_play_song(0x1DF);
+        break;
+    case AOS_OPENING_CUE_SOUL_ABSORBED:
+        /* State 5's post-impact cue. */
+        aos_audio_play_song(0x197);
+        break;
+    case AOS_OPENING_CUE_AFTER_BATTLE:
+        /* sub_0805D410 state 6: MUS_23, Premonition. */
+        aos_room_music_change(music, 0x17);
+        break;
+    default:
+        break;
+    }
 }
 
 /* Apply the equipment menu's weapon choice to the same runtime objects used
@@ -4818,6 +4848,13 @@ int aria_runtime_main(int argc, char **argv) {
         }
         opening.dirty = false;
         aos_audio_play_song(0x1000);
+        if (start_song < 0) {
+            room_music.current_song = 0;
+            /* sub_0805CED0 starts MUS_28 after Object20's room reveal. The
+             * compact host has no reveal stage yet, so it starts with the
+             * dialogue instead of letting the room loop overwrite it. */
+            aos_room_music_change(&room_music, 0x1C);
+        }
         printf("Aria opening story started from Object20 parameter 3\n");
     }
     static AriaSouls souls;
@@ -5086,7 +5123,7 @@ int aria_runtime_main(int argc, char **argv) {
             aos_input_update(&aria_input, held);
             lifecycle.input = aria_input;
             aos_game_lifecycle_update(&lifecycle);
-            if (have_room_music && start_song < 0 &&
+            if (have_room_music && start_song < 0 && !opening.active &&
                 (room.area != music_area || room.number != music_room)) {
                 music_area = room.area;
                 music_room = room.number;
@@ -5117,7 +5154,9 @@ int aria_runtime_main(int argc, char **argv) {
                 soma.anim.frame = 0;
                 aos_opening_actors_update(&opening_actors);
                 aos_opening_event_update(&opening, aria_input.new_input);
-                if (opening.advanced) aos_audio_play_song(0xF3);
+                if (opening.advanced) aos_audio_play_song(0x132);
+                if (start_song < 0)
+                    play_opening_cue(opening.cue, &room_music);
                 if (opening.malformed) {
                     fprintf(stderr, "Malformed Aria opening text entry 0x%04X\n",
                             AOS_OPENING_TEXT_ID);
@@ -5136,6 +5175,16 @@ int aria_runtime_main(int argc, char **argv) {
                     aos_opening_event_commit(&opening, aria_events, &progress)) {
                     printf("Aria opening story completed; event 0x20 set and "
                            "Winged Skeleton soul granted and equipped\n");
+                }
+                if (opening.complete && have_room_music && start_song < 0) {
+                    const AosRoomMusicFlags *flags =
+                        room.area < MUSIC_AREAS && room.number < MUSIC_ROOMS
+                            ? &room_music_flags[room.area][room.number]
+                            : NULL;
+                    aos_room_music_enter(&room_music, room.area, room.number,
+                                         flags);
+                    music_area = room.area;
+                    music_room = room.number;
                 }
                 ++step;
                 if (has_active_save) active_save.play_frames++;

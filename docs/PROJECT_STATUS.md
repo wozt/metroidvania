@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-04**.
 
+## Patch 0743 - Match the opening dialogue type and music beats
+
+- The opening dialogue now uses both native Aria font contexts instead of
+  drawing the speaker and speech with one font. Speaker names come from the
+  8-pixel glyphs at `0x08509876` and metrics at `0x080E2EC0`; dialogue keeps
+  the 12-pixel glyphs and metrics already used by context A. The lower field
+  now meets the portrait and continues to the bottom of the 240 x 160 frame.
+- The portable `aos_opening_event` parser exposes semantic cues for all seven
+  control-2 beats in ROM text entry `0x000C`. This keeps the script useful to
+  the runtime and future editor previews without putting SDL or audio calls in
+  the event model.
+- Object20 now stops the room loop, starts native scene track `MUS_28`, changes
+  to `MUS_16` at callback state 2, requests the monster reveal, attack and
+  soul-impact cues (`0x1B4`, `0x1DF`, `0x197`), changes to `MUS_23` at state 6,
+  and restores area 0's normal room track when the compact dialogue controller
+  hands control back to Soma. The previous room-music update could immediately
+  overwrite Object20's initial stop command; it is now suspended for the scene.
+- Synthetic tests cover both native font tables, music replacement ordering
+  and semantic beat output. A private verified-ROM run confirms that entry
+  `0x000C` contains seven beats and reaches every defined cue. Timing remains
+  source-derived and not emulator-compared; Object20's delayed animation cues,
+  full actor combat and native BG text tilemap remain partial.
+
 ## Patch 0742 - Reconstruct the native opening portraits
 
 - Added the reusable, SDL-independent `aos_portrait` decoder for the eight

@@ -20,6 +20,11 @@ typedef struct {
     uint16_t special_song;      /* unk_254CE */
 } AosRoomMusic;
 
+/* sub_08013CF0: replace the tracked music while preserving PlaySong's
+ * stop-before-start ordering. Event controllers use this before room music
+ * resumes through aos_room_music_enter. */
+bool aos_room_music_change(AosRoomMusic *music, uint16_t song);
+
 /* sub_08013960 for the room at (area, room), sending its PlaySong requests
  * through aos_audio_play_song: save and warp rooms only quiet the music,
  * transition rooms mute player 0 once (0x1040) and forget the song, others

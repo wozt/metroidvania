@@ -9,6 +9,8 @@ enum {
     ROM_SIZE = 0x510000,
     METRICS_OFFSET = 0x0E2B4C,
     GLYPHS_OFFSET = 0x50A136,
+    SMALL_METRICS_OFFSET = 0x0E2EC0,
+    SMALL_GLYPHS_OFFSET = 0x509876,
     GLYPH_A = 'A' - 0x20,
     GLYPH_B = 'B' - 0x20,
 };
@@ -27,6 +29,12 @@ int main(int argc, char **argv) {
     metric_b[1] = 8;
     uint8_t *bitmap_b = data + GLYPHS_OFFSET + GLYPH_B * 14;
     bitmap_b[0] = 0xFF;
+    uint8_t *small_metric = data + SMALL_METRICS_OFFSET + GLYPH_A * 4;
+    small_metric[0] = 2;
+    small_metric[1] = 2;
+    uint8_t *small_bitmap = data + SMALL_GLYPHS_OFFSET + GLYPH_A * 10;
+    small_bitmap[0] = 0x30;
+    small_bitmap[7] = 0x20;
 
     FusionRom rom = {
         .data = data,
@@ -69,6 +77,16 @@ int main(int argc, char **argv) {
                                       sizeof split_line));
     for (unsigned x = 27; x < 35; ++x)
         assert(aos_intro_text_tiles_pixel(&tiles, x, 0) == 8);
+
+    /* Speaker names use context B's independent 8-pixel glyph and metric
+     * tables rather than a scaled copy of the dialogue font. */
+    aos_intro_text_tiles_clear(&tiles);
+    assert(aos_intro_font_render_small_span(&font, &tiles, 6, 3, 40, 15,
+                                             line, sizeof line));
+    assert(aos_intro_text_tiles_pixel(&tiles, 6, 3) == 15);
+    assert(aos_intro_text_tiles_pixel(&tiles, 7, 3) == 15);
+    assert(aos_intro_text_tiles_pixel(&tiles, 6, 10) == 15);
+    assert(aos_intro_text_tiles_pixel(&tiles, 8, 3) == 0);
 
     rom.game = FUSION_ASSET_GAME_METROID;
     assert(!aos_intro_font_init(&font, &rom, error, sizeof error));

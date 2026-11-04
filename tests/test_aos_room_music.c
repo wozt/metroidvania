@@ -11,6 +11,15 @@ int main(void) {
     aos_audio_reset();
     aos_audio_clear();
     AosRoomMusic music = {0};
+    assert(!aos_room_music_change(&music, 28));
+    assert(music.current_song == 28);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 28) == 1);
+    assert(!aos_room_music_change(&music, 16));
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 28) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 16) == 1);
+    assert(aos_room_music_change(&music, 16));
+    aos_audio_clear();
+    music = (AosRoomMusic){0};
     /* Castle Corridor (area 0): loud, then its song 2. */
     assert(!aos_room_music_enter(&music, 0, 3, &plain));
     assert(aos_audio_count() == 2 && aos_audio_requested(AOS_AUDIO_COMMAND, 0x1011));

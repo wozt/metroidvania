@@ -2152,8 +2152,6 @@ aos:c:src/code/code_08039340.c:sub_0803FE0C	sub_0803FE0C	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803FE64	sub_0803FE64	environment	referrers			c_function	0x0803FE64	src/code/code_08039340.c	5917	1	0
 aos:c:src/code/code_08039340.c:sub_0804017C	sub_0804017C	unclassified				c_function	0x0804017C	src/code/code_08039340.c	6107	1	0
 aos:c:src/code/code_08039340.c:sub_08040208	sub_08040208	unclassified				c_function	0x08040208	src/code/code_08039340.c	6151	1	0
-aos:c:src/code/code_08039340.c:sub_080402DC	sub_080402DC	unclassified				c_function	0x080402DC	src/code/code_08039340.c	6215	2	0
-aos:c:src/code/code_08039340.c:sub_0804039C	sub_0804039C	unclassified				c_function	0x0804039C	src/code/code_08039340.c	6270	1	1
 aos:c:src/code/code_08039340.c:sub_080404A0	sub_080404A0	unclassified				c_function	0x080404A0	src/code/code_08039340.c	6322	1	0
 aos:c:src/code/code_08039340.c:sub_08040508	sub_08040508	unclassified				c_function	0x08040508	src/code/code_08039340.c	6355	1	0
 aos:c:src/code/code_08039340.c:sub_0804059C	sub_0804059C	unclassified				c_function	0x0804059C	src/code/code_08039340.c	6402	11	0
@@ -2429,7 +2427,6 @@ aos:c:src/code_08013960.c:sub_08013960_inline_0	sub_08013960_inline_0	unclassifi
 aos:c:src/code_08013960.c:sub_08013B44	sub_08013B44	unclassified		rooms	exclusive_callees	c_function	0x08013B44	src/code_08013960.c	155	3	3
 aos:c:src/code_08013960.c:sub_08013BCC	sub_08013BCC	unclassified		rooms	exclusive_callees	c_function	0x08013BCC	src/code_08013960.c	191	3	3
 aos:c:src/code_08013960.c:sub_08013C5C	sub_08013C5C	unclassified		rooms	exclusive_callees	c_function	0x08013C5C	src/code_08013960.c	228	2	3
-aos:c:src/code_08013960.c:sub_08013CF0	sub_08013CF0	unclassified		audio	exclusive_callees	c_function	0x08013CF0	src/code_08013960.c	258	37	1
 aos:c:src/code_08013960.c:sub_08013D30	sub_08013D30	unclassified		audio	exclusive_callees	c_function	0x08013D30	src/code_08013960.c	281	2	1
 aos:c:src/code_08013960.c:sub_08013DA8	sub_08013DA8	unclassified		audio	exclusive_callees	c_function	0x08013DA8	src/code_08013960.c	339	5	1
 aos:c:src/code_08013960.c:sub_08013E74	sub_08013E74	unclassified		audio	exclusive_callees	c_function	0x08013E74	src/code_08013960.c	419	2	1

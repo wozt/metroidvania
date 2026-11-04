@@ -17,7 +17,8 @@ static const uint16_t soma_songs[AREA_COUNT] = {2, 8, 7, 5, 6, 9, 1, 3, 10, 4, 1
 static const uint16_t julius_songs[AREA_COUNT] = {20, 8, 7, 5, 6, 9, 2, 3, 10, 4, 11, 12, 12};
 
 /* sub_08013960_inline_0: a new song stops the previous one. */
-static bool change(AosRoomMusic *music, uint16_t song) {
+bool aos_room_music_change(AosRoomMusic *music, uint16_t song) {
+    if (!music) return false;
     if (music->current_song == song) return true;
     if (music->current_song) aos_audio_play_song((uint16_t)(music->current_song | STOP_SONG));
     music->current_song = song;
@@ -27,7 +28,7 @@ static bool change(AosRoomMusic *music, uint16_t song) {
 
 bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
                           const AosRoomMusicFlags *flags) {
-    if (music->boss_mode) return change(music, 0x14);
+    if (music->boss_mode) return aos_room_music_change(music, 0x14);
     if (flags && (flags->save || flags->warp)) {
         aos_audio_play_song(SONG_QUIET);
         return false;
@@ -52,7 +53,7 @@ bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
     if (!music->special_song && (music->events_37e & 4) && area == 5 &&
         (room == 6 || room == 0xE))
         song = music->special_song = 0x25;
-    bool playing = change(music, song);
+    bool playing = aos_room_music_change(music, song);
     if (!playing && music->stop_player_0) aos_audio_play_song(MUSIC_PLAYER_STOP_0);
     return playing;
 }

@@ -57,9 +57,11 @@ static void test_script_and_commit(void) {
     assert(event.glyph_counts[0] == 2 && event.glyph_counts[1] == 1);
     aos_opening_event_update(&event, AOS_KEY_A);
     assert(event.waiting && event.beat == 9 && event.speaker == 8);
+    assert(event.beat_count == 1 && event.cue == AOS_OPENING_CUE_NONE);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'D');
     aos_opening_event_update(&event, AOS_KEY_A);
     assert(event.complete && !event.active && !event.malformed);
+    assert(event.cue == AOS_OPENING_CUE_COMPLETE);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'E');
 
     uint32_t events[8] = {0};
@@ -122,9 +124,19 @@ int main(int argc, char **argv) {
         AosOpeningEvent event;
         assert(aos_opening_event_init(&event, script, script_size));
         aos_opening_event_set_resolver(&event, resolve_rom_text, &resources);
-        for (unsigned frame = 0; frame < 10000 && event.active; ++frame)
+        bool cues[AOS_OPENING_CUE_COMPLETE + 1] = {false};
+        for (unsigned frame = 0; frame < 10000 && event.active; ++frame) {
             aos_opening_event_update(&event, AOS_KEY_A);
+            cues[event.cue] = true;
+        }
         assert(event.complete && !event.malformed);
+        assert(event.beat_count == 7);
+        assert(cues[AOS_OPENING_CUE_CONFRONTATION]);
+        assert(cues[AOS_OPENING_CUE_ENEMY_APPEARS]);
+        assert(cues[AOS_OPENING_CUE_ENEMY_ATTACKS]);
+        assert(cues[AOS_OPENING_CUE_SOUL_ABSORBED]);
+        assert(cues[AOS_OPENING_CUE_AFTER_BATTLE]);
+        assert(cues[AOS_OPENING_CUE_COMPLETE]);
         fusion_rom_close(&rom);
     }
     return 0;

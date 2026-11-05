@@ -240,7 +240,77 @@ static void begin_emitted_disappearance(AosOpeningActors *actors) {
         AosOpeningEntity *entity = &actors->emitted[i];
         if (!entity->active) continue;
         entity->disappearing = true;
-        entity->disappear_timer = 48;
+        entity->state = entity->entity_type == 8 ? 4 : 3;
+        entity->step = 0;
+        entity->timer = 0;
+        entity->hidden = false;
+    }
+}
+
+static bool emitted_in_impact_margin(const AosOpeningActors *actors,
+                                     const AosOpeningEntity *entity) {
+    int32_t screen_x = (entity->x >> 16) - (actors->camera_x >> 16);
+    int32_t screen_y = (entity->y >> 16) - actors->camera_y;
+    /* sub_08068AD4 receives (-0x80, -0x40, 0x1F0, 0x120). The latter two
+     * values are inclusive rectangle widths, not absolute coordinates. */
+    return screen_x >= -0x80 && screen_x <= 0x170 &&
+           screen_y >= -0x40 && screen_y <= 0xE0;
+}
+
+static bool emitted_selector(AosOpeningActors *actors,
+                             const AosOpeningEntity *entity) {
+    return actors->random &&
+           actors->random(actors->motion_context) % 7 == entity->variant;
+}
+
+static void finish_emitted(AosOpeningActors *actors, AosOpeningEntity *entity,
+                           bool projectile) {
+    if (emitted_in_impact_margin(actors, entity))
+        entity->events |= AOS_OPENING_ENTITY_EVENT_SOUND_0X6B |
+                          AOS_OPENING_ENTITY_EVENT_DEBRIS;
+    if (projectile)
+        entity->events |= AOS_OPENING_ENTITY_EVENT_PROJECTILE;
+    entity->state = entity->entity_type == 8 ? 5 : 4;
+    entity->step = 0;
+}
+
+static void update_emitted_tail(AosOpeningActors *actors,
+                                AosOpeningEntity *entity) {
+    uint8_t terminal = entity->entity_type == 8 ? 5 : 4;
+    if (entity->state == terminal) {
+        entity->active = false;
+        entity->hidden = true;
+        return;
+    }
+    switch (entity->step) {
+    case 0:
+        entity->timer = 0x20;
+        entity->step = 1;
+        break;
+    case 1:
+        /* Both callbacks select the alternate OBJ attribute on odd timer
+         * values. Hidden is the portable renderer's approximation until the
+         * native palette/attribute path is available. */
+        entity->hidden = (entity->timer & 1) != 0;
+        if (--entity->timer == UINT8_MAX) {
+            entity->hidden = false;
+            entity->step = 2;
+            if (entity->entity_type == 8) entity->timer = 0x10;
+        }
+        break;
+    case 2:
+        if (entity->entity_type == 8) {
+            if (--entity->timer == UINT8_MAX) entity->step = 3;
+        } else if (emitted_selector(actors, entity)) {
+            entity->step = 3;
+        }
+        break;
+    case 3:
+        if (emitted_selector(actors, entity))
+            finish_emitted(actors, entity, entity->entity_type == 10);
+        break;
+    default:
+        break;
     }
 }
 
@@ -248,6 +318,7 @@ static void update_emitted(AosOpeningActors *actors) {
     for (unsigned i = 0; i < actors->emitted_count; ++i) {
         AosOpeningEntity *entity = &actors->emitted[i];
         if (!entity->active) continue;
+        entity->events = AOS_OPENING_ENTITY_EVENT_NONE;
         if (entity->animation_age < UINT16_MAX) ++entity->animation_age;
         if (!entity->disappearing && entity->entity_type == 8) {
             /* sub_0805E2D8 states 0-2: a phase-randomized quarter-amplitude
@@ -290,10 +361,7 @@ static void update_emitted(AosOpeningActors *actors) {
                 else if (entity->parameter & 0x10) entity->animation = 2;
             }
         }
-        if (!entity->disappearing) continue;
-        entity->hidden = (entity->disappear_timer & 1) != 0;
-        if (entity->disappear_timer) --entity->disappear_timer;
-        if (!entity->disappear_timer) entity->active = false;
+        if (entity->disappearing) update_emitted_tail(actors, entity);
     }
 }
 
@@ -366,8 +434,9 @@ static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
 AosOpeningCue aos_opening_actors_update(
     AosOpeningActors *actors,
     const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT],
-    int32_t *camera_x) {
+    int32_t *camera_x, int32_t camera_y) {
     if (!actors || !actors->active) return AOS_OPENING_CUE_NONE;
+    actors->camera_y = camera_y;
     AosOpeningCue output = actors->pending_cue;
     actors->pending_cue = AOS_OPENING_CUE_NONE;
     ++actors->frame;

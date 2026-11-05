@@ -57,6 +57,16 @@ typedef enum {
     AOS_OPENING_EMISSION_NEAR_SOMA = 1u << 1,
 } AosOpeningEmission;
 
+/* Portable requests raised by the two private assault callbacks. Hosts may
+ * consume these after aos_opening_actors_update without coupling the story
+ * controller to audio, particles or the combat entity allocator. */
+typedef enum {
+    AOS_OPENING_ENTITY_EVENT_NONE = 0,
+    AOS_OPENING_ENTITY_EVENT_SOUND_0X6B = 1u << 0,
+    AOS_OPENING_ENTITY_EVENT_DEBRIS = 1u << 1,
+    AOS_OPENING_ENTITY_EVENT_PROJECTILE = 1u << 2,
+} AosOpeningEntityEvent;
+
 typedef struct {
     int16_t x;
     int16_t y;
@@ -82,7 +92,7 @@ typedef struct {
     uint8_t state;
     uint8_t step;
     uint8_t timer;
-    uint8_t disappear_timer;
+    uint8_t events;
     bool active;
     bool mirrored;
     bool hidden;
@@ -130,6 +140,7 @@ typedef struct {
     uint8_t scene_step;
     uint16_t scene_timer;
     int32_t camera_x;
+    int32_t camera_y;
     uint8_t camera_mode;
     uint8_t emitted_batches;
     uint8_t emitted_count;
@@ -167,11 +178,12 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
 /* Advances one frame and returns one audio cue due on that frame. Animation
  * durations are supplied by the exported actor library, keeping this model
  * independent from SDL and usable by editor previews. camera_x is a whole-
- * pixel host camera position; Object20 retains the fractional part itself. */
+ * pixel host camera position; Object20 retains the horizontal fractional
+ * part itself. camera_y is read by sub_08068AD4's portable margin test. */
 AosOpeningCue aos_opening_actors_update(
     AosOpeningActors *actors,
     const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT],
-    int32_t *camera_x);
+    int32_t *camera_x, int32_t camera_y);
 /* Returns the source-derived spawn descriptors for one emission bit. Soma's
  * world X is required because sub_0805D35C places two entities relative to
  * him. The return value is the full batch size, even when capacity is lower. */

@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0748 - Port Object20's emitted attack tails
+
+- Replaced the fixed 48-frame retirement of Object20's emitted actors with
+  the source-visible tail states of `sub_0805E2D8` and `sub_0805E5D4`. Both
+  callbacks now run the native `0x20` underflow blink. Type 8 then runs its
+  separate `0x10` underflow delay, while type 10 waits on its recorded random
+  selector twice.
+- Ported the `sub_08068AD4` rectangle used by those tails. The portable model
+  compares each actor with the host camera in the native expanded screen
+  margin: X from -128 through 368 and Y from -64 through 224. A successful
+  in-margin finish requests sound `0x6B` and the actor-specific debris; type
+  10 also requests its attack projectile even when outside that margin.
+- Exposed sound, debris and projectile requests as per-entity semantic event
+  bits. The game runtime consumes sound `0x6B` now, while a future editor
+  preview can consume the same records without depending on SDL or the combat
+  allocator.
+- Deterministic tests cover both underflow timelines, alternating visibility,
+  random gates, the inclusive camera rectangle, in-margin impact requests,
+  the unconditional type-10 projectile and the following-frame retirement.
+  Debris graphics and projectile motion are not rendered yet, and type 10's
+  parameter-bit-3 collision flight remains absent, so the opening stays
+  partial and source-derived rather than emulator-compared.
+
 ## Patch 0747 - Drive Object20's emitted native motion
 
 - Added host-injected RNG and sine callbacks to the portable opening-scene

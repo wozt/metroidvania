@@ -5244,7 +5244,14 @@ int aria_runtime_main(int argc, char **argv) {
                 opening_actor_durations(objects_ok ? &objects : NULL,
                                         &opening_actors, actor_durations);
                 AosOpeningCue actor_cue = aos_opening_actors_update(
-                    &opening_actors, actor_durations, &cam_x);
+                    &opening_actors, actor_durations, &cam_x, cam_y);
+                for (unsigned actor = 0;
+                     actor < opening_actors.emitted_count; ++actor)
+                    if (opening_actors.emitted[actor].events &
+                        AOS_OPENING_ENTITY_EVENT_SOUND_0X6B) {
+                        aos_audio_play_song(0x6B);
+                        break;
+                    }
                 if (start_song < 0) play_opening_cue(actor_cue, &room_music);
                 if (opening.malformed) {
                     fprintf(stderr, "Malformed Aria opening text entry 0x%04X\n",

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-05T08:22:15+00:00",
+ "generated_at": "2026-11-05T08:30:20+00:00",
  "git": {
-  "commit": "4586b05",
+  "commit": "5189e08",
   "branch": "main",
   "dirty": true
  },
@@ -12722,10 +12722,11 @@
     "sub_0805E260",
     "sub_0805E528",
     "sub_0805E2D8",
-    "sub_0805E5D4"
+    "sub_0805E5D4",
+    "sub_08068AD4"
    ],
-   "limitations": "The dialogue field remains an SDL overlay rather than the native BG text tilemap. The initial pre-dialogue room reveal, type-10 parameter-bit-3 collision flight, both emitted types' post-blink random collision, attack and particle tails, the soul particle, mode-4 return pan and later proximity conversations from states 10 and 11 remain absent. The compact children retire after the source-visible 0x20 + 0x10 blink boundary rather than running those remaining tails. Animation durations come from the user's generated object library and are not committed. The state-3 pan, construction, state-0-to-2 child motion and rendering follow source-visible boundaries but are not emulator-compared. The runtime reads localized entry 0x000C, holds Soma on animation 0x51 at the lower floor position, uses native portraits and both native font contexts, and freezes gameplay. Control 02 advances Object20 without an artificial confirmation; control 05 owns the wait. State 3 constructs and renders six sub_0805D2C8 and four sub_0805D35C children around the 0x38000 camera pan and two 0x20-frame holds. Private type 8 uses Winged Skeleton animation 4 with its RNG phase and quarter-amplitude sine bob from sub_0805E2D8. Type 10 uses Skeleton Knight art and sub_0805E5D4's per-variant random start, optional second selector, sixteen one-in-three half-pixel rises and parameter-selected state-2 animation. The portable controller receives RNG and sine callbacks, so runtime and editor previews share the state machine without SDL. At Arikado animation 2 completion, children alternate visibility over 0x20 + 0x10 before retirement. The principal enemy and soul timer, scene music, persistence and Winged Skeleton soul grant remain connected. Source-derived, unit-tested and locally reviewed, not emulator-compared.",
-   "next_action": "Port sub_0805E5D4's parameter-bit-3 collision flight and both callbacks' post-blink collision, attack and particle tails, then reconstruct the initial reveal, soul particle, mode-4 return pan and later conversations before emulator comparison.",
+   "limitations": "The dialogue field remains an SDL overlay rather than the native BG text tilemap. The initial pre-dialogue room reveal, type-10 parameter-bit-3 collision flight, rendered debris and projectile motion, the soul particle, mode-4 return pan and later proximity conversations from states 10 and 11 remain absent. The alternating OBJ attribute is approximated by visibility until its native palette path is available. Animation durations come from the user's generated object library and are not committed. The state-3 pan, construction, state-0-to-2 child motion and source-visible attack-tail boundaries are not emulator-compared. The runtime reads localized entry 0x000C, holds Soma on animation 0x51 at the lower floor position, uses native portraits and both native font contexts, and freezes gameplay. Control 02 advances Object20 without an artificial confirmation; control 05 owns the wait. State 3 constructs and renders six sub_0805D2C8 and four sub_0805D35C children around the 0x38000 camera pan and two 0x20-frame holds. Private type 8 uses Winged Skeleton animation 4 with its RNG phase and quarter-amplitude sine bob from sub_0805E2D8. Type 10 uses Skeleton Knight art and sub_0805E5D4's per-variant random start, optional second selector, sixteen one-in-three half-pixel rises and parameter-selected state-2 animation. At Arikado animation 2 completion both callbacks run their 0x20 underflow blink; type 8 adds its 0x10 underflow delay and type 10 uses its two random gates. Their camera-relative sub_08068AD4 test emits portable sound, debris and projectile requests; the runtime plays sound 0x6B. The principal enemy and soul timer, scene music, persistence and Winged Skeleton soul grant remain connected. Source-derived, unit-tested and locally reviewed, not emulator-compared.",
+   "next_action": "Render the actor-specific debris and port the type-10 projectile motion, then port type 10's parameter-bit-3 collision flight and reconstruct the initial reveal, soul particle, mode-4 return pan and later conversations before emulator comparison.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_opening_event.c",
@@ -12737,7 +12738,7 @@
      "tests/test_aos_menu_save_bridge.c"
     ],
     "in_game_check": [
-     "area_00_room_000: reviewed captures show the first dialogue and both emitted actor groups after the camera reaches 223, including their changed stagger and bob positions; deterministic tests cover RNG consumption, phase, fixed-point rise and sine motion, timers, all ten records, retirement and the principal 0xD2, 0xD0 and 0x8F boundaries"
+     "area_00_room_000: reviewed captures show the first dialogue and both emitted actor groups after the camera reaches 223, including their changed stagger and bob positions; deterministic tests cover RNG consumption, phase, fixed-point rise, sine motion, both underflow timelines, camera margins, impact event masks, all ten records and the principal 0xD2, 0xD0 and 0x8F boundaries"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -15801,7 +15802,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "A new file continues from the scrolling introduction into area 0 room 0, where Object20 parameter 3 starts ROM text entry 0x000C and holds Soma on native animation 0x51 at the lower floor position. Native portraits and distinct speaker/dialogue fonts remain connected. The portable actor model consumes all seven beats and exported animation durations. State 3 constructs and renders the six sub_0805D2C8 and four sub_0805D35C children around its 3.5-pixel-per-frame pan and two 0x20-frame holds. Type 8 uses Winged Skeleton art plus sub_0805E2D8's RNG phase and quarter-amplitude sine bob; type 10 uses Skeleton Knight art plus sub_0805E5D4's variant-gated start, optional second gate, sixteen one-in-three half-pixel rises and parameter-selected state-2 animation. RNG and sine are injected so the same model serves runtime and editor previews. After Arikado animation 2 the children blink for 0x20 + 0x10 and retire. The scene's music, principal-enemy timer, persistence and Winged Skeleton soul grant remain connected. The native BG text tilemap, initial reveal, parameter-bit-3 collision flight, post-blink attacks and particles, soul particle, return pan and later conversations remain missing. Source-derived, unit-tested and locally reviewed, not emulator-compared.",
+   "limitations": "A new file continues from the scrolling introduction into area 0 room 0, where Object20 parameter 3 starts ROM text entry 0x000C and holds Soma on native animation 0x51 at the lower floor position. Native portraits and distinct speaker/dialogue fonts remain connected. The portable actor model consumes all seven beats and exported animation durations. State 3 constructs and renders the six sub_0805D2C8 and four sub_0805D35C children around its 3.5-pixel-per-frame pan and two 0x20-frame holds. Type 8 uses Winged Skeleton art plus sub_0805E2D8's RNG phase and quarter-amplitude sine bob; type 10 uses Skeleton Knight art plus sub_0805E5D4's variant-gated start, optional second gate, sixteen one-in-three half-pixel rises and parameter-selected state-2 animation. RNG and sine are injected so the same model serves runtime and editor previews. After Arikado animation 2 both callbacks run their source underflow blink and random-selector tails. The camera-relative sub_08068AD4 margin requests sound 0x6B and debris for visible impacts, while type 10 also requests its projectile unconditionally; the runtime consumes the sound and leaves the graphical requests portable. The scene's principal-enemy timer, music, persistence and Winged Skeleton soul grant remain connected. The native BG text tilemap, initial reveal, parameter-bit-3 collision flight, rendered debris and projectile trajectories, soul particle, return pan and later conversations remain missing. Source-derived, unit-tested and locally reviewed, not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -19606,6 +19607,12 @@
  },
  "timeline": [
   {
+   "commit": "5189e08",
+   "date": "2026-11-05",
+   "subject": "Animate Aria opening assault groups",
+   "scope": "project"
+  },
+  {
    "commit": "4586b05",
    "date": "2026-11-05",
    "subject": "Render Aria opening assault groups",
@@ -20077,12 +20084,6 @@
    "commit": "cfdcf82",
    "date": "2026-10-31",
    "subject": "Match Aria Buer linked flame and attack visuals to native noncombat lifecycle",
-   "scope": "project"
-  },
-  {
-   "commit": "24e8cd9",
-   "date": "2026-10-31",
-   "subject": "Port Aria Buer native mode-two and mode-six motion with gravity and affine rotation",
    "scope": "project"
   }
  ],

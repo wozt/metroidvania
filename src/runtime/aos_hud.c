@@ -82,7 +82,8 @@ static unsigned render_notice(uint8_t *tiles, const AosHudFont *font, const char
     return cursor;
 }
 
-bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name) {
+static bool show_notice(AosHud *hud, const AosHudFont *font, const char *name,
+                        AosHudNoticeKind kind) {
     if (!hud || !font || !font->metrics || !font->glyphs || !name || !*name) return false;
     uint8_t page = hud->notice_page;
     unsigned pixels = render_notice(hud->notice_tiles[page], font, name);
@@ -96,7 +97,7 @@ bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name) {
             notice_pixel(hud->notice_tiles[page], x, y, 1);
 
     clear_notice_map(hud);
-    int x = 26 - (int)width;
+    int x = kind == AOS_HUD_NOTICE_ENEMY ? 26 - (int)width : 0;
     store(hud, x++, 18, 0xE220);
     store(hud, x++, 18, 0xE221);
     store(hud, x++, 18, 0xE222);
@@ -105,7 +106,7 @@ bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name) {
     store(hud, x++, 18, 0xE621);
     store(hud, x, 18, 0xE620);
 
-    x = 28 - (int)width;
+    x = kind == AOS_HUD_NOTICE_ENEMY ? 28 - (int)width : 0;
     store(hud, x++, 19, 0xE230);
     store(hud, x++, 19, 0xE231);
     for (unsigned i = 0; i < width; ++i)
@@ -113,7 +114,7 @@ bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name) {
     store(hud, x++, 19, 0xE631);
     store(hud, x, 19, 0xE630);
 
-    x = 26 - (int)width;
+    x = kind == AOS_HUD_NOTICE_ENEMY ? 26 - (int)width : 0;
     store(hud, x++, 20, 0xE240);
     store(hud, x++, 20, 0xE241);
     store(hud, x++, 20, 0xE242);
@@ -124,9 +125,18 @@ bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name) {
 
     hud->notice_timer = 0xF0;
     hud->notice_active = true;
+    hud->notice_kind = (uint8_t)kind;
     hud->notice_page ^= 1;
     hud->revision++;
     return true;
+}
+
+bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name) {
+    return show_notice(hud, font, name, AOS_HUD_NOTICE_ENEMY);
+}
+
+bool aos_hud_show_item(AosHud *hud, const AosHudFont *font, const char *name) {
+    return show_notice(hud, font, name, AOS_HUD_NOTICE_ITEM);
 }
 
 void aos_hud_tick(AosHud *hud) {
@@ -177,7 +187,9 @@ bool aos_hud_pixel(const AosHud *hud, const uint8_t *tiles, const uint8_t *palet
     unsigned index = px & 1 ? byte >> 4 : byte & 0xF;
     if (!index) return false;
     unsigned row = entry >> 12;
-    size_t palette_offset = row == 0xE && hud->notice_active ? 64 : row == 0xE ? 32 : 0;
+    size_t palette_offset = row == 0xE && hud->notice_active
+                                ? 64 + (size_t)hud->notice_kind * 32
+                                : row == 0xE ? 32 : 0;
     *color = (uint16_t)(palette[palette_offset + index * 2] |
                         palette[palette_offset + index * 2 + 1] << 8);
     return true;

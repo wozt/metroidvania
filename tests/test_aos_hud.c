@@ -68,15 +68,23 @@ int main(void) {
     assert(at(24, 18) == 0xE220 && at(29, 18) == 0xE620);
     assert(at(26, 19) == 0xE230 && at(28, 19) == 0xE280 && at(31, 19) == 0xE630);
     assert(at(24, 20) == 0xE240 && at(29, 20) == 0xE640);
-    palette[64 + 0xF * 2] = 0xE0;
-    palette[64 + 0xF * 2 + 1] = 0x03;
+    palette[96 + 0xF * 2] = 0xE0;
+    palette[96 + 0xF * 2 + 1] = 0x03;
     assert(aos_hud_pixel(&hud, tiles, palette, 28 * 8, 19 * 8 - AOS_HUD_SCROLL_Y,
                          &color) && color == 0x03E0);
     for (int i = 0; i < 0xEF; ++i) aos_hud_tick(&hud);
     assert(hud.notice_active && hud.notice_timer == 1);
     aos_hud_tick(&hud);
     assert(!hud.notice_active && !hud.notice_timer && at(28, 19) == 0);
-    assert(aos_hud_show_enemy(&hud, &font, "AB") && at(28, 19) == 0xE2A0);
+    /* sub_0800EF98/sub_0800E0E8 uses the other palette and places the
+     * equivalent frame at the left edge. */
+    assert(aos_hud_show_item(&hud, &font, "AB"));
+    assert(hud.notice_kind == AOS_HUD_NOTICE_ITEM && at(0, 18) == 0xE220 &&
+           at(5, 18) == 0xE620 && at(0, 19) == 0xE230 && at(2, 19) == 0xE2A0 &&
+           at(5, 19) == 0xE630 && at(0, 20) == 0xE240 && at(5, 20) == 0xE640);
+    palette[64 + 0xF * 2] = 0x1F;
+    assert(aos_hud_pixel(&hud, tiles, palette, 2 * 8, 19 * 8 - AOS_HUD_SCROLL_Y,
+                         &color) && color == 0x001F);
     puts("Aria HUD tests passed");
     return 0;
 }

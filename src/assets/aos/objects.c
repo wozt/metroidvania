@@ -1298,9 +1298,9 @@ static bool append_skill_throws(const FusionRom *rom, Text *throws, char *error,
 }
 
 /* The in-game HUD resources of sub_0800DA50 and sub_0800DE4C: palette rows
- * 0-1 of 0x0820C428 (the initial BG rows 13-14), its row 5 (the enemy-name
- * BG row 14), the 16 x 16 tiles of 0x0827B208 (BG tiles 0x200-0x2FF), then
- * context B's metrics and 8-pixel font bitmaps. */
+ * 0-1 of 0x0820C428 (the initial BG rows 13-14), its rows 4 and 5 (the item-
+ * and enemy-name BG row 14), the 16 x 16 tiles of 0x0827B208 (BG tiles
+ * 0x200-0x2FF), then context B's metrics and 8-pixel font bitmaps. */
 static bool write_hud(const FusionRom *rom, const char *metadata_output, char *error,
                       size_t error_size) {
     const uint8_t *palette = slice(rom, HUD_PALETTE, 4 + 6 * 32, "HUD palette", error,
@@ -1317,14 +1317,14 @@ static bool write_hud(const FusionRom *rom, const char *metadata_output, char *e
                                             "HUD font glyphs", error, error_size)
                                      : NULL;
     bool ok = sheet.size == 0x2000 && metrics && glyphs;
-    size_t total = 96 + sheet.size + HUD_FONT_METRIC_BYTES + HUD_FONT_BITMAP_BYTES;
+    size_t total = 128 + sheet.size + HUD_FONT_METRIC_BYTES + HUD_FONT_BITMAP_BYTES;
     uint8_t *bytes = ok ? malloc(total) : NULL;
     if (bytes) {
         memcpy(bytes, palette + 4, 64);
-        memcpy(bytes + 64, palette + 4 + 5 * 32, 32);
-        memcpy(bytes + 96, sheet.data, sheet.size);
-        memcpy(bytes + 96 + sheet.size, metrics, HUD_FONT_METRIC_BYTES);
-        memcpy(bytes + 96 + sheet.size + HUD_FONT_METRIC_BYTES, glyphs,
+        memcpy(bytes + 64, palette + 4 + 4 * 32, 64);
+        memcpy(bytes + 128, sheet.data, sheet.size);
+        memcpy(bytes + 128 + sheet.size, metrics, HUD_FONT_METRIC_BYTES);
+        memcpy(bytes + 128 + sheet.size + HUD_FONT_METRIC_BYTES, glyphs,
                HUD_FONT_BITMAP_BYTES);
         char path[FUSION_EXPORT_PATH_CAPACITY];
         ok = fusion_export_join(path, metadata_output, "hud.bin") &&

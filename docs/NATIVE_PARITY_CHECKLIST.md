@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 944 | 2629 |
+| Castlevania: Aria of Sorrow | 946 | 2627 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1206,14 +1206,14 @@ Known divergences: The hub and its usable pages use an SDL diagnostic text overl
 Next action: Reconstruct the native hub and page graphics, descriptions, icons, cursor OAM and transitions, then compare Sleep and Enemy against an emulator.
 Evidence: in game: `aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the seven-entry hub; Soul Set opens the reviewed equipment overlay`.
 
-[~] **`aos.ui.hud` — Aria in-game HUD and enemy notice.** sub_0800DA50 sets BG0 (map base 28, scrolled 6 pixels up), exports the tiles of 0x0827B208 at tile 0x200 and the required palettes, lays the frame of sub_0800DB78 and draws HP and MP as eight-tile bars with sub_0800F138. sub_0800DC70 moves their shown values two steps a frame toward the real values. On the first reward for a defeated enemy, sub_0800EA98 now resolves its name and sub_0800DE4C draws the native three-row lower-right frame with context B's eight-pixel ROM font, alternating tiles 0x280 and 0x2A0. sub_0800EFD4 keeps it for 0xF0 frames before sub_0800EB04 clears it. A local room 0/15 capture showed the exported purple and gold frame with Axe Armor after the native reward and experience path. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.ui.hud` — Aria in-game HUD and pickup notices.** sub_0800DA50 sets BG0 (map base 28, scrolled 6 pixels up), exports the tiles of 0x0827B208 at tile 0x200 and the required palettes, lays the frame of sub_0800DB78 and draws HP and MP as eight-tile bars with sub_0800F138. sub_0800DC70 moves their shown values two steps a frame toward the real values. On the first reward for a defeated enemy, sub_0800EA98 resolves its name and sub_0800DE4C draws the native three-row lower-right frame with palette resource row 5. Successful money, item, weapon and armor pickups now enter through sub_0800EF98's equivalent portable hook and sub_0800E0E8 draws the left-aligned sibling using resource row 4. Both use context B's eight-pixel ROM font, alternating tiles 0x280 and 0x2A0, and sub_0800EFD4's 0xF0-frame lifetime before sub_0800EB04 clears them. A local room 0/15 capture showed the enemy variant with Axe Armor. Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:c:src/code_0800CB00.c:sub_0800DA50`, `aos:c:src/code_0800CB00.c:sub_0800DB78`, `aos:c:src/code_0800CB00.c:sub_0800DC70`, `aos:c:src/code_0800CB00.c:sub_0800DE4C`, `aos:c:src/code_0800CB00.c:sub_0800EA98`, `aos:c:src/code_0800CB00.c:sub_0800EB04`, `aos:c:src/code_0800CB00.c:sub_0800EFD4`, `aos:c:src/code_0800CB00.c:sub_0800F138`.  
+Native evidence: `aos:c:src/code_0800CB00.c:sub_0800DA50`, `aos:c:src/code_0800CB00.c:sub_0800DB78`, `aos:c:src/code_0800CB00.c:sub_0800DC70`, `aos:c:src/code_0800CB00.c:sub_0800DE4C`, `aos:c:src/code_0800CB00.c:sub_0800E0E8`, `aos:c:src/code_0800CB00.c:sub_0800EA98`, `aos:c:src/code_0800CB00.c:sub_0800EB04`, `aos:c:src/code_0800CB00.c:sub_0800EF98`, `aos:c:src/code_0800CB00.c:sub_0800EFD4`, `aos:c:src/code_0800CB00.c:sub_0800F138`.  
 Local implementation: [`src/runtime/aos_hud.c`](../src/runtime/aos_hud.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_hud.c`](../tests/test_aos_hud.c).
 Dependencies: `aos.souls.red_soul_use`, `aos.progression.experience`.  
-Known divergences: The base HUD text window set up by sub_0800DA50 is still empty. The item-name path sub_0800EF98/sub_0800E0E8, pickup-specific frames, fades and hiding during menus and transitions are not ported. The enemy notice resolves the already catalogued English bestiary name instead of the native multilingual text-resource id. Its DMA queue is immediate. Positioning, tiles, font, palette, double buffer and lifetime are source-derived and unit-tested, not emulator-compared.  
-Next action: Port sub_0800EF98/sub_0800E0E8 for item names, then identify the base HUD text-window contents and port pause-menu presentation.
+Known divergences: The base HUD text window set up by sub_0800DA50 is still empty. Pickup-specific soul frames, fades and hiding during menus and transitions are not ported. Item, equipment and enemy notices resolve the already catalogued English names instead of native multilingual text-resource ids; money labels are synthesized from the exported amount. The DMA queue is immediate. Positioning, tiles, font, both palettes, double buffer and lifetime are source-derived and unit-tested, not emulator-compared.  
+Next action: Port native room entity-kind 4 pickups with persistent event bits, then identify the base HUD text-window contents and port pause-menu presentation.
 Evidence: in game: `aria area_00_room_015: Axe Armor defeated at frame 63 (--spawn 300 430 --weapon 0 --atk 80 --repeat 2, buttons 0x2), native enemy notice captured at frame 70`.
 
 ### Controls and input

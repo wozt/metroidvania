@@ -2477,6 +2477,20 @@ static void clear_skills(AriaSouls *souls) {
  * in the save (schema v10). */
 static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 
+static const char *pickup_notice_name(uint8_t type, uint16_t variant) {
+    if (type == AOS_PICKUP_ITEM)
+        return variant < AOS_ITEM_RECORDS ? aos_item_name((uint8_t)variant) : NULL;
+    if (type == AOS_PICKUP_WEAPON)
+        return variant < AOS_WEAPON_RECORDS
+                   ? aos_equipment_name(AOS_EQUIP_WEAPON, (uint8_t)variant)
+                   : NULL;
+    if (type == AOS_PICKUP_ARMOR)
+        return variant < AOS_ARMOR_RECORDS
+                   ? aos_equipment_name(AOS_EQUIP_ARMOR, (uint8_t)variant)
+                   : NULL;
+    return NULL;
+}
+
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; native enemies include hidden producers such
  * as the Ghost's, whose children retain their producer slot. */
@@ -2753,6 +2767,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         } else if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
             uint32_t text = aos_pickup_collect_money(pickup, combat->money,
                                                      &combat->progress->gold);
+            if (combat->hud && combat->hud_font && pickup->variant < AOS_MONEY_KINDS) {
+                char name[24];
+                snprintf(name, sizeof name, "%u GOLD", combat->money[pickup->variant].value);
+                aos_hud_show_item(combat->hud, combat->hud_font, name);
+            }
             printf("Collected %u gold (total %u, message %u)\n",
                    combat->money[pickup->variant].value, combat->progress->gold, text);
         } else if (touching && pickup->type >= AOS_PICKUP_ITEM &&
@@ -2760,10 +2779,13 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             static const char *const kinds[] = {"item", "weapon", "armor"};
             bool refusal_sound;
             if (aos_pickup_collect_item(pickup, combat->progress, &refusal_sound) ==
-                AOS_COLLECT_TAKEN)
+                AOS_COLLECT_TAKEN) {
+                const char *name = pickup_notice_name(pickup->type, pickup->variant);
+                if (combat->hud && combat->hud_font && name)
+                    aos_hud_show_item(combat->hud, combat->hud_font, name);
                 printf("Collected %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
                        pickup->variant);
-            else if (refusal_sound)
+            } else if (refusal_sound)
                 printf("Cannot carry more of %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
                        pickup->variant);
         } else if (touching && soul) {

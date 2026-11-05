@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0754 - Port Aria's money and item name notices
+
+- Ported the sibling `sub_0800EF98`/`sub_0800E0E8` HUD path used when Soma
+  collects money, consumables, weapons and armor. It reuses the editor-safe
+  notice controller, context-B font, alternating 0x280/0x2A0 tile pages and
+  0xF0-frame lifetime, but reconstructs the native left-aligned three-row
+  frame and selects palette resource row 4 instead of the defeated-enemy row
+  5.
+- Connected successful runtime pickups to their portable English equipment
+  and item names. Money notices use the amount from the exported money record;
+  refused full-inventory pickups do not create a notice. The controller still
+  accepts caller-supplied text, so an editor or a later localization layer can
+  replace those labels without depending on SDL or ROM addresses.
+- Extended `aria_objects` to version 65 and refreshed its verified private
+  golden inventory. `hud.bin` now carries both native notice palettes; no ROM
+  or extracted proprietary data is committed. Deterministic ROM-free tests
+  cover item alignment, palette selection and double-buffer reuse alongside
+  the existing enemy path.
+- This is source-derived and unit-tested, not emulator-compared. Native
+  multilingual text-resource lookup, pickup-specific soul presentation,
+  transitions/menu hiding and placed-room item persistence remain open.
+
+Next: decode and spawn room entity-kind 4 as native money, item, equipment and
+soul pickups, preserve its persistent event bit in the portable room format,
+and then connect save/load and editor round trips for those placements.
+
 ## Patch 0753 - Port Aria's defeated-enemy name notice
 
 - Traced the supplied lower-right name display back to Aria's native

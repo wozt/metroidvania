@@ -10,7 +10,7 @@
 enum {
     AOS_HUD_MAP_SIZE = 32,
     AOS_HUD_TILE_BYTES = 0x2000,
-    AOS_HUD_PALETTE_BYTES = 0x60,
+    AOS_HUD_PALETTE_BYTES = 0x80,
     AOS_HUD_FONT_GLYPHS = 0xE0,
     AOS_HUD_FONT_METRIC_BYTES = AOS_HUD_FONT_GLYPHS * 4,
     AOS_HUD_FONT_BITMAP_BYTES = AOS_HUD_FONT_GLYPHS * 10,
@@ -28,12 +28,18 @@ typedef struct {
     const uint8_t *glyphs;  /* sUnk_08509876: ten bytes per glyph, first eight drawn */
 } AosHudFont;
 
+typedef enum {
+    AOS_HUD_NOTICE_ITEM,
+    AOS_HUD_NOTICE_ENEMY,
+} AosHudNoticeKind;
+
 typedef struct {
     uint16_t map[AOS_HUD_MAP_SIZE * AOS_HUD_MAP_SIZE];
     int16_t hp, mp, max_hp, max_mp;     /* unk_404, unk_406, unk_408, unk_40A */
     uint8_t notice_tiles[2][AOS_HUD_NOTICE_TILE_BYTES];
     uint16_t notice_timer;              /* unk_422: 0xF0 frames */
     uint8_t notice_page;                /* unk_424: alternating 0x280/0x2A0 tiles */
+    uint8_t notice_kind;                /* resource palette row 4 or 5 */
     bool notice_active;
     uint32_t revision;                  /* dynamic tiles can change without map changes */
 } AosHud;
@@ -53,11 +59,14 @@ void aos_hud_update(AosHud *hud, int16_t hp, int16_t max_hp, int16_t mp, int16_t
  * three-row frame at the bottom of BG0. The caller supplies the resolved
  * language string so the state stays usable by the runtime and editor. */
 bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name);
+/* sub_0800EF98/sub_0800E0E8: the sibling left-aligned money/item notice,
+ * using resource palette row 4 and the same font pages and lifetime. */
+bool aos_hud_show_item(AosHud *hud, const AosHudFont *font, const char *name);
 /* sub_0800EFD4: expire the current enemy/item notice after 0xF0 frames. */
 void aos_hud_tick(AosHud *hud);
 /* The BGR555 colour of screen pixel (x, y), false when transparent; tiles
  * holds 0x2000 bytes for tiles 0x200-0x2FF. Palette holds the initial rows
- * 13-14 followed by the row-14 enemy-notice palette. */
+ * 13-14 followed by the row-14 item- and enemy-notice palettes. */
 bool aos_hud_pixel(const AosHud *hud, const uint8_t *tiles, const uint8_t *palette,
                    unsigned x, unsigned y, uint16_t *color);
 #endif

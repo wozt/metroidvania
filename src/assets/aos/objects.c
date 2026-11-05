@@ -74,6 +74,19 @@ typedef struct {
     int static_frame;
 } EffectSpec;
 
+/* A direct `EwramData_unk54C` type-1 sequence, rather than an entry in an
+ * entity descriptor's animation-pointer table. */
+typedef struct {
+    const char *name;
+    uint32_t graphics;
+    uint32_t palette;
+    uint8_t bank;
+    uint32_t frames;
+    uint8_t count;
+    uint8_t frame[MAX_FRAMES];
+    uint8_t ticks[MAX_FRAMES];
+} DirectEffectSpec;
+
 typedef struct {
     int8_t x;
     int8_t y;
@@ -341,14 +354,6 @@ static const EffectSpec effects[] = {
     {"burst_15", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {15}, -1},
     /* sub_08045B44 type 0: still frame 0x36, OBJ row 6 (bank 2). */
     {"sparkle", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x36},
-    /* sub_08044840's type-4 sub_08045B44 children use the same common
-     * sparkle frame with the four soul-container palette rows. Their direct
-     * sequence descriptor is not yet exported, so the native movement is
-     * paired with this source-frame presentation. */
-    {"soul_container_spark0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 0, {0}, 0x36},
-    {"soul_container_spark1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x36},
-    {"soul_container_spark2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 0, {0}, 0x36},
-    {"soul_container_spark3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 0, {0}, 0x36},
     /* sub_08025540: the two randomly selected still frames of Rock Armor's
      * four landing fragments, both on OBJ row 6 (palette bank 2). */
     {"rock_fragment_0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x40},
@@ -411,6 +416,19 @@ static const EffectSpec effects[] = {
     {"soul_container_follower1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {18}, -1},
     {"soul_container_follower2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {18}, -1},
     {"soul_container_follower3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {18}, -1},
+};
+
+/* 0x0852513C, selected by sub_08045B44 type 4: its four type-1 records are
+ * (frame, ticks) = (0x49,3), (0x36,7), (0x35,7), (0x34,3). */
+static const DirectEffectSpec direct_effects[] = {
+    {"soul_container_spark0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 4,
+     {0x49, 0x36, 0x35, 0x34}, {3, 7, 7, 3}},
+    {"soul_container_spark1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 4,
+     {0x49, 0x36, 0x35, 0x34}, {3, 7, 7, 3}},
+    {"soul_container_spark2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 4,
+     {0x49, 0x36, 0x35, 0x34}, {3, 7, 7, 3}},
+    {"soul_container_spark3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 4,
+     {0x49, 0x36, 0x35, 0x34}, {3, 7, 7, 3}},
 };
 
 #undef ENTITY
@@ -787,7 +805,7 @@ static bool export_animation(const FusionRom *rom,
                 return false;
             }
         }
-        RenderedFrame rendered;
+        RenderedFrame rendered = {0};
         if (!render_frame(rom, descriptor, sheet, palette, frame, &rendered,
                           error, error_size)) return false;
         anchors_x[index] = rendered.anchor_x;
@@ -980,6 +998,38 @@ static bool export_effect(const FusionRom *rom, FusionSpriteLibrary *library,
             rom, library, "Effect", effect->name, effect->frames, &sheet,
             palette, number, read_u32(entry), 0, false, false, NULL,
             error, error_size);
+    }
+    free(sheet.data);
+    return success;
+}
+
+static bool export_direct_effect(const FusionRom *rom, FusionSpriteLibrary *library,
+                                 const DirectEffectSpec *effect,
+                                 char *error, size_t error_size) {
+    TileSheet sheet;
+    if (!load_tile_sheet(rom, effect->graphics, &sheet, error, error_size)) return false;
+    const uint8_t *palette = load_palette(rom, effect->palette, effect->bank,
+                                          error, error_size);
+    bool success = palette != NULL && effect->count > 0 && effect->count <= MAX_FRAMES;
+    char key[96];
+    if (success && snprintf(key, sizeof key, "Effect/%s/anim_0", effect->name) >=
+                       (int)sizeof key) {
+        set_error(error, error_size, "direct effect sprite key is too long");
+        success = false;
+    }
+    for (size_t index = 0; success && index < effect->count; ++index) {
+        if (effect->ticks[index] == 0) {
+            set_error(error, error_size, "direct effect has a zero-duration frame");
+            success = false;
+            break;
+        }
+        RenderedFrame rendered = {0};
+        success = render_frame(rom, effect->frames, &sheet, palette, effect->frame[index],
+                               &rendered, error, error_size);
+        if (success)
+            success = begin_and_add(library, key, index, effect->ticks[index], &rendered,
+                                    index == 0, error, error_size);
+        free(rendered.bmp);
     }
     free(sheet.data);
     return success;
@@ -1416,6 +1466,10 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof effects / sizeof effects[0]; ++index)
         success = export_effect(rom, &library, &effects[index],
                                 error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof direct_effects / sizeof direct_effects[0]; ++index)
+        success = export_direct_effect(rom, &library, &direct_effects[index],
+                                       error, error_size);
     if (success) success = export_icons(rom, &library, error, error_size);
     if (success) success = append_buer_death_offsets(rom, &rows, error, error_size) &&
                            append_global_metadata(rom, &rows, error, error_size) &&

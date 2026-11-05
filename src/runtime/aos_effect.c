@@ -104,6 +104,24 @@ static bool timed_update(AosEffect *e, const AosAnimSet *anims) {
     return --e->timer != 0;
 }
 
+/* sub_080450C8 state 1: type-4 direct sequences move under the same terms
+ * as the timed variant but end at their source sequence's final frame. */
+static bool direct_update(AosEffect *e, const AosAnimSet *anims) {
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, false)) return false;
+        e->anim.id = 0;
+        e->started = true;
+        /* State 0 calls sub_0803F0E4 to select the initial frame; motion
+         * begins on the following state-1 update. */
+        return true;
+    }
+    e->x += e->vx;
+    e->y += e->vy;
+    e->vx += e->ax;
+    e->vy += e->ay;
+    return aos_anim_step(&e->anim, anims) != 3;
+}
+
 /* sub_08045E80: hidden through its delay, then moved and animated. */
 static bool burst_update(AosEffect *e, const AosAnimSet *anims) {
     if (!e->started) {
@@ -259,6 +277,7 @@ bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t
     if (effect->drift) return drift_update(effect, anims);
     if (effect->burst) return burst_update(effect, anims);
     if (effect->timed) return timed_update(effect, anims);
+    if (effect->direct) return direct_update(effect, anims);
     if (effect->ballistic) return ballistic_update(effect, anims, world);
     if (effect->wisp) return wisp_update(effect, anims, world);
     if (!effect->started) {

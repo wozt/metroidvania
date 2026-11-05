@@ -2802,8 +2802,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (spark.spawn && room->effect_count < MAX_EFFECTS)
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = (uint8_t)(AOS_EFFECT_CONTAINER_SPARK0 + spark.soul_type),
-                    .timed = true, .x = spark.x, .y = spark.y, .vx = spark.vx,
-                    .vy = spark.vy, .ay = spark.ay, .timer = 12};
+                    .direct = true, .x = spark.x, .y = spark.y, .vx = spark.vx,
+                    .vy = spark.vy, .ay = spark.ay};
             int wx, wy, ww, wh;
             bool weapon_hit = combat->weapon && combat->weapon_frames &&
                               aos_weapon_hitbox(combat->weapon, soma, combat->weapon_frames,

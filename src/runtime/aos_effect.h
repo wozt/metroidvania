@@ -89,6 +89,7 @@ typedef struct {
     bool follow;            /* sub_080C9198: a spark held on the player */
     bool burst;             /* sub_08045E80 */
     bool timed;             /* sub_08045000 */
+    bool direct;            /* sub_080450C8, type-4 direct sequence */
     bool ballistic;         /* sub_0802DA98: acceleration, 8.0 clamps, margin 4 */
     bool wisp;              /* sub_08069134 (+ 0x18 = 0, + 0x19 = 3): random flips, a lifetime */
     bool debris;            /* sub_0804F8A0: a wall's debris, one bounce */

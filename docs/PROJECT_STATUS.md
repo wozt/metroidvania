@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0758 - Export Aria's direct soul-container sparkle sequence
+
+- Decoded the type-1 direct descriptor at `0x0852513C` used by
+  `sub_08045B44` type 4: frame `0x49` for 3 updates, `0x36` for 7, `0x35`
+  for 7 and `0x34` for 3. The C11 object exporter now supports these direct
+  sequences without treating them as descriptor-table animations.
+- Replaced the placeholder single-frame sparkle with its four palette-matched
+  native frames. The runtime mirrors `sub_080450C8`: creation selects the
+  initial frame without motion, then moving updates end only when the direct
+  sequence reaches its final frame. `aria_objects` is version 68.
+- Deterministic tests cover the initial stationary state, all 20 direct
+  sequence updates, movement and final frame. Source-derived and unit-tested,
+  not emulator-compared.
+
+Next: trace the shared eight-slot item-icon limit, then compare a placed soul
+container's emission and release against an emulator.
+
 ## Patch 0757 - Animate Aria soul-container spark children
 
 - Ported the intact-state child emission of `sub_08044840`: every eighth

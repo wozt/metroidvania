@@ -684,8 +684,10 @@ released soul expires; only successful soul collection sets the corresponding
 placed-item word. While intact, `sub_08044840` emits a type-4
 `sub_08045B44` child every eighth frame, 20 to 27 pixels above the container;
 its four random samples set the horizontal offset, height, lateral drift and
-upward acceleration. The host uses the matching palette and common sparkle
-frame while the native type-4 sequence descriptor remains unexported.
+upward acceleration. Its direct type-1 sequence at `0x0852513C` is exported
+as frames `0x49`, `0x36`, `0x35`, `0x34` for 3, 7, 7 and 3 updates; the first
+state selects frame 0 before motion, and the second state ends on its final
+frame.
 
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,

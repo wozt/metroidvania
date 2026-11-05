@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_pickup.h"
 #include "aos_enemy.h"
+#include "aos_effect.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -154,6 +155,18 @@ int main(void) {
            !aos_pickup_create_placed_soul(&container, 5, 0, 20, 24, 56, collected) &&
            !aos_pickup_create_placed_soul(&container, 8, 4, 20, 24, 56, collected) &&
            !aos_pickup_create_placed_soul(&container, 9, 1, 20, 24, 56, collected));
+
+    /* sub_080450C8: the container's direct type-4 sequence selects an
+     * initial frame without moving, then consumes 3, 7, 7 and 3 updates. */
+    static const uint8_t direct_ticks[] = {3, 7, 7, 3};
+    static const AosAnimDef direct_defs[] = {{4, direct_ticks}};
+    static const AosAnimSet direct_set = {direct_defs, 1};
+    AosEffect direct = {.direct = true, .vx = 0x10000, .vy = -0x10000};
+    assert(aos_effect_update(&direct, &direct_set, NULL, NULL) && direct.x == 0 &&
+           direct.y == 0 && direct.anim.frame == 0);
+    for (int i = 0; i < 19; ++i) assert(aos_effect_update(&direct, &direct_set, NULL, NULL));
+    assert(!aos_effect_update(&direct, &direct_set, NULL, NULL));
+    assert(direct.x == 20 << 16 && direct.y == -(20 << 16) && direct.anim.frame == 3);
 
     /* Item pickups probe at their own height (no 8-pixel money offset). */
     AosPickup item = aos_pickup_create_item(AOS_PICKUP_WEAPON, 1, 40, 30);

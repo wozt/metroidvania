@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0747 - Drive Object20's emitted native motion
+
+- Added host-injected RNG and sine callbacks to the portable opening-scene
+  controller. The game runtime supplies the existing native-formula
+  `aos_random` and `aos_sine` primitives, while tests and future editor
+  previews can provide deterministic callbacks without acquiring an SDL or
+  gameplay-runtime dependency.
+- Ported the source-visible states 0-2 of `sub_0805E2D8` for Object20's type-8
+  Winged Skeletons. Creation takes `(RNG & 0x7F) << 9` as the phase, then each
+  frame samples `sin(phase + 0x4000) / 4` with the native negative rounding,
+  advances the phase by `0x200` and follows the parent-bit-8 handoff through
+  states 0, 1 and 2.
+- Ported the non-collision states 0-2 of `sub_0805E5D4` for its type-10
+  Skeleton Knights. Every entity waits on its recorded `0..6` selector; those
+  without parameter bit 1 wait a second time, then consume sixteen successful
+  one-in-three clocks while rising by half a pixel. Parameter bits 3 and 4
+  select animations 1 and 2 on entry to state 2.
+- Deterministic tests cover RNG consumption, phase and fixed-point Y changes,
+  stagger states, timers and a variant that must remain waiting. A reviewed
+  offscreen frame confirms the actors remain composed in the panned room after
+  this motion pass. The parameter-bit-3 collision flight, post-blink random
+  collision checks, attacks and particle tails remain absent, so the feature
+  stays partial and not emulator-compared.
+
 ## Patch 0746 - Render Object20's emitted assault groups
 
 - Connected the ten descriptors from `sub_0805D2C8` and `sub_0805D35C` to

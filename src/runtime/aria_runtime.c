@@ -3743,6 +3743,16 @@ static void opening_actor_durations(
     }
 }
 
+static uint32_t opening_random(void *context) {
+    (void)context;
+    return aos_random();
+}
+
+static int32_t opening_sine(uint32_t angle, void *context) {
+    (void)context;
+    return aos_sine(angle);
+}
+
 /* Shared effects of one kind, flipped when + 0x58 bit 0x40 (drawn at
  * random) is set. Flames and smoke (priority + 0x5C or the creator's) are
  * drawn in front of the enemies, blood (priority 3) behind them; OBJ
@@ -4906,6 +4916,8 @@ int aria_runtime_main(int argc, char **argv) {
         aos_opening_event_set_resolver(&opening, resolve_opening_text,
                                        &opening_resources);
         aos_opening_actors_init(&opening_actors);
+        aos_opening_actors_set_motion(&opening_actors, opening_random,
+                                      opening_sine, NULL);
         soma.x = AOS_OPENING_SOMA_X << 16;
         soma.y = AOS_OPENING_SOMA_Y << 16;
         soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;

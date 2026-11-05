@@ -71,17 +71,26 @@ typedef struct {
 typedef struct {
     int32_t x;
     int32_t y;
+    int32_t vx;
+    int32_t vy;
     uint16_t animation_age;
+    uint16_t phase;
     uint8_t entity_type;
     uint8_t parameter;
     uint8_t variant;
     uint8_t animation;
+    uint8_t state;
+    uint8_t step;
+    uint8_t timer;
     uint8_t disappear_timer;
     bool active;
     bool mirrored;
     bool hidden;
     bool disappearing;
 } AosOpeningEntity;
+
+typedef uint32_t (*AosOpeningRandom)(void *context);
+typedef int32_t (*AosOpeningSine)(uint32_t angle, void *context);
 
 typedef struct {
     const uint8_t *script;
@@ -127,6 +136,9 @@ typedef struct {
     bool camera_active;
     bool camera_initialized;
     AosOpeningEntity emitted[AOS_OPENING_EMITTED_CAPACITY];
+    AosOpeningRandom random;
+    AosOpeningSine sine;
+    void *motion_context;
     AosOpeningCue pending_cue;
     uint32_t frame;
     bool active;
@@ -145,6 +157,11 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
 /* Localized speaker ids used by the first-room Object20 script. */
 const char *aos_opening_event_speaker_name(uint8_t speaker);
 void aos_opening_actors_init(AosOpeningActors *actors);
+/* Injects the native RNG and sine primitive without coupling the portable
+ * scene model to the gameplay runtime. NULL callbacks leave motion inert. */
+void aos_opening_actors_set_motion(AosOpeningActors *actors,
+                                   AosOpeningRandom random,
+                                   AosOpeningSine sine, void *context);
 /* Connects a script control-2 beat to sub_0805D410's actor state. */
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
 /* Advances one frame and returns one audio cue due on that frame. Animation

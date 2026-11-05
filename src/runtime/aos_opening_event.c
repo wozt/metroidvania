@@ -191,6 +191,15 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
     };
 }
 
+void aos_opening_actors_set_motion(AosOpeningActors *actors,
+                                   AosOpeningRandom random,
+                                   AosOpeningSine sine, void *context) {
+    if (!actors) return;
+    actors->random = random;
+    actors->sine = sine;
+    actors->motion_context = context;
+}
+
 static void actor_animation(AosOpeningActors *actors, unsigned actor,
                             uint8_t animation) {
     actors->animation[actor] = animation;
@@ -213,11 +222,12 @@ static void append_emission(AosOpeningActors *actors,
             .entity_type = spawns[i].entity_type,
             .parameter = spawns[i].parameter,
             .variant = spawns[i].variant,
-            .animation = spawns[i].entity_type == 8 ? 4
-                         : (spawns[i].parameter & 0x10) ? 2 : 0,
+            .animation = spawns[i].entity_type == 8 ? 4 : 0,
             .active = true,
             .mirrored = spawns[i].x < AOS_OPENING_SOMA_X,
         };
+        if (entity->entity_type == 8 && actors->random)
+            entity->phase = (uint16_t)((actors->random(actors->motion_context) & 0x7F) << 9);
         /* sub_0805E528 advances parameter-bit-2 Skeleton Knights by sixteen
          * half-pixel steps during creation. */
         if (entity->entity_type == 10 && (entity->parameter & 4))
@@ -239,6 +249,47 @@ static void update_emitted(AosOpeningActors *actors) {
         AosOpeningEntity *entity = &actors->emitted[i];
         if (!entity->active) continue;
         if (entity->animation_age < UINT16_MAX) ++entity->animation_age;
+        if (!entity->disappearing && entity->entity_type == 8) {
+            /* sub_0805E2D8 states 0-2: a phase-randomized quarter-amplitude
+             * sine bob, followed by the parent-bit-8 state handoff. */
+            if (entity->state <= 2 && actors->sine) {
+                int32_t dy = actors->sine((uint16_t)(entity->phase + 0x4000),
+                                          actors->motion_context);
+                if (dy < 0) dy += 3;
+                entity->y += dy >> 2;
+                entity->phase = (uint16_t)(entity->phase + 0x200);
+            }
+            if (entity->state == 0) entity->state = 1;
+            else if (entity->state == 1) entity->state = 2;
+        } else if (!entity->disappearing && entity->entity_type == 10 &&
+                   actors->random) {
+            /* sub_0805E5D4 states 0-2: each child waits for its 0..6
+             * selector. Children without parameter bit 1 then wait for the
+             * selector again and rise by 0.5 pixel on sixteen successful
+             * one-in-three clocks before joining state 2. */
+            if (entity->state == 0 &&
+                actors->random(actors->motion_context) % 7 == entity->variant) {
+                entity->state = (entity->parameter & 2) ? 2 : 1;
+                entity->step = 0;
+            } else if (entity->state == 1 && entity->step == 0 &&
+                       actors->random(actors->motion_context) % 7 == entity->variant) {
+                entity->timer = 16;
+                entity->step = 1;
+            } else if (entity->state == 1 && entity->step == 1 &&
+                       actors->random(actors->motion_context) % 3 == 0) {
+                if (entity->timer == 0) {
+                    entity->state = 2;
+                    entity->step = 0;
+                } else {
+                    --entity->timer;
+                    entity->y -= 0x8000;
+                }
+            }
+            if (entity->state == 2) {
+                if (entity->parameter & 8) entity->animation = 1;
+                else if (entity->parameter & 0x10) entity->animation = 2;
+            }
+        }
         if (!entity->disappearing) continue;
         entity->hidden = (entity->disappear_timer & 1) != 0;
         if (entity->disappear_timer) --entity->disappear_timer;

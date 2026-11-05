@@ -8,6 +8,42 @@
 
 #include "aos_input.h"
 
+static uint32_t zero_random(void *context) {
+    (void)context;
+    return 0;
+}
+
+static int32_t full_sine(uint32_t angle, void *context) {
+    (void)angle;
+    (void)context;
+    return 0x10000;
+}
+
+static void test_emitted_motion(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    aos_opening_actors_set_motion(&actors, zero_random, full_sine, NULL);
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
+    assert(actors.emitted_count == 6);
+    int32_t knight_y = actors.emitted[0].y;
+    int32_t winged_y = actors.emitted[5].y;
+    assert(actors.emitted[5].phase == 0);
+    aos_opening_actors_update(&actors, NULL, NULL);
+    assert(actors.emitted[0].state == 1);
+    assert(actors.emitted[5].state == 1 &&
+           actors.emitted[5].y == winged_y + 0x4000 &&
+           actors.emitted[5].phase == 0x200);
+    aos_opening_actors_update(&actors, NULL, NULL);
+    assert(actors.emitted[0].state == 1 && actors.emitted[0].step == 1 &&
+           actors.emitted[0].timer == 16);
+    assert(actors.emitted[5].state == 2 &&
+           actors.emitted[5].y == winged_y + 0x8000);
+    aos_opening_actors_update(&actors, NULL, NULL);
+    assert(actors.emitted[0].timer == 15 &&
+           actors.emitted[0].y == knight_y - 0x8000);
+    assert(actors.emitted[2].state == 0);
+}
+
 static void test_trigger(void) {
     assert(AOS_OPENING_SOMA_X == 168 && AOS_OPENING_SOMA_Y == 704);
     assert(AOS_OPENING_ACTOR_COUNT == 3);
@@ -58,7 +94,7 @@ static void test_trigger(void) {
     assert(actors.emitted_batches ==
            (AOS_OPENING_EMISSION_DISTANT | AOS_OPENING_EMISSION_NEAR_SOMA));
     assert(actors.emitted_count == AOS_OPENING_EMITTED_CAPACITY);
-    assert(actors.emitted[6].animation == 2 && !actors.emitted[6].mirrored);
+    assert(actors.emitted[6].animation == 0 && !actors.emitted[6].mirrored);
     assert(actors.emitted[7].animation == 0 && actors.emitted[7].mirrored);
     assert(actors.emitted[8].entity_type == 8 && actors.emitted[8].mirrored);
     assert(actors.emitted[9].entity_type == 8 && !actors.emitted[9].mirrored);
@@ -201,6 +237,7 @@ static bool resolve_rom_text(void *context, uint8_t id,
 }
 
 int main(int argc, char **argv) {
+    test_emitted_motion();
     test_trigger();
     test_script_and_commit();
     test_insert_and_malformed();

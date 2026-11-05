@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-05T08:09:27+00:00",
+ "generated_at": "2026-11-05T08:17:38+00:00",
  "git": {
-  "commit": "d39ded8",
+  "commit": "a5034cc",
   "branch": "main",
   "dirty": true
  },
@@ -12718,10 +12718,12 @@
     "sub_08012078",
     "sub_0805CCE4",
     "sub_0805D2C8",
-    "sub_0805D35C"
+    "sub_0805D35C",
+    "sub_0805E260",
+    "sub_0805E528"
    ],
-   "limitations": "The dialogue field remains an SDL overlay rather than the native BG text tilemap. The initial pre-dialogue room reveal, the private emitted entities' callbacks and rendering, the attack entity, soul particle, mode-4 return pan and later proximity conversations from states 10 and 11 remain absent. Animation durations come from the user's generated object library and are not committed. The state-3 mode-2 pan and emission descriptors follow source-visible boundaries but are not emulator-compared. The runtime reads localized entry 0x000C, holds Soma on animation 0x51 at the lower floor position, uses native portraits and both native font contexts, and freezes gameplay. Control 02 now advances Object20 without an artificial confirmation; control 05 owns the wait. The portable actor controller consumes all seven callback beats, resets per-actor animation clocks and uses supplied animation durations. State 3 exposes sub_0805D2C8's six distant spawn descriptors, advances the camera by 0x38000 until it passes 0xDD, waits 0x20 frames, exposes sub_0805D35C's four near descriptors, then selects Mina animation 5 and sound 0x1B4 before the second 0x20-frame hold. Arikado uses animations 2 and 3 with sounds 0x1DF and 0x1E0 around their real duration and a 0x10 pause; the battle follows the 0xD2 timer, hides the Winged Skeleton and plays 0x6B at 0xD0, and requests 0x197 at 0x8F. Scene music and normal-room restoration remain connected. Completion persists event 0x20 and grants and equips the soul. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Export Object20 private entity types 8 and 10 and port their callbacks and rendering, then reconstruct the initial reveal, mode-4 return pan, attack and soul particle before emulator comparison.",
+   "limitations": "The dialogue field remains an SDL overlay rather than the native BG text tilemap. The initial pre-dialogue room reveal, emitted children's random stagger, sinusoidal and collision motion, attack and particle tails, the soul particle, mode-4 return pan and later proximity conversations from states 10 and 11 remain absent. The compact children retire after the source-visible 0x20 + 0x10 blink boundary rather than running the remaining random collision tail of sub_0805E2D8 and sub_0805E5D4. Animation durations come from the user's generated object library and are not committed. The state-3 mode-2 pan, construction records and emission rendering follow source-visible boundaries but are not emulator-compared. The runtime reads localized entry 0x000C, holds Soma on animation 0x51 at the lower floor position, uses native portraits and both native font contexts, and freezes gameplay. Control 02 advances Object20 without an artificial confirmation; control 05 owns the wait. The portable actor controller consumes all seven callback beats and exported animation durations. State 3 constructs and renders sub_0805D2C8's six distant and sub_0805D35C's four near children around the 0x38000 camera pan and two 0x20-frame holds. Private type 8 reuses Winged Skeleton art and animation 4; type 10 reuses Skeleton Knight art, applies parameter bit 2's eight-pixel creation offset and bit 4's animation 2, and faces each child toward Soma. At Arikado animation 2 completion, the children alternate visibility for the source-visible 0x20 + 0x10 interval before retirement. Arikado then uses animation 3 and sound 0x1E0; the battle follows the 0xD2 timer, hides the principal Winged Skeleton and plays 0x6B at 0xD0, and requests 0x197 at 0x8F. Scene music and normal-room restoration remain connected. Completion persists event 0x20 and grants and equips the soul. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the random stagger, sinusoidal and collision branches of sub_0805E2D8 and sub_0805E5D4, then reconstruct the initial reveal, attack and soul particles, mode-4 return pan and later conversations before emulator comparison.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_opening_event.c",
@@ -12733,7 +12735,7 @@
      "tests/test_aos_menu_save_bridge.c"
     ],
     "in_game_check": [
-     "area_00_room_000: a reviewed capture shows the first dialogue, lower floor pose and portrait; verified-ROM parsing confirms all seven beats; deterministic actor tests cover camera 48 to 223 at 3.5 pixels per frame, both native emission batches, the 0x20 holds, animation completion plus 0x10, and the 0xD2, 0xD0 and 0x8F boundaries"
+     "area_00_room_000: reviewed captures show the first dialogue, lower floor pose and portrait, then both emitted native actor groups after the camera reaches 223; verified-ROM parsing confirms all seven beats; deterministic tests cover all ten child records, camera timing, the 0x20 + 0x10 retirement, animation completion and the 0xD2, 0xD0 and 0x8F boundaries"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -15797,7 +15799,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "A new file continues from the scrolling introduction into area 0 room 0, where Object20 parameter 3 starts ROM text entry 0x000C and holds Soma on native animation 0x51 at the lower floor position. The transparent native portraits and distinct 8-pixel speaker and 12-pixel dialogue fonts remain connected. Control 02 advances the callback without inventing an input wait; control 05 alone pauses the text. The portable actor model consumes all seven beats and exported animation durations. State 3 exposes the two native sub_0805D2C8/sub_0805D35C emission layouts around a 3.5-pixel-per-frame camera pan from 48 through the greater-than-0xDD threshold at 223 and the source's two 0x20-frame holds. It runs Arikado animations 2 and 3 around their real duration and a 0x10 pause, then follows the battle timer from 0xD2 through enemy removal at 0xD0 to soul impact at 0x8F. Object20 owns MUS_28, MUS_16, the 0x1B4, 0x1DF, 0x1E0, 0x6B and 0x197 cues, MUS_23, then restores the area track. Completion persists event 0x20 and grants and equips Winged Skeleton. The native BG text tilemap, initial room reveal, emitted private entity callbacks and rendering, attack entity, soul particle, return pan and later conversations remain missing. Source-derived and verified against the local ROM script, not emulator-compared.",
+   "limitations": "A new file continues from the scrolling introduction into area 0 room 0, where Object20 parameter 3 starts ROM text entry 0x000C and holds Soma on native animation 0x51 at the lower floor position. The transparent native portraits and distinct 8-pixel speaker and 12-pixel dialogue fonts remain connected. Control 02 advances the callback without inventing an input wait; control 05 alone pauses the text. The portable actor model consumes all seven beats and exported animation durations. State 3 constructs and renders the six sub_0805D2C8 and four sub_0805D35C children around its 3.5-pixel-per-frame pan and two 0x20-frame holds. Private type 8 uses the exported Winged Skeleton art and type 10 the Skeleton Knight art, including parameter-derived creation offset, animation and facing; after Arikado animation 2 they alternate visibility over the source-visible 0x20 + 0x10 interval and retire. The scene follows the battle timer from 0xD2 through principal enemy removal at 0xD0 to soul impact at 0x8F. Object20 owns MUS_28, MUS_16, the 0x1B4, 0x1DF, 0x1E0, 0x6B and 0x197 cues, MUS_23, then restores the area track. Completion persists event 0x20 and grants and equips Winged Skeleton. The native BG text tilemap, initial reveal, emitted children's random movement/collision and particle tails, attack entity, soul particle, return pan and later conversations remain missing. Source-derived, unit-tested and locally reviewed, not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -19602,6 +19604,12 @@
  },
  "timeline": [
   {
+   "commit": "a5034cc",
+   "date": "2026-11-05",
+   "subject": "Port Aria opening reveal pan",
+   "scope": "project"
+  },
+  {
    "commit": "d39ded8",
    "date": "2026-11-04",
    "subject": "Drive Aria opening actor timeline",
@@ -20074,12 +20082,6 @@
    "date": "2026-10-31",
    "subject": "Extend Aria Buer grounded mode-six probes to native floor edges",
    "scope": "project"
-  },
-  {
-   "commit": "62fcc3e",
-   "date": "2026-10-31",
-   "subject": "Extend Buer slope contacts to bounded native floor-edge probes",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -20140,9 +20142,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 925,
-    "routines_attached_to_features": 925,
-    "unassigned_routines": 2648,
+    "routines_cited_by_features": 927,
+    "routines_attached_to_features": 927,
+    "unassigned_routines": 2646,
     "call_edges": 14228
    }
   },

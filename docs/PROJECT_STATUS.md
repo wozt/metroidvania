@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0746 - Render Object20's emitted assault groups
+
+- Connected the ten descriptors from `sub_0805D2C8` and `sub_0805D35C` to
+  live, portable `AosOpeningEntity` records. Their native Object20 table types
+  remain explicit, with parameter, random-selector variant, world position,
+  animation age, facing and lifetime kept outside SDL for future editor use.
+- Type 8 reuses the already exported Winged Skeleton sheet and type 10 reuses
+  the Skeleton Knight sheet. No new extraction, duplicate proprietary asset or
+  `aria_objects` version bump is needed. Type-10 parameter bit 2 applies the
+  sixteen native half-pixel creation steps, parameter bit 4 selects animation
+  2, and every child faces Soma from its source position.
+- The runtime now renders both groups during the state-3 camera pan and
+  dialogue. When Arikado's animation 2 completes and `sub_0805D410` raises the
+  parent bit read by both child callbacks, the compact controller starts their
+  source-visible `0x20 + 0x10` alternating disappearance period and retires the
+  records after 48 frames.
+- Deterministic tests cover all ten live records, the parameter-derived Y and
+  animation changes, left/right facing and complete retirement. A reviewed
+  offscreen frame shows the native Skeleton Knight and Winged Skeleton art in
+  the panned first room. Their random stagger, sinusoidal motion, collision,
+  attack and particle tails from `sub_0805E2D8`/`sub_0805E5D4` are not yet
+  reconstructed, so the opening remains partial and not emulator-compared.
+
 ## Patch 0745 - Port Object20's reveal pan and emission layout
 
 - Replaced the opening scene's abstract `0x20`-frame reveal delay with the

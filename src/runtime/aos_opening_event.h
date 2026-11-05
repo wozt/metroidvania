@@ -28,6 +28,7 @@ enum {
     AOS_OPENING_LINES = 4,
     AOS_OPENING_GLYPHS_PER_LINE = 80,
     AOS_OPENING_EMISSION_MAX_SPAWNS = 6,
+    AOS_OPENING_EMITTED_CAPACITY = 10,
 };
 
 typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
@@ -63,6 +64,24 @@ typedef struct {
     uint8_t parameter;
     uint8_t variant;
 } AosOpeningSpawn;
+
+/* One private child allocated by sub_0805E260 or sub_0805E528. The resource
+ * table type stays explicit so hosts can select an exported sprite without
+ * turning these story actors into ordinary room enemies. */
+typedef struct {
+    int32_t x;
+    int32_t y;
+    uint16_t animation_age;
+    uint8_t entity_type;
+    uint8_t parameter;
+    uint8_t variant;
+    uint8_t animation;
+    uint8_t disappear_timer;
+    bool active;
+    bool mirrored;
+    bool hidden;
+    bool disappearing;
+} AosOpeningEntity;
 
 typedef struct {
     const uint8_t *script;
@@ -104,8 +123,10 @@ typedef struct {
     int32_t camera_x;
     uint8_t camera_mode;
     uint8_t emitted_batches;
+    uint8_t emitted_count;
     bool camera_active;
     bool camera_initialized;
+    AosOpeningEntity emitted[AOS_OPENING_EMITTED_CAPACITY];
     AosOpeningCue pending_cue;
     uint32_t frame;
     bool active;

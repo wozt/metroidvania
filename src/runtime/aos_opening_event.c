@@ -197,6 +197,55 @@ static void actor_animation(AosOpeningActors *actors, unsigned actor,
     actors->animation_age[actor] = 0;
 }
 
+static void append_emission(AosOpeningActors *actors,
+                            AosOpeningEmission emission) {
+    AosOpeningSpawn spawns[AOS_OPENING_EMISSION_MAX_SPAWNS];
+    size_t count = aos_opening_emission_spawns(
+        emission, AOS_OPENING_SOMA_X, spawns,
+        AOS_OPENING_EMISSION_MAX_SPAWNS);
+    for (size_t i = 0; i < count &&
+                       actors->emitted_count < AOS_OPENING_EMITTED_CAPACITY;
+         ++i) {
+        AosOpeningEntity *entity = &actors->emitted[actors->emitted_count++];
+        *entity = (AosOpeningEntity){
+            .x = (int32_t)spawns[i].x << 16,
+            .y = (int32_t)spawns[i].y << 16,
+            .entity_type = spawns[i].entity_type,
+            .parameter = spawns[i].parameter,
+            .variant = spawns[i].variant,
+            .animation = spawns[i].entity_type == 8 ? 4
+                         : (spawns[i].parameter & 0x10) ? 2 : 0,
+            .active = true,
+            .mirrored = spawns[i].x < AOS_OPENING_SOMA_X,
+        };
+        /* sub_0805E528 advances parameter-bit-2 Skeleton Knights by sixteen
+         * half-pixel steps during creation. */
+        if (entity->entity_type == 10 && (entity->parameter & 4))
+            entity->y += 8 << 16;
+    }
+}
+
+static void begin_emitted_disappearance(AosOpeningActors *actors) {
+    for (unsigned i = 0; i < actors->emitted_count; ++i) {
+        AosOpeningEntity *entity = &actors->emitted[i];
+        if (!entity->active) continue;
+        entity->disappearing = true;
+        entity->disappear_timer = 48;
+    }
+}
+
+static void update_emitted(AosOpeningActors *actors) {
+    for (unsigned i = 0; i < actors->emitted_count; ++i) {
+        AosOpeningEntity *entity = &actors->emitted[i];
+        if (!entity->active) continue;
+        if (entity->animation_age < UINT16_MAX) ++entity->animation_age;
+        if (!entity->disappearing) continue;
+        entity->hidden = (entity->disappear_timer & 1) != 0;
+        if (entity->disappear_timer) --entity->disappear_timer;
+        if (!entity->disappear_timer) entity->active = false;
+    }
+}
+
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     if (!actors || !actors->active || cue == AOS_OPENING_CUE_NONE) return;
     switch (cue) {
@@ -211,6 +260,7 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         actors->camera_active = true;
         actors->camera_initialized = false;
         actors->emitted_batches |= AOS_OPENING_EMISSION_DISTANT;
+        append_emission(actors, AOS_OPENING_EMISSION_DISTANT);
         break;
     case AOS_OPENING_CUE_ENEMY_ATTACKS:
         actors->scene_state = 4;
@@ -273,6 +323,7 @@ AosOpeningCue aos_opening_actors_update(
     for (unsigned actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor)
         if (actors->animation_age[actor] < UINT16_MAX)
             ++actors->animation_age[actor];
+    update_emitted(actors);
     /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
     if (actors->state == 0) {
         if (actors->timer) --actors->timer;
@@ -310,6 +361,7 @@ scene:
         } else if (actors->scene_step == 1 && actors->scene_timer &&
                    --actors->scene_timer == 0) {
             actors->emitted_batches |= AOS_OPENING_EMISSION_NEAR_SOMA;
+            append_emission(actors, AOS_OPENING_EMISSION_NEAR_SOMA);
             actor_animation(actors, 0, 5);
             if (output == AOS_OPENING_CUE_NONE)
                 output = AOS_OPENING_CUE_ENEMY_APPEARS;
@@ -328,6 +380,9 @@ scene:
         uint16_t duration = animation_durations ? animation_durations[1] : 0;
         if (actors->scene_step == 0 && duration &&
             actors->animation_age[1] >= duration) {
+            /* sub_0805D410 raises parent bit 2 here. Both private child
+             * callbacks enter their two-stage 0x20 + 0x10 blink sequence. */
+            begin_emitted_disappearance(actors);
             actors->scene_step = 1;
             actors->scene_timer = 16;
         } else if (actors->scene_step == 1 && actors->scene_timer &&

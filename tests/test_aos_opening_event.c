@@ -36,6 +36,12 @@ static void test_trigger(void) {
            AOS_OPENING_CUE_CONFRONTATION);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
     assert(actors.emitted_batches == AOS_OPENING_EMISSION_DISTANT);
+    assert(actors.emitted_count == 6);
+    assert(actors.emitted[0].active && actors.emitted[0].entity_type == 10 &&
+           actors.emitted[0].animation == 0 &&
+           actors.emitted[0].y == (0x2A7 << 16));
+    assert(actors.emitted[5].active && actors.emitted[5].entity_type == 8 &&
+           actors.emitted[5].animation == 4);
     int32_t camera_x = 48;
     for (unsigned frame = 0; frame < 49; ++frame)
         assert(aos_opening_actors_update(&actors, NULL, &camera_x) ==
@@ -51,6 +57,11 @@ static void test_trigger(void) {
     assert(actors.animation[0] == 5 && actors.animation_age[0] == 0);
     assert(actors.emitted_batches ==
            (AOS_OPENING_EMISSION_DISTANT | AOS_OPENING_EMISSION_NEAR_SOMA));
+    assert(actors.emitted_count == AOS_OPENING_EMITTED_CAPACITY);
+    assert(actors.emitted[6].animation == 2 && !actors.emitted[6].mirrored);
+    assert(actors.emitted[7].animation == 0 && actors.emitted[7].mirrored);
+    assert(actors.emitted[8].entity_type == 8 && actors.emitted[8].mirrored);
+    assert(actors.emitted[9].entity_type == 8 && !actors.emitted[9].mirrored);
 
     AosOpeningSpawn spawns[AOS_OPENING_EMISSION_MAX_SPAWNS];
     assert(aos_opening_emission_spawns(AOS_OPENING_EMISSION_DISTANT,
@@ -77,6 +88,7 @@ static void test_trigger(void) {
            AOS_OPENING_CUE_ENEMY_ATTACKS);
     assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
     assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
+    assert(actors.emitted[0].disappearing && actors.emitted[0].disappear_timer == 48);
     for (unsigned frame = 0; frame < 15; ++frame)
         assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
     assert(aos_opening_actors_update(&actors, durations, NULL) ==
@@ -92,6 +104,8 @@ static void test_trigger(void) {
     assert(!actors.visible[2]);
     for (unsigned frame = 0; frame < 64; ++frame)
         assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
+    for (unsigned actor = 0; actor < actors.emitted_count; ++actor)
+        assert(!actors.emitted[actor].active);
     assert(aos_opening_actors_update(&actors, durations, NULL) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);

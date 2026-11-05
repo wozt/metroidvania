@@ -3678,6 +3678,51 @@ static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objec
                           frame->h};
         SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
     }
+    for (unsigned actor = 0; actor < actors->emitted_count; ++actor) {
+        const AosOpeningEntity *entity = &actors->emitted[actor];
+        if (!entity->active || entity->hidden) continue;
+        const AriaFrame *frame = NULL;
+        unsigned total = 0, count = 0;
+        const uint8_t *ticks = NULL;
+        if (entity->entity_type == 8) {
+            const __typeof__(objects->opening_actors[0]) *art =
+                &objects->opening_actors[2];
+            if (!art->loaded || entity->animation >= AOS_ENEMY_MAX_ANIMS)
+                continue;
+            count = art->defs[entity->animation].count;
+            ticks = art->ticks[entity->animation];
+            for (unsigned i = 0; i < count; ++i) total += ticks[i];
+            if (!total) continue;
+            unsigned age = entity->animation_age % total, index = 0;
+            while (index + 1 < count && age >= ticks[index])
+                age -= ticks[index++];
+            frame = &art->frames[entity->animation][index];
+        } else if (entity->entity_type == 10) {
+            const __typeof__(objects->enemies[0]) *art =
+                &objects->enemies[AOS_ENEMY_SKELETON_KNIGHT];
+            if (!art->loaded || entity->animation >= AOS_ENEMY_MAX_ANIMS)
+                continue;
+            count = art->defs[entity->animation].count;
+            ticks = art->ticks[entity->animation];
+            for (unsigned i = 0; i < count; ++i) total += ticks[i];
+            if (!total) continue;
+            unsigned age = entity->animation_age % total, index = 0;
+            while (index + 1 < count && age >= ticks[index])
+                age -= ticks[index++];
+            frame = &art->frames[entity->animation][index];
+        }
+        if (!frame || !frame->texture) continue;
+        int x = entity->x >> 16, y = entity->y >> 16;
+        float draw_x = entity->mirrored
+                           ? (float)(x - frame->offset_x) - frame->w
+                           : (float)(x + frame->offset_x);
+        SDL_FRect rect = {draw_x - (float)cam_x,
+                          (float)(y + frame->offset_y - cam_y), frame->w,
+                          frame->h};
+        SDL_RenderTextureRotated(
+            renderer, frame->texture, NULL, &rect, 0, NULL,
+            entity->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+    }
 }
 
 static void opening_actor_durations(

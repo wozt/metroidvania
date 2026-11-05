@@ -189,7 +189,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion
                src/runtime/aos_bestiary.c
                src/runtime/aos_button_config.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
-               src/runtime/aos_door.c src/runtime/aos_wall.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_effect.c
+               src/runtime/aos_door.c src/runtime/aos_wall.c src/runtime/aos_weapon.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_main_menu.c
                src/runtime/aos_intro_cutscene.c src/runtime/aos_intro_entities.c
@@ -608,7 +608,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_save_room COMMAND fusion_aos_save_room_tests)
 
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_pickup.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_stats.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
                    src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_pickup_tests PRIVATE src/runtime)
@@ -648,7 +648,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_menu COMMAND fusion_aos_soul_menu_tests)
 
     add_executable(fusion_aos_skill_throw_tests tests/test_aos_skill_throw.c
-                   src/runtime/aos_skill_throw.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_throw.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -682,7 +682,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_axe COMMAND fusion_aos_skill_axe_tests)
 
     add_executable(fusion_aos_skill_spear_tests tests/test_aos_skill_spear.c
-                   src/runtime/aos_skill_spear.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_spear.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c)
@@ -709,7 +709,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_room_music COMMAND fusion_aos_room_music_tests)
 
     add_executable(fusion_aos_skill_devil_tests tests/test_aos_skill_devil.c
-                   src/runtime/aos_skill_devil.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_devil.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -719,7 +719,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_devil COMMAND fusion_aos_skill_devil_tests)
 
     add_executable(fusion_aos_skill_crow_tests tests/test_aos_skill_crow.c
-                   src/runtime/aos_skill_crow.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_crow.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -729,7 +729,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_crow COMMAND fusion_aos_skill_crow_tests)
 
     add_executable(fusion_aos_skill_flea_tests tests/test_aos_skill_flea.c
-                   src/runtime/aos_skill_flea.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_flea.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -751,7 +751,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_valkyrie COMMAND fusion_aos_skill_valkyrie_tests)
 
     add_executable(fusion_aos_skill_needles_tests tests/test_aos_skill_needles.c
-                   src/runtime/aos_skill_needles.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_skill_needles.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -761,7 +761,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_needles COMMAND fusion_aos_skill_needles_tests)
 
     add_executable(fusion_aos_guardian_buer_tests tests/test_aos_guardian_buer.c
-                   src/runtime/aos_guardian_buer.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_guardian_buer.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -771,7 +771,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_guardian_buer COMMAND fusion_aos_guardian_buer_tests)
 
     add_executable(fusion_aos_guardian_ghost_tests tests/test_aos_guardian_ghost.c
-                   src/runtime/aos_guardian_ghost.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_guardian_ghost.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -781,7 +781,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_guardian_ghost COMMAND fusion_aos_guardian_ghost_tests)
 
     add_executable(fusion_aos_guardian_imp_tests tests/test_aos_guardian_imp.c
-                   src/runtime/aos_guardian_imp.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_guardian_imp.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -791,7 +791,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_guardian_imp COMMAND fusion_aos_guardian_imp_tests)
 
     add_executable(fusion_aos_guardian_death_tests tests/test_aos_guardian_death.c
-                   src/runtime/aos_guardian_death.c src/runtime/aos_enemy.c src/runtime/aos_weapon.c
+                   src/runtime/aos_guardian_death.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -844,7 +844,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_killer_fish COMMAND fusion_aos_skill_killer_fish_tests)
 
     add_executable(fusion_aos_skill_gladiator_tests tests/test_aos_skill_gladiator.c
-                   src/runtime/aos_skill_gladiator.c src/runtime/aos_enemy.c
+                   src/runtime/aos_skill_gladiator.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c
                    src/runtime/aos_weapon.c src/runtime/aos_effect.c src/runtime/aos_soma.c
                    src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
                    src/runtime/aos_anim.c src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -855,7 +855,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_skill_ghost_tests tests/test_aos_skill_ghost.c
                    src/runtime/aos_skill_ghost.c src/runtime/aos_skill_devil.c
-                   src/runtime/aos_enemy.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
+                   src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
                    src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
                    src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_stats.c
                    src/runtime/aos_audio.c)
@@ -865,7 +865,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_skill_ghost COMMAND fusion_aos_skill_ghost_tests)
 
     add_executable(fusion_aos_skill_siren_tests tests/test_aos_skill_siren.c
-                   src/runtime/aos_skill_siren.c src/runtime/aos_enemy.c
+                   src/runtime/aos_skill_siren.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c
                    src/runtime/aos_weapon.c src/runtime/aos_effect.c src/runtime/aos_soma.c
                    src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
                    src/runtime/aos_anim.c src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -1090,13 +1090,19 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_wall_tests)
     add_test(NAME aos_wall COMMAND fusion_aos_wall_tests)
 
-    add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c src/runtime/aos_enemy.c
+    add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c
                    src/runtime/aos_audio.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
                    src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_stats.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_enemy_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_enemy_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_enemy_tests)
     add_test(NAME aos_enemy COMMAND fusion_aos_enemy_tests)
+
+    add_executable(fusion_aos_damage_popup_tests tests/test_aos_damage_popup.c
+                   src/runtime/aos_damage_popup.c)
+    target_include_directories(fusion_aos_damage_popup_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_damage_popup_tests)
+    add_test(NAME aos_damage_popup COMMAND fusion_aos_damage_popup_tests)
 
     # ROM-free native Zero Mission pose controller regression.
     add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c

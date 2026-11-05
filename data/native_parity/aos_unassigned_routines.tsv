@@ -156,14 +156,10 @@ aos:asm:asm/code/code_08040A38.s:sub_080429D0	sub_080429D0	enemies	referrers			a
 aos:asm:asm/code/code_08040A38.s:sub_08042A54	sub_08042A54	unclassified				asm_function	0x08042A54	asm/code/code_08040A38.s	3015	74	0
 aos:asm:asm/code/code_08040A38.s:sub_08042A6C	sub_08042A6C	unclassified				asm_function	0x08042A6C	asm/code/code_08040A38.s	3028	2	0
 aos:asm:asm/code/code_08040A38.s:sub_08042A7C	sub_08042A7C	unclassified		technical	exclusive_callees	asm_function	0x08042A7C	asm/code/code_08040A38.s	3039	2	5
-aos:asm:asm/code/code_08040A38.s:sub_08042B8C	sub_08042B8C	unclassified		technical	exclusive_callees	asm_function	0x08042B8C	asm/code/code_08040A38.s	3177	81	4
-aos:asm:asm/code/code_08040A38.s:sub_08042C78	sub_08042C78	unclassified				asm_function	0x08042C78	asm/code/code_08040A38.s	3301	6	0
 aos:asm:asm/code/code_08040A38.s:sub_08042D4C	sub_08042D4C	unclassified				asm_function	0x08042D4C	asm/code/code_08040A38.s	3422	0	0
-aos:asm:asm/code/code_08040A38.s:sub_08042DE8	sub_08042DE8	unclassified				asm_function	0x08042DE8	asm/code/code_08040A38.s	3508	0	0
 aos:asm:asm/code/code_08040A38.s:sub_08042E98	sub_08042E98	unclassified				asm_function	0x08042E98	asm/code/code_08040A38.s	3606	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08042F44	sub_08042F44	unclassified		technical	exclusive_callees	asm_function	0x08042F44	asm/code/code_08040A38.s	3698	0	4
 aos:asm:asm/code/code_08040A38.s:sub_08042FE0	sub_08042FE0	unclassified				asm_function	0x08042FE0	asm/code/code_08040A38.s	3775	0	1
-aos:asm:asm/code/code_08040A38.s:sub_0804301C	sub_0804301C	unclassified				asm_function	0x0804301C	asm/code/code_08040A38.s	3811	0	1
 aos:asm:asm/code/code_08040A38.s:sub_0804306C	sub_0804306C	unclassified				asm_function	0x0804306C	asm/code/code_08040A38.s	3856	0	1
 aos:asm:asm/code/code_08040A38.s:sub_080430B0	sub_080430B0	unclassified		technical	exclusive_callees	asm_function	0x080430B0	asm/code/code_08040A38.s	3891	1	4
 aos:asm:asm/code/code_08040A38.s:sub_08043908	sub_08043908	unclassified				asm_function	0x08043908	asm/code/code_08040A38.s	4480	1	0

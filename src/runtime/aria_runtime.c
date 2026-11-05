@@ -265,6 +265,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
 #define MAX_TRANSITIONS 32
 #define MAX_ENTITIES 128
 #define MAX_EFFECTS 32      /* shared effects (flames, blood) alive at once */
+#define MAX_DAMAGE_POPUPS 32
 static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
                                                           "dark_smoke", "fire", "spark",
                                                           "dust", "impact", "casing",
@@ -305,6 +306,8 @@ typedef struct {
     size_t entity_count;
     AosEffect effects[MAX_EFFECTS];
     size_t effect_count;
+    AosDamagePopup damage_popups[MAX_DAMAGE_POPUPS];
+    size_t damage_popup_count;
     AosPickup pickups[MAX_PICKUPS];
     size_t pickup_count;
 } AriaRoom;
@@ -2638,6 +2641,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             for (int c = 0; c < hit.effect_count && room->effect_count < MAX_EFFECTS; ++c)
                 if (combat->effects[hit.effects[c].kind])
                     room->effects[room->effect_count++] = hit.effects[c];
+            if (hit.has_damage_popup && room->damage_popup_count < MAX_DAMAGE_POPUPS)
+                room->damage_popups[room->damage_popup_count++] = hit.damage_popup;
             /* Child entities of this kind (grenades, axes, arrows, debris). */
             for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c)
                 room->entities[room->entity_count++] = (AriaEntity){
@@ -2718,6 +2723,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                               &world))
             room->effects[kept++] = room->effects[i];
     room->effect_count = kept;
+    kept = 0;
+    for (size_t i = 0; i < room->damage_popup_count; ++i)
+        if (aos_damage_popup_update(&room->damage_popups[i]))
+            room->damage_popups[kept++] = room->damage_popups[i];
+    room->damage_popup_count = kept;
     /* Pickups (sub_08043DD0), then the player's collisions with them
      * (sub_080441F8 through their type-0xB box). */
     kept = 0;
@@ -2817,6 +2827,12 @@ typedef struct {
         AosAnimSet set;
     } effects[AOS_EFFECT_KINDS],    /* Effect/<effect_names[k]>/anim_N */
       pickup_arts[PICKUP_ARTS];     /* Effect/<pickup_art_names[k]>/anim_N */
+    struct {
+        AriaFrame frames[MAX_FRAMES];
+        uint8_t ticks[MAX_FRAMES];
+        AosAnimDef def;
+        AosAnimSet set;
+    } damage[AOS_DAMAGE_POPUP_GLYPHS], damage_guard;
     AriaFrame icons[ITEM_ICONS];    /* Icon/i<n>/anim_0 */
     AriaFrame walls[AOS_WALL_ENTRIES]; /* Enemy/wall_<n>/frame_<f>: an entry's frame */
     uint8_t item_icon[3][59];       /* item, weapon, armor record -> icon */
@@ -3366,6 +3382,23 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         }
         if (sscanf(line, "Effect/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
                    &frame, &ticks, &ox, &oy, frame_path) == 7) {
+            int damage = -1;
+            bool damage_guard = !strcmp(enemy_name, "damage_guard");
+            if (sscanf(enemy_name, "damage_%d", &damage) == 1 || damage_guard) {
+                __typeof__(objects->damage[0]) *art = damage_guard
+                    ? &objects->damage_guard
+                    : damage >= 0 && damage < AOS_DAMAGE_POPUP_GLYPHS
+                        ? &objects->damage[damage] : NULL;
+                if (!art || style != 0 || frame != 0 || ticks < 1 || ticks > 255 ||
+                    !load_frame(&art->frames[0], frame_path, ox, oy, renderer)) {
+                    ok = false;
+                    break;
+                }
+                art->ticks[0] = (uint8_t)ticks;
+                art->def = (AosAnimDef){1, art->ticks};
+                art->set = (AosAnimSet){&art->def, 1};
+                continue;
+            }
             /* One animation per effect kind or pickup sprite. */
             for (int k = 0; k < AOS_EFFECT_KINDS + PICKUP_ARTS; ++k) {
                 if (strcmp(enemy_name, k < AOS_EFFECT_KINDS ? effect_names[k]
@@ -3504,6 +3537,11 @@ static void free_objects(AriaObjects *objects) {
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
                 SDL_DestroyTexture(objects->effects[k].frames[i].texture);
+    for (int k = 0; k < AOS_DAMAGE_POPUP_GLYPHS; ++k)
+        if (objects->damage[k].frames[0].texture)
+            SDL_DestroyTexture(objects->damage[k].frames[0].texture);
+    if (objects->damage_guard.frames[0].texture)
+        SDL_DestroyTexture(objects->damage_guard.frames[0].texture);
     for (int id = 0; id < ENEMY_KINDS; ++id)
         for (int i = 0; i < objects->enemies[id].static_count; ++i)
             if (objects->enemies[id].statics[i].texture)
@@ -3850,6 +3888,35 @@ static void draw_effects(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         if (room->entities[i].kind == ARIA_KIND_ENEMY && e->role == AOS_ROLE_DOLL_PIECE &&
             !e->removed && e->glow.started)
             draw_effect(renderer, objects, &e->glow, cam_x, cam_y);
+    }
+}
+
+/* sub_0804301C: skip blank entries, drawing every visible glyph five
+ * pixels after the previous one. The frame's native anchor still applies. */
+static void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
+                              const AosDamagePopup *popup, int cam_x, int cam_y) {
+    if (popup->hidden || !popup->active) return;
+    if (popup->guard) {
+        const AriaFrame *frame = &objects->damage_guard.frames[0];
+        if (!frame->texture) return;
+        SDL_FRect rect = {(float)((popup->x >> 16) + frame->offset_x - cam_x),
+                          (float)((popup->y >> 16) + frame->offset_y - cam_y), frame->w, frame->h};
+        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+        return;
+    }
+    int x = popup->x >> 16;
+    for (int i = 0; i < AOS_DAMAGE_POPUP_DIGITS; ++i) {
+        uint8_t glyph = popup->glyphs[i];
+        if (glyph == AOS_DAMAGE_POPUP_BLANK) continue;
+        if (glyph >= AOS_DAMAGE_POPUP_GLYPHS) continue;
+        const AriaFrame *frame = &objects->damage[glyph].frames[0];
+        if (frame->texture) {
+            SDL_FRect rect = {(float)(x + frame->offset_x - cam_x),
+                              (float)((popup->y >> 16) + frame->offset_y - cam_y),
+                              frame->w, frame->h};
+            SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+        }
+        x += 5;
     }
 }
 
@@ -5755,6 +5822,8 @@ int aria_runtime_main(int argc, char **argv) {
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
+        for (size_t k = 0; objects_ok && k < room.damage_popup_count; ++k)
+            draw_damage_popup(renderer, &objects, &room.damage_popups[k], cam_x, cam_y);
         /* Pickups: their sequence from creation, looping; a blinking pickup
          * shows on even frames (the native blink of + 0x0F is not traced). */
         for (size_t k = 0; objects_ok && k < room.pickup_count; ++k) {

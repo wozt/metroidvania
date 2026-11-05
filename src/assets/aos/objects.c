@@ -354,6 +354,21 @@ static const EffectSpec effects[] = {
      * shared effect (animations 15/row 6 and 20/row 7). */
     {"hit_element_3", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {15}, -1},
     {"hit_element_5", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {20}, -1},
+    /* sub_08042B8C / sub_0804301C: damage digits 0-9, minus, plus and
+     * the zero-damage guard still, all on OBJ row 6 (palette bank 2). */
+    {"damage_0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0},
+    {"damage_1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 1},
+    {"damage_2", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 2},
+    {"damage_3", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 3},
+    {"damage_4", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 4},
+    {"damage_5", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 5},
+    {"damage_6", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 6},
+    {"damage_7", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 7},
+    {"damage_8", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 8},
+    {"damage_9", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 9},
+    {"damage_10", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 10},
+    {"damage_11", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 11},
+    {"damage_guard", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x58},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows

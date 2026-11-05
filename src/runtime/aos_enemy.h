@@ -51,6 +51,7 @@
 
 #include "aos_anim.h"
 #include "aos_collision.h"
+#include "aos_damage_popup.h"
 #include "aos_combat.h"
 #include "aos_effect.h"
 #include "aos_soma.h"
@@ -337,6 +338,8 @@ typedef struct {
     int soma_damage;
     bool enemy_hit;         /* the weapon hit the enemy */
     int enemy_damage;
+    bool has_damage_popup; /* sub_08042B8C, including the zero-damage guard art */
+    AosDamagePopup damage_popup;
     bool killed;
     bool spawn;             /* a zombie spawner created a zombie here */
     int32_t spawn_x, spawn_y;   /* room pixels */

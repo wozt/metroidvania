@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0752 - Port Aria's native damage-number entities
+
+- Added the SDL-independent `aos_damage_popup` controller for
+  `sub_08042B8C`, `sub_08042C78` and `sub_08042DE8`. Enemy collision reports
+  now retain the signed value, eleven-entry glyph encoding, zero-damage guard
+  art, half-pixel rise, native blink threshold and 28/40-frame lifetime even
+  through the specialized enemy report-merging paths.
+- Extended `aria_objects` to version 63. It exports the common sprite
+  descriptor's digit, minus, plus and guard frames on OBJ row 6; the runtime
+  loads those records as a separate editor-safe art family and draws the
+  visible glyphs at `sub_0804301C`'s five-pixel spacing. No extracted bitmap
+  is committed.
+- Added deterministic ROM-free popup tests and a collision assertion in the
+  enemy suite. A local offscreen room 0/3 run exercised both a 9-damage
+  surviving Zombie hit and a 79-damage lethal hit with the regenerated native
+  glyph library. Source-derived and unit-tested, not emulator-compared.
+- The purple lower-right enemy-name banner shown in the supplied reference is
+  not attributed to the hit callback by the current cvaos source: enemy names
+  are currently reached through the bestiary/menu path. It was therefore not
+  mixed into this native popup patch without evidence.
+
+Next: trace the exact provenance of the supplied enemy-name banner; if it is
+an external overlay, implement it only as an explicitly documented optional
+runtime/editor presentation feature, then continue the missing native HUD
+numbers and hit-feedback comparisons.
+
 ## Patch 0751 - Restore Soma audio lifecycle and native enemy hit feedback
 
 - Fixed the split PlaySong/MP2K lifecycle: when a sequencer player reaches

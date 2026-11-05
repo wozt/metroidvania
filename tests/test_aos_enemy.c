@@ -4970,6 +4970,8 @@ static void soul_attack_tests(void) {
                                         never_zero);
     int expected = aos_enemy_damage(26, stats.defence, 0, 0, 0);
     assert(hit.enemy_hit && hit.enemy_damage == expected && e.hp == 30 - expected);
+    assert(hit.has_damage_popup && hit.damage_popup.value == expected &&
+           hit.damage_popup.x == e.x && hit.damage_popup.y == e.y);
     assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_IMPACT);
     assert((hit.effects[0].x >> 16) >= 90 && (hit.effects[0].x >> 16) <= 110);
     assert((hit.effects[0].y >> 16) >= 80 && (hit.effects[0].y >> 16) <= 104);

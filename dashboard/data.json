@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-05T13:50:48+00:00",
+ "generated_at": "2026-11-05T14:18:28+00:00",
  "git": {
-  "commit": "7634fc2",
+  "commit": "453bbf9",
   "branch": "main",
   "dirty": true
  },
@@ -10167,7 +10167,7 @@
     "sub_0807E328",
     "sub_08069134"
    ],
-   "limitations": "Rewritten from the native routines, replacing the earlier homing approximation. The parts are made by its first update (native: at creation); the aura's affine scale is drawn as a plain scale about the sprite centre (no double-size placement). The palette bits and the hit spark sub_08042B8C are not modelled. EnemyGiantGhostUpdate is ported from its traced routines: inside the sub_0806CC20 window (only colliding while flashing), the drift (sub_0807D33C: facing its target, one time in three a charge with it inside the 160 x 160 box, otherwise 20 frames speeding by 0x1000 to 0xC000 toward 48 pixels over it, 20 coasting, 30 slowing by 0x800; after touching Soma, the same fleeing upward), the charge (sub_0807D65C: backing away from 16 pixels over the target, facing it, the 2.0 swoop with 0x87, the slowing drift and the rest), the death (sub_0807D88C: 0x6B, animation 5, translucent, four wisps, then 90 frames blinking out with a wisp every eighth past 40; wisps sub_08069134 with gravity 0x2000 for 200 frames), the aura (sub_0807D9B8: 4 pixels behind and 18 up, its affine scale pulsing, afterimages sub_0807E074, swelling at death) and the eyes looking at the target (sub_0807DBB4 / sub_0807DE14), sweeping under the global 0x8E & 0x40.",
+   "limitations": "Rewritten from the native routines, replacing the earlier homing approximation. The parts are made by its first update (native: at creation); the aura's affine scale is drawn as a plain scale about the sprite centre (no double-size placement). The palette bits are not modelled. EnemyGiantGhostUpdate is ported from its traced routines: inside the sub_0806CC20 window (only colliding while flashing), the drift (sub_0807D33C: facing its target, one time in three a charge with it inside the 160 x 160 box, otherwise 20 frames speeding by 0x1000 to 0xC000 toward 48 pixels over it, 20 coasting, 30 slowing by 0x800; after touching Soma, the same fleeing upward), the charge (sub_0807D65C: backing away from 16 pixels over the target, facing it, the 2.0 swoop with 0x87, the slowing drift and the rest), the death (sub_0807D88C: 0x6B, animation 5, translucent, four wisps, then 90 frames blinking out with a wisp every eighth past 40; wisps sub_08069134 with gravity 0x2000 for 200 frames), the aura (sub_0807D9B8: 4 pixels behind and 18 up, its affine scale pulsing, afterimages sub_0807E074, swelling at death) and the eyes looking at the target (sub_0807DBB4 / sub_0807DE14), sweeping under the global 0x8E & 0x40.",
    "next_action": "Compare the drift, the charge, the death and its soul against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -10643,7 +10643,7 @@
     "sub_0806E5FC",
     "sub_080693E4"
    ],
-   "limitations": "The fry and the bubbles are created by the first update rather than at creation. The box walker sub_0806A224 keeps only the flags the fry reads (walls, ceiling, floor, the top-left water corner). The fry's parent check uses the parent pointer instead of + 0x37. The global pause gEwramData + 0x4BE, the death palette bits and the hit spark sub_08042B8C are not ported. EnemyKillerFishUpdate is ported from its traced routines: outside screen margin 4 inactive, the swim (sub_0806FA50: 0.25 a frame, bob by 0x400, turn after 61 frames at one x, pushed under the surface by sub_0806E5FC, a bubble every 120-239 frames) on the swimmer walker sub_08069CF4, the attack at a target in water within 80 pixels (sub_0806FCA4: 40 frames, four spat bubbles, a 2.0 dart at a point above it, a drift), the hit callback (sub_080700CC) and the death floating up dead to the surface with 0x6C (sub_0806FF70), or the generic death for a fish lying out of water, its + 0x32 fry (sub_08070168 / sub_08070218: following, a five-dash frenzy at a target in water, bursting when struck by sub_08070A08) and its rising and bursting bubbles (sub_080708B0 on sub_08069B70, sub_0807091C). The bubble frames 14-16 are exported (aria_objects v45).",
+   "limitations": "The fry and the bubbles are created by the first update rather than at creation. The box walker sub_0806A224 keeps only the flags the fry reads (walls, ceiling, floor, the top-left water corner). The fry's parent check uses the parent pointer instead of + 0x37. The global pause gEwramData + 0x4BE, and the death palette bits are not ported. EnemyKillerFishUpdate is ported from its traced routines: outside screen margin 4 inactive, the swim (sub_0806FA50: 0.25 a frame, bob by 0x400, turn after 61 frames at one x, pushed under the surface by sub_0806E5FC, a bubble every 120-239 frames) on the swimmer walker sub_08069CF4, the attack at a target in water within 80 pixels (sub_0806FCA4: 40 frames, four spat bubbles, a 2.0 dart at a point above it, a drift), the hit callback (sub_080700CC) and the death floating up dead to the surface with 0x6C (sub_0806FF70), or the generic death for a fish lying out of water, its + 0x32 fry (sub_08070168 / sub_08070218: following, a five-dash frenzy at a target in water, bursting when struck by sub_08070A08) and its rising and bursting bubbles (sub_080708B0 on sub_08069B70, sub_0807091C). The bubble frames 14-16 are exported (aria_objects v45).",
    "next_action": "Compare the swim, the attack and the fry frenzy against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -11199,7 +11199,7 @@
     "sub_0806D2F8",
     "sub_0806BAC8"
    ],
-   "limitations": "The body runs its linked sprite at the end of its own update (the native slot follows the body's) and the child entity only shows it. The children are emitted on the first update instead of at creation. sub_08042B8C (the hit spark of its callback) and the +0x5A palette bits of its death are not ported. The trails copy the body's visibility each frame, so sub_080C7A3C is not modelled separately. EnemyNemesisUpdate is ported from its traced routines at its constructor-table ID 0x26: state 0 fade-in with its linked sprite, state 1 tilted approach (sub_080686CC turns, half-pixel drift to 72 x 48 of the target, sine bob), state 2 attack rows of 0x08528A34, state 3 three dashes with recoils (0x081194D0 turns), state 4 the swoop legs of 0x085289FC, state 5 the spinning dive at the target, state 6 the recoil every fourth blow or at a lethal one (sub_080C7604 with + 0x24), state 0xFF the fall with flames (sub_080C750C), the affine tilt drawn by the runtime, the tip boxes of sub_080C6EF8, the global 0x8E & 0x40 inert state 7, and the three sub_080C7B54 trails with the sub_08045748 history. Sounds 0x85, 0x1C3 and 0x72 are requested; its red soul (SkillNemesisUse) is ported.",
+   "limitations": "The body runs its linked sprite at the end of its own update (the native slot follows the body's) and the child entity only shows it. The children are emitted on the first update instead of at creation. the +0x5A palette bits of its death are not ported. The trails copy the body's visibility each frame, so sub_080C7A3C is not modelled separately. EnemyNemesisUpdate is ported from its traced routines at its constructor-table ID 0x26: state 0 fade-in with its linked sprite, state 1 tilted approach (sub_080686CC turns, half-pixel drift to 72 x 48 of the target, sine bob), state 2 attack rows of 0x08528A34, state 3 three dashes with recoils (0x081194D0 turns), state 4 the swoop legs of 0x085289FC, state 5 the spinning dive at the target, state 6 the recoil every fourth blow or at a lethal one (sub_080C7604 with + 0x24), state 0xFF the fall with flames (sub_080C750C), the affine tilt drawn by the runtime, the tip boxes of sub_080C6EF8, the global 0x8E & 0x40 inert state 7, and the three sub_080C7B54 trails with the sub_08045748 history. Sounds 0x85, 0x1C3 and 0x72 are requested; its red soul (SkillNemesisUse) is ported.",
    "next_action": "Compare the dash, swoop and dive paths and the trails against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -11280,7 +11280,7 @@
     "sub_08088E54",
     "sub_08088E78"
    ],
-   "limitations": "Rewritten from the native routines, replacing the earlier polar approximation. The parts are made by its first update (native: at creation). The knockback of a blow pushes away from Soma, whose position stands in for the weapon entity. The tip segment's affine angle (sub_0803E238) is drawn with the convention of sub_0803E058. The palette bits, the hit spark sub_08042B8C, the tracking list sub_08021924 and the global pause 0x4BE (taken as 0) are not modelled. Its yellow soul sets the 0x13260 bit 0x1000000, read only by the breakable walls Object08Update and Object09Update, which are not ported. EnemyPeepingEyeUpdate is ported from its traced routines: the wait for the target in its 180 x 200 box or a first wound, the opening (0x08527400, 40 frames), the steering toward a point 64 pixels short of the target and 64 above it then toward random points 16 to 63 pixels to a side and 32 to 79 above (sub_08088168: +- 0x800 beyond 4 pixels, 31/32 damping, sub_0806D3D8 at 2.0, 120-frame timeout), its eyelid looks (0x08527450: blink, looking up or down toward the target, the hurt look facing it after a blow), the 2.0 push of a blow and the death (sub_08088638: 0x6E, 45 hidden frames with a flame), the eyeball (sub_080888D4), the pupil looking at the target (sub_08088724) and the six swaying, growing segments flaming in turn at its death (sub_08088A64), and the state-4 showcase (sub_08088510) under the global 0x8E & 0x40.",
+   "limitations": "Rewritten from the native routines, replacing the earlier polar approximation. The parts are made by its first update (native: at creation). The knockback of a blow pushes away from Soma, whose position stands in for the weapon entity. The tip segment's affine angle (sub_0803E238) is drawn with the convention of sub_0803E058. The palette bits, the tracking list sub_08021924 and the global pause 0x4BE (taken as 0) are not modelled. Its yellow soul sets the 0x13260 bit 0x1000000, read only by the breakable walls Object08Update and Object09Update, which are not ported. EnemyPeepingEyeUpdate is ported from its traced routines: the wait for the target in its 180 x 200 box or a first wound, the opening (0x08527400, 40 frames), the steering toward a point 64 pixels short of the target and 64 above it then toward random points 16 to 63 pixels to a side and 32 to 79 above (sub_08088168: +- 0x800 beyond 4 pixels, 31/32 damping, sub_0806D3D8 at 2.0, 120-frame timeout), its eyelid looks (0x08527450: blink, looking up or down toward the target, the hurt look facing it after a blow), the 2.0 push of a blow and the death (sub_08088638: 0x6E, 45 hidden frames with a flame), the eyeball (sub_080888D4), the pupil looking at the target (sub_08088724) and the six swaying, growing segments flaming in turn at its death (sub_08088A64), and the state-4 showcase (sub_08088510) under the global 0x8E & 0x40.",
    "next_action": "Port the breakable walls Object08 and Object09 and their yellow soul sparkle; compare the eye against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -12133,7 +12133,7 @@
     "sub_08077BFC",
     "sub_08077C8C"
    ],
-   "limitations": "Rewritten from the native routines, replacing the earlier bending-chain approximation. The segments are made by the first two updates (native: at creation) and positioned at the end of their update rather than in a draw callback; the head likewise after its collision pass, as the native draw callback runs after the updates. The palette bits, priorities and the hit spark sub_08042B8C are not modelled. EnemyWhiteDragonUpdate is ported from its traced routines: its head at the neck length + 0x4E from a root at the record along heading + swing + wobble (sub_08077080), the ten segments at (9 - i) / 10 of the neck with the swing of (i + 1) * 8 frames ago (sub_080771C8), the idle swing and its two attack countdowns (sub_08076824), the bite with its 0x87 lunge and the two breaths (flames, sparks drawn into the mouth, eight 4.0 fireballs growing through frames 5-9, the sweeping variant; 0x77), the recoil after a weapon blow while idle (sub_080773AC, sub_08076ED8), the death (0x6E, flames, the head falling with 0x6B into two pieces, then each segment into a piece), and the inert state 4. Direct frames 0-11 are exported (aria_objects v46).",
+   "limitations": "Rewritten from the native routines, replacing the earlier bending-chain approximation. The segments are made by the first two updates (native: at creation) and positioned at the end of their update rather than in a draw callback; the head likewise after its collision pass, as the native draw callback runs after the updates. The palette bits and priorities are not modelled. EnemyWhiteDragonUpdate is ported from its traced routines: its head at the neck length + 0x4E from a root at the record along heading + swing + wobble (sub_08077080), the ten segments at (9 - i) / 10 of the neck with the swing of (i + 1) * 8 frames ago (sub_080771C8), the idle swing and its two attack countdowns (sub_08076824), the bite with its 0x87 lunge and the two breaths (flames, sparks drawn into the mouth, eight 4.0 fireballs growing through frames 5-9, the sweeping variant; 0x77), the recoil after a weapon blow while idle (sub_080773AC, sub_08076ED8), the death (0x6E, flames, the head falling with 0x6B into two pieces, then each segment into a piece), and the inert state 4. Direct frames 0-11 are exported (aria_objects v46).",
    "next_action": "Compare the swing, the attacks and the death against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -12269,11 +12269,14 @@
     "src/runtime/aos_effect.h",
     "src/runtime/aos_audio.c",
     "src/runtime/aria_runtime.c",
-    "src/assets/aos/objects.c"
+    "src/assets/aos/objects.c",
+    "src/runtime/aos_damage_popup.c",
+    "src/runtime/aos_damage_popup.h"
    ],
    "tests": [
     "tests/test_aos_enemy.c",
-    "tests/test_native_golden.c"
+    "tests/test_native_golden.c",
+    "tests/test_aos_damage_popup.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -12294,14 +12297,19 @@
     "sub_0806E524",
     "sub_0806B7D8",
     "sub_0806B658",
-    "sub_0806B5DC"
+    "sub_0806B5DC",
+    "sub_08042B8C",
+    "sub_08042C78",
+    "sub_08042DE8",
+    "sub_0804301C"
    ],
-   "limitations": "Palette bits, the tracking list of sub_08021924, sub_080683BC, the damage-number popup of sub_08042B8C and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced). Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported. Its death (sub_0807B0DC) plays 0x70 before the gore; unit-tested. The shared hit callback now selects all seven 0x08526D0C effect and sound records from attack elements, weakness and resistance, places the effect at the weapon or soul intersection, and preserves it through specialized controller reports. A normal knife hit on a non-weak Zombie produces animation 13 on OBJ row 8 (blood) and sound 0x9E. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Compare the generic hit art, sound, damage-number popup and Zombie death timing against an emulator.",
+   "limitations": "Palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced). Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported. Its death (sub_0807B0DC) plays 0x70 before the gore; unit-tested. The shared hit callback now selects all seven 0x08526D0C effect and sound records from attack elements, weakness and resistance, places the effect at the weapon or soul intersection, and preserves it through specialized controller reports. A normal knife hit on a non-weak Zombie produces animation 13 on OBJ row 8 (blood) and sound 0x9E. Source-derived and unit-tested, not emulator-compared. The same collision now creates sub_08042B8C damage numbers with the native digit encoding, zero-damage guard art, half-pixel rise, blink and lifetime; the runtime draws the ROM-derived glyph frames exported by aria_objects v63.",
+   "next_action": "Compare the generic hit art, sound, damage-number timing and Zombie death timing against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
-     "tests/test_native_golden.c"
+     "tests/test_native_golden.c",
+     "tests/test_aos_damage_popup.c"
     ],
     "in_game_check": [
      "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
@@ -12332,6 +12340,16 @@
       "ctest": [
        "native_golden_aos",
        "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_damage_popup.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_damage_popup"
       ],
       "outcome": "passed",
       "exists": true
@@ -19554,6 +19572,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_damage_popup",
+    "files": [
+     "tests/test_aos_damage_popup.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "mzm_samus_controller",
     "files": [
      "tests/test_mzm_samus.c"
@@ -19611,12 +19636,18 @@
    }
   ],
   "summary": {
-   "passed": 126,
+   "passed": 127,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "453bbf9",
+   "date": "2026-11-05",
+   "subject": "Restore Aria hit feedback and Soma sounds",
+   "scope": "project"
+  },
   {
    "commit": "7634fc2",
    "date": "2026-11-05",
@@ -20090,12 +20121,6 @@
    "date": "2026-10-31",
    "subject": "Correct Aria Buer native attack-side spin and projectile mirrors",
    "scope": "project"
-  },
-  {
-   "commit": "ad9609b",
-   "date": "2026-10-31",
-   "subject": "Restore Aria Buer linked flame and spin setup in inactive mode",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -20156,9 +20181,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 936,
-    "routines_attached_to_features": 936,
-    "unassigned_routines": 2637,
+    "routines_cited_by_features": 940,
+    "routines_attached_to_features": 940,
+    "unassigned_routines": 2633,
     "call_edges": 14228
    }
   },
@@ -22503,7 +22528,8 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_enemy.c",
-        "tests/test_native_golden.c"
+        "tests/test_native_golden.c",
+        "tests/test_aos_damage_popup.c"
        ],
        "in_game_check": [
         "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"

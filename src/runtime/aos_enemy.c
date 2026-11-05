@@ -1443,6 +1443,9 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 report.enemy_damage = 0;
                 aos_audio_play_song(0x69);
             }
+            report.has_damage_popup = true;
+            report.damage_popup = aos_damage_popup_create(enemy->x, enemy->y,
+                                                          (int16_t)report.enemy_damage, 0);
             if (report.enemy_damage > 0)
                 spawn_hit_effect(hit_effect_type(elements, enemy->stats.weak,
                                                   enemy->stats.resist),
@@ -7456,13 +7459,19 @@ static void skeleton_close_in(AosEnemy *e, const AosSoma *soma, const AosCollisi
     }
 }
 
-/* The collision pass's report with its children (the death pieces). */
-static void skeleton_merge(AosHitReport *report, const AosHitReport *hit) {
+static void copy_collision_result(AosHitReport *report, const AosHitReport *hit) {
     report->soma_hit = hit->soma_hit;
     report->soma_damage = hit->soma_damage;
     report->enemy_hit = hit->enemy_hit;
     report->enemy_damage = hit->enemy_damage;
+    report->has_damage_popup = hit->has_damage_popup;
+    report->damage_popup = hit->damage_popup;
     report->killed = hit->killed;
+}
+
+/* The collision pass's report with its children (the death pieces). */
+static void skeleton_merge(AosHitReport *report, const AosHitReport *hit) {
+    copy_collision_result(report, hit);
     report->targetable |= hit->targetable;
     report->wake_spawner |= hit->wake_spawner;
     for (int i = 0; i < hit->child_count && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i)
@@ -8722,11 +8731,7 @@ static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
         AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         if (!report.child_count) report = hit;
         else {
-            report.soma_hit = hit.soma_hit;
-            report.soma_damage = hit.soma_damage;
-            report.enemy_hit = hit.enemy_hit;
-            report.enemy_damage = hit.enemy_damage;
-            report.killed = hit.killed;
+            copy_collision_result(&report, &hit);
         }
     }
     aos_combat_tick(&e->combat);
@@ -8844,11 +8849,7 @@ static AosHitReport gorgon_update(AosEnemy *e, AosSoma *soma, const AosCollision
         AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
         if (!report.child_count) report = hit;
         else {
-            report.soma_hit = hit.soma_hit;
-            report.soma_damage = hit.soma_damage;
-            report.enemy_hit = hit.enemy_hit;
-            report.enemy_damage = hit.enemy_damage;
-            report.killed = hit.killed;
+            copy_collision_result(&report, &hit);
         }
     }
     aos_combat_tick(&e->combat);
@@ -8856,11 +8857,7 @@ static AosHitReport gorgon_update(AosEnemy *e, AosSoma *soma, const AosCollision
 }
 
 static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
-    report->soma_hit = hit.soma_hit;
-    report->soma_damage = hit.soma_damage;
-    report->enemy_hit = hit.enemy_hit;
-    report->enemy_damage = hit.enemy_damage;
-    report->killed = hit.killed;
+    copy_collision_result(report, &hit);
 }
 
 /* sub_080C5898: the Tiny Devil holds an aimed animation-4 orb beside its
@@ -10709,11 +10706,7 @@ static AosHitReport dragon_update(AosEnemy *d, AosSoma *soma, const AosEnemyKind
     if (d->state != 4 && !d->removed && !d->defeated) {
         bool targetable = report.targetable;
         AosHitReport hit = collide(d, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
-        report.soma_hit = hit.soma_hit;
-        report.soma_damage = hit.soma_damage;
-        report.enemy_hit = hit.enemy_hit;
-        report.enemy_damage = hit.enemy_damage;
-        report.killed = hit.killed;
+        copy_collision_result(&report, &hit);
         report.targetable = targetable;
     }
     aos_combat_tick(&d->combat);
@@ -11400,11 +11393,7 @@ static AosHitReport giant_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind 
     }
     if (!g->defeated && !g->removed) {
         AosHitReport hit = collide(g, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
-        report.soma_hit = hit.soma_hit;
-        report.soma_damage = hit.soma_damage;
-        report.enemy_hit = hit.enemy_hit;
-        report.enemy_damage = hit.enemy_damage;
-        report.killed = hit.killed;
+        copy_collision_result(&report, &hit);
         if (hit.soma_hit) g->gg_touched = true;    /* sub_0807E328 */
         if (hit.killed) giant_struck(g, kind, random, &spawned);
         for (int e = 0; e < hit.effect_count && spawned.effect_count < AOS_ENEMY_MAX_EFFECTS; ++e)

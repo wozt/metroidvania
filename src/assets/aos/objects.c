@@ -379,7 +379,9 @@ static const EffectSpec effects[] = {
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows
      * 0-3: rows 6, 7, 9, 8) loop sequence 21 (sub_0803F2C8), bags (rows 4-6:
      * rows 6, 7, 8) show frame 33, hearts (row 7) frames 40 (small) and 39
-     * (big), souls (rows of 0x080E1CD0: 7, 6, 8, 9) loop sequence 6. */
+     * (big), souls (rows of 0x080E1CD0: 7, 6, 8, 9) loop sequence 6.
+     * sub_08044980's fixed soul containers use the same four rows: primary
+     * sequence 19 and follower sequence 18. */
     {"coin0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {21}, -1},
     {"coin1", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {21}, -1},
     {"coin2", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {21}, -1},
@@ -393,6 +395,14 @@ static const EffectSpec effects[] = {
     {"soul1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {6}, -1},
     {"soul2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {6}, -1},
     {"soul3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {6}, -1},
+    {"soul_container0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {19}, -1},
+    {"soul_container1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {19}, -1},
+    {"soul_container2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {19}, -1},
+    {"soul_container3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {19}, -1},
+    {"soul_container_follower0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {18}, -1},
+    {"soul_container_follower1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {18}, -1},
+    {"soul_container_follower2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {18}, -1},
+    {"soul_container_follower3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {18}, -1},
 };
 
 #undef ENTITY

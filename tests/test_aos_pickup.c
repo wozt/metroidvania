@@ -115,6 +115,35 @@ int main(void) {
            !aos_pickup_create_placed(&placed, kinds, 2, 32, 92, 24, 56, collected) &&
            !aos_pickup_create_placed(&placed, kinds, 1, 7, 92, 24, 56, collected));
 
+    /* sub_08044980 / sub_08044840: ids 5-8 are fixed containers. The
+     * source's parameter 1 is one-based, and their one-time bit changes only
+     * once the homing soul has actually reached Soma. */
+    AosPickup container, released;
+    assert(aos_pickup_create_placed_soul(&container, 6, 2, 156, 24, 56, collected));
+    assert(container.soul_container && container.placed &&
+           container.type == AOS_PICKUP_SOUL + AOS_SOUL_BLUE && container.variant == 1 &&
+           container.persistent_index == 156);
+    assert(aos_soul_container_box.x == -8 && aos_soul_container_box.y == -32 &&
+           aos_soul_container_box.w == 16 && aos_soul_container_box.h == 32);
+    aos_pickup_mark_placed(&container, collected);
+    assert(!aos_pickup_placed_collected(collected, 156));
+    draws = 0;
+    assert(aos_pickup_release_placed_soul(&container, &released, 80 << 16, 64 << 16,
+                                          counting_random));
+    assert(draws == 1 && container.container_released && container.container_timer == 16 &&
+           released.placed && !released.soul_container && released.persistent_index == 156 &&
+           released.type == container.type && released.variant == container.variant);
+    for (int i = 0; i < 15; ++i) aos_pickup_soul_container_update(&container);
+    assert(!container.removed && container.container_timer == 1);
+    aos_pickup_soul_container_update(&container);
+    assert(container.removed && !aos_pickup_placed_collected(collected, 156));
+    aos_pickup_mark_placed(&released, collected);
+    assert(aos_pickup_placed_collected(collected, 156));
+    assert(!aos_pickup_create_placed_soul(&container, 6, 2, 156, 24, 56, collected) &&
+           !aos_pickup_create_placed_soul(&container, 5, 0, 20, 24, 56, collected) &&
+           !aos_pickup_create_placed_soul(&container, 8, 4, 20, 24, 56, collected) &&
+           !aos_pickup_create_placed_soul(&container, 9, 1, 20, 24, 56, collected));
+
     /* Item pickups probe at their own height (no 8-pixel money offset). */
     AosPickup item = aos_pickup_create_item(AOS_PICKUP_WEAPON, 1, 40, 30);
     assert(item.type == AOS_PICKUP_WEAPON && item.variant == 1 && item.offset == 0);

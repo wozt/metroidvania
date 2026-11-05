@@ -673,6 +673,16 @@ row 6). The event words are stored in the portable save (schema v10), and
 the placed-room-item words are stored separately from schema v11 onward. The
 map update of `sub_08012154` is not ported.
 
+Placed pickup entity ids 1-8 (`sub_0800F1FC` case 4) are read from the same
+room records. Ids 1-4 are fixed money, item, weapon and armor icons. Ids 5-8
+are the red, blue, yellow and ability soul containers of `sub_08044980`: their
+one-based parameter 1 selects a soul, sequence 19 draws the primary and
+sequence 18 its follower, and the `(-8, -32, 16, 32)` weapon box releases the
+ordinary homing soul of `sub_0804459C` with sound `0xA2`. The container never
+accepts Soma's body collision. Its parameter-0 bit remains clear if the
+released soul expires; only successful soul collection sets the corresponding
+placed-item word.
+
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,
 flags at +0x1C, +0x20). `sub_0806B04C` copies the stats into the entity (HP

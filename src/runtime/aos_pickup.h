@@ -59,6 +59,11 @@ typedef struct {
     bool placed;        /* sub_08044054's last argument: fixed, no timeout */
     uint16_t persistent_index; /* entity parameter 0, zero is not recorded */
     uint16_t age;       /* frames updated, for the sprite sequence */
+    /* sub_08044840: a fixed soul container waits for a weapon contact, then
+     * hides its follower for 16 frames while the released soul flies away. */
+    bool soul_container;
+    bool container_released;
+    uint8_t container_timer;
 } AosPickup;
 
 /* Soma's position (16.16) for the soul pickups' homing. */
@@ -68,6 +73,8 @@ typedef uint32_t (*AosRandom)(void);
 extern const AosBox aos_pickup_box;
 /* The hearts' box (0x0808FCFC). */
 extern const AosBox aos_heart_box;
+/* The placed soul container's weapon box (0x2010E0F8). */
+extern const AosBox aos_soul_container_box;
 /* The box a pickup registered. */
 AosBox aos_pickup_box_of(const AosPickup *pickup);
 
@@ -92,6 +99,20 @@ bool aos_pickup_placed_collected(
     const uint32_t collected[AOS_PLACED_ITEM_WORDS], uint16_t persistent_index);
 void aos_pickup_mark_placed(const AosPickup *pickup,
                             uint32_t collected[AOS_PLACED_ITEM_WORDS]);
+/* sub_08044980: entity ids 5-8 make one fixed container. `soul_id` is the
+ * room record's one-based parameter 1; it selects the zero-based soul index.
+ * The durable bit remains clear until the released pickup is collected. */
+bool aos_pickup_create_placed_soul(AosPickup *pickup, uint8_t entity_id,
+                                   uint16_t soul_id, uint16_t persistent_index,
+                                   int32_t x, int32_t y,
+                                   const uint32_t collected[AOS_PLACED_ITEM_WORDS]);
+/* sub_08044840's weapon result: release sub_0804459C's homing soul and start
+ * the primary container's 16-frame deletion delay. */
+bool aos_pickup_release_placed_soul(AosPickup *container, AosPickup *soul,
+                                    int32_t soma_x, int32_t soma_y, AosRandom random);
+/* The fixed container's update; unlike a flying soul it never homes, times
+ * out or writes its persistent bit by itself. */
+void aos_pickup_soul_container_update(AosPickup *pickup);
 /* Cases 2-4 of sub_080441F8: below 9 held the count rises (to at most 9)
  * and the pickup is removed; above 8 it stays, and the refusal sound 0x13B
  * plays only when its 0x20-frame cooldown has run out (*refusal_sound). */

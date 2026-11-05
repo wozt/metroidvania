@@ -98,11 +98,17 @@
 #define ITEM_ICONS 193     /* icon numbers 1-192 of sub_0801232C */
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */
 /* The pickup sprites of the object export (coins 0-3, bags 4-6, hearts,
- * souls by type); item icons are not exported. */
-#define PICKUP_ARTS 13
+ * souls by type, then the four primary and four follower soul containers);
+ * item icons are not exported. */
+#define PICKUP_ARTS 21
+#define PICKUP_ART_SOUL_CONTAINER 13
+#define PICKUP_ART_SOUL_CONTAINER_FOLLOWER 17
 static const char *const pickup_art_names[PICKUP_ARTS] = {
     "coin0", "coin1", "coin2", "coin3", "bag4", "bag5", "bag6", "heart_small", "heart_big",
-    "soul0", "soul1", "soul2", "soul3"};
+    "soul0", "soul1", "soul2", "soul3",
+    "soul_container0", "soul_container1", "soul_container2", "soul_container3",
+    "soul_container_follower0", "soul_container_follower1", "soul_container_follower2",
+    "soul_container_follower3"};
 #define DOOR_STYLES 2
 #define ENEMY_KINDS AOS_BESTIARY_NATIVE_RECORDS
 static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie",
@@ -2509,15 +2515,20 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     int sound = 0;
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
-        bool placed_pickup = e->kind == ARIA_KIND_PICKUP && e->id >= 1 && e->id <= 4;
+        bool placed_pickup = e->kind == ARIA_KIND_PICKUP && e->id >= 1 && e->id <= 8;
         if (placed_pickup) {
             if (!e->spawned && e->x >= cam_x - 80 && e->x <= cam_x + 320) {
                 e->spawned = true;
                 AosPickup pickup;
-                if (room->pickup_count < MAX_PICKUPS &&
-                    aos_pickup_create_placed(&pickup, combat->money, (uint8_t)e->id,
-                                             (uint16_t)e->param1, (uint16_t)e->param0,
-                                             e->x, e->y, aria_placed_items))
+                bool created = e->id <= 4
+                    ? aos_pickup_create_placed(&pickup, combat->money, (uint8_t)e->id,
+                                                (uint16_t)e->param1, (uint16_t)e->param0,
+                                                e->x, e->y, aria_placed_items)
+                    : aos_pickup_create_placed_soul(&pickup, (uint8_t)e->id,
+                                                     (uint16_t)e->param1,
+                                                     (uint16_t)e->param0, e->x, e->y,
+                                                     aria_placed_items);
+                if (room->pickup_count < MAX_PICKUPS && created)
                     room->pickups[room->pickup_count++] = pickup;
             }
             continue;
@@ -2773,8 +2784,31 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     /* Pickups (sub_08043DD0), then the player's collisions with them
      * (sub_080441F8 through their type-0xB box). */
     kept = 0;
-    for (size_t i = 0; i < room->pickup_count; ++i) {
+    const size_t pickup_source_count = room->pickup_count;
+    AosPickup released_souls[MAX_PICKUPS];
+    size_t released_count = 0;
+    for (size_t i = 0; i < pickup_source_count; ++i) {
         AosPickup *pickup = &room->pickups[i];
+        if (pickup->soul_container) {
+            int wx, wy, ww, wh;
+            bool weapon_hit = combat->weapon && combat->weapon_frames &&
+                              aos_weapon_hitbox(combat->weapon, soma, combat->weapon_frames,
+                                                &wx, &wy, &ww, &wh) &&
+                              ww > 1 && wh > 1;
+            AosRect target = aos_entity_rect(aos_soul_container_box, pickup->x >> 16,
+                                              pickup->y >> 16, false, false);
+            if (weapon_hit && !pickup->container_released &&
+                !(wx + ww - 1 < target.x1 || target.x2 < wx || wy + wh - 1 < target.y1 ||
+                  target.y2 < wy) && pickup_source_count + released_count < MAX_PICKUPS &&
+                aos_pickup_release_placed_soul(pickup, &released_souls[released_count], soma->x,
+                                               soma->y, aos_random)) {
+                released_count++;
+                aos_audio_play_song(0xA2);
+            }
+            aos_pickup_soul_container_update(pickup);
+            if (!pickup->removed) room->pickups[kept++] = *pickup;
+            continue;
+        }
         bool soul = pickup->type >= AOS_PICKUP_SOUL;
         /* Souls move before their collision pass (sub_080446D4); money and
          * items test it first (sub_08043DD0). */
@@ -2816,6 +2850,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         } else if (touching && soul) {
             static const char *const colours[] = {"red", "blue", "yellow", "ability"};
             bool fresh = aos_pickup_collect_soul(pickup, combat->progress);
+            aos_pickup_mark_placed(pickup, aria_placed_items);
             printf("Collected %s %s soul %u (held %u, %u souls)\n", fresh ? "new" : "another",
                    colours[pickup->type - AOS_PICKUP_SOUL], pickup->variant,
                    aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
@@ -2828,6 +2863,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         if (!pickup->removed) room->pickups[kept++] = *pickup;
     }
     room->pickup_count = kept;
+    for (size_t i = 0; i < released_count && room->pickup_count < MAX_PICKUPS; ++i)
+        room->pickups[room->pickup_count++] = released_souls[i];
     return sound;
 }
 
@@ -2838,6 +2875,7 @@ static void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void 
 
 /* The sprite art of a pickup, or -1 (items). */
 static int pickup_art(const AosPickup *pickup) {
+    if (pickup->soul_container) return -1;
     if (pickup->type == AOS_PICKUP_HEART) return pickup->small_heart ? 7 : 8;
     if (pickup->type == AOS_PICKUP_MONEY) return pickup->variant < 7 ? pickup->variant : -1;
     if (pickup->type >= AOS_PICKUP_SOUL && pickup->type < AOS_PICKUP_SOUL + 4)
@@ -2891,6 +2929,23 @@ typedef struct {
     AosMoneyKind money[AOS_MONEY_KINDS];
     bool money_loaded;
 } AriaObjects;
+
+static void draw_pickup_art(SDL_Renderer *renderer, const AriaObjects *objects, int index,
+                            const AosPickup *pickup, int cam_x, int cam_y) {
+    if (index < 0 || index >= PICKUP_ARTS) return;
+    const __typeof__(objects->pickup_arts[0]) *art = &objects->pickup_arts[index];
+    unsigned total = 0, frame = 0;
+    for (unsigned f = 0; f < art->def.count; ++f) total += art->ticks[f];
+    if (!total) return;
+    unsigned t = pickup->age % total;
+    while (frame + 1 < art->def.count && t >= art->ticks[frame]) t -= art->ticks[frame++];
+    const AriaFrame *image = &art->frames[frame];
+    if (!image->texture) return;
+    SDL_FRect rect = {(float)((pickup->x >> 16) + image->offset_x - cam_x),
+                      (float)((pickup->y >> 16) + pickup->offset + image->offset_y - cam_y),
+                      image->w, image->h};
+    SDL_RenderTexture(renderer, image->texture, NULL, &rect);
+}
 
 /* An art's exported still frame `id`, or NULL. */
 static const AriaFrame *blade_frame(const __typeof__(((AriaObjects *)0)->skills[0]) *art, int id) {
@@ -5901,6 +5956,18 @@ int aria_runtime_main(int argc, char **argv) {
         for (size_t k = 0; objects_ok && k < room.pickup_count; ++k) {
             const AosPickup *pickup = &room.pickups[k];
             if (pickup->blinking && (pickup->age & 1)) continue;
+            if (pickup->soul_container) {
+                unsigned type = pickup->type - AOS_PICKUP_SOUL;
+                if (type < 4) {
+                    draw_pickup_art(renderer, &objects, PICKUP_ART_SOUL_CONTAINER + (int)type,
+                                    pickup, cam_x, cam_y);
+                    if (!pickup->container_released)
+                        draw_pickup_art(renderer, &objects,
+                                        PICKUP_ART_SOUL_CONTAINER_FOLLOWER + (int)type, pickup,
+                                        cam_x, cam_y);
+                }
+                continue;
+            }
             if (pickup->type >= AOS_PICKUP_ITEM && pickup->type <= AOS_PICKUP_ARMOR) {
                 /* sub_0801232C's icon on the frames of 0x080E10F0. */
                 unsigned icon = pickup->variant < 59
@@ -5914,19 +5981,7 @@ int aria_runtime_main(int argc, char **argv) {
                 continue;
             }
             int index = pickup_art(pickup);
-            if (index < 0) continue;
-            const __typeof__(objects.pickup_arts[0]) *art = &objects.pickup_arts[index];
-            unsigned total = 0, frame = 0;
-            for (unsigned f = 0; f < art->def.count; ++f) total += art->ticks[f];
-            if (!total) continue;
-            unsigned t = pickup->age % total;
-            while (frame + 1 < art->def.count && t >= art->ticks[frame]) t -= art->ticks[frame++];
-            const AriaFrame *image = &art->frames[frame];
-            if (!image->texture) continue;
-            SDL_FRect rect = {(float)((pickup->x >> 16) + image->offset_x - cam_x),
-                              (float)((pickup->y >> 16) + pickup->offset + image->offset_y - cam_y),
-                              image->w, image->h};
-            SDL_RenderTexture(renderer, image->texture, NULL, &rect);
+            draw_pickup_art(renderer, &objects, index, pickup, cam_x, cam_y);
         }
         for (int k = 0; objects_ok && k < MAX_SKILLS; ++k) {
             const AriaSkill *skill = &souls.skills[k];
@@ -6340,7 +6395,8 @@ int aria_runtime_main(int argc, char **argv) {
             for (size_t i = 0; i < room.pickup_count; ++i) {
                 const AosPickup *pickup = &room.pickups[i];
                 if (pickup->blinking && (step & 1)) continue;
-                AosBox shape = aos_pickup_box_of(pickup);
+                AosBox shape = pickup->soul_container ? aos_soul_container_box
+                                                       : aos_pickup_box_of(pickup);
                 SDL_FRect box = {(float)((pickup->x >> 16) + shape.x - cam_x),
                                  (float)((pickup->y >> 16) + shape.y - cam_y), shape.w, shape.h};
                 SDL_RenderRect(renderer, &box);

@@ -13,6 +13,7 @@ enum {
 
 /* 0x1010F8F8: x -8, y -8, 16 x 16. */
 const AosBox aos_pickup_box = {-8, -8, 16, 16};
+const AosBox aos_soul_container_box = {-8, -32, 16, 32};
 
 AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uint8_t variant,
                                   int32_t x, int32_t y) {
@@ -119,10 +120,57 @@ bool aos_pickup_create_placed(AosPickup *pickup,
 
 void aos_pickup_mark_placed(const AosPickup *pickup,
                             uint32_t collected[AOS_PLACED_ITEM_WORDS]) {
-    if (!pickup || !pickup->placed || !pickup->persistent_index || !collected ||
+    if (!pickup || !pickup->placed || pickup->soul_container || !pickup->persistent_index ||
+        !collected ||
         pickup->persistent_index >= AOS_PLACED_ITEM_WORDS * 32u)
         return;
     collected[pickup->persistent_index >> 5] |= 1u << (pickup->persistent_index & 31u);
+}
+
+bool aos_pickup_create_placed_soul(AosPickup *pickup, uint8_t entity_id,
+                                   uint16_t soul_id, uint16_t persistent_index,
+                                   int32_t x, int32_t y,
+                                   const uint32_t collected[AOS_PLACED_ITEM_WORDS]) {
+    /* The four native soul arrays are 0x1C, 0xD, 0x12 and 3 entries. */
+    static const uint8_t limits[] = {0x1C, 0xD, 0x12, 3};
+    unsigned soul_type = entity_id - 5u;
+    if (!pickup || entity_id < 5 || entity_id > 8 || soul_id == 0 ||
+        persistent_index >= AOS_PLACED_ITEM_WORDS * 32u ||
+        aos_pickup_placed_collected(collected, persistent_index) ||
+        soul_id - 1u >= limits[soul_type])
+        return false;
+    *pickup = (AosPickup){.type = (uint8_t)(AOS_PICKUP_SOUL + soul_type),
+                          .variant = (uint16_t)(soul_id - 1u),
+                          .x = x * 65536,
+                          .y = y * 65536,
+                          .placed = true,
+                          .persistent_index = persistent_index,
+                          .soul_container = true};
+    return true;
+}
+
+bool aos_pickup_release_placed_soul(AosPickup *container, AosPickup *soul,
+                                    int32_t soma_x, int32_t soma_y, AosRandom random) {
+    if (!container || !soul || !random || !container->soul_container ||
+        container->container_released || container->type < AOS_PICKUP_SOUL ||
+        container->type >= AOS_PICKUP_SOUL + 4)
+        return false;
+    *soul = aos_pickup_create_soul((uint8_t)(container->type - AOS_PICKUP_SOUL),
+                                   (uint8_t)container->variant, container->x >> 16,
+                                   container->y >> 16, soma_x, soma_y, random);
+    soul->placed = true;
+    soul->persistent_index = container->persistent_index;
+    container->container_released = true;
+    container->container_timer = 16;
+    return true;
+}
+
+void aos_pickup_soul_container_update(AosPickup *pickup) {
+    if (!pickup || pickup->removed || !pickup->soul_container) return;
+    pickup->age++;
+    if (pickup->container_released && pickup->container_timer > 0 &&
+        --pickup->container_timer == 0)
+        pickup->removed = true;
 }
 
 AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,

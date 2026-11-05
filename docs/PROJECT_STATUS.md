@@ -1,6 +1,25 @@
 # Project status
 
-Last updated: **2026-11-05**.
+Last updated: **2026-11-06**.
+
+## Patch 0756 - Release and persist Aria's placed soul containers
+
+- Ported room pickup ids 5-8 from `sub_08044980` and `sub_08044840`. The
+  fixed red, blue, yellow and ability containers use their native palette
+  rows, primary sequence 19 and follower sequence 18, and expose the native
+  `(-8, -32, 16, 32)` weapon target rather than a player pickup box.
+- A weapon hit releases `sub_0804459C`'s ordinary homing soul, plays request
+  `0xA2`, hides the follower and removes the primary after 16 frames. The
+  six durable item words are deliberately untouched until that released soul
+  reaches Soma, so an uncollected soul restores its container after a room
+  reload.
+- Extended `aria_objects` to version 66 and refreshed its private golden
+  inventory. Deterministic pickup tests cover all four types' bounds,
+  one-based record mapping, weapon release, delay and deferred persistence.
+  Source-derived and unit-tested, not emulator-compared.
+
+Next: trace the container's sparkle child and the shared icon-slot limit, then
+compare a container release and fade against an emulator.
 
 ## Patch 0755 - Spawn and persist Aria's placed room items
 

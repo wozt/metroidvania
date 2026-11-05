@@ -207,7 +207,10 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     case AOS_OPENING_CUE_ENEMY_APPEARS:
         actors->scene_state = 3;
         actors->scene_step = 0;
-        actors->scene_timer = 32;
+        actors->camera_mode = 2;
+        actors->camera_active = true;
+        actors->camera_initialized = false;
+        actors->emitted_batches |= AOS_OPENING_EMISSION_DISTANT;
         break;
     case AOS_OPENING_CUE_ENEMY_ATTACKS:
         actors->scene_state = 4;
@@ -235,9 +238,34 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     }
 }
 
+static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
+    static const int32_t velocity[] = {
+        0x80000, 0x40000, 0x38000, -0x40000, -0x10000, -0x80000,
+    };
+    if (!actors->camera_active || !camera_x || actors->camera_mode >= 6)
+        return false;
+    if (!actors->camera_initialized) {
+        actors->camera_x = *camera_x << 16;
+        actors->camera_initialized = true;
+    }
+    actors->camera_x += velocity[actors->camera_mode];
+    *camera_x = actors->camera_x >> 16;
+    switch (actors->camera_mode) {
+    case 0: return *camera_x > 0x1F;
+    case 1: return *camera_x > 0x5F;
+    case 2: return *camera_x > 0xDD;
+    case 3: return *camera_x <= 0x60;
+    /* Mode 4 ends when Soma reaches screen X 0x78 rather than at a camera
+     * threshold. It is not used by the opening state reconstructed here. */
+    case 5: return *camera_x <= 0x20;
+    default: return false;
+    }
+}
+
 AosOpeningCue aos_opening_actors_update(
     AosOpeningActors *actors,
-    const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT]) {
+    const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT],
+    int32_t *camera_x) {
     if (!actors || !actors->active) return AOS_OPENING_CUE_NONE;
     AosOpeningCue output = actors->pending_cue;
     actors->pending_cue = AOS_OPENING_CUE_NONE;
@@ -272,15 +300,26 @@ AosOpeningCue aos_opening_actors_update(
 scene:
     switch (actors->scene_state) {
     case 3:
-        /* State 3 waits 0x20 frames after the reveal transition, then puts
-         * Mina in animation 5 and plays SE_436. */
-        if (actors->scene_timer && --actors->scene_timer == 0) {
+        /* State 3 emits sub_0805D2C8's distant group, pans at 3.5 pixels per
+         * frame until the camera passes 0xDD, then waits 0x20 frames before
+         * sub_0805D35C's near group, Mina animation 5 and SE_436. */
+        if (actors->scene_step == 0 && camera_update(actors, camera_x)) {
+            actors->camera_active = false;
+            actors->scene_step = 1;
+            actors->scene_timer = 32;
+        } else if (actors->scene_step == 1 && actors->scene_timer &&
+                   --actors->scene_timer == 0) {
+            actors->emitted_batches |= AOS_OPENING_EMISSION_NEAR_SOMA;
             actor_animation(actors, 0, 5);
             if (output == AOS_OPENING_CUE_NONE)
                 output = AOS_OPENING_CUE_ENEMY_APPEARS;
             else
                 actors->pending_cue = AOS_OPENING_CUE_ENEMY_APPEARS;
-            actors->scene_step = 1;
+            actors->scene_step = 2;
+            actors->scene_timer = 32;
+        } else if (actors->scene_step == 2 && actors->scene_timer &&
+                   --actors->scene_timer == 0) {
+            actors->scene_step = 3;
         }
         break;
     case 4: {
@@ -330,6 +369,37 @@ scene:
         break;
     }
     return output;
+}
+
+size_t aos_opening_emission_spawns(AosOpeningEmission emission,
+                                   int16_t soma_x, AosOpeningSpawn *spawns,
+                                   size_t capacity) {
+    static const AosOpeningSpawn distant[] = {
+        {0x158, 0x29F, 10, 4, 0},
+        {0x170, 0x29F, 10, 4, 1},
+        {0x148, 0x29F, 10, 2, 2},
+        {0x168, 0x29F, 10, 2, 3},
+        {0x188, 0x29F, 10, 2, 4},
+        {0x14F, 0x288, 8, 0, 0},
+    };
+    AosOpeningSpawn near[] = {
+        {(int16_t)(soma_x + 0x18), 0x29F, 10, 0x12, 5},
+        {(int16_t)(soma_x - 0x30), 0x29F, 10, 2, 6},
+        {0x7C, 0x290, 8, 0, 0},
+        {0xC4, 0x280, 8, 0, 0},
+    };
+    const AosOpeningSpawn *source = NULL;
+    size_t count = 0;
+    if (emission == AOS_OPENING_EMISSION_DISTANT) {
+        source = distant;
+        count = sizeof distant / sizeof distant[0];
+    } else if (emission == AOS_OPENING_EMISSION_NEAR_SOMA) {
+        source = near;
+        count = sizeof near / sizeof near[0];
+    }
+    size_t copied = count < capacity ? count : capacity;
+    if (spawns && copied) memcpy(spawns, source, copied * sizeof *spawns);
+    return count;
 }
 
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],

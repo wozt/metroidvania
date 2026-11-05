@@ -27,6 +27,7 @@ enum {
     AOS_OPENING_SKELETON_Y = 0x268,
     AOS_OPENING_LINES = 4,
     AOS_OPENING_GLYPHS_PER_LINE = 80,
+    AOS_OPENING_EMISSION_MAX_SPAWNS = 6,
 };
 
 typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
@@ -46,6 +47,22 @@ typedef enum {
     AOS_OPENING_CUE_AFTER_BATTLE,
     AOS_OPENING_CUE_COMPLETE,
 } AosOpeningCue;
+
+/* The two native sub_0805D2C8/sub_0805D35C emission groups. Entity types
+ * refer to Object20's private 0x081186DC resource table, not room objects. */
+typedef enum {
+    AOS_OPENING_EMISSION_NONE = 0,
+    AOS_OPENING_EMISSION_DISTANT = 1u << 0,
+    AOS_OPENING_EMISSION_NEAR_SOMA = 1u << 1,
+} AosOpeningEmission;
+
+typedef struct {
+    int16_t x;
+    int16_t y;
+    uint8_t entity_type;
+    uint8_t parameter;
+    uint8_t variant;
+} AosOpeningSpawn;
 
 typedef struct {
     const uint8_t *script;
@@ -84,6 +101,11 @@ typedef struct {
     uint8_t scene_state;
     uint8_t scene_step;
     uint16_t scene_timer;
+    int32_t camera_x;
+    uint8_t camera_mode;
+    uint8_t emitted_batches;
+    bool camera_active;
+    bool camera_initialized;
     AosOpeningCue pending_cue;
     uint32_t frame;
     bool active;
@@ -106,10 +128,18 @@ void aos_opening_actors_init(AosOpeningActors *actors);
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
 /* Advances one frame and returns one audio cue due on that frame. Animation
  * durations are supplied by the exported actor library, keeping this model
- * independent from SDL and usable by editor previews. */
+ * independent from SDL and usable by editor previews. camera_x is a whole-
+ * pixel host camera position; Object20 retains the fractional part itself. */
 AosOpeningCue aos_opening_actors_update(
     AosOpeningActors *actors,
-    const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT]);
+    const uint16_t animation_durations[AOS_OPENING_ACTOR_COUNT],
+    int32_t *camera_x);
+/* Returns the source-derived spawn descriptors for one emission bit. Soma's
+ * world X is required because sub_0805D35C places two entities relative to
+ * him. The return value is the full batch size, even when capacity is lower. */
+size_t aos_opening_emission_spawns(AosOpeningEmission emission,
+                                   int16_t soma_x, AosOpeningSpawn *spawns,
+                                   size_t capacity);
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats);
 

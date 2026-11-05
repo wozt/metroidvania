@@ -22,51 +22,80 @@ static void test_trigger(void) {
     assert(actors.x[1] == (AOS_OPENING_ARIKADO_X << 16));
     assert(actors.animation[0] == 4 && actors.animation[1] == 1 && actors.animation[2] == 4);
     for (unsigned frame = 0; frame < 64; ++frame)
-        aos_opening_actors_update(&actors, NULL);
+        aos_opening_actors_update(&actors, NULL, NULL);
     assert(actors.state == 1 && actors.timer == 0 && actors.x[1] == (0x119 << 16));
-    aos_opening_actors_update(&actors, NULL);
+    aos_opening_actors_update(&actors, NULL, NULL);
     assert(actors.x[1] < (0x119 << 16));
     for (unsigned frame = 0; frame < 128; ++frame)
-        aos_opening_actors_update(&actors, NULL);
+        aos_opening_actors_update(&actors, NULL, NULL);
     assert(actors.state == 2 && actors.x[1] == (0xD0 << 16));
     assert(actors.visible[0] && actors.visible[1] && actors.visible[2]);
 
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_CONFRONTATION);
-    assert(aos_opening_actors_update(&actors, NULL) ==
+    assert(aos_opening_actors_update(&actors, NULL, NULL) ==
            AOS_OPENING_CUE_CONFRONTATION);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
+    assert(actors.emitted_batches == AOS_OPENING_EMISSION_DISTANT);
+    int32_t camera_x = 48;
+    for (unsigned frame = 0; frame < 49; ++frame)
+        assert(aos_opening_actors_update(&actors, NULL, &camera_x) ==
+               AOS_OPENING_CUE_NONE);
+    assert(camera_x == 219 && actors.camera_active);
+    assert(aos_opening_actors_update(&actors, NULL, &camera_x) ==
+           AOS_OPENING_CUE_NONE);
+    assert(camera_x == 223 && !actors.camera_active);
     for (unsigned frame = 0; frame < 31; ++frame)
-        assert(aos_opening_actors_update(&actors, NULL) == AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, NULL) ==
+        assert(aos_opening_actors_update(&actors, NULL, &camera_x) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, NULL, &camera_x) ==
            AOS_OPENING_CUE_ENEMY_APPEARS);
     assert(actors.animation[0] == 5 && actors.animation_age[0] == 0);
+    assert(actors.emitted_batches ==
+           (AOS_OPENING_EMISSION_DISTANT | AOS_OPENING_EMISSION_NEAR_SOMA));
+
+    AosOpeningSpawn spawns[AOS_OPENING_EMISSION_MAX_SPAWNS];
+    assert(aos_opening_emission_spawns(AOS_OPENING_EMISSION_DISTANT,
+                                       AOS_OPENING_SOMA_X, spawns,
+                                       AOS_OPENING_EMISSION_MAX_SPAWNS) == 6);
+    assert(spawns[0].x == 0x158 && spawns[0].y == 0x29F &&
+           spawns[0].entity_type == 10 && spawns[0].parameter == 4 &&
+           spawns[0].variant == 0);
+    assert(spawns[5].x == 0x14F && spawns[5].y == 0x288 &&
+           spawns[5].entity_type == 8);
+    assert(aos_opening_emission_spawns(AOS_OPENING_EMISSION_NEAR_SOMA,
+                                       AOS_OPENING_SOMA_X, spawns,
+                                       AOS_OPENING_EMISSION_MAX_SPAWNS) == 4);
+    assert(spawns[0].x == 0xC0 && spawns[0].parameter == 0x12 &&
+           spawns[0].variant == 5);
+    assert(spawns[1].x == 0x78 && spawns[1].parameter == 2 &&
+           spawns[1].variant == 6);
+    assert(spawns[2].x == 0x7C && spawns[3].x == 0xC4);
 
     const uint16_t durations[AOS_OPENING_ACTOR_COUNT] = {1, 3, 1};
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_ATTACKS);
     assert(actors.animation[1] == 2);
-    assert(aos_opening_actors_update(&actors, durations) ==
+    assert(aos_opening_actors_update(&actors, durations, NULL) ==
            AOS_OPENING_CUE_ENEMY_ATTACKS);
-    assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
     for (unsigned frame = 0; frame < 15; ++frame)
-        assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, durations) ==
+        assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations, NULL) ==
            AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
     assert(actors.animation[1] == 3 && actors.animation_age[1] == 0);
 
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_SOUL_ABSORBED);
     for (unsigned frame = 0; frame < 18; ++frame) {
-        AosOpeningCue cue = aos_opening_actors_update(&actors, durations);
+        AosOpeningCue cue = aos_opening_actors_update(&actors, durations, NULL);
         if (frame == 17) assert(cue == AOS_OPENING_CUE_ENEMY_DEFEATED);
         else assert(cue == AOS_OPENING_CUE_NONE);
     }
     assert(!actors.visible[2]);
     for (unsigned frame = 0; frame < 64; ++frame)
-        assert(aos_opening_actors_update(&actors, durations) == AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, durations) ==
+        assert(aos_opening_actors_update(&actors, durations, NULL) == AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations, NULL) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);
-    assert(aos_opening_actors_update(&actors, durations) ==
+    assert(aos_opening_actors_update(&actors, durations, NULL) ==
            AOS_OPENING_CUE_AFTER_BATTLE);
     assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);
     assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));

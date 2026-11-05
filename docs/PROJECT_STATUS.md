@@ -1,6 +1,29 @@
 # Project status
 
-Last updated: **2026-11-04**.
+Last updated: **2026-11-05**.
+
+## Patch 0745 - Port Object20's reveal pan and emission layout
+
+- Replaced the opening scene's abstract `0x20`-frame reveal delay with the
+  state-3 branch of `sub_0805CCE4`. The host camera now preserves the native
+  16.16 fractional position, advances by `0x38000` (3.5 pixels per frame),
+  finishes only after passing `0xDD`, and reaches 223 from the first-room
+  starting camera position of 48.
+- Reconstructed the two source emission layouts from `sub_0805D2C8` and
+  `sub_0805D35C` as portable data. Their ten private Object20 entities retain
+  the native resource-table type, world coordinate, parameter and random
+  variant selector; the second pair remains relative to Soma's X position.
+  Runtime and a future editor preview can consume the same descriptors without
+  embedding SDL or extracted graphics in the scene controller.
+- The distant group is now signalled before the camera move. Once the camera
+  reaches its threshold, Object20 waits `0x20` frames, signals the near group,
+  selects Mina animation 5 and requests sound `0x1B4`, then preserves the
+  source's second `0x20`-frame hold before the following state.
+- Deterministic tests cover the fractional pan, its exact threshold and both
+  complete emission batches. The private types 8 and 10 still need their child
+  callbacks and rendering, and the initial pre-dialogue reveal, later return
+  pan, attack entity and soul particle remain absent. The feature therefore
+  stays partial, source-derived and not emulator-compared.
 
 ## Patch 0744 - Drive Object20's timed actor and audio beats
 

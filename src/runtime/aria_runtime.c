@@ -4727,7 +4727,8 @@ int aria_runtime_main(int argc, char **argv) {
     bool objects_ok = load_objects(DEFAULT_OBJECTS, &objects, renderer);
     bool enemies_ok = objects_ok && load_enemy_data(&objects);
     if (!enemies_ok) fprintf(stderr, "No object library: ./build/fusion_rebuild --task aria_objects\n");
-    int cam_x = 0, cam_y = 0;
+    int32_t cam_x = 0;
+    int cam_y = 0;
 
     /* The level and its stats follow from the saved experience
      * (sub_08033DA4 then sub_08033CAC, as sub_08033E38 rebuilds them). */
@@ -5186,7 +5187,7 @@ int aria_runtime_main(int argc, char **argv) {
                 opening_actor_durations(objects_ok ? &objects : NULL,
                                         &opening_actors, actor_durations);
                 AosOpeningCue actor_cue = aos_opening_actors_update(
-                    &opening_actors, actor_durations);
+                    &opening_actors, actor_durations, &cam_x);
                 if (start_song < 0) play_opening_cue(actor_cue, &room_music);
                 if (opening.malformed) {
                     fprintf(stderr, "Malformed Aria opening text entry 0x%04X\n",

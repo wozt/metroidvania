@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0750 - Port Object20's collision-guided Skeleton Knight flight
+
+- Completed `sub_0805E5D4`'s state-2 path for type-10 children with parameter
+  bit 3. Its animation-1 setup and `0xA0` opportunity counter now precede
+  the native one-in-two movement gate.
+- Reproduced the relevant `sub_0806E140` behavior: each accepted update
+  tentatively moves a quarter pixel toward the facing side and two pixels
+  down. Open air restores X and keeps the fall; floor contact retains its
+  horizontal fraction plus any wall correction and snaps Y by the collision
+  depth. Odd RNG results leave both motion and the counter unchanged.
+- Added injected floor-depth and wall-push queries beside RNG, sine and
+  ArcTan2. The Aria host connects them to the active room's portable collision
+  layer, while tests and future editor previews can supply deterministic
+  geometry without depending on SDL or a loaded room. No current Object20
+  emission record sets bit 3, so
+  this completes the generic private-child path without changing the visible
+  opening sequence. Source-derived tests cover air, floor, both facings and
+  the skipped RNG clock; emulator comparison remains outstanding and the
+  scene stays partial.
+
 ## Patch 0749 - Render Object20's debris and homing attack
 
 - Materialized the semantic impact requests from Patch 0748 as portable

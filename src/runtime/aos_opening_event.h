@@ -135,6 +135,9 @@ typedef struct {
 typedef uint32_t (*AosOpeningRandom)(void *context);
 typedef int32_t (*AosOpeningSine)(uint32_t angle, void *context);
 typedef uint16_t (*AosOpeningAngle)(int16_t x, int16_t y, void *context);
+typedef int (*AosOpeningFloorDepth)(int32_t x, int32_t y, void *context);
+typedef int (*AosOpeningWallPush)(int32_t x, int32_t y, bool moving_left,
+                                  void *context);
 
 typedef struct {
     const uint8_t *script;
@@ -188,6 +191,8 @@ typedef struct {
     AosOpeningRandom random;
     AosOpeningSine sine;
     AosOpeningAngle angle;
+    AosOpeningFloorDepth floor_depth;
+    AosOpeningWallPush wall_push;
     void *motion_context;
     AosOpeningCue pending_cue;
     uint32_t frame;
@@ -207,13 +212,16 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
 /* Localized speaker ids used by the first-room Object20 script. */
 const char *aos_opening_event_speaker_name(uint8_t speaker);
 void aos_opening_actors_init(AosOpeningActors *actors);
-/* Injects the native RNG, sine and ArcTan2 primitives without coupling the
+/* Injects the native RNG, sine, ArcTan2 and collision probes without coupling the
  * portable scene model to the gameplay runtime. NULL callbacks leave their
- * corresponding motion inert. */
+ * corresponding query unavailable; a missing floor probe means open air. */
 void aos_opening_actors_set_motion(AosOpeningActors *actors,
                                    AosOpeningRandom random,
                                    AosOpeningSine sine,
-                                   AosOpeningAngle angle, void *context);
+                                   AosOpeningAngle angle,
+                                   AosOpeningFloorDepth floor_depth,
+                                   AosOpeningWallPush wall_push,
+                                   void *context);
 /* Connects a script control-2 beat to sub_0805D410's actor state. */
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
 /* Advances one frame and returns one audio cue due on that frame. Animation

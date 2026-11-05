@@ -13,6 +13,11 @@ static uint32_t zero_random(void *context) {
     return 0;
 }
 
+static uint32_t one_random(void *context) {
+    (void)context;
+    return 1;
+}
+
 static int32_t full_sine(uint32_t angle, void *context) {
     (void)angle;
     (void)context;
@@ -26,11 +31,31 @@ static uint16_t zero_angle(int16_t x, int16_t y, void *context) {
     return 0;
 }
 
+typedef struct {
+    int32_t last_probe;
+    int wall_push;
+    bool moving_left;
+} TestCollision;
+
+static int test_floor(int32_t x, int32_t y, void *context) {
+    TestCollision *collision = context;
+    collision->last_probe = (x << 16) | (y & 0xFFFF);
+    return y >= 100 ? -2 : 0;
+}
+
+static int test_wall(int32_t x, int32_t y, bool moving_left, void *context) {
+    (void)x;
+    (void)y;
+    TestCollision *collision = context;
+    collision->moving_left = moving_left;
+    return collision->wall_push;
+}
+
 static void test_emitted_motion(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
     aos_opening_actors_set_motion(&actors, zero_random, full_sine,
-                                  zero_angle, NULL);
+                                  zero_angle, NULL, NULL, NULL);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
     assert(actors.emitted_count == 6);
     int32_t knight_y = actors.emitted[0].y;
@@ -52,11 +77,55 @@ static void test_emitted_motion(void) {
     assert(actors.emitted[2].state == 0);
 }
 
+static void test_skeleton_collision_flight(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    TestCollision collision = {0};
+    aos_opening_actors_set_motion(&actors, zero_random, full_sine,
+                                  zero_angle, test_floor, test_wall,
+                                  &collision);
+    actors.emitted_count = 1;
+    actors.emitted[0] = (AosOpeningEntity){
+        .x = 50 << 16,
+        .y = 96 << 16,
+        .entity_type = 10,
+        .parameter = 8,
+        .state = 2,
+        .active = true,
+    };
+    AosOpeningEntity *entity = &actors.emitted[0];
+
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(entity->animation == 1 && entity->step == 1 &&
+           entity->timer == 0x9F && entity->x == (50 << 16) &&
+           entity->y == (98 << 16));
+    assert(collision.last_probe == ((49 << 16) | 98) &&
+           collision.moving_left);
+
+    collision.wall_push = 1;
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(entity->timer == 0x9E && entity->x == (50 << 16) + 0xC000 &&
+           entity->y == (98 << 16));
+    assert(collision.last_probe == ((50 << 16) | 100));
+
+    entity->mirrored = true;
+    collision.wall_push = -1;
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(entity->timer == 0x9D && entity->x == (50 << 16) &&
+           entity->y == (98 << 16));
+    assert(!collision.moving_left);
+
+    actors.random = one_random;
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(entity->timer == 0x9D && entity->x == (50 << 16) &&
+           entity->y == (98 << 16));
+}
+
 static void test_emitted_attack_tails(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
     aos_opening_actors_set_motion(&actors, zero_random, full_sine,
-                                  zero_angle, NULL);
+                                  zero_angle, NULL, NULL, NULL);
     actors.camera_x = 0xDF << 16;
     actors.emitted_count = 1;
     actors.emitted[0] = (AosOpeningEntity){
@@ -352,6 +421,7 @@ static bool resolve_rom_text(void *context, uint8_t id,
 
 int main(int argc, char **argv) {
     test_emitted_motion();
+    test_skeleton_collision_flight();
     test_emitted_attack_tails();
     test_trigger();
     test_script_and_commit();

@@ -194,11 +194,16 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
 void aos_opening_actors_set_motion(AosOpeningActors *actors,
                                    AosOpeningRandom random,
                                    AosOpeningSine sine,
-                                   AosOpeningAngle angle, void *context) {
+                                   AosOpeningAngle angle,
+                                   AosOpeningFloorDepth floor_depth,
+                                   AosOpeningWallPush wall_push,
+                                   void *context) {
     if (!actors) return;
     actors->random = random;
     actors->sine = sine;
     actors->angle = angle;
+    actors->floor_depth = floor_depth;
+    actors->wall_push = wall_push;
     actors->motion_context = context;
 }
 
@@ -479,6 +484,43 @@ static void update_emitted_tail(AosOpeningActors *actors,
     }
 }
 
+static void update_skeleton_flight(AosOpeningActors *actors,
+                                   AosOpeningEntity *entity) {
+    /* sub_0805E5D4 state 2, parameter bit 3. sub_0806E140 tentatively
+     * advances a quarter pixel toward the entity's facing side and two
+     * pixels down. In open air it restores X and applies only the vertical
+     * motion; on a floor it retains X and snaps Y by the returned depth. */
+    if (entity->step == 0) {
+        entity->animation = 1;
+        entity->timer = 0xA0;
+        entity->step = 1;
+    }
+    if (!actors->random || (actors->random(actors->motion_context) & 1) ||
+        entity->timer == 0)
+        return;
+
+    int32_t candidate_x = entity->x + (entity->mirrored ? 0x4000 : -0x4000);
+    int32_t candidate_y = entity->y + 0x20000;
+    if (actors->wall_push) {
+        int push = actors->wall_push(candidate_x >> 16, entity->y >> 16,
+                                     !entity->mirrored,
+                                     actors->motion_context);
+        candidate_x += (int32_t)((uint32_t)push << 16);
+    }
+    int depth = actors->floor_depth
+                    ? actors->floor_depth(candidate_x >> 16,
+                                          candidate_y >> 16,
+                                          actors->motion_context)
+                    : 0;
+    if (depth) {
+        entity->x = candidate_x;
+        entity->y = ((candidate_y >> 16) + depth) * 0x10000;
+    } else {
+        entity->y = candidate_y;
+    }
+    --entity->timer;
+}
+
 static void update_emitted(AosOpeningActors *actors) {
     for (unsigned i = 0; i < actors->emitted_count; ++i) {
         AosOpeningEntity *entity = &actors->emitted[i];
@@ -499,6 +541,7 @@ static void update_emitted(AosOpeningActors *actors) {
             else if (entity->state == 1) entity->state = 2;
         } else if (!entity->disappearing && entity->entity_type == 10 &&
                    actors->random) {
+            uint8_t initial_state = entity->state;
             /* sub_0805E5D4 states 0-2: each child waits for its 0..6
              * selector. Children without parameter bit 1 then wait for the
              * selector again and rise by 0.5 pixel on sixteen successful
@@ -521,9 +564,13 @@ static void update_emitted(AosOpeningActors *actors) {
                     entity->y -= 0x8000;
                 }
             }
-            if (entity->state == 2) {
-                if (entity->parameter & 8) entity->animation = 1;
-                else if (entity->parameter & 0x10) entity->animation = 2;
+            if (initial_state == 2 && entity->state == 2) {
+                if (entity->parameter & 8)
+                    update_skeleton_flight(actors, entity);
+                else if (entity->parameter & 0x10) {
+                    entity->animation = 2;
+                    if (entity->step == 0) entity->step = 1;
+                }
             }
         }
         if (entity->disappearing) update_emitted_tail(actors, entity);

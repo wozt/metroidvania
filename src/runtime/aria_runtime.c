@@ -3802,6 +3802,19 @@ static uint16_t opening_angle(int16_t x, int16_t y, void *context) {
     return aos_arctan2(x, y);
 }
 
+static int opening_floor_depth(int32_t x, int32_t y, void *context) {
+    const AosCollision *layer = context;
+    return layer ? aos_floor_depth(layer, x, y, 0, false) : 0;
+}
+
+static int opening_wall_push(int32_t x, int32_t y, bool moving_left,
+                             void *context) {
+    const AosCollision *layer = context;
+    if (!layer) return 0;
+    return moving_left ? aos_wall_push_right(layer, x, y)
+                       : aos_wall_push_left(layer, x, y);
+}
+
 /* Shared effects of one kind, flipped when + 0x58 bit 0x40 (drawn at
  * random) is set. Flames and smoke (priority + 0x5C or the creator's) are
  * drawn in front of the enemies, blood (priority 3) behind them; OBJ
@@ -4966,7 +4979,9 @@ int aria_runtime_main(int argc, char **argv) {
                                        &opening_resources);
         aos_opening_actors_init(&opening_actors);
         aos_opening_actors_set_motion(&opening_actors, opening_random,
-                                      opening_sine, opening_angle, NULL);
+                                      opening_sine, opening_angle,
+                                      opening_floor_depth, opening_wall_push,
+                                      &layer);
         soma.x = AOS_OPENING_SOMA_X << 16;
         soma.y = AOS_OPENING_SOMA_Y << 16;
         soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;

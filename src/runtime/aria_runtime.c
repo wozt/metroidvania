@@ -284,7 +284,11 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "spark_7",
                                                           "opening_projectile",
                                                           "hit_element_3",
-                                                          "hit_element_5"};
+                                                          "hit_element_5",
+                                                          "soul_container_spark0",
+                                                          "soul_container_spark1",
+                                                          "soul_container_spark2",
+                                                          "soul_container_spark3"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_KIND_PICKUP 4
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
@@ -2790,6 +2794,16 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     for (size_t i = 0; i < pickup_source_count; ++i) {
         AosPickup *pickup = &room->pickups[i];
         if (pickup->soul_container) {
+            AosSoulContainerSpark spark;
+            /* The native update emits its child before testing the weapon
+             * collision, so the eighth frame can contain both a sparkle and
+             * the released soul. */
+            aos_pickup_soul_container_update(pickup, &spark, aos_random);
+            if (spark.spawn && room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = (uint8_t)(AOS_EFFECT_CONTAINER_SPARK0 + spark.soul_type),
+                    .timed = true, .x = spark.x, .y = spark.y, .vx = spark.vx,
+                    .vy = spark.vy, .ay = spark.ay, .timer = 12};
             int wx, wy, ww, wh;
             bool weapon_hit = combat->weapon && combat->weapon_frames &&
                               aos_weapon_hitbox(combat->weapon, soma, combat->weapon_frames,
@@ -2805,7 +2819,6 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 released_count++;
                 aos_audio_play_song(0xA2);
             }
-            aos_pickup_soul_container_update(pickup);
             if (!pickup->removed) room->pickups[kept++] = *pickup;
             continue;
         }

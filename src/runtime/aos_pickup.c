@@ -165,12 +165,31 @@ bool aos_pickup_release_placed_soul(AosPickup *container, AosPickup *soul,
     return true;
 }
 
-void aos_pickup_soul_container_update(AosPickup *pickup) {
+static int32_t centered_random(AosRandom random, unsigned range) {
+    return (int32_t)(random() & (range - 1u)) - (int32_t)(range >> 1);
+}
+
+void aos_pickup_soul_container_update(AosPickup *pickup, AosSoulContainerSpark *spark,
+                                      AosRandom random) {
+    if (spark) *spark = (AosSoulContainerSpark){0};
     if (!pickup || pickup->removed || !pickup->soul_container) return;
+    if (pickup->container_released) {
+        if (pickup->container_timer > 0 && --pickup->container_timer == 0)
+            pickup->removed = true;
+        return;
+    }
     pickup->age++;
-    if (pickup->container_released && pickup->container_timer > 0 &&
-        --pickup->container_timer == 0)
-        pickup->removed = true;
+    /* sub_08044840 case 0: every eighth frame, sub_08045B44 type 4 starts
+     * a palette-matched child around 20 to 27 pixels above the container. */
+    if (spark && random && !(pickup->age & 7)) {
+        spark->spawn = true;
+        spark->x = pickup->x + centered_random(random, 8) * 65536;
+        spark->y = pickup->y - (int32_t)(((random() & 7u) + 20u) << 16);
+        spark->vx = centered_random(random, 0x1000);
+        spark->vy = centered_random(random, 0x4000) - 0x10000;
+        spark->ay = -spark->vy / 32;
+        spark->soul_type = (uint8_t)(pickup->type - AOS_PICKUP_SOUL);
+    }
 }
 
 AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,

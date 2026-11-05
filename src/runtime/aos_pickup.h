@@ -69,6 +69,14 @@ typedef struct {
 /* Soma's position (16.16) for the soul pickups' homing. */
 typedef uint32_t (*AosRandom)(void);
 
+/* A type-4 sub_08045B44 child emitted by an intact placed soul container. */
+typedef struct {
+    bool spawn;
+    int32_t x, y;
+    int32_t vx, vy, ay;
+    uint8_t soul_type;
+} AosSoulContainerSpark;
+
 /* The pickup's collision box (sub_08042884 with 0x1010F8F8). */
 extern const AosBox aos_pickup_box;
 /* The hearts' box (0x0808FCFC). */
@@ -111,8 +119,10 @@ bool aos_pickup_create_placed_soul(AosPickup *pickup, uint8_t entity_id,
 bool aos_pickup_release_placed_soul(AosPickup *container, AosPickup *soul,
                                     int32_t soma_x, int32_t soma_y, AosRandom random);
 /* The fixed container's update; unlike a flying soul it never homes, times
- * out or writes its persistent bit by itself. */
-void aos_pickup_soul_container_update(AosPickup *pickup);
+ * out or writes its persistent bit by itself. Before a weapon release it
+ * emits one type-4 sparkle child every eighth frame. */
+void aos_pickup_soul_container_update(AosPickup *pickup, AosSoulContainerSpark *spark,
+                                      AosRandom random);
 /* Cases 2-4 of sub_080441F8: below 9 held the count rises (to at most 9)
  * and the pickup is removed; above 8 it stays, and the refusal sound 0x13B
  * plays only when its 0x20-frame cooldown has run out (*refusal_sound). */

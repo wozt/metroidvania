@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0757 - Animate Aria soul-container spark children
+
+- Ported the intact-state child emission of `sub_08044840`: every eighth
+  update it uses the native four random samples to place a sparkle 20 to 27
+  pixels above the container, then applies its lateral drift and decelerating
+  upward motion. The update remains ordered before the weapon collision, as
+  in the source routine.
+- Added four palette-matched `soul_container_spark` arts and extended
+  `aria_objects` to version 67. The native type-4 direct animation descriptor
+  is still not exported, so the common source sparkle frame is an explicit
+  presentation approximation rather than a parity claim.
+- Deterministic pickup tests cover the eighth-frame cadence, all four random
+  samples, coordinates and motion. A local area 0 room 16 capture at frame 10
+  showed the emitted child. Source-derived and unit-tested, not
+  emulator-compared.
+
+Next: identify and export the type-4 direct sparkle sequence, then trace the
+shared eight-slot item-icon limit and compare the release against an emulator.
+
 ## Patch 0756 - Release and persist Aria's placed soul containers
 
 - Ported room pickup ids 5-8 from `sub_08044980` and `sub_08044840`. The

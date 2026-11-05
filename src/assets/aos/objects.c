@@ -341,6 +341,14 @@ static const EffectSpec effects[] = {
     {"burst_15", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {15}, -1},
     /* sub_08045B44 type 0: still frame 0x36, OBJ row 6 (bank 2). */
     {"sparkle", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x36},
+    /* sub_08044840's type-4 sub_08045B44 children use the same common
+     * sparkle frame with the four soul-container palette rows. Their direct
+     * sequence descriptor is not yet exported, so the native movement is
+     * paired with this source-frame presentation. */
+    {"soul_container_spark0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 0, {0}, 0x36},
+    {"soul_container_spark1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x36},
+    {"soul_container_spark2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 0, {0}, 0x36},
+    {"soul_container_spark3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 0, {0}, 0x36},
     /* sub_08025540: the two randomly selected still frames of Rock Armor's
      * four landing fragments, both on OBJ row 6 (palette bank 2). */
     {"rock_fragment_0", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x40},

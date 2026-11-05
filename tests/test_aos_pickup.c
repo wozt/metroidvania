@@ -127,15 +127,26 @@ int main(void) {
            aos_soul_container_box.w == 16 && aos_soul_container_box.h == 32);
     aos_pickup_mark_placed(&container, collected);
     assert(!aos_pickup_placed_collected(collected, 156));
+    AosSoulContainerSpark spark;
+    draws = 0;
+    for (int i = 0; i < 7; ++i) {
+        aos_pickup_soul_container_update(&container, &spark, counting_random);
+        assert(!spark.spawn);
+    }
+    aos_pickup_soul_container_update(&container, &spark, counting_random);
+    assert(spark.spawn && draws == 4 && spark.soul_type == AOS_SOUL_BLUE &&
+           spark.x == 20 << 16 && spark.y == 36 << 16 && spark.vx == -1984 &&
+           spark.vy == -73664 && spark.ay == 2302);
     draws = 0;
     assert(aos_pickup_release_placed_soul(&container, &released, 80 << 16, 64 << 16,
                                           counting_random));
     assert(draws == 1 && container.container_released && container.container_timer == 16 &&
            released.placed && !released.soul_container && released.persistent_index == 156 &&
            released.type == container.type && released.variant == container.variant);
-    for (int i = 0; i < 15; ++i) aos_pickup_soul_container_update(&container);
+    for (int i = 0; i < 15; ++i)
+        aos_pickup_soul_container_update(&container, NULL, counting_random);
     assert(!container.removed && container.container_timer == 1);
-    aos_pickup_soul_container_update(&container);
+    aos_pickup_soul_container_update(&container, NULL, counting_random);
     assert(container.removed && !aos_pickup_placed_collected(collected, 156));
     aos_pickup_mark_placed(&released, collected);
     assert(aos_pickup_placed_collected(collected, 156));

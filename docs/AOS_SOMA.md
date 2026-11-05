@@ -681,7 +681,11 @@ sequence 18 its follower, and the `(-8, -32, 16, 32)` weapon box releases the
 ordinary homing soul of `sub_0804459C` with sound `0xA2`. The container never
 accepts Soma's body collision. Its parameter-0 bit remains clear if the
 released soul expires; only successful soul collection sets the corresponding
-placed-item word.
+placed-item word. While intact, `sub_08044840` emits a type-4
+`sub_08045B44` child every eighth frame, 20 to 27 pixels above the container;
+its four random samples set the horizontal offset, height, lateral drift and
+upward acceleration. The host uses the matching palette and common sparkle
+frame while the native type-4 sequence descriptor remains unexported.
 
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,

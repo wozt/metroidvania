@@ -16,6 +16,9 @@
  *   rising 0.5 per frame after its first one;
  * - the effect sub_0806B5DC of type 1 (sub_0806E664(x, y, 1); table
  *   0x08526D0C: animation 13, OBJ row 8: Effect/blood), still, priority 3;
+ *   the generic collision callback also selects types 0-6 from the same
+ *   table by attack element, including animations 7, 13, 1, 15, 16, 20
+ *   and 22 on their native OBJ rows;
  * both deleted when their animation ends;
  * - the particles of sub_08068F78 (`particle`), created by sub_0806D894
  *   (animation 5, OBJ row 6: Effect/smoke), sub_0806D930 (here animation 5,
@@ -70,7 +73,8 @@ enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_ROCK_FRAGMENT_0 = 14, AOS_EFFECT_ROCK_FRAGMENT_1 = 15,
        AOS_EFFECT_ROCK_FRAGMENT_2 = 16, AOS_EFFECT_WALL_PIECE_1 = 17,
        AOS_EFFECT_WALL_PIECE_2 = 18, AOS_EFFECT_SPARK_ROW7 = 19,
-       AOS_EFFECT_OPENING_PROJECTILE = 20, AOS_EFFECT_KINDS = 21 };
+       AOS_EFFECT_OPENING_PROJECTILE = 20, AOS_EFFECT_HIT_ELEMENT_3 = 21,
+       AOS_EFFECT_HIT_ELEMENT_5 = 22, AOS_EFFECT_KINDS = 23 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */

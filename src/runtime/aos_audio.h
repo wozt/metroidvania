@@ -88,6 +88,10 @@ void aos_audio_reset(void);
 void aos_audio_play_song(uint16_t song);
 /* MPlayVolumeUpdate, normally called once per VBlank by AudioVSync. */
 void aos_audio_volume_update(void);
+/* MPlay's status word becomes inactive when its last track reaches FINE.
+ * The portable sequencer reports that transition through this function so
+ * a finished high-priority sound cannot reject later sounds forever. */
+void aos_audio_player_finished(unsigned player);
 const AosAudioState *aos_audio_state(void);
 
 /* sub_08013D60: a held sound enters the 4-slot list unk_254C4 (scanned from

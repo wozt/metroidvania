@@ -326,6 +326,13 @@ void aos_audio_volume_update(void) {
     }
 }
 
+void aos_audio_player_finished(unsigned player) {
+    if (player >= AOS_AUDIO_PLAYER_COUNT) return;
+    g_state.players[player].active = false;
+    g_state.players[player].paused = false;
+    g_state.players[player].volume_step = 0;
+}
+
 const AosAudioState *aos_audio_state(void) { return &g_state; }
 
 void aos_audio_clear(void) { g_count = 0; }

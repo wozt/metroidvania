@@ -275,7 +275,9 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "rock_fragment_2",
                                                           "wall_piece_1", "wall_piece_2",
                                                           "spark_7",
-                                                          "opening_projectile"};
+                                                          "opening_projectile",
+                                                          "hit_element_3",
+                                                          "hit_element_5"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 #define ARIA_OBJECT_WALL 0x08           /* Object08: a breakable wall */
@@ -5285,10 +5287,13 @@ int aria_runtime_main(int argc, char **argv) {
             }
             /* AudioVSync advances the native volume commands every frame. */
             aos_audio_volume_update();
-            /* m4aSoundMain: each started player's sequencer clocks (no voices
-             * or mixing yet, so still silent). */
+            /* m4aSoundMain: advance every player, retire players whose final
+             * track ended, then mix the active DirectSound voices. */
             if (have_audio_bank) {
                 aos_mp2k_engine_frame(&mp2k);
+                for (unsigned player = 0; player < AOS_AUDIO_PLAYER_COUNT; ++player)
+                    if (mp2k.players[player].ended || mp2k.players[player].failed)
+                        aos_audio_player_finished(player);
                 int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
                 aos_mp2k_mix(&mp2k, pcm, sizeof pcm);
                 if (audio_stream &&

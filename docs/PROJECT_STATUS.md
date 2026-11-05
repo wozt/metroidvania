@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0751 - Restore Soma audio lifecycle and native enemy hit feedback
+
+- Fixed the split PlaySong/MP2K lifecycle: when a sequencer player reaches
+  FINE or fails, the runtime now clears the mirrored active-player state.
+  A completed priority-55 action sound therefore no longer blocks Soma's
+  later priority-50 sounds on the same player. Deterministic audio tests cover
+  the lower-priority restart after completion; local recordings of Soma's
+  jump, weapon and voice song records contain non-zero mixed samples.
+- Ported `sub_0806B7D8`'s seven generic enemy-hit effect records. Weapon and
+  soul hits select the native animation, palette row and sound from their
+  elements plus the enemy's weakness and resistance, and place the effect at
+  the rectangles' intersection. A normal physical knife hit on a non-weak
+  target now creates the animation-13 row-8 blood effect and requests 0x9E.
+- Added the two missing shared-effect exports (animations 15/row 6 and
+  20/row 7); the other five records reuse existing common-effect resources.
+  Specialized enemy controllers now preserve collision effects when merging
+  their hit reports. The object golden inventory was refreshed from the
+  verified private ROM: 775 sequences, 2,322 indexed frames and 1,466 unique
+  BMP payloads.
+- Source-derived and unit-tested, not emulator-compared. The native damage
+  number entity (`sub_08042B8C`), CGB synthesis, reverb and audio LFOs remain
+  open.
+
 ## Patch 0750 - Port Object20's collision-guided Skeleton Knight flight
 
 - Completed `sub_0805E5D4`'s state-2 path for type-10 children with parameter

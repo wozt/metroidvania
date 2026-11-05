@@ -134,8 +134,14 @@ static void accepted_start_sink_test(void) {
     assert(observed.info.player == 0 && observed.info.header_pointer == 0x08300010);
     aos_audio_play_song(2);
     assert(observed.calls == 1);
+    /* The portable MP2K player reaching FINE clears the native active
+     * status, so a later lower-priority sound can use the same player. */
+    aos_audio_player_finished(0);
+    assert(!aos_audio_state()->players[0].active);
+    aos_audio_play_song(2);
+    assert(observed.calls == 2 && observed.song == 2);
     aos_audio_play_song(3);
-    assert(observed.calls == 2 && observed.song == 3);
+    assert(observed.calls == 3 && observed.song == 3);
     assert(observed.info.priority == 12 && observed.info.header_pointer == 0x08300030);
     aos_audio_set_start_sink(NULL, NULL);
 }

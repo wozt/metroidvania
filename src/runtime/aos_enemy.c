@@ -99,6 +99,51 @@ static void spawn_blood(int x, int y, uint32_t (*random)(void), AosHitReport *re
     blood->mirrored = random() & 1;
 }
 
+/* sub_0806B7D8 chooses one of the common hit arts from the attack's first
+ * relevant element. A weakness uses the intersecting element (the physical
+ * element changes to type 0); a fully resisted element also uses type 0. */
+static uint8_t hit_effect_type(uint16_t elements, uint16_t weak, uint16_t resist) {
+    uint16_t active = elements & 0x3F;
+    uint16_t relevant = active & weak;
+    bool weakness = relevant != 0;
+    if (!weakness) {
+        uint16_t resisted = active & resist;
+        uint16_t resisted_nonphysical = resisted & (uint16_t)~1u;
+        if ((resisted_nonphysical &&
+             (active & (uint16_t)~1u) == resisted_nonphysical) ||
+            (!resisted_nonphysical && active == resisted))
+            return 0;
+        relevant = active;
+    }
+    uint8_t type = 0;
+    for (uint8_t bit = 1; bit <= 6; ++bit)
+        if (relevant & (1u << (bit - 1))) type = bit;
+    return weakness && type == 1 ? 0 : type;
+}
+
+/* 0x08526D0C: animation/palette/sound records consumed by sub_0806B5DC.
+ * The arts already shared elsewhere keep their established effect kind. */
+static void spawn_hit_effect(uint8_t type, int x, int y, AosHitReport *report) {
+    static const uint8_t kinds[7] = {
+        AOS_EFFECT_IMPACT, AOS_EFFECT_BLOOD, AOS_EFFECT_EMBER,
+        AOS_EFFECT_HIT_ELEMENT_3, AOS_EFFECT_SPARK, AOS_EFFECT_HIT_ELEMENT_5,
+        AOS_EFFECT_OPENING_PROJECTILE,
+    };
+    static const uint16_t sounds[7] = {0xA4, 0x9E, 0xA1, 0xA5, 0xA8, 0xA0, 0xA6};
+    if (type >= 7) type = 0;
+    aos_audio_play_song(sounds[type]);
+    if (type == 1) {
+        spawn_blood(x, y, aos_random, report);
+        return;
+    }
+    if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
+    AosEffect *effect = &report->effects[report->effect_count++];
+    *effect = (AosEffect){.kind = kinds[type],
+                          .x = (int32_t)((uint32_t)x << 16),
+                          .y = (int32_t)((uint32_t)y << 16),
+                          .mirrored = (aos_random() & 1) != 0};
+}
+
 /* The flame spawn of sub_0806BE74 and sub_0806AEAC: EntityCreateInRange(
  * 0x49, 0xCF, sub_0806E524) at a random point of a w x h area (16.16)
  * centred 6 pixels above the entity, mirrored at random (a third random
@@ -1303,6 +1348,7 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
     uint8_t attacker = 0;
     int power = 0;
     uint16_t elements = 0;
+    int contact_x = ex, contact_y = ey;
     AosRect target = aos_entity_rect(hurt, ex, ey, enemy->mirrored, enemy->vflip);
     if (hurt_on && weapon && weapon_frames &&
         aos_combat_can_take(&enemy->combat, AOS_TYPE_WEAPON) &&
@@ -1319,6 +1365,14 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
             /* sub_08021530(3) = ATK * 16 / 16. */
             power = soma_atk;
             elements = soma->weapon.flags;
+            {
+                int x1 = blade.x1 > target.x1 ? blade.x1 : target.x1;
+                int x2 = blade.x2 < target.x2 ? blade.x2 : target.x2;
+                int y1 = blade.y1 > target.y1 ? blade.y1 : target.y1;
+                int y2 = blade.y2 < target.y2 ? blade.y2 : target.y2;
+                contact_x = (x1 + x2) / 2;
+                contact_y = (y1 + y2) / 2;
+            }
         }
     }
     for (int i = 0; hurt_on && !struck && i < soul_attack_count; ++i) {
@@ -1341,6 +1395,8 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     soul_contact[i][0] = (int16_t)((x1 + x2) / 2);
                     soul_contact[i][1] = (int16_t)((y1 + y2) / 2);
                 }
+                contact_x = (x1 + x2) / 2;
+                contact_y = (y1 + y2) / 2;
             }
             power = attack->power;
             elements = attack->elements;
@@ -1387,6 +1443,10 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                 report.enemy_damage = 0;
                 aos_audio_play_song(0x69);
             }
+            if (report.enemy_damage > 0)
+                spawn_hit_effect(hit_effect_type(elements, enemy->stats.weak,
+                                                  enemy->stats.resist),
+                                 contact_x, contact_y, &report);
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
@@ -7404,8 +7464,11 @@ static void skeleton_merge(AosHitReport *report, const AosHitReport *hit) {
     report->enemy_damage = hit->enemy_damage;
     report->killed = hit->killed;
     report->targetable |= hit->targetable;
+    report->wake_spawner |= hit->wake_spawner;
     for (int i = 0; i < hit->child_count && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i)
         report->children[report->child_count++] = hit->children[i];
+    for (int i = 0; i < hit->effect_count && report->effect_count < AOS_ENEMY_MAX_EFFECTS; ++i)
+        report->effects[report->effect_count++] = hit->effects[i];
 }
 
 /* sub_0806D0B8(x, y): 2 (3 with bit 3) in a solid cell, else 0 above a

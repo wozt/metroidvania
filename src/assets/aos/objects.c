@@ -349,6 +349,11 @@ static const EffectSpec effects[] = {
     /* Object20's sub_0805ED80 attack: common animation 0x16 with palette
      * bank 6 (OBJ row 9), aimed at the principal Winged Skeleton. */
     {"opening_projectile", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {0x16}, -1},
+    /* sub_0806B5DC's elemental hit variants selected by sub_0806B7D8.
+     * Types 3 and 5 are the two arts not already exported for another
+     * shared effect (animations 15/row 6 and 20/row 7). */
+    {"hit_element_3", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {15}, -1},
+    {"hit_element_5", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {20}, -1},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows

@@ -670,7 +670,8 @@ static void giant_ghost_tests(void) {
     AosHitReport hit = aos_enemy_update(&g, &soma, &layer, &kind, &weapon, &blade, 9999, 4, 0,
                                         0, always_zero);
     assert(hit.killed && g.state == 2 && g.timer == 0x5A && g.anim.id == 5 && g.translucent &&
-           hit.effect_count == 4 && hit.effects[0].wisp &&
+           hit.effect_count == 5 && hit.effects[0].wisp &&
+           hit.effects[4].kind == AOS_EFFECT_BLOOD &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
     aos_enemy_update(&eye, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     aos_enemy_update(&aura, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
@@ -2775,6 +2776,7 @@ static void armor_tests(void) {
     for (int i = 0; i < aos_audio_count(); ++i) {
         AosAudioRequest request = aos_audio_get(i);
         if (request.action == AOS_AUDIO_START_SONG && request.value == 0xB3) continue;
+        if (request.action == AOS_AUDIO_START_SONG && request.value == 0x9E) continue;
         assert(request.action == AOS_AUDIO_START_SONG &&
                request.value == (logged == 0 ? 0x6F : 0x6E));
         ++logged;
@@ -4968,6 +4970,10 @@ static void soul_attack_tests(void) {
                                         never_zero);
     int expected = aos_enemy_damage(26, stats.defence, 0, 0, 0);
     assert(hit.enemy_hit && hit.enemy_damage == expected && e.hp == 30 - expected);
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_IMPACT);
+    assert((hit.effects[0].x >> 16) >= 90 && (hit.effects[0].x >> 16) <= 110);
+    assert((hit.effects[0].y >> 16) >= 80 && (hit.effects[0].y >> 16) <= 104);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xA4));
     /* The skill learns it struck (its hit callback). */
     assert(ring.struck && ring.target == &e);
     /* The weapon's ATK (10) is not used for it. */
@@ -4982,6 +4988,19 @@ static void soul_attack_tests(void) {
     hit = aos_enemy_update(&weak, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.enemy_damage == aos_enemy_damage(26, 2, 0x0004, 0, 0x0004) &&
            hit.enemy_damage > expected);
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_HIT_ELEMENT_3);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xA5));
+    /* A normal physical element against a non-weak target selects the
+     * shared blood art and its table sound, as a knife hit on a Zombie. */
+    AosEnemy blood_target;
+    assert(aos_enemy_create(&blood_target, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    AosSoulAttack physical = {{90, 80, 110, 104}, 10, 0x0001, false, NULL, AOS_TYPE_SOUL};
+    aos_enemy_set_soul_attacks(&physical, 1);
+    hit = aos_enemy_update(&blood_target, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_BLOOD);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x9E));
     /* A box beside the enemy does nothing. */
     AosEnemy apart;
     assert(aos_enemy_create(&apart, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer, &kind,
@@ -5107,6 +5126,8 @@ int main(void) {
     AosWeaponEntity weapon = {.active = true};
     hit = aos_enemy_update(&bat, &soma, &layer, &kind, &weapon, &blade, 10, 0, 0, 0, never_zero);
     assert(hit.enemy_hit && hit.enemy_damage == 12 && hit.killed && bat.state == 3);
+    assert(hit.effect_count == 1 && hit.effects[0].kind == AOS_EFFECT_IMPACT);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xA4));
     assert(soma.flags & AOS_FLAG_KICK_HIT);
     int dying = 0;
     while (!bat.removed && dying < 100) {

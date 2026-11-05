@@ -560,10 +560,10 @@ int main(void) {
         &room_payload, error, sizeof error));
     const char *room_text = (const char *)room_payload.data;
     assert(!strncmp(room_text,
-                    "AOSROOM-NATIVE\t4\t3\t7\t1\t1\t32\t32\t3\nR\t450e",
-                    strlen("AOSROOM-NATIVE\t4\t3\t7\t1\t1\t32\t32\t3\nR\t450e")));
+                    "AOSROOM-NATIVE\t5\t3\t7\t1\t1\t32\t32\t3\nR\t450e",
+                    strlen("AOSROOM-NATIVE\t5\t3\t7\t1\t1\t32\t32\t3\nR\t450e")));
     assert(strstr(room_text, "\nT\t-1\t2\t-16\t1040\t512\t1\t6\n"));
-    assert(strstr(room_text, "\nE\t1\t33\t-12\t34\t4660\t22136\t7\nEND\n"));
+    assert(strstr(room_text, "\nE\t1\t33\t-12\t34\t5\t4660\t22136\t7\nEND\n"));
     assert(room_payload.data[room_payload.size] == '\0');
     fusion_aos_free_runtime_room_payload(&room_payload);
     assert(room_payload.data == NULL && room_payload.size == 0);

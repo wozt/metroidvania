@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Aria of Sorrow runtime-room export: each room with a decoded BG1
  * collision table gets
- * area_<AA>_room_<RRR>/room.tsv (AOSROOM-NATIVE v4) and background.bmp (the
+ * area_<AA>_room_<RRR>/room.tsv (AOSROOM-NATIVE v5) and background.bmp (the
  * static-origin composite), then export_index.tsv. */
 #include "fusion/assets/aos.h"
 

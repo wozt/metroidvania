@@ -106,12 +106,13 @@ build/fusion_aria_title_preview \
 ```
 
 `aos_save.c` deliberately uses the small, checksummed
-`metroidvania-aos-save-v10` text schema instead of claiming compatibility with
+`metroidvania-aos-save-v11` text schema instead of claiming compatibility with
 the original six 0x47C-byte SRAM records. It reads every earlier portable
 version and stores the encoded player identity, room and spawn, vitals,
 movement, experience, gold, equipment, inventory, souls, MP and configurable
 buttons, plus bestiary and common/rare drop-discovery bitsets and the
-event words of gEwramData + 0x344 (schema v10). The runtime
+event words of gEwramData + 0x344 (schema v10) and the six placed-item words
+of gEwramData + 0x360 (schema v11). The runtime
 accepts `--save FILE` and restores that state. New files
 record the native first-room player position rather than using the earlier
 diagnostic floor search. Runtime compatibility also
@@ -669,7 +670,8 @@ gets set elsewhere (nothing in the port sets one yet), a grid into 21 pieces
 of its art (`sub_0804F9B4`). While the Peeping Eye soul sets 0x13260 bit
 0x1000000, both kinds sparkle every 16 frames (`sub_08045CEC` animation 12,
 row 6). The event words are stored in the portable save (schema v10), and
-the map update of `sub_08012154` is not ported.
+the placed-room-item words are stored separately from schema v11 onward. The
+map update of `sub_08012154` is not ported.
 
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,

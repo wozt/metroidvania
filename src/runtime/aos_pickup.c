@@ -25,6 +25,10 @@ AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uin
 void aos_pickup_update(AosPickup *pickup, const AosCollision *layer) {
     if (pickup->removed || pickup->type > 4) return;
     pickup->age++;
+    if (pickup->placed) {
+        if (pickup->cooldown) pickup->cooldown--;
+        return;
+    }
     pickup->y += pickup->vy;
     /* Money probes 8 pixels lower than the item types. */
     int32_t probe_y = (pickup->y >> 16) + pickup->offset + (pickup->type <= 1 ? 8 : 0);
@@ -79,6 +83,46 @@ bool aos_item_decode(uint16_t id, uint8_t *category, uint8_t *index) {
 
 AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int32_t y) {
     return (AosPickup){.type = category, .variant = index, .x = x * 65536, .y = y * 65536};
+}
+
+bool aos_pickup_placed_collected(
+    const uint32_t collected[AOS_PLACED_ITEM_WORDS], uint16_t persistent_index) {
+    return collected && persistent_index < AOS_PLACED_ITEM_WORDS * 32u &&
+           (collected[persistent_index >> 5] & (1u << (persistent_index & 31u))) != 0;
+}
+
+bool aos_pickup_create_placed(AosPickup *pickup,
+                              const AosMoneyKind kinds[AOS_MONEY_KINDS],
+                              uint8_t entity_id, uint16_t variant,
+                              uint16_t persistent_index, int32_t x, int32_t y,
+                              const uint32_t collected[AOS_PLACED_ITEM_WORDS]) {
+    if (!pickup || entity_id < 1 || entity_id > 4 || variant > UINT8_MAX ||
+        persistent_index >= AOS_PLACED_ITEM_WORDS * 32u ||
+        aos_pickup_placed_collected(collected, persistent_index))
+        return false;
+    if (entity_id == 1) {
+        if (!kinds || variant >= AOS_MONEY_KINDS) return false;
+        *pickup = aos_pickup_create_money(kinds, (uint8_t)variant, x, y);
+    } else {
+        static const uint8_t categories[] = {0, 0, AOS_PICKUP_ITEM,
+                                             AOS_PICKUP_WEAPON, AOS_PICKUP_ARMOR};
+        unsigned limit = entity_id == 2 ? AOS_ITEM_RECORDS
+                         : entity_id == 3 ? AOS_WEAPON_RECORDS
+                                          : AOS_ARMOR_RECORDS;
+        if (variant >= limit) return false;
+        *pickup = aos_pickup_create_item(categories[entity_id], (uint8_t)variant, x, y);
+    }
+    pickup->placed = true;
+    pickup->persistent_index = persistent_index;
+    return true;
+}
+
+void aos_pickup_mark_placed(const AosPickup *pickup,
+                            uint32_t collected[AOS_PLACED_ITEM_WORDS]) {
+    if (!pickup || !pickup->placed || !pickup->persistent_index || !collected ||
+        pickup->persistent_index >= AOS_PLACED_ITEM_WORDS * 32u)
+        return;
+    collected[pickup->persistent_index >> 5] |= 1u << (pickup->persistent_index & 31u);
 }
 
 AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,

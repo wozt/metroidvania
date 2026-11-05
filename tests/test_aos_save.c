@@ -71,6 +71,10 @@ int main(void) {
     /* Schema v10: opening-story event 32, wall event 34 and event 255. */
     source.events[1] = (1u << 0) | (1u << 2);
     source.events[7] = 1u << 31;
+    /* Schema v11: one-time room pickup indices 1, 90 and 157. */
+    source.placed_items[0] = 1u << 1;
+    source.placed_items[2] = 1u << (90 - 64);
+    source.placed_items[4] = 1u << (157 - 128);
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -85,11 +89,30 @@ int main(void) {
         assert(fclose(text) == 0 && n > 0);
         assert(!strcmp(head, AOS_SAVE_SCHEMA "\n") &&
                strstr(all, "events=00000000,00000005,00000000,00000000,00000000,00000000,"
-                           "00000000,80000000\n"));
-        /* The same file as schema v9 (no event line) loads without events. */
+                           "00000000,80000000\n") &&
+               strstr(all, "placed_items=00000002,00000000,04000000,00000000,20000000,"
+                           "00000000\n"));
+        /* The same file as schema v10 (no placed-item line) loads with no
+         * collected room pickups. */
+        char v10[2048];
+        int v10_size = snprintf(v10, sizeof v10, "%s\n", AOS_SAVE_SCHEMA_V10);
+        const char *body = strchr(all, '\n') + 1, *placed = strstr(all, "placed_items=");
+        memcpy(v10 + v10_size, body, (size_t)(placed - body));
+        v10_size += (int)(placed - body);
+        v10_size += snprintf(v10 + v10_size, sizeof v10 - (size_t)v10_size,
+                             "checksum=%08x\n", test_checksum(v10, (size_t)v10_size));
+        FILE *v10_file = fopen(path, "wb");
+        assert(v10_file && fwrite(v10, 1, (size_t)v10_size, v10_file) == (size_t)v10_size);
+        assert(fclose(v10_file) == 0);
+        AosSaveData previous = {0};
+        assert(aos_save_load(path, &previous, error, sizeof error));
+        assert(previous.events[1] == source.events[1] && previous.placed_items[0] == 0 &&
+               previous.placed_items[4] == 0);
+
+        /* The same data as schema v9 (no event line) loads without events. */
         char v9[2048];
         int size = snprintf(v9, sizeof v9, "%s\n", AOS_SAVE_SCHEMA_V9);
-        const char *body = strchr(all, '\n') + 1, *events = strstr(all, "events=");
+        const char *events = strstr(all, "events=");
         memcpy(v9 + size, body, (size_t)(events - body));
         size += (int)(events - body);
         size += snprintf(v9 + size, sizeof v9 - (size_t)size, "checksum=%08x\n",

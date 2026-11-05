@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0755 - Spawn and persist Aria's placed room items
+
+- Upgraded `AOSROOM-NATIVE` to schema v5. Entity rows now preserve the
+  original list's `persistent_index` independently from parameters 0 and 1;
+  v3 and v4 room payloads remain readable. The `aria_rooms` rebuild task is
+  version 3 and its private golden inventory now guards all 342 changed room
+  payloads.
+- Ported `sub_0800F1FC` case 4 and `sub_08044054` for placed money, items,
+  weapons and armor. The runtime reads entity id 1-4, uses parameter 1 as
+  the variant, keeps the pickup fixed without the dropped-item timeout, and
+  suppresses it once parameter 0's native one-time bit has been collected.
+  Invalid variants are rejected without indexing metadata out of range.
+- Extended portable saves to schema v11 with the six `gEwramData + 0x360`
+  item words required by the verified US room data (115 type-4 placements,
+  highest durable index 157). These remain separate from the eight event
+  words. v1-v10 saves still load, with no placed pickups collected.
+- Added deterministic tests for all four categories, fixed lifetime,
+  invalid records, zero/nonzero persistent indices, v10 migration and v11
+  round trips. A local room 0/15 capture showed the ROM-positioned Potion
+  icon at `(48, 296)`; walking left collected it through the native inventory
+  and HUD path. Source-derived and locally reviewed, not emulator-compared.
+
+Next: port ids 5-8 of room entity kind 4: the placed soul container of
+`sub_08044980`, its weapon-hit release into `sub_0804459C`, native art and
+sound, and persistence only when the released soul is actually collected.
+
 ## Patch 0754 - Port Aria's money and item name notices
 
 - Ported the sibling `sub_0800EF98`/`sub_0800E0E8` HUD path used when Soma

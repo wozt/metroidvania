@@ -280,12 +280,13 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "hit_element_3",
                                                           "hit_element_5"};
 #define ARIA_KIND_SPECIAL 2
+#define ARIA_KIND_PICKUP 4
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 #define ARIA_OBJECT_WALL 0x08           /* Object08: a breakable wall */
 #define ARIA_OBJECT_EVENT_WALL 0x09     /* Object09: a wall its event bit breaks */
 
 typedef struct {
-    int kind, id, x, y, param0, param1, flags;
+    int kind, id, x, y, persistent_index, param0, param1, flags;
     bool spawned;           /* gEwramData + 0x3D0 bit of the record */
     int spawner;            /* entity index of a zombie's spawner, or -1 */
     AosDoor door;
@@ -346,7 +347,8 @@ static bool load_room(const char *path, AriaRoom *room) {
     int fields = sscanf(line, "AOSROOM-NATIVE\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &version,
                         &area, &number, &room->width_screens, &room->height_screens,
                         &room->width_cells, &room->height_cells, &room_flags, &extra);
-    bool valid_header = version == 4 && fields == 8 && room_flags >= 0 && room_flags <= 3;
+    bool valid_header = (version == 5 || version == 4) && fields == 8 &&
+                        room_flags >= 0 && room_flags <= 3;
     if (!valid_header) {
         room_flags = 0;
         fields = sscanf(line, "AOSROOM-NATIVE\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &version,
@@ -375,9 +377,14 @@ static bool load_room(const char *path, AriaRoom *room) {
         if (!strcmp(line, "END\n") || !strcmp(line, "END")) { ended = true; break; }
         if (line[0] == 'E') {
             AriaEntity *e = &room->entities[room->entity_count];
-            if (room->entity_count >= MAX_ENTITIES ||
-                sscanf(line, "E\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c", &e->kind, &e->id, &e->x, &e->y,
-                       &e->param0, &e->param1, &e->flags, &extra) != 7 ||
+            int entity_fields = version >= 5
+                ? sscanf(line, "E\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c",
+                         &e->kind, &e->id, &e->x, &e->y, &e->persistent_index,
+                         &e->param0, &e->param1, &e->flags, &extra)
+                : sscanf(line, "E\t%d\t%d\t%d\t%d\t%d\t%d\t%d %c",
+                         &e->kind, &e->id, &e->x, &e->y,
+                         &e->param0, &e->param1, &e->flags, &extra);
+            if (room->entity_count >= MAX_ENTITIES || entity_fields != (version >= 5 ? 8 : 7) ||
                 e->kind < 0 || e->kind > 255 || e->id < 0 || e->id > 255)
                 goto failure;
             e->spawned = false;
@@ -2476,6 +2483,9 @@ static void clear_skills(AriaSouls *souls) {
 /* gEwramData + 0x344: the event bits (a breakable wall's break), stored
  * in the save (schema v10). */
 static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
+/* gEwramData + 0x360 through +0x377: one-time room pickup bits, separate
+ * from the event words at +0x344. */
+static uint32_t aria_placed_items[AOS_PLACED_ITEM_WORDS];
 
 static const char *pickup_notice_name(uint8_t type, uint16_t variant) {
     if (type == AOS_PICKUP_ITEM)
@@ -2499,6 +2509,19 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     int sound = 0;
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
+        bool placed_pickup = e->kind == ARIA_KIND_PICKUP && e->id >= 1 && e->id <= 4;
+        if (placed_pickup) {
+            if (!e->spawned && e->x >= cam_x - 80 && e->x <= cam_x + 320) {
+                e->spawned = true;
+                AosPickup pickup;
+                if (room->pickup_count < MAX_PICKUPS &&
+                    aos_pickup_create_placed(&pickup, combat->money, (uint8_t)e->id,
+                                             (uint16_t)e->param1, (uint16_t)e->param0,
+                                             e->x, e->y, aria_placed_items))
+                    room->pickups[room->pickup_count++] = pickup;
+            }
+            continue;
+        }
         bool door = e->kind == ARIA_KIND_SPECIAL && e->id == ARIA_OBJECT_WOODEN_DOOR;
         bool wall = e->kind == ARIA_KIND_SPECIAL &&
                     (e->id == ARIA_OBJECT_WALL || e->id == ARIA_OBJECT_EVENT_WALL);
@@ -2767,6 +2790,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         } else if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
             uint32_t text = aos_pickup_collect_money(pickup, combat->money,
                                                      &combat->progress->gold);
+            aos_pickup_mark_placed(pickup, aria_placed_items);
             if (combat->hud && combat->hud_font && pickup->variant < AOS_MONEY_KINDS) {
                 char name[24];
                 snprintf(name, sizeof name, "%u GOLD", combat->money[pickup->variant].value);
@@ -2780,6 +2804,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             bool refusal_sound;
             if (aos_pickup_collect_item(pickup, combat->progress, &refusal_sound) ==
                 AOS_COLLECT_TAKEN) {
+                aos_pickup_mark_placed(pickup, aria_placed_items);
                 const char *name = pickup_notice_name(pickup->type, pickup->variant);
                 if (combat->hud && combat->hud_font && name)
                     aos_hud_show_item(combat->hud, combat->hud_font, name);
@@ -3292,6 +3317,7 @@ static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
     memcpy(save->defeated, progress->defeated, sizeof save->defeated);
     memcpy(save->dropped, progress->dropped, sizeof save->dropped);
     memcpy(save->events, aria_events, sizeof save->events);
+    memcpy(save->placed_items, aria_placed_items, sizeof save->placed_items);
     save->weapon = progress->weapon;
     save->armor = progress->armor;
     save->accessory = progress->accessory;
@@ -4949,12 +4975,15 @@ int aria_runtime_main(int argc, char **argv) {
     progress.character = has_active_save ? active_save.character : 0;
     aos_stats_init(&progress);
     aos_button_config_default(&progress.buttons);
+    memset(aria_events, 0, sizeof aria_events);
+    memset(aria_placed_items, 0, sizeof aria_placed_items);
     if (has_active_save) {
         progress.experience = active_save.experience;
         progress.gold = active_save.gold;
         memcpy(progress.defeated, active_save.defeated, sizeof progress.defeated);
         memcpy(progress.dropped, active_save.dropped, sizeof progress.dropped);
         memcpy(aria_events, active_save.events, sizeof aria_events);
+        memcpy(aria_placed_items, active_save.placed_items, sizeof aria_placed_items);
         for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
             progress.buttons.action[action] =
                 aos_button_config_button(active_save.buttons[action]);

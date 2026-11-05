@@ -27,6 +27,9 @@ enum {
     AOS_PICKUP_WEAPON = 3,  /* weaponInventory, records 0x08505D3C */
     AOS_PICKUP_ARMOR = 4,   /* armor and accessories, records 0x085063B0 */
     AOS_PICKUP_SOUL = 5,    /* types 5-8: soul type + 5 (sub_0804459C) */
+    /* gEwramData + 0x360 through +0x377: the six words used by the native
+     * placed-item indices (the US room data reaches bit 157). */
+    AOS_PLACED_ITEM_WORDS = 6,
 };
 
 typedef enum {
@@ -53,6 +56,8 @@ typedef struct {
     int32_t turn, speed;
     int32_t vx;
     bool small_heart;   /* runs sub_08043CE4 instead of sub_08043DD0 */
+    bool placed;        /* sub_08044054's last argument: fixed, no timeout */
+    uint16_t persistent_index; /* entity parameter 0, zero is not recorded */
     uint16_t age;       /* frames updated, for the sprite sequence */
 } AosPickup;
 
@@ -75,6 +80,18 @@ AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uin
 bool aos_item_decode(uint16_t id, uint8_t *category, uint8_t *index);
 /* sub_08044054 for categories 2-4: an item pickup at room pixel (x, y). */
 AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int32_t y);
+/* sub_0800F1FC case 4 for entity ids 1-4: create fixed money, item,
+ * weapon or armor unless parameter 0's persistent bit was already set.
+ * Soul containers (ids 5-8) have a separate weapon-hit lifecycle. */
+bool aos_pickup_create_placed(AosPickup *pickup,
+                              const AosMoneyKind kinds[AOS_MONEY_KINDS],
+                              uint8_t entity_id, uint16_t variant,
+                              uint16_t persistent_index, int32_t x, int32_t y,
+                              const uint32_t collected[AOS_PLACED_ITEM_WORDS]);
+bool aos_pickup_placed_collected(
+    const uint32_t collected[AOS_PLACED_ITEM_WORDS], uint16_t persistent_index);
+void aos_pickup_mark_placed(const AosPickup *pickup,
+                            uint32_t collected[AOS_PLACED_ITEM_WORDS]);
 /* Cases 2-4 of sub_080441F8: below 9 held the count rises (to at most 9)
  * and the pickup is removed; above 8 it stays, and the refusal sound 0x13B
  * plays only when its 0x20-frame cooldown has run out (*refusal_sound). */

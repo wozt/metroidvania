@@ -576,7 +576,7 @@ bool fusion_aos_serialize_runtime_room(
     size_t used = 0;
     if (!append_format(
             data, capacity, &used,
-            "AOSROOM-NATIVE\t4\t%zu\t%zu\t%u\t%u\t%zu\t%zu\t%u\n",
+            "AOSROOM-NATIVE\t5\t%zu\t%zu\t%u\t%u\t%zu\t%zu\t%u\n",
             area, room, (unsigned)collision->width_screens,
             (unsigned)collision->height_screens, collision->width_tiles,
             collision->height_tiles, (unsigned)room_flags)) {
@@ -612,9 +612,10 @@ bool fusion_aos_serialize_runtime_room(
         const FusionAosEntity *entity = &entities->entries[index];
         if (!append_format(
                 data, capacity, &used,
-                "E\t%u\t%u\t%d\t%d\t%u\t%u\t%u\n",
+                "E\t%u\t%u\t%d\t%d\t%u\t%u\t%u\t%u\n",
                 (unsigned)entity->kind, (unsigned)entity->entity_id,
-                entity->x, entity->y, (unsigned)entity->parameters[0],
+                entity->x, entity->y, (unsigned)entity->persistent_index,
+                (unsigned)entity->parameters[0],
                 (unsigned)entity->parameters[1], (unsigned)entity->flags)) {
             goto overflow;
         }

@@ -368,8 +368,9 @@ confirmation controllers, special completed-file positions and final direct
 load/intro fades. The same state owns the native eight-character name editor
 and its return/intro results. `aos_menu_save_bridge.c` consumes the typed
 regular-file and one-use quicksave operations and persists them through
-portable save schema v10, including bestiary and common/rare drop discovery
-and the event words of the breakable walls;
+portable save schema v11, including bestiary and common/rare drop discovery,
+the event words of the breakable walls and the six native one-time room-item
+words;
 the host waits for the native destination fade and, for a new file, runs the
 seven-stage `GameModeIntroCutsceneUpdate` controller in
 `aos_intro_cutscene.c` before starting the separate room-runtime process at

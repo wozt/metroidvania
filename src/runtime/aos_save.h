@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v10"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v11"
+#define AOS_SAVE_SCHEMA_V10 "metroidvania-aos-save-v10"
 #define AOS_SAVE_SCHEMA_V9 "metroidvania-aos-save-v9"
 #define AOS_SAVE_SCHEMA_V8 "metroidvania-aos-save-v8"
 #define AOS_SAVE_SCHEMA_V7 "metroidvania-aos-save-v7"
@@ -22,6 +23,7 @@
  * original 0x47C-byte SRAM slot until every native field is understood. */
 enum { AOS_SAVE_INVENTORY = 32 + 59 + 45, AOS_SAVE_WEAPONS = 32, AOS_SAVE_ARMOR = 32 + 59 };
 enum { AOS_SAVE_SOUL_BYTES = 56 + 26 + 36 + 3 + 2 };
+enum { AOS_SAVE_PLACED_ITEM_WORDS = 6 };
 
 typedef struct {
     uint8_t slot;
@@ -67,6 +69,10 @@ typedef struct {
     /* Schema v10: the event words of gEwramData + 0x344 (breakable walls,
      * one-time story events and the other native event consumers). */
     uint32_t events[8];
+    /* Schema v11: gEwramData + 0x360, the durable bits assigned through
+     * entity parameter 0 to one-time room money, items, equipment and soul
+     * containers. Older saves have collected none of them. */
+    uint32_t placed_items[AOS_SAVE_PLACED_ITEM_WORDS];
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

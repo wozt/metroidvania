@@ -89,6 +89,32 @@ int main(void) {
     assert(aos_item_decode(0x88, &category, &index) && category == AOS_PICKUP_ARMOR &&
            index == 44);
 
+    /* sub_0800F1FC case 4: ids 1-4 use parameter 1 as their variant and
+     * parameter 0 as a durable bit in gEwramData + 0x360. They stay fixed
+     * instead of entering sub_08043DD0's fall and timeout. */
+    uint32_t collected[AOS_PLACED_ITEM_WORDS] = {0};
+    AosPickup placed;
+    assert(aos_pickup_create_placed(&placed, kinds, 1, 4, 157, 24, 56, collected));
+    assert(placed.placed && placed.persistent_index == 157 &&
+           placed.type == AOS_PICKUP_MONEY && placed.variant == 4);
+    int32_t placed_y = placed.y;
+    for (int i = 0; i < 400; ++i) aos_pickup_update(&placed, &shaft);
+    assert(placed.y == placed_y && !placed.removed && placed.age == 400);
+    aos_pickup_mark_placed(&placed, collected);
+    assert(aos_pickup_placed_collected(collected, 157) &&
+           !aos_pickup_create_placed(&placed, kinds, 1, 4, 157, 24, 56, collected));
+    assert(aos_pickup_create_placed(&placed, kinds, 2, 31, 0, 24, 56, collected) &&
+           placed.type == AOS_PICKUP_ITEM && placed.variant == 31);
+    aos_pickup_mark_placed(&placed, collected);
+    assert(!aos_pickup_placed_collected(collected, 0));
+    assert(aos_pickup_create_placed(&placed, kinds, 3, 58, 90, 24, 56, collected) &&
+           placed.type == AOS_PICKUP_WEAPON && placed.variant == 58);
+    assert(aos_pickup_create_placed(&placed, kinds, 4, 44, 91, 24, 56, collected) &&
+           placed.type == AOS_PICKUP_ARMOR && placed.variant == 44);
+    assert(!aos_pickup_create_placed(&placed, kinds, 5, 1, 92, 24, 56, collected) &&
+           !aos_pickup_create_placed(&placed, kinds, 2, 32, 92, 24, 56, collected) &&
+           !aos_pickup_create_placed(&placed, kinds, 1, 7, 92, 24, 56, collected));
+
     /* Item pickups probe at their own height (no 8-pixel money offset). */
     AosPickup item = aos_pickup_create_item(AOS_PICKUP_WEAPON, 1, 40, 30);
     assert(item.type == AOS_PICKUP_WEAPON && item.variant == 1 && item.offset == 0);

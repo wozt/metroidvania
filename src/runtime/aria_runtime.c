@@ -677,6 +677,8 @@ typedef struct {
     AosStats *progress;                          /* level, experience, bestiary */
     const AosMoneyKind *money;                   /* NULL without metadata/money.tsv */
     const AosEquipmentTables *equipment;         /* NULL without metadata/equipment.tsv */
+    AosHud *hud;                                 /* sub_0800EA98 enemy-name notice */
+    const AosHudFont *hud_font;
     bool derive_atk, derive_def;                 /* false under --atk / --def */
 } AriaCombat;
 
@@ -2572,6 +2574,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            combat->progress->max_hp);
                 }
                 if (gained >= 0) {
+                    if (combat->hud && combat->hud_font)
+                        aos_hud_show_enemy(combat->hud, combat->hud_font,
+                                           aos_bestiary_name((uint8_t)e->id));
                     printf("Experience %u (next level in %d)\n", combat->progress->experience,
                            aos_stats_experience_to_next(combat->progress));
                     /* The drop draws, in the native order; the pickups they
@@ -5157,8 +5162,9 @@ int aria_runtime_main(int argc, char **argv) {
         fprintf(stderr, "No Aria blue soul records: %s\n", DEFAULT_BLUE_SOULS);
     }
     /* The in-game HUD (sub_0800DA50), drawn from the exported resources. */
-    static uint8_t hud_bytes[64 + AOS_HUD_TILE_BYTES];
+    static uint8_t hud_bytes[AOS_HUD_ASSET_BYTES];
     static AosHud hud;
+    AosHudFont hud_font = {0};
     bool have_hud = false;
     {
         FILE *f = fopen(DEFAULT_HUD, "rb");
@@ -5176,10 +5182,15 @@ int aria_runtime_main(int argc, char **argv) {
         SDL_SetTextureScaleMode(hud_texture, SDL_SCALEMODE_NEAREST);
     }
     static uint16_t hud_drawn[AOS_HUD_MAP_SIZE * AOS_HUD_MAP_SIZE];
+    uint32_t hud_drawn_revision = 0;
     bool hud_dirty = true;
     soma.hp = (int16_t)player_stats.hp;
     soma.max_hp = (int16_t)player_stats.max_hp;
-    if (have_hud) aos_hud_init(&hud, soma.hp, soma.max_hp, progress.mp, (int16_t)progress.max_mp);
+    if (have_hud) {
+        aos_hud_init(&hud, soma.hp, soma.max_hp, progress.mp, (int16_t)progress.max_mp);
+        hud_font = (AosHudFont){hud_bytes + AOS_HUD_FONT_METRIC_OFFSET,
+                                hud_bytes + AOS_HUD_FONT_BITMAP_OFFSET};
+    }
     if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon)) {
         fprintf(stderr, "Export the weapons first: ./build/fusion_rebuild --task aria_weapons\n");
         goto cleanup;
@@ -5189,10 +5200,17 @@ int aria_runtime_main(int argc, char **argv) {
     bool weapon_ported = soma.weapon.weapon_class <= 4;
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
-    AriaCombat combat = {{NULL}, {NULL}, {NULL}, &weapon_entity,
-                         weapon_loaded ? &weapon_sprite.data : NULL, &player_stats, {NULL},
-                         &progress, NULL, have_equipment ? &equipment : NULL,
-                         !atk_override, !def_override};
+    AriaCombat combat = {
+        .weapon = &weapon_entity,
+        .weapon_frames = weapon_loaded ? &weapon_sprite.data : NULL,
+        .player = &player_stats,
+        .progress = &progress,
+        .equipment = have_equipment ? &equipment : NULL,
+        .hud = have_hud ? &hud : NULL,
+        .hud_font = have_hud ? &hud_font : NULL,
+        .derive_atk = !atk_override,
+        .derive_def = !def_override,
+    };
     if (objects.money_loaded) combat.money = objects.money;
     for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
         if (objects.effects[k].def.count) combat.effects[k] = &objects.effects[k].set;
@@ -5571,8 +5589,11 @@ int aria_runtime_main(int argc, char **argv) {
             if (have_equipment && !atk_override) player_stats.atk = progress.atk;
             if (have_equipment && !def_override) player_stats.def = progress.def;
             /* sub_0800DC70: the HUD chases the current values. */
-            if (have_hud) aos_hud_update(&hud, soma.hp, soma.max_hp, progress.mp,
-                                         (int16_t)progress.max_mp);
+            if (have_hud) {
+                aos_hud_update(&hud, soma.hp, soma.max_hp, progress.mp,
+                               (int16_t)progress.max_mp);
+                aos_hud_tick(&hud);
+            }
             const __typeof__(objects.skills[0]) *bat = &objects.skills[SKILL_ART_BAT],
                                                 *archer = &objects.skills[SKILL_ART_ARCHER];
             souls.bat = objects_ok && bat->loaded ? &bat->set : NULL;
@@ -6345,13 +6366,15 @@ int aria_runtime_main(int argc, char **argv) {
             }
         }
         if (hud_texture) {
-            if (hud_dirty || memcmp(hud_drawn, hud.map, sizeof hud_drawn)) {
+            if (hud_dirty || hud_drawn_revision != hud.revision ||
+                memcmp(hud_drawn, hud.map, sizeof hud_drawn)) {
                 static uint8_t pixels[240 * 160 * 4];
                 for (unsigned y = 0; y < 160; ++y)
                     for (unsigned x = 0; x < 240; ++x) {
                         uint8_t *out = pixels + (y * 240 + x) * 4;
                         uint16_t color;
-                        if (!aos_hud_pixel(&hud, hud_bytes + 64, hud_bytes, x, y, &color)) {
+                        if (!aos_hud_pixel(&hud, hud_bytes + AOS_HUD_TILE_OFFSET,
+                                           hud_bytes, x, y, &color)) {
                             memset(out, 0, 4);
                             continue;
                         }
@@ -6362,6 +6385,7 @@ int aria_runtime_main(int argc, char **argv) {
                     }
                 SDL_UpdateTexture(hud_texture, NULL, pixels, 240 * 4);
                 memcpy(hud_drawn, hud.map, sizeof hud_drawn);
+                hud_drawn_revision = hud.revision;
                 hud_dirty = false;
             }
             SDL_FRect whole = {0, 0, 240, 160};

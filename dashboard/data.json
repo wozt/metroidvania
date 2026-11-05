@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-05T14:18:28+00:00",
+ "generated_at": "2026-11-05T18:50:30+00:00",
  "git": {
-  "commit": "453bbf9",
+  "commit": "1dd988e",
   "branch": "main",
   "dirty": true
  },
@@ -15370,7 +15370,7 @@
    "id": "aos.ui.hud",
    "area": "aos",
    "category": "menus",
-   "title": "Aria in-game HUD bars",
+   "title": "Aria in-game HUD and enemy notice",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -15389,15 +15389,21 @@
     "sub_0800DA50",
     "sub_0800DB78",
     "sub_0800DC70",
+    "sub_0800DE4C",
+    "sub_0800EA98",
+    "sub_0800EB04",
+    "sub_0800EFD4",
     "sub_0800F138"
    ],
-   "limitations": "Only the frame and the two bars of BG0 are drawn: the HUD's text window set up by sub_0800DA50 (font at 0x5000, window 0, 0, 0x1A, 1) and whatever it shows are not ported, nor the HUD's other updaters in code_0800CB00.c, its fades or its hiding during menus and transitions. sub_0800DA50's VRAM clears and the palette transfer are modelled by the export and a fresh map. The HUD is drawn over the room at a fixed priority. sub_0800DA50 sets BG0 (map base 28, scrolled 6 pixels up), the tiles of 0x0827B208 at tile 0x200 and palette rows 13-14 from 0x0820C428 (exported together as metadata/hud.bin), lays the frame of sub_0800DB78 (sUnk_080E0F74's two blocks) and draws both bars with sub_0800F138: eight tiles from cell (4, 1) for HP (tiles 0x200-0x208) and (4, 2) for MP (0x210-0x218), filled value * 100 / max * 64 / 100 pixels and at least one when positive. sub_0800DC70 moves the shown HP, MP and maxima two steps a frame toward the real values and redraws a bar that moved. The runtime draws it from Soma's HP and the current MP; a local capture showed the native frame, a full red HP bar and a green MP bar catching up after two bat casts. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the HUD text window and its numbers, then the pause menu.",
+   "limitations": "The base HUD text window set up by sub_0800DA50 is still empty. The item-name path sub_0800EF98/sub_0800E0E8, pickup-specific frames, fades and hiding during menus and transitions are not ported. The enemy notice resolves the already catalogued English bestiary name instead of the native multilingual text-resource id. Its DMA queue is immediate. Positioning, tiles, font, palette, double buffer and lifetime are source-derived and unit-tested, not emulator-compared. sub_0800DA50 sets BG0 (map base 28, scrolled 6 pixels up), exports the tiles of 0x0827B208 at tile 0x200 and the required palettes, lays the frame of sub_0800DB78 and draws HP and MP as eight-tile bars with sub_0800F138. sub_0800DC70 moves their shown values two steps a frame toward the real values. On the first reward for a defeated enemy, sub_0800EA98 now resolves its name and sub_0800DE4C draws the native three-row lower-right frame with context B's eight-pixel ROM font, alternating tiles 0x280 and 0x2A0. sub_0800EFD4 keeps it for 0xF0 frames before sub_0800EB04 clears it. A local room 0/15 capture showed the exported purple and gold frame with Axe Armor after the native reward and experience path. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port sub_0800EF98/sub_0800E0E8 for item names, then identify the base HUD text-window contents and port pause-menu presentation.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_hud.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "aria area_00_room_015: Axe Armor defeated at frame 63 (--spawn 300 430 --weapon 0 --atk 80 --repeat 2, buttons 0x2), native enemy notice captured at frame 70"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -17307,13 +17313,14 @@
     "tests/test_aos_skill_throw.c",
     "tests/test_aos_skill_fish_head.c",
     "tests/test_aos_skill_gladiator.c",
-    "tests/test_aos_skill_killer_fish.c"
+    "tests/test_aos_skill_killer_fish.c",
+    "tests/test_aos_hud.c"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 775 traced door, enemy, skill and shared-effect sequences, 2,322 indexed frames, 1,466 unique BMPs, frame boxes, anchors, probes (including the shared throw routine's 0x084F1388 and 0x084F139C tables), volleys and all 113 enemy stat records; all 1,467 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports each record's experience (u16 at 0x10) and drop fields (items at 0x08/0x0A, rates at 0x15/0x16, soul rarity, type and index at 0x12/0x17/0x18), which the runtime uses on defeat, metadata/money.tsv the money pickup table 0x085250E4, and metadata/equipment.tsv the weapon and armor records. Compressed tile sheets skip their 4-byte expanded header (before v47 every tile was shifted down one row, leaving stray one-pixel rows). It also exports the 18 breakable-wall frames of 0x08526064 (Enemy/wall_N), the third debris frame and the object 0x09 wall pieces. The Flying Armor, Death, Persephone and Great Armor guardians' arts are exported (Enemy/skill_flying_armor, skill_death, skill_persephone, skill_great_armor, skill_devil_spark, skill_shadow_knight, skill_alura_une, skill_big_golem), with the Great Armor's row-7 spark (Effect/spark_7). The shared collision-effect table now exports the two previously missing elemental arts (animations 15 on OBJ row 6 and 20 on row 7); the other five variants reuse their already exported common-effect art.",
+   "limitations": "The native C11 rebuild task exports 788 traced door, enemy, skill and shared-effect sequences, 2,335 indexed frames, 1,479 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 1,480 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 64 extends metadata/hud.bin with the initial HUD palettes, the defeated-enemy palette and context B's native metrics and eight-pixel glyphs; the runtime reconstructs the lower-right enemy-name notice without committing extracted data.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -17322,7 +17329,8 @@
      "tests/test_aos_skill_throw.c",
      "tests/test_aos_skill_fish_head.c",
      "tests/test_aos_skill_gladiator.c",
-     "tests/test_aos_skill_killer_fish.c"
+     "tests/test_aos_skill_killer_fish.c",
+     "tests/test_aos_hud.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -17391,6 +17399,16 @@
       "registered": true,
       "ctest": [
        "aos_skill_killer_fish"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_hud.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_hud"
       ],
       "outcome": "passed",
       "exists": true
@@ -19643,6 +19661,12 @@
  },
  "timeline": [
   {
+   "commit": "1dd988e",
+   "date": "2026-11-05",
+   "subject": "Port Aria damage number popups",
+   "scope": "project"
+  },
+  {
    "commit": "453bbf9",
    "date": "2026-11-05",
    "subject": "Restore Aria hit feedback and Soma sounds",
@@ -20115,12 +20139,6 @@
    "date": "2026-10-31",
    "subject": "Preserve native Buer constructor gravity across legacy and inert metadata",
    "scope": "project"
-  },
-  {
-   "commit": "1a989df",
-   "date": "2026-10-31",
-   "subject": "Correct Aria Buer native attack-side spin and projectile mirrors",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -20181,9 +20199,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 940,
-    "routines_attached_to_features": 940,
-    "unassigned_routines": 2633,
+    "routines_cited_by_features": 944,
+    "routines_attached_to_features": 944,
+    "unassigned_routines": 2629,
     "call_edges": 14228
    }
   },

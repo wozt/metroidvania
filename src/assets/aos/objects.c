@@ -24,6 +24,11 @@ enum {
     SKILL_THROWS = 0x084F12C8,
     HUD_PALETTE = 0x0820C428,
     HUD_TILES = 0x0827B208,
+    HUD_FONT_METRICS = 0x080E2EC0,
+    HUD_FONT_GLYPHS = 0x08509876,
+    HUD_FONT_GLYPH_COUNT = 0xE0,
+    HUD_FONT_METRIC_BYTES = HUD_FONT_GLYPH_COUNT * 4,
+    HUD_FONT_BITMAP_BYTES = HUD_FONT_GLYPH_COUNT * 10,
     ENEMY_COUNT = 0x71,
     DEATH_BLINK = 0x08118CE0,
     SCREEN_MARGINS = 0x08118D08,
@@ -1292,28 +1297,38 @@ static bool append_skill_throws(const FusionRom *rom, Text *throws, char *error,
     return true;
 }
 
-/* The in-game HUD resources of sub_0800DA50: palette rows 0-1 of
- * 0x0820C428 (rows 13-14 of BG palette memory) and the 16 x 16 tiles of
- * 0x0827B208 (BG tiles 0x200-0x2FF), as one private binary: 64 palette
- * bytes then 0x2000 tile bytes. */
+/* The in-game HUD resources of sub_0800DA50 and sub_0800DE4C: palette rows
+ * 0-1 of 0x0820C428 (the initial BG rows 13-14), its row 5 (the enemy-name
+ * BG row 14), the 16 x 16 tiles of 0x0827B208 (BG tiles 0x200-0x2FF), then
+ * context B's metrics and 8-pixel font bitmaps. */
 static bool write_hud(const FusionRom *rom, const char *metadata_output, char *error,
                       size_t error_size) {
-    const uint8_t *palette = slice(rom, HUD_PALETTE, 4 + 2 * 32, "HUD palette", error,
+    const uint8_t *palette = slice(rom, HUD_PALETTE, 4 + 6 * 32, "HUD palette", error,
                                    error_size);
-    if (!palette || palette[0] != 0 || palette[2] < 2) {
+    if (!palette || palette[0] != 0 || palette[2] < 6) {
         if (palette) set_error(error, error_size, "unsupported HUD palette resource");
         return false;
     }
     TileSheet sheet;
     if (!load_tile_sheet(rom, HUD_TILES, &sheet, error, error_size)) return false;
-    bool ok = sheet.size == 0x2000;
-    uint8_t *bytes = ok ? malloc(64 + sheet.size) : NULL;
+    const uint8_t *metrics = slice(rom, HUD_FONT_METRICS, HUD_FONT_METRIC_BYTES,
+                                   "HUD font metrics", error, error_size);
+    const uint8_t *glyphs = metrics ? slice(rom, HUD_FONT_GLYPHS, HUD_FONT_BITMAP_BYTES,
+                                            "HUD font glyphs", error, error_size)
+                                     : NULL;
+    bool ok = sheet.size == 0x2000 && metrics && glyphs;
+    size_t total = 96 + sheet.size + HUD_FONT_METRIC_BYTES + HUD_FONT_BITMAP_BYTES;
+    uint8_t *bytes = ok ? malloc(total) : NULL;
     if (bytes) {
         memcpy(bytes, palette + 4, 64);
-        memcpy(bytes + 64, sheet.data, sheet.size);
+        memcpy(bytes + 64, palette + 4 + 5 * 32, 32);
+        memcpy(bytes + 96, sheet.data, sheet.size);
+        memcpy(bytes + 96 + sheet.size, metrics, HUD_FONT_METRIC_BYTES);
+        memcpy(bytes + 96 + sheet.size + HUD_FONT_METRIC_BYTES, glyphs,
+               HUD_FONT_BITMAP_BYTES);
         char path[FUSION_EXPORT_PATH_CAPACITY];
         ok = fusion_export_join(path, metadata_output, "hud.bin") &&
-             fusion_export_write_file(path, bytes, 64 + sheet.size, error, error_size);
+             fusion_export_write_file(path, bytes, total, error, error_size);
     } else {
         if (ok) set_error(error, error_size, "cannot allocate the HUD resources");
         else set_error(error, error_size, "unexpected HUD tile sheet size");

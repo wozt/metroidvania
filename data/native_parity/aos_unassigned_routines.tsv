@@ -2297,14 +2297,11 @@ aos:c:src/code_0800CB00.c:sub_0800D1F0	sub_0800D1F0	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800D288	sub_0800D288	unclassified				c_function	0x0800D288	src/code_0800CB00.c	438	6	15
 aos:c:src/code_0800CB00.c:sub_0800D288_inline_0	sub_0800D288_inline_0	unclassified				c_function		src/code_0800CB00.c	429	1	0
 aos:c:src/code_0800CB00.c:sub_0800DC70_inline_0	sub_0800DC70_inline_0	unclassified		technical	exclusive_callees	c_function		src/code_0800CB00.c	860	1	1
-aos:c:src/code_0800CB00.c:sub_0800DE4C	sub_0800DE4C	unclassified				c_function	0x0800DE4C	src/code_0800CB00.c	1034	1	10
 aos:c:src/code_0800CB00.c:sub_0800E0E8	sub_0800E0E8	unclassified				c_function	0x0800E0E8	src/code_0800CB00.c	1150	1	11
 aos:c:src/code_0800CB00.c:sub_0800E380	sub_0800E380	unclassified				c_function	0x0800E380	src/code_0800CB00.c	1277	1	0
 aos:c:src/code_0800CB00.c:sub_0800E40C	sub_0800E40C	unclassified				c_function	0x0800E40C	src/code_0800CB00.c	1343	2	2
 aos:c:src/code_0800CB00.c:sub_0800E40C_inline_0	sub_0800E40C_inline_0	unclassified				c_function		src/code_0800CB00.c	1330	3	0
 aos:c:src/code_0800CB00.c:sub_0800E540	sub_0800E540	unclassified				c_function	0x08003540	src/code_0800CB00.c	1392	1	10
-aos:c:src/code_0800CB00.c:sub_0800EA98	sub_0800EA98	unclassified				c_function	0x0800EA98	src/code_0800CB00.c	1650	1	1
-aos:c:src/code_0800CB00.c:sub_0800EB04	sub_0800EB04	unclassified				c_function	0x0800EB04	src/code_0800CB00.c	1673	9	1
 aos:c:src/code_0800CB00.c:sub_0800EBE0	sub_0800EBE0	unclassified				c_function	0x0800EBE0	src/code_0800CB00.c	1714	1	5
 aos:c:src/code_0800CB00.c:sub_0800ECA0	sub_0800ECA0	unclassified		technical	exclusive_callees	c_function	0x0800ECA0	src/code_0800CB00.c	1745	3	4
 aos:c:src/code_0800CB00.c:sub_0800ED24	sub_0800ED24	unclassified		technical	exclusive_callees	c_function	0x0800ED24	src/code_0800CB00.c	1778	9	3
@@ -2314,7 +2311,6 @@ aos:c:src/code_0800CB00.c:sub_0800EF58	sub_0800EF58	environment	referrers			c_fu
 aos:c:src/code_0800CB00.c:sub_0800EF6C	sub_0800EF6C	unclassified				c_function	0x0800EF6C	src/code_0800CB00.c	1969	2	0
 aos:c:src/code_0800CB00.c:sub_0800EF94	sub_0800EF94	unclassified				c_function	0x0800EF94	src/code_0800CB00.c	1979	1	0
 aos:c:src/code_0800CB00.c:sub_0800EF98	sub_0800EF98	unclassified				c_function	0x0800EF98	src/code_0800CB00.c	1990	1	0
-aos:c:src/code_0800CB00.c:sub_0800EFD4	sub_0800EFD4	unclassified				c_function	0x0800EFD4	src/code_0800CB00.c	2007	2	3
 aos:c:src/code_0800CB00.c:sub_0800F038	sub_0800F038	unclassified				c_function	0x0800F038	src/code_0800CB00.c	2040	1	2
 aos:c:src/code_0800CB00.c:sub_0800F0AC	sub_0800F0AC	unclassified				c_function	0x0800F0AC	src/code_0800CB00.c	2055	1	2
 aos:c:src/code_0800CB00.c:sub_0800F1C4	sub_0800F1C4	unclassified				c_function	0x0800F1C4	src/code_0800CB00.c	2134	0	0

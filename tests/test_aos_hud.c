@@ -42,7 +42,7 @@ int main(void) {
 
     /* Pixels: BG0 scrolled 6 pixels up, palette 13, index 0 transparent. */
     static uint8_t tiles[AOS_HUD_TILE_BYTES];
-    uint8_t palette[32] = {0};
+    uint8_t palette[AOS_HUD_PALETTE_BYTES] = {0};
     palette[2 * 3] = 0x1F;                      /* colour 3: red */
     tiles[(0x209 - 0x200) * 32 + 6 * 4] = 0x03; /* tile 0x209, row 6, pixel 0 */
     aos_hud_init(&hud, 1, 1, 1, 1);
@@ -50,6 +50,33 @@ int main(void) {
     assert(aos_hud_pixel(&hud, tiles, palette, 0, 0, &color) && color == 0x001F);
     assert(!aos_hud_pixel(&hud, tiles, palette, 1, 0, &color));
     assert(!aos_hud_pixel(&hud, tiles, palette, 200, 100, &color));
+
+    /* sub_0800EA98/sub_0800DE4C: a defeated enemy uses context B's
+     * eight-pixel font, alternates the two dynamic tile pages and keeps the
+     * right-aligned three-row notice for 0xF0 frames. */
+    static uint8_t metrics[AOS_HUD_FONT_METRIC_BYTES];
+    static uint8_t glyphs[AOS_HUD_FONT_BITMAP_BYTES];
+    unsigned a = ('A' - 0x20) * 4, b = ('B' - 0x20) * 4;
+    metrics[a] = metrics[b] = 0;
+    metrics[a + 1] = 4;
+    metrics[b + 1] = 3;
+    glyphs[('A' - 0x20) * 10] = 0xF0;
+    glyphs[('B' - 0x20) * 10] = 0xE0;
+    AosHudFont font = {metrics, glyphs};
+    assert(aos_hud_show_enemy(&hud, &font, "AB"));
+    assert(hud.notice_active && hud.notice_timer == 0xF0 && hud.notice_page == 1);
+    assert(at(24, 18) == 0xE220 && at(29, 18) == 0xE620);
+    assert(at(26, 19) == 0xE230 && at(28, 19) == 0xE280 && at(31, 19) == 0xE630);
+    assert(at(24, 20) == 0xE240 && at(29, 20) == 0xE640);
+    palette[64 + 0xF * 2] = 0xE0;
+    palette[64 + 0xF * 2 + 1] = 0x03;
+    assert(aos_hud_pixel(&hud, tiles, palette, 28 * 8, 19 * 8 - AOS_HUD_SCROLL_Y,
+                         &color) && color == 0x03E0);
+    for (int i = 0; i < 0xEF; ++i) aos_hud_tick(&hud);
+    assert(hud.notice_active && hud.notice_timer == 1);
+    aos_hud_tick(&hud);
+    assert(!hud.notice_active && !hud.notice_timer && at(28, 19) == 0);
+    assert(aos_hud_show_enemy(&hud, &font, "AB") && at(28, 19) == 0xE2A0);
     puts("Aria HUD tests passed");
     return 0;
 }

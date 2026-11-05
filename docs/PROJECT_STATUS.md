@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0753 - Port Aria's defeated-enemy name notice
+
+- Traced the supplied lower-right name display back to Aria's native
+  `sub_0800EA98` reward hook and `sub_0800DE4C` BG0 builder. The modern
+  Advance Collection adds its own gadget presentation, but the GBA game does
+  have a distinct enemy/item name system; the reconstruction now keeps those
+  layers separate.
+- Extended the portable `AosHud` state with the native three-row lower-right
+  frame, context-B eight-pixel font rendering, alternating tile pages 0x280
+  and 0x2A0, the notice palette and the 0xF0-frame lifetime/clear path of
+  `sub_0800EFD4` and `sub_0800EB04`. The resolved name remains data supplied
+  by the caller, so the controller is reusable by the runtime and editor.
+- Extended `aria_objects` to version 64. Its private `hud.bin` now carries
+  the required initial and notice palettes plus the native small-font metrics
+  and bitmaps. Updated the golden fixture after the intentional format
+  change; no extracted data is committed.
+- Added deterministic ROM-free tests for layout, font pixels, palette
+  selection, double buffering and expiration. A local offscreen room 0/15
+  capture defeated Axe Armor through the native reward path and showed its
+  purple/gold name notice at frame 70. This is source-derived and unit-tested,
+  not emulator-compared.
+
+Next: port the sibling item-name path (`sub_0800EF98`/`sub_0800E0E8`) using
+the same editor-safe HUD controller, then identify and reconstruct the still
+empty base HUD text window before continuing pause-menu presentation.
+
 ## Patch 0752 - Port Aria's native damage-number entities
 
 - Added the SDL-independent `aos_damage_popup` controller for

@@ -19,10 +19,18 @@ static int32_t full_sine(uint32_t angle, void *context) {
     return 0x10000;
 }
 
+static uint16_t zero_angle(int16_t x, int16_t y, void *context) {
+    (void)x;
+    (void)y;
+    (void)context;
+    return 0;
+}
+
 static void test_emitted_motion(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
-    aos_opening_actors_set_motion(&actors, zero_random, full_sine, NULL);
+    aos_opening_actors_set_motion(&actors, zero_random, full_sine,
+                                  zero_angle, NULL);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
     assert(actors.emitted_count == 6);
     int32_t knight_y = actors.emitted[0].y;
@@ -47,7 +55,8 @@ static void test_emitted_motion(void) {
 static void test_emitted_attack_tails(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
-    aos_opening_actors_set_motion(&actors, zero_random, full_sine, NULL);
+    aos_opening_actors_set_motion(&actors, zero_random, full_sine,
+                                  zero_angle, NULL);
     actors.camera_x = 0xDF << 16;
     actors.emitted_count = 1;
     actors.emitted[0] = (AosOpeningEntity){
@@ -76,6 +85,14 @@ static void test_emitted_attack_tails(void) {
     assert(entity->state == 5 && entity->active &&
            entity->events == (AOS_OPENING_ENTITY_EVENT_SOUND_0X6B |
                               AOS_OPENING_ENTITY_EVENT_DEBRIS));
+    assert(actors.debris_count == 7);
+    assert(actors.debris[0].active && actors.debris[0].source_type == 8 &&
+           actors.debris[0].frame == 0x24 &&
+           actors.debris[0].x == entity->x &&
+           actors.debris[0].y == entity->y - 30 * 0x10000 &&
+           actors.debris[0].vx == 16 * 0x1000 &&
+           actors.debris[0].vy == -64 * 0x1000 &&
+           actors.debris[0].timer == 30);
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(!entity->active && entity->events == AOS_OPENING_ENTITY_EVENT_NONE);
 
@@ -98,8 +115,48 @@ static void test_emitted_attack_tails(void) {
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(entity->state == 4 && entity->active &&
            entity->events == AOS_OPENING_ENTITY_EVENT_PROJECTILE);
+    assert(actors.projectile_count == 1 &&
+           actors.projectiles[0].active &&
+           actors.projectiles[0].x == entity->x &&
+           actors.projectiles[0].y == entity->y - 0x200000 &&
+           actors.projectiles[0].heading == 0x8000 &&
+           actors.projectiles[0].speed == 0x30000 &&
+           actors.projectiles[0].timer == 0xC8);
+    int32_t projectile_x = actors.projectiles[0].x;
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
-    assert(!entity->active);
+    assert(!entity->active && actors.projectiles[0].active &&
+           actors.projectiles[0].speed == 0x31800 &&
+           actors.projectiles[0].turn == 0x2A &&
+           actors.projectiles[0].x == projectile_x + 0x31800 &&
+           actors.projectiles[0].timer == 0xC7);
+
+    actors.emitted[0] = (AosOpeningEntity){
+        .x = 0x158 << 16,
+        .y = 0x288 << 16,
+        .entity_type = 10,
+        .variant = 0,
+        .state = 3,
+        .active = true,
+        .disappearing = true,
+    };
+    for (unsigned frame = 0; frame < 36; ++frame)
+        aos_opening_actors_update(&actors, NULL, NULL, 0x230);
+    assert(actors.emitted[0].state == 4 && actors.debris_count == 14 &&
+           actors.debris[7].source_type == 10 &&
+           actors.debris[7].frame == 0x1B &&
+           actors.debris[7].vx == 32 * 0x1000 &&
+           actors.debris[7].vy == -80 * 0x1000 &&
+           actors.projectile_count == 2);
+
+    actors.projectile_count = 1;
+    actors.projectiles[0] = (AosOpeningProjectile){
+        .x = actors.x[2], .y = actors.y[2], .state = 2, .active = true};
+    aos_opening_actors_update(&actors, NULL, NULL, 0x230);
+    assert(!actors.projectiles[0].active &&
+           actors.projectiles[0].events ==
+               AOS_OPENING_ENTITY_EVENT_SOUND_0XBC);
+    aos_opening_actors_update(&actors, NULL, NULL, 0x230);
+    assert(actors.projectiles[0].events == AOS_OPENING_ENTITY_EVENT_NONE);
 }
 
 static void test_trigger(void) {

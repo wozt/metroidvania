@@ -274,7 +274,8 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "rock_fragment_1",
                                                           "rock_fragment_2",
                                                           "wall_piece_1", "wall_piece_2",
-                                                          "spark_7"};
+                                                          "spark_7",
+                                                          "opening_projectile"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 #define ARIA_OBJECT_WALL 0x08           /* Object08: a breakable wall */
@@ -3361,7 +3362,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             }
             continue;
         }
-        if (sscanf(line, "Effect/%15[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
+        if (sscanf(line, "Effect/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style,
                    &frame, &ticks, &ox, &oy, frame_path) == 7) {
             /* One animation per effect kind or pickup sprite. */
             for (int k = 0; k < AOS_EFFECT_KINDS + PICKUP_ARTS; ++k) {
@@ -3723,6 +3724,49 @@ static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objec
             renderer, frame->texture, NULL, &rect, 0, NULL,
             entity->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     }
+    for (unsigned piece = 0; piece < actors->debris_count; ++piece) {
+        const AosOpeningDebris *debris = &actors->debris[piece];
+        if (!debris->active) continue;
+        const __typeof__(objects->enemies[0]) *art =
+            &objects->enemies[debris->source_type == 8
+                                  ? AOS_ENEMY_WINGED_SKELETON
+                                  : AOS_ENEMY_SKELETON];
+        const AriaFrame *frame = blade_frame(art, debris->frame);
+        if (!frame || !frame->texture) continue;
+        int x = debris->x >> 16, y = debris->y >> 16;
+        float draw_x = debris->mirrored
+                           ? (float)(x - frame->offset_x) - frame->w
+                           : (float)(x + frame->offset_x);
+        SDL_FRect rect = {draw_x - (float)cam_x,
+                          (float)(y + frame->offset_y - cam_y), frame->w,
+                          frame->h};
+        SDL_RenderTextureRotated(
+            renderer, frame->texture, NULL, &rect, 0, NULL,
+            debris->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+    }
+    const __typeof__(objects->effects[0]) *projectile_art =
+        &objects->effects[AOS_EFFECT_OPENING_PROJECTILE];
+    unsigned projectile_total = 0;
+    for (unsigned frame = 0; frame < projectile_art->def.count; ++frame)
+        projectile_total += projectile_art->ticks[frame];
+    if (projectile_total) {
+        for (unsigned index = 0; index < actors->projectile_count; ++index) {
+            const AosOpeningProjectile *projectile = &actors->projectiles[index];
+            if (!projectile->active) continue;
+            unsigned age = projectile->animation_age % projectile_total;
+            unsigned frame = 0;
+            while (frame + 1 < projectile_art->def.count &&
+                   age >= projectile_art->ticks[frame])
+                age -= projectile_art->ticks[frame++];
+            const AriaFrame *art = &projectile_art->frames[frame];
+            if (!art->texture) continue;
+            SDL_FRect rect = {
+                (float)((projectile->x >> 16) + art->offset_x - cam_x),
+                (float)((projectile->y >> 16) + art->offset_y - cam_y),
+                art->w, art->h};
+            SDL_RenderTexture(renderer, art->texture, NULL, &rect);
+        }
+    }
 }
 
 static void opening_actor_durations(
@@ -3751,6 +3795,11 @@ static uint32_t opening_random(void *context) {
 static int32_t opening_sine(uint32_t angle, void *context) {
     (void)context;
     return aos_sine(angle);
+}
+
+static uint16_t opening_angle(int16_t x, int16_t y, void *context) {
+    (void)context;
+    return aos_arctan2(x, y);
 }
 
 /* Shared effects of one kind, flipped when + 0x58 bit 0x40 (drawn at
@@ -4917,7 +4966,7 @@ int aria_runtime_main(int argc, char **argv) {
                                        &opening_resources);
         aos_opening_actors_init(&opening_actors);
         aos_opening_actors_set_motion(&opening_actors, opening_random,
-                                      opening_sine, NULL);
+                                      opening_sine, opening_angle, NULL);
         soma.x = AOS_OPENING_SOMA_X << 16;
         soma.y = AOS_OPENING_SOMA_Y << 16;
         soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
@@ -5250,6 +5299,13 @@ int aria_runtime_main(int argc, char **argv) {
                     if (opening_actors.emitted[actor].events &
                         AOS_OPENING_ENTITY_EVENT_SOUND_0X6B) {
                         aos_audio_play_song(0x6B);
+                        break;
+                    }
+                for (unsigned projectile = 0;
+                     projectile < opening_actors.projectile_count; ++projectile)
+                    if (opening_actors.projectiles[projectile].events &
+                        AOS_OPENING_ENTITY_EVENT_SOUND_0XBC) {
+                        aos_audio_play_song(0xBC);
                         break;
                     }
                 if (start_song < 0) play_opening_cue(actor_cue, &room_music);

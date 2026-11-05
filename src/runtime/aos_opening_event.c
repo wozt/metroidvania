@@ -193,10 +193,12 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
 
 void aos_opening_actors_set_motion(AosOpeningActors *actors,
                                    AosOpeningRandom random,
-                                   AosOpeningSine sine, void *context) {
+                                   AosOpeningSine sine,
+                                   AosOpeningAngle angle, void *context) {
     if (!actors) return;
     actors->random = random;
     actors->sine = sine;
+    actors->angle = angle;
     actors->motion_context = context;
 }
 
@@ -247,14 +249,19 @@ static void begin_emitted_disappearance(AosOpeningActors *actors) {
     }
 }
 
-static bool emitted_in_impact_margin(const AosOpeningActors *actors,
-                                     const AosOpeningEntity *entity) {
-    int32_t screen_x = (entity->x >> 16) - (actors->camera_x >> 16);
-    int32_t screen_y = (entity->y >> 16) - actors->camera_y;
+static bool point_in_impact_margin(const AosOpeningActors *actors,
+                                   int32_t x, int32_t y) {
+    int32_t screen_x = (x >> 16) - (actors->camera_x >> 16);
+    int32_t screen_y = (y >> 16) - actors->camera_y;
     /* sub_08068AD4 receives (-0x80, -0x40, 0x1F0, 0x120). The latter two
      * values are inclusive rectangle widths, not absolute coordinates. */
     return screen_x >= -0x80 && screen_x <= 0x170 &&
            screen_y >= -0x40 && screen_y <= 0xE0;
+}
+
+static bool emitted_in_impact_margin(const AosOpeningActors *actors,
+                                     const AosOpeningEntity *entity) {
+    return point_in_impact_margin(actors, entity->x, entity->y);
 }
 
 static bool emitted_selector(AosOpeningActors *actors,
@@ -263,13 +270,171 @@ static bool emitted_selector(AosOpeningActors *actors,
            actors->random(actors->motion_context) % 7 == entity->variant;
 }
 
+typedef struct {
+    int8_t x;
+    int8_t y;
+    uint8_t frame;
+    int8_t vx;
+    int8_t vy;
+    int8_t timer;
+} OpeningDebrisSpec;
+
+/* 0x085267D8 and 0x08526802, seven six-byte records consumed by
+ * sub_0805E8C8 and sub_0805E9F0. Only the sprite-frame column differs. */
+static const OpeningDebrisSpec skeleton_debris[7] = {
+    {0, -30, 0x1B, 16, 64, 60}, {0, -5, 0x17, 16, 49, 38},
+    {0, -3, 0x19, 17, 48, 23},  {4, -5, 0x15, 12, 56, 43},
+    {4, -2, 0x16, 18, 51, 40},  {-4, -5, 0x18, 24, 50, 33},
+    {-4, -2, 0x1A, 12, 40, 26},
+};
+
+static const OpeningDebrisSpec winged_debris[7] = {
+    {0, -30, 0x24, 16, 64, 60}, {0, -5, 0x25, 16, 49, 38},
+    {0, -3, 0x26, 17, 48, 23},  {4, -5, 0x27, 12, 56, 43},
+    {4, -2, 0x28, 18, 51, 40},  {-4, -5, 0x29, 24, 50, 33},
+    {-4, -2, 0x2A, 12, 40, 26},
+};
+
+static void append_debris(AosOpeningActors *actors,
+                          const AosOpeningEntity *entity) {
+    const OpeningDebrisSpec *specs = entity->entity_type == 8
+                                         ? winged_debris : skeleton_debris;
+    for (unsigned i = 0; i < 7 &&
+                         actors->debris_count < AOS_OPENING_DEBRIS_CAPACITY;
+         ++i) {
+        const OpeningDebrisSpec *spec = &specs[i];
+        int32_t vx = spec->vx;
+        int32_t vy = spec->vy;
+        if (entity->entity_type == 10 && actors->random) {
+            vx += 0x10 - (int32_t)(actors->random(actors->motion_context) & 0x1F);
+            vy += 0x10 - (int32_t)(actors->random(actors->motion_context) & 0x1F);
+        }
+        int32_t x_offset = spec->x;
+        if (entity->mirrored) {
+            x_offset = -x_offset;
+            vx = -vx;
+        }
+        actors->debris[actors->debris_count++] = (AosOpeningDebris){
+            .x = entity->x + x_offset * 0x10000,
+            .y = entity->y + (int32_t)spec->y * 0x10000,
+            .vx = vx * 0x1000,
+            .vy = -vy * 0x1000,
+            .frame = spec->frame,
+            .source_type = entity->entity_type,
+            .timer = (uint8_t)(spec->timer / 2),
+            .active = true,
+            .mirrored = entity->mirrored,
+        };
+    }
+}
+
+static uint16_t angle_to(AosOpeningActors *actors, int32_t from_x,
+                         int32_t from_y, int32_t to_x, int32_t to_y) {
+    if (!actors->angle) return 0;
+    int16_t dx = (int16_t)((to_x >> 16) - (from_x >> 16));
+    int16_t dy = (int16_t)((to_y >> 16) - (from_y >> 16));
+    return actors->angle(dx, dy, actors->motion_context);
+}
+
+static void append_projectile(AosOpeningActors *actors,
+                              const AosOpeningEntity *entity) {
+    if (actors->projectile_count >= AOS_OPENING_PROJECTILE_CAPACITY) return;
+    int32_t y = entity->y - 0x200000;
+    uint32_t random = actors->random
+                          ? actors->random(actors->motion_context) : 0;
+    int32_t target_y = actors->y[2] - 0x80000 -
+                       (int32_t)(random & 0x7F) * 0x1000;
+    uint16_t heading = (uint16_t)(angle_to(
+        actors, entity->x, y, actors->x[2], target_y) + 0x8000);
+    actors->projectiles[actors->projectile_count++] = (AosOpeningProjectile){
+        .x = entity->x,
+        .y = y,
+        .speed = 0x30000,
+        .heading = heading,
+        .timer = 0xC8,
+        .active = true,
+    };
+}
+
+static void update_debris(AosOpeningActors *actors) {
+    for (unsigned i = 0; i < actors->debris_count; ++i) {
+        AosOpeningDebris *debris = &actors->debris[i];
+        if (!debris->active) continue;
+        if (!point_in_impact_margin(actors, debris->x, debris->y) ||
+            debris->timer-- == 0 || (debris->y >> 16) > 0xAA) {
+            debris->active = false;
+            continue;
+        }
+        debris->x += debris->vx;
+        debris->y += debris->vy;
+        debris->vy += 0x3000;
+    }
+}
+
+static uint16_t turn_projectile(AosOpeningActors *actors,
+                                const AosOpeningProjectile *projectile) {
+    uint16_t wanted = angle_to(actors, projectile->x, projectile->y,
+                               actors->x[2], actors->y[2] - 0x100000);
+    int32_t difference = (int32_t)wanted - projectile->heading;
+    bool up = difference > 0 ? difference <= 0x7FFF : difference < -0x8000;
+    return (uint16_t)(projectile->heading +
+                      (up ? projectile->turn : -projectile->turn));
+}
+
+static void update_projectiles(AosOpeningActors *actors) {
+    for (unsigned i = 0; i < actors->projectile_count; ++i) {
+        AosOpeningProjectile *projectile = &actors->projectiles[i];
+        projectile->events = AOS_OPENING_ENTITY_EVENT_NONE;
+        if (!projectile->active) continue;
+        if (projectile->animation_age < UINT16_MAX)
+            ++projectile->animation_age;
+        if (projectile->state <= 1 && actors->sine) {
+            projectile->heading = turn_projectile(actors, projectile);
+            projectile->turn = (uint16_t)(projectile->turn + 0x2A);
+            if (projectile->turn > 0x4000) projectile->turn = 0x4000;
+            projectile->speed += 0x1800;
+            if (projectile->speed > 0x80000) projectile->speed = 0x80000;
+            projectile->vx =
+                (actors->sine((uint16_t)(projectile->heading + 0x4000),
+                              actors->motion_context) >> 8) *
+                (projectile->speed >> 8);
+            projectile->vy =
+                (actors->sine(projectile->heading,
+                              actors->motion_context) >> 8) *
+                (projectile->speed >> 8);
+            projectile->x += projectile->vx;
+            projectile->y += projectile->vy;
+        }
+        int32_t dx = (actors->x[2] >> 16) - (projectile->x >> 16);
+        int32_t dy = (actors->y[2] >> 16) - (projectile->y >> 16);
+        if (dx >= -0x10 && dx <= 0x10 && dy >= -0x10 && dy <= 0x10) {
+            projectile->events = AOS_OPENING_ENTITY_EVENT_SOUND_0XBC;
+            projectile->active = false;
+            continue;
+        }
+        if (projectile->timer) --projectile->timer;
+        if (!projectile->timer) {
+            if (projectile->state == 0) {
+                projectile->state = 1;
+                projectile->timer = 0x40;
+            } else {
+                projectile->active = false;
+            }
+        }
+    }
+}
+
 static void finish_emitted(AosOpeningActors *actors, AosOpeningEntity *entity,
                            bool projectile) {
-    if (emitted_in_impact_margin(actors, entity))
+    if (emitted_in_impact_margin(actors, entity)) {
         entity->events |= AOS_OPENING_ENTITY_EVENT_SOUND_0X6B |
                           AOS_OPENING_ENTITY_EVENT_DEBRIS;
-    if (projectile)
+        append_debris(actors, entity);
+    }
+    if (projectile) {
         entity->events |= AOS_OPENING_ENTITY_EVENT_PROJECTILE;
+        append_projectile(actors, entity);
+    }
     entity->state = entity->entity_type == 8 ? 5 : 4;
     entity->step = 0;
 }
@@ -443,6 +608,8 @@ AosOpeningCue aos_opening_actors_update(
     for (unsigned actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor)
         if (actors->animation_age[actor] < UINT16_MAX)
             ++actors->animation_age[actor];
+    update_debris(actors);
+    update_projectiles(actors);
     update_emitted(actors);
     /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
     if (actors->state == 0) {

@@ -346,6 +346,9 @@ static const EffectSpec effects[] = {
      * 0x08526064: descriptor 5 of 0x08526004, bank 4), its frames 1 and 2. */
     {"wall_piece_1", 0x081CBEC4, 0x0820A100, 4, 0x082112E8, 0, {0}, 1},
     {"wall_piece_2", 0x081CBEC4, 0x0820A100, 4, 0x082112E8, 0, {0}, 2},
+    /* Object20's sub_0805ED80 attack: common animation 0x16 with palette
+     * bank 6 (OBJ row 9), aimed at the principal Winged Skeleton. */
+    {"opening_projectile", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {0x16}, -1},
     /* Pickups. sub_0803B924's attribute bits are the OBJ palette row,
      * which sub_0800C5D8 fills from bank sUnk_084F0DD8[row] of 0x082099FC
      * (rows 6, 7, 8, 9 -> banks 2, 3, 4, 6). Small coins (money table rows

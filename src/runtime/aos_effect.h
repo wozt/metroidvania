@@ -58,7 +58,10 @@
  * - the pieces of an object 0x09 grid sub_0804F9B4 (`piece`, the wall's
  *   frames 1 and 2: Effect/wall_piece_1, _2): frame and speeds at random
  *   (vx 2.0 to 2.5, vy -1.0 to -5.0, ay 0x3000), moved by sub_0806D3D8(e,
- *   8.0) from their first update; deleted off the same box. */
+ *   8.0) from their first update; deleted off the same box;
+ * - Object20's attack from sub_0805ED80 uses common animation 0x16 with
+ *   palette bank 6 (`opening_projectile`). Its motion remains owned by the
+ *   portable opening controller rather than AosEffect. */
 enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_DARK_SMOKE = 3, AOS_EFFECT_FIRE = 4, AOS_EFFECT_SPARK = 5,
        AOS_EFFECT_DUST = 6, AOS_EFFECT_IMPACT = 7, AOS_EFFECT_CASING = 8,
@@ -66,7 +69,8 @@ enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_BURST_15 = 12, AOS_EFFECT_SPARKLE = 13,
        AOS_EFFECT_ROCK_FRAGMENT_0 = 14, AOS_EFFECT_ROCK_FRAGMENT_1 = 15,
        AOS_EFFECT_ROCK_FRAGMENT_2 = 16, AOS_EFFECT_WALL_PIECE_1 = 17,
-       AOS_EFFECT_WALL_PIECE_2 = 18, AOS_EFFECT_SPARK_ROW7 = 19, AOS_EFFECT_KINDS = 20 };
+       AOS_EFFECT_WALL_PIECE_2 = 18, AOS_EFFECT_SPARK_ROW7 = 19,
+       AOS_EFFECT_OPENING_PROJECTILE = 20, AOS_EFFECT_KINDS = 21 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */

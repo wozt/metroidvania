@@ -29,6 +29,8 @@ enum {
     AOS_OPENING_GLYPHS_PER_LINE = 80,
     AOS_OPENING_EMISSION_MAX_SPAWNS = 6,
     AOS_OPENING_EMITTED_CAPACITY = 10,
+    AOS_OPENING_DEBRIS_CAPACITY = AOS_OPENING_EMITTED_CAPACITY * 7,
+    AOS_OPENING_PROJECTILE_CAPACITY = 7,
 };
 
 typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
@@ -65,6 +67,7 @@ typedef enum {
     AOS_OPENING_ENTITY_EVENT_SOUND_0X6B = 1u << 0,
     AOS_OPENING_ENTITY_EVENT_DEBRIS = 1u << 1,
     AOS_OPENING_ENTITY_EVENT_PROJECTILE = 1u << 2,
+    AOS_OPENING_ENTITY_EVENT_SOUND_0XBC = 1u << 3,
 } AosOpeningEntityEvent;
 
 typedef struct {
@@ -99,8 +102,39 @@ typedef struct {
     bool disappearing;
 } AosOpeningEntity;
 
+/* Seven pieces created by sub_0805E8C8/sub_0805E9F0 and updated by
+ * sub_0805F044. source_type selects the Skeleton or Winged Skeleton sheet. */
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t vx;
+    int32_t vy;
+    uint8_t frame;
+    uint8_t source_type;
+    uint8_t timer;
+    bool active;
+    bool mirrored;
+} AosOpeningDebris;
+
+/* sub_0805ED80/sub_0805EE88's attack aimed at Object20's principal enemy. */
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t vx;
+    int32_t vy;
+    int32_t speed;
+    uint16_t heading;
+    uint16_t turn;
+    uint16_t animation_age;
+    uint8_t state;
+    uint8_t timer;
+    uint8_t events;
+    bool active;
+} AosOpeningProjectile;
+
 typedef uint32_t (*AosOpeningRandom)(void *context);
 typedef int32_t (*AosOpeningSine)(uint32_t angle, void *context);
+typedef uint16_t (*AosOpeningAngle)(int16_t x, int16_t y, void *context);
 
 typedef struct {
     const uint8_t *script;
@@ -147,8 +181,13 @@ typedef struct {
     bool camera_active;
     bool camera_initialized;
     AosOpeningEntity emitted[AOS_OPENING_EMITTED_CAPACITY];
+    AosOpeningDebris debris[AOS_OPENING_DEBRIS_CAPACITY];
+    AosOpeningProjectile projectiles[AOS_OPENING_PROJECTILE_CAPACITY];
+    uint8_t debris_count;
+    uint8_t projectile_count;
     AosOpeningRandom random;
     AosOpeningSine sine;
+    AosOpeningAngle angle;
     void *motion_context;
     AosOpeningCue pending_cue;
     uint32_t frame;
@@ -168,11 +207,13 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input);
 /* Localized speaker ids used by the first-room Object20 script. */
 const char *aos_opening_event_speaker_name(uint8_t speaker);
 void aos_opening_actors_init(AosOpeningActors *actors);
-/* Injects the native RNG and sine primitive without coupling the portable
- * scene model to the gameplay runtime. NULL callbacks leave motion inert. */
+/* Injects the native RNG, sine and ArcTan2 primitives without coupling the
+ * portable scene model to the gameplay runtime. NULL callbacks leave their
+ * corresponding motion inert. */
 void aos_opening_actors_set_motion(AosOpeningActors *actors,
                                    AosOpeningRandom random,
-                                   AosOpeningSine sine, void *context);
+                                   AosOpeningSine sine,
+                                   AosOpeningAngle angle, void *context);
 /* Connects a script control-2 beat to sub_0805D410's actor state. */
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
 /* Advances one frame and returns one audio cue due on that frame. Animation

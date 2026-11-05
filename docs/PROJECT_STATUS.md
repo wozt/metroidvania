@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0749 - Render Object20's debris and homing attack
+
+- Materialized the semantic impact requests from Patch 0748 as portable
+  records. `sub_0805E8C8` and `sub_0805E9F0` now create seven Skeleton or
+  Winged Skeleton pieces with their source table offsets, still frames,
+  mirrored X velocities, type-specific RNG velocities and halved lifetimes.
+  `sub_0805F044` applies their fixed-point motion, `0x3000` gravity, Y limit
+  and expanded camera-margin removal.
+- Ported Object20's `sub_0805ED80` projectile and the source-visible motion of
+  `sub_0805EE88`. Each Skeleton Knight spawns the attack 32 pixels above its
+  last position, initially aims away from a randomized point over the
+  principal Winged Skeleton, turns toward that target by an accelerating
+  `0x2A` step, and accelerates from 3 to 8 pixels per frame. Its 200- plus
+  64-frame lifetime, 32 by 32 target test and sound `0xBC` are connected.
+- Added ArcTan2 to the injected opening-motion interface alongside RNG and
+  sine, so the portable controller remains usable by deterministic tests and
+  future editor previews. The runtime renders both debris sheets and the
+  projectile, and consumes the projectile's one-frame impact sound event.
+- Exported common animation `0x16` with palette bank 6 as
+  `Effect/opening_projectile` and bumped `aria_objects` to version 61. A local
+  rebuild produced its twelve frames. Tests cover both debris tables,
+  randomized velocity formulas, gravity, projectile creation, acceleration,
+  lifetime state and non-repeating impact event. The type-10 parameter-bit-3
+  collision flight, the projectile's secondary sparks and combat callback,
+  and emulator comparison remain outstanding, so the scene stays partial.
+
 ## Patch 0748 - Port Object20's emitted attack tails
 
 - Replaced the fixed 48-frame retirement of Object20's emitted actors with

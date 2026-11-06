@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0761 - Port Aria's pickup collection flags
+
+- Ported `sub_080441F8`'s shared collection tail into a host-neutral state:
+  ordinary placed pickups set their `0x360` bit, special soul drops set the
+  indexed `0x37E` bit and clear global bits 0-1, and Object10-style scripted
+  pickups set global bit `0x400` even without a persistent index.
+- Connected every runtime collection to that common path and synchronized the
+  global door bits `0x101` with the existing door controller. Deterministic
+  tests cover ordinary, scripted, special and zero-index behavior. The two
+  special producers are not runtime-connected yet. Source-derived and
+  unit-tested, not emulator-compared.
+
+Next: connect Object10's scripted item and `sub_080D7308`'s special soul
+producer, then compare their collection transitions against an emulator.
+
 ## Patch 0760 - Connect Aria's recent-equipment ordering
 
 - Connected the three four-entry caches populated by item collection to the

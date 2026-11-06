@@ -2496,9 +2496,8 @@ static void clear_skills(AriaSouls *souls) {
 /* gEwramData + 0x344: the event bits (a breakable wall's break), stored
  * in the save (schema v10). */
 static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
-/* gEwramData + 0x360 through +0x377: one-time room pickup bits, separate
- * from the event words at +0x344. */
-static uint32_t aria_placed_items[AOS_PLACED_ITEM_WORDS];
+/* The durable words touched by the common pickup collection tail. */
+static AosPickupCollectionState aria_pickup_state;
 
 static const char *pickup_notice_name(uint8_t type, uint16_t variant) {
     if (type == AOS_PICKUP_ITEM)
@@ -2530,11 +2529,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 bool created = e->id <= 4
                     ? aos_pickup_create_placed(&pickup, combat->money, (uint8_t)e->id,
                                                 (uint16_t)e->param1, (uint16_t)e->param0,
-                                                e->x, e->y, aria_placed_items)
+                                                e->x, e->y, aria_pickup_state.placed)
                     : aos_pickup_create_placed_soul(&pickup, (uint8_t)e->id,
                                                      (uint16_t)e->param1,
                                                      (uint16_t)e->param0, e->x, e->y,
-                                                     aria_placed_items);
+                                                     aria_pickup_state.placed);
                 if (room->pickup_count < MAX_PICKUPS && created)
                     room->pickups[room->pickup_count++] = pickup;
             }
@@ -2846,7 +2845,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         } else if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
             uint32_t text = aos_pickup_collect_money(pickup, combat->money,
                                                      &combat->progress->gold);
-            aos_pickup_mark_placed(pickup, aria_placed_items);
+            aos_pickup_commit_collection(pickup, &aria_pickup_state);
             if (combat->hud && combat->hud_font && pickup->variant < AOS_MONEY_KINDS) {
                 char name[24];
                 snprintf(name, sizeof name, "%u GOLD", combat->money[pickup->variant].value);
@@ -2861,7 +2860,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             bool refusal_sound;
             if (aos_pickup_collect_item(pickup, combat->progress, &refusal_sound) ==
                 AOS_COLLECT_TAKEN) {
-                aos_pickup_mark_placed(pickup, aria_placed_items);
+                aos_pickup_commit_collection(pickup, &aria_pickup_state);
                 if (combat->recent_items)
                     aos_pickup_recent_record(combat->recent_items, pickup->type,
                                              (uint8_t)pickup->variant);
@@ -2879,7 +2878,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         } else if (touching && soul) {
             static const char *const colours[] = {"red", "blue", "yellow", "ability"};
             bool fresh = aos_pickup_collect_soul(pickup, combat->progress);
-            aos_pickup_mark_placed(pickup, aria_placed_items);
+            aos_pickup_commit_collection(pickup, &aria_pickup_state);
             printf("Collected %s %s soul %u (held %u, %u souls)\n", fresh ? "new" : "another",
                    colours[pickup->type - AOS_PICKUP_SOUL], pickup->variant,
                    aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
@@ -3405,7 +3404,7 @@ static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
     memcpy(save->defeated, progress->defeated, sizeof save->defeated);
     memcpy(save->dropped, progress->dropped, sizeof save->dropped);
     memcpy(save->events, aria_events, sizeof save->events);
-    memcpy(save->placed_items, aria_placed_items, sizeof save->placed_items);
+    memcpy(save->placed_items, aria_pickup_state.placed, sizeof save->placed_items);
     save->weapon = progress->weapon;
     save->armor = progress->armor;
     save->accessory = progress->accessory;
@@ -5067,14 +5066,15 @@ int aria_runtime_main(int argc, char **argv) {
     aos_stats_init(&progress);
     aos_button_config_default(&progress.buttons);
     memset(aria_events, 0, sizeof aria_events);
-    memset(aria_placed_items, 0, sizeof aria_placed_items);
+    memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
     if (has_active_save) {
         progress.experience = active_save.experience;
         progress.gold = active_save.gold;
         memcpy(progress.defeated, active_save.defeated, sizeof progress.defeated);
         memcpy(progress.dropped, active_save.dropped, sizeof progress.dropped);
         memcpy(aria_events, active_save.events, sizeof aria_events);
-        memcpy(aria_placed_items, active_save.placed_items, sizeof aria_placed_items);
+        memcpy(aria_pickup_state.placed, active_save.placed_items,
+               sizeof aria_pickup_state.placed);
         for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
             progress.buttons.action[action] =
                 aos_button_config_button(active_save.buttons[action]);
@@ -5723,17 +5723,19 @@ int aria_runtime_main(int argc, char **argv) {
              * MP regeneration, then sub_08021C44. */
             aos_stats_status_update(&progress, player_new, (uint16_t)(soma.ticks - 1));
             aos_stats_derive(&progress);
+            /* A door walking Soma through owns the shared bits 0 and 8. */
+            bool door_held = false;
+            for (size_t k = 0; k < room.entity_count && !door_held; ++k)
+                door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
+                            room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
+                            room.entities[k].spawned && room.entities[k].door.holding;
+            aria_pickup_state.global_flags &= ~0x101u;
+            if (door_held) aria_pickup_state.global_flags |= 0x101u;
             if (have_yellow_souls) {
                 aos_yellow_soul_update(&yellow_soul, &progress, yellow_souls, soma.hp,
                                        soma.max_hp);
-                /* gEwramData + 0x42C bit 0: a door walking Soma through. */
-                bool held = false;
-                for (size_t k = 0; k < room.entity_count && !held; ++k)
-                    held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
-                           room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
-                           room.entities[k].spawned && room.entities[k].door.holding;
                 aos_yellow_soul_regen(&yellow_soul, &progress, yellow_souls, &soma.hp,
-                                      soma.max_hp, soma.vx, soma.flags, held);
+                                      soma.max_hp, soma.vx, soma.flags, door_held);
             }
             if (have_equipment && !atk_override) player_stats.atk = progress.atk;
             if (have_equipment && !def_override) player_stats.def = progress.def;

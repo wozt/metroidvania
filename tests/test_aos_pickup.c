@@ -225,6 +225,31 @@ int main(void) {
            !aos_pickup_create_placed_soul(&container, 8, 4, 20, 24, 56, collected) &&
            !aos_pickup_create_placed_soul(&container, 9, 1, 20, 24, 56, collected));
 
+    /* sub_080441F8's common tail distinguishes ordinary room pickups from
+     * Object10's scripted item and sub_080D7308's special soul drops. */
+    AosPickupCollectionState collection = {.global_flags = 0x103};
+    placed = aos_pickup_create_item(AOS_PICKUP_ITEM, 0, 0, 0);
+    placed.placed = true;
+    placed.persistent_index = 90;
+    aos_pickup_commit_collection(&placed, &collection);
+    assert(aos_pickup_placed_collected(collection.placed, 90) &&
+           collection.special == 0 && collection.global_flags == 0x103);
+    AosPickup scripted = aos_pickup_create_item(AOS_PICKUP_ITEM, 1, 0, 0);
+    scripted.origin_flags = AOS_PICKUP_ORIGIN_SCRIPTED;
+    aos_pickup_commit_collection(&scripted, &collection);
+    assert(collection.global_flags == 0x503);
+    AosPickup special = aos_pickup_create_soul(AOS_SOUL_RED, 2, 0, 0, 0, 0,
+                                                counting_random);
+    special.persistent_index = 7;
+    special.origin_flags = AOS_PICKUP_ORIGIN_SPECIAL;
+    aos_pickup_commit_collection(&special, &collection);
+    assert(collection.special == (1u << 7) && collection.global_flags == 0x500 &&
+           !aos_pickup_placed_collected(collection.placed, 7));
+    special.persistent_index = 0;
+    collection.global_flags = 3;
+    aos_pickup_commit_collection(&special, &collection);
+    assert(collection.global_flags == 3 && collection.special == (1u << 7));
+
     /* sub_080450C8: the container's direct type-4 sequence selects an
      * initial frame without moving, then consumes 3, 7, 7 and 3 updates. */
     static const uint8_t direct_ticks[] = {3, 7, 7, 3};

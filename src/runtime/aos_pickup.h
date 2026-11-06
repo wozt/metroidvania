@@ -38,6 +38,9 @@ enum {
     AOS_PICKUP_SOUND_EQUIPMENT = 0xB7,
     AOS_PICKUP_SOUND_SOUL = 0xBC,
     AOS_PICKUP_SOUND_REFUSED = 0x13B,
+    AOS_PICKUP_ORIGIN_SCRIPTED = 1, /* entity + 0x0B bit 0 */
+    AOS_PICKUP_ORIGIN_SPECIAL = 2,  /* entity + 0x0B bit 1 */
+    AOS_PICKUP_GLOBAL_SCRIPTED_TAKEN = 0x400,
 };
 
 typedef enum {
@@ -51,6 +54,15 @@ typedef struct {
     uint16_t active[AOS_PICKUP_ICON_SLOTS];
     uint16_t backup[AOS_PICKUP_ICON_SLOTS];
 } AosPickupIconSlots;
+
+/* The durable state touched by sub_080441F8's common collection tail. The
+ * global word is shared with room systems; this module only changes bits
+ * documented by the pickup path. */
+typedef struct {
+    uint32_t placed[AOS_PLACED_ITEM_WORDS]; /* gEwramData + 0x360 */
+    uint16_t special;                       /* gEwramData + 0x37E */
+    uint32_t global_flags;                  /* gEwramData + 0x42C */
+} AosPickupCollectionState;
 
 /* A pickup entity of sub_08043F70 (entities 0x49-0xCF). */
 typedef struct {
@@ -73,6 +85,7 @@ typedef struct {
     bool small_heart;   /* runs sub_08043CE4 instead of sub_08043DD0 */
     bool placed;        /* sub_08044054's last argument: fixed, no timeout */
     uint16_t persistent_index; /* entity parameter 0, zero is not recorded */
+    uint8_t origin_flags; /* entity + 0x0B: scripted/special collection */
     uint16_t age;       /* frames updated, for the sprite sequence */
     /* sub_08044840: a fixed soul container waits for a weapon contact, then
      * hides its follower for 16 frames while the released soul flies away. */
@@ -137,6 +150,11 @@ bool aos_pickup_placed_collected(
     const uint32_t collected[AOS_PLACED_ITEM_WORDS], uint16_t persistent_index);
 void aos_pickup_mark_placed(const AosPickup *pickup,
                             uint32_t collected[AOS_PLACED_ITEM_WORDS]);
+/* sub_080441F8's shared tail after a successful collection. Ordinary
+ * one-time pickups set their +0x360 bit. Special soul drops instead set
+ * +0x37E, clear global bits 0-1, and scripted pickups set global bit 10. */
+void aos_pickup_commit_collection(const AosPickup *pickup,
+                                  AosPickupCollectionState *state);
 /* sub_08044980: entity ids 5-8 make one fixed container. `soul_id` is the
  * room record's one-based parameter 1; it selects the zero-based soul index.
  * The durable bit remains clear until the released pickup is collected. */

@@ -200,6 +200,21 @@ void aos_pickup_mark_placed(const AosPickup *pickup,
     collected[pickup->persistent_index >> 5] |= 1u << (pickup->persistent_index & 31u);
 }
 
+void aos_pickup_commit_collection(const AosPickup *pickup,
+                                  AosPickupCollectionState *state) {
+    if (!pickup || !state) return;
+    if (pickup->persistent_index) {
+        if (pickup->origin_flags & AOS_PICKUP_ORIGIN_SPECIAL) {
+            state->special |= (uint16_t)(1u << (pickup->persistent_index & 31u));
+            state->global_flags &= ~3u;
+        } else {
+            aos_pickup_mark_placed(pickup, state->placed);
+        }
+    }
+    if (pickup->origin_flags & AOS_PICKUP_ORIGIN_SCRIPTED)
+        state->global_flags |= AOS_PICKUP_GLOBAL_SCRIPTED_TAKEN;
+}
+
 bool aos_pickup_create_placed_soul(AosPickup *pickup, uint8_t entity_id,
                                    uint16_t soul_id, uint16_t persistent_index,
                                    int32_t x, int32_t y,

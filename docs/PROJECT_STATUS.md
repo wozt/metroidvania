@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0768 - Move Headhunter's linked heads
+
+- Ported `sub_08083FD0` cases 1-3: each activated head generates the native
+  pair of progressively tighter targets above the body, accelerates toward
+  them at `0x2000`, applies the four-pixel speed cap and counts horizontal
+  direction changes between arcs.
+- Ported case 4's three mirrored attack perches and one-pixel-per-frame
+  approach. Added a shared source-equivalent polar acceleration helper.
+- Deterministic tests cover target generation, movement, per-head offsets and
+  arrival. Cases 5-7, attacks, body phase transitions and dedicated art remain
+  absent; source-derived and unit-tested, not emulator-compared.
+
+Next: port head cases 5-7 and the body phase transitions that drive them,
+then export the dedicated head art.
+
 ## Patch 0767 - Start Headhunter's native opening
 
 - Ported `sub_08081EBC` cases 0-2: select head phase 1, start sequence 24

@@ -17,6 +17,7 @@ static const AosCollision layer = {2, 1, W, H, cells, NULL, false};
 static uint32_t never_zero(void) { return 1; }
 static uint32_t always_zero(void) { return 0; }
 static uint32_t always_one_hundred(void) { return 100; }
+static uint32_t headhunter_random(void) { return 0xC0000; }
 /* A scripted RandomNumberGenerator. */
 static const uint32_t *script;
 static int script_at;
@@ -50,6 +51,28 @@ static void headhunter_death_tests(void) {
     aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);
     assert(first.step == 1 && second.step == 0);
+    aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    assert(first.step == 3 && first.target_x == body.x + AOS_FIXED(4) &&
+           first.target_y == body.y - AOS_FIXED(80));
+    int32_t old_x = first.x, old_y = first.y;
+    aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    assert(first.x != old_x || first.y != old_y);
+    first.step = 4;
+    first.substep = 0;
+    first.x = body.x;
+    first.y = body.y;
+    body.mirrored = false;
+    aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    assert(first.step == 4 && first.target_x == body.x - AOS_FIXED(2) &&
+           first.target_y == body.y - AOS_FIXED(52));
+    first.x = first.target_x;
+    first.y = first.target_y;
+    aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    assert(first.step == 5 && first.timer == 0);
     body.hh_phase = 2;
     aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);

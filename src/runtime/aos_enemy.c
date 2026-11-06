@@ -290,6 +290,21 @@ static bool move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     return (int32_t)(isqrt((uint32_t)(dx * dx + dy * dy)) << 16) <= speed;
 }
 
+/* sub_080695B4: the same polar solution, written to acceleration instead
+ * of velocity. */
+static bool accelerate_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+    int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
+    uint32_t distance = isqrt((uint32_t)(dx * dx + dy * dy));
+    if (!distance) {
+        e->ax = e->ay = 0;
+        return true;
+    }
+    uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
+    e->ax = fixed_mul(aos_sine(angle + 0x4000u), speed);
+    e->ay = fixed_mul(aos_sine(angle), speed);
+    return (int32_t)(distance << 16) <= speed;
+}
+
 /* sub_0803F2C8: starting an animation also clears + 0x59 bit 0. */
 static void play_loop(AosEnemy *enemy, const AosAnimSet *anims, unsigned id, bool loop) {
     aos_anim_start(&enemy->anim, anims, id, loop);
@@ -1928,19 +1943,72 @@ static AosHitReport headhunter_update(AosEnemy *enemy, AosSoma *soma,
     return report;
 }
 
-static void headhunter_head_update(AosEnemy *head) {
+static void headhunter_head_update(AosEnemy *head, uint32_t (*random)(void)) {
     const AosEnemy *body = head->parent;
     if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {
         head->removed = true;
         return;
     }
     head->mirrored = body->mirrored;
-    /* sub_08083FD0 case 0: each head remains parked until the body selects
-     * its native phase. Movement starts in case 1, which is not ported yet. */
+    /* sub_08083FD0 cases 0-4: wait for this head's phase, make two
+     * accelerating arcs above the body, then approach its phase-specific
+     * attack perch at one pixel per frame. */
     if (head->step == 0 && body->hh_phase == (uint8_t)(head->variant + 1u)) {
         head->step = 1;
         head->substep = 0;
         head->timer = 0;
+        return;
+    }
+    switch (head->step) {
+    case 1:
+        head->step = 2;
+        /* fall through */
+    case 2: {
+        unsigned n = 2u - head->substep;
+        uint32_t maximum = n << 19, minimum = n << 18;
+        uint32_t offset;
+        do offset = random() % maximum; while (offset < minimum);
+        head->target_x = body->x + (int32_t)(offset - minimum);
+        head->target_y = body->y - (int32_t)((n * 5u << 18) + 0x280000u);
+        head->step = 3;
+        break;
+    }
+    case 3: {
+        (void)accelerate_toward(head, head->target_x, head->target_y, 0x2000);
+        head->vy = head->ay * 8;
+        head->ay = 0;
+        int32_t old_vx = head->vx;
+        accel_move(head, 0x40000);
+        if (((uint32_t)(old_vx ^ head->vx) >> 31) != 0) {
+            if (++head->substep <= 1) head->step = 2;
+            else {
+                head->step = 4;
+                head->substep = 0;
+            }
+        }
+        break;
+    }
+    case 4: {
+        static const int32_t mirrored_x[3] = {0x200000, 0x480000, 0x400000};
+        static const int32_t normal_x[3] = {-0x20000, -0x120000, -0x100000};
+        static const int32_t y_offset[3] = {-0x340000, -0x2A0000, -0x280000};
+        unsigned variant = head->variant < 3 ? head->variant : 0;
+        if (head->substep == 0) {
+            head->substep = 1;
+            head->target_x = body->x +
+                             (body->mirrored ? mirrored_x[variant] : normal_x[variant]);
+            head->target_y = body->y + y_offset[variant];
+        }
+        if (move_toward(head, head->target_x, head->target_y, 0x10000)) {
+            head->step = 5;
+            head->timer = 0;
+        } else {
+            accel_move(head, 0x40000);
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 
@@ -11844,7 +11912,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
     if (enemy->role == AOS_ROLE_HEADHUNTER_HEAD) {
-        headhunter_head_update(enemy);
+        headhunter_head_update(enemy, random);
         return report;
     }
     if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY) {

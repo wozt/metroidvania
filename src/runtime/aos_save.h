@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v11"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v12"
+#define AOS_SAVE_SCHEMA_V11 "metroidvania-aos-save-v11"
 #define AOS_SAVE_SCHEMA_V10 "metroidvania-aos-save-v10"
 #define AOS_SAVE_SCHEMA_V9 "metroidvania-aos-save-v9"
 #define AOS_SAVE_SCHEMA_V8 "metroidvania-aos-save-v8"
@@ -73,6 +74,9 @@ typedef struct {
      * entity parameter 0 to one-time room money, items, equipment and soul
      * containers. Older saves have collected none of them. */
     uint32_t placed_items[AOS_SAVE_PLACED_ITEM_WORDS];
+    /* Schema v12: gEwramData + 0x37E, including the guaranteed boss-soul
+     * bits used by Headhunter, Death, Legion and Balore. */
+    uint16_t special_souls;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

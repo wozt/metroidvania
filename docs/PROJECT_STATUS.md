@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0764 - Persist Aria's guaranteed boss souls
+
+- Extended the portable save to schema v12 with `gEwramData + 0x37E`'s
+  special-soul halfword. Collecting the guaranteed Headhunter, Death, Legion
+  or Balore soul now survives save-room writes, sleep quicksaves and reloads.
+- Schema v11 remains readable and initializes the new field empty. Round-trip
+  and migration tests cover both the six placed-item words and the new boss
+  bits. Source-derived and unit-tested, not emulator-compared.
+
+Next: port the first complete boss death controller so its guaranteed soul is
+emitted at the native animation stage instead of the generic kill boundary.
+
 ## Patch 0763 - Connect Aria's guaranteed boss souls
 
 - Connected the four native `sub_080D7308` call sites to defeated Headhunter,

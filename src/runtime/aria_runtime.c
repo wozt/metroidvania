@@ -3418,6 +3418,7 @@ static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
     memcpy(save->dropped, progress->dropped, sizeof save->dropped);
     memcpy(save->events, aria_events, sizeof save->events);
     memcpy(save->placed_items, aria_pickup_state.placed, sizeof save->placed_items);
+    save->special_souls = aria_pickup_state.special;
     save->weapon = progress->weapon;
     save->armor = progress->armor;
     save->accessory = progress->accessory;
@@ -5088,6 +5089,7 @@ int aria_runtime_main(int argc, char **argv) {
         memcpy(aria_events, active_save.events, sizeof aria_events);
         memcpy(aria_pickup_state.placed, active_save.placed_items,
                sizeof aria_pickup_state.placed);
+        aria_pickup_state.special = active_save.special_souls;
         for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
             progress.buttons.action[action] =
                 aos_button_config_button(active_save.buttons[action]);

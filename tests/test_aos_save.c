@@ -75,6 +75,8 @@ int main(void) {
     source.placed_items[0] = 1u << 1;
     source.placed_items[2] = 1u << (90 - 64);
     source.placed_items[4] = 1u << (157 - 128);
+    /* Schema v12: guaranteed Death and Balore souls. */
+    source.special_souls = (1u << 1) | (1u << 6);
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -91,12 +93,29 @@ int main(void) {
                strstr(all, "events=00000000,00000005,00000000,00000000,00000000,00000000,"
                            "00000000,80000000\n") &&
                strstr(all, "placed_items=00000002,00000000,04000000,00000000,20000000,"
-                           "00000000\n"));
+                           "00000000\n") &&
+               strstr(all, "special_souls=0042\n"));
+        /* Schema v11 keeps placed items but initializes special souls empty. */
+        char v11[2048];
+        int v11_size = snprintf(v11, sizeof v11, "%s\n", AOS_SAVE_SCHEMA_V11);
+        const char *body = strchr(all, '\n') + 1;
+        const char *special = strstr(all, "special_souls=");
+        memcpy(v11 + v11_size, body, (size_t)(special - body));
+        v11_size += (int)(special - body);
+        v11_size += snprintf(v11 + v11_size, sizeof v11 - (size_t)v11_size,
+                             "checksum=%08x\n", test_checksum(v11, (size_t)v11_size));
+        FILE *v11_file = fopen(path, "wb");
+        assert(v11_file && fwrite(v11, 1, (size_t)v11_size, v11_file) == (size_t)v11_size);
+        assert(fclose(v11_file) == 0);
+        AosSaveData previous_v11 = {0};
+        assert(aos_save_load(path, &previous_v11, error, sizeof error));
+        assert(previous_v11.placed_items[4] == source.placed_items[4] &&
+               previous_v11.special_souls == 0);
         /* The same file as schema v10 (no placed-item line) loads with no
          * collected room pickups. */
         char v10[2048];
         int v10_size = snprintf(v10, sizeof v10, "%s\n", AOS_SAVE_SCHEMA_V10);
-        const char *body = strchr(all, '\n') + 1, *placed = strstr(all, "placed_items=");
+        const char *placed = strstr(all, "placed_items=");
         memcpy(v10 + v10_size, body, (size_t)(placed - body));
         v10_size += (int)(placed - body);
         v10_size += snprintf(v10 + v10_size, sizeof v10 - (size_t)v10_size,

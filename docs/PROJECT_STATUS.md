@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0769 - Finish Headhunter head-cycle timing
+
+- Ported `sub_08083FD0` cases 5-7: the 90-frame attack clock, retreat drift,
+  sound `0x11D`, immediate removal of head 0 and the five-frame delayed
+  removal of heads 1-2.
+- Connected the corresponding body mutations: sequences 1, 5 and 9, step
+  advances and the native -19/+11 pixel corrections for phases 2 and 3.
+- Tests cover all three endings and their exact timers. The four
+  `sub_08083C1C` attack actors and ten shared particles are not emitted yet;
+  source-derived and unit-tested, not emulator-compared.
+
+Next: port the four attack actors and `sub_08083EEC`, then connect the body
+phase transitions and dedicated art.
+
 ## Patch 0768 - Move Headhunter's linked heads
 
 - Ported `sub_08083FD0` cases 1-3: each activated head generates the native

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-06T11:22:54+00:00",
+ "generated_at": "2026-11-06T11:26:55+00:00",
  "git": {
-  "commit": "0b3bd3e",
+  "commit": "24bb83e",
   "branch": "main",
   "dirty": true
  },
@@ -10468,8 +10468,8 @@
     "sub_08083FD0",
     "sub_080D7308"
    ],
-   "limitations": "Only sub_08081EBC cases 0-2 and sub_08083FD0 cases 0-4 are ported. Body flight, attacks and phase changes, the heads' attack and phase-ending cases 5-7, dedicated OAM resources, native palette fade, two death effects and event callback are absent. The body receives combat directly. Head children disappear with it; reaching the lower edge still advances immediately instead of waiting for their native death sequences. Art and an in-game capture are absent. EnemyHeadhunterCreate initializes the body on sequence 23 and emits three owned head identities at the native screen coordinates. The opening selects head phase 1, starts sequence 24 with the 100-frame appearance clock, returns to sequence 0 and advances after the 29-frame hold. Each head waits for its phase, then sub_08083FD0 cases 1-3 generate two progressively tighter targets above the body, accelerate at 0x2000 with the native 4-pixel cap and count horizontal direction changes. Case 4 selects the mirrored per-head attack perch and approaches it at one pixel per frame. A lethal hit runs the staged fall and 90-frame ending before requesting the guaranteed yellow soul at special index 4; schema v12 persists its bit. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port sub_08083FD0 cases 5-7 and the body phase transitions that drive them, then export the heads' dedicated art.",
+   "limitations": "Only sub_08081EBC cases 0-2 are ported. Body flight, attacks and most phase changes are absent. In sub_08083FD0 case 5, the four sub_08083C1C attack actors are not emitted; cases 6-7 omit the ten shared particles. Dedicated OAM resources, native palette fade, two death effects and event callback are absent. The body receives combat directly. Reaching the lower edge still advances immediately instead of waiting for the heads' native death sequences. Art and an in-game capture are absent. EnemyHeadhunterCreate initializes the body on sequence 23 and emits three owned head identities at the native screen coordinates. The opening selects phase 1 and runs its sequence 24 appearance. Each head's sub_08083FD0 cases 0-4 wait for their phase, perform two accelerating arcs and approach the mirrored per-head attack perch. Cases 5-7 run the 90-frame attack clock and retreat drift, request sound 0x11D, remove head 0 after selecting body sequence 1, and delay heads 1-2 by five frames before selecting body sequences 5 and 9 and applying their -19 and +11 pixel vertical corrections. A lethal hit runs the staged fall and 90-frame ending before requesting the guaranteed yellow soul at special index 4; schema v12 persists its bit. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the four sub_08083C1C attack actors, their sub_08083EEC updates and the body phase transitions, then export the dedicated art.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
@@ -19838,6 +19838,12 @@
  },
  "timeline": [
   {
+   "commit": "24bb83e",
+   "date": "2026-11-06",
+   "subject": "Move Aria Headhunter linked heads",
+   "scope": "project"
+  },
+  {
    "commit": "0b3bd3e",
    "date": "2026-11-06",
    "subject": "Start Aria Headhunter opening controller",
@@ -20309,12 +20315,6 @@
    "commit": "a0ccb61",
    "date": "2026-11-02",
    "subject": "Port the Catoblepas blue soul and Soma's guardian pose state",
-   "scope": "project"
-  },
-  {
-   "commit": "abe5d76",
-   "date": "2026-11-02",
-   "subject": "Request the audited sounds of nine Aria enemies",
    "scope": "project"
   }
  ],

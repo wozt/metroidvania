@@ -237,7 +237,7 @@ typedef struct AosEnemy {
     bool guarding;          /* + 0x21 of the dead crusader: blows deal 0 */
     uint8_t variant;        /* + 0x14 of a Skull Millione, Cagnazzo or Lubicant */
     int32_t speed;          /* + 0x20 of their chase */
-    const struct AosEnemy *parent;  /* a fin's or beam's owner, set by the caller */
+    struct AosEnemy *parent;  /* a linked actor's owner, set by the caller */
     /* A compact target location for controllers that have an explicit native
      * random destination rather than following Soma directly. */
     int32_t target_x, target_y;

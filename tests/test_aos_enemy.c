@@ -73,10 +73,52 @@ static void headhunter_death_tests(void) {
     aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, headhunter_random);
     assert(first.step == 5 && first.timer == 0);
+    AosEnemy phase_body = body;
+    phase_body.step = 3;
+    first.parent = &phase_body;
+    int32_t retreat_y = first.y;
+    for (int i = 0; i < 90; ++i)
+        aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, headhunter_random);
+    assert(first.step == 6 && first.timer == 90 &&
+           first.y == retreat_y + 31 * 0x4000);
+    aos_audio_clear();
+    aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    assert(first.removed && phase_body.step == 4 && phase_body.anim.id == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x11D) == 1);
+
     body.hh_phase = 2;
     aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);
     assert(second.step == 1);
+    AosEnemy second_body = body;
+    second_body.step = 9;
+    int32_t second_y = second_body.y;
+    second.parent = &second_body;
+    second.step = 6;
+    aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    assert(second.step == 7 && second.timer == 5 && !second.removed);
+    for (int i = 0; i < 5; ++i)
+        aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, headhunter_random);
+    assert(second.removed && second_body.step == 10 && second_body.anim.id == 5 &&
+           second_body.y == second_y - AOS_FIXED(19));
+
+    AosEnemy third_body = body;
+    third_body.step = 29;
+    int32_t third_y = third_body.y;
+    AosEnemy third = built.children[2];
+    third.parent = &third_body;
+    third.step = 6;
+    aos_enemy_update(&third, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, headhunter_random);
+    for (int i = 0; i < 5; ++i)
+        aos_enemy_update(&third, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, headhunter_random);
+    assert(third.removed && third_body.step == 30 && third_body.anim.id == 9 &&
+           third_body.y == third_y + AOS_FIXED(11));
     body.hh_phase = 1;
     aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);

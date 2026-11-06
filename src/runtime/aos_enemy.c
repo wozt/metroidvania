@@ -1878,7 +1878,7 @@ static AosHitReport headhunter_death(AosEnemy *enemy, const AosEnemyKind *kind, 
 /* EnemyHeadhunterCreate's three sub_08083FD0 actors. Native construction
  * places them at screen (240,124), (272,128) and (256,96); their full
  * eight-stage controllers and dedicated OAM resources are a later slice. */
-static AosEnemy headhunter_head(const AosEnemy *body, unsigned index, int cam_x, int cam_y) {
+static AosEnemy headhunter_head(AosEnemy *body, unsigned index, int cam_x, int cam_y) {
     static const int16_t screen_x[3] = {240, 272, 256};
     static const int16_t screen_y[3] = {124, 128, 96};
     AosEnemy head = {.id = body->id,
@@ -1943,8 +1943,9 @@ static AosHitReport headhunter_update(AosEnemy *enemy, AosSoma *soma,
     return report;
 }
 
-static void headhunter_head_update(AosEnemy *head, uint32_t (*random)(void)) {
-    const AosEnemy *body = head->parent;
+static void headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
+                                   uint32_t (*random)(void)) {
+    AosEnemy *body = head->parent;
     if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {
         head->removed = true;
         return;
@@ -2007,6 +2008,45 @@ static void headhunter_head_update(AosEnemy *head, uint32_t (*random)(void)) {
         }
         break;
     }
+    case 5:
+        head->timer++;
+        /* sub_08083C1C emits four phase-specific attack actors at timers
+         * 2, 5, 20 and 28. Their dedicated resources are not ported yet. */
+        if (head->timer == 90) head->step = 6;
+        if (head->timer > 59) {
+            head->y += 0x4000;
+            if (head->variant)
+                head->x += head->mirrored ? -0x2000 : 0x2000;
+        }
+        break;
+    case 6:
+        aos_audio_play_song(0x11D);
+        if (head->variant == 0) {
+            body->step++;
+            play(body, kind->anims, 1);
+            step_anim(body, kind->anims);
+            head->removed = true;
+        } else {
+            /* Native cases 1 and 2 emit ten shared visual particles here. */
+            head->timer = 5;
+            head->step = 7;
+        }
+        break;
+    case 7:
+        if (head->variant == 1 && head->timer && --head->timer == 0) {
+            play(body, kind->anims, 5);
+            step_anim(body, kind->anims);
+            body->step++;
+            body->y -= 0x130000;
+            head->removed = true;
+        } else if (head->variant == 2 && head->timer && --head->timer == 0) {
+            play(body, kind->anims, 9);
+            step_anim(body, kind->anims);
+            body->step++;
+            body->y += 0xB0000;
+            head->removed = true;
+        }
+        break;
     default:
         break;
     }
@@ -9362,7 +9402,7 @@ static AosHitReport devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind 
 /* sub_080C2ABC / sub_080C2B74: Ripper's short-range blade child. It is
  * placed twelve pixels toward the body's facing, accelerates horizontally,
  * and falls away after a weapon or player collision. */
-static void ripper_blade(const AosEnemy *owner, const AosEnemyKind *kind,
+static void ripper_blade(AosEnemy *owner, const AosEnemyKind *kind,
                          AosHitReport *report) {
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
     AosEnemy blade = {0};
@@ -11912,7 +11952,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
     if (enemy->role == AOS_ROLE_HEADHUNTER_HEAD) {
-        headhunter_head_update(enemy, random);
+        headhunter_head_update(enemy, kind, random);
         return report;
     }
     if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY) {

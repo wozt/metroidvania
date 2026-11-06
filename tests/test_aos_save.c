@@ -30,7 +30,7 @@ int main(void) {
     aos_save_init_new(&source, 2);
     assert(source.slot == 2 && source.area == 0 && source.room == 0);
     assert(source.spawn_x == 0x78 && source.spawn_y == 0x8D &&
-           source.hp == 320 && source.moves == 0x1F);
+           source.hp == 320 && source.moves == 0);
     assert(source.name[0] == 0x14 && source.name[3] == 2 && source.character == 0);
     assert(source.buttons[0] == 1 && source.buttons[1] == 0 &&
            source.buttons[2] == 3 && source.buttons[3] == 2);

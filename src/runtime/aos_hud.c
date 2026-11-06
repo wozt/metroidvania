@@ -106,7 +106,10 @@ static bool show_notice(AosHud *hud, const AosHudFont *font, const char *name,
     store(hud, x++, 18, 0xE621);
     store(hud, x, 18, 0xE620);
 
-    x = kind == AOS_HUD_NOTICE_ENEMY ? 28 - (int)width : 0;
+    /* sub_0800DE4C writes one contiguous 3 x 32-cell staging buffer. The
+     * two trailing blanks after each framed row are the first two blanks of
+     * the following row, so all three visible rows begin at 26 - width. */
+    x = kind == AOS_HUD_NOTICE_ENEMY ? 26 - (int)width : 0;
     store(hud, x++, 19, 0xE230);
     store(hud, x++, 19, 0xE231);
     for (unsigned i = 0; i < width; ++i)

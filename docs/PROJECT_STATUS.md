@@ -2,6 +2,37 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0773 - Reconstruct the native Aria START hub and SELECT map
+
+- Replaced the provisional START-hub presentation with a source-driven C11
+  renderer shared by the runtime and future editor surfaces. It decodes the
+  verified ROM's pause BG1 at `0x0815E940`, portrait, frame, palettes and
+  language bank at `0x0827B200`, then rebuilds `sub_08047520` and
+  `sub_08047C4C`'s BG0 labels, selected/unselected palettes, HP/MP bars,
+  attributes, level, time, experience, next value, gold and status word.
+- Connected SELECT to a separate native quick-map path based on
+  `sub_080109F4` through `sub_08011430`. It reads the ROM's 64 by 35 castle
+  and connectivity tables, copies `sUnk_080E3664`, procedurally writes each
+  four-pixel room and edge, distinguishes ordinary/save/warp rooms, honours
+  Castle Map items 1-3 and animates the current-screen brightness circle.
+- Added deterministic synthetic-ROM tests for both renderers and optional
+  verified-ROM image checks. Local offscreen captures show the authentic
+  Soma status panel and the purple quick map; no proprietary data is stored.
+- Corrected `sub_0800DE4C`'s enemy-name row origin from `28 - width` to
+  `26 - width`; a before/after capture confirms the name is aligned in its
+  native lower-right frame.
+- New files and old portable saves now start with no movement ability bits.
+  Enabled ability souls 0-4 drive backdash, slide, Malphas double jump, dive
+  kick and high jump; explicit diagnostic movement masks remain overrides.
+- This remains partial and is not emulator-compared: the START hub still
+  lacks its localized description canvas, cursor OAM and exact fades; its
+  seven subordinate pages still use their older diagnostic presentation.
+  The quick map does not yet persist explored/secret-room bits and collapses
+  the entry/exit stages into its live native-style highlight.
+
+Next: reconstruct the native Soul Set and Equip page tilemaps, icons,
+descriptions and cursor OAM, then persist the SELECT map's explored bits.
+
 ## Patch 0772 - Connect the Aria prologue and opening-scene audio
 
 - Connected the scrolling introduction's source `PlaySong` requests to the

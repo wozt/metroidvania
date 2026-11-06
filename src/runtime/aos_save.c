@@ -212,7 +212,10 @@ void aos_save_init_new(AosSaveData *save, unsigned slot) {
         .spawn_y = 0x8D,
         .hp = 320,
         .max_hp = 320,
-        .moves = 0x1F,
+        /* New-game ability souls are all absent. Malphas (double jump),
+         * Grave Keeper, Skeleton Blaze, Kicker Skeleton and Hippogryph are
+         * acquired later and enable their movement bits through progression. */
+        .moves = 0,
         .name = {0x14, 0x10, 0x0E, 0x02, 0, 0, 0, 0},
         .weapon = 0,
         .armor = 0,

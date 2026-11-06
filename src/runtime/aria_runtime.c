@@ -20,7 +20,9 @@
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"
 #include "aos_opening_event.h"
+#include "aos_pause_graphics.h"
 #include "aos_portrait.h"
+#include "aos_quick_map.h"
 #include "aos_room.h"
 #include "aos_save.h"
 #include "aos_stats.h"
@@ -4216,6 +4218,52 @@ static const char *drop_item_name(uint16_t id) {
     return "Unknown";
 }
 
+static bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
+                                  AosPauseGraphics *graphics,
+                                  const AosSoulMenu *menu, const AosStats *stats,
+                                  const AosSoma *soma, uint32_t play_frames) {
+    if (!renderer || !texture || !graphics || !menu || !stats || !soma ||
+        !menu->open || menu->page != AOS_SOUL_MENU_PAGE_HUB)
+        return false;
+    AosPauseHubValues values = {
+        .hp = soma->hp,
+        .mp = stats->mp,
+        .max_hp = (uint16_t)soma->max_hp,
+        .max_mp = stats->max_mp,
+        .attack = stats->atk,
+        .defence = stats->def,
+        .level = stats->level,
+        .experience = stats->experience,
+        .next_experience = (uint32_t)aos_stats_experience_to_next(stats),
+        .gold = stats->gold,
+        .play_frames = play_frames,
+        .status = stats->status,
+    };
+    memcpy(values.stats, stats->current, sizeof values.stats);
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_pause_graphics_render_hub(graphics, &values, menu->hub_cursor,
+                                       pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
+static bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
+                                  AosQuickMap *map, const AosStats *stats,
+                                  uint32_t animation_frame) {
+    if (!renderer || !texture || !map || !stats) return false;
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_quick_map_render(map, stats->item_counts[0x1D] != 0,
+                              stats->item_counts[0x1E] != 0,
+                              stats->item_counts[0x1F] != 0,
+                              animation_frame, pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
 /* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
  * description and transition rendering remain separate future work. */
 static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
@@ -4878,10 +4926,10 @@ int aria_runtime_main(int argc, char **argv) {
     bool consume_save = false;
     long area = -1, room_number = -1, capture_frames = 0;
     unsigned long capture_buttons = 0;
-    /* Move ownership is still a diagnostic mask; the soul inventories are
-     * loaded independently below and drive the in-game soul menu. */
-    unsigned long moves = AOS_MOVE_BACKDASH | AOS_MOVE_SLIDE | AOS_MOVE_AIR_JUMP |
-                          AOS_MOVE_DIVE_KICK | AOS_MOVE_HIGH_JUMP;
+    /* A new file owns no ability soul. In particular, Malphas' mid-air jump
+     * must be collected before AOS_MOVE_AIR_JUMP becomes available. Saves and
+     * the explicit --moves diagnostic override this zero mask below. */
+    unsigned long moves = 0;
     int spawn_x = -1, spawn_y = -1;
     bool check = false, show_hitboxes = false, debug_at_start = false;
     bool hp_override = false, moves_override = false, spawn_override = false;
@@ -5107,6 +5155,13 @@ int aria_runtime_main(int argc, char **argv) {
     AosRoomMusic room_music = {0};
     int music_area = -1, music_room = -1;
     FusionRom opening_rom = {0};
+    AosPauseGraphics pause_graphics = {0};
+    bool have_pause_graphics = false;
+    SDL_Texture *pause_texture = NULL;
+    AosQuickMap quick_map = {0};
+    bool have_quick_map = false;
+    bool quick_map_open = false;
+    SDL_Texture *quick_map_texture = NULL;
     AosIntroResources opening_resources = {0};
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
@@ -5242,6 +5297,45 @@ int aria_runtime_main(int argc, char **argv) {
     if (!load_bursts(DEFAULT_BURSTS)) fprintf(stderr, "No Aria burst list: %s\n", DEFAULT_BURSTS);
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
+    if (rom_path) {
+        char error[256];
+        if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &opening_rom,
+                             error, sizeof error)) {
+            fprintf(stderr, "Cannot open the verified Aria ROM: %s\n", error);
+            goto cleanup;
+        }
+        have_pause_graphics = aos_pause_graphics_init(
+            &pause_graphics, &opening_rom, 1, error, sizeof error);
+        if (!have_pause_graphics) {
+            fprintf(stderr, "Cannot decode the native Aria pause graphics: %s\n",
+                    error);
+            goto cleanup;
+        }
+        pause_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                          SDL_TEXTUREACCESS_STREAMING,
+                                          VIEW_W, VIEW_H);
+        if (!pause_texture) {
+            fprintf(stderr, "Cannot create the native Aria pause texture: %s\n",
+                    SDL_GetError());
+            goto cleanup;
+        }
+        SDL_SetTextureScaleMode(pause_texture, SDL_SCALEMODE_NEAREST);
+        have_quick_map = aos_quick_map_init(&quick_map, &opening_rom,
+                                            error, sizeof error);
+        if (!have_quick_map) {
+            fprintf(stderr, "Cannot decode the native Aria quick map: %s\n", error);
+            goto cleanup;
+        }
+        quick_map_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                              SDL_TEXTUREACCESS_STREAMING,
+                                              VIEW_W, VIEW_H);
+        if (!quick_map_texture) {
+            fprintf(stderr, "Cannot create the native Aria quick-map texture: %s\n",
+                    SDL_GetError());
+            goto cleanup;
+        }
+        SDL_SetTextureScaleMode(quick_map_texture, SDL_SCALEMODE_NEAREST);
+    }
     bool opening_needed = has_active_save &&
         aos_opening_event_should_start((uint8_t)room.area, (uint16_t)room.number,
                                        progress.character, aria_events,
@@ -5250,13 +5344,11 @@ int aria_runtime_main(int argc, char **argv) {
         char error[256];
         const uint8_t *script = NULL;
         size_t script_size = 0;
-        if (!rom_path) {
+        if (!opening_rom.data) {
             fprintf(stderr, "The unfinished Aria opening scene requires --rom\n");
             goto cleanup;
         }
-        if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path, &opening_rom,
-                             error, sizeof error) ||
-            !aos_intro_resources_init(&opening_resources, &opening_rom,
+        if (!aos_intro_resources_init(&opening_resources, &opening_rom,
                                       error, sizeof error) ||
             !aos_intro_font_init(&opening_font, &opening_rom,
                                  error, sizeof error) ||
@@ -5545,6 +5637,7 @@ int aria_runtime_main(int argc, char **argv) {
                 soma.moves = 0;
                 for (int i = 0; i < 5; ++i)
                     if (debug_moves[i]) soma.moves |= debug_move_bits[i];
+                moves_override = true;
                 break;
             case DEBUG_SPAWN:
                 if (!debug_spawn(&room, &combat, &soma, &layer, enemy_ids[debug_enemy]))
@@ -5689,8 +5782,35 @@ int aria_runtime_main(int argc, char **argv) {
             uint8_t previous_weapon = progress.weapon;
             AosItemVitals item_vitals = {soma.hp, soma.max_hp};
             soul_menu.sleep_available = has_active_save;
-            unsigned soul_menu_event =
-                progress.character == 0
+            unsigned soul_menu_event = 0;
+            if (quick_map_open) {
+                if (aria_input.new_input & (AOS_KEY_SELECT | AOS_KEY_B)) {
+                    quick_map_open = false;
+                    aos_audio_play_song(AOS_AUDIO_RESUME);
+                    printf("Quick map closed\n");
+                }
+                ++step;
+                if (has_active_save) active_save.play_frames++;
+                continue;
+            }
+            if (!soul_menu.open && have_quick_map &&
+                (aria_input.new_input & AOS_KEY_SELECT)) {
+                char error[160];
+                if (aos_quick_map_visit(&quick_map, &opening_rom,
+                                        (unsigned)room.area, (unsigned)room.number,
+                                        soma.x >> 16, soma.y >> 16,
+                                        error, sizeof error)) {
+                    quick_map_open = true;
+                    aos_audio_play_song(AOS_AUDIO_PAUSE);
+                    printf("Quick map opened\n");
+                } else {
+                    fprintf(stderr, "Cannot place the quick-map cursor: %s\n", error);
+                }
+                ++step;
+                if (has_active_save) active_save.play_frames++;
+                continue;
+            }
+            soul_menu_event = progress.character == 0
                     ? aos_pause_menu_update(&soul_menu, &progress,
                                             have_equipment ? &equipment : NULL,
                                             have_item_use ? item_use : NULL, &item_vitals,
@@ -5803,6 +5923,11 @@ int aria_runtime_main(int argc, char **argv) {
                                       ? aria_input.player_new_input
                                       : aos_button_config_remap(&progress.buttons,
                                                                 aria_input.player_new_input);
+            /* Ability souls 0-4 map directly to Soma's five movement flags.
+             * A newly collected ability is enabled by aos_pickup_collect_soul;
+             * the pause Ability page can then toggle it. Diagnostic --moves
+             * and F1 movement edits deliberately retain their explicit mask. */
+            if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
             /* Soma reads gEwramData + 0x13260 (the yellow souls' bits). */
             soma.abilities = progress.flags;
             soma.guardian_alive = guardian.core.active;
@@ -6652,9 +6777,15 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
         }
-        draw_soul_menu(renderer, &soul_menu, &progress,
-                       have_equipment ? &equipment : NULL,
-                       have_item_use ? item_use : NULL, &soma, &objects);
+        if (quick_map_open)
+            draw_native_quick_map(renderer, quick_map_texture, &quick_map,
+                                  &progress, (uint32_t)step);
+        else if (!draw_native_pause_hub(renderer, pause_texture, &pause_graphics,
+                                   &soul_menu, &progress, &soma,
+                                   has_active_save ? active_save.play_frames : (uint32_t)step))
+            draw_soul_menu(renderer, &soul_menu, &progress,
+                           have_equipment ? &equipment : NULL,
+                           have_item_use ? item_use : NULL, &soma, &objects);
         if (opening_soul_text_ready && opening_actors.soul_notice_visible)
             draw_opening_soul_notice(renderer, &opening_soul_tiles);
         else if (opening_text_ready)
@@ -6678,6 +6809,9 @@ int aria_runtime_main(int argc, char **argv) {
     }
     rc = 0;
 cleanup:
+    if (quick_map_texture) SDL_DestroyTexture(quick_map_texture);
+    if (pause_texture) SDL_DestroyTexture(pause_texture);
+    aos_pause_graphics_free(&pause_graphics);
     if (opening_portrait_texture) SDL_DestroyTexture(opening_portrait_texture);
     fusion_rom_close(&opening_rom);
     if (audio_stream) SDL_DestroyAudioStream(audio_stream);

@@ -192,6 +192,8 @@ bool aos_pickup_create_special_soul(AosPickup *pickup, uint8_t mode_flags,
                                     uint8_t soul_index, uint16_t persistent_index,
                                     int32_t x, int32_t y, int32_t soma_x,
                                     int32_t soma_y, AosRandom random);
+/* The +0x37E bit assigned by the four native sub_080D7308 callers. */
+bool aos_pickup_special_boss_index(uint8_t enemy_id, uint16_t *persistent_index);
 /* sub_080446D4 up to its collision pass: turns toward Soma's y - 16 pixels
  * (sub_0802D408, step + 0x2A per frame up to 0x4000), speeds up by 0x1800
  * per frame up to 0x80000 and moves. */

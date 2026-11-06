@@ -354,6 +354,19 @@ bool aos_pickup_create_special_soul(AosPickup *pickup, uint8_t mode_flags,
     return true;
 }
 
+bool aos_pickup_special_boss_index(uint8_t enemy_id, uint16_t *persistent_index) {
+    uint16_t index;
+    switch (enemy_id) {
+    case 0x6A: index = 4; break; /* Headhunter */
+    case 0x6B: index = 1; break; /* Death */
+    case 0x6C: index = 5; break; /* Legion */
+    case 0x6D: index = 6; break; /* Balore */
+    default: return false;
+    }
+    if (persistent_index) *persistent_index = index;
+    return true;
+}
+
 void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y) {
     if (pickup->state > 1) return;
     /* sub_0802D408: one turn step along the shorter way (an exact match

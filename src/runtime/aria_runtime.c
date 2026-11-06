@@ -2646,8 +2646,21 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                                       combat->drops[e->id]->soul_index - 1),
                         .ground = aos_collision_cell(layer, e->enemy.x >> 16,
                                                      (e->enemy.y >> 16) - 8)};
+                    uint16_t special_index;
+                    const AosEnemyDrops *enemy_drops = combat->drops[e->id];
+                    if (aos_pickup_special_boss_index((uint8_t)e->id, &special_index) &&
+                        !(aria_pickup_state.special & (uint16_t)(1u << special_index)) &&
+                        enemy_drops->soul_index && room->pickup_count < MAX_PICKUPS) {
+                        AosPickup special;
+                        if (aos_pickup_create_special_soul(
+                                &special, 0, false, enemy_drops->soul_type,
+                                (uint8_t)(enemy_drops->soul_index - 1u), special_index,
+                                e->enemy.x >> 16, e->enemy.y >> 16, soma->x, soma->y,
+                                aos_random))
+                            room->pickups[room->pickup_count++] = special;
+                    }
                     AosDrop drop = aos_stats_roll_drop(combat->progress, (uint8_t)e->id,
-                                                       combat->drops[e->id], &context,
+                                                       enemy_drops, &context,
                                                        aos_random);
                     if (drop.kind == AOS_DROP_SOUL) {
                         /* sub_0804459C(x, y - 8, type, index, 0). */

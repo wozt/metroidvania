@@ -270,6 +270,13 @@ int main(void) {
                                            0, 1, 0, 0, 0, 0, counting_random) &&
            !aos_pickup_create_special_soul(&special, 0, false, 4,
                                            0, 1, 0, 0, 0, 0, counting_random));
+    uint16_t boss_index = 0;
+    assert(aos_pickup_special_boss_index(0x6A, &boss_index) && boss_index == 4);
+    assert(aos_pickup_special_boss_index(0x6B, &boss_index) && boss_index == 1);
+    assert(aos_pickup_special_boss_index(0x6C, &boss_index) && boss_index == 5);
+    assert(aos_pickup_special_boss_index(0x6D, &boss_index) && boss_index == 6);
+    assert(!aos_pickup_special_boss_index(0x69, &boss_index) &&
+           aos_pickup_special_boss_index(0x6A, NULL));
 
     /* sub_080450C8: the container's direct type-4 sequence selects an
      * initial frame without moving, then consumes 3, 7, 7 and 3 updates. */

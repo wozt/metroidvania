@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0763 - Connect Aria's guaranteed boss souls
+
+- Connected the four native `sub_080D7308` call sites to defeated Headhunter,
+  Death, Legion and Balore entities. Their enemy records select the soul while
+  the source-assigned `0x37E` indices 4, 1, 5 and 6 prevent a second spawn in
+  the same runtime session.
+- The pickups use the existing homing, collection and special-flag paths;
+  ordinary random drops remain independent. Deterministic mapping and producer
+  tests pass. Special bits are not saved yet. Source-derived and unit-tested,
+  not emulator-compared.
+
+Next: preserve the native `0x37E` special-soul bits in portable saves, then
+connect the bosses' full death controllers.
+
 ## Patch 0762 - Add Aria's scripted pickup producers
 
 - Added portable constructors for Object10's fixed global-id item and

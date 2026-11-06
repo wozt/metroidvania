@@ -100,8 +100,9 @@ static void spawn_blood(int x, int y, uint32_t (*random)(void), AosHitReport *re
 }
 
 /* sub_0806B7D8 chooses one of the common hit arts from the attack's first
- * relevant element. A weakness uses the intersecting element (the physical
- * element changes to type 0); a fully resisted element also uses type 0. */
+ * relevant element. A weakness uses the intersecting element unchanged; on
+ * the ordinary path physical type 1 changes to impact type 0. A fully
+ * resisted element also uses type 0. */
 static uint8_t hit_effect_type(uint16_t elements, uint16_t weak, uint16_t resist) {
     uint16_t active = elements & 0x3F;
     uint16_t relevant = active & weak;
@@ -118,7 +119,7 @@ static uint8_t hit_effect_type(uint16_t elements, uint16_t weak, uint16_t resist
     uint8_t type = 0;
     for (uint8_t bit = 1; bit <= 6; ++bit)
         if (relevant & (1u << (bit - 1))) type = bit;
-    return weakness && type == 1 ? 0 : type;
+    return !weakness && type == 1 ? 0 : type;
 }
 
 /* 0x08526D0C: animation/palette/sound records consumed by sub_0806B5DC.
@@ -190,6 +191,14 @@ static bool death_flames(AosEnemy *e, const AosEnemyKind *kind, int period, uint
 static void take_effects(AosHitReport *to, const AosHitReport *from) {
     to->effect_count = from->effect_count;
     memcpy(to->effects, from->effects, sizeof from->effects[0] * from->effect_count);
+}
+
+static void append_effects(AosHitReport *to, const AosHitReport *from) {
+    for (int index = 0;
+         index < from->effect_count &&
+         to->effect_count < AOS_ENEMY_MAX_EFFECTS;
+         ++index)
+        to->effects[to->effect_count++] = from->effects[index];
 }
 
 /* sSineTable: every entry is floor(sin(i * pi / 2048) * 65536), which was
@@ -2359,7 +2368,10 @@ static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision
     aos_combat_tick(&z->combat);
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
-    take_effects(&report, &spawned);
+    /* Keep sub_0806E218's contact art. Zombie's walking particles and
+     * death flames are additional effects; an empty secondary report must
+     * not erase the native splash from a surviving hit. */
+    append_effects(&report, &spawned);
     return report;
 }
 

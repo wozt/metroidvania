@@ -333,6 +333,54 @@ static void render_intro_backgrounds(
     }
 }
 
+static void render_intro_actors(SDL_Renderer *renderer,
+                                SDL_Texture *texture,
+                                const AosIntroGraphics *graphics,
+                                const AosIntroEntities *actors) {
+    if (!texture) return;
+    static AosObjLayer layer;
+    static uint8_t pixels[GBA_W * GBA_H * 4];
+    aos_obj_layer_clear(&layer);
+    const struct {
+        uint8_t entity;
+        uint8_t sheet;
+        uint8_t record;
+    } draws[] = {
+        {AOS_INTRO_ENTITY_MAIN, 0, 0},
+        /* sub_08008F40: animation 2 is Soma climbing the shrine stairs. */
+        {AOS_INTRO_ENTITY_SCROLL_FOLLOWER, 1, 2},
+    };
+    for (unsigned index = 0; index < sizeof draws / sizeof draws[0]; ++index) {
+        const AosIntroEntity *actor = &actors->entities[draws[index].entity];
+        if (!actor->alive || !actor->visible ||
+            draws[index].record >= graphics->actors[draws[index].sheet].frame_count)
+            continue;
+        AosObjSprite sprite = {
+            .sheet = draws[index].sheet,
+            .record = draws[index].record,
+            .palette_row = 4,
+            .priority = 2,
+            .pa = 0x100,
+            .pd = 0x100,
+            .x = (int16_t)(actor->x >> 16),
+            .y = (int16_t)(actor->y >> 16),
+        };
+        aos_obj_layer_draw(&layer, graphics->actors, &sprite);
+    }
+    for (int index = 0; index < GBA_W * GBA_H; ++index) {
+        uint16_t color = graphics->object_palette[layer.index[index]];
+        pixels[index * 4] = (uint8_t)((color & 31) * 255 / 31);
+        pixels[index * 4 + 1] =
+            (uint8_t)(((color >> 5) & 31) * 255 / 31);
+        pixels[index * 4 + 2] =
+            (uint8_t)(((color >> 10) & 31) * 255 / 31);
+        pixels[index * 4 + 3] = layer.index[index] ? 255 : 0;
+    }
+    SDL_UpdateTexture(texture, NULL, pixels, GBA_W * 4);
+    SDL_FRect screen = {0, 0, GBA_W, GBA_H};
+    SDL_RenderTexture(renderer, texture, NULL, &screen);
+}
+
 static bool create_main_menu_textures(
     SDL_Renderer *renderer, const AosMainMenuGraphics *graphics,
     SDL_Texture *textures[AOS_MAIN_GRAPHICS_SCREEN_COUNT]
@@ -593,6 +641,13 @@ int aria_title_preview_main(int argc, char **argv) {
     if (menu_objects_texture) {
         SDL_SetTextureBlendMode(menu_objects_texture, SDL_BLENDMODE_BLEND);
         SDL_SetTextureScaleMode(menu_objects_texture, SDL_SCALEMODE_NEAREST);
+    }
+    SDL_Texture *intro_actor_texture = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
+        GBA_W, GBA_H);
+    if (intro_actor_texture) {
+        SDL_SetTextureBlendMode(intro_actor_texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(intro_actor_texture, SDL_SCALEMODE_NEAREST);
     }
     SDL_Texture *menu_bg0_texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
@@ -897,6 +952,9 @@ int aria_title_preview_main(int argc, char **argv) {
             render_intro_backgrounds(renderer, &intro_graphics,
                                      intro_background_textures,
                                      &lifecycle.intro_cutscene);
+            render_intro_actors(
+                renderer, intro_actor_texture, &intro_graphics,
+                &lifecycle.intro_cutscene.entities);
         } else if (in_main_menu && have_main_menu_graphics) {
             render_main_menu_backgrounds(
                 renderer, &main_menu_graphics, main_menu_textures,
@@ -1177,6 +1235,7 @@ int aria_title_preview_main(int argc, char **argv) {
     if (menu_bg0_texture) SDL_DestroyTexture(menu_bg0_texture);
     if (title_texture) SDL_DestroyTexture(title_texture);
     if (menu_objects_texture) SDL_DestroyTexture(menu_objects_texture);
+    if (intro_actor_texture) SDL_DestroyTexture(intro_actor_texture);
     if (logo_texture) SDL_DestroyTexture(logo_texture);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);

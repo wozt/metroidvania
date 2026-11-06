@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_intro_graphics.h"
+#include "aos_obj_rom.h"
 #include "aos_rom_graphics.h"
 
 #include <stdio.h>
@@ -14,8 +15,12 @@ enum {
     AOS_INTRO_BG3_METADATA = 0x080E9354,
     AOS_INTRO_CHARACTER_BASE = 0x8000,
     AOS_INTRO_GRAPHICS_BLOCK = 0x2000,
-    AOS_INTRO_TEXT_PALETTE = 15,
-    AOS_INTRO_TEXT_COLOR = 8,
+    AOS_INTRO_MAIN_GRAPHICS = 0x08160490,
+    AOS_INTRO_MAIN_FRAMES = 0x0820CB60,
+    AOS_INTRO_SUPPORT_GRAPHICS = 0x08160498,
+    AOS_INTRO_SUPPORT_FRAMES = 0x0820CD00,
+    AOS_INTRO_OBJECT_PALETTE = 0x0820972C,
+    AOS_INTRO_OBJECT_PALETTE_ROW = 4,
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -104,9 +109,30 @@ bool aos_intro_graphics_init(AosIntroGraphics *graphics,
         }
     }
     color_rgb(memory->palette, 0, graphics->backdrop_rgb);
-    color_rgb(memory->palette,
-              AOS_INTRO_TEXT_PALETTE * 16 + AOS_INTRO_TEXT_COLOR,
-              graphics->text_rgb);
+    /* The introduction's text is the white colour written to BG palette
+     * row 15 by sub_080412F0(8). Keep it explicit: the resource row is
+     * reused while the cutscene runs and is not the final text colour. */
+    graphics->text_rgb[0] = 255;
+    graphics->text_rgb[1] = 255;
+    graphics->text_rgb[2] = 255;
+    uint8_t object_palette[0x200] = {0};
+    if (!aos_obj_sheet_decode(&graphics->actors[0], rom,
+                              AOS_INTRO_MAIN_GRAPHICS,
+                              AOS_INTRO_MAIN_FRAMES, error, error_size) ||
+        !aos_obj_sheet_decode(&graphics->actors[1], rom,
+                              AOS_INTRO_SUPPORT_GRAPHICS,
+                              AOS_INTRO_SUPPORT_FRAMES, error, error_size) ||
+        !aos_rom_load_palette_range(rom, AOS_INTRO_OBJECT_PALETTE, 0, 1,
+                                    AOS_INTRO_OBJECT_PALETTE_ROW,
+                                    object_palette, error, error_size)) {
+        free(memory);
+        aos_intro_graphics_free(graphics);
+        return false;
+    }
+    for (unsigned index = 0; index < 256; ++index)
+        graphics->object_palette[index] =
+            (uint16_t)(object_palette[index * 2] |
+                       object_palette[index * 2 + 1] << 8);
     free(memory);
     if (error && error_size) error[0] = '\0';
     return true;

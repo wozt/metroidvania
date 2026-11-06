@@ -1002,6 +1002,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_intro_graphics_tests
                    tests/test_aos_intro_graphics.c
                    src/runtime/aos_intro_graphics.c
+                   src/runtime/aos_obj_rom.c
                    src/runtime/aos_rom_graphics.c)
     target_include_directories(fusion_aos_intro_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_intro_graphics_tests PRIVATE fusion_assets)

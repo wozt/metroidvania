@@ -420,6 +420,10 @@ static bool resolve_rom_text(void *context, uint8_t id,
 }
 
 int main(int argc, char **argv) {
+    assert(AOS_OPENING_TEXT_PANEL_X * 2 +
+               AOS_OPENING_TEXT_PANEL_WIDTH == 240);
+    assert(AOS_OPENING_TEXT_PANEL_Y +
+               AOS_OPENING_TEXT_PANEL_HEIGHT == 160);
     test_emitted_motion();
     test_skeleton_collision_flight();
     test_emitted_attack_tails();

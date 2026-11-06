@@ -14,10 +14,19 @@ enum {
     BG1_OFFSET = 0x0E9464,
     BG2_OFFSET = 0x0E9244,
     BG3_OFFSET = 0x0E9354,
+    OBJECT_PALETTE_OFFSET = 0x20972C,
+    MAIN_GRAPHICS_OFFSET = 0x160490,
+    MAIN_FRAMES_OFFSET = 0x20CB60,
+    SUPPORT_GRAPHICS_OFFSET = 0x160498,
+    SUPPORT_FRAMES_OFFSET = 0x20CD00,
     COMPRESSED_FIRST_OFFSET = 0x1000,
     COMPRESSED_SECOND_OFFSET = 0x4000,
     BLOCKS_OFFSET = 0x7000,
     MAP_OFFSET = 0x7100,
+    OBJECT_FRAME_OFFSET = 0x7200,
+    OBJECT_PIECE_OFFSET = 0x7220,
+    SUPPORT_FRAME_OFFSET = 0x7240,
+    SUPPORT_PIECE_OFFSET = 0x7300,
     GRAPHICS_SIZE = 0x2000,
 };
 
@@ -66,6 +75,37 @@ static void background_metadata(uint8_t *data, size_t offset) {
     write_u32(data, offset + 12, 0x08000000u + MAP_OFFSET);
 }
 
+static void main_actor_descriptor(uint8_t *data) {
+    write_u16(data, MAIN_FRAMES_OFFSET, 1);
+    write_u16(data, MAIN_FRAMES_OFFSET + 2, 0);
+    write_u32(data, MAIN_FRAMES_OFFSET + 4,
+              0x08000000u + OBJECT_FRAME_OFFSET);
+    data[OBJECT_FRAME_OFFSET + 5] = 1;
+    write_u32(data, OBJECT_FRAME_OFFSET + 12,
+              0x08000000u + OBJECT_PIECE_OFFSET);
+    data[OBJECT_PIECE_OFFSET] = (uint8_t)-4;
+    data[OBJECT_PIECE_OFFSET + 1] = (uint8_t)-4;
+    data[OBJECT_PIECE_OFFSET + 6] = 8;
+    data[OBJECT_PIECE_OFFSET + 7] = 8;
+}
+
+static void supporting_actor_descriptor(uint8_t *data) {
+    write_u16(data, SUPPORT_FRAMES_OFFSET, 3);
+    write_u16(data, SUPPORT_FRAMES_OFFSET + 2, 0);
+    write_u32(data, SUPPORT_FRAMES_OFFSET + 4,
+              0x08000000u + SUPPORT_FRAME_OFFSET);
+    for (unsigned frame = 0; frame < 3; ++frame) {
+        size_t record = SUPPORT_FRAME_OFFSET + frame * 16;
+        data[record + 5] = 1;
+        write_u32(data, record + 12,
+                  0x08000000u + SUPPORT_PIECE_OFFSET);
+    }
+    data[SUPPORT_PIECE_OFFSET] = (uint8_t)-4;
+    data[SUPPORT_PIECE_OFFSET + 1] = (uint8_t)-4;
+    data[SUPPORT_PIECE_OFFSET + 6] = 8;
+    data[SUPPORT_PIECE_OFFSET + 7] = 8;
+}
+
 int main(int argc, char **argv) {
     uint8_t *data = calloc(1, ROM_SIZE);
     uint8_t *decoded = calloc(1, GRAPHICS_SIZE + 4);
@@ -76,6 +116,9 @@ int main(int argc, char **argv) {
     write_u16(data, PALETTE_OFFSET + 4 + 2, 31);
     write_u16(data, PALETTE_OFFSET + 4 + (15 * 16 + 8) * 2,
               31u << 10);
+    data[OBJECT_PALETTE_OFFSET + 2] = 1;
+    write_u16(data, OBJECT_PALETTE_OFFSET + 4, 31);
+    write_u16(data, OBJECT_PALETTE_OFFSET + 6, 31u | 31u << 5);
     decoded[1] = 4;
     decoded[2] = 0x10;
     decoded[3] = 0x10;
@@ -89,9 +132,15 @@ int main(int argc, char **argv) {
                         COMPRESSED_FIRST_OFFSET);
     graphics_descriptor(data, GRAPHICS_SECOND_OFFSET,
                         COMPRESSED_SECOND_OFFSET);
+    graphics_descriptor(data, MAIN_GRAPHICS_OFFSET,
+                        COMPRESSED_FIRST_OFFSET);
+    graphics_descriptor(data, SUPPORT_GRAPHICS_OFFSET,
+                        COMPRESSED_FIRST_OFFSET);
     background_metadata(data, BG1_OFFSET);
     background_metadata(data, BG2_OFFSET);
     background_metadata(data, BG3_OFFSET);
+    main_actor_descriptor(data);
+    supporting_actor_descriptor(data);
     for (unsigned index = 0; index < 64; ++index)
         write_u16(data, MAP_OFFSET + index * 2, 1);
 
@@ -106,8 +155,13 @@ int main(int argc, char **argv) {
     assert(graphics.backdrop_rgb[0] == 0 &&
            graphics.backdrop_rgb[1] == 255 &&
            graphics.backdrop_rgb[2] == 0);
-    assert(graphics.text_rgb[0] == 0 && graphics.text_rgb[1] == 0 &&
+    assert(graphics.text_rgb[0] == 255 && graphics.text_rgb[1] == 255 &&
            graphics.text_rgb[2] == 255);
+    assert(graphics.actors[0].frame_count == 1 &&
+           graphics.actors[0].frames[0].count == 1);
+    assert(graphics.actors[1].frame_count == 3 &&
+           graphics.actors[1].frames[2].count == 1);
+    assert(graphics.object_palette[4 * 16 + 1] == (31u | 31u << 5));
     for (unsigned index = 0; index < AOS_INTRO_BACKGROUND_COUNT; ++index) {
         const FusionAosRenderedBackground *background =
             &graphics.backgrounds[index];

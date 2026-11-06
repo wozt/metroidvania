@@ -4730,19 +4730,22 @@ static void draw_opening_text(SDL_Renderer *renderer,
         SDL_RenderTexture(renderer, portrait->texture, &source, &destination);
     }
     SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
-    /* The portrait's lowest opaque row and the text field now meet. The
-     * field continues to the native 160-pixel screen edge. */
-    SDL_FRect panel = {32, 92, VIEW_W - 32, VIEW_H - 92};
+    /* The portrait's lowest opaque row and the centred text field meet. */
+    SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
+                       AOS_OPENING_TEXT_PANEL_Y,
+                       AOS_OPENING_TEXT_PANEL_WIDTH,
+                       AOS_OPENING_TEXT_PANEL_HEIGHT};
     SDL_RenderFillRect(renderer, &panel);
 
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
     for (unsigned y = 0; y < 64; ++y)
         for (unsigned x = 0; x < 200; ++x)
             if (aos_intro_text_tiles_pixel(tiles, x, y))
-                SDL_RenderPoint(renderer, 34.0f + (float)x, 100.0f + (float)y);
+                SDL_RenderPoint(renderer, AOS_OPENING_TEXT_X + (float)x,
+                                AOS_OPENING_TEXT_Y + (float)y);
     if (event->waiting) {
         SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
-        SDL_FRect prompt = {225, 154, 5, 3};
+        SDL_FRect prompt = {AOS_OPENING_PROMPT_X, AOS_OPENING_PROMPT_Y, 5, 3};
         SDL_RenderFillRect(renderer, &prompt);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);

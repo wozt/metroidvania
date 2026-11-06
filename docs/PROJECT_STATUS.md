@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0770 - Restore Aria introduction actors and hit feedback
+
+- Decoded the scrolling introduction's two native OBJ resources and palette
+  directly from the verified ROM. The SDL frontend now draws the castle
+  foreground and Soma at the bottom of the shrine stairs; the scrolling text
+  uses white instead of the mutable background palette entry.
+- Centred the first-room dialogue field without changing its 208 by 68 pixel
+  size. Its text origin and wait marker now share editor-visible layout
+  constants, with a unit-tested 16-pixel margin on both sides.
+- Corrected the reversed physical branch of `sub_0806B7D8`: Zombie's physical
+  weakness now selects the native blood animation and sound `0x9E`. Its
+  specialized update no longer discards that splash when its secondary
+  particle report is empty, so it reaches the runtime renderer.
+- Synthetic tests cover both introduction OBJ descriptors and palette row 4;
+  the verified-ROM smoke test and a local SDL capture confirm Soma's composed
+  sprite and white text. Source-derived and unit-tested, not emulator-compared.
+
+Next: step Soma's complete shrine-stair animation stream, then render the
+remaining four introduction actors with their affine and alpha behavior.
+
 ## Patch 0769 - Finish Headhunter head-cycle timing
 
 - Ported `sub_08083FD0` cases 5-7: the 90-frame attack clock, retreat drift,

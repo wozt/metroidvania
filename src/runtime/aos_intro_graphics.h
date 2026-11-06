@@ -7,11 +7,14 @@
 #include <stdint.h>
 
 #include "fusion/assets/aos.h"
+#include "aos_obj.h"
 
-enum { AOS_INTRO_BACKGROUND_COUNT = 3 };
+enum { AOS_INTRO_BACKGROUND_COUNT = 3, AOS_INTRO_ACTOR_SHEETS = 2 };
 
 typedef struct {
     FusionAosRenderedBackground backgrounds[AOS_INTRO_BACKGROUND_COUNT];
+    AosObjSheet actors[AOS_INTRO_ACTOR_SHEETS];
+    uint16_t object_palette[256];
     uint8_t backdrop_rgb[3];
     uint8_t text_rgb[3];
 } AosIntroGraphics;

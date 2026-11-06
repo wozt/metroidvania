@@ -7,7 +7,7 @@
 #include <string.h>
 
 enum {
-    ROM_SIZE = 0x27C000,
+    ROM_SIZE = 0x510000,
     PALETTE_OFFSET = 0x0E5C20,
     GRAPHICS_OFFSET = 0x15E02C,
     METADATA_OFFSET = 0x15E940,
@@ -17,6 +17,13 @@ enum {
     BLOCKS_OFFSET = 0x8000,
     MAP_OFFSET = 0x8100,
     GRAPHICS_SIZE = 0x2000,
+    TEXT_SCRIPT_OFFSET = 0x500000,
+    TEXT_TABLE_OFFSET = 0x506B38,
+    FONT_METRICS_OFFSET = 0x0E2B4C,
+    FONT_GLYPHS_OFFSET = 0x50A136,
+    SMALL_FONT_METRICS_OFFSET = 0x0E2EC0,
+    SMALL_FONT_GLYPHS_OFFSET = 0x509876,
+    TEXT_ENTRIES = 0x3C4 * 3,
 };
 
 static void write_u16(uint8_t *bytes, size_t offset, uint16_t value) {
@@ -89,6 +96,17 @@ int main(int argc, char **argv) {
     graphics_descriptor(bytes, GRAPHICS_OFFSET, COMPRESSED_GRAPHICS);
     graphics_descriptor(bytes, LANGUAGE_OFFSET, COMPRESSED_LANGUAGE);
 
+    bytes[TEXT_SCRIPT_OFFSET + 2] = 'A';
+    bytes[TEXT_SCRIPT_OFFSET + 3] = 10;
+    for (unsigned entry = 0; entry < TEXT_ENTRIES; ++entry)
+        write_u32(bytes, TEXT_TABLE_OFFSET + entry * 4,
+                  0x08000000u + TEXT_SCRIPT_OFFSET);
+    unsigned glyph = 'A' - 0x20;
+    bytes[FONT_METRICS_OFFSET + glyph * 4 + 1] = 1;
+    bytes[SMALL_FONT_METRICS_OFFSET + glyph * 4 + 1] = 1;
+    memset(bytes + FONT_GLYPHS_OFFSET + glyph * 14, 0x80, 12);
+    memset(bytes + SMALL_FONT_GLYPHS_OFFSET + glyph * 10, 0x80, 8);
+
     bytes[METADATA_OFFSET] = 1;
     bytes[METADATA_OFFSET + 1] = 1;
     write_u32(bytes, METADATA_OFFSET + 4, 0x08000000u + BLOCKS_OFFSET);
@@ -116,6 +134,24 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[12 * 32 + 2] & 0xF000) == 0x3000);
     assert((graphics.bg0_map[13 * 32 + 2] & 0xF000) == 0x7000);
     assert(graphics.bg0_map[2 * 32 + 14] == 0x3300);
+
+    AosPauseSoulSetValues soul = {
+        .stats = {11, 12, 13, 14},
+        .attack = 15,
+        .defence = 16,
+        .category = 0,
+        .cursor = {1, 0, 0},
+        .equipped = {1, 0, 0},
+    };
+    soul.counts[0][0] = 2;
+    assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
+                                               rgba, 240 * 160 * 4));
+    assert((graphics.bg0_map[3 * 32 + 6] & 0xF000) == 0x8000);
+    assert((graphics.bg0_map[5 * 32 + 6] & 0xF000) == 0x3000);
+    assert(graphics.bg0_map[2 * 32 + 22] == 0x3305);
+    assert((graphics.bg0_map[10 * 32 + 15] & 0x3FF) >= 0x200);
+    assert((graphics.bg0_map[12 * 32] & 0x3FF) >= 0x200);
+    assert((graphics.bg0_map[15 * 32 + 7] & 0x3FF) >= 0x200);
     aos_pause_graphics_free(&graphics);
     free(rgba);
     free(decoded);
@@ -132,6 +168,27 @@ int main(int argc, char **argv) {
         assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
                                              rgba, 240 * 160 * 4));
         if (argc >= 3) write_ppm(argv[2], rgba);
+        static const unsigned soul_records[] = {55, 24, 35};
+        memset(soul.counts, 1, sizeof soul.counts);
+        for (unsigned category = 0; category < 3; ++category) {
+            soul.category = (uint8_t)category;
+            for (unsigned cursor = 0; cursor <= soul_records[category]; ++cursor) {
+                soul.cursor[category] = (uint8_t)cursor;
+                if (!aos_pause_graphics_render_soul_set(
+                        &graphics, &soul, rgba, 240 * 160 * 4)) {
+                    fprintf(stderr, "Soul Set render failed for category %u cursor %u\n",
+                            category, cursor);
+                    assert(false);
+                }
+            }
+        }
+        if (argc >= 4) {
+            soul.category = 0;
+            soul.cursor[0] = 1;
+            assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
+                                                       rgba, 240 * 160 * 4));
+            write_ppm(argv[3], rgba);
+        }
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

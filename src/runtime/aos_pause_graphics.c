@@ -91,6 +91,9 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         memcpy(graphics->bg0_chars, memory->vram + 0x4000,
                sizeof graphics->bg0_chars);
         graphics->language = language;
+        graphics->text_ready =
+            aos_intro_resources_init(&graphics->text, rom, NULL, 0) &&
+            aos_intro_font_init(&graphics->font, rom, NULL, 0);
     }
     free(memory);
     if (!ok) {
@@ -177,15 +180,32 @@ static bool bg0_pixel(const AosPauseGraphics *graphics, unsigned x, unsigned y,
     return true;
 }
 
+static bool valid_output(const AosPauseGraphics *graphics, const uint8_t *rgba,
+                         size_t rgba_size) {
+    return graphics && rgba &&
+           rgba_size >= AOS_PAUSE_WIDTH * AOS_PAUSE_HEIGHT * 4 &&
+           graphics->background.rgba &&
+           graphics->background.width_pixels >= AOS_PAUSE_WIDTH &&
+           graphics->background.height_pixels >= AOS_PAUSE_HEIGHT;
+}
+
+static void composite(const AosPauseGraphics *graphics, uint8_t *rgba) {
+    for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
+        for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
+            size_t out = ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
+            size_t background =
+                ((size_t)y * graphics->background.width_pixels + x) * 4;
+            memcpy(rgba + out, graphics->background.rgba + background, 4);
+            bg0_pixel(graphics, x, y, rgba + out);
+        }
+}
+
 bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                                    const AosPauseHubValues *values,
                                    uint8_t selected, uint8_t *rgba,
                                    size_t rgba_size) {
-    if (!graphics || !values || !rgba || selected >= 7 ||
-        rgba_size < AOS_PAUSE_WIDTH * AOS_PAUSE_HEIGHT * 4 ||
-        !graphics->background.rgba ||
-        graphics->background.width_pixels < AOS_PAUSE_WIDTH ||
-        graphics->background.height_pixels < AOS_PAUSE_HEIGHT)
+    if (!values || selected >= 7 ||
+        !valid_output(graphics, rgba, rgba_size))
         return false;
     for (size_t index = 0; index < 32 * 32; ++index)
         graphics->bg0_map[index] = AOS_PAUSE_BG0_FILL;
@@ -221,12 +241,161 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                               : values->status & 4 ? 1 : 0;
     put_tiles(graphics, 12, 9, (uint16_t)(0x330A + status_variant * 0x10), 4);
 
-    for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
-        for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
-            size_t out = ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
-            size_t background = ((size_t)y * graphics->background.width_pixels + x) * 4;
-            memcpy(rgba + out, graphics->background.rgba + background, 4);
-            bg0_pixel(graphics, x, y, rgba + out);
+    composite(graphics, rgba);
+    return true;
+}
+
+static bool read_text(AosPauseGraphics *graphics, uint16_t id,
+                      AosNativeText *text) {
+    return aos_intro_resources_read_text(&graphics->text, graphics->language,
+                                         id, text, NULL, 0);
+}
+
+static bool place_text(AosPauseGraphics *graphics, const AosNativeText *text,
+                       bool small, unsigned x, unsigned y,
+                       unsigned width, unsigned palette,
+                       unsigned *next_tile) {
+    if (!graphics || !text || !next_tile || !text->line_count || x >= 240 ||
+        y >= 160 || !width)
+        return false;
+    size_t line_count = text->line_count;
+    if (line_count > (small ? 1u : 2u)) line_count = small ? 1u : 2u;
+    unsigned offset_x = x & 7u, offset_y = y & 7u;
+    unsigned line_height = small ? 8u : 12u;
+    unsigned height = offset_y + (unsigned)line_count * line_height;
+    unsigned tile_width = (offset_x + width + 7u) / 8u;
+    unsigned tile_height = (height + 7u) / 8u;
+    if (*next_tile + tile_width * tile_height > 0x300u) return false;
+
+    aos_intro_text_tiles_clear(&graphics->text_tiles);
+    for (size_t line = 0; line < line_count; ++line) {
+        bool rendered = small
+            ? aos_intro_font_render_small_span(
+                  &graphics->font, &graphics->text_tiles, offset_x,
+                  offset_y + (unsigned)line * line_height, width, 8,
+                  text->glyphs[line], text->glyph_counts[line])
+            : aos_intro_font_render_span(
+                  &graphics->font, &graphics->text_tiles, offset_x,
+                  offset_y + (unsigned)line * line_height, width, 8,
+                  text->glyphs[line], text->glyph_counts[line]);
+        if (!rendered) return false;
+    }
+
+    unsigned destination_x = x / 8u, destination_y = y / 8u;
+    for (unsigned row = 0; row < tile_height; ++row)
+        for (unsigned column = 0; column < tile_width; ++column) {
+            unsigned tile = (*next_tile)++;
+            size_t source = ((size_t)row * 32 + column) * 32;
+            memcpy(graphics->bg0_chars + (size_t)tile * 32,
+                   graphics->text_tiles.data + source, 32);
+            unsigned map_x = destination_x + column;
+            unsigned map_y = destination_y + row;
+            if (map_x < 32 && map_y < 32)
+                graphics->bg0_map[map_y * 32 + map_x] =
+                    (uint16_t)(tile | palette << 12);
         }
+    return true;
+}
+
+static uint16_t soul_name_id(unsigned category, unsigned soul) {
+    static const uint16_t bases[] = {0xE2, 0x11A, 0x132};
+    return soul ? (uint16_t)(bases[category] + soul) : 0x34F;
+}
+
+static uint16_t soul_description_id(unsigned category, unsigned soul) {
+    static const uint16_t bases[] = {0x1E3, 0x21B, 0x233};
+    static const uint16_t none[] = {0x37D, 0x37E, 0x37F};
+    return soul ? (uint16_t)(bases[category] + soul) : none[category];
+}
+
+static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
+                          unsigned x, unsigned y, unsigned width,
+                          unsigned palette, unsigned *next_tile) {
+    AosNativeText text;
+    return read_text(graphics, id, &text) &&
+           place_text(graphics, &text, small, x, y, width, palette, next_tile);
+}
+
+bool aos_pause_graphics_render_soul_set(
+    AosPauseGraphics *graphics, const AosPauseSoulSetValues *values,
+    uint8_t *rgba, size_t rgba_size) {
+    static const unsigned soul_counts[] = {56, 25, 36};
+    static const unsigned selected_palettes[] = {8, 9, 6};
+    if (!values || values->category >= AOS_PAUSE_SOUL_FAMILIES ||
+        !graphics || !graphics->text_ready ||
+        !valid_output(graphics, rgba, rgba_size))
+        return false;
+    for (size_t index = 0; index < 32 * 32; ++index)
+        graphics->bg0_map[index] = AOS_PAUSE_BG0_FILL;
+
+    put_number(graphics, 22, 2, values->attack, 3, 0x3300, false);
+    put_number(graphics, 22, 3, values->defence, 3, 0x3300, false);
+    for (int stat = 0; stat < 4; ++stat)
+        put_number(graphics, 22, 4 + stat, values->stats[stat], 3, 0x3300, false);
+    unsigned status_variant = values->status & 1 ? 2
+                              : values->status & 2 ? 3
+                              : values->status & 4 ? 1 : 0;
+    put_tiles(graphics, 21, 8, (uint16_t)(0x330A + status_variant * 0x10), 4);
+
+    for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category) {
+        unsigned palette = category == values->category
+                               ? selected_palettes[category]
+                               : 3;
+        put_tiles(graphics, 6, 3 + (int)category * 2,
+                  (uint16_t)((0x350 + category * 0x10) | (palette << 12)), 10);
+    }
+    for (unsigned entry = 0; entry < 8; ++entry)
+        put_tiles(graphics, entry & 1u ? 17 : 3,
+                  10 + (int)(entry / 2),
+                  (uint16_t)(0x3380 + entry * 0x10), 10);
+
+    unsigned next_tile = 0x200;
+    for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category) {
+        unsigned x = category == 0 ? 126 : category == 1 ? 0 : 126;
+        unsigned y = category == 0 ? 80 : 88;
+        unsigned palette = category == values->category
+                               ? selected_palettes[category]
+                               : 3;
+        if (!place_text_id(graphics,
+                           soul_name_id(category, values->equipped[category]),
+                           true, x, y, 84, palette, &next_tile))
+            return false;
+    }
+
+    unsigned available[AOS_PAUSE_SOUL_RECORDS];
+    unsigned available_count = 1;
+    available[0] = 0;
+    for (unsigned soul = 1; soul < soul_counts[values->category]; ++soul)
+        if (values->counts[values->category][soul - 1])
+            available[available_count++] = soul;
+    unsigned selected_soul = values->cursor[values->category];
+    unsigned selected = 0;
+    for (unsigned index = 0; index < available_count; ++index)
+        if (available[index] == selected_soul) selected = index;
+    unsigned top = selected > 3 ? selected - 3 : 0;
+    if (top + 8 > available_count)
+        top = available_count > 8 ? available_count - 8 : 0;
+    for (unsigned entry = 0; entry < 8 && top + entry < available_count; ++entry) {
+        unsigned soul = available[top + entry];
+        unsigned x = entry & 1u ? 126 : 0;
+        unsigned y = (12 + entry / 2) * 8;
+        unsigned palette = soul == selected_soul
+                               ? selected_palettes[values->category]
+                               : 3;
+        if (!place_text_id(graphics,
+                           soul_name_id(values->category, soul), true,
+                           x, y, 84, palette, &next_tile))
+            return false;
+        put_number(graphics, entry & 1u ? 27 : 13,
+                   10 + (int)(entry / 2),
+                   soul ? values->counts[values->category][soul - 1] : 0,
+                   1, 0x3300, false);
+    }
+    if (!place_text_id(graphics,
+                       soul_description_id(values->category, selected_soul),
+                       false, 56, 120, 174, 3, &next_tile))
+        return false;
+
+    composite(graphics, rgba);
     return true;
 }

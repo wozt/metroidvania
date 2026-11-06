@@ -4249,6 +4249,37 @@ static bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
+static bool draw_native_soul_set(SDL_Renderer *renderer, SDL_Texture *texture,
+                                 AosPauseGraphics *graphics,
+                                 const AosSoulMenu *menu, const AosStats *stats) {
+    if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
+        menu->page != AOS_SOUL_MENU_PAGE_SOUL_SET ||
+        menu->category >= AOS_PAUSE_SOUL_FAMILIES)
+        return false;
+    AosPauseSoulSetValues values = {
+        .attack = stats->atk,
+        .defence = stats->def,
+        .status = stats->status,
+        .category = menu->category,
+        .equipped = {stats->red_soul, stats->blue_soul, stats->yellow_soul},
+    };
+    memcpy(values.stats, stats->current, sizeof values.stats);
+    memcpy(values.cursor, menu->cursor, sizeof values.cursor);
+    static const uint8_t counts[] = {55, 24, 35};
+    for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category)
+        for (unsigned soul = 0; soul < counts[category]; ++soul)
+            values.counts[category][soul] =
+                aos_souls_total(stats, (int32_t)category, (int32_t)soul);
+
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_pause_graphics_render_soul_set(graphics, &values,
+                                            pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
 static bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosQuickMap *map, const AosStats *stats,
                                   uint32_t animation_frame) {
@@ -6780,7 +6811,9 @@ int aria_runtime_main(int argc, char **argv) {
         if (quick_map_open)
             draw_native_quick_map(renderer, quick_map_texture, &quick_map,
                                   &progress, (uint32_t)step);
-        else if (!draw_native_pause_hub(renderer, pause_texture, &pause_graphics,
+        else if (!draw_native_soul_set(renderer, pause_texture, &pause_graphics,
+                                       &soul_menu, &progress) &&
+                 !draw_native_pause_hub(renderer, pause_texture, &pause_graphics,
                                    &soul_menu, &progress, &soma,
                                    has_active_save ? active_save.play_frames : (uint32_t)step))
             draw_soul_menu(renderer, &soul_menu, &progress,

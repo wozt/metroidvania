@@ -1029,9 +1029,12 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_pause_graphics_tests
                    tests/test_aos_pause_graphics.c
                    src/runtime/aos_pause_graphics.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos_rom_graphics.c
+                   src/runtime/aos_intro_resources.c
+                   src/runtime/aos_intro_entities.c
+                   src/runtime/aos_intro_font.c)
     target_include_directories(fusion_aos_pause_graphics_tests PRIVATE src/runtime)
-    target_link_libraries(fusion_aos_pause_graphics_tests PRIVATE fusion_assets)
+    target_link_libraries(fusion_aos_pause_graphics_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_pause_graphics_tests)
     add_test(NAME aos_pause_graphics COMMAND fusion_aos_pause_graphics_tests)
 

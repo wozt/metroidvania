@@ -14,6 +14,7 @@ enum {
     PROMPT_OFFSET = 0x1200,
     PROMPT_ID = 0x354,
     BAD_PROMPT_ID = 0x355,
+    BUTTON_PROMPT_ID = 0x356,
 };
 
 static void write_u32(uint8_t *data, size_t offset, uint32_t value) {
@@ -50,13 +51,17 @@ int main(int argc, char **argv) {
     /* A two-line localized prompt and an entry with an unknown control. */
     static const uint8_t prompt_script[] = {0, 0, 'P', 'L', 6, 'Y', 10, 'Z'};
     static const uint8_t bad_script[] = {0, 0, 'Q', 3, 10};
+    static const uint8_t button_script[] = {0, 0, 15, 11, 17, 18, 10};
     memcpy(data + PROMPT_OFFSET, prompt_script, sizeof prompt_script);
     memcpy(data + PROMPT_OFFSET + 0x20, bad_script, sizeof bad_script);
+    memcpy(data + PROMPT_OFFSET + 0x40, button_script, sizeof button_script);
     write_u32(data, TEXT_TABLE_OFFSET + PROMPT_ID * 4, 0x08000000 + PROMPT_OFFSET);
     write_u32(data, TEXT_TABLE_OFFSET + (PROMPT_ID + 1) * 4,
               0x08000000 + PROMPT_OFFSET + 0x20);
     write_u32(data, TEXT_TABLE_OFFSET + (BAD_PROMPT_ID + 1) * 4,
-              0x08000000 + PROMPT_OFFSET + 0x20 + sizeof bad_script);
+              0x08000000 + PROMPT_OFFSET + 0x40);
+    write_u32(data, TEXT_TABLE_OFFSET + (BUTTON_PROMPT_ID + 1) * 4,
+              0x08000000 + PROMPT_OFFSET + 0x40 + sizeof button_script);
 
     FusionRom rom = {
         .data = data,
@@ -89,6 +94,14 @@ int main(int argc, char **argv) {
     assert(!aos_intro_resources_read_text(&resources, 1, BAD_PROMPT_ID, &text,
                                           error, sizeof error));
     assert(strstr(error, "unsupported control") != NULL);
+    assert(aos_intro_resources_read_text(&resources, 1, BUTTON_PROMPT_ID,
+                                         &text, error, sizeof error));
+    static const uint8_t button_glyphs[] = {
+        0x88, 0x82, 0x83, 0x8C, 0x8D, 0x8A, 0x8B,
+    };
+    assert(text.line_count == 1 &&
+           text.glyph_counts[0] == sizeof button_glyphs &&
+           memcmp(text.glyphs[0], button_glyphs, sizeof button_glyphs) == 0);
     assert(!aos_intro_resources_read_text(&resources, 4, PROMPT_ID, &text,
                                           error, sizeof error));
 

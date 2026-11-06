@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "aos_intro_font.h"
+#include "aos_intro_resources.h"
 #include "fusion/assets/aos.h"
 
 typedef struct {
@@ -15,6 +17,10 @@ typedef struct {
     uint8_t palette[0x200];
     uint8_t backdrop_rgb[3];
     uint8_t language;
+    AosIntroResources text;
+    AosIntroFont font;
+    AosIntroTextTiles text_tiles;
+    bool text_ready;
 } AosPauseGraphics;
 
 typedef struct {
@@ -33,6 +39,22 @@ typedef struct {
     uint16_t status;
 } AosPauseHubValues;
 
+enum {
+    AOS_PAUSE_SOUL_FAMILIES = 3,
+    AOS_PAUSE_SOUL_RECORDS = 56,
+};
+
+typedef struct {
+    int16_t stats[4];
+    int16_t attack;
+    int16_t defence;
+    uint16_t status;
+    uint8_t category;
+    uint8_t cursor[AOS_PAUSE_SOUL_FAMILIES];
+    uint8_t equipped[AOS_PAUSE_SOUL_FAMILIES];
+    uint8_t counts[AOS_PAUSE_SOUL_FAMILIES][AOS_PAUSE_SOUL_RECORDS];
+} AosPauseSoulSetValues;
+
 /* sub_08047684 and sub_08047520: decode the pause hub's actual BG1 tiles,
  * palette and block map from the verified Aria ROM. Dynamic BG0 text and OBJ
  * layers are deliberately separate so the runtime and editor can share this
@@ -46,6 +68,13 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                                    const AosPauseHubValues *values,
                                    uint8_t selected, uint8_t *rgba,
                                    size_t rgba_size);
+/* sub_08048D84/sub_080493E8/sub_080494F8/sub_08049DB4: reconstruct the
+ * Soul Set BG0 page with the ROM's localized names, descriptions and native
+ * proportional fonts. Sprite icons and the animated OBJ cursor remain a
+ * separate layer. */
+bool aos_pause_graphics_render_soul_set(
+    AosPauseGraphics *graphics, const AosPauseSoulSetValues *values,
+    uint8_t *rgba, size_t rgba_size);
 void aos_pause_graphics_free(AosPauseGraphics *graphics);
 
 #endif /* AOS_PAUSE_GRAPHICS_H */

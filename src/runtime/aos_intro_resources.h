@@ -38,7 +38,8 @@ bool aos_intro_resources_bind(AosIntroResources *resources,
 bool aos_intro_resources_entry(AosIntroResources *resources, uint8_t language,
                                uint16_t id, const uint8_t **entry, size_t *entry_size);
 /* Reads one localized entry from the native text table. Control 6 starts a
- * new line and control 10 terminates the entry, matching sub_08046BC8. */
+ * new line, control 10 terminates the entry, and controls 11-18 become the
+ * default action-button and D-pad glyphs used by sub_08046BC8. */
 bool aos_intro_resources_read_text(AosIntroResources *resources,
                                    uint8_t language, uint16_t id,
                                    AosNativeText *text, char *error,

@@ -202,6 +202,28 @@ bool aos_intro_resources_read_text(AosIntroResources *resources,
         } else if (value == 10) {
             if (error && error_size) error[0] = '\0';
             return true;
+        } else if (value >= 11 && value <= 18) {
+            static const uint8_t glyphs[][2] = {
+                {0x82, 0x83}, /* Attack: B. */
+                {0x80, 0x81}, /* Jump: A. */
+                {0x84, 0x85}, /* Ability: L. */
+                {0x86, 0x87}, /* Guardian: R. */
+                {0x88, 0},    /* Up. */
+                {0x89, 0},    /* Down. */
+                {0x8C, 0x8D}, /* Left. */
+                {0x8A, 0x8B}, /* Right. */
+            };
+            size_t line = text->line_count - 1;
+            for (size_t part = 0; part < 2 && glyphs[value - 11][part]; ++part) {
+                size_t count = text->glyph_counts[line];
+                if (count >= AOS_NATIVE_TEXT_MAX_GLYPHS) {
+                    set_error(error, error_size,
+                              "Aria localized text line is too long");
+                    return false;
+                }
+                text->glyphs[line][count] = glyphs[value - 11][part];
+                text->glyph_counts[line] = count + 1;
+            }
         } else {
             set_error(error, error_size,
                       "unsupported control in Aria localized text");

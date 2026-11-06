@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0774 - Reconstruct the native Aria Soul Set page
+
+- Replaced the first diagnostic START subpage with a C11 renderer derived
+  from `sub_08048D84`, `sub_080493E8`, `sub_080494F8`, `sub_08049DB4` and
+  `sub_08049AAC`. Soul Set now uses the verified ROM's pause background,
+  language-bank labels, number tiles, category palettes and exact BG0
+  coordinates for the three coloured soul families.
+- Read equipped names, owned-list names and the selected soul description
+  from their native localized text IDs. Both proportional font tables are
+  consumed directly from the verified ROM; no extracted or proprietary
+  resource is stored. The runtime passes the live equipped souls, inventory,
+  cursor, ATK, DEF, attributes and status to the renderer.
+- Extended the deterministic synthetic-ROM test with text tables and both
+  font contexts, then rendered the page from the local verified ROM and
+  reviewed its native composition. This is source-derived and image-checked,
+  not emulator-compared.
+- Status remains partial. Soul icons, the animated OBJ cursor, the native
+  recent-four soul ordering and exact category transitions are still absent;
+  Equip and the other subordinate pages retain their diagnostic rendering.
+
+Next: reconstruct `sub_0804A95C`'s native Equip page with its ROM labels,
+localized item descriptions and stat preview, then add its icons and cursor
+OAM.
+
 ## Patch 0773 - Reconstruct the native Aria START hub and SELECT map
 
 - Replaced the provisional START-hub presentation with a source-driven C11

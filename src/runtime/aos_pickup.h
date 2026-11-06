@@ -30,12 +30,34 @@ enum {
     /* gEwramData + 0x360 through +0x377: the six words used by the native
      * placed-item indices (the US room data reaches bit 157). */
     AOS_PLACED_ITEM_WORDS = 6,
+    AOS_PICKUP_ICON_SLOTS = 8,
+    AOS_PICKUP_RECENT_LISTS = 3,
+    AOS_PICKUP_RECENT_ITEMS = 4,
+    AOS_PICKUP_SOUND_HEART = 0xB4,
+    AOS_PICKUP_SOUND_ITEM = 0xB5,
+    AOS_PICKUP_SOUND_MONEY = 0xB6,
+    AOS_PICKUP_SOUND_EQUIPMENT = 0xB7,
+    AOS_PICKUP_SOUND_SOUL = 0xBC,
+    AOS_PICKUP_SOUND_REFUSED = 0x13B,
 };
 
 typedef enum {
     AOS_COLLECT_TAKEN,      /* counted (at most 9) and removed */
     AOS_COLLECT_FULL,       /* more than 8 held: it stays on the ground */
 } AosCollectResult;
+
+/* sub_08012294 and sub_0801232C's eight shared icon graphics slots. Icon
+ * zero is not loaded; equal non-zero icon ids share a slot. */
+typedef struct {
+    uint16_t active[AOS_PICKUP_ICON_SLOTS];
+    uint16_t backup[AOS_PICKUP_ICON_SLOTS];
+} AosPickupIconSlots;
+
+/* sub_0804AE3C's four recent weapons, body armor pieces and accessories.
+ * Empty entries are 0xFF. */
+typedef struct {
+    uint8_t item[AOS_PICKUP_RECENT_LISTS][AOS_PICKUP_RECENT_ITEMS];
+} AosPickupRecent;
 
 /* A pickup entity of sub_08043F70 (entities 0x49-0xCF). */
 typedef struct {
@@ -64,6 +86,8 @@ typedef struct {
     bool soul_container;
     bool container_released;
     uint8_t container_timer;
+    uint16_t icon_id;    /* sub_0801232C's exported icon id */
+    int8_t icon_slot;    /* -1 until one of the eight shared slots is free */
 } AosPickup;
 
 /* Soma's position (16.16) for the soul pickups' homing. */
@@ -83,6 +107,24 @@ extern const AosBox aos_pickup_box;
 extern const AosBox aos_heart_box;
 /* The placed soul container's weapon box (0x2010E0F8). */
 extern const AosBox aos_soul_container_box;
+
+void aos_pickup_icon_slots_reset(AosPickupIconSlots *slots);
+int aos_pickup_icon_acquire(AosPickupIconSlots *slots, uint16_t icon_id);
+void aos_pickup_icon_release(AosPickupIconSlots *slots, int slot);
+void aos_pickup_icon_backup(AosPickupIconSlots *slots);
+void aos_pickup_icon_restore(AosPickupIconSlots *slots);
+/* Bind (or rebind after a shared slot was released) one pickup. */
+int aos_pickup_icon_bind(AosPickup *pickup, AosPickupIconSlots *slots,
+                         uint16_t icon_id);
+void aos_pickup_icon_unbind(AosPickup *pickup, AosPickupIconSlots *slots);
+
+void aos_pickup_recent_reset(AosPickupRecent *recent);
+/* category 3 is a weapon; category 4 selects body armor below index 25 and
+ * accessories from index 25. Returns true only when a new entry was added. */
+bool aos_pickup_recent_record(AosPickupRecent *recent, uint8_t category,
+                              uint8_t index);
+/* The successful collection sound selected by sub_080441F8, or zero. */
+uint16_t aos_pickup_collection_sound(const AosPickup *pickup);
 /* The box a pickup registered. */
 AosBox aos_pickup_box_of(const AosPickup *pickup);
 

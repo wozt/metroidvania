@@ -3,6 +3,8 @@
 
 #include "aos_enemy.h"
 
+#include <string.h>
+
 enum {
     AOS_PICKUP_GRAVITY = 0x2000,
     AOS_PICKUP_MAX_FALL = 0x40000,
@@ -15,10 +17,100 @@ enum {
 const AosBox aos_pickup_box = {-8, -8, 16, 16};
 const AosBox aos_soul_container_box = {-8, -32, 16, 32};
 
+void aos_pickup_icon_slots_reset(AosPickupIconSlots *slots) {
+    if (slots) memset(slots, 0, sizeof *slots);
+}
+
+int aos_pickup_icon_acquire(AosPickupIconSlots *slots, uint16_t icon_id) {
+    if (!slots || !icon_id) return -1;
+    int free_slot = -1;
+    for (int slot = 0; slot < AOS_PICKUP_ICON_SLOTS; ++slot) {
+        if (slots->active[slot] == icon_id) return slot;
+        if (!slots->active[slot] && free_slot < 0) free_slot = slot;
+    }
+    if (free_slot >= 0) slots->active[free_slot] = icon_id;
+    return free_slot;
+}
+
+void aos_pickup_icon_release(AosPickupIconSlots *slots, int slot) {
+    if (slots && slot >= 0 && slot < AOS_PICKUP_ICON_SLOTS)
+        slots->active[slot] = 0;
+}
+
+void aos_pickup_icon_backup(AosPickupIconSlots *slots) {
+    if (!slots) return;
+    memcpy(slots->backup, slots->active, sizeof slots->active);
+    memset(slots->active, 0, sizeof slots->active);
+}
+
+void aos_pickup_icon_restore(AosPickupIconSlots *slots) {
+    if (slots) memcpy(slots->active, slots->backup, sizeof slots->active);
+}
+
+int aos_pickup_icon_bind(AosPickup *pickup, AosPickupIconSlots *slots,
+                         uint16_t icon_id) {
+    if (!pickup || !slots) return -1;
+    if (!icon_id) {
+        aos_pickup_icon_unbind(pickup, slots);
+        pickup->icon_id = 0;
+        return -1;
+    }
+    if (pickup->icon_slot >= 0 && pickup->icon_slot < AOS_PICKUP_ICON_SLOTS &&
+        pickup->icon_id == icon_id && slots->active[pickup->icon_slot] == icon_id)
+        return pickup->icon_slot;
+    if (pickup->icon_slot >= 0 && pickup->icon_slot < AOS_PICKUP_ICON_SLOTS &&
+        slots->active[pickup->icon_slot] == pickup->icon_id)
+        aos_pickup_icon_release(slots, pickup->icon_slot);
+    pickup->icon_id = icon_id;
+    pickup->icon_slot = (int8_t)aos_pickup_icon_acquire(slots, icon_id);
+    return pickup->icon_slot;
+}
+
+void aos_pickup_icon_unbind(AosPickup *pickup, AosPickupIconSlots *slots) {
+    if (!pickup) return;
+    aos_pickup_icon_release(slots, pickup->icon_slot);
+    pickup->icon_slot = -1;
+}
+
+void aos_pickup_recent_reset(AosPickupRecent *recent) {
+    if (recent) memset(recent->item, 0xFF, sizeof recent->item);
+}
+
+bool aos_pickup_recent_record(AosPickupRecent *recent, uint8_t category,
+                              uint8_t index) {
+    if (!recent || (category != AOS_PICKUP_WEAPON && category != AOS_PICKUP_ARMOR))
+        return false;
+    unsigned list = category == AOS_PICKUP_WEAPON ? 0u : index < 25 ? 1u : 2u;
+    for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+        if (recent->item[list][slot] == index) return false;
+    for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+        if (recent->item[list][slot] == 0xFF) {
+            recent->item[list][slot] = index;
+            return true;
+        }
+    recent->item[list][AOS_PICKUP_RECENT_ITEMS - 1] = index;
+    return true;
+}
+
+uint16_t aos_pickup_collection_sound(const AosPickup *pickup) {
+    if (!pickup) return 0;
+    switch (pickup->type) {
+    case AOS_PICKUP_HEART: return AOS_PICKUP_SOUND_HEART;
+    case AOS_PICKUP_MONEY: return AOS_PICKUP_SOUND_MONEY;
+    case AOS_PICKUP_ITEM: return AOS_PICKUP_SOUND_ITEM;
+    case AOS_PICKUP_WEAPON:
+    case AOS_PICKUP_ARMOR: return AOS_PICKUP_SOUND_EQUIPMENT;
+    default:
+        return pickup->type >= AOS_PICKUP_SOUL &&
+                       pickup->type < AOS_PICKUP_SOUL + 4
+                   ? AOS_PICKUP_SOUND_SOUL : 0;
+    }
+}
+
 AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uint8_t variant,
                                   int32_t x, int32_t y) {
     AosPickup pickup = {.type = AOS_PICKUP_MONEY, .variant = variant,
-                        .x = x * 65536, .y = y * 65536};
+                        .x = x * 65536, .y = y * 65536, .icon_slot = -1};
     if (variant < AOS_MONEY_KINDS && kinds[variant].lifted) pickup.offset = -8;
     return pickup;
 }
@@ -83,7 +175,8 @@ bool aos_item_decode(uint16_t id, uint8_t *category, uint8_t *index) {
 }
 
 AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int32_t y) {
-    return (AosPickup){.type = category, .variant = index, .x = x * 65536, .y = y * 65536};
+    return (AosPickup){.type = category, .variant = index, .x = x * 65536,
+                       .y = y * 65536, .icon_slot = -1};
 }
 
 bool aos_pickup_placed_collected(
@@ -145,7 +238,8 @@ bool aos_pickup_create_placed_soul(AosPickup *pickup, uint8_t entity_id,
                           .y = y * 65536,
                           .placed = true,
                           .persistent_index = persistent_index,
-                          .soul_container = true};
+                          .soul_container = true,
+                          .icon_slot = -1};
     return true;
 }
 
@@ -230,7 +324,7 @@ static uint16_t angle_to(const AosPickup *pickup, int32_t x, int32_t y) {
 AosPickup aos_pickup_create_soul(uint8_t soul_type, uint8_t soul_index, int32_t x, int32_t y,
                                  int32_t soma_x, int32_t soma_y, AosRandom random) {
     AosPickup pickup = {.type = (uint8_t)(soul_type + AOS_PICKUP_SOUL), .variant = soul_index,
-                        .x = x * 65536, .y = y * 65536};
+                        .x = x * 65536, .y = y * 65536, .icon_slot = -1};
     int32_t target_y = soma_y - (int32_t)((random() & 0x7F) << 12) - 0x80000;
     pickup.heading = (uint32_t)(angle_to(&pickup, soma_x, target_y) + 0x8000) & 0xFFFF;
     pickup.turn = 0;
@@ -295,7 +389,8 @@ AosBox aos_pickup_box_of(const AosPickup *pickup) {
 
 AosPickup aos_pickup_create_heart(bool big, bool pop, int32_t x, int32_t y) {
     AosPickup pickup = {.type = AOS_PICKUP_HEART, .variant = big ? 15 : 3,
-                        .x = x * 65536, .y = y * 65536, .small_heart = !big};
+                        .x = x * 65536, .y = y * 65536, .small_heart = !big,
+                        .icon_slot = -1};
     if (pop) pickup.vy = (int32_t)0xFFFE0000;
     return pickup;
 }

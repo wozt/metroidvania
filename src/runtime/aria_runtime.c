@@ -321,6 +321,7 @@ typedef struct {
     size_t damage_popup_count;
     AosPickup pickups[MAX_PICKUPS];
     size_t pickup_count;
+    AosPickupIconSlots pickup_icons;
 } AriaRoom;
 
 static void free_room(AriaRoom *room) {
@@ -694,6 +695,8 @@ typedef struct {
     AosStats *progress;                          /* level, experience, bestiary */
     const AosMoneyKind *money;                   /* NULL without metadata/money.tsv */
     const AosEquipmentTables *equipment;         /* NULL without metadata/equipment.tsv */
+    const uint8_t *item_icons;                    /* item, weapon, armor -> icon id */
+    AosPickupRecent *recent_items;                /* sub_0804AE3C's three caches */
     AosHud *hud;                                 /* sub_0800EA98 enemy-name notice */
     const AosHudFont *hud_font;
     bool derive_atk, derive_def;                 /* false under --atk / --def */
@@ -2822,6 +2825,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (!pickup->removed) room->pickups[kept++] = *pickup;
             continue;
         }
+        if (pickup->type >= AOS_PICKUP_ITEM && pickup->type <= AOS_PICKUP_ARMOR &&
+            combat->item_icons && pickup->variant < 59)
+            aos_pickup_icon_bind(pickup, &room->pickup_icons,
+                                 combat->item_icons[(pickup->type - AOS_PICKUP_ITEM) * 59u +
+                                                    pickup->variant]);
         bool soul = pickup->type >= AOS_PICKUP_SOUL;
         /* Souls move before their collision pass (sub_080446D4); money and
          * items test it first (sub_08043DD0). */
@@ -2833,6 +2841,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                           pickup->y >> 16, false, false);
         if (touching && pickup->type == AOS_PICKUP_HEART) {
             aos_pickup_collect_heart(pickup, combat->progress);
+            aos_audio_play_song(aos_pickup_collection_sound(pickup));
             printf("Collected an MP heart (MP %d)\n", combat->progress->mp);
         } else if (touching && pickup->type == AOS_PICKUP_MONEY && combat->money) {
             uint32_t text = aos_pickup_collect_money(pickup, combat->money,
@@ -2843,6 +2852,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 snprintf(name, sizeof name, "%u GOLD", combat->money[pickup->variant].value);
                 aos_hud_show_item(combat->hud, combat->hud_font, name);
             }
+            aos_audio_play_song(aos_pickup_collection_sound(pickup));
             printf("Collected %u gold (total %u, message %u)\n",
                    combat->money[pickup->variant].value, combat->progress->gold, text);
         } else if (touching && pickup->type >= AOS_PICKUP_ITEM &&
@@ -2852,14 +2862,20 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (aos_pickup_collect_item(pickup, combat->progress, &refusal_sound) ==
                 AOS_COLLECT_TAKEN) {
                 aos_pickup_mark_placed(pickup, aria_placed_items);
+                if (combat->recent_items)
+                    aos_pickup_recent_record(combat->recent_items, pickup->type,
+                                             (uint8_t)pickup->variant);
                 const char *name = pickup_notice_name(pickup->type, pickup->variant);
                 if (combat->hud && combat->hud_font && name)
                     aos_hud_show_item(combat->hud, combat->hud_font, name);
                 printf("Collected %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
                        pickup->variant);
-            } else if (refusal_sound)
+                aos_audio_play_song(aos_pickup_collection_sound(pickup));
+            } else if (refusal_sound) {
+                aos_audio_play_song(AOS_PICKUP_SOUND_REFUSED);
                 printf("Cannot carry more of %s %u\n", kinds[pickup->type - AOS_PICKUP_ITEM],
                        pickup->variant);
+            }
         } else if (touching && soul) {
             static const char *const colours[] = {"red", "blue", "yellow", "ability"};
             bool fresh = aos_pickup_collect_soul(pickup, combat->progress);
@@ -2869,11 +2885,15 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                    aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
                                    pickup->variant),
                    combat->progress->souls_collected);
+            aos_audio_play_song(aos_pickup_collection_sound(pickup));
         }
         if (soul) aos_pickup_soul_finish(pickup, aos_random);
         else if (pickup->small_heart) aos_pickup_small_heart_update(pickup, layer);
         else aos_pickup_update(pickup, layer);
-        if (!pickup->removed) room->pickups[kept++] = *pickup;
+        if (!pickup->removed)
+            room->pickups[kept++] = *pickup;
+        else
+            aos_pickup_icon_unbind(pickup, &room->pickup_icons);
     }
     room->pickup_count = kept;
     for (size_t i = 0; i < released_count && room->pickup_count < MAX_PICKUPS; ++i)
@@ -5319,12 +5339,16 @@ int aria_runtime_main(int argc, char **argv) {
     bool weapon_ported = soma.weapon.weapon_class <= 4;
     bool weapon_loaded = weapon_ported && load_weapon_sprite(weapon_name, &weapon_sprite, renderer);
     AosWeaponEntity weapon_entity = {0};
+    AosPickupRecent recent_items;
+    aos_pickup_recent_reset(&recent_items);
     AriaCombat combat = {
         .weapon = &weapon_entity,
         .weapon_frames = weapon_loaded ? &weapon_sprite.data : NULL,
         .player = &player_stats,
         .progress = &progress,
         .equipment = have_equipment ? &equipment : NULL,
+        .item_icons = objects_ok ? &objects.item_icon[0][0] : NULL,
+        .recent_items = &recent_items,
         .hud = have_hud ? &hud : NULL,
         .hud_font = have_hud ? &hud_font : NULL,
         .derive_atk = !atk_override,
@@ -5592,6 +5616,7 @@ int aria_runtime_main(int argc, char **argv) {
                 if (combat.derive_def) player_stats.def = progress.def;
             }
             if (soul_menu_event & AOS_SOUL_MENU_OPENED) {
+                aos_pickup_icon_backup(&room.pickup_icons);
                 aos_audio_play_song(AOS_AUDIO_PAUSE);
                 printf("Pause hub opened\n");
             }
@@ -5666,6 +5691,7 @@ int aria_runtime_main(int argc, char **argv) {
                            progress.abilities[1], progress.abilities[0]);
             }
             if (soul_menu_event & AOS_SOUL_MENU_CLOSED) {
+                aos_pickup_icon_restore(&room.pickup_icons);
                 aos_audio_play_song(AOS_AUDIO_RESUME);
                 printf("Pause hub closed\n");
             }
@@ -5983,10 +6009,13 @@ int aria_runtime_main(int argc, char **argv) {
             }
             if (pickup->type >= AOS_PICKUP_ITEM && pickup->type <= AOS_PICKUP_ARMOR) {
                 /* sub_0801232C's icon on the frames of 0x080E10F0. */
-                unsigned icon = pickup->variant < 59
-                    ? objects.item_icon[pickup->type - AOS_PICKUP_ITEM][pickup->variant] : 0;
+                unsigned icon = pickup->icon_slot >= 0 &&
+                                        pickup->icon_slot < AOS_PICKUP_ICON_SLOTS &&
+                                        room.pickup_icons.active[pickup->icon_slot] ==
+                                            pickup->icon_id
+                                    ? pickup->icon_id : 0;
                 const AriaFrame *image = icon < ITEM_ICONS ? &objects.icons[icon] : NULL;
-                if (!image || !image->texture) continue;
+                if (!icon || !image || !image->texture) continue;
                 SDL_FRect rect = {(float)((pickup->x >> 16) + image->offset_x - cam_x),
                                   (float)((pickup->y >> 16) + image->offset_y - cam_y), image->w,
                                   image->h};

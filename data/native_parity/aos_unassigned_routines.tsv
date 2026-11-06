@@ -276,7 +276,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08049EDC	sub_08049EDC	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_08049F34	sub_08049F34	unclassified				asm_function	0x08049F34	asm/code/code_08040A38.s	17687	2	5
 aos:asm:asm/code/code_08040A38.s:sub_0804A00C	sub_0804A00C	unclassified		technical	exclusive_callees	asm_function	0x0804A00C	asm/code/code_08040A38.s	17786	3	4
 aos:asm:asm/code/code_08040A38.s:sub_0804A0B4	sub_0804A0B4	unclassified		technical	exclusive_callees	asm_function	0x0804A0B4	asm/code/code_08040A38.s	17869	2	2
-aos:asm:asm/code/code_08040A38.s:sub_0804AE3C	sub_0804AE3C	unclassified				asm_function	0x0804AE3C	asm/code/code_08040A38.s	19637	2	1
 aos:asm:asm/code/code_08040A38.s:sub_0804B228	sub_0804B228	unclassified				asm_function	0x0804B228	asm/code/code_08040A38.s	20153	0	1
 aos:asm:asm/code/code_08040A38.s:sub_0804B2C0	sub_0804B2C0	unclassified				asm_function	0x0804B2C0	asm/code/code_08040A38.s	20230	0	0
 aos:asm:asm/code/code_08040A38.s:sub_0804B34C	sub_0804B34C	unclassified				asm_function	0x0804B34C	asm/code/code_08040A38.s	20315	0	3
@@ -2367,14 +2366,8 @@ aos:c:src/code_08011DD0.c:sub_08012104	sub_08012104	unclassified				c_function	0
 aos:c:src/code_08011DD0.c:sub_08012154	sub_08012154	environment	referrers			c_function	0x08012154	src/code_08011DD0.c	325	2	0
 aos:c:src/code_08011DD0.c:sub_080121E0	sub_080121E0	unclassified				c_function	0x080121E0	src/code_08011DD0.c	365	2	0
 aos:c:src/code_08011DD0.c:sub_08012210	sub_08012210	unclassified				c_function	0x08012210	src/code_08011DD0.c	380	2	2
-aos:c:src/code_08011DD0.c:sub_08012294	sub_08012294	unclassified				c_function	0x08012294	src/code_08011DD0.c	399	2	1
 aos:c:src/code_08011DD0.c:sub_080123EC	sub_080123EC	unclassified		technical	exclusive_callees	c_function	0x080123EC	src/code_08011DD0.c	499	0	3
-aos:c:src/code_08011DD0.c:sub_080124A8	sub_080124A8	unclassified				c_function	0x080124A8	src/code_08011DD0.c	538	3	0
-aos:c:src/code_08011DD0.c:sub_08012534	sub_08012534	unclassified		technical	exclusive_callees	c_function	0x08012534	src/code_08011DD0.c	572	4	1
-aos:c:src/code_08011DD0.c:sub_08012564	sub_08012564	unclassified				c_function	0x08012564	src/code_08011DD0.c	587	0	0
 aos:c:src/code_08011DD0.c:sub_0801257C	sub_0801257C	unclassified				c_function	0x0801257C	src/code_08011DD0.c	599	0	0
-aos:c:src/code_08011DD0.c:sub_080125B4	sub_080125B4	unclassified				c_function	0x080125B4	src/code_08011DD0.c	622	3	0
-aos:c:src/code_08011DD0.c:sub_0801261C	sub_0801261C	unclassified				c_function	0x0801261C	src/code_08011DD0.c	633	3	1
 aos:c:src/code_08011DD0.c:sub_0801266C	sub_0801266C	unclassified				c_function	0x0801266C	src/code_08011DD0.c	644	4	0
 aos:c:src/code_08011DD0.c:sub_08012688	sub_08012688	environment	referrers			c_function	0x08012688	src/code_08011DD0.c	654	1	4
 aos:c:src/code_08012744.c:SaveData_ClearSlotInSram_inline	SaveData_ClearSlotInSram_inline	saves	name			c_function		src/code_08012744.c	61	1	3

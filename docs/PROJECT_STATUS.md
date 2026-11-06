@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0759 - Complete Aria's shared pickup presentation state
+
+- Ported the eight shared item-icon slots of `sub_08012294` and
+  `sub_0801232C`: equal icon ids reuse a slot, a ninth distinct icon waits
+  for a release, and pickup deletion returns its slot. Opening and closing
+  the pause menu now follows `sub_080125B4` and `sub_0801261C` by backing up,
+  clearing and restoring the slot table. The runtime remains editor-safe:
+  the controller stores portable icon ids while SDL only renders the
+  separately exported texture selected by that id.
+- Connected `sub_080441F8`'s collection requests: MP heart `0xB4`, money
+  `0xB6`, item `0xB5`, weapon or armor `0xB7`, soul `0xBC`, plus the `0x13B`
+  full-inventory response on its existing 0x20-frame cooldown.
+- Ported and connected `sub_0804AE3C`'s independent four-entry recent caches
+  for weapons, body armor and accessories. The diagnostic equipment page
+  does not consume their native ordering yet, so the pickup and equipment
+  features remain partial. Deterministic tests cover slot sharing,
+  saturation, release, backup/restore, cache separation, duplicate handling,
+  replacement and sound selection. Source-derived and unit-tested, not
+  emulator-compared.
+
+Next: connect the recent caches to `sub_0804AED4`'s equipment ordering and
+cleanup, then trace the remaining `0x42C` pickup flags and compare the full
+collection path against an emulator.
+
 ## Patch 0758 - Export Aria's direct soul-container sparkle sequence
 
 - Decoded the type-1 direct descriptor at `0x0852513C` used by

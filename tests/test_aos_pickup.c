@@ -90,6 +90,55 @@ int main(void) {
     assert(aos_item_decode(0x88, &category, &index) && category == AOS_PICKUP_ARMOR &&
            index == 44);
 
+    /* sub_08012294/sub_0801232C: equal icons share one of eight slots,
+     * distinct icons fill the first free slot and a ninth waits. */
+    AosPickupIconSlots icon_slots;
+    aos_pickup_icon_slots_reset(&icon_slots);
+    assert(aos_pickup_icon_acquire(&icon_slots, 0) == -1);
+    for (int icon = 1; icon <= AOS_PICKUP_ICON_SLOTS; ++icon)
+        assert(aos_pickup_icon_acquire(&icon_slots, (uint16_t)icon) == icon - 1);
+    assert(aos_pickup_icon_acquire(&icon_slots, 4) == 3);
+    assert(aos_pickup_icon_acquire(&icon_slots, 9) == -1);
+    aos_pickup_icon_release(&icon_slots, 3);
+    assert(aos_pickup_icon_acquire(&icon_slots, 9) == 3);
+    aos_pickup_icon_backup(&icon_slots);
+    for (int slot = 0; slot < AOS_PICKUP_ICON_SLOTS; ++slot)
+        assert(icon_slots.active[slot] == 0);
+    aos_pickup_icon_restore(&icon_slots);
+    assert(icon_slots.active[3] == 9);
+
+    AosPickup bound = aos_pickup_create_item(AOS_PICKUP_ITEM, 0, 0, 0);
+    assert(bound.icon_slot == -1 && aos_pickup_icon_bind(&bound, &icon_slots, 1) == 0 &&
+           bound.icon_id == 1);
+    aos_pickup_icon_release(&icon_slots, 0);
+    assert(aos_pickup_icon_bind(&bound, &icon_slots, 1) == 0);
+    assert(aos_pickup_icon_bind(&bound, &icon_slots, 10) == 0 &&
+           icon_slots.active[0] == 10);
+    assert(aos_pickup_icon_bind(&bound, &icon_slots, 0) == -1 &&
+           bound.icon_slot == -1 && bound.icon_id == 0);
+    assert(aos_pickup_icon_bind(&bound, &icon_slots, 1) == 0);
+    aos_pickup_icon_unbind(&bound, &icon_slots);
+    assert(bound.icon_slot == -1 && icon_slots.active[0] == 0);
+
+    /* sub_0804AE3C: weapons, armor and accessories have independent
+     * four-entry caches; a full cache replaces only its last entry. */
+    AosPickupRecent recent;
+    aos_pickup_recent_reset(&recent);
+    for (unsigned list = 0; list < AOS_PICKUP_RECENT_LISTS; ++list)
+        for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+            assert(recent.item[list][slot] == 0xFF);
+    assert(aos_pickup_recent_record(&recent, AOS_PICKUP_WEAPON, 3));
+    assert(!aos_pickup_recent_record(&recent, AOS_PICKUP_WEAPON, 3));
+    assert(aos_pickup_recent_record(&recent, AOS_PICKUP_ARMOR, 4));
+    assert(aos_pickup_recent_record(&recent, AOS_PICKUP_ARMOR, 25));
+    assert(recent.item[0][0] == 3 && recent.item[1][0] == 4 && recent.item[2][0] == 25);
+    for (uint8_t weapon = 4; weapon < 7; ++weapon)
+        assert(aos_pickup_recent_record(&recent, AOS_PICKUP_WEAPON, weapon));
+    assert(aos_pickup_recent_record(&recent, AOS_PICKUP_WEAPON, 9));
+    assert(recent.item[0][0] == 3 && recent.item[0][1] == 4 && recent.item[0][2] == 5 &&
+           recent.item[0][3] == 9);
+    assert(!aos_pickup_recent_record(&recent, AOS_PICKUP_ITEM, 1));
+
     /* sub_0800F1FC case 4: ids 1-4 use parameter 1 as their variant and
      * parameter 0 as a durable bit in gEwramData + 0x360. They stay fixed
      * instead of entering sub_08043DD0's fall and timeout. */
@@ -171,6 +220,8 @@ int main(void) {
     /* Item pickups probe at their own height (no 8-pixel money offset). */
     AosPickup item = aos_pickup_create_item(AOS_PICKUP_WEAPON, 1, 40, 30);
     assert(item.type == AOS_PICKUP_WEAPON && item.variant == 1 && item.offset == 0);
+    assert(aos_pickup_collection_sound(&item) == AOS_PICKUP_SOUND_EQUIPMENT &&
+           aos_pickup_collection_sound(&coin) == AOS_PICKUP_SOUND_MONEY);
     for (int i = 0; i < 200 && item.state == 0; ++i) aos_pickup_update(&item, &layer);
     assert(item.state == 1 && (item.y >> 16) <= 80);
 
@@ -183,6 +234,7 @@ int main(void) {
     assert(aos_pickup_collect_item(&item, &held, &sound) == AOS_COLLECT_TAKEN && !sound &&
            item.removed && held.weapon_counts[1] == 1);
     AosPickup potion = aos_pickup_create_item(AOS_PICKUP_ITEM, 3, 0, 0);
+    assert(aos_pickup_collection_sound(&potion) == AOS_PICKUP_SOUND_ITEM);
     held.item_counts[3] = 8;
     assert(aos_pickup_collect_item(&potion, &held, &sound) == AOS_COLLECT_TAKEN &&
            held.item_counts[3] == 9);
@@ -229,6 +281,7 @@ int main(void) {
     assert(draws == 1 && soul.type == AOS_PICKUP_SOUL && soul.variant == 7 &&
            soul.speed == 0x30000 && soul.turn == 0 && soul.blink == 200 &&
            soul.heading == ((aos_arctan2(100, -12) + 0x8000u) & 0xFFFF));
+    assert(aos_pickup_collection_sound(&soul) == AOS_PICKUP_SOUND_SOUL);
     /* sub_080446D4: the turn step grows by 0x2A and the speed by 0x1800 a
      * frame, both capped; the trail draws twice on even timer values. */
     draws = 0;
@@ -273,6 +326,7 @@ int main(void) {
     AosPickup heart = aos_pickup_create_heart(false, true, 40, 40);
     assert(heart.type == AOS_PICKUP_HEART && heart.variant == 3 && heart.small_heart &&
            heart.vy == (int32_t)0xFFFE0000);
+    assert(aos_pickup_collection_sound(&heart) == AOS_PICKUP_SOUND_HEART);
     assert(aos_pickup_box_of(&heart).w == 8 && aos_pickup_box_of(&heart).x == -4);
     int32_t top = heart.y;
     int frames_up = 0;

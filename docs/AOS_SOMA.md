@@ -689,6 +689,20 @@ as frames `0x49`, `0x36`, `0x35`, `0x34` for 3, 7, 7 and 3 updates; the first
 state selects frame 0 before motion, and the second state ends on its final
 frame.
 
+Item, weapon and armor icons share the eight native slots initialized by
+`sub_08012294`. `sub_0801232C` reuses a slot when the same nonzero icon is
+already present, otherwise takes the first empty slot and refuses a ninth
+distinct icon until one is released. The C controller keeps those slots in
+the room state, releases them with the pickup, and mirrors
+`sub_080125B4`/`sub_0801261C` by backing them up while the pause menu owns the
+screen. The exported icon textures stand in for the source's OBJ VRAM copies.
+Collection now requests the source sounds: `0xB4` for MP hearts, `0xB6` for
+money, `0xB5` for items, `0xB7` for weapons and armor, and `0xBC` for souls;
+an inventory at nine requests `0x13B` only once per 0x20-frame cooldown.
+`sub_0804AE3C` also records separate four-entry recent lists for weapons,
+body armor and accessories (indices 25-44). The native equipment-page
+cleanup and ordering that consume these lists remain to be connected.
+
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,
 flags at +0x1C, +0x20). `sub_0806B04C` copies the stats into the entity (HP

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0766 - Construct Headhunter's linked heads
+
+- Added the source-derived Headhunter constructor: the body starts on native
+  sequence 23 and its first host update emits three owned head actors at
+  screen coordinates `(240,124)`, `(272,128)` and `(256,96)`.
+- The runtime entity bridge now preserves the heads' parent and producer
+  linkage, and removes a head safely after its body disappears. Deterministic
+  tests cover construction, identity, positions and ownership.
+- The head actors do not yet run `sub_08083FD0`'s eight-stage controllers or
+  load their dedicated OAM resources, so the encounter is still partial and
+  has no in-game capture. Source-derived and unit-tested, not
+  emulator-compared.
+
+Next: port `sub_08081EBC` and the three `sub_08083FD0` head controllers, then
+export their dedicated art.
+
 ## Patch 0765 - Stage Headhunter's guaranteed soul
 
 - Ported Headhunter's lethal handoff and `sub_08083860` death stages: the

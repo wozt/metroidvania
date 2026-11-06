@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 960 | 2613 |
+| Castlevania: Aria of Sorrow | 961 | 2612 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1551,13 +1551,13 @@ Known divergences: Exact native acceleration rounding, activity-region clamping,
 Next action: Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP`.
 
-[~] **`aos.enemies.headhunter` — Headhunter death sequence.** A lethal hit enters state 2, initializes the native fall, applies its 6-pixel speed cap, snaps at the lower screen edge, selects animation 19, waits the 90-frame fade clock and requests sound 0x76 every eighth frame. Completion removes the entity and asks the runtime for the guaranteed yellow Headhunter soul at special index 4; schema v12 persists its bit. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.enemies.headhunter` — Headhunter death sequence.** EnemyHeadhunterCreate initializes the body on sequence 23; its first host update emits the three linked head identities at the native screen coordinates and registers their ownership. A lethal hit enters state 2, initializes the native fall, applies its 6-pixel speed cap, snaps at the lower screen edge, selects animation 19, waits the 90-frame fade clock and requests sound 0x76 every eighth frame. Completion removes the entity and asks the runtime for the guaranteed yellow Headhunter soul at special index 4; schema v12 persists its bit. Source-derived and unit-tested, not emulator-compared.
 
-Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyHeadhunterUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08083860`, `aos:asm:asm/code/code_080809C0.s:sub_08083AC4`, `aos:asm:asm/code/code_080D0998.s:sub_080D7308`.  
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyHeadhunterCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyHeadhunterUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08083860`, `aos:asm:asm/code/code_080809C0.s:sub_08083AC4`, `aos:asm:asm/code/code_080D0998.s:sub_080D7308`.  
 Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_pickup.c`](../src/runtime/aos_pickup.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_aos_pickup.c`](../tests/test_aos_pickup.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
-Known divergences: The constructor, active AI, three linked heads, native palette fade, two visual effects and event callback are absent. Because the linked heads are not reconstructed, reaching the lower edge advances immediately instead of waiting for their completion. Art and an in-game capture are absent.  
-Next action: Port the constructor, linked heads and active controller, then connect the omitted effects and compare the complete death in an emulator.
+Known divergences: The active phase controller, the heads' eight-stage controllers, their dedicated OAM resources, native palette fade, two death effects and event callback are absent. The body receives combat directly. The three host children currently retain their constructor positions, mirror the body and disappear with it; reaching the lower edge still advances immediately instead of waiting for their native death sequences. Art and an in-game capture are absent.  
+Next action: Port sub_08081EBC and the three sub_08083FD0 head controllers, then export their dedicated art and compare the complete encounter in an emulator.
 
 [+] **`aos.enemies.imp` — Imp.** Palette bank 0, randomized rest, approach and braking, the persistent linked animation-3 helper, Soma-following control phase, alternating SetPlayerInput B/release calls, native Soma-state gate, retreat, contact combat, global inert state, 50-frame falling death and direct-frame 0x15 death child are connected. Its death plays 0x72 (sub_080C4ED4 step 0), unit-tested.
 

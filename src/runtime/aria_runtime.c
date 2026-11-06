@@ -2609,6 +2609,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_PILLAR_BREATH ||
                  e->enemy.role == AOS_ROLE_IMP_HELPER ||
                  e->enemy.role == AOS_ROLE_RIPPER_BLADE ||
+                 e->enemy.role == AOS_ROLE_HEADHUNTER_HEAD ||
                  e->enemy.role == AOS_ROLE_PEEPING_SEGMENT ||
                  e->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
                  e->enemy.role == AOS_ROLE_BUER_FIRE ||
@@ -2746,6 +2747,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_PILLAR_BREATH ||
                                        hit.children[c].role == AOS_ROLE_IMP_HELPER ||
                                        hit.children[c].role == AOS_ROLE_RIPPER_BLADE ||
+                                       hit.children[c].role == AOS_ROLE_HEADHUNTER_HEAD ||
                                        hit.children[c].role == AOS_ROLE_PEEPING_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_BUER_FIRE ||

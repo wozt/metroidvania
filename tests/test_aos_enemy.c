@@ -24,11 +24,31 @@ static uint32_t scripted(void) { return script[script_at++]; }
 
 static void headhunter_death_tests(void) {
     static const uint8_t tick = 1;
-    static AosAnimDef defs[20];
-    for (int i = 0; i < 20; ++i) defs[i] = (AosAnimDef){1, &tick};
-    const AosAnimSet anims = {defs, 20};
+    static AosAnimDef defs[24];
+    for (int i = 0; i < 24; ++i) defs[i] = (AosAnimDef){1, &tick};
+    const AosAnimSet anims = {defs, 24};
     AosEnemyKind kind = {.anims = &anims};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(100), NULL);
+    const AosEnemyStats stats = {.hp = 300};
+    AosEnemy body;
+    assert(aos_enemy_create(&body, AOS_BOSS_HEADHUNTER, 120, 80, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(body.state == 0 && body.anim.id == 0x17 && !body.boss_parts_spawned);
+    AosHitReport built = aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                                          10, 4, 10, 20, never_zero);
+    assert(built.child_count == 3 && body.boss_parts_spawned && body.spawned_count == 3);
+    static const int x[3] = {250, 282, 266}, y[3] = {144, 148, 116};
+    for (int i = 0; i < 3; ++i)
+        assert(built.children[i].role == AOS_ROLE_HEADHUNTER_HEAD &&
+               built.children[i].variant == i && built.children[i].parent == &body &&
+               built.children[i].x == AOS_FIXED(x[i]) &&
+               built.children[i].y == AOS_FIXED(y[i]));
+    body.removed = true;
+    AosEnemy orphan = built.children[0];
+    aos_enemy_update(&orphan, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(orphan.removed);
+
     AosEnemy boss = {.id = AOS_BOSS_HEADHUNTER, .role = AOS_ROLE_ENEMY,
                      .state = 2, .defeated = true, .hp = 0,
                      .x = AOS_FIXED(100), .y = AOS_FIXED(180), .static_frame = -1};

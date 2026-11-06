@@ -935,7 +935,6 @@ aos:asm:asm/code/code_080809C0.s:EnemyFleshGolemCreate	EnemyFleshGolemCreate	ene
 aos:asm:asm/code/code_080809C0.s:EnemyFleshGolemUpdate	EnemyFleshGolemUpdate	enemies	name			asm_function		asm/code/code_080809C0.s	2259	0	1
 aos:asm:asm/code/code_080809C0.s:EnemyGreatArmorCreate	EnemyGreatArmorCreate	enemies	name			asm_function		asm/code/code_080809C0.s	19698	2	20
 aos:asm:asm/code/code_080809C0.s:EnemyGreatArmorUpdate	EnemyGreatArmorUpdate	enemies	name			asm_function		asm/code/code_080809C0.s	19422	2	14
-aos:asm:asm/code/code_080809C0.s:EnemyHeadhunterCreate	EnemyHeadhunterCreate	enemies	name			asm_function		asm/code/code_080809C0.s	2405	0	15
 aos:asm:asm/code/code_080809C0.s:EnemyIronGolemCreate	EnemyIronGolemCreate	enemies	name			asm_function		asm/code/code_080809C0.s	2235	0	1
 aos:asm:asm/code/code_080809C0.s:EnemyIronGolemUpdate	EnemyIronGolemUpdate	enemies	name			asm_function		asm/code/code_080809C0.s	2227	0	1
 aos:asm:asm/code/code_080809C0.s:EnemyShadowKnightCreate	EnemyShadowKnightCreate	enemies	name			asm_function		asm/code/code_080809C0.s	28614	0	1

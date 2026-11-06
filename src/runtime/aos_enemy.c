@@ -567,7 +567,8 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MIMIC && id != AOS_ENEMY_DEAD_CRUSADER && id != AOS_ENEMY_CAGNAZZO &&
         id != AOS_ENEMY_SKULL_MILLIONE && id != AOS_ENEMY_LUBICANT &&
         id != AOS_ENEMY_BEAM_SKELETON && id != AOS_ENEMY_LIGHTNING_DOLL &&
-        id != AOS_ENEMY_KILLER_DOLL && id != AOS_ENEMY_NEMESIS && id != AOS_ENEMY_PEEPING_EYE)
+        id != AOS_ENEMY_KILLER_DOLL && id != AOS_ENEMY_NEMESIS && id != AOS_ENEMY_PEEPING_EYE &&
+        id != AOS_BOSS_HEADHUNTER)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -578,6 +579,15 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
     enemy->stats = *stats;
     enemy->hp = stats->hp;
     enemy->combat.type = AOS_TYPE_ENEMY;
+    if (id == AOS_BOSS_HEADHUNTER) {
+        /* EnemyHeadhunterCreate: the main body starts on sequence 23. The
+         * three sub_08083FD0 actors are emitted by its first host update so
+         * they can use the current camera origin. */
+        play(enemy, anims, 0x17);
+        step_anim(enemy, anims);
+        enemy->state = 0;
+        return true;
+    }
     if (is_early_enemy(id)) {
         /* Constructor-table batch. These initial states, animations, boxes,
          * floor offsets and producer forms come directly from the ten native
@@ -1848,6 +1858,54 @@ static AosHitReport headhunter_death(AosEnemy *enemy, const AosEnemyKind *kind, 
         break;
     }
     return report;
+}
+
+/* EnemyHeadhunterCreate's three sub_08083FD0 actors. Native construction
+ * places them at screen (240,124), (272,128) and (256,96); their full
+ * eight-stage controllers and dedicated OAM resources are a later slice. */
+static AosEnemy headhunter_head(const AosEnemy *body, unsigned index, int cam_x, int cam_y) {
+    static const int16_t screen_x[3] = {240, 272, 256};
+    static const int16_t screen_y[3] = {124, 128, 96};
+    AosEnemy head = {.id = body->id,
+                     .x = AOS_FIXED(cam_x + screen_x[index]),
+                     .y = AOS_FIXED(cam_y + screen_y[index]),
+                     .role = AOS_ROLE_HEADHUNTER_HEAD,
+                     .variant = (uint8_t)index,
+                     .parent = body,
+                     .static_frame = -1,
+                     .combat = {.type = AOS_TYPE_ENEMY, .attack_off = true,
+                                .hurt_off = true}};
+    head.mirrored = body->mirrored;
+    return head;
+}
+
+static AosHitReport headhunter_update(AosEnemy *enemy, AosSoma *soma,
+                                      const AosEnemyKind *kind,
+                                      const AosWeaponEntity *weapon,
+                                      const AosWeaponFrames *weapon_frames,
+                                      int soma_atk, int soma_def, int cam_x, int cam_y) {
+    AosHitReport report = {0};
+    if (!enemy->boss_parts_spawned) {
+        for (unsigned i = 0; i < 3; ++i)
+            report.children[report.child_count++] =
+                headhunter_head(enemy, i, cam_x, cam_y);
+        enemy->spawned_count = 3;
+        enemy->boss_parts_spawned = true;
+    }
+    step_anim(enemy, kind->anims);
+    AosHitReport hit = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    skeleton_merge(&report, &hit);
+    aos_combat_tick(&enemy->combat);
+    return report;
+}
+
+static void headhunter_head_update(AosEnemy *head) {
+    const AosEnemy *body = head->parent;
+    if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {
+        head->removed = true;
+        return;
+    }
+    head->mirrored = body->mirrored;
 }
 
 /* sub_08069A00 with the zombie's arguments: X then Y motion with the walls
@@ -11749,6 +11807,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     AosHitReport report = {0};
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
+    if (enemy->role == AOS_ROLE_HEADHUNTER_HEAD) {
+        headhunter_head_update(enemy);
+        return report;
+    }
+    if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY) {
+        if (enemy->state == 2) return headhunter_death(enemy, kind, cam_y);
+        return headhunter_update(enemy, soma, kind, weapon, weapon_frames,
+                                 soma_atk, soma_def, cam_x, cam_y);
+    }
     if (enemy->role == AOS_ROLE_SKELETON_BONE)
         return skeleton_bone_update(enemy, soma, kind, weapon, weapon_frames,
                                     soma_atk, soma_def, cam_x, cam_y);
@@ -12103,9 +12170,6 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER)
         return soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
-    if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY &&
-        enemy->state == 2)
-        return headhunter_death(enemy, kind, cam_y);
     if (enemy->state == 4) {
         /* sub_080AD6AC: animation 1 (unless playing), stepped each frame;
          * no activity window and no collision pass. */

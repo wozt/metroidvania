@@ -189,7 +189,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DRAGON_SPARK = 43, AOS_ROLE_DRAGON_PIECE = 44,
        AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46,
        AOS_ROLE_PILLAR_PIECE = 47, AOS_ROLE_PILLAR_BREATH = 48, AOS_ROLE_PILLAR_FIREBALL = 49,
-       AOS_ROLE_PILLAR_SMOKE = 50 };
+       AOS_ROLE_PILLAR_SMOKE = 50, AOS_ROLE_HEADHUNTER_HEAD = 51 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -242,6 +242,7 @@ typedef struct AosEnemy {
      * random destination rather than following Soma directly. */
     int32_t target_x, target_y;
     bool helper_spawned;    /* the Nemesis body has emitted its linked helper */
+    bool boss_parts_spawned; /* a multipart boss emitted its constructor children */
     bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     /* Death step-one linked-fire displacement: +1 X/Y on every third
      * tick, then -1 on the following tick; carried into death step two.

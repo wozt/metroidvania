@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 static unsigned draws;
 static uint32_t counting_random(void) {
@@ -138,6 +139,25 @@ int main(void) {
     assert(recent.item[0][0] == 3 && recent.item[0][1] == 4 && recent.item[0][2] == 5 &&
            recent.item[0][3] == 9);
     assert(!aos_pickup_recent_record(&recent, AOS_PICKUP_ITEM, 1));
+
+    AosStats exchange_stats = {0};
+    exchange_stats.weapon = 2;
+    exchange_stats.weapon_counts[1] = exchange_stats.weapon_counts[2] = 1;
+    AosPickupRecent exchange_recent = {
+        .item = {{1, 2, 3, 4}, {0xFF, 0xFF, 0xFF, 0xFF},
+                 {0xFF, 0xFF, 0xFF, 0xFF}}};
+    assert(aos_pickup_recent_exchange(&exchange_recent, &exchange_stats, 0, 1));
+    assert(exchange_recent.item[0][0] == 0xFF && exchange_recent.item[0][1] == 2 &&
+           exchange_recent.item[0][2] == 3 && exchange_recent.item[0][3] == 4);
+    /* More than one selected copy remains available, so it stays in a full
+     * cache while the old equipment enters at the front. */
+    exchange_stats.weapon_counts[7] = 2;
+    memcpy(exchange_recent.item[0], (uint8_t[]){5, 6, 7, 8}, 4);
+    assert(aos_pickup_recent_exchange(&exchange_recent, &exchange_stats, 0, 7));
+    assert(exchange_recent.item[0][0] == 2 && exchange_recent.item[0][1] == 5 &&
+           exchange_recent.item[0][2] == 6 && exchange_recent.item[0][3] == 7);
+    exchange_stats.weapon = AOS_EQUIPMENT_NONE;
+    assert(!aos_pickup_recent_exchange(&exchange_recent, &exchange_stats, 0, 7));
 
     /* sub_0800F1FC case 4: ids 1-4 use parameter 1 as their variant and
      * parameter 0 as a durable bit in gEwramData + 0x360. They stay fixed

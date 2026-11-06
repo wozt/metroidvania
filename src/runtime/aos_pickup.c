@@ -72,26 +72,6 @@ void aos_pickup_icon_unbind(AosPickup *pickup, AosPickupIconSlots *slots) {
     pickup->icon_slot = -1;
 }
 
-void aos_pickup_recent_reset(AosPickupRecent *recent) {
-    if (recent) memset(recent->item, 0xFF, sizeof recent->item);
-}
-
-bool aos_pickup_recent_record(AosPickupRecent *recent, uint8_t category,
-                              uint8_t index) {
-    if (!recent || (category != AOS_PICKUP_WEAPON && category != AOS_PICKUP_ARMOR))
-        return false;
-    unsigned list = category == AOS_PICKUP_WEAPON ? 0u : index < 25 ? 1u : 2u;
-    for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
-        if (recent->item[list][slot] == index) return false;
-    for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
-        if (recent->item[list][slot] == 0xFF) {
-            recent->item[list][slot] = index;
-            return true;
-        }
-    recent->item[list][AOS_PICKUP_RECENT_ITEMS - 1] = index;
-    return true;
-}
-
 uint16_t aos_pickup_collection_sound(const AosPickup *pickup) {
     if (!pickup) return 0;
     switch (pickup->type) {

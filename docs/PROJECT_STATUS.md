@@ -2,6 +2,28 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0760 - Connect Aria's recent-equipment ordering
+
+- Connected the three four-entry caches populated by item collection to the
+  equipment controller and renderer. `sub_0804A2A4` now presents valid recent
+  weapons, body armor or accessories first, then walks the remaining owned
+  records in native table order without duplicates.
+- Ported `sub_0804AED4`'s replacement transaction: a selected last copy is
+  removed from the cache, the old equipment is removed, survivors compact
+  toward the end, and the old equipment enters immediately before them. The
+  operation runs before the equipped slot changes, so inventory counts retain
+  their source meaning.
+- Split the cache into the host-neutral `aos_recent_items` module so pickup
+  collection, the pause menu, tests and a future editor use one C11 state
+  model without SDL or ROM pointers. Deterministic pickup and menu tests cover
+  partial and full caches, duplicates, unowned entries, multi-copy selection,
+  ordered navigation and all three equipment families. Source-derived and
+  unit-tested, not emulator-compared.
+
+Next: trace the pickup-specific effects of the global `0x42C` flags without
+duplicating the wider room and cutscene state, then compare collection and
+recent-equipment ordering against an emulator.
+
 ## Patch 0759 - Complete Aria's shared pickup presentation state
 
 - Ported the eight shared item-icon slots of `sub_08012294` and

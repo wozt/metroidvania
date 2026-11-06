@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-06T00:05:32+00:00",
+ "generated_at": "2026-11-06T00:13:31+00:00",
  "git": {
-  "commit": "ca2f7f9",
+  "commit": "1d34db4",
   "branch": "main",
   "dirty": true
  },
@@ -12928,6 +12928,7 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_pickup.c",
+    "src/runtime/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos_save.c",
     "src/assets/aos/runtime_room.c",
@@ -12935,6 +12936,7 @@
    ],
    "tests": [
     "tests/test_aos_pickup.c",
+    "tests/test_aos_soul_menu.c",
     "tests/test_aos_save.c",
     "tests/test_fusion_assets_aos.c",
     "tests/test_native_golden.c"
@@ -12964,11 +12966,12 @@
     "sub_08044840",
     "sub_0804459C"
    ],
-   "limitations": "Blinking remains approximated by alternate host frames. Icon graphics use exported textures instead of native OBJ VRAM DMA. The 0x42C pickup flags are incomplete; sub_0804AE3C's three recent-equipment caches are populated, but the equipment page does not yet consume them through sub_0804AED4. The player's hurtbox stands for the player side of the type-0xB collision. Source-derived and locally reviewed, not emulator-compared. Dropped money, items and MP hearts retain their native fall, rest, blink, collection and inventory-cap paths. sub_08044054 decodes global item ids and cases 1-4 create money, items, weapons and armor. AOSROOM-NATIVE v5 preserves every original entity field. sub_0800F1FC case 4 now spawns room entity ids 1-4 at their fixed ROM coordinates, parameter 1 selecting the record and parameter 0 selecting one of the six gEwramData + 0x360 words. Successful collection sets that bit; a full inventory leaves the pickup and bit intact. Entity ids 5-8 create the four source-derived sub_08044980 soul containers with sequence 19 primary and sequence 18 follower art. Their sub_08044840 intact update emits a palette-matched type-4 child every eighth frame before the weapon collision, using its native random offset and motion terms. Its direct type-1 sequence at 0x0852513C is exported as frames 0x49, 0x36, 0x35 and 0x34 with 3, 7, 7 and 3 updates; sub_080450C8's initial no-motion state and sequence-ending update are ported. A weapon contact with the native tall box releases sub_0804459C's homing soul, requests sound 0xA2, then hides and removes the container; only a collected released soul sets its durable bit. The eight shared icon slots now deduplicate equal icon ids, reject a ninth distinct icon until a slot is released, and back up and restore around the pause menu. Successful heart, money, item, equipment and soul collection requests 0xB4, 0xB6, 0xB5, 0xB7 and 0xBC; a full inventory requests 0x13B only once per 0x20-frame cooldown. Weapon, armor and accessory collection fills sub_0804AE3C's separate four-entry caches. Portable save schema v11 preserves all six words independently from story events, and v1-v10 migration initializes them empty. Item and money notices use the native sibling HUD paths. Deterministic tests cover categories, bounds, fixed lifetime, icon-slot ownership and backup, recent caches, sounds, sparkle timing and motion, container release and deferred persistence. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Connect the recent caches to native equipment ordering, trace the 0x42C flags and compare collection and container release against an emulator.",
+   "limitations": "Blinking remains approximated by alternate host frames. Icon graphics use exported textures instead of native OBJ VRAM DMA. The global 0x42C pickup flags are incomplete. The player's hurtbox stands for the player side of the type-0xB collision. Source-derived and locally reviewed, not emulator-compared. Dropped money, items and MP hearts retain their native fall, rest, blink, collection and inventory-cap paths. sub_08044054 decodes global item ids and cases 1-4 create money, items, weapons and armor. AOSROOM-NATIVE v5 preserves every original entity field. sub_0800F1FC case 4 now spawns room entity ids 1-4 at their fixed ROM coordinates, parameter 1 selecting the record and parameter 0 selecting one of the six gEwramData + 0x360 words. Successful collection sets that bit; a full inventory leaves the pickup and bit intact. Entity ids 5-8 create the four source-derived sub_08044980 soul containers with sequence 19 primary and sequence 18 follower art. Their sub_08044840 intact update emits a palette-matched type-4 child every eighth frame before the weapon collision, using its native random offset and motion terms. Its direct type-1 sequence at 0x0852513C is exported as frames 0x49, 0x36, 0x35 and 0x34 with 3, 7, 7 and 3 updates; sub_080450C8's initial no-motion state and sequence-ending update are ported. A weapon contact with the native tall box releases sub_0804459C's homing soul, requests sound 0xA2, then hides and removes the container; only a collected released soul sets its durable bit. The eight shared icon slots now deduplicate equal icon ids, reject a ninth distinct icon until a slot is released, and back up and restore around the pause menu. Successful heart, money, item, equipment and soul collection requests 0xB4, 0xB6, 0xB5, 0xB7 and 0xBC; a full inventory requests 0x13B only once per 0x20-frame cooldown. Weapon, armor and accessory collection fills sub_0804AE3C's separate four-entry caches. The equipment controller consumes those caches before its table-order inventory and runs sub_0804AED4's exact selected-copy removal, old-equipment insertion and right compaction on every replacement. Portable save schema v11 preserves all six words independently from story events, and v1-v10 migration initializes them empty. Item and money notices use the native sibling HUD paths. Deterministic tests cover categories, bounds, fixed lifetime, icon-slot ownership and backup, recent cache population, ordering and exchange, sounds, sparkle timing and motion, container release and deferred persistence. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Trace the 0x42C flags and compare collection, equipment ordering and container release against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_pickup.c",
+     "tests/test_aos_soul_menu.c",
      "tests/test_aos_save.c",
      "tests/test_fusion_assets_aos.c",
      "tests/test_native_golden.c"
@@ -12991,6 +12994,16 @@
       "registered": true,
       "ctest": [
        "aos_pickup"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_soul_menu.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul_menu"
       ],
       "outcome": "passed",
       "exists": true
@@ -13212,6 +13225,7 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_soul_menu.c",
+    "src/runtime/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos_stats.c",
     "src/runtime/aos_weapon.c",
@@ -13219,6 +13233,7 @@
    ],
    "tests": [
     "tests/test_aos_soul_menu.c",
+    "tests/test_aos_pickup.c",
     "tests/test_aos_stats.c",
     "tests/test_aos_weapon.c",
     "tests/test_aos_save.c"
@@ -13240,17 +13255,18 @@
     "sub_0804AFD4",
     "sub_0804B26C"
    ],
-   "limitations": "The page uses a diagnostic SDL overlay instead of native text tiles, icons, description records, cursor OAM and transitions. Its owned-item scan is complete but does not reproduce the native four-entry recent-item caches. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. All 59 weapons, 25 armor pieces and 20 accessories have identified English names. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-adapted and unit-tested, not emulator-compared.",
+   "limitations": "The page uses a diagnostic SDL overlay instead of native text tiles, icons, description records, cursor OAM and transitions. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. sub_0804AED4 removes a selected last copy from that cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-adapted and unit-tested, not emulator-compared.",
    "next_action": "Render the native equipment resources and descriptions, complete all weapon entity classes, then port resistance and record-specific accessory effects.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soul_menu.c",
+     "tests/test_aos_pickup.c",
      "tests/test_aos_stats.c",
      "tests/test_aos_weapon.c",
      "tests/test_aos_save.c"
     ],
     "in_game_check": [
-     "aria area_00_room_003: reviewed capture shows Equip enabled in the seven-entry hub; deterministic controller tests cover owned lists and all three slot changes"
+     "aria area_00_room_003: reviewed capture shows Equip enabled in the seven-entry hub; deterministic controller tests cover recent-first owned lists, cache exchange and all three slot changes"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -13267,6 +13283,16 @@
       "registered": true,
       "ctest": [
        "aos_soul_menu"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_pickup.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_pickup"
       ],
       "outcome": "passed",
       "exists": true
@@ -19728,6 +19754,12 @@
  },
  "timeline": [
   {
+   "commit": "1d34db4",
+   "date": "2026-11-06",
+   "subject": "Port Aria shared pickup state",
+   "scope": "project"
+  },
+  {
    "commit": "ca2f7f9",
    "date": "2026-11-06",
    "subject": "Export Aria direct container sparkles",
@@ -20199,12 +20231,6 @@
    "commit": "227771d",
    "date": "2026-10-31",
    "subject": "Guard Buer visual projectiles and cover the full enemy lifecycle",
-   "scope": "project"
-  },
-  {
-   "commit": "ab1dfda",
-   "date": "2026-10-31",
-   "subject": "Correct Aria Buer death flame scatter sizes from native GBA shifts",
    "scope": "project"
   }
  ],
@@ -24685,6 +24711,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24705,6 +24732,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24725,6 +24753,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24745,6 +24774,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24765,6 +24795,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24785,6 +24816,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24805,6 +24837,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24825,6 +24858,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24845,6 +24879,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24865,6 +24900,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24885,6 +24921,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24905,6 +24942,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24925,6 +24963,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24945,6 +24984,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24965,6 +25005,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -24985,6 +25026,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25005,6 +25047,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25025,6 +25068,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25045,6 +25089,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25065,6 +25110,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25085,6 +25131,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25105,6 +25152,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25125,6 +25173,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25145,6 +25194,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25165,6 +25215,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25185,6 +25236,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25205,6 +25257,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25225,6 +25278,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25245,6 +25299,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25265,6 +25320,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25285,6 +25341,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25305,6 +25362,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"
@@ -25325,6 +25383,7 @@
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
+        "tests/test_aos_soul_menu.c",
         "tests/test_aos_save.c",
         "tests/test_fusion_assets_aos.c",
         "tests/test_native_golden.c"

@@ -34,7 +34,9 @@ int main(void) {
     stats.defeated[0] = (1u << 0) | (1u << 4);
     stats.defeated[1] = 1u << (33 - 32);
 
-    AosSoulMenu menu = {0};
+    AosPickupRecent recent;
+    aos_pickup_recent_reset(&recent);
+    AosSoulMenu menu = {.recent_items = &recent};
     menu.sleep_available = true;
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
            AOS_SOUL_MENU_OPENED);
@@ -134,7 +136,8 @@ int main(void) {
            AOS_SOUL_MENU_MOVED && menu.equip_choice == 7);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_CHANGED));
-    assert(stats.weapon == 7 && stats.atk == 48 && !menu.equip_selecting);
+    assert(stats.weapon == 7 && stats.atk == 48 && !menu.equip_selecting &&
+           recent.item[AOS_EQUIP_WEAPON][3] == 0);
 
     aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_DOWN);
     assert(menu.equip_slot == AOS_EQUIP_ARMOR);
@@ -151,6 +154,32 @@ int main(void) {
     assert(menu.equip_choice == 25 && aos_equipment_quantity(&stats, AOS_EQUIP_ACCESSORY, 25) == 1);
     aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
     assert(stats.accessory == 25 && stats.def == 21);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK && menu.page == AOS_SOUL_MENU_PAGE_HUB);
+
+    /* sub_0804A2A4 presents recent valid equipment before the remaining
+     * table-order inventory. Re-equipping the cached Knife rotates Gram
+     * into that cache through sub_0804AED4. */
+    assert(aos_equipment_ordered_choice_at(&stats, &recent, AOS_EQUIP_WEAPON, 0) ==
+               AOS_EQUIPMENT_NONE &&
+           aos_equipment_ordered_choice_at(&stats, &recent, AOS_EQUIP_WEAPON, 1) == 0 &&
+           aos_equipment_ordered_choice_at(&stats, &recent, AOS_EQUIP_WEAPON, 2) == 7);
+    AosPickupRecent noisy_recent = recent;
+    memcpy(noisy_recent.item[AOS_EQUIP_WEAPON],
+           (uint8_t[]){44, 0, 0, 7}, AOS_PICKUP_RECENT_ITEMS);
+    assert(aos_equipment_ordered_choice_at(&stats, &noisy_recent,
+                                           AOS_EQUIP_WEAPON, 1) == 0 &&
+           aos_equipment_ordered_choice_at(&stats, &noisy_recent,
+                                           AOS_EQUIP_WEAPON, 2) == 7);
+    menu.hub_cursor = AOS_PAUSE_EQUIP;
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    assert(menu.equip_selecting && menu.equip_choice == 7);
+    aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP);
+    assert(menu.equip_choice == 0);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
+           (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_CHANGED));
+    assert(stats.weapon == 0 && recent.item[AOS_EQUIP_WEAPON][3] == 7);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK && menu.page == AOS_SOUL_MENU_PAGE_HUB);
 

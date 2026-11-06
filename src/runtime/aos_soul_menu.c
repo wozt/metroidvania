@@ -136,6 +136,40 @@ uint8_t aos_equipment_choice_at(const AosStats *stats, uint8_t slot, int ordinal
     return AOS_EQUIPMENT_NONE;
 }
 
+static bool recent_equipment(const AosStats *stats, const AosPickupRecent *recent,
+                             uint8_t slot, uint8_t item) {
+    if (!recent || slot >= AOS_EQUIP_SLOTS || !equipment_owned(stats, slot, item))
+        return false;
+    for (unsigned index = 0; index < AOS_PICKUP_RECENT_ITEMS; ++index)
+        if (recent->item[slot][index] == item) return true;
+    return false;
+}
+
+uint8_t aos_equipment_ordered_choice_at(const AosStats *stats,
+                                        const AosPickupRecent *recent,
+                                        uint8_t slot, int ordinal) {
+    if (ordinal <= 0) return AOS_EQUIPMENT_NONE;
+    if (recent && slot < AOS_EQUIP_SLOTS)
+        for (unsigned index = 0; index < AOS_PICKUP_RECENT_ITEMS; ++index) {
+            uint8_t item = recent->item[slot][index];
+            if (!equipment_owned(stats, slot, item)) continue;
+            bool duplicate = false;
+            for (unsigned previous = 0; previous < index; ++previous)
+                if (recent->item[slot][previous] == item) duplicate = true;
+            if (!duplicate && --ordinal == 0) return item;
+        }
+    int first = slot == AOS_EQUIP_ACCESSORY ? 25 : 0;
+    int limit = slot == AOS_EQUIP_WEAPON ? AOS_WEAPON_RECORDS
+                : slot == AOS_EQUIP_ARMOR ? 25
+                : slot == AOS_EQUIP_ACCESSORY ? AOS_ARMOR_RECORDS
+                                             : 0;
+    for (int item = first; item < limit; ++item)
+        if (equipment_owned(stats, slot, (uint8_t)item) &&
+            !recent_equipment(stats, recent, slot, (uint8_t)item) && --ordinal == 0)
+            return (uint8_t)item;
+    return AOS_EQUIPMENT_NONE;
+}
+
 const char *aos_item_name(uint8_t item) {
     return item < AOS_ITEM_RECORDS ? item_names[item] : "Unknown";
 }
@@ -328,18 +362,22 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
     return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
 }
 
-static int equipment_ordinal(const AosStats *stats, uint8_t slot, uint8_t item) {
+static int equipment_ordinal(const AosStats *stats, const AosPickupRecent *recent,
+                             uint8_t slot, uint8_t item) {
     int count = aos_equipment_choice_count(stats, slot);
     for (int ordinal = 0; ordinal < count; ++ordinal)
-        if (aos_equipment_choice_at(stats, slot, ordinal) == item) return ordinal;
+        if (aos_equipment_ordered_choice_at(stats, recent, slot, ordinal) == item)
+            return ordinal;
     return 0;
 }
 
 static void move_equipment_choice(AosSoulMenu *menu, const AosStats *stats, int direction) {
     int count = aos_equipment_choice_count(stats, menu->equip_slot);
-    int ordinal = equipment_ordinal(stats, menu->equip_slot, menu->equip_choice);
+    int ordinal = equipment_ordinal(stats, menu->recent_items, menu->equip_slot,
+                                    menu->equip_choice);
     ordinal = (ordinal + direction + count) % count;
-    menu->equip_choice = aos_equipment_choice_at(stats, menu->equip_slot, ordinal);
+    menu->equip_choice = aos_equipment_ordered_choice_at(
+        stats, menu->recent_items, menu->equip_slot, ordinal);
 }
 
 static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
@@ -384,6 +422,9 @@ static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
                         : menu->equip_slot == AOS_EQUIP_ARMOR ? &stats->armor
                                                               : &stats->accessory;
     bool changed = *equipped != menu->equip_choice;
+    if (menu->recent_items && *equipped != AOS_EQUIPMENT_NONE)
+        aos_pickup_recent_exchange(menu->recent_items, stats, menu->equip_slot,
+                                   menu->equip_choice);
     *equipped = menu->equip_choice;
     if (equipment) aos_stats_refresh(stats, equipment);
     menu->equip_selecting = false;

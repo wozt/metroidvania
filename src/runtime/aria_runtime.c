@@ -4385,13 +4385,16 @@ static void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
         int choices = aos_equipment_choice_count(stats, menu->equip_slot);
         int cursor = 0;
         for (int ordinal = 0; ordinal < choices; ++ordinal)
-            if (aos_equipment_choice_at(stats, menu->equip_slot, ordinal) == menu->equip_choice)
+            if (aos_equipment_ordered_choice_at(stats, menu->recent_items,
+                                                menu->equip_slot, ordinal) ==
+                menu->equip_choice)
                 cursor = ordinal;
         int top = cursor - 5;
         if (top > choices - 11) top = choices - 11;
         if (top < 0) top = 0;
         for (int row = 0; row < 11 && top + row < choices; ++row) {
-            uint8_t item = aos_equipment_choice_at(stats, menu->equip_slot, top + row);
+            uint8_t item = aos_equipment_ordered_choice_at(
+                stats, menu->recent_items, menu->equip_slot, top + row);
             snprintf(line, sizeof line, "%c %02u %-20s x%u", top + row == cursor ? '>' : ' ',
                      item == AOS_EQUIPMENT_NONE ? 0 : item + 1,
                      aos_equipment_name(menu->equip_slot, item),
@@ -5383,6 +5386,7 @@ int aria_runtime_main(int argc, char **argv) {
     static DebugMenu debug;
     bool paused = false, step_once = false, chord_before = false;
     AosSoulMenu soul_menu = {0};
+    soul_menu.recent_items = &recent_items;
     bool debug_moves[5] = {false};
     int debug_hp = soma.hp, debug_max_hp = soma.max_hp, debug_enemy = 0;
     int debug_area = room.area, debug_room = room.number;

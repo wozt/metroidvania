@@ -185,7 +185,7 @@ target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
 add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c
-               src/runtime/aos_stats.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos_soul_menu.c
+               src/runtime/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos_soul_menu.c
                src/runtime/aos_bestiary.c
                src/runtime/aos_button_config.c
                src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
@@ -607,7 +607,7 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_save_room_tests)
     add_test(NAME aos_save_room COMMAND fusion_aos_save_room_tests)
 
-    add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_pickup.c
+    add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
                    src/runtime/aos_combat.c src/runtime/aos_anim.c)
@@ -641,7 +641,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul COMMAND fusion_aos_soul_tests)
 
     add_executable(fusion_aos_soul_menu_tests tests/test_aos_soul_menu.c
-                   src/runtime/aos_soul_menu.c src/runtime/aos_stats.c
+                   src/runtime/aos_soul_menu.c src/runtime/aos_recent_items.c src/runtime/aos_stats.c
                    src/runtime/aos_button_config.c src/runtime/aos_bestiary.c)
     target_include_directories(fusion_aos_soul_menu_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_menu_tests)

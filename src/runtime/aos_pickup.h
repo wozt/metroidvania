@@ -6,6 +6,7 @@
 
 #include "aos_collision.h"
 #include "aos_combat.h"
+#include "aos_recent_items.h"
 #include "aos_stats.h"
 
 /* One record of the money table 0x085250E4 (12 bytes), exported as
@@ -31,8 +32,6 @@ enum {
      * placed-item indices (the US room data reaches bit 157). */
     AOS_PLACED_ITEM_WORDS = 6,
     AOS_PICKUP_ICON_SLOTS = 8,
-    AOS_PICKUP_RECENT_LISTS = 3,
-    AOS_PICKUP_RECENT_ITEMS = 4,
     AOS_PICKUP_SOUND_HEART = 0xB4,
     AOS_PICKUP_SOUND_ITEM = 0xB5,
     AOS_PICKUP_SOUND_MONEY = 0xB6,
@@ -52,12 +51,6 @@ typedef struct {
     uint16_t active[AOS_PICKUP_ICON_SLOTS];
     uint16_t backup[AOS_PICKUP_ICON_SLOTS];
 } AosPickupIconSlots;
-
-/* sub_0804AE3C's four recent weapons, body armor pieces and accessories.
- * Empty entries are 0xFF. */
-typedef struct {
-    uint8_t item[AOS_PICKUP_RECENT_LISTS][AOS_PICKUP_RECENT_ITEMS];
-} AosPickupRecent;
 
 /* A pickup entity of sub_08043F70 (entities 0x49-0xCF). */
 typedef struct {
@@ -118,11 +111,6 @@ int aos_pickup_icon_bind(AosPickup *pickup, AosPickupIconSlots *slots,
                          uint16_t icon_id);
 void aos_pickup_icon_unbind(AosPickup *pickup, AosPickupIconSlots *slots);
 
-void aos_pickup_recent_reset(AosPickupRecent *recent);
-/* category 3 is a weapon; category 4 selects body armor below index 25 and
- * accessories from index 25. Returns true only when a new entry was added. */
-bool aos_pickup_recent_record(AosPickupRecent *recent, uint8_t category,
-                              uint8_t index);
 /* The successful collection sound selected by sub_080441F8, or zero. */
 uint16_t aos_pickup_collection_sound(const AosPickup *pickup);
 /* The box a pickup registered. */

@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "aos_bestiary.h"
+#include "aos_recent_items.h"
 #include "aos_stats.h"
 
 enum {
@@ -97,6 +98,7 @@ typedef struct {
     uint8_t sleep_choice; /* 0 Yes, 1 No, as in sub_0804BD38. */
     uint8_t sleep_stage;
     uint8_t sleep_timer;
+    AosPickupRecent *recent_items;
     AosBestiaryMenu enemy;
     /* Colour cursors are native equipped values: 0 None, then index + 1.
      * The ability cursor is its zero-based index. */
@@ -140,6 +142,11 @@ const char *aos_equipment_name(uint8_t slot, uint8_t item);
 uint8_t aos_equipment_current(const AosStats *stats, uint8_t slot);
 int aos_equipment_choice_count(const AosStats *stats, uint8_t slot);
 uint8_t aos_equipment_choice_at(const AosStats *stats, uint8_t slot, int ordinal);
+/* sub_0804A2A4's order: valid recent entries first, then every other owned
+ * record in table order. None remains ordinal zero. */
+uint8_t aos_equipment_ordered_choice_at(const AosStats *stats,
+                                        const AosPickupRecent *recent,
+                                        uint8_t slot, int ordinal);
 uint8_t aos_equipment_quantity(const AosStats *stats, uint8_t slot, uint8_t item);
 const char *aos_item_name(uint8_t item);
 int aos_item_choice_count(const AosStats *stats);

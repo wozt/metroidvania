@@ -700,8 +700,13 @@ Collection now requests the source sounds: `0xB4` for MP hearts, `0xB6` for
 money, `0xB5` for items, `0xB7` for weapons and armor, and `0xBC` for souls;
 an inventory at nine requests `0x13B` only once per 0x20-frame cooldown.
 `sub_0804AE3C` also records separate four-entry recent lists for weapons,
-body armor and accessories (indices 25-44). The native equipment-page
-cleanup and ordering that consume these lists remain to be connected.
+body armor and accessories (indices 25-44). `sub_0804A2A4` displays valid
+cached entries before the remaining owned records in table order. On a
+replacement, `sub_0804AED4` removes the selected record when its only copy
+will become equipped, removes the old equipment from the cache, compacts the
+survivors toward the end and inserts that old equipment immediately before
+them. This state is host-neutral and shared by pickup collection, the menu
+controller and any editor-side preview.
 
 Enemies. Kind 1 records spawn through `sUnk_080E9644[id]` (0x24 bytes:
 create, update, then stats: HP at +0xC, +0xE, contact damage at +0x13, +0x14,

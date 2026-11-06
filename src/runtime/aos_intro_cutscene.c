@@ -36,6 +36,20 @@ void aos_intro_cutscene_prepare(AosIntroCutscene *intro, bool preview_only) {
     };
 }
 
+size_t aos_intro_cutscene_audio_requests(
+    const AosIntroCutscene *intro,
+    uint16_t requests[AOS_INTRO_AUDIO_CAPACITY]) {
+    if (!intro || !requests) return 0;
+    size_t count = 0;
+    if (intro->music_start_requested)
+        requests[count++] = AOS_INTRO_SONG_PROLOGUE;
+    if (intro->entities.affine_sound_requested)
+        requests[count++] = AOS_INTRO_SOUND_AFFINE_RISE;
+    if (intro->music_mute_requested)
+        requests[count++] = AOS_INTRO_AUDIO_MUTE;
+    return count;
+}
+
 static void scroll_up(int32_t *position, int32_t *velocity, int32_t step) {
     if (*position + step < 0) step = -*position;
     if (step < -0x80000) step = -0x80000;

@@ -206,7 +206,10 @@ typedef struct {
     void *motion_context;
     AosOpeningCue pending_cue;
     uint32_t frame;
+    uint8_t soma_animation;
     bool active;
+    bool soma_hidden;
+    bool soul_notice_visible;
 } AosOpeningActors;
 
 bool aos_opening_event_should_start(uint8_t area, uint16_t room,

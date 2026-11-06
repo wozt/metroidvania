@@ -38,11 +38,32 @@ static void engine_song_start_test(void) {
     assert(player->tempo_scale == 0x100);
     assert(player->tracks[0].cursor == 64 && player->tracks[1].cursor == 80);
     assert(player->tracks[0].bend_range == 2 && player->tracks[0].lfo_speed == 0x16);
-
+    assert(player->tracks[0].vol_public == 0x40 &&
+           player->tracks[1].vol_public == 0x40);
+    aos_mp2k_player_volume(&engine, 2, 0xFF);
+    assert(player->tracks[0].vol_public == 0x3F &&
+           player->tracks[1].vol_public == 0x3F);
+    aos_mp2k_player_volume(&engine, 2, 0);
+    assert(player->tracks[0].vol_public == 0 &&
+           player->tracks[1].vol_public == 0);
+    aos_mp2k_player_volume(&engine, AOS_MP2K_PLAYER_COUNT, 0x80);
     write_pointer(bank, 24, sizeof bank);
     assert(!aos_mp2k_player_start(&engine, 2, BASE + 16));
     assert(aos_mp2k_player(&engine, 2)->tracks[0].cursor == 64);
     assert(!aos_mp2k_player_start(&engine, AOS_MP2K_PLAYER_COUNT, BASE + 16));
+
+    uint32_t clock = player->clock;
+    aos_mp2k_player_pause(&engine, 2, true);
+    assert(player->paused);
+    aos_mp2k_engine_player_frame(&engine, 2);
+    assert(player->clock == clock);
+    aos_mp2k_player_pause(&engine, 2, false);
+    assert(!player->paused);
+    aos_mp2k_engine_player_frame(&engine, 2);
+    assert(player->clock > clock);
+    aos_mp2k_player_pause(NULL, 2, true);
+    aos_mp2k_player_pause(&engine, AOS_MP2K_PLAYER_COUNT, true);
+
     aos_mp2k_engine_destroy(&engine);
 }
 

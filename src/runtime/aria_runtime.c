@@ -4648,6 +4648,46 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
     return true;
 }
 
+/* sub_0800E708(0, 0, 1) selects text 0xE3 for Winged Skeleton and
+ * sub_0800E540 selects 0x1E4 for its description. Decode those verified-ROM
+ * scripts through the same bounded parser as dialogue; no localized string
+ * is embedded in the runtime. */
+static bool render_opening_soul_entry(AosIntroResources *resources,
+                                      const AosIntroFont *font,
+                                      AosIntroTextTiles *tiles, uint16_t id,
+                                      unsigned y) {
+    const uint8_t *script = NULL;
+    size_t script_size = 0;
+    if (!aos_intro_resources_entry(resources, 1, id, &script, &script_size))
+        return false;
+    AosOpeningEvent text;
+    if (!aos_opening_event_init(&text, script, script_size)) return false;
+    aos_opening_event_set_resolver(&text, resolve_opening_text, resources);
+    for (unsigned frame = 0; frame < 1024 && text.active; ++frame)
+        aos_opening_event_update(&text, text.waiting ? AOS_KEY_A : 0);
+    if (!text.complete || text.malformed) return false;
+    for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
+        if (!aos_intro_font_render_span(font, tiles, 24, y + line * 12,
+                                        192, 8, text.glyphs[line],
+                                        text.glyph_counts[line]))
+            return false;
+    return true;
+}
+
+static void draw_opening_soul_notice(SDL_Renderer *renderer,
+                                     const AosIntroTextTiles *tiles) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
+    SDL_FRect panel = {16, 24, 208, 56};
+    SDL_RenderFillRect(renderer, &panel);
+    SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
+    for (unsigned y = 0; y < 80; ++y)
+        for (unsigned x = 0; x < 240; ++x)
+            if (aos_intro_text_tiles_pixel(tiles, x, y))
+                SDL_RenderPoint(renderer, (float)x, (float)y);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
 /* Fallback for dialogue entries whose native portrait resource cannot be
  * decoded (for example when the runtime is launched without --rom). */
 static const AriaFrame *opening_portrait_frame(const AosOpeningEvent *event,
@@ -4774,8 +4814,10 @@ static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
         aos_audio_play_song(0x6B);
         break;
     case AOS_OPENING_CUE_SOUL_ABSORBED:
-        /* State 5's post-impact cue. */
+        /* State 5: SE_0x197 followed by sub_0805B878(0x1040), which mutes
+         * music player 0 while sub_0800E708 displays the obtained soul. */
         aos_audio_play_song(0x197);
+        aos_audio_play_song(AOS_AUDIO_PLAYER_MUTE_BASE);
         break;
     case AOS_OPENING_CUE_AFTER_BATTLE:
         /* sub_0805D410 state 6: MUS_23, Premonition. */
@@ -5070,7 +5112,9 @@ int aria_runtime_main(int argc, char **argv) {
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
     static AosIntroTextTiles opening_tiles;
+    static AosIntroTextTiles opening_soul_tiles;
     bool opening_text_ready = false;
+    bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
     uint8_t opening_portrait_id = 0xFF;
     int rc = 1;
@@ -5243,6 +5287,13 @@ int aria_runtime_main(int argc, char **argv) {
             fprintf(stderr, "Cannot render the Aria opening dialogue\n");
             goto cleanup;
         }
+        aos_intro_text_tiles_clear(&opening_soul_tiles);
+        opening_soul_text_ready = render_opening_soul_entry(
+                                      &opening_resources, &opening_font,
+                                      &opening_soul_tiles, 0xE3, 32) &&
+                                  render_opening_soul_entry(
+                                      &opening_resources, &opening_font,
+                                      &opening_soul_tiles, 0x1E4, 50);
         opening.dirty = false;
         aos_audio_play_song(0x1000);
         if (start_song < 0) {
@@ -5554,6 +5605,14 @@ int aria_runtime_main(int argc, char **argv) {
             /* m4aSoundMain: advance every player, retire players whose final
              * track ended, then mix the active DirectSound voices. */
             if (have_audio_bank) {
+                const AosAudioState *audio_state = aos_audio_state();
+                for (unsigned player = 0; player < AOS_AUDIO_PLAYER_COUNT; ++player) {
+                    aos_mp2k_player_pause(&mp2k, (uint8_t)player,
+                                          audio_state->players[player].paused);
+                    aos_mp2k_player_volume(
+                        &mp2k, (uint8_t)player,
+                        (uint8_t)(audio_state->players[player].volume_current / 0x10));
+                }
                 aos_mp2k_engine_frame(&mp2k);
                 for (unsigned player = 0; player < AOS_AUDIO_PLAYER_COUNT; ++player)
                     if (mp2k.players[player].ended || mp2k.players[player].failed)
@@ -5578,6 +5637,7 @@ int aria_runtime_main(int argc, char **argv) {
                                         &opening_actors, actor_durations);
                 AosOpeningCue actor_cue = aos_opening_actors_update(
                     &opening_actors, actor_durations, &cam_x, cam_y);
+                soma.anim.id = opening_actors.soma_animation;
                 for (unsigned actor = 0;
                      actor < opening_actors.emitted_count; ++actor)
                     if (opening_actors.emitted[actor].events &
@@ -6518,7 +6578,8 @@ int aria_runtime_main(int argc, char **argv) {
         const AriaFrame *frame = NULL;
         if (soma.anim.frame < MAX_FRAMES)
             frame = &library.frames[soma.anim.id][soma.anim.frame];
-        if (frame && frame->texture) {
+        if (frame && frame->texture &&
+            !(opening.active && opening_actors.soma_hidden)) {
             /* Library offsets face right; facing left mirrors around x. */
             float x = soma.facing_left ? (float)(sx - frame->offset_x) - frame->w
                                        : (float)(sx + frame->offset_x);
@@ -6594,7 +6655,9 @@ int aria_runtime_main(int argc, char **argv) {
         draw_soul_menu(renderer, &soul_menu, &progress,
                        have_equipment ? &equipment : NULL,
                        have_item_use ? item_use : NULL, &soma, &objects);
-        if (opening_text_ready)
+        if (opening_soul_text_ready && opening_actors.soul_notice_visible)
+            draw_opening_soul_notice(renderer, &opening_soul_tiles);
+        else if (opening_text_ready)
             draw_opening_text(renderer, &opening, &opening_tiles, objects_ok ? &objects : NULL,
                               &library, &opening_actors, &opening_rom,
                               &opening_portrait_texture, &opening_portrait_id);

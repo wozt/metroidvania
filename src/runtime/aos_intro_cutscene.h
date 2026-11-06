@@ -3,11 +3,19 @@
 #define AOS_INTRO_CUTSCENE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "aos_game_mode.h"
 #include "aos_input.h"
 #include "aos_intro_entities.h"
+
+enum {
+    AOS_INTRO_AUDIO_CAPACITY = 3,
+    AOS_INTRO_SONG_PROLOGUE = 21,
+    AOS_INTRO_SOUND_AFFINE_RISE = 318,
+    AOS_INTRO_AUDIO_MUTE = 0x1010,
+};
 
 /* Display-independent state for GameModeIntroCutsceneUpdate. Graphics,
  * entities, palette fades and songs are reported as host requests. */
@@ -44,6 +52,13 @@ typedef struct {
 /* preview_only is the title's idle demonstration. A named new file passes
  * false and continues into gameplay when the introduction finishes. */
 void aos_intro_cutscene_prepare(AosIntroCutscene *intro, bool preview_only);
+
+/* Collect the current frame's PlaySong calls in native execution order.
+ * The caller owns their host-audio delivery, so the controller remains
+ * usable by deterministic tests and editor previews without an audio device. */
+size_t aos_intro_cutscene_audio_requests(
+    const AosIntroCutscene *intro,
+    uint16_t requests[AOS_INTRO_AUDIO_CAPACITY]);
 
 /* GameModeIntroCutsceneUpdate and its sub_08008ED0 gameplay handoff. */
 int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,

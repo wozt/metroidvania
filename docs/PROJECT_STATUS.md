@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0772 - Connect the Aria prologue and opening-scene audio
+
+- Connected the scrolling introduction's source `PlaySong` requests to the
+  native MP2K host: MUS 21 starts with the fade, sound 318 accompanies the
+  affine rise and command `0x1010` mutes the sequence at its exit. Corrected
+  the panel pair to the source's 128-pixel repeat.
+- Traced Object20 state 5 directly through the vendored reconstruction. At
+  timer `0xD0` the Winged Skeleton disappears with sound `0x6B`; at `0x8F`
+  the runtime now shows the ROM-localized Winged Skeleton soul notice, plays
+  sound `0x197`, mutes music player 0, holds Soma on animation `0x52` and
+  alternates his visibility until the post-battle beat.
+- Applied `MPlayVolumeControl`'s public volume to every MP2K track and linked
+  `MPlayStop`/continue state to the sequencer and its live channels. Music
+  replacement and the opening-scene mute therefore stop the old audible
+  stream instead of leaving two tracks playing.
+- Deterministic tests cover the introduction request order, Object20's soul
+  timing and pose, MP2K public volume and pause/resume. A fresh local file was
+  run from the native menu through the first-room scene: event `0x20` was set
+  and the Winged Skeleton soul was granted and equipped; captures at frames
+  400-1200 include the dialogue, battle and soul notice. Source-derived and
+  locally captured, not emulator-compared; the soul notice uses native ROM
+  text but its host-composed background is not yet a pixel-exact BG0 map.
+
+Next: reconstruct the soul notice's native BG0 frame and remaining Object20
+death effects, then compare the full first-room sequence with an emulator.
+
 ## Patch 0771 - Animate and compose the Aria introduction actors
 
 - Corrected the introduction actor parameters: the values passed to
@@ -19,8 +45,8 @@ Last updated: **2026-11-06**.
 - Synthetic resource tests cover all ten frame records, both animation
   descriptors and the four palette rows. Controller tests cover animation
   duration, action-driven motion and static panel records. Source-derived and
-  unit-tested, not emulator-compared; the panels' native half-pixel paired draw
-  still collapses to the host renderer's integer-pixel position.
+  unit-tested, not emulator-compared. Patch 0772 corrects the initial reading
+  of the panel offset: the high position halfword makes it 128 pixels.
 
 Next: connect the introduction's existing music, mute and affine-effect
 requests to the native MP2K host, then capture the complete sequence.

@@ -529,7 +529,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_0805B754	sub_0805B754	unclassified		technic
 aos:asm:asm/code/code_08050A3C.s:sub_0805B7BC	sub_0805B7BC	unclassified				asm_function	0x0805B7BC	asm/code/code_08050A3C.s	21931	0	0
 aos:asm:asm/code/code_08050A3C.s:sub_0805B814	sub_0805B814	unclassified				asm_function	0x0805B814	asm/code/code_08050A3C.s	21978	2	0
 aos:asm:asm/code/code_08050A3C.s:sub_0805B864	sub_0805B864	unclassified				asm_function	0x0805B864	asm/code/code_08050A3C.s	22022	6	1
-aos:asm:asm/code/code_08050A3C.s:sub_0805B878	sub_0805B878	unclassified		audio	exclusive_callees	asm_function	0x0805B878	asm/code/code_08050A3C.s	22034	17	1
 aos:asm:asm/code/code_08050A3C.s:sub_0805B8F4	sub_0805B8F4	unclassified		technical	exclusive_callees	asm_function	0x0805B8F4	asm/code/code_08050A3C.s	22096	0	16
 aos:asm:asm/code/code_08050A3C.s:sub_0805C218	sub_0805C218	unclassified		technical	exclusive_callees	asm_function	0x0805C218	asm/code/code_08050A3C.s	23235	1	1
 aos:asm:asm/code/code_08050A3C.s:sub_0805C284	sub_0805C284	unclassified		audio	exclusive_callees	asm_function	0x0805C284	asm/code/code_08050A3C.s	23292	0	3
@@ -2298,7 +2297,6 @@ aos:c:src/code_0800CB00.c:sub_0800EE54	sub_0800EE54	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800EF58	sub_0800EF58	environment	referrers			c_function	0x0800EF58	src/code_0800CB00.c	1959	1	2
 aos:c:src/code_0800CB00.c:sub_0800EF6C	sub_0800EF6C	unclassified				c_function	0x0800EF6C	src/code_0800CB00.c	1969	2	0
 aos:c:src/code_0800CB00.c:sub_0800EF94	sub_0800EF94	unclassified				c_function	0x0800EF94	src/code_0800CB00.c	1979	1	0
-aos:c:src/code_0800CB00.c:sub_0800F038	sub_0800F038	unclassified				c_function	0x0800F038	src/code_0800CB00.c	2040	1	2
 aos:c:src/code_0800CB00.c:sub_0800F0AC	sub_0800F0AC	unclassified				c_function	0x0800F0AC	src/code_0800CB00.c	2055	1	2
 aos:c:src/code_0800CB00.c:sub_0800F1C4	sub_0800F1C4	unclassified				c_function	0x0800F1C4	src/code_0800CB00.c	2134	0	0
 aos:c:src/code_0800F1FC.c:sub_0800F4F8	sub_0800F4F8	unclassified		technical	exclusive_callees	c_function	0x0800F4F8	src/code_0800F1FC.c	311	1	1
@@ -2567,7 +2565,6 @@ aos:c:src/m4a.c:MPlayContinue	MPlayContinue	audio	path			c_function		src/m4a.c	6
 aos:c:src/m4a.c:MPlayExtender	MPlayExtender	audio	path			c_function		src/m4a.c	234	1	0
 aos:c:src/m4a.c:MPlayFadeOut	MPlayFadeOut	audio	path			c_function		src/m4a.c	72	1	0
 aos:c:src/m4a.c:MPlayOpen	MPlayOpen	audio	path			c_function		src/m4a.c	504	1	1
-aos:c:src/m4a.c:MPlayStop	MPlayStop	audio	path			c_function		src/m4a.c	602	5	1
 aos:c:src/m4a.c:MidiKeyToCgbFreq	MidiKeyToCgbFreq	audio	path			c_function		src/m4a.c	729	0	0
 aos:c:src/m4a.c:MusicPlayerJumpTableCopy	MusicPlayerJumpTableCopy	audio	path			c_function		src/m4a.c	289	0	0
 aos:c:src/m4a.c:SampleFreqSet	SampleFreqSet	audio	path			c_function		src/m4a.c	348	2	1
@@ -2575,7 +2572,6 @@ aos:c:src/m4a.c:SoundClear	SoundClear	audio	path			c_function		src/m4a.c	433	0	1
 aos:c:src/m4a.c:SoundInit	SoundInit	audio	path			c_function		src/m4a.c	306	1	2
 aos:c:src/m4a.c:m4aMPlayAllContinue	m4aMPlayAllContinue	audio	path			c_function		src/m4a.c	179	1	1
 aos:c:src/m4a.c:m4aMPlayAllStop	m4aMPlayAllStop	audio	path			c_function		src/m4a.c	169	2	1
-aos:c:src/m4a.c:m4aMPlayContinue	m4aMPlayContinue	audio	path			c_function		src/m4a.c	177	1	1
 aos:c:src/m4a.c:m4aMPlayFadeIn	m4aMPlayFadeIn	audio	path			c_function		src/m4a.c	200	0	0
 aos:c:src/m4a.c:m4aMPlayFadeOut	m4aMPlayFadeOut	audio	path			c_function		src/m4a.c	187	0	1
 aos:c:src/m4a.c:m4aMPlayFadeOutTemporarily	m4aMPlayFadeOutTemporarily	audio	path			c_function		src/m4a.c	189	0	0
@@ -2585,7 +2581,6 @@ aos:c:src/m4a.c:m4aMPlayModDepthSet	m4aMPlayModDepthSet	audio	path			c_function	
 aos:c:src/m4a.c:m4aMPlayPanpotControl	m4aMPlayPanpotControl	audio	path			c_function		src/m4a.c	1150	0	0
 aos:c:src/m4a.c:m4aMPlayPitchControl	m4aMPlayPitchControl	audio	path			c_function		src/m4a.c	1118	0	0
 aos:c:src/m4a.c:m4aMPlayTempoControl	m4aMPlayTempoControl	audio	path			c_function		src/m4a.c	1077	0	0
-aos:c:src/m4a.c:m4aMPlayVolumeControl	m4aMPlayVolumeControl	audio	path			c_function		src/m4a.c	1087	2	0
 aos:c:src/m4a.c:m4aSongNumContinue	m4aSongNumContinue	audio	path			c_function		src/m4a.c	158	0	1
 aos:c:src/m4a.c:m4aSongNumStart	m4aSongNumStart	audio	path			c_function		src/m4a.c	106	1	1
 aos:c:src/m4a.c:m4aSongNumStartOrChange	m4aSongNumStartOrChange	audio	path			c_function		src/m4a.c	116	0	1

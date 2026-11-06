@@ -26,9 +26,17 @@ int main(void) {
     assert(intro.alpha_blend == 0x060A);
 
     unsigned frames = 0;
+    uint16_t audio[AOS_INTRO_AUDIO_CAPACITY] = {0};
     while (mode.update_stage == 1) {
         assert(tick(&mode, &intro, 0) == AOS_MODE_SAME);
         ++frames;
+        size_t audio_count =
+            aos_intro_cutscene_audio_requests(&intro, audio);
+        if (frames == 1) {
+            assert(audio_count == 1 && audio[0] == AOS_INTRO_SONG_PROLOGUE);
+        } else {
+            assert(audio_count == 0);
+        }
         assert(frames < 140);
     }
     assert(frames == 129 && mode.update_stage == 2 && intro.brightness == 0);
@@ -38,6 +46,14 @@ int main(void) {
     while (mode.update_stage == 3) {
         assert(tick(&mode, &intro, 0) == AOS_MODE_SAME);
         ++frames;
+        size_t audio_count =
+            aos_intro_cutscene_audio_requests(&intro, audio);
+        if (intro.entities.affine_sound_requested) {
+            assert(audio_count == 1 &&
+                   audio[0] == AOS_INTRO_SOUND_AFFINE_RISE);
+        } else {
+            assert(audio_count == 0);
+        }
         assert(frames < 3300);
     }
     assert(frames == 3220 && mode.update_stage == 4 && intro.bg_y[1] == 0 &&
@@ -57,6 +73,8 @@ int main(void) {
     }
     assert(frames == 120 && mode.update_stage == 6 &&
            intro.palette_fade_requested && intro.palette_fade_timer == 120);
+    assert(aos_intro_cutscene_audio_requests(&intro, audio) == 1 &&
+           audio[0] == AOS_INTRO_AUDIO_MUTE);
 
     frames = 0;
     int32_t result = AOS_MODE_SAME;
@@ -78,6 +96,8 @@ int main(void) {
     assert(tick(&mode, &intro, AOS_KEY_START) == AOS_MODE_IN_GAME);
     assert(intro.gameplay_setup_requested);
     assert(intro.entities.graphics_release_requested);
+    assert(aos_intro_cutscene_audio_requests(&intro, audio) == 1 &&
+           audio[0] == AOS_INTRO_AUDIO_MUTE);
     for (unsigned index = 0; index < AOS_INTRO_ENTITY_COUNT; ++index)
         assert(!intro.entities.entities[index].alive);
 
@@ -93,9 +113,21 @@ int main(void) {
     aos_intro_cutscene_prepare(&intro, true);
     assert(tick(&mode, &intro, AOS_KEY_A) == AOS_MODE_SAME);
     assert(mode.update_stage == 6 && intro.palette_fade_timer == 120);
+    assert(aos_intro_cutscene_audio_requests(&intro, audio) == 1 &&
+           audio[0] == AOS_INTRO_AUDIO_MUTE);
     for (unsigned i = 0; i < 119; ++i)
         assert(tick(&mode, &intro, 0) == AOS_MODE_SAME);
     assert(tick(&mode, &intro, 0) == AOS_MODE_KONAMI_LOGO);
+
+    intro.music_start_requested = true;
+    intro.entities.affine_sound_requested = true;
+    intro.music_mute_requested = true;
+    assert(aos_intro_cutscene_audio_requests(&intro, audio) == 3 &&
+           audio[0] == AOS_INTRO_SONG_PROLOGUE &&
+           audio[1] == AOS_INTRO_SOUND_AFFINE_RISE &&
+           audio[2] == AOS_INTRO_AUDIO_MUTE);
+    assert(aos_intro_cutscene_audio_requests(NULL, audio) == 0 &&
+           aos_intro_cutscene_audio_requests(&intro, NULL) == 0);
 
     puts("Aria introduction controller tests passed");
     return 0;

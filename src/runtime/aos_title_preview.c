@@ -383,6 +383,14 @@ static void render_intro_actors(SDL_Renderer *renderer,
             sprite.pd = (int16_t)matrix;
         }
         aos_obj_layer_draw(&layer, graphics->actors, &sprite);
+        /* sub_08008FEC changes the integer halfword by 0x80 between its
+         * two draws. The two panel records therefore meet from opposite
+         * screen edges; this is a 128-pixel repeat, not a subpixel offset. */
+        if (actor->double_draw) {
+            sprite.x = (int16_t)(sprite.x +
+                (actor->variant == 0 ? -0x80 : 0x80));
+            aos_obj_layer_draw(&layer, graphics->actors, &sprite);
+        }
     }
     unsigned first_alpha = actors->alpha_override_valid
                                ? actors->alpha_override & 0x1Fu
@@ -836,8 +844,25 @@ int aria_title_preview_main(int argc, char **argv) {
             aos_audio_play_song(428);
             lifecycle.startup_logo.konami_code_sound_requested = false;
         }
+        /* GameModeIntroCutsceneUpdate and sub_08009178's PlaySong calls. */
+        uint16_t intro_audio[AOS_INTRO_AUDIO_CAPACITY];
+        size_t intro_audio_count = aos_intro_cutscene_audio_requests(
+            &lifecycle.intro_cutscene, intro_audio);
+        for (size_t k = 0; k < intro_audio_count; ++k)
+            aos_audio_play_song(intro_audio[k]);
+        lifecycle.intro_cutscene.music_start_requested = false;
+        lifecycle.intro_cutscene.music_mute_requested = false;
+        lifecycle.intro_cutscene.entities.affine_sound_requested = false;
         aos_audio_volume_update();
         if (have_audio) {
+            const AosAudioState *audio_state = aos_audio_state();
+            for (unsigned player = 0; player < AOS_AUDIO_PLAYER_COUNT; ++player) {
+                aos_mp2k_player_pause(&mp2k, (uint8_t)player,
+                                      audio_state->players[player].paused);
+                aos_mp2k_player_volume(
+                    &mp2k, (uint8_t)player,
+                    (uint8_t)(audio_state->players[player].volume_current / 0x10));
+            }
             aos_mp2k_engine_frame(&mp2k);
             int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
             aos_mp2k_mix(&mp2k, pcm, sizeof pcm);

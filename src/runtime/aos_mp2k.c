@@ -376,6 +376,35 @@ const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player
     return engine && player < AOS_MP2K_PLAYER_COUNT ? &engine->players[player] : NULL;
 }
 
+void aos_mp2k_player_volume(AosMp2kEngine *engine, uint8_t player,
+                            uint8_t volume) {
+    if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return;
+    AosMp2kPlayer *state = &engine->players[player];
+    uint8_t public_volume = (uint8_t)(volume / 4u);
+    for (uint8_t track = 0; track < state->track_count; ++track)
+        if (state->tracks[track].active)
+            state->tracks[track].vol_public = public_volume;
+}
+
+void aos_mp2k_player_pause(AosMp2kEngine *engine, uint8_t player,
+                           bool paused) {
+    if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return;
+    AosMp2kPlayer *state = &engine->players[player];
+    if (state->paused == paused) return;
+    state->paused = paused;
+    if (!paused) return;
+    AosMp2kChannel *lists[2] = {engine->direct, engine->cgb};
+    size_t counts[2] = {AOS_MP2K_DIRECT_CHANNELS, AOS_MP2K_CGB_CHANNELS};
+    for (int list = 0; list < 2; ++list)
+        for (size_t index = 0; index < counts[list]; ++index) {
+            AosMp2kChannel *channel = &lists[list][index];
+            if (!channel->linked || channel->player != player) continue;
+            if (channel->status & AOS_MP2K_CHANNEL_ACTIVE)
+                channel->status |= AOS_MP2K_CHANNEL_STOP;
+            channel->linked = false;
+        }
+}
+
 static void channel_clock(AosMp2kEngine *engine, uint8_t player, uint8_t track);
 static void channel_events(AosMp2kEngine *engine, uint8_t player, uint8_t track);
 
@@ -418,7 +447,7 @@ static void player_mix(AosMp2kEngine *engine, uint8_t number);
 void aos_mp2k_engine_player_frame(AosMp2kEngine *engine, uint8_t player) {
     if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return;
     AosMp2kPlayer *state = &engine->players[player];
-    if (!state->active || state->ended) return;
+    if (!state->active || state->ended || state->paused) return;
     player_frame(engine, state, player);
     if (!state->ended) player_mix(engine, player);
 }

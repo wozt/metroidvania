@@ -327,7 +327,14 @@ static void test_trigger(void) {
         assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
+    assert(actors.soul_notice_visible && actors.soma_animation == 0x52);
+    bool hidden = actors.soma_hidden;
+    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+           AOS_OPENING_CUE_NONE);
+    assert(actors.soma_hidden != hidden && actors.soma_animation == 0x52);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);
+    assert(!actors.soul_notice_visible && !actors.soma_hidden &&
+           actors.soma_animation == 0x51);
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_AFTER_BATTLE);
     assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);

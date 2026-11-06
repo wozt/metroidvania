@@ -295,8 +295,8 @@ static void update_orbit(AosIntroEntity *entity, int32_t bg1_velocity) {
     if ((entity->y >> 16) > 0x12C) entity->alive = false;
 }
 
-/* sub_08009054; sub_08008FEC's two half-pixel-separated draws are exposed
- * through double_draw until a native sprite renderer consumes them. */
+/* sub_08009054; double_draw exposes sub_08008FEC's two copies separated by
+ * 0x80 integer screen pixels to the renderer. */
 static void update_panel(AosIntroEntities *group, AosIntroEntity *entity,
                          int32_t bg1_y, int32_t bg3_y) {
     if (entity->state == 0) {

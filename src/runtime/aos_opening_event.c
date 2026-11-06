@@ -188,6 +188,7 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
         .visible = {true, true, true},
         .timer = 0x40,
         .active = true,
+        .soma_animation = 0x51,
     };
 }
 
@@ -606,6 +607,9 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         actor_animation(actors, 2, 5);
         break;
     case AOS_OPENING_CUE_AFTER_BATTLE:
+        actors->soul_notice_visible = false;
+        actors->soma_hidden = false;
+        actors->soma_animation = 0x51;
         actors->scene_state = 6;
         actors->scene_step = 0;
         actors->pending_cue = cue;
@@ -746,12 +750,21 @@ scene:
                 due = AOS_OPENING_CUE_ENEMY_DEFEATED;
             } else if (actors->scene_timer == 0x8F) {
                 due = AOS_OPENING_CUE_SOUL_ABSORBED;
+                actors->soul_notice_visible = true;
+                actors->soma_animation = 0x52;
+                actors->soma_hidden = false;
                 actors->scene_step = 2;
             }
             if (due != AOS_OPENING_CUE_NONE) {
                 if (output == AOS_OPENING_CUE_NONE) output = due;
                 else actors->pending_cue = due;
             }
+        }
+        if (actors->scene_step == 2) {
+            /* sub_0805D410 case 5 keeps pose 0x52 and alternates the player
+             * object's visibility while sub_0800E708's soul notice is up. */
+            actors->soma_animation = 0x52;
+            actors->soma_hidden = (actors->frame & 1u) != 0;
         }
         break;
     default:

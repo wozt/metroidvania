@@ -395,7 +395,8 @@ scroll and draws nonzero pixels with native palette row 15.
 banks and all three block maps in memory, reuses the asset library's bounded
 tilemap expansion and RGBA renderer, and exposes the three planes to SDL. The
 host wraps and scrolls them in BG3-to-BG1 priority order. Actor OAM, animation
-resources, affine/alpha composition and songs are not connected. Portable
+resources, affine/alpha composition and the native music/effect requests are
+connected to the SDL compositor and MP2K host. Portable
 one-use quicksave companions are connected to the native odd menu positions;
 completed-file metadata remains open.
 `aos_rom_graphics.c` provides the shared bounded raw/compressed descriptor and

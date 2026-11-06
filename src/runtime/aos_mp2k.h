@@ -143,6 +143,7 @@ typedef struct {
     uint16_t track_bits;        /* + 0x04: the tracks that existed on the last clock */
     bool ended;                 /* + 0x04 = 0x80000000: no track left */
     bool failed;                /* a track met an unsupported or invalid stream */
+    bool paused;                /* MPlayStop: sequencer clocks are suspended */
     AosMp2kTrack tracks[AOS_MP2K_TRACK_COUNT];
 } AosMp2kPlayer;
 
@@ -178,6 +179,13 @@ void aos_mp2k_engine_destroy(AosMp2kEngine *engine);
 bool aos_mp2k_player_start(AosMp2kEngine *engine, uint8_t player,
                            uint32_t header_pointer);
 const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player);
+/* m4aMPlayVolumeControl(TRACKS_ALL): the 0-255 public value is divided by
+ * four into every existing track's volPublic field. */
+void aos_mp2k_player_volume(AosMp2kEngine *engine, uint8_t player,
+                            uint8_t volume);
+/* MPlayStop/m4aMPlayContinue. Stopping releases and detaches the
+ * player's live channels; continuing resumes its sequencer position. */
+void aos_mp2k_player_pause(AosMp2kEngine *engine, uint8_t player, bool paused);
 /* MP2KPlayerMain's sequencer part for one frame: the tempo counter gains
  * the interval, and while it is at least 150 every existing track advances
  * one clock (a TEMPO event sets the raw tempo to twice its value and the

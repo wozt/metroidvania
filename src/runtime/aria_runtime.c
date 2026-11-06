@@ -2513,6 +2513,26 @@ static const char *pickup_notice_name(uint8_t type, uint16_t variant) {
     return NULL;
 }
 
+static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
+                                    const AosSoma *soma, const AriaCombat *combat) {
+    uint16_t special_index;
+    if (!room || !entity || !soma || !combat || !combat->drops[entity->id] ||
+        !aos_pickup_special_boss_index((uint8_t)entity->id, &special_index) ||
+        (aria_pickup_state.special & (uint16_t)(1u << special_index)) ||
+        room->pickup_count >= MAX_PICKUPS)
+        return false;
+    const AosEnemyDrops *drops = combat->drops[entity->id];
+    if (!drops->soul_index) return false;
+    AosPickup special;
+    if (!aos_pickup_create_special_soul(
+            &special, 0, false, drops->soul_type, (uint8_t)(drops->soul_index - 1u),
+            special_index, entity->enemy.x >> 16, entity->enemy.y >> 16,
+            soma->x, soma->y, aos_random))
+        return false;
+    room->pickups[room->pickup_count++] = special;
+    return true;
+}
+
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; native enemies include hidden producers such
  * as the Ghost's, whose children retain their producer slot. */
@@ -2646,19 +2666,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                                       combat->drops[e->id]->soul_index - 1),
                         .ground = aos_collision_cell(layer, e->enemy.x >> 16,
                                                      (e->enemy.y >> 16) - 8)};
-                    uint16_t special_index;
                     const AosEnemyDrops *enemy_drops = combat->drops[e->id];
-                    if (aos_pickup_special_boss_index((uint8_t)e->id, &special_index) &&
-                        !(aria_pickup_state.special & (uint16_t)(1u << special_index)) &&
-                        enemy_drops->soul_index && room->pickup_count < MAX_PICKUPS) {
-                        AosPickup special;
-                        if (aos_pickup_create_special_soul(
-                                &special, 0, false, enemy_drops->soul_type,
-                                (uint8_t)(enemy_drops->soul_index - 1u), special_index,
-                                e->enemy.x >> 16, e->enemy.y >> 16, soma->x, soma->y,
-                                aos_random))
-                            room->pickups[room->pickup_count++] = special;
-                    }
+                    if (e->id != AOS_BOSS_HEADHUNTER)
+                        (void)spawn_special_boss_soul(room, e, soma, combat);
                     AosDrop drop = aos_stats_roll_drop(combat->progress, (uint8_t)e->id,
                                                        enemy_drops, &context,
                                                        aos_random);
@@ -2698,6 +2708,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                drop.variant);
                 }
             }
+            if (hit.special_soul)
+                (void)spawn_special_boss_soul(room, e, soma, combat);
             if (hit.force_input && !input->active) {
                 input->active = true;
                 input->held = hit.forced_held;

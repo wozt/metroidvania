@@ -1732,6 +1732,12 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->step = enemy->substep = 0;
                     enemy->vx = enemy->ax = enemy->ay = 0;
                     enemy->vy = 0x8000;
+                } else if (enemy->id == AOS_BOSS_HEADHUNTER) {
+                    /* sub_08083AC4: the main body enters sub_08083860. */
+                    aos_audio_play_song(0x1C0);
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0;
                 } else {
                     /* sub_0807B0DC: death animation 3, 40 frames (sound 0x70;
                      * sub_080683BC and the gore of sub_0807B258 are not
@@ -1792,6 +1798,8 @@ contact:
     return report;
 }
 
+static void accel_move(AosEnemy *e, int32_t limit);
+
 /* sub_0806AEAC: the generic death, a flame every 4 frames over 16 x 12
  * pixels, the blink, then the deletion. */
 static void generic_death(AosEnemy *enemy, const AosEnemyKind *kind, uint32_t (*random)(void),
@@ -1799,6 +1807,47 @@ static void generic_death(AosEnemy *enemy, const AosEnemyKind *kind, uint32_t (*
     if ((enemy->timer & 3) == 0) spawn_flame(enemy, 0x100000, 0xC0000, random, report);
     enemy->hidden = enemy->timer <= 0x27 ? kind->blink[enemy->timer] & 1 : false;
     if ((int8_t)--enemy->timer <= 0) enemy->removed = true;
+}
+
+/* sub_08083860, Headhunter's main-body death. The native body waits at the
+ * lower screen edge for its linked heads before step 2; those actors are not
+ * reconstructed, so their completed signal is immediate after the landing. */
+static AosHitReport headhunter_death(AosEnemy *enemy, const AosEnemyKind *kind, int cam_y) {
+    AosHitReport report = {0};
+    switch (enemy->step) {
+    case 0:
+        enemy->vx = enemy->ax = 0;
+        enemy->vy = 0x10000;
+        enemy->ay = 0x4000;
+        enemy->step = 1;
+        break;
+    case 1:
+        accel_move(enemy, 0x60000);
+        if ((enemy->y >> 16) - cam_y > 0xBF) {
+            enemy->vx = enemy->ax = enemy->vy = enemy->ay = 0;
+            enemy->y = AOS_FIXED(cam_y + 0xC0);
+            enemy->step = 2;
+        }
+        break;
+    case 2:
+        play_loop(enemy, kind->anims, 0x13, false);
+        enemy->timer = 0x5A;
+        enemy->step = 3;
+        /* fall through */
+    case 3:
+        if ((enemy->timer & 7u) == 0) aos_audio_play_song(0x76);
+        if (enemy->timer) {
+            enemy->timer--;
+        } else {
+            enemy->removed = true;
+            enemy->step = 4;
+            report.special_soul = true;
+        }
+        break;
+    default:
+        break;
+    }
+    return report;
 }
 
 /* sub_08069A00 with the zombie's arguments: X then Y motion with the walls
@@ -12054,6 +12103,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER)
         return soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
+    if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY &&
+        enemy->state == 2)
+        return headhunter_death(enemy, kind, cam_y);
     if (enemy->state == 4) {
         /* sub_080AD6AC: animation 1 (unless playing), stepped each frame;
          * no activity window and no collision pass. */

@@ -22,6 +22,35 @@ static const uint32_t *script;
 static int script_at;
 static uint32_t scripted(void) { return script[script_at++]; }
 
+static void headhunter_death_tests(void) {
+    static const uint8_t tick = 1;
+    static AosAnimDef defs[20];
+    for (int i = 0; i < 20; ++i) defs[i] = (AosAnimDef){1, &tick};
+    const AosAnimSet anims = {defs, 20};
+    AosEnemyKind kind = {.anims = &anims};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(100), NULL);
+    AosEnemy boss = {.id = AOS_BOSS_HEADHUNTER, .role = AOS_ROLE_ENEMY,
+                     .state = 2, .defeated = true, .hp = 0,
+                     .x = AOS_FIXED(100), .y = AOS_FIXED(180), .static_frame = -1};
+    AosHitReport report = aos_enemy_update(&boss, &soma, &layer, &kind, NULL, NULL,
+                                           10, 4, 0, 0, never_zero);
+    assert(!report.special_soul && boss.step == 1 && boss.vy == 0x10000 &&
+           boss.ay == 0x4000);
+    while (boss.step == 1)
+        aos_enemy_update(&boss, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, never_zero);
+    assert(boss.step == 2 && boss.y == AOS_FIXED(0xC0) && boss.vy == 0);
+    aos_audio_clear();
+    int frames = 0;
+    do {
+        report = aos_enemy_update(&boss, &soma, &layer, &kind, NULL, NULL,
+                                  10, 4, 0, 0, never_zero);
+        ++frames;
+    } while (!report.special_soul && frames < 100);
+    assert(report.special_soul && boss.removed && boss.step == 4 && frames == 91 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) == 12);
+}
+
 /* Skeleton: the native attack's third animation frame launches a single
  * bone, using source-derived OAM IDs, sound, launch trajectory and boxes.
  * The regular kill path is deliberately still used for XP and soul drops. */
@@ -5250,6 +5279,7 @@ int main(void) {
     valkyrie_tests();
     curly_tests();
     medusa_tests();
+    headhunter_death_tests();
     puts("aos_enemy: ok");
     return 0;
 }

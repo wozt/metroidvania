@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 75 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 76 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 956 | 2617 |
+| Castlevania: Aria of Sorrow | 960 | 2613 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1242,7 +1242,7 @@ Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08043BB0`, `aos:asm:asm/c
 Local implementation: [`src/runtime/aos_pickup.c`](../src/runtime/aos_pickup.c), [`src/runtime/aos_recent_items.c`](../src/runtime/aos_recent_items.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c), [`src/assets/aos/runtime_room.c`](../src/assets/aos/runtime_room.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_pickup.c`](../tests/test_aos_pickup.c), [`tests/test_aos_soul_menu.c`](../tests/test_aos_soul_menu.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c), [`tests/test_fusion_assets_aos.c`](../tests/test_fusion_assets_aos.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.progression.experience`.  
-Known divergences: Blinking remains approximated by alternate host frames. Icon graphics use exported textures instead of native OBJ VRAM DMA. Object10's scripted pickup has a source-derived portable constructor but no runtime producer. Headhunter, Death, Legion and Balore now emit their guaranteed sub_080D7308 soul with the native special index, and schema v12 preserves the 0x37E bits; their full death controllers remain absent. Other 0x42C producers remain outside the pickup module. The player's hurtbox stands for the player side of the type-0xB collision. Source-derived and locally reviewed, not emulator-compared.  
+Known divergences: Blinking remains approximated by alternate host frames. Icon graphics use exported textures instead of native OBJ VRAM DMA. Object10's scripted pickup has a source-derived portable constructor but no runtime producer. Headhunter, Death, Legion and Balore now emit their guaranteed sub_080D7308 soul with the native special index, and schema v12 preserves the 0x37E bits; Headhunter now waits for its staged death ending; the other three full death controllers remain absent. Other 0x42C producers remain outside the pickup module. The player's hurtbox stands for the player side of the type-0xB collision. Source-derived and locally reviewed, not emulator-compared.  
 Next action: Connect the bosses' death controllers and Object10's caller, then compare collection against an emulator.
 Evidence: in game: `aria area_00_room_016: frame 10 shows the Blue soul container child; area_00_room_015: frame 2 shows the placed Potion`.
 
@@ -1550,6 +1550,14 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: Exact native acceleration rounding, activity-region clamping, fragment offsets, entity-slot ordering, palette callbacks and rewards are not modelled. Sound 0x8B is connected to the corresponding idle animation boundary because sub_080756FC's rising flight remains source-adapted.  
 Next action: Refine acceleration and activity-region clamping when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_06_room_000 (--spawn 256 159 --hp 9999): Harpy renders, its five-feather volley is visible by frame 40 and contact damages Soma for 40 HP`.
+
+[~] **`aos.enemies.headhunter` — Headhunter death sequence.** A lethal hit enters state 2, initializes the native fall, applies its 6-pixel speed cap, snaps at the lower screen edge, selects animation 19, waits the 90-frame fade clock and requests sound 0x76 every eighth frame. Completion removes the entity and asks the runtime for the guaranteed yellow Headhunter soul at special index 4; schema v12 persists its bit. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyHeadhunterUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08083860`, `aos:asm:asm/code/code_080809C0.s:sub_08083AC4`, `aos:asm:asm/code/code_080D0998.s:sub_080D7308`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos_pickup.c`](../src/runtime/aos_pickup.c), [`src/runtime/aos_save.c`](../src/runtime/aos_save.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_aos_pickup.c`](../tests/test_aos_pickup.c), [`tests/test_aos_save.c`](../tests/test_aos_save.c).
+Known divergences: The constructor, active AI, three linked heads, native palette fade, two visual effects and event callback are absent. Because the linked heads are not reconstructed, reaching the lower edge advances immediately instead of waiting for their completion. Art and an in-game capture are absent.  
+Next action: Port the constructor, linked heads and active controller, then connect the omitted effects and compare the complete death in an emulator.
 
 [+] **`aos.enemies.imp` — Imp.** Palette bank 0, randomized rest, approach and braking, the persistent linked animation-3 helper, Soma-following control phase, alternating SetPlayerInput B/release calls, native Soma-state gate, retreat, contact combat, global inert state, 50-frame falling death and direct-frame 0x15 death child are connected. Its death plays 0x72 (sub_080C4ED4 step 0), unit-tested.
 

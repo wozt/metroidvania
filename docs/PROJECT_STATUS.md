@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0765 - Stage Headhunter's guaranteed soul
+
+- Ported Headhunter's lethal handoff and `sub_08083860` death stages: the
+  initial fall, six-pixel speed cap, lower-edge snap, animation 19, 90-frame
+  fade clock and sound `0x76` every eighth frame.
+- The runtime no longer emits its guaranteed soul at the generic kill
+  boundary. The final death stage now requests the yellow Headhunter soul at
+  special index 4, whose persistence was added in schema v12.
+- The three linked heads are not reconstructed, so their completion wait is
+  currently immediate; the native palette fade, visual effects and event
+  callback also remain absent. Source-derived and unit-tested, not
+  emulator-compared.
+
+Next: port Headhunter's constructor, linked heads and active controller, then
+validate the complete encounter in game.
+
 ## Patch 0764 - Persist Aria's guaranteed boss souls
 
 - Extended the portable save to schema v12 with `gEwramData + 0x37E`'s

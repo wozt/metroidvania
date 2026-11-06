@@ -163,6 +163,9 @@ enum {
     AOS_ENEMY_LUBICANT = 0x63,
 };
 
+/* Boss ids live outside the ordinary monster-aspect inventory. */
+#define AOS_BOSS_HEADHUNTER 0x6A
+
 /* What an AosEnemy slot holds: the enemy itself or a child entity of its
  * kind (sharing its sprites and record). */
 enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARROW = 3,
@@ -341,6 +344,7 @@ typedef struct {
     bool has_damage_popup; /* sub_08042B8C, including the zero-damage guard art */
     AosDamagePopup damage_popup;
     bool killed;
+    bool special_soul;     /* this boss death reached sub_080D7308 */
     bool spawn;             /* a zombie spawner created a zombie here */
     int32_t spawn_x, spawn_y;   /* room pixels */
     int16_t spawn_param1;       /* + 0x32 of the spawned enemy */

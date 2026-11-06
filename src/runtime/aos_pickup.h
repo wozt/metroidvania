@@ -138,6 +138,10 @@ AosPickup aos_pickup_create_money(const AosMoneyKind kinds[AOS_MONEY_KINDS], uin
 bool aos_item_decode(uint16_t id, uint8_t *category, uint8_t *index);
 /* sub_08044054 for categories 2-4: an item pickup at room pixel (x, y). */
 AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int32_t y);
+/* Object10Create's pickup: decode a global item id, keep it fixed and mark
+ * collection as the scripted event that sets global bit 10. */
+bool aos_pickup_create_scripted_item(AosPickup *pickup, uint16_t item_id,
+                                     int32_t x, int32_t y);
 /* sub_0800F1FC case 4 for entity ids 1-4: create fixed money, item,
  * weapon or armor unless parameter 0's persistent bit was already set.
  * Soul containers (ids 5-8) have a separate weapon-hit lifecycle. */
@@ -181,6 +185,13 @@ AosCollectResult aos_pickup_collect_item(AosPickup *pickup, AosStats *stats,
  * draw) at speed 0x30000, with 200 frames to live. */
 AosPickup aos_pickup_create_soul(uint8_t soul_type, uint8_t soul_index, int32_t x, int32_t y,
                                  int32_t soma_x, int32_t soma_y, AosRandom random);
+/* sub_080D7308's boss/event soul producer. The two source gates suppress it
+ * during special modes or while the player state byte is non-zero. */
+bool aos_pickup_create_special_soul(AosPickup *pickup, uint8_t mode_flags,
+                                    bool player_blocked, uint8_t soul_type,
+                                    uint8_t soul_index, uint16_t persistent_index,
+                                    int32_t x, int32_t y, int32_t soma_x,
+                                    int32_t soma_y, AosRandom random);
 /* sub_080446D4 up to its collision pass: turns toward Soma's y - 16 pixels
  * (sub_0802D408, step + 0x2A per frame up to 0x4000), speeds up by 0x1800
  * per frame up to 0x80000 and moves. */

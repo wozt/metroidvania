@@ -159,6 +159,17 @@ AosPickup aos_pickup_create_item(uint8_t category, uint8_t index, int32_t x, int
                        .y = y * 65536, .icon_slot = -1};
 }
 
+bool aos_pickup_create_scripted_item(AosPickup *pickup, uint16_t item_id,
+                                     int32_t x, int32_t y) {
+    uint8_t category, index;
+    if (!pickup || !aos_item_decode(item_id, &category, &index)) return false;
+    *pickup = aos_pickup_create_item(category, index, x, y);
+    pickup->placed = true;
+    pickup->state = 0x63;
+    pickup->origin_flags = AOS_PICKUP_ORIGIN_SCRIPTED;
+    return true;
+}
+
 bool aos_pickup_placed_collected(
     const uint32_t collected[AOS_PLACED_ITEM_WORDS], uint16_t persistent_index) {
     return collected && persistent_index < AOS_PLACED_ITEM_WORDS * 32u &&
@@ -326,6 +337,21 @@ AosPickup aos_pickup_create_soul(uint8_t soul_type, uint8_t soul_index, int32_t 
     pickup.speed = 0x30000;
     pickup.blink = 200;
     return pickup;
+}
+
+bool aos_pickup_create_special_soul(AosPickup *pickup, uint8_t mode_flags,
+                                    bool player_blocked, uint8_t soul_type,
+                                    uint8_t soul_index, uint16_t persistent_index,
+                                    int32_t x, int32_t y, int32_t soma_x,
+                                    int32_t soma_y, AosRandom random) {
+    if (!pickup || !random || (mode_flags & 3u) || player_blocked ||
+        soul_type >= 4)
+        return false;
+    *pickup = aos_pickup_create_soul(soul_type, soul_index, x, y,
+                                     soma_x, soma_y, random);
+    pickup->persistent_index = persistent_index;
+    pickup->origin_flags = AOS_PICKUP_ORIGIN_SPECIAL;
+    return true;
 }
 
 void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y) {

@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0762 - Add Aria's scripted pickup producers
+
+- Added portable constructors for Object10's fixed global-id item and
+  `sub_080D7308`'s special soul. They preserve the native `0x63` fixed state,
+  origin flags, persistent index, homing initialization and both special-soul
+  suppression gates.
+- Deterministic tests cover item decoding, coordinates, origin state, the
+  special soul's random initialization and every refusal path. The host does
+  not create either producer yet. Source-derived and unit-tested, not
+  emulator-compared.
+
+Next: reconstruct Object10's runtime controller and connect its scripted item
+to the room object dispatcher.
+
 ## Patch 0761 - Port Aria's pickup collection flags
 
 - Ported `sub_080441F8`'s shared collection tail into a host-neutral state:

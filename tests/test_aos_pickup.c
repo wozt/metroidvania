@@ -250,6 +250,27 @@ int main(void) {
     aos_pickup_commit_collection(&special, &collection);
     assert(collection.global_flags == 3 && collection.special == (1u << 7));
 
+    assert(aos_pickup_create_scripted_item(&scripted, 33, 12, 34) &&
+           scripted.type == AOS_PICKUP_WEAPON && scripted.variant == 0 &&
+           scripted.x == 12 << 16 && scripted.y == 34 << 16 &&
+           scripted.placed && scripted.state == 0x63 &&
+           scripted.origin_flags == AOS_PICKUP_ORIGIN_SCRIPTED);
+    assert(!aos_pickup_create_scripted_item(&scripted, 0, 0, 0) &&
+           !aos_pickup_create_scripted_item(NULL, 1, 0, 0));
+    draws = 0;
+    assert(aos_pickup_create_special_soul(&special, 0, false, AOS_SOUL_YELLOW,
+                                          5, 11, 20, 30, 40 << 16, 50 << 16,
+                                          counting_random));
+    assert(draws == 1 && special.type == AOS_PICKUP_SOUL + AOS_SOUL_YELLOW &&
+           special.variant == 5 && special.persistent_index == 11 &&
+           special.origin_flags == AOS_PICKUP_ORIGIN_SPECIAL);
+    assert(!aos_pickup_create_special_soul(&special, 1, false, AOS_SOUL_RED,
+                                           0, 1, 0, 0, 0, 0, counting_random) &&
+           !aos_pickup_create_special_soul(&special, 0, true, AOS_SOUL_RED,
+                                           0, 1, 0, 0, 0, 0, counting_random) &&
+           !aos_pickup_create_special_soul(&special, 0, false, 4,
+                                           0, 1, 0, 0, 0, 0, counting_random));
+
     /* sub_080450C8: the container's direct type-4 sequence selects an
      * initial frame without moving, then consumes 3, 7, 7 and 3 updates. */
     static const uint8_t direct_ticks[] = {3, 7, 7, 3};

@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "aos_obj.h"
+
 enum {
     AOS_INTRO_TEXT_X = 4,
     AOS_INTRO_TEXT_WIDTH = 0x25,
@@ -33,7 +35,11 @@ typedef struct {
     uint8_t kind;
     uint8_t state;
     uint8_t variant;
+    uint8_t palette_row;
     uint8_t animation;
+    uint8_t animation_frame;
+    uint8_t animation_step;
+    uint8_t animation_tick;
     uint8_t animation_action;
     uint8_t frame_modulo;
     bool alive;
@@ -55,6 +61,7 @@ typedef struct {
  * feed the separate native-format font rasterizer. */
 typedef struct {
     AosIntroEntity entities[AOS_INTRO_ENTITY_COUNT];
+    const AosObjSheet *actor_sheet;
     int16_t bg0_vertical;
     uint8_t text_column;
     uint8_t text_draw_column;
@@ -80,6 +87,8 @@ typedef struct {
 } AosIntroEntities;
 
 void aos_intro_entities_init(AosIntroEntities *group);
+void aos_intro_entities_bind_actor_sheet(AosIntroEntities *group,
+                                         const AosObjSheet *sheet);
 void aos_intro_entities_clear(AosIntroEntities *group);
 void aos_intro_entities_set_text_script(AosIntroEntities *group,
                                         const uint8_t *script,

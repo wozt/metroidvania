@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-06T11:45:47+00:00",
+ "generated_at": "2026-11-06T11:57:28+00:00",
  "git": {
-  "commit": "b4187ba",
+  "commit": "debf16a",
   "branch": "main",
   "dirty": true
  },
@@ -15426,12 +15426,17 @@
     "sub_080094AC",
     "sub_08009610",
     "sub_08009648",
+    "sub_0803C7B4",
+    "sub_0803E058",
+    "sub_0803F17C",
+    "sub_0803F2C8",
     "sub_0803FEA4",
     "sub_0803FF64",
-    "sub_08040048"
+    "sub_08040048",
+    "sub_0804342C"
    ],
-   "limitations": "The main castle and Soma on the shrine stairs now use their native OBJ sheets and palette. Soma currently uses the source-selected starting frame; its full OAM animation stream, the other four actors, affine transforms, paired draws, actor alpha interaction and songs remain request-only. Gameplay starts as a separate process, and the introduction has no emulator pixel comparison. The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group preserves fixed-point motion, thresholds, lifetimes, alpha ownership and cleanup. sub_080093E0 retains the complete row-oriented script protocol. The verified-ROM resource view resolves the three language banks, proportional font, complete background palette, two compressed character banks and three block maps without exporting proprietary bytes. The SDL host renders BG3 through BG1 at their native fixed-point scroll positions and maps text through palette row 15. Source-derived, unit-tested, ROM-smoke-tested and locally reviewed in SDL; not emulator-compared. The introduction text is explicitly rendered white, and the SDL host now draws the native castle foreground plus Soma's shrine-stair actor from resources 0x08160490 and 0x08160498 with OBJ palette row 4. Their decoded composition was locally reviewed in a ROM-backed SDL capture.",
-   "next_action": "Step Soma's complete native OAM animation, then render the remaining four actors with affine transforms, paired draws and alpha composition.",
+   "limitations": "The SDL compositor uses integer object positions, so sub_08008FEC's two half-pixel-separated panel draws currently coincide. The music start, mute and affine-effect sound remain host requests instead of reaching MP2K. Gameplay starts as a separate process, and the introduction has no emulator pixel comparison. The seven-stage controller retains all native durations, scrolls, blends, skip destinations and the sub_08008ED0 handoff. Its six-actor group preserves fixed-point motion, thresholds, lifetimes, alpha ownership and cleanup. sub_080093E0 retains the complete row-oriented script protocol. The verified-ROM resource view resolves the three language banks, proportional font, complete background palette, two compressed character banks, three block maps, both actor sheets, all ten supporting frame records, both supporting animation streams and all four OBJ palette rows without exporting proprietary bytes. The controller steps Soma's four 42-frame stair poses and the affine actors' six three-frame poses. The SDL host renders BG3 through BG1 at their native fixed-point scroll positions, maps white text through palette row 15 and composes all six actors with their resource record, native OBJ row, layer-derived priority, inverse affine scale and panel alpha. Source-derived, unit-tested and ROM-smoke-tested; not emulator-compared.",
+   "next_action": "Connect the introduction music, mute and affine-effect sound requests to MP2K, implement subpixel paired panel draws, then capture the complete sequence.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_intro_cutscene.c",
@@ -17252,7 +17257,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title, main-menu and scrolling-introduction controllers, maps typed file operations onto three checksummed portable files and one-use quicksave companions, and launches the room runtime only after the native gameplay handoff. It forwards --rom so a new file continues into the first-room Object20 opening story; schema v11 preserves event 0x20 plus the six one-time placed-item words across later saves. With --rom the frontend verifies the user's Aria image and renders the native menu and introduction resources directly from memory without exporting ROM bytes. The main menu draws its native objects and file statistics, and the title screen is native. The scrolling introduction now draws its native castle foreground, white text and Soma on the shrine stairs. Still absent are Soma's complete animation stream and the other four actors' OAM and affine composition, the first-room actor and camera choreography, completed-file metadata and map state; portable quicksaves use companion files instead of native SRAM.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and scrolling-introduction controllers, maps typed file operations onto three checksummed portable files and one-use quicksave companions, and launches the room runtime only after the native gameplay handoff. It forwards --rom so a new file continues into the first-room Object20 opening story; schema v12 preserves bestiary, drop discovery, event words, one-time placed items and guaranteed boss souls across later saves. With --rom the frontend verifies the user's Aria image and renders the native menu and introduction resources directly from memory without exporting ROM bytes. The main menu draws its native objects and file statistics, and the title screen is native. The scrolling introduction draws its backgrounds, white text and all six actors from the native resources, including Soma's complete stair animation, the two affine actors and the alpha panels. The panels' paired half-pixel draw, introduction audio requests, completed-file metadata and map state remain incomplete; portable quicksaves use companion files instead of native SRAM.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -17272,7 +17277,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-11-05",
+   "last_validated": "2026-11-06",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -19838,6 +19843,12 @@
  },
  "timeline": [
   {
+   "commit": "debf16a",
+   "date": "2026-11-06",
+   "subject": "Restore Aria intro Soma and zombie blood",
+   "scope": "project"
+  },
+  {
    "commit": "b4187ba",
    "date": "2026-11-06",
    "subject": "Finish Aria Headhunter head timing",
@@ -20310,12 +20321,6 @@
    "date": "2026-11-02",
    "subject": "Port the Lightning Doll soul and the dolls' sounds",
    "scope": "project"
-  },
-  {
-   "commit": "4904113",
-   "date": "2026-11-02",
-   "subject": "Port the Imp blue soul familiar",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -20376,9 +20381,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 963,
-    "routines_attached_to_features": 963,
-    "unassigned_routines": 2610,
+    "routines_cited_by_features": 964,
+    "routines_attached_to_features": 964,
+    "unassigned_routines": 2609,
     "call_edges": 14228
    }
   },

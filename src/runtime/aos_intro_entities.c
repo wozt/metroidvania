@@ -35,10 +35,16 @@ static uint16_t alpha_pack(unsigned first, unsigned second) {
     return (uint16_t)((first & 0x1Fu) | ((second & 0x1Fu) << 8));
 }
 
-static AosIntroEntity entity(uint8_t kind, uint8_t animation, uint8_t variant) {
+enum { NO_ANIMATION = 0xFF };
+
+static AosIntroEntity entity(uint8_t kind, uint8_t palette_row,
+                             uint8_t variant, uint8_t animation,
+                             uint8_t frame) {
     return (AosIntroEntity){
         .kind = kind,
+        .palette_row = palette_row,
         .animation = animation,
+        .animation_frame = frame,
         .variant = variant,
         .alive = true,
     };
@@ -48,7 +54,7 @@ void aos_intro_entities_init(AosIntroEntities *group) {
     *group = (AosIntroEntities){.bg0_vertical = -0xA4};
 
     AosIntroEntity *main = &group->entities[AOS_INTRO_ENTITY_MAIN];
-    *main = entity(AOS_INTRO_ENTITY_MAIN, 0, 0);
+    *main = entity(AOS_INTRO_ENTITY_MAIN, 0, 0, NO_ANIMATION, 0);
     main->state = 1;
     main->visible = true;
     main->x = FIXED(0x78);
@@ -56,15 +62,31 @@ void aos_intro_entities_init(AosIntroEntities *group) {
     main->vy = 0x1000;
 
     group->entities[AOS_INTRO_ENTITY_SCROLL_FOLLOWER] =
-        entity(AOS_INTRO_ENTITY_SCROLL_FOLLOWER, 2, 0);
+        entity(AOS_INTRO_ENTITY_SCROLL_FOLLOWER, 2, 0, 0, 0);
     group->entities[AOS_INTRO_ENTITY_AFFINE_RISE] =
-        entity(AOS_INTRO_ENTITY_AFFINE_RISE, 3, 0);
+        entity(AOS_INTRO_ENTITY_AFFINE_RISE, 3, 0, 1, 4);
     group->entities[AOS_INTRO_ENTITY_ORBIT] =
-        entity(AOS_INTRO_ENTITY_ORBIT, 3, 0);
+        entity(AOS_INTRO_ENTITY_ORBIT, 3, 0, 1, 4);
     group->entities[AOS_INTRO_ENTITY_PANEL_LEFT] =
-        entity(AOS_INTRO_ENTITY_PANEL_LEFT, 1, 0);
+        entity(AOS_INTRO_ENTITY_PANEL_LEFT, 1, 0, NO_ANIMATION, 8);
     group->entities[AOS_INTRO_ENTITY_PANEL_RIGHT] =
-        entity(AOS_INTRO_ENTITY_PANEL_RIGHT, 1, 1);
+        entity(AOS_INTRO_ENTITY_PANEL_RIGHT, 1, 1, NO_ANIMATION, 9);
+}
+
+void aos_intro_entities_bind_actor_sheet(AosIntroEntities *group,
+                                         const AosObjSheet *sheet) {
+    group->actor_sheet = sheet;
+    if (!sheet) return;
+    for (unsigned index = 0; index < AOS_INTRO_ENTITY_COUNT; ++index) {
+        AosIntroEntity *current = &group->entities[index];
+        current->animation_step = 0;
+        current->animation_tick = 0;
+        current->animation_action = 0;
+        if (current->animation < sheet->anim_count &&
+            sheet->anim_length[current->animation] != 0)
+            current->animation_frame =
+                sheet->anim_frame[current->animation][0];
+    }
 }
 
 void aos_intro_entities_clear(AosIntroEntities *group) {
@@ -310,6 +332,25 @@ static void update_panel(AosIntroEntities *group, AosIntroEntity *entity,
     entity->y = FIXED(0x5A) - bg3_y;
 }
 
+/* sub_0803F17C advances the resource animation after the controller has
+ * consumed its current action index. The decoded sheet keeps this logic
+ * independent from ROM access and usable by editor previews. */
+static void advance_animation(const AosObjSheet *sheet,
+                              AosIntroEntity *entity) {
+    if (!sheet || entity->animation >= sheet->anim_count) return;
+    uint8_t length = sheet->anim_length[entity->animation];
+    if (length == 0 || entity->animation_step >= length) return;
+    uint8_t duration =
+        sheet->anim_duration[entity->animation][entity->animation_step];
+    if (duration == 0) duration = 1;
+    if (++entity->animation_tick < duration) return;
+    entity->animation_tick = 0;
+    entity->animation_step = (uint8_t)((entity->animation_step + 1) % length);
+    entity->animation_action = entity->animation_step;
+    entity->animation_frame =
+        sheet->anim_frame[entity->animation][entity->animation_step];
+}
+
 void aos_intro_entities_update(AosIntroEntities *group, int32_t mode_stage,
                                int32_t bg1_y, int32_t bg1_velocity,
                                int32_t bg3_y) {
@@ -344,5 +385,6 @@ void aos_intro_entities_update(AosIntroEntities *group, int32_t mode_stage,
             default:
                 break;
         }
+        if (current->alive) advance_animation(group->actor_sheet, current);
     }
 }

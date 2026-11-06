@@ -344,29 +344,50 @@ static void render_intro_actors(SDL_Renderer *renderer,
     const struct {
         uint8_t entity;
         uint8_t sheet;
-        uint8_t record;
+        uint8_t native_layer;
+        bool semi_transparent;
     } draws[] = {
-        {AOS_INTRO_ENTITY_MAIN, 0, 0},
-        /* sub_08008F40: animation 2 is Soma climbing the shrine stairs. */
-        {AOS_INTRO_ENTITY_SCROLL_FOLLOWER, 1, 2},
+        {AOS_INTRO_ENTITY_MAIN, 0, 0x1A, false},
+        {AOS_INTRO_ENTITY_SCROLL_FOLLOWER, 1, 0x16, false},
+        {AOS_INTRO_ENTITY_AFFINE_RISE, 1, 0x1A, false},
+        {AOS_INTRO_ENTITY_ORBIT, 1, 0x16, false},
+        {AOS_INTRO_ENTITY_PANEL_LEFT, 1, 0x19, true},
+        {AOS_INTRO_ENTITY_PANEL_RIGHT, 1, 0x19, true},
     };
     for (unsigned index = 0; index < sizeof draws / sizeof draws[0]; ++index) {
         const AosIntroEntity *actor = &actors->entities[draws[index].entity];
+        uint8_t record = actor->animation_frame;
         if (!actor->alive || !actor->visible ||
-            draws[index].record >= graphics->actors[draws[index].sheet].frame_count)
+            (actor->affine && actor->scale == 0) ||
+            record >= graphics->actors[draws[index].sheet].frame_count)
             continue;
+        int32_t x = actor->x, y = actor->y;
         AosObjSprite sprite = {
             .sheet = draws[index].sheet,
-            .record = draws[index].record,
-            .palette_row = 4,
-            .priority = 2,
+            .record = record,
+            .palette_row = actor->palette_row,
+            .priority = (uint8_t)(draws[index].native_layer <= 6 ? 0 :
+                                  draws[index].native_layer == 7 ? 1 :
+                                  draws[index].native_layer <= 0x16 ? 2 : 3),
+            .mode = draws[index].semi_transparent ? 1 : 0,
+            .affine = actor->affine,
             .pa = 0x100,
             .pd = 0x100,
-            .x = (int16_t)(actor->x >> 16),
-            .y = (int16_t)(actor->y >> 16),
+            .x = (int16_t)(x < 0 ? -((-x) >> 16) : x >> 16),
+            .y = (int16_t)(y < 0 ? -((-y) >> 16) : y >> 16),
         };
+        if (actor->affine) {
+            uint32_t matrix = 0x1000000u / actor->scale;
+            if (matrix > 0x7FFFu) matrix = 0x7FFFu;
+            sprite.pa = (int16_t)matrix;
+            sprite.pd = (int16_t)matrix;
+        }
         aos_obj_layer_draw(&layer, graphics->actors, &sprite);
     }
+    unsigned first_alpha = actors->alpha_override_valid
+                               ? actors->alpha_override & 0x1Fu
+                               : 16u;
+    if (first_alpha > 16) first_alpha = 16;
     for (int index = 0; index < GBA_W * GBA_H; ++index) {
         uint16_t color = graphics->object_palette[layer.index[index]];
         pixels[index * 4] = (uint8_t)((color & 31) * 255 / 31);
@@ -374,7 +395,11 @@ static void render_intro_actors(SDL_Renderer *renderer,
             (uint8_t)(((color >> 5) & 31) * 255 / 31);
         pixels[index * 4 + 2] =
             (uint8_t)(((color >> 10) & 31) * 255 / 31);
-        pixels[index * 4 + 3] = layer.index[index] ? 255 : 0;
+        pixels[index * 4 + 3] = layer.index[index]
+                                    ? (uint8_t)(layer.semi[index]
+                                                    ? first_alpha * 255 / 16
+                                                    : 255)
+                                    : 0;
     }
     SDL_UpdateTexture(texture, NULL, pixels, GBA_W * 4);
     SDL_FRect screen = {0, 0, GBA_W, GBA_H};
@@ -855,6 +880,10 @@ int aria_title_preview_main(int argc, char **argv) {
                     lifecycle.reset.language, launch_error,
                     sizeof launch_error)) {
                 have_intro_resources = false;
+            } else {
+                aos_intro_entities_bind_actor_sheet(
+                    &lifecycle.intro_cutscene.entities,
+                    &intro_graphics.actors[1]);
             }
         }
         AosIntroEntities *intro_entities = &lifecycle.intro_cutscene.entities;

@@ -27,6 +27,9 @@ enum {
     OBJECT_PIECE_OFFSET = 0x7220,
     SUPPORT_FRAME_OFFSET = 0x7240,
     SUPPORT_PIECE_OFFSET = 0x7300,
+    SUPPORT_ANIMATION_TABLE_OFFSET = 0x7320,
+    SUPPORT_ANIMATION_ZERO_OFFSET = 0x7340,
+    SUPPORT_ANIMATION_ONE_OFFSET = 0x7360,
     GRAPHICS_SIZE = 0x2000,
 };
 
@@ -90,11 +93,15 @@ static void main_actor_descriptor(uint8_t *data) {
 }
 
 static void supporting_actor_descriptor(uint8_t *data) {
-    write_u16(data, SUPPORT_FRAMES_OFFSET, 3);
-    write_u16(data, SUPPORT_FRAMES_OFFSET + 2, 0);
+    write_u16(data, SUPPORT_FRAMES_OFFSET, 10);
+    write_u16(data, SUPPORT_FRAMES_OFFSET + 2, 2);
     write_u32(data, SUPPORT_FRAMES_OFFSET + 4,
               0x08000000u + SUPPORT_FRAME_OFFSET);
-    for (unsigned frame = 0; frame < 3; ++frame) {
+    write_u32(data, SUPPORT_FRAMES_OFFSET + 8,
+              0x08000000u + SUPPORT_ANIMATION_ZERO_OFFSET);
+    write_u32(data, SUPPORT_FRAMES_OFFSET + 12,
+              0x08000000u + SUPPORT_ANIMATION_TABLE_OFFSET);
+    for (unsigned frame = 0; frame < 10; ++frame) {
         size_t record = SUPPORT_FRAME_OFFSET + frame * 16;
         data[record + 5] = 1;
         write_u32(data, record + 12,
@@ -104,6 +111,23 @@ static void supporting_actor_descriptor(uint8_t *data) {
     data[SUPPORT_PIECE_OFFSET + 1] = (uint8_t)-4;
     data[SUPPORT_PIECE_OFFSET + 6] = 8;
     data[SUPPORT_PIECE_OFFSET + 7] = 8;
+    write_u32(data, SUPPORT_ANIMATION_TABLE_OFFSET,
+              0x08000000u + SUPPORT_ANIMATION_ZERO_OFFSET);
+    write_u32(data, SUPPORT_ANIMATION_TABLE_OFFSET + 4,
+              0x08000000u + SUPPORT_ANIMATION_ONE_OFFSET);
+    write_u16(data, SUPPORT_ANIMATION_ZERO_OFFSET, 4);
+    write_u16(data, SUPPORT_ANIMATION_ZERO_OFFSET + 2, 1);
+    for (unsigned step = 0; step < 4; ++step) {
+        data[SUPPORT_ANIMATION_ZERO_OFFSET + 4 + step * 4] = (uint8_t)step;
+        data[SUPPORT_ANIMATION_ZERO_OFFSET + 5 + step * 4] = 42;
+    }
+    static const uint8_t frames[] = {4, 5, 6, 7, 6, 5};
+    write_u16(data, SUPPORT_ANIMATION_ONE_OFFSET, 6);
+    write_u16(data, SUPPORT_ANIMATION_ONE_OFFSET + 2, 1);
+    for (unsigned step = 0; step < 6; ++step) {
+        data[SUPPORT_ANIMATION_ONE_OFFSET + 4 + step * 4] = frames[step];
+        data[SUPPORT_ANIMATION_ONE_OFFSET + 5 + step * 4] = 3;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -116,9 +140,12 @@ int main(int argc, char **argv) {
     write_u16(data, PALETTE_OFFSET + 4 + 2, 31);
     write_u16(data, PALETTE_OFFSET + 4 + (15 * 16 + 8) * 2,
               31u << 10);
-    data[OBJECT_PALETTE_OFFSET + 2] = 1;
+    data[OBJECT_PALETTE_OFFSET + 2] = 4;
     write_u16(data, OBJECT_PALETTE_OFFSET + 4, 31);
     write_u16(data, OBJECT_PALETTE_OFFSET + 6, 31u | 31u << 5);
+    write_u16(data, OBJECT_PALETTE_OFFSET + 4 + 2 * 0x20 + 2, 31u << 10);
+    write_u16(data, OBJECT_PALETTE_OFFSET + 4 + 3 * 0x20 + 2,
+              31u | 31u << 10);
     decoded[1] = 4;
     decoded[2] = 0x10;
     decoded[3] = 0x10;
@@ -159,9 +186,18 @@ int main(int argc, char **argv) {
            graphics.text_rgb[2] == 255);
     assert(graphics.actors[0].frame_count == 1 &&
            graphics.actors[0].frames[0].count == 1);
-    assert(graphics.actors[1].frame_count == 3 &&
-           graphics.actors[1].frames[2].count == 1);
-    assert(graphics.object_palette[4 * 16 + 1] == (31u | 31u << 5));
+    assert(graphics.actors[1].frame_count == 10 &&
+           graphics.actors[1].frames[9].count == 1);
+    assert(graphics.actors[1].anim_count == 2 &&
+           graphics.actors[1].anim_length[0] == 4 &&
+           graphics.actors[1].anim_frame[0][3] == 3 &&
+           graphics.actors[1].anim_duration[0][3] == 42 &&
+           graphics.actors[1].anim_length[1] == 6 &&
+           graphics.actors[1].anim_frame[1][3] == 7 &&
+           graphics.actors[1].anim_duration[1][3] == 3);
+    assert(graphics.object_palette[1] == (31u | 31u << 5) &&
+           graphics.object_palette[2 * 16 + 1] == (31u << 10) &&
+           graphics.object_palette[3 * 16 + 1] == (31u | 31u << 10));
     for (unsigned index = 0; index < AOS_INTRO_BACKGROUND_COUNT; ++index) {
         const FusionAosRenderedBackground *background =
             &graphics.backgrounds[index];

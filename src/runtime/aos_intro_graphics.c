@@ -20,7 +20,6 @@ enum {
     AOS_INTRO_SUPPORT_GRAPHICS = 0x08160498,
     AOS_INTRO_SUPPORT_FRAMES = 0x0820CD00,
     AOS_INTRO_OBJECT_PALETTE = 0x0820972C,
-    AOS_INTRO_OBJECT_PALETTE_ROW = 4,
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -122,8 +121,7 @@ bool aos_intro_graphics_init(AosIntroGraphics *graphics,
         !aos_obj_sheet_decode(&graphics->actors[1], rom,
                               AOS_INTRO_SUPPORT_GRAPHICS,
                               AOS_INTRO_SUPPORT_FRAMES, error, error_size) ||
-        !aos_rom_load_palette_range(rom, AOS_INTRO_OBJECT_PALETTE, 0, 1,
-                                    AOS_INTRO_OBJECT_PALETTE_ROW,
+        !aos_rom_load_palette_range(rom, AOS_INTRO_OBJECT_PALETTE, 0, 4, 0,
                                     object_palette, error, error_size)) {
         free(memory);
         aos_intro_graphics_free(graphics);

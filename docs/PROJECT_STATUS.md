@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0771 - Animate and compose the Aria introduction actors
+
+- Corrected the introduction actor parameters: the values passed to
+  `sub_0803B924` select OBJ palette rows 0-3 rather than animations. The ROM
+  resource loader now retains all four rows instead of copying one row into a
+  provisional slot.
+- Bound the supporting actor descriptor's two native animation streams to the
+  controller. Soma cycles records 0-3 for 42 frames each while his vertical
+  stair motion follows action indices 1 and 3; the affine actors cycle records
+  4, 5, 6, 7, 6 and 5 for three frames each.
+- The SDL composition now includes the affine-rise actor, orbiting actor and
+  both translucent panels in addition to the castle and Soma. Each uses its
+  native static or animated record, OBJ row, layer-derived priority, inverse
+  affine scale and current panel alpha.
+- Synthetic resource tests cover all ten frame records, both animation
+  descriptors and the four palette rows. Controller tests cover animation
+  duration, action-driven motion and static panel records. Source-derived and
+  unit-tested, not emulator-compared; the panels' native half-pixel paired draw
+  still collapses to the host renderer's integer-pixel position.
+
+Next: connect the introduction's existing music, mute and affine-effect
+requests to the native MP2K host, then capture the complete sequence.
+
 ## Patch 0770 - Restore Aria introduction actors and hit feedback
 
 - Decoded the scrolling introduction's two native OBJ resources and palette

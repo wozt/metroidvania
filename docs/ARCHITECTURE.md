@@ -376,7 +376,11 @@ seven-stage `GameModeIntroCutsceneUpdate` controller in
 `aos_intro_cutscene.c` before starting the separate room-runtime process at
 the native first-room position. `aos_intro_entities.c` advances the six native
 introduction actors, their fixed-point motion, thresholds, lifetimes, alpha
-overrides and cleanup. The same module implements `sub_080093E0` as a bounded
+overrides and cleanup. Its editor-usable resource binding consumes the decoded
+supporting-actor sheet's two animation streams: Soma's four 42-frame stair
+poses and the six-step affine cycle. The SDL compositor draws all six actors
+with their native frame records, OBJ palette rows, priorities, affine matrices
+and panel alpha. The same module implements `sub_080093E0` as a bounded
 interpreter over externally supplied native-format scripts; it emits row-clear,
 glyph and string-insertion results without storing original text.
 `aos_intro_resources.c` is a non-owning view of the hash-verified ROM buffer:

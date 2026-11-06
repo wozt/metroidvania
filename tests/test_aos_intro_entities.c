@@ -42,6 +42,43 @@ int main(void) {
     assert(group.entities[AOS_INTRO_ENTITY_PANEL_RIGHT].x == -0x7F000);
     assert(group.alpha_override_valid && group.alpha_override == 0x060A);
 
+    /* The supporting descriptor supplies the native four-step stair walk.
+     * Its action index changes the follower's vertical velocity before the
+     * animation advances at the end of the frame. */
+    AosObjSheet actor_sheet = {0};
+    actor_sheet.anim_count = 2;
+    actor_sheet.anim_length[0] = 4;
+    actor_sheet.anim_length[1] = 6;
+    for (unsigned step = 0; step < 4; ++step) {
+        actor_sheet.anim_frame[0][step] = (uint8_t)step;
+        actor_sheet.anim_duration[0][step] = 42;
+    }
+    const uint8_t affine_frames[] = {4, 5, 6, 7, 6, 5};
+    for (unsigned step = 0; step < 6; ++step) {
+        actor_sheet.anim_frame[1][step] = affine_frames[step];
+        actor_sheet.anim_duration[1][step] = 3;
+    }
+    aos_intro_entities_init(&group);
+    aos_intro_entities_bind_actor_sheet(&group, &actor_sheet);
+    AosIntroEntity *animated_follower =
+        &group.entities[AOS_INTRO_ENTITY_SCROLL_FOLLOWER];
+    AosIntroEntity *animated_rise =
+        &group.entities[AOS_INTRO_ENTITY_AFFINE_RISE];
+    assert(animated_follower->palette_row == 2 &&
+           animated_follower->animation_frame == 0);
+    assert(animated_rise->palette_row == 3 &&
+           animated_rise->animation_frame == 4);
+    for (unsigned frame = 0; frame < 42; ++frame)
+        aos_intro_entities_update(&group, 3, 0x1600000, 0, 0x0C90000);
+    assert(animated_follower->animation_action == 1 &&
+           animated_follower->animation_frame == 1);
+    int32_t animated_y = animated_follower->y;
+    aos_intro_entities_update(&group, 3, 0x1600000, 0, 0x0C90000);
+    assert(animated_follower->vy == -0x2E00 &&
+           animated_follower->y == animated_y - 0x2E00);
+    assert(group.entities[AOS_INTRO_ENTITY_PANEL_LEFT].animation_frame == 8 &&
+           group.entities[AOS_INTRO_ENTITY_PANEL_RIGHT].animation_frame == 9);
+
     /* The main actor advances BG0 every five frames and reaches the first
      * 12-pixel text-script boundary on frame 40. */
     aos_intro_entities_init(&group);

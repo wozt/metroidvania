@@ -1892,6 +1892,35 @@ static AosHitReport headhunter_update(AosEnemy *enemy, AosSoma *soma,
         enemy->spawned_count = 3;
         enemy->boss_parts_spawned = true;
     }
+    /* sub_08081EBC cases 0..2: begin the first head phase, run the
+     * 100-frame appearance fade while sequence 24 completes, return to
+     * sequence 0, then hold it for 29 frames. */
+    switch (enemy->step) {
+    case 0:
+        enemy->hh_phase = 1;
+        enemy->timer = 100;
+        enemy->substep = 0;
+        play(enemy, kind->anims, 0x18);
+        enemy->step = 1;
+        break;
+    case 1:
+        if (enemy->timer) enemy->timer--;
+        if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            play(enemy, kind->anims, 0);
+            enemy->timer = 0;
+            enemy->step = 2;
+        }
+        break;
+    case 2:
+        if (enemy->timer++ > 27) {
+            enemy->step = 3;
+            enemy->timer = 60;
+        }
+        break;
+    default:
+        break;
+    }
     step_anim(enemy, kind->anims);
     AosHitReport hit = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     skeleton_merge(&report, &hit);
@@ -1906,6 +1935,13 @@ static void headhunter_head_update(AosEnemy *head) {
         return;
     }
     head->mirrored = body->mirrored;
+    /* sub_08083FD0 case 0: each head remains parked until the body selects
+     * its native phase. Movement starts in case 1, which is not ported yet. */
+    if (head->step == 0 && body->hh_phase == (uint8_t)(head->variant + 1u)) {
+        head->step = 1;
+        head->substep = 0;
+        head->timer = 0;
+    }
 }
 
 /* sub_08069A00 with the zombie's arguments: X then Y motion with the walls

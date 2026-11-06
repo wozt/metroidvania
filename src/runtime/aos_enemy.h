@@ -243,6 +243,7 @@ typedef struct AosEnemy {
     int32_t target_x, target_y;
     bool helper_spawned;    /* the Nemesis body has emitted its linked helper */
     bool boss_parts_spawned; /* a multipart boss emitted its constructor children */
+    uint8_t hh_phase;       /* Headhunter body +0x18: active head, 1..3 */
     bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     /* Death step-one linked-fire displacement: +1 X/Y on every third
      * tick, then -1 on the following tick; carried into death step two.

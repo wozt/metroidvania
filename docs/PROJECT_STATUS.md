@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0767 - Start Headhunter's native opening
+
+- Ported `sub_08081EBC` cases 0-2: select head phase 1, start sequence 24
+  with its 100-frame appearance clock, return to sequence 0 when it ends,
+  and advance after the native 29-frame hold.
+- Ported `sub_08083FD0`'s case-0 phase gate. Each linked head remains parked
+  until the body selects its phase 1, 2 or 3, then inherits the body's facing
+  and enters its movement controller.
+- Body flight, attacks, phase changes and head movement remain absent.
+  Deterministic frame-sequence tests cover this exact opening subset;
+  source-derived and unit-tested, not emulator-compared.
+
+Next: port the body flight after case 2 and head cases 1-4, then export the
+heads' dedicated art.
+
 ## Patch 0766 - Construct Headhunter's linked heads
 
 - Added the source-derived Headhunter constructor: the body starts on native

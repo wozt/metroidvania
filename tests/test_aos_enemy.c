@@ -24,9 +24,9 @@ static uint32_t scripted(void) { return script[script_at++]; }
 
 static void headhunter_death_tests(void) {
     static const uint8_t tick = 1;
-    static AosAnimDef defs[24];
-    for (int i = 0; i < 24; ++i) defs[i] = (AosAnimDef){1, &tick};
-    const AosAnimSet anims = {defs, 24};
+    static AosAnimDef defs[25];
+    for (int i = 0; i < 25; ++i) defs[i] = (AosAnimDef){1, &tick};
+    const AosAnimSet anims = {defs, 25};
     AosEnemyKind kind = {.anims = &anims};
     AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(100), NULL);
     const AosEnemyStats stats = {.hp = 300};
@@ -36,13 +36,32 @@ static void headhunter_death_tests(void) {
     assert(body.state == 0 && body.anim.id == 0x17 && !body.boss_parts_spawned);
     AosHitReport built = aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
                                           10, 4, 10, 20, never_zero);
-    assert(built.child_count == 3 && body.boss_parts_spawned && body.spawned_count == 3);
+    assert(built.child_count == 3 && body.boss_parts_spawned && body.spawned_count == 3 &&
+           body.step == 1 && body.hh_phase == 1 && body.timer == 100 && body.anim.id == 0x18);
     static const int x[3] = {250, 282, 266}, y[3] = {144, 148, 116};
     for (int i = 0; i < 3; ++i)
         assert(built.children[i].role == AOS_ROLE_HEADHUNTER_HEAD &&
                built.children[i].variant == i && built.children[i].parent == &body &&
                built.children[i].x == AOS_FIXED(x[i]) &&
                built.children[i].y == AOS_FIXED(y[i]));
+    AosEnemy first = built.children[0], second = built.children[1];
+    aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(first.step == 1 && second.step == 0);
+    body.hh_phase = 2;
+    aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(second.step == 1);
+    body.hh_phase = 1;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(body.step == 2 && body.timer == 0 && body.anim.id == 0);
+    for (int i = 0; i < 29; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(body.step == 3 && body.timer == 60);
     body.removed = true;
     AosEnemy orphan = built.children[0];
     aos_enemy_update(&orphan, &soma, &layer, &kind, NULL, NULL,

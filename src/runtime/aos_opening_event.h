@@ -209,7 +209,19 @@ typedef struct {
     uint8_t soma_animation;
     bool active;
     bool soma_hidden;
-    bool soul_notice_visible;
+    /* The opening's guaranteed Winged Skeleton soul uses the same curved
+     * homing motion as an ordinary red-soul pickup, but remains owned by the
+     * story controller so editor previews do not mutate an inventory. */
+    int32_t soul_x;
+    int32_t soul_y;
+    int32_t soul_vx;
+    int32_t soul_vy;
+    int32_t soul_speed;
+    int32_t soul_turn;
+    uint32_t soul_heading;
+    uint16_t soul_age;
+    bool soul_active;
+    bool soul_absorbed;
 } AosOpeningActors;
 
 bool aos_opening_event_should_start(uint8_t area, uint16_t room,
@@ -237,6 +249,10 @@ void aos_opening_actors_set_motion(AosOpeningActors *actors,
                                    void *context);
 /* Connects a script control-2 beat to sub_0805D410's actor state. */
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
+/* True while an Object20 beat owns the scene. The text parser waits instead
+ * of accepting the next page early, so rapid A presses cannot skip or strand
+ * the enemy reveal, attack or soul absorption. */
+bool aos_opening_actors_blocks_script(const AosOpeningActors *actors);
 /* Advances one frame and returns one audio cue due on that frame. Animation
  * durations are supplied by the exported actor library, keeping this model
  * independent from SDL and usable by editor previews. camera_x is a whole-

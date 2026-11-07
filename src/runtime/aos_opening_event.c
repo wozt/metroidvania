@@ -255,6 +255,65 @@ static void begin_emitted_disappearance(AosOpeningActors *actors) {
     }
 }
 
+static void begin_opening_soul(AosOpeningActors *actors) {
+    actors->soul_x = actors->x[2];
+    actors->soul_y = actors->y[2] - (16 << 16);
+    actors->soul_vx = 0;
+    actors->soul_vy = 0;
+    actors->soul_speed = 0x30000;
+    actors->soul_turn = 0;
+    actors->soul_age = 0;
+    actors->soul_active = true;
+    actors->soul_absorbed = false;
+    if (actors->angle) {
+        int16_t dx = (int16_t)(AOS_OPENING_SOMA_X - (actors->soul_x >> 16));
+        int16_t dy = (int16_t)((AOS_OPENING_SOMA_Y - 16) -
+                               (actors->soul_y >> 16));
+        actors->soul_heading =
+            (uint32_t)(actors->angle(dx, dy, actors->motion_context) + 0x8000u) &
+            0xFFFFu;
+    }
+}
+
+/* sub_0802D408's red-soul homing path. The opening owns a private instance
+ * because the scripted reward is committed only when Object20 completes. */
+static void update_opening_soul(AosOpeningActors *actors) {
+    if (!actors->soul_active) return;
+    ++actors->soul_age;
+    int32_t target_x = AOS_OPENING_SOMA_X << 16;
+    int32_t target_y = (AOS_OPENING_SOMA_Y - 16) << 16;
+    if (!actors->angle || !actors->sine) {
+        actors->soul_x += (target_x - actors->soul_x) / 8;
+        actors->soul_y += (target_y - actors->soul_y) / 8;
+        return;
+    }
+    int16_t dx = (int16_t)(AOS_OPENING_SOMA_X - (actors->soul_x >> 16));
+    int16_t dy = (int16_t)((AOS_OPENING_SOMA_Y - 16) -
+                           (actors->soul_y >> 16));
+    int32_t difference =
+        (int32_t)actors->angle(dx, dy, actors->motion_context) -
+        (int32_t)actors->soul_heading;
+    bool turn_up = difference > 0 ? difference <= 0x7FFF
+                                  : difference < -0x8000;
+    actors->soul_heading =
+        (uint32_t)((int32_t)actors->soul_heading +
+                   (turn_up ? actors->soul_turn : -actors->soul_turn)) &
+        0xFFFFu;
+    actors->soul_turn += 0x2A;
+    if (actors->soul_turn > 0x4000) actors->soul_turn = 0x4000;
+    actors->soul_speed += 0x1800;
+    if (actors->soul_speed > 0x80000) actors->soul_speed = 0x80000;
+    actors->soul_vx =
+        (actors->sine(actors->soul_heading + 0x4000u,
+                      actors->motion_context) >> 8) *
+        (actors->soul_speed >> 8);
+    actors->soul_vy =
+        (actors->sine(actors->soul_heading, actors->motion_context) >> 8) *
+        (actors->soul_speed >> 8);
+    actors->soul_x += actors->soul_vx;
+    actors->soul_y += actors->soul_vy;
+}
+
 static bool point_in_impact_margin(const AosOpeningActors *actors,
                                    int32_t x, int32_t y) {
     int32_t screen_x = (x >> 16) - (actors->camera_x >> 16);
@@ -607,7 +666,7 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         actor_animation(actors, 2, 5);
         break;
     case AOS_OPENING_CUE_AFTER_BATTLE:
-        actors->soul_notice_visible = false;
+        actors->soul_active = false;
         actors->soma_hidden = false;
         actors->soma_animation = 0x51;
         actors->scene_state = 6;
@@ -620,6 +679,16 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         break;
     default:
         break;
+    }
+}
+
+bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
+    if (!actors || !actors->active) return false;
+    switch (actors->scene_state) {
+    case 3: return actors->scene_step < 3;
+    case 4: return actors->scene_step < 2;
+    case 5: return !actors->soul_absorbed;
+    default: return false;
     }
 }
 
@@ -662,6 +731,7 @@ AosOpeningCue aos_opening_actors_update(
     update_debris(actors);
     update_projectiles(actors);
     update_emitted(actors);
+    update_opening_soul(actors);
     /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
     if (actors->state == 0) {
         if (actors->timer) --actors->timer;
@@ -747,10 +817,14 @@ scene:
             AosOpeningCue due = AOS_OPENING_CUE_NONE;
             if (actors->scene_timer == 0xD0) {
                 actors->visible[2] = false;
+                begin_opening_soul(actors);
                 due = AOS_OPENING_CUE_ENEMY_DEFEATED;
             } else if (actors->scene_timer == 0x8F) {
                 due = AOS_OPENING_CUE_SOUL_ABSORBED;
-                actors->soul_notice_visible = true;
+                actors->soul_active = false;
+                actors->soul_absorbed = true;
+                actors->soul_x = AOS_OPENING_SOMA_X << 16;
+                actors->soul_y = (AOS_OPENING_SOMA_Y - 16) << 16;
                 actors->soma_animation = 0x52;
                 actors->soma_hidden = false;
                 actors->scene_step = 2;
@@ -762,7 +836,7 @@ scene:
         }
         if (actors->scene_step == 2) {
             /* sub_0805D410 case 5 keeps pose 0x52 and alternates the player
-             * object's visibility while sub_0800E708's soul notice is up. */
+             * object's visibility during the absorption flash. */
             actors->soma_animation = 0x52;
             actors->soma_hidden = (actors->frame & 1u) != 0;
         }

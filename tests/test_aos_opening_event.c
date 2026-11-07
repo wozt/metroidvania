@@ -303,6 +303,7 @@ static void test_trigger(void) {
 
     const uint16_t durations[AOS_OPENING_ACTOR_COUNT] = {1, 3, 1};
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_ATTACKS);
+    assert(aos_opening_actors_blocks_script(&actors));
     assert(actors.animation[1] == 2);
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_ENEMY_ATTACKS);
@@ -315,25 +316,34 @@ static void test_trigger(void) {
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
     assert(actors.animation[1] == 3 && actors.animation_age[1] == 0);
+    assert(!aos_opening_actors_blocks_script(&actors));
 
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_SOUL_ABSORBED);
+    assert(aos_opening_actors_blocks_script(&actors));
     for (unsigned frame = 0; frame < 18; ++frame) {
         AosOpeningCue cue = aos_opening_actors_update(&actors, durations, NULL, 0);
         if (frame == 17) assert(cue == AOS_OPENING_CUE_ENEMY_DEFEATED);
         else assert(cue == AOS_OPENING_CUE_NONE);
     }
-    assert(!actors.visible[2]);
+    assert(!actors.visible[2] && actors.soul_active && !actors.soul_absorbed);
+    int32_t soul_start_x = actors.soul_x;
+    int32_t soul_start_y = actors.soul_y;
     for (unsigned frame = 0; frame < 64; ++frame)
         assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
+    assert(actors.soul_x != soul_start_x || actors.soul_y != soul_start_y);
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
-    assert(actors.soul_notice_visible && actors.soma_animation == 0x52);
+    assert(!actors.soul_active && actors.soul_absorbed &&
+           actors.soul_x == (AOS_OPENING_SOMA_X << 16) &&
+           actors.soul_y == ((AOS_OPENING_SOMA_Y - 16) << 16) &&
+           actors.soma_animation == 0x52);
+    assert(!aos_opening_actors_blocks_script(&actors));
     bool hidden = actors.soma_hidden;
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_NONE);
     assert(actors.soma_hidden != hidden && actors.soma_animation == 0x52);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);
-    assert(!actors.soul_notice_visible && !actors.soma_hidden &&
+    assert(!actors.soul_active && !actors.soma_hidden &&
            actors.soma_animation == 0x51);
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_AFTER_BATTLE);

@@ -89,6 +89,7 @@ static void update_identity(Browser *browser) {
 static void select_id(Browser *browser, int id) {
     int maximum = browser->selected_game == BROWSER_ARIA
                     ? (int)aos_audio_song_count() - 1 : MZM_SOUND_COUNT - 1;
+    if (maximum < 0) maximum = 0; /* Both banks can be missing. */
     if (id < 0) id = maximum;
     if (id > maximum) id = 0;
     gtk_spin_button_set_range(GTK_SPIN_BUTTON(browser->id), 0, maximum);
@@ -218,6 +219,8 @@ static gboolean audio_tick(gpointer userdata) {
 
 static void activate(GtkApplication *application, gpointer userdata) {
     Browser *browser = userdata;
+    if (g_getenv("FUSION_SFX_DEBUG"))
+        fprintf(stderr, "[sfx-browser] GTK activate: opening window\n");
     GtkWidget *window = gtk_application_window_new(application);
     gtk_window_set_title(GTK_WINDOW(window), "Metroid Vania - Native SFX Browser");
     gtk_window_set_default_size(GTK_WINDOW(window), 560, 220);
@@ -323,9 +326,13 @@ int main(int argc, char **argv) {
     }
     browser.timer = g_timeout_add(8, audio_tick, &browser);
     GtkApplication *application = gtk_application_new(
-        "com.wozt.metroidvania.sfx-browser", G_APPLICATION_DEFAULT_FLAGS);
+        "com.wozt.metroidvania.sfx-browser", G_APPLICATION_NON_UNIQUE);
     g_signal_connect(application, "activate", G_CALLBACK(activate), &browser);
+    if (g_getenv("FUSION_SFX_DEBUG"))
+        fprintf(stderr, "[sfx-browser] starting GTK main loop\n");
     int result = g_application_run(G_APPLICATION(application), argc, argv);
+    if (g_getenv("FUSION_SFX_DEBUG"))
+        fprintf(stderr, "[sfx-browser] GTK loop stopped, status=%d\n", result);
     g_source_remove(browser.timer);
     if (browser.aria_stream) SDL_DestroyAudioStream(browser.aria_stream);
     if (browser.mzm_stream) SDL_DestroyAudioStream(browser.mzm_stream);

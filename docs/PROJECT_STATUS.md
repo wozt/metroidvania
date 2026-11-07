@@ -60,8 +60,9 @@ Last updated: **2026-11-07**.
   `((slot&1)?0x10:1, 0xB+slot/2)`, equip `(2, 5+2*slot)` plus the item
   list's flat slot formula, config `(5, cursor*2+4)`, soul set
   `((slot&1)?0x10:2, 0xA+slot/2)` and enemy
-  `((slot&1)?0x10:2, 5+slot/2)`. The enemy detail view, soul set's
-  second placement and every page's frame animation remain open.
+  `((slot&1)?0x10:2, 5+slot/2)`. Soul set's second `sub_08048EA4` call
+  site uses the identical formula and the enemy detail view has no
+  native hand placement, so every cursor placement is covered.
 
 ## Patch 0798 - Reconstruct the opening obtained-soul windows
 

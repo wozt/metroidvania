@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <signal.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -84,6 +85,7 @@ typedef struct {
     AosLabDb *db;
     int last_state_count;
     GList *pipes;
+    GPid pids[8];      /* live child worker per slot, -1 when none */
 } Viewer;
 
 static Viewer *g_viewer; /* set in on_activate; shared by log watches */
@@ -236,6 +238,103 @@ static gboolean spawn_worker(Viewer *v, const char *state_id_str,
                              record_name, record_frames, NULL);
 }
 
+/* Respawn a worker from the launch config its last process persisted
+ * in worker.N.launch ("state=ID|iters=N|mode=trial|frames=F" or
+ * "mode=scout|chunks=C"). Returns FALSE when nothing is stored. */
+static gboolean spawn_from_launch(Viewer *v, int worker_id) {
+    char key[64];
+    snprintf(key, sizeof key, "worker.%d.launch", worker_id);
+    char *cfg = aos_labdb_meta_get(v->db, key);
+    if (!cfg) return FALSE;
+    char mode[16] = "", state[24] = "", iters[16] = "", frames[16] = "",
+         chunks[16] = "";
+    char *save = NULL;
+    for (char *tok = strtok_r(cfg, "|", &save); tok;
+         tok = strtok_r(NULL, "|", &save)) {
+        char *eq = strchr(tok, '=');
+        if (!eq) continue;
+        *eq = 0;
+        const char *val = eq + 1;
+        if (!strcmp(tok, "mode")) snprintf(mode, sizeof mode, "%s", val);
+        else if (!strcmp(tok, "state"))
+            snprintf(state, sizeof state, "%s", val);
+        else if (!strcmp(tok, "iters"))
+            snprintf(iters, sizeof iters, "%s", val);
+        else if (!strcmp(tok, "frames"))
+            snprintf(frames, sizeof frames, "%s", val);
+        else if (!strcmp(tok, "chunks"))
+            snprintf(chunks, sizeof chunks, "%s", val);
+    }
+    free(cfg);
+    if (!v->rom_path[0] || !v->worker_path[0]) {
+        gtk_label_set_text(GTK_LABEL(v->worker_label),
+                           "Set --rom to respawn workers");
+        return FALSE;
+    }
+    char seed[32], wid[8];
+    snprintf(seed, sizeof seed, "%ld",
+             (long)(time(NULL) ^ (getpid() << (worker_id & 7))));
+    snprintf(wid, sizeof wid, "%d", worker_id);
+    const char *argv[24];
+    int n = 0;
+    argv[n++] = v->worker_path;
+    argv[n++] = "--db";   argv[n++] = v->db_path;
+    argv[n++] = "--rom";  argv[n++] = v->rom_path;
+    argv[n++] = "--worker-id"; argv[n++] = wid;
+    argv[n++] = "--seed"; argv[n++] = seed;
+    if (!strcmp(mode, "scout")) {
+        argv[n++] = "--scout";
+        argv[n++] = "--scout-chunks";
+        argv[n++] = chunks[0] ? chunks : "400";
+    } else {
+        argv[n++] = "--state";
+        argv[n++] = state[0] ? state : "0";
+        argv[n++] = "--iterations";
+        argv[n++] = iters[0] ? iters : "100";
+        if (frames[0]) { argv[n++] = "--frames"; argv[n++] = frames; }
+    }
+    argv[n] = NULL;
+    int out_fd = -1, err_fd = -1;
+    GPid pid = 0;
+    GError *error = NULL;
+    if (!g_spawn_async_with_pipes(
+            NULL, (char **)argv, NULL,
+            G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
+            NULL, NULL, &pid, NULL, &out_fd, &err_fd, &error)) {
+        gtk_label_set_text(GTK_LABEL(v->worker_label),
+                           error ? error->message : "spawn failed");
+        if (error) g_error_free(error);
+        return FALSE;
+    }
+    if (worker_id >= 0 && worker_id < 8) v->pids[worker_id] = pid;
+    for (int s = 0; s < 2; ++s) {
+        int fd = s == 0 ? out_fd : err_fd;
+        if (fd < 0) continue;
+        GIOChannel *ch = g_io_channel_unix_new(fd);
+        g_io_channel_set_encoding(ch, NULL, NULL);
+        g_io_channel_set_buffered(ch, FALSE);
+        LogPipe *pipe = g_new0(LogPipe, 1);
+        pipe->fd = fd;
+        pipe->worker_id = worker_id;
+        char tagname[32];
+        snprintf(tagname, sizeof tagname, "w%d", worker_id);
+        GtkTextTagTable *tags =
+            gtk_text_buffer_get_tag_table(v->log_buffer);
+        pipe->tag = gtk_text_tag_table_lookup(tags, tagname);
+        if (!pipe->tag) {
+            pipe->tag = gtk_text_tag_new(tagname);
+            gtk_text_tag_table_add(tags, pipe->tag);
+        }
+        v->pipes = g_list_prepend(v->pipes, pipe);
+        g_io_add_watch(ch, G_IO_IN | G_IO_HUP,
+                       (GIOFunc)on_log_pipe, pipe);
+    }
+    char msg[96];
+    snprintf(msg, sizeof msg, "worker %d respawned (%s)", worker_id, mode);
+    gtk_label_set_text(GTK_LABEL(v->worker_label), msg);
+    return TRUE;
+}
+
 static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
                                   int iterations, int worker_id,
                                   const char *record_name, int record_frames,
@@ -292,6 +391,7 @@ static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
         if (error) g_error_free(error);
         return FALSE;
     }
+    if (worker_id >= 0 && worker_id < 8) v->pids[worker_id] = pid;
     /* merge both streams through one watch each */
     for (int s = 0; s < 2; ++s) {
         int fd = s == 0 ? stdout_fd : stderr_fd;
@@ -678,6 +778,54 @@ static void on_stop_clicked(GtkButton *button, gpointer user_data) {
     worker_control(v, id, "stop");
 }
 
+/* Play: resume a paused worker, or respawn a dead one from its stored
+ * launch config. Never double-spawns a live worker. */
+static void play_worker(Viewer *v, int id) {
+    char pk[64], ck[64];
+    snprintf(pk, sizeof pk, "worker.%d.phase", id);
+    snprintf(ck, sizeof ck, "lab.control.%d", id);
+    char *ph = aos_labdb_meta_get(v->db, pk);
+    char *ctl = aos_labdb_meta_get(v->db, ck);
+    int alive = ph && (!strcmp(ph, "running") ||
+                       !strcmp(ph, "scouting") ||
+                       !strcmp(ph, "paused"));
+    if (alive) {
+        worker_control(v, id,
+                       ctl && !strcmp(ctl, "pause") ? "resume" : "run");
+    } else {
+        worker_control(v, id, "run");
+        if (!spawn_from_launch(v, id))
+            gtk_label_set_text(GTK_LABEL(v->worker_label),
+                               "Worker has no stored launch config — "
+                               "start a batch or scout first");
+    }
+    free(ph);
+    free(ctl);
+}
+
+static void on_play_clicked(GtkButton *button, gpointer user_data) {
+    Viewer *v = user_data;
+    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "wid"));
+    play_worker(v, id);
+}
+
+/* Best: ask the worker to hop to the fleet's highest-value checkpoint
+ * (smart restart, implemented worker-side). */
+static void on_best_clicked(GtkButton *button, gpointer user_data) {
+    Viewer *v = user_data;
+    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "wid"));
+    worker_control(v, id, "best");
+    char msg[80];
+    snprintf(msg, sizeof msg, "worker %d: switch to best branch", id);
+    gtk_label_set_text(GTK_LABEL(v->worker_label), msg);
+}
+
+static void on_play_all_clicked(GtkButton *button, gpointer user_data) {
+    (void)button;
+    Viewer *v = user_data;
+    for (int i = 0; i < 8; ++i) play_worker(v, i);
+}
+
 static void on_speed_changed(GtkRange *range, gpointer user_data) {
     Viewer *v = user_data;
     int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(range), "wid"));
@@ -730,7 +878,7 @@ static void on_launch_clicked(GtkButton *button, gpointer user_data) {
     (void)button;
     Viewer *v = user_data;
     int count = 0;
-    AosStateRow *states = aos_labdb_states(v->db, 512, &count);
+    AosStateRow *states = aos_labdb_valuable_states(v->db, 200, &count);
     if (count == 0) {
         gtk_label_set_text(GTK_LABEL(v->worker_label),
                            "No save state yet — press \"Record state\" "
@@ -856,12 +1004,111 @@ static GtkWidget *make_tab_page(GListStore **store, const char **titles,
     return page;
 }
 
+/* ---- background policy ----------------------------------------------
+ * The viewer owns the worker processes it spawns. Unless the user
+ * opted in via Settings ("allow background"), closing the window
+ * stops every worker; with the option on, workers keep running
+ * unsupervised and a later viewer session reattaches to them through
+ * the shared database + framebuffer segments. */
+
+static int bg_allowed(Viewer *v) {
+    char *val = aos_labdb_meta_get(v->db, "lab.bg");
+    int on = val && !strcmp(val, "1");
+    free(val);
+    return on;
+}
+
+typedef struct {
+    Viewer *viewer;
+    GtkWidget *switch_;
+} SettingsDialog;
+
+static void on_settings_destroy(GtkWidget *widget, gpointer user_data) {
+    (void)widget;
+    g_free(user_data);
+}
+
+static void on_settings_confirm(GtkButton *button, gpointer user_data) {
+    (void)button;
+    SettingsDialog *d = user_data;
+    int on = gtk_switch_get_active(GTK_SWITCH(d->switch_));
+    aos_labdb_meta_set(d->viewer->db, "lab.bg", on ? "1" : "0");
+    gtk_window_destroy(GTK_WINDOW(gtk_widget_get_ancestor(
+        GTK_WIDGET(button), GTK_TYPE_WINDOW)));
+}
+
+static void on_settings_clicked(GtkButton *button, gpointer user_data) {
+    (void)button;
+    Viewer *v = user_data;
+    SettingsDialog *d = g_new0(SettingsDialog, 1);
+    d->viewer = v;
+    GtkWidget *win = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(win), "Lab settings");
+    gtk_window_set_transient_for(GTK_WINDOW(win), GTK_WINDOW(v->window));
+    gtk_window_set_modal(GTK_WINDOW(win), TRUE);
+    gtk_window_set_default_size(GTK_WINDOW(win), 420, -1);
+    g_signal_connect(win, "destroy",
+                     G_CALLBACK(on_settings_destroy), d);
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_widget_set_margin_start(box, 16);
+    gtk_widget_set_margin_end(box, 16);
+    gtk_widget_set_margin_top(box, 16);
+    gtk_widget_set_margin_bottom(box, 16);
+    gtk_window_set_child(GTK_WINDOW(win), box);
+    GtkWidget *srow = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_box_append(GTK_BOX(box), srow);
+    gtk_box_append(GTK_BOX(srow), gtk_label_new("Background workers:"));
+    d->switch_ = gtk_switch_new();
+    gtk_switch_set_active(GTK_SWITCH(d->switch_), bg_allowed(v));
+    gtk_widget_set_tooltip_text(
+        d->switch_,
+        "OFF (default): closing this window stops every worker. "
+        "ON: workers survive the viewer and keep learning; reopen "
+        "the viewer later to reattach.");
+    gtk_box_append(GTK_BOX(srow), d->switch_);
+    GtkWidget *note = gtk_label_new(
+        "Workers coordinate through the SQLite database, so they do "
+        "not need this window to keep working.");
+    gtk_label_set_wrap(GTK_LABEL(note), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(note), 0.0);
+    gtk_widget_add_css_class(note, "dim-label");
+    gtk_box_append(GTK_BOX(box), note);
+    GtkWidget *btns = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_set_halign(btns, GTK_ALIGN_END);
+    gtk_box_append(GTK_BOX(box), btns);
+    GtkWidget *ok = gtk_button_new_with_label("OK");
+    gtk_widget_add_css_class(ok, "suggested-action");
+    g_signal_connect(ok, "clicked", G_CALLBACK(on_settings_confirm), d);
+    gtk_box_append(GTK_BOX(btns), ok);
+    gtk_window_present(GTK_WINDOW(win));
+}
+
+/* On close: cooperative stop to every slot, then SIGTERM the children
+ * we spawned — unless background mode is allowed, in which case they
+ * are simply detached and keep running. */
+static gboolean on_close_request(GtkWindow *window, gpointer user_data) {
+    (void)window;
+    Viewer *v = user_data;
+    if (bg_allowed(v)) return FALSE; /* let it close, workers survive */
+    for (int i = 0; i < 8; ++i) worker_control(v, i, "stop");
+    for (int i = 0; i < 8; ++i) {
+        if (v->pids[i] > 0) {
+            kill(v->pids[i], SIGTERM);
+            v->pids[i] = -1;
+        }
+    }
+    return FALSE;
+}
+
 static void on_activate(GtkApplication *app, gpointer user_data) {
     Viewer *v = user_data;
     g_viewer = v;
+    for (int i = 0; i < 8; ++i) v->pids[i] = -1;
     v->window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(v->window), "Aria Lab — learning registry");
     gtk_window_set_default_size(GTK_WINDOW(v->window), 1280, 860);
+    g_signal_connect(v->window, "close-request",
+                     G_CALLBACK(on_close_request), v);
 
     /* status colours for worker cards */
     GtkCssProvider *css = gtk_css_provider_new();
@@ -926,6 +1173,24 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                      G_CALLBACK(on_all_stop_clicked), v);
     gtk_box_append(GTK_BOX(fleet), v->all_stop_button);
 
+    GtkWidget *all_play_button = gtk_button_new_with_label("Play all");
+    gtk_widget_add_css_class(all_play_button, "suggested-action");
+    gtk_widget_set_tooltip_text(
+        all_play_button,
+        "Resume every paused worker and respawn every stopped one "
+        "from its stored launch config");
+    g_signal_connect(all_play_button, "clicked",
+                     G_CALLBACK(on_play_all_clicked), v);
+    gtk_box_append(GTK_BOX(fleet), all_play_button);
+
+    GtkWidget *settings_button = gtk_button_new_with_label("Settings…");
+    gtk_widget_set_tooltip_text(
+        settings_button,
+        "Lab settings: background mode, purge policy");
+    g_signal_connect(settings_button, "clicked",
+                     G_CALLBACK(on_settings_clicked), v);
+    gtk_box_append(GTK_BOX(fleet), settings_button);
+
     GtkWidget *purge_button = gtk_button_new_with_label("Purge DB");
     gtk_widget_add_css_class(purge_button, "destructive-action");
     gtk_widget_set_tooltip_text(
@@ -948,7 +1213,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_scale_add_mark(GTK_SCALE(v->all_speed_scale), 16,
                        GTK_POS_BOTTOM, "x16");
     gtk_widget_set_hexpand(v->all_speed_scale, TRUE);
-    gtk_widget_set_size_request(v->all_speed_scale, 220, 24);
+    gtk_widget_set_size_request(v->all_speed_scale, 220, -1);
     gtk_widget_set_tooltip_text(
         v->all_speed_scale,
         "Speed cap applied to ALL workers: Auto = unthrottled, "
@@ -1052,6 +1317,24 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         g_object_set_data(G_OBJECT(stop), "wid", GINT_TO_POINTER(i));
         g_signal_connect(stop, "clicked", G_CALLBACK(on_stop_clicked), v);
         gtk_box_append(GTK_BOX(btns), stop);
+
+        GtkWidget *play = gtk_button_new_with_label("Play");
+        gtk_widget_set_tooltip_text(
+            play,
+            "Resume a paused worker, or respawn a stopped one from "
+            "its last launch config");
+        g_object_set_data(G_OBJECT(play), "wid", GINT_TO_POINTER(i));
+        g_signal_connect(play, "clicked", G_CALLBACK(on_play_clicked), v);
+        gtk_box_append(GTK_BOX(btns), play);
+
+        GtkWidget *best = gtk_button_new_with_label("Best");
+        gtk_widget_set_tooltip_text(
+            best,
+            "Smart restart: hop this worker to the fleet's "
+            "highest-value checkpoint");
+        g_object_set_data(G_OBJECT(best), "wid", GINT_TO_POINTER(i));
+        g_signal_connect(best, "clicked", G_CALLBACK(on_best_clicked), v);
+        gtk_box_append(GTK_BOX(btns), best);
         gtk_box_append(GTK_BOX(vbox), btns);
 
         GtkWidget *sbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
@@ -1069,7 +1352,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 16, GTK_POS_BOTTOM,
                            "x16");
         gtk_widget_set_hexpand(wc->speed_scale, TRUE);
-        gtk_widget_set_size_request(wc->speed_scale, 140, 24);
+        gtk_widget_set_size_request(wc->speed_scale, 140, -1);
         gtk_widget_set_tooltip_text(
             wc->speed_scale,
             "Emulation speed cap: Auto = unthrottled (fastest), "

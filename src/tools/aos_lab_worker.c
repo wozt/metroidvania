@@ -556,6 +556,12 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
     snprintf(ctrl_key, sizeof ctrl_key, "lab.control.%d", worker_id);
     aos_labdb_meta_set(db, ctrl_key, "run");
     aos_labdb_meta_set(db, phase_key, "scouting");
+    {
+        char lcfg[128], lkey[64];
+        snprintf(lcfg, sizeof lcfg, "mode=scout|chunks=%d", max_chunks);
+        snprintf(lkey, sizeof lkey, "worker.%d.launch", worker_id);
+        aos_labdb_meta_set(db, lkey, lcfg);
+    }
     aos_labdb_begin_run(db, rom, "scout early game");
 
     uint64_t seen[1024];
@@ -973,6 +979,19 @@ int main(int argc, char **argv) {
     snprintf(ctrl_key, sizeof ctrl_key, "lab.control.%d", worker_id);
     aos_labdb_meta_set(db, ctrl_key, "run");
 
+    /* persist the launch config so the viewer can respawn this exact
+     * batch after a stop (Play button reads worker.N.launch) */
+    {
+        char lcfg[160];
+        snprintf(lcfg, sizeof lcfg,
+                 "state=%lld|iters=%d|mode=trial|frames=%d",
+                 (long long)state_id, iterations,
+                 frames_override > 0 ? frames_override : 120);
+        char lkey[64];
+        snprintf(lkey, sizeof lkey, "worker.%d.launch", worker_id);
+        aos_labdb_meta_set(db, lkey, lcfg);
+    }
+
     int64_t run_id = aos_labdb_begin_run(db, rom, "worker batch");
     aos_labdb_meta_set(db, phase_key, "running");
     char run_buf[32];
@@ -982,6 +1001,11 @@ int main(int argc, char **argv) {
     int stop_requested = 0;
     int stuck_streak = 0;
     uint64_t last_scene = 0;
+    /* smart restart: EMA of this worker's rewards vs the fleet's best
+     * branch — hop to the best checkpoint when clearly behind, and on
+     * demand via the viewer's "best" control */
+    double reward_ema = 0.0;
+    int branch_hops = 0, branch_request = 0;
     struct timeval t0, t1;
 
     /* bandit over actions: weights table gives each (action,params)
@@ -1039,10 +1063,42 @@ int main(int argc, char **argv) {
                 if (control && !strcmp(control, "resume")) {
                     aos_labdb_meta_set(db, ctrl_key, "run");
                 }
+                if (control && !strcmp(control, "best")) {
+                    aos_labdb_meta_set(db, ctrl_key, "run");
+                    branch_request = 1;
+                }
                 if (control && !strcmp(control, "stop")) stop_requested = 1;
                 free(control);
             }
             if (stop_requested) break;
+            /* smart restart: every 60 trials, or on demand, hop to the
+             * fleet's highest-value checkpoint when this worker's EMA
+             * reward is clearly below it */
+            if (branch_request || (trials_done && trials_done % 60 == 0)) {
+                double bv = 0.0;
+                int64_t bs = aos_labdb_best_state(db, &bv);
+                if (bs > 0 && bs != state_id && branch_hops < 8 &&
+                    (branch_request || bv > reward_ema + 0.35)) {
+                    size_t nsz = 0;
+                    uint8_t *nb = aos_labdb_state_blob(db, bs, &nsz);
+                    if (nb) {
+                        free(state_blob);
+                        state_blob = nb;
+                        blob_size = nsz;
+                        state_id = bs;
+                        ++branch_hops;
+                        branch_request = 0;
+                        char st[96];
+                        snprintf(st, sizeof st,
+                                 "branch->state %lld (v=%.2f)",
+                                 (long long)bs, bv);
+                        aos_labdb_meta_set(db, status_key, st);
+                        printf("worker %d %s\n", worker_id, st);
+                    }
+                } else {
+                    branch_request = 0;
+                }
+            }
             aos_labdb_meta_set(db, phase_key, "running");
             /* choose params: exploit best weight or explore randomly */
             char params_buf[512];
@@ -1390,10 +1446,36 @@ int main(int argc, char **argv) {
             }
             /* stuck detection: long streak of zero-reward fails on the
              * same scene means the worker is spinning wheels */
+            reward_ema = reward_ema * 0.92 + reward * 0.08;
             if (reward <= 0.0 && scene_hash == last_scene) ++stuck_streak;
             else if (reward > 0.0) { stuck_streak = 0; last_scene = scene_hash; }
             else last_scene = scene_hash;
             if (stuck_streak >= 400) {
+                /* barren streak: hop to the best branch once before
+                 * giving up — a fresh frontier beats spinning wheels */
+                double bv = 0.0;
+                int64_t bs = aos_labdb_best_state(db, &bv);
+                if (bs > 0 && bs != state_id && branch_hops < 8) {
+                    size_t nsz = 0;
+                    uint8_t *nb = aos_labdb_state_blob(db, bs, &nsz);
+                    if (nb) {
+                        free(state_blob);
+                        state_blob = nb;
+                        blob_size = nsz;
+                        state_id = bs;
+                        ++branch_hops;
+                        stuck_streak = 0;
+                        last_scene = 0;
+                        char st[96];
+                        snprintf(st, sizeof st,
+                                 "stuck->branch state %lld (v=%.2f)",
+                                 (long long)bs, bv);
+                        aos_labdb_meta_set(db, status_key, st);
+                        printf("worker %d %s\n", worker_id, st);
+                        fflush(stdout);
+                        continue;
+                    }
+                }
                 aos_labdb_meta_set(db, phase_key, "stuck");
                 aos_labdb_meta_set(db, status_key,
                                    "stuck: 400 barren trials");

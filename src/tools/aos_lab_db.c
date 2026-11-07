@@ -308,6 +308,58 @@ AosTrialRow *aos_labdb_recent_trials(AosLabDb *db, int limit, int *out_count) {
     return rows;
 }
 
+static AosStateRow *states_query(AosLabDb *db, int limit, int *out_count,
+                               const char *where) {
+    *out_count = 0;
+    sqlite3_stmt *st = NULL;
+    char sql[512];
+    snprintf(sql, sizeof sql,
+        "SELECT id,name,note,parent_id,blob_size,created_at FROM states"
+        " %s ORDER BY id DESC LIMIT ?", where);
+    if (sqlite3_prepare_v2(db->handle, sql, -1, &st, NULL) != SQLITE_OK)
+        return NULL;
+    sqlite3_bind_int(st, 1, limit);
+    int cap = 16, n = 0;
+    AosStateRow *rows = malloc(cap * sizeof *rows);
+    while (sqlite3_step(st) == SQLITE_ROW) {
+        if (n == cap) {
+            cap *= 2;
+            rows = realloc(rows, cap * sizeof *rows);
+        }
+        AosStateRow *r = &rows[n++];
+        memset(r, 0, sizeof *r);
+        r->id = sqlite3_column_int64(st, 0);
+        r->name = col_text(st, 1);
+        r->note = col_text(st, 2);
+        r->parent_id = sqlite3_column_int64(st, 3);
+        r->blob_size = sqlite3_column_int(st, 4);
+        r->created_at = col_text(st, 5);
+    }
+    sqlite3_finalize(st);
+    *out_count = n;
+    return rows;
+}
+
+AosStateRow *aos_labdb_states(AosLabDb *db, int limit, int *out_count) {
+    return states_query(db, limit, out_count, "");
+}
+
+/* Launch-worthy checkpoints only: states a trial actually used, the
+ * validated scout_play_* checkpoints, and manual/other records —
+ * everything the purge would keep. Follows the same rhythm as the
+ * cleanup rules so the picker never lists dead scene dumps. */
+AosStateRow *aos_labdb_valuable_states(AosLabDb *db, int limit,
+                                       int *out_count) {
+    return states_query(db, limit, out_count,
+        "WHERE (name LIKE 'scout_play%'"
+        " AND id IN (SELECT id FROM states WHERE name LIKE 'scout_play%'"
+        " ORDER BY id DESC LIMIT 40))"
+        " OR (name NOT LIKE 'scout_c%' AND name NOT LIKE 'scout_play%'"
+        " AND name NOT LIKE 'auto_%')"
+        " OR id IN (SELECT state_id FROM trials WHERE reward > 0.5"
+        " AND state_id IS NOT NULL)");
+}
+
 AosWeightRow *aos_labdb_weights(AosLabDb *db, int limit, int *out_count) {
     *out_count = 0;
     sqlite3_stmt *st = NULL;
@@ -342,35 +394,6 @@ AosWeightRow *aos_labdb_weights(AosLabDb *db, int limit, int *out_count) {
     return rows;
 }
 
-AosStateRow *aos_labdb_states(AosLabDb *db, int limit, int *out_count) {
-    *out_count = 0;
-    sqlite3_stmt *st = NULL;
-    const char *sql =
-        "SELECT id,name,note,parent_id,blob_size,created_at FROM states"
-        " ORDER BY id DESC LIMIT ?";
-    if (sqlite3_prepare_v2(db->handle, sql, -1, &st, NULL) != SQLITE_OK)
-        return NULL;
-    sqlite3_bind_int(st, 1, limit);
-    int cap = 16, n = 0;
-    AosStateRow *rows = malloc(cap * sizeof *rows);
-    while (sqlite3_step(st) == SQLITE_ROW) {
-        if (n == cap) {
-            cap *= 2;
-            rows = realloc(rows, cap * sizeof *rows);
-        }
-        AosStateRow *r = &rows[n++];
-        memset(r, 0, sizeof *r);
-        r->id = sqlite3_column_int64(st, 0);
-        r->name = col_text(st, 1);
-        r->note = col_text(st, 2);
-        r->parent_id = sqlite3_column_int64(st, 3);
-        r->blob_size = sqlite3_column_int(st, 4);
-        r->created_at = col_text(st, 5);
-    }
-    sqlite3_finalize(st);
-    *out_count = n;
-    return rows;
-}
 
 AosActionRow *aos_labdb_actions(AosLabDb *db, int *out_count) {
     *out_count = 0;
@@ -564,4 +587,28 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
                                    counts[5] + counts[6];
     return counts[0] + counts[1] + counts[2] + counts[3] + counts[4] +
            counts[5] + counts[6];
+}
+
+/* Best branch by observed value: the state whose trials produced the
+ * highest reward, tie-broken by the most recent trial. Used by workers
+ * for smart restarts — jump to whatever checkpoint proved most
+ * interesting instead of replaying a stale base state. */
+int64_t aos_labdb_best_state(AosLabDb *db, double *out_value) {
+    static const char *sql =
+        "SELECT state_id, MAX(reward) FROM trials"
+        " WHERE state_id IS NOT NULL"
+        " GROUP BY state_id ORDER BY MAX(reward) DESC,"
+        " MAX(id) DESC LIMIT 1";
+    sqlite3_stmt *st = NULL;
+    int64_t id = -1;
+    double val = 0.0;
+    if (sqlite3_prepare_v2(db->handle, sql, -1, &st, NULL) == SQLITE_OK) {
+        if (sqlite3_step(st) == SQLITE_ROW) {
+            id = sqlite3_column_int64(st, 0);
+            val = sqlite3_column_double(st, 1);
+        }
+        sqlite3_finalize(st);
+    }
+    if (out_value) *out_value = val;
+    return id;
 }

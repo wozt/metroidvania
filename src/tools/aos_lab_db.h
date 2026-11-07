@@ -121,3 +121,12 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
 #endif
 
 #endif /* AOS_LAB_DB_H */
+
+/* Highest-value checkpoint: state_id whose trials reached the max
+ * reward (most interesting branch so far). -1 when no trials. */
+int64_t aos_labdb_best_state(AosLabDb *db, double *out_value);
+
+/* States worth launching from: trial-referenced, scout_play_* and
+ * manual records — mirrors the purge keep-rules. */
+AosStateRow *aos_labdb_valuable_states(AosLabDb *db, int limit,
+                                       int *out_count);

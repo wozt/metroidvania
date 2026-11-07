@@ -100,6 +100,25 @@ Last updated: **2026-11-07**.
 - Best-worker highlight: the viewer computes each worker's mean
   reward (worker.N.rsum / worker.N.rn meta, updated per trial) and
   draws a green outline on the top-performing slot.
+- Smart restart on the best branch: every 60 trials (and on demand via
+  the per-card "Best" button -> lab.control.N=best) a worker compares
+  its reward EMA against the fleet's highest-value checkpoint
+  (aos_labdb_best_state: state whose trials reached max reward) and
+  hops to it when clearly behind; a 400-trial barren streak also hops
+  branches (max 8 hops) before declaring stuck. Each worker persists
+  its launch config in worker.N.launch so the viewer's Play buttons
+  can respawn stopped workers: per-card Play/Best and fleet "Play
+  all" (resume paused, respawn dead from stored config).
+- Worker lifecycle in the viewer: each spawned child pid is tracked
+  per slot; closing the window sends a cooperative stop and SIGTERM to
+  every child unless the user enabled the background switch in
+  Settings (lab.bg meta, off by default). With background on, workers
+  keep running unsupervised and a later viewer reattaches through the
+  shared database and framebuffer segments.
+- The launch state picker lists only launch-worthy checkpoints
+  (aos_labdb_valuable_states): the newest 40 scout_play_* checkpoints,
+  manual records, and states whose trials scored reward > 0.5 —
+  mirroring the purge keep-rules instead of dumping every scene state.
 - peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.
 

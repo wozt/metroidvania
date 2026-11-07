@@ -40,3 +40,8 @@ void aos_vision_metrics_append(char *metrics, size_t size,
 uint64_t aos_vision_tilemap(const uint16_t *regs,
                             const uint8_t *vram, size_t vram_size,
                             char *out, size_t out_size);
+
+/* Fraction of central-band pixels that changed between two frames,
+ * plus optional direction (-1 left .. +1 right). */
+double aos_vision_motion(const uint32_t *a, const uint32_t *b,
+                         int w, int h, double *dir_out);

@@ -222,6 +222,15 @@ static void run_on_thread(struct mCoreThread *thread) {
         }
         core->setKeys(core, keys);
         core->runFrame(core);
+        if (frame == 0 && g_ctx.result && !g_ctx.result->fb_first) {
+            g_ctx.result->fb_first = malloc(AOS_MGBA_WIDTH *
+                                            AOS_MGBA_HEIGHT *
+                                            sizeof(uint32_t));
+            if (g_ctx.result->fb_first)
+                memcpy(g_ctx.result->fb_first, s->framebuffer,
+                       AOS_MGBA_WIDTH * AOS_MGBA_HEIGHT *
+                       sizeof(uint32_t));
+        }
         if (spec->fb_mirror &&
             (!spec->fb_interval || frame % spec->fb_interval == 0)) {
             memcpy(spec->fb_mirror, s->framebuffer,
@@ -341,6 +350,8 @@ void aos_mgba_free_result(AosRunResult *result) {
     free(result->peeks);
     result->peeks = NULL;
     result->peek_count = 0;
+    free(result->fb_first);
+    result->fb_first = NULL;
 }
 
 bool aos_mgba_save_state(AosMgbaSession *s, const char *path) {

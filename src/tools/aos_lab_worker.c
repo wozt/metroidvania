@@ -566,8 +566,7 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         free(ctl);
         if (stop) break;
 
-        /* level-based schedule: A taps to advance text, occasional
-         * START for menus, RIGHT held for the last 80 frames */
+        /* phase 1: 520 frames advancing text/menus (A taps, START) */
         AosKeyEvent ev[32];
         int ne = 0;
         ev[ne++] = (AosKeyEvent){0, 0};
@@ -575,26 +574,15 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
             ev[ne++] = (AosKeyEvent){40, 8};
             ev[ne++] = (AosKeyEvent){55, 0};
         }
-        for (int f = 120; f < 540; f += 140) {
+        for (int f = 120; f < 510; f += 140) {
             ev[ne++] = (AosKeyEvent){f, 1};
             ev[ne++] = (AosKeyEvent){f + 12, 0};
         }
-        /* alternate pulse direction: RIGHT can stall against a wall,
-         * LEFT explores the other way */
-        ev[ne++] = (AosKeyEvent){520, (chunk & 1) ? 32 : 16};
-        ev[ne++] = (AosKeyEvent){599, 0};
-
-        AosPeekRequest pk[3];
-        pk[0] = (AosPeekRequest){0, 0x02000524, 4};  /* posX chunk start */
-        pk[1] = (AosPeekRequest){598, 0x02000524, 4};/* posX after pulse */
-        pk[2] = (AosPeekRequest){598, 0x02000010, 4};/* gameMode end */
         AosRunSpec spec;
         memset(&spec, 0, sizeof spec);
-        spec.frames = 600;
+        spec.frames = 520;
         spec.keys = ev;
         spec.key_count = ne;
-        spec.peeks = pk;
-        spec.peek_count = 3;
         {
             char sk[64];
             snprintf(sk, sizeof sk, "worker.%d.speed", worker_id);
@@ -608,15 +596,43 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
             spec.fb_seq = fb.seq;
             spec.fb_interval = 2;
         }
-        AosRunResult res;
-        aos_mgba_run(session, &spec, &res);
+        AosRunResult res1;
+        aos_mgba_run(session, &spec, &res1);
+        aos_mgba_free_result(&res1);
 
-        int mode = res.peeks[2].data ? res.peeks[2].data[0] : -1;
-        int32_t x0 = res.peeks[0].data ? peek_i32(&res.peeks[0]) : 0;
-        int32_t x1 = res.peeks[1].data ? peek_i32(&res.peeks[1]) : 0;
-        /* real walking gives ~1.5px/frame -> >4px in the 80-frame
-         * pulse; cutscene drift stays below that */
-        int responsive = (x1 - x0 > 0x40000) || (x0 - x1 > 0x40000);
+        /* phase 2: 80-frame directional pulse. fb_first = the frame
+         * right before the pulse, so screen motion measures exactly
+         * the player's response — no WRAM entity layout needed. */
+        uint32_t pulse = (chunk & 1) ? 32 : 16; /* LEFT / RIGHT */
+        AosKeyEvent pev[2] = {{0, pulse}, {79, 0}};
+        AosPeekRequest pk[1] = {{-1, 0x02000010, 4}}; /* gameMode end */
+        AosRunSpec spec2;
+        memset(&spec2, 0, sizeof spec2);
+        spec2.frames = 80;
+        spec2.keys = pev;
+        spec2.key_count = 2;
+        spec2.peeks = pk;
+        spec2.peek_count = 1;
+        spec2.fps_cap = spec.fps_cap;
+        if (fb_ok) {
+            spec2.fb_mirror = fb.pixels;
+            spec2.fb_seq = fb.seq;
+            spec2.fb_interval = 2;
+        }
+        AosRunResult res2;
+        aos_mgba_run(session, &spec2, &res2);
+
+        int mode = res2.peeks[0].data ? res2.peeks[0].data[0] : -1;
+        double mdir = 0.0;
+        double motion = res2.fb_first
+            ? aos_vision_motion(res2.fb_first,
+                                aos_mgba_framebuffer(session),
+                                AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT, &mdir)
+            : 0.0;
+        /* >0.8% of central pixels changed during the 80-frame pulse:
+         * walking moves far more, idle animation far less */
+        int responsive = motion > 0.008;
+        aos_mgba_free_result(&res2);
 
         const uint32_t *fbpx = aos_mgba_framebuffer(session);
         AosSceneFeat feat;
@@ -654,8 +670,8 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 char nm[96], note[160];
                 snprintf(nm, sizeof nm, "scout_play_%03d", chunk);
                 snprintf(note, sizeof note,
-                         "responsive RIGHT dx=%d scene=%016llx",
-                         (int)(x1 - x0),
+                         "responsive pulse motion=%.4f scene=%016llx",
+                         motion,
                          (unsigned long long)feat.scene_hash);
                 aos_labdb_add_state(db, nm, note, 0, blob, ns);
                 free(blob);
@@ -683,9 +699,8 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         }
         char st[160];
         snprintf(st, sizeof st,
-                 "chunk %d mode=%d pos=%d->%d resp=%d states=%d",
-                 chunk, mode, (int)(x0 >> 16), (int)(x1 >> 16),
-                 responsive, nseen);
+                 "chunk %d mode=%d motion=%.3f resp=%d states=%d",
+                 chunk, mode, motion, responsive, nseen);
         aos_labdb_meta_set(db, status_key, st);
         printf("scout %s\n", st);
         fflush(stdout);
@@ -1141,6 +1156,24 @@ int main(int argc, char **argv) {
                                    &feat);
                 aos_vision_metrics_append(metrics, sizeof metrics, &feat);
                 scene_hash = feat.scene_hash;
+                /* motion between frame 0 and the last frame — the
+                 * reliable "did anything move" signal that does not
+                 * depend on WRAM entity layout */
+                double motion = 0.0, movedir = 0.0;
+                if (res.fb_first) {
+                    motion = aos_vision_motion(res.fb_first, fb,
+                        AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT, &movedir);
+                    size_t ml = strlen(metrics);
+                    if (ml && metrics[ml - 1] == '}') {
+                        char extra[80];
+                        snprintf(extra, sizeof extra,
+                                 ",\"motion\":%.4f,\"mdir\":%.2f}",
+                                 motion, movedir);
+                        metrics[ml - 1] = 0;
+                        strncat(metrics, extra,
+                                sizeof metrics - ml - 1);
+                    }
+                }
                 /* tilemap OCR signature from the post-run VRAM peek
                  * plus the session's video-register snapshot */
                 {

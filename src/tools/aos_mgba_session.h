@@ -66,6 +66,7 @@ typedef struct {
     int peek_count;
     bool state_out_ok;
     uint16_t video_regs[8]; /* DISPCNT + BGCNT0..3 at run end */
+    uint32_t *fb_first;   /* framebuffer after frame 0 (malloc'd) */
 } AosRunResult;
 
 /* Open a session and load the ROM. On failure returns NULL and fills err. */

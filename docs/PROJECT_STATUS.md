@@ -53,6 +53,16 @@ Last updated: **2026-11-07**.
   with txtrows (dense tile rows = text/UI lines) and tileuses.
   Glyph decoding still needs the font table; tile identity is now
   tracked per trial.
+- Motion-based responsiveness: the session captures the framebuffer
+  after frame 0 of every run (AosRunResult.fb_first); the scout now
+  splits each chunk into a 520-frame text/menu phase and an 80-frame
+  directional pulse, and validates free gameplay when >0.8% of
+  central pixels change during the pulse (two consecutive chunks,
+  mode 4). WRAM entity addresses proved unreliable for position —
+  entityData[0] was empty in gameplay states. First validated
+  checkpoint: scout_play_010.
+- Per-trial motion metric (motion/mdir in metrics JSON) replaces the
+  unreliable position probe as the movement signal.
 - Worker liveness: every trial/chunk updates worker.N.hb (epoch ms);
   the viewer flags any slot claiming to run with a heartbeat older
   than 15 s as STALE (red border). Workers self-detect stalls: 400

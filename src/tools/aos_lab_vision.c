@@ -219,3 +219,33 @@ uint64_t aos_vision_tilemap(const uint16_t *regs,
     (void)w;
     return all;
 }
+
+/* Motion between two frames: fraction of central-screen pixels whose
+ * RGB changed meaningfully, plus a left/right direction signal.
+ * Robust to entity layout — pure pixels. */
+double aos_vision_motion(const uint32_t *a, const uint32_t *b,
+                         int w, int h, double *dir_out) {
+    if (!a || !b || w <= 0 || h <= 0) return 0.0;
+    /* central band where the player lives */
+    int x0 = w / 5, x1 = w - w / 5;
+    int y0 = h / 4, y1 = h - h / 5;
+    long changed = 0, total = 0, dl = 0, dr = 0;
+    for (int y = y0; y < y1; ++y) {
+        for (int x = x0; x < x1; ++x) {
+            uint32_t pa = a[y * w + x], pb = b[y * w + x];
+            int dr_ = abs((int)(pa & 0xFF) - (int)(pb & 0xFF));
+            int dg = abs((int)((pa >> 8) & 0xFF) -
+                         (int)((pb >> 8) & 0xFF));
+            int db = abs((int)((pa >> 16) & 0xFF) -
+                         (int)((pb >> 16) & 0xFF));
+            if (dr_ + dg + db > 60) {
+                ++changed;
+                if (x < (x0 + x1) / 2) ++dl; else ++dr;
+            }
+            ++total;
+        }
+    }
+    if (dir_out) *dir_out = dr + dl ? (double)(dr - dl) / (dr + dl)
+                                    : 0.0;
+    return total ? (double)changed / (double)total : 0.0;
+}

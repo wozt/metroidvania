@@ -5270,6 +5270,10 @@ int aria_runtime_main(int argc, char **argv) {
     AosQuickMap quick_map = {0};
     bool have_quick_map = false;
     bool quick_map_open = false;
+    /* sub_080110E4's BLDY stages: 16->0 over four frames on open, then
+     * 0->16 over four frames on close before the map hands back. */
+    int quick_map_bldY = 0;
+    bool quick_map_closing = false;
     SDL_Texture *quick_map_texture = NULL;
     AosIntroResources opening_resources = {0};
     AosIntroFont opening_font = {0};
@@ -5904,10 +5908,23 @@ int aria_runtime_main(int argc, char **argv) {
             soul_menu.sleep_available = has_active_save;
             unsigned soul_menu_event = 0;
             if (quick_map_open) {
-                if (aria_input.new_input & (AOS_KEY_SELECT | AOS_KEY_B)) {
-                    quick_map_open = false;
+                /* BLDY ramps 4/frame like sub_080110E4's stages. */
+                if (quick_map_closing) {
+                    quick_map_bldY += 4;
+                    if (quick_map_bldY >= 16) {
+                        quick_map_bldY = 16;
+                        quick_map_open = false;
+                        quick_map_closing = false;
+                        printf("Quick map closed\n");
+                    }
+                } else if (quick_map_bldY > 0) {
+                    quick_map_bldY -= 4;
+                    if (quick_map_bldY < 0) quick_map_bldY = 0;
+                }
+                if (quick_map_open && quick_map_bldY == 0 && !quick_map_closing &&
+                    (aria_input.new_input & (AOS_KEY_SELECT | AOS_KEY_B))) {
+                    quick_map_closing = true;
                     aos_audio_play_song(AOS_AUDIO_RESUME);
-                    printf("Quick map closed\n");
                 }
                 ++step;
                 if (has_active_save) active_save.play_frames++;
@@ -5921,6 +5938,8 @@ int aria_runtime_main(int argc, char **argv) {
                                         soma.x >> 16, soma.y >> 16,
                                         error, sizeof error)) {
                     quick_map_open = true;
+                    quick_map_bldY = 16;
+                    quick_map_closing = false;
                     aos_audio_play_song(AOS_AUDIO_PAUSE);
                     printf("Quick map opened\n");
                 } else {
@@ -6912,10 +6931,19 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
         }
-        if (quick_map_open)
+        if (quick_map_open) {
             draw_native_quick_map(renderer, quick_map_texture, &quick_map,
                                   &progress, (uint32_t)step);
-        else if (!draw_native_equip(renderer, pause_texture, &pause_graphics,
+            /* BLDY brightness stages: black veil weight = bldY/16. */
+            if (quick_map_bldY > 0) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0,
+                                       (uint8_t)(quick_map_bldY * 255 / 16));
+                SDL_FRect whole = {0, 0, VIEW_W, VIEW_H};
+                SDL_RenderFillRect(renderer, &whole);
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+            }
+        } else if (!draw_native_equip(renderer, pause_texture, &pause_graphics,
                                     &soul_menu, &progress,
                                     have_equipment ? &equipment : NULL) &&
                  !draw_native_soul_set(renderer, pause_texture, &pause_graphics,

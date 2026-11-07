@@ -1,6 +1,27 @@
 # Project status
 
-Last updated: **2026-11-05**.
+Last updated: **2026-11-06**.
+
+## Patch 0786 - SELECT quick map native brightness stages
+
+- `sub_080110E4`'s stage machine fades the map with BLDY: 16 down to 0 in
+  steps of 4 over four frames on open (stage 1), then 0 up to 16 in steps
+  of 4 over four frames on close (stage 3) before gameplay resumes.
+- The room runtime now carries `quick_map_bldY`/`quick_map_closing`: the
+  SELECT press opens with bldY 16, each frame ramps 4 toward the target,
+  input is ignored until bldY reaches 0, and B/SELECT only starts the
+  close ramp — the map stays interactive-free for the four fade-out
+  frames, matching the native stages that do not poll keys.
+- The renderer draws the same black veil weight (`bldY/16`) over the
+  native map texture during both ramps; before, open and close were
+  instant.
+- Audited the remaining SELECT divergence: native edge value 1 resolves
+  through `sub_08012104`/`sub_08012078` against the `sUnk_081183B0`
+  secret-room coordinate table (13 signed pairs extracted from the ROM)
+  and the `unk_60.unk_33C` discovery bits set by `sub_080120AC` on room
+  entry. The portable still renders every secret edge as undiscovered;
+  wiring the discovery bits through room entry and a save-schema field
+  remains open.
 
 ## Patch 0785 - Aria introduction alpha and fade fidelity
 

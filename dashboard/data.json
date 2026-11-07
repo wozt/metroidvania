@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T23:35:22+00:00",
+ "generated_at": "2026-11-07T23:42:37+00:00",
  "git": {
-  "commit": "dbc186b1",
+  "commit": "25fa65d5",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "25fa65d5",
+   "date": "2026-11-08",
+   "subject": "Lab: scout room registry, door pulses, longer traversal trials",
+   "scope": "project"
+  },
+  {
    "commit": "dbc186b1",
    "date": "2026-11-08",
    "subject": "Lab: smart branch restart, worker lifecycle control, lean state picker",
@@ -20789,12 +20795,6 @@
    "commit": "0afd0b47",
    "date": "2026-11-07",
    "subject": "Compose Aria dialogue through native BG0",
-   "scope": "project"
-  },
-  {
-   "commit": "c6cd2557",
-   "date": "2026-11-07",
-   "subject": "Match Aria dialogue blend and wait marker",
    "scope": "project"
   }
  ],

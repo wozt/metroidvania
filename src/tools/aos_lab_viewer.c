@@ -150,6 +150,7 @@ static GtkWidget *scrolled_page(GListStore **store_out,
 }
 
 static void store_row(GListStore *store, const char *line) {
+    if (!store || !G_IS_LIST_STORE(store)) return;
     GtkStringObject *obj = gtk_string_object_new(line);
     g_list_store_append(store, obj);
     g_object_unref(obj);
@@ -171,6 +172,7 @@ static void row_printf(GString *out, const char *fmt, ...) {
 
 static void log_append(Viewer *v, int worker_id, const char *text,
                        gsize len) {
+    if (!v->log_buffer) return;
     GtkTextIter end;
     gtk_text_buffer_get_end_iter(v->log_buffer, &end);
     if (worker_id >= 0) {
@@ -430,6 +432,7 @@ static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
 /* ---- refresh -------------------------------------------------------- */
 
 static void refresh_trials(Viewer *v) {
+    if (!v->trials_store) return;
     int count = 0;
     AosTrialRow *rows = aos_labdb_recent_trials(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->trials_store);
@@ -471,6 +474,8 @@ static void refresh_trials(Viewer *v) {
 }
 
 static void refresh_weights(Viewer *v) {
+    if (!v->weights_store) return;
+    if (!v->weights_store) return;
     int count = 0;
     AosWeightRow *rows = aos_labdb_weights(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->weights_store);
@@ -496,6 +501,8 @@ static void refresh_weights(Viewer *v) {
 }
 
 static void refresh_states(Viewer *v) {
+    if (!v->states_store) return;
+    if (!v->states_store) return;
     int count = 0;
     AosStateRow *rows = aos_labdb_states(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->states_store);
@@ -536,6 +543,8 @@ static void refresh_states(Viewer *v) {
 }
 
 static void refresh_runs(Viewer *v) {
+    if (!v->runs_store) return;
+    if (!v->runs_store) return;
     int count = 0;
     AosRunRow *rows = aos_labdb_runs(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->runs_store);

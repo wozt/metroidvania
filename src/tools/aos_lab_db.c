@@ -17,7 +17,19 @@ struct AosLabDb {
 };
 
 static const char *SCHEMA =
+    /* lab data is reproducible experiment output, not user documents:
+     * skip per-commit fsyncs and keep temp b-trees in RAM so the
+     * workers do not hammer the disk */
     "PRAGMA journal_mode=WAL;"
+    "PRAGMA synchronous=OFF;"
+    "PRAGMA temp_store=MEMORY;"
+    "PRAGMA wal_autocheckpoint=4000;"
+    /* keep the database effectively in RAM: mmap the main file and a
+     * 64 MiB page cache per connection — workers read state blobs
+     * constantly and the OS page cache was already doing this, now it
+     * is explicit */
+    "PRAGMA mmap_size=1073741824;"
+    "PRAGMA cache_size=-65536;"
     "CREATE TABLE IF NOT EXISTS meta("
     "  key TEXT PRIMARY KEY, value TEXT);"
     "CREATE TABLE IF NOT EXISTS runs("
@@ -570,9 +582,31 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
         " WHERE state_id IS NOT NULL)"
         " AND id < (SELECT COALESCE(MAX(id),0) FROM states"
         " WHERE name LIKE 'auto_%') - 50",
+        /* hard cap: keep only the 300 most valuable states overall.
+         * Score = best trial reward on that state + bonuses for
+         * validated play checkpoints and manual records, minus a
+         * penalty for raw scene dumps. Everything else goes — this
+         * is what makes the list actually shrink over time. */
+        "DELETE FROM states WHERE id NOT IN ("
+        " SELECT id FROM ("
+        "  SELECT s.id,"
+        "   COALESCE((SELECT MAX(t.reward) FROM trials t"
+        "    WHERE t.state_id=s.id),0)"
+        "   + CASE WHEN s.name LIKE 'scout_play%' THEN 2.0 ELSE 0 END"
+        "   + CASE WHEN s.name LIKE 'scout_c%' OR s.name LIKE 'auto_%'"
+        "     THEN 0.0 ELSE 1.0 END"
+        "   - CASE WHEN s.name LIKE 'scout_c%' THEN 0.5 ELSE 0 END"
+        "  FROM states s ORDER BY 2 DESC, s.id DESC LIMIT 300) k)",
+        /* trials pointing at deleted states are dead weight too */
+        "DELETE FROM trials WHERE state_id IS NOT NULL"
+        " AND state_id NOT IN (SELECT id FROM states)",
+        /* bound the trial log itself: newest 8000 rows is plenty of
+         * learning history for the weight tables */
+        "DELETE FROM trials WHERE id NOT IN ("
+        " SELECT id FROM trials ORDER BY id DESC LIMIT 8000)",
     };
-    int counts[7] = {0, 0, 0, 0, 0, 0, 0};
-    for (int i = 0; i < 7; ++i) {
+    int counts[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < 10; ++i) {
         sqlite3_stmt *st = NULL;
         if (sqlite3_prepare_v2(db->handle, sqls[i], -1, &st, NULL) !=
             SQLITE_OK)
@@ -584,9 +618,9 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
     if (out_trials) *out_trials = counts[0];
     if (out_weights) *out_weights = counts[1];
     if (out_states) *out_states = counts[2] + counts[3] + counts[4] +
-                                   counts[5] + counts[6];
+                                   counts[5] + counts[6] + counts[7];
     return counts[0] + counts[1] + counts[2] + counts[3] + counts[4] +
-           counts[5] + counts[6];
+           counts[5] + counts[6] + counts[7] + counts[8] + counts[9];
 }
 
 /* Best branch by observed value: the state whose trials produced the

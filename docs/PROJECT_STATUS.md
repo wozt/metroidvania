@@ -127,6 +127,21 @@ Last updated: **2026-11-07**.
   doors and room transitions are reachable, and a probe-fail that
   still earned exploration reward is recorded as "partial" instead of
   "fail" so the weight table does not treat it as a dead spin.
+- Disk budget: scout scene dumps are capped at 80 per run, play
+  checkpoints are saved only on scene change (or every 50 chunks),
+  and trial auto-checkpoints at 120 per worker — novelty is still
+  scored from the hash registry even when the blob is skipped.
+- SQLite is kept effectively in RAM: synchronous=OFF,
+  temp_store=MEMORY, wal_autocheckpoint=4000, mmap_size=1 GiB and a
+  64 MiB page cache per connection.
+- Purge now truly shrinks the registry: in addition to the dead-weight
+  rules it keeps only the 300 highest-value states overall (best trial
+  reward + scout_play/manual bonuses - scene-dump penalty), removes
+  trials referencing deleted states and caps the trial log at the
+  newest 8000 rows.
+- Viewer hardening: store_row/log_append and every refresh_* bail out
+  on NULL or invalid stores, turning the previous G_IS_LIST_STORE
+  criticals + segfault path into no-ops.
 - peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.
 

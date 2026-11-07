@@ -570,6 +570,7 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
     int in_game = 0;      /* sticky: mode 4 was reached once */
     int prev_mode = -1;   /* gameMode at end of previous chunk */
     int scout_area = -1, scout_room = -1, scout_rooms = 0;
+    int scene_saves = 0;
     for (int chunk = 0; chunk < max_chunks && !stop; ++chunk) {
         char *ctl = aos_labdb_meta_get(db, ctrl_key);
         if (ctl && !strcmp(ctl, "stop")) stop = 1;
@@ -707,6 +708,12 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         if (is_new) last_new_chunk = chunk;
         if (is_new && nseen < 1024) {
             seen[nseen++] = feat.scene_hash;
+            /* disk budget: scene dumps are exploratory footage — keep
+             * at most 80 per scout run; validated play checkpoints
+             * below are the ones that matter */
+            if (scene_saves >= 80) goto scout_skip_scene;
+            ++scene_saves;
+            {
             size_t ns = 0;
             uint8_t *blob = aos_mgba_save_state_blob(session, &ns);
             if (blob) {
@@ -718,9 +725,14 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 aos_labdb_add_state(db, nm, note, 0, blob, ns);
                 free(blob);
             }
+            }
         }
+        scout_skip_scene:
         resp_streak = (responsive && mode == 4) ? resp_streak + 1 : 0;
-        if (resp_streak >= 2) {
+        /* save a play checkpoint only when the scene actually changed
+         * (real progression) or every 50 chunks as a safety net —
+         * saving every chunk flooded the DB with ~300KB blobs */
+        if (resp_streak >= 2 && (is_new || chunk % 50 == 0)) {
             /* validated free-gameplay checkpoint: two consecutive
              * responsive chunks rule out cutscene drift */
             ++validated;
@@ -1037,7 +1049,7 @@ int main(int argc, char **argv) {
      * a random one. Total budget = iterations trials. */
     int total_trials = iterations;
     uint64_t seen_scenes[512];
-    int seen_count = 0;
+    int seen_count = 0, scene_saves2 = 0;
     for (int t = 0; t < total_trials && !stop_requested; ++t) {
         {
             AosActionRow *action;
@@ -1366,7 +1378,11 @@ int main(int argc, char **argv) {
                 int seen = 0;
                 for (int si = 0; si < seen_count; ++si)
                     if (seen_scenes[si] == scene_hash) { seen = 1; break; }
-                if (!seen && seen_count < 512) {
+                /* disk budget: auto checkpoints only while this worker
+                 * has fewer than 120 scene saves — novelty is still
+                 * scored via the hash registry above */
+                if (!seen && seen_count < 512 && scene_saves2 < 120) {
+                    ++scene_saves2;
                     seen_scenes[seen_count++] = scene_hash;
                     size_t ns = 0;
                     uint8_t *blob = aos_mgba_save_state_blob(session, &ns);

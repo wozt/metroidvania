@@ -84,6 +84,9 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | death | HP → 0 | −1.0 + branch ban |
 
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
+Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
+override) so the fleet covers both exploit and explore regimes instead
+of running four identical bandits.
 
 ## Branch management
 

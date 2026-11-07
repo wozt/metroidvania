@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T23:55:44+00:00",
+ "generated_at": "2026-11-07T23:57:13+00:00",
  "git": {
-  "commit": "0b574354",
+  "commit": "1df626ea",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "1df626ea",
+   "date": "2026-11-08",
+   "subject": "Lab: fleet culling, campaign progress metric, slider warning fix",
+   "scope": "project"
+  },
+  {
    "commit": "0b574354",
    "date": "2026-11-08",
    "subject": "Lab: lethal-branch ban, macro synthesis, lifecycle crash fix, LAB.md",
@@ -20789,12 +20795,6 @@
    "commit": "02ac12b2",
    "date": "2026-11-07",
    "subject": "Document the sub_0805D410 Object20 choreography audit",
-   "scope": "project"
-  },
-  {
-   "commit": "4eadf8ed",
-   "date": "2026-11-07",
-   "subject": "Document the sub_08067A04 dialogue-map audit",
    "scope": "project"
   }
  ],

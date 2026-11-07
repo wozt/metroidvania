@@ -1223,7 +1223,8 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                                                   0, 16, 1);
     gtk_scale_set_draw_value(GTK_SCALE(v->all_speed_scale), FALSE);
     gtk_widget_set_hexpand(v->all_speed_scale, TRUE);
-    gtk_widget_set_size_request(v->all_speed_scale, 220, -1);
+    gtk_widget_set_size_request(v->all_speed_scale, 220, 30);
+    gtk_widget_set_valign(v->all_speed_scale, GTK_ALIGN_CENTER);
     gtk_widget_set_tooltip_text(
         v->all_speed_scale,
         "Speed cap applied to ALL workers: Auto = unthrottled, "
@@ -1361,7 +1362,8 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                                                  0, 16, 1);
         gtk_scale_set_draw_value(GTK_SCALE(wc->speed_scale), FALSE);
         gtk_widget_set_hexpand(wc->speed_scale, TRUE);
-        gtk_widget_set_size_request(wc->speed_scale, 140, -1);
+        gtk_widget_set_size_request(wc->speed_scale, 140, 30);
+        gtk_widget_set_valign(wc->speed_scale, GTK_ALIGN_CENTER);
         gtk_widget_set_tooltip_text(
             wc->speed_scale,
             "Emulation speed cap: Auto = unthrottled (fastest), "

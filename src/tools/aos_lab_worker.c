@@ -1087,6 +1087,11 @@ int main(int argc, char **argv) {
         return rc;
     }
 
+    /* per-slot explore spread applied after arg parsing: slots cover
+     * 10-25% exploration so the fleet spans exploit..explore */
+    explore = 0.10 + 0.05 * (worker_id & 3);
+    if (getenv("AOS_LAB_EXPLORE")) explore = atof(getenv("AOS_LAB_EXPLORE"));
+
     if (state_id < 0) {
         fprintf(stderr, "--state ID is required for trials\n");
         aos_mgba_close(session);

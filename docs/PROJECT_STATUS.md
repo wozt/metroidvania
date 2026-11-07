@@ -163,6 +163,28 @@ Last updated: **2026-11-06**.
   wiring the discovery bits through room entry and a save-schema field
   remains open.
 
+## Patch 0786 - Aria intro presentation fixes
+
+- Removed the leftover `A OR START: SKIP` SDL debug overlay from the
+  introduction (`aos_title_preview.c`); the native A/START skip in
+  `aos_game_mode_intro_cutscene_update` is unchanged.
+- Fixed the castle superimposition during the stair scroll:
+  `render_intro_backgrounds` tiled each decoded bitmap infinitely, so the
+  castle re-entered view through the wrap. The native scroll offsets
+  (352/608/201 px against 512/768/512 px bitmaps) never leave
+  `height - 160`, so each layer is now drawn once at `-scroll`.
+- The room's area music now enters while the first-room opening event is
+  still active instead of being deferred to `opening.complete`, matching
+  the native room-entry `PlaySong`; Object20's story cues (MUS_16
+  confrontation, MUS_23 after the battle) still override mid-scene.
+- The opening dialogue panel lost the fake yellow advance square (the
+  native window shows none; A/START still pages) and gained a thin light
+  frame approximating the native message window; exact native window
+  metrics remain an open fidelity item.
+- Verified the gameplay HUD renders Soma's HP/MP bars (native `hud.bin`
+  tiles); no code change was needed — a missing `assets/extracted/aria/
+  metadata/hud.bin` next to the launched binary disables it silently.
+
 ## Patch 0785 - Aria introduction alpha and fade fidelity
 
 - Audited `GameModeIntroCutsceneUpdate` (stages 0-6), `sub_0803FC6C`/

@@ -5052,6 +5052,10 @@ static void draw_opening_text(SDL_Renderer *renderer,
                        AOS_OPENING_TEXT_PANEL_WIDTH,
                        AOS_OPENING_TEXT_PANEL_HEIGHT};
     SDL_RenderFillRect(renderer, &panel);
+    /* The native message window has a thin light frame; the flat fill
+     * alone read as a bare rectangle. */
+    SDL_SetRenderDrawColor(renderer, 168, 176, 208, 255);
+    SDL_RenderRect(renderer, &panel);
 
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
     for (unsigned y = 0; y < 64; ++y)
@@ -5059,11 +5063,7 @@ static void draw_opening_text(SDL_Renderer *renderer,
             if (aos_intro_text_tiles_pixel(tiles, x, y))
                 SDL_RenderPoint(renderer, AOS_OPENING_TEXT_X + (float)x,
                                 AOS_OPENING_TEXT_Y + (float)y);
-    if (event->waiting) {
-        SDL_SetRenderDrawColor(renderer, 255, 215, 116, 255);
-        SDL_FRect prompt = {AOS_OPENING_PROMPT_X, AOS_OPENING_PROMPT_Y, 5, 3};
-        SDL_RenderFillRect(renderer, &prompt);
-    }
+    /* The native window shows no advance prompt; A/START still pages. */
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
@@ -5928,7 +5928,10 @@ int aria_runtime_main(int argc, char **argv) {
             aos_input_update(&aria_input, held);
             lifecycle.input = aria_input;
             aos_game_lifecycle_update(&lifecycle);
-            if (have_room_music && start_song < 0 && !opening.active &&
+            /* The room's area music enters with the room like the native
+             * flow; Object20's story cues (MUS_16 confrontation, MUS_23
+             * after the battle) override it mid-scene. */
+            if (have_room_music && start_song < 0 &&
                 (room.area != music_area || room.number != music_room)) {
                 music_area = room.area;
                 music_room = room.number;
@@ -6018,7 +6021,8 @@ int aria_runtime_main(int argc, char **argv) {
                     printf("Aria opening story completed; event 0x20 set and "
                            "Winged Skeleton soul granted and equipped\n");
                 }
-                if (opening.complete && have_room_music && start_song < 0) {
+                if (opening.complete && have_room_music && start_song < 0 &&
+                    (room.area != music_area || room.number != music_room)) {
                     const AosRoomMusicFlags *flags =
                         room.area < MUSIC_AREAS && room.number < MUSIC_ROOMS
                             ? &room_music_flags[room.area][room.number]

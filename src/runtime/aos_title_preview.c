@@ -324,12 +324,17 @@ static void render_intro_backgrounds(
                            graphics->backdrop_rgb[2], 255);
     SDL_FRect screen = {0, 0, GBA_W, GBA_H};
     SDL_RenderFillRect(renderer, &screen);
+    /* The native scrolls stay inside each bitmap (start offsets equal
+     * height - 160 or less), so a single draw replaces the old infinite
+     * wrap that superimposed the castle during the stair scroll. */
     for (int index = AOS_INTRO_BACKGROUND_COUNT - 1; index >= 0; --index) {
         unsigned layer = (unsigned)index + 1;
-        render_wrapped_background(renderer, textures[index],
-                                  &graphics->backgrounds[index],
-                                  0,
-                                  intro->bg_y[layer] >> 16);
+        int32_t scroll = intro->bg_y[layer] >> 16;
+        SDL_FRect destination = {
+            0, (float)-scroll,
+            (float)graphics->backgrounds[index].width_pixels,
+            (float)graphics->backgrounds[index].height_pixels};
+        SDL_RenderTexture(renderer, textures[index], NULL, &destination);
     }
 }
 
@@ -1233,7 +1238,6 @@ int aria_title_preview_main(int argc, char **argv) {
                     SDL_RenderDebugText(renderer, 20, 103,
                                         "ADD --rom FOR NATIVE TEXT");
                 }
-                SDL_RenderDebugText(renderer, 62, 132, "A OR START: SKIP");
             } else if (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN && !title_texture) {
                 SDL_RenderDebugText(renderer, 72, 122, "PRESS START");
             } else if (!have_logos && lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO) {

@@ -59,6 +59,7 @@
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
+#include "aos_window_frame.h"
 #include "debug_menu.h"
 #include "gba_input.h"
 #include "aos_input.h"
@@ -5023,6 +5024,7 @@ static void draw_opening_text(SDL_Renderer *renderer,
                               const AosOpeningEvent *event,
                               const AosIntroTextTiles *tiles,
                               const FusionRom *rom,
+                              const AosWindowFrame *frame,
                               SDL_Texture **portrait_texture,
                               uint8_t *portrait_id) {
     if (!event->active) return;
@@ -5052,10 +5054,20 @@ static void draw_opening_text(SDL_Renderer *renderer,
                        AOS_OPENING_TEXT_PANEL_WIDTH,
                        AOS_OPENING_TEXT_PANEL_HEIGHT};
     SDL_RenderFillRect(renderer, &panel);
-    /* The native message window has a thin light frame; the flat fill
-     * alone read as a bare rectangle. */
-    SDL_SetRenderDrawColor(renderer, 168, 176, 208, 255);
-    SDL_RenderRect(renderer, &panel);
+    /* sub_0805AFC0's native border: the language window sheet's four
+     * strips on BG0 at tile rows 16-19, drawn over the backing. */
+    if (frame) {
+        /* Only map rows 16-19 carry entries (the four border strips). */
+        for (unsigned y = 128; y < 160; ++y)
+            for (unsigned x = 0; x < VIEW_W; ++x) {
+                uint16_t color;
+                if (!aos_window_frame_pixel(frame, x, y, &color)) continue;
+                unsigned r = (color & 0x1F) << 3, g = ((color >> 5) & 0x1F) << 3,
+                         b = ((color >> 10) & 0x1F) << 3;
+                SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+                SDL_RenderPoint(renderer, (float)x, (float)y);
+            }
+    }
 
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
     for (unsigned y = 0; y < 64; ++y)
@@ -5406,6 +5418,8 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
+    AosWindowFrame opening_frame = {0};
+    bool opening_frame_ready = false;
     static AosIntroTextTiles opening_tiles;
     static AosIntroTextTiles opening_soul_tiles;
     bool opening_text_ready = false;
@@ -5596,6 +5610,8 @@ int aria_runtime_main(int argc, char **argv) {
                                       error, sizeof error) ||
             !aos_intro_font_init(&opening_font, &opening_rom,
                                  error, sizeof error) ||
+            !aos_window_frame_init(&opening_frame, &opening_rom, 1,
+                                   error, sizeof error) ||
             !aos_intro_resources_entry(&opening_resources, 1,
                                        AOS_OPENING_TEXT_ID, &script,
                                        &script_size) ||
@@ -5617,6 +5633,8 @@ int aria_runtime_main(int argc, char **argv) {
         soma.anim.tick = 0;
         spawn_x = AOS_OPENING_SOMA_X;
         spawn_y = AOS_OPENING_SOMA_Y;
+        opening_frame_ready = true;
+        aos_window_frame_build(&opening_frame);
         opening_text_ready = rebuild_opening_text(&opening, &opening_font,
                                                   &opening_tiles);
         if (!opening_text_ready) {
@@ -7106,6 +7124,7 @@ int aria_runtime_main(int argc, char **argv) {
             draw_opening_soul_notice(renderer, &opening_soul_tiles);
         else if (opening_text_ready)
             draw_opening_text(renderer, &opening, &opening_tiles, &opening_rom,
+                              opening_frame_ready ? &opening_frame : NULL,
                               &opening_portrait_texture, &opening_portrait_id);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {

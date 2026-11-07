@@ -184,7 +184,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c
                src/runtime/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos_soul_menu.c
                src/runtime/aos_bestiary.c
                src/runtime/aos_button_config.c
@@ -209,7 +209,7 @@ add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/run
                src/runtime/aos_main_menu_files.c src/runtime/aos_stats.c
                src/runtime/aos_title_graphics.c src/runtime/aos_obj_rom.c src/runtime/aos_logo_graphics.c
                src/runtime/aos_input.c src/runtime/aos_text_window.c
-               src/runtime/aos_menu_bg0.c
+               src/runtime/aos_menu_bg0.c src/runtime/aos_window_frame.c
                src/runtime/aos_game_over_graphics.c
                src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c
                src/runtime/aos_audio.c src/runtime/aos_mp2k.c)
@@ -918,6 +918,13 @@ if(BUILD_TESTING)
     target_link_libraries(fusion_aos_menu_bg0_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_menu_bg0_tests)
     add_test(NAME aos_menu_bg0 COMMAND fusion_aos_menu_bg0_tests)
+
+    add_executable(fusion_aos_window_frame_tests tests/test_aos_window_frame.c
+                   src/runtime/aos_window_frame.c src/runtime/aos_rom_graphics.c)
+    target_include_directories(fusion_aos_window_frame_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_window_frame_tests PRIVATE fusion_assets m)
+    fusion_enable_warnings(fusion_aos_window_frame_tests)
+    add_test(NAME aos_window_frame COMMAND fusion_aos_window_frame_tests)
 
     add_executable(fusion_aos_text_window_tests tests/test_aos_text_window.c
                    src/runtime/aos_text_window.c src/runtime/aos_intro_resources.c

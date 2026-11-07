@@ -215,9 +215,15 @@ Last updated: **2026-11-06**.
   the native room-entry `PlaySong`; Object20's story cues (MUS_16
   confrontation, MUS_23 after the battle) still override mid-scene.
 - The opening dialogue panel lost the fake yellow advance square (the
-  native window shows none; A/START still pages) and gained a thin light
-  frame approximating the native message window; exact native window
-  metrics remain an open fidelity item.
+  native window shows none; A/START still pages). Its bottom border now
+  renders the native window frame: `aos_window_frame` decodes the
+  language window sheet (`sub_0805AE64`'s per-language descriptors
+  0x0815E084/0x0815E09C/0x0815E08C+0x0815E094 -> VRAM 0x06000000), the
+  dialogue palette row 15 (0x081183F4 row 0) and the four
+  `sub_0805AFC0` border strips (29 entries at map rows 16-19, bases
+  0xF060/0xF080/0xF0A0/0xF0C0), drawn over the remaining backing panel.
+  The text-window engine's own frame/fill tiles on map 0x06004000 and
+  the portrait OAM path remain open fidelity items.
 - Verified the gameplay HUD renders Soma's HP/MP bars (native `hud.bin`
   tiles); no code change was needed — a missing `assets/extracted/aria/
   metadata/hud.bin` next to the launched binary disables it silently.

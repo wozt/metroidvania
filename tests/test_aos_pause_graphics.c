@@ -350,6 +350,43 @@ int main(int argc, char **argv) {
             /* Enemy 11 defeated -> name text written near (0,64);
              * undiscovered enemies render 0x34E instead. */
         }
+        /* sub_0804CDF4 detail: header numbers, drop names, name
+         * underline, element grids, soul bars and markers. */
+        {
+            AosPauseEnemyValues detail = {.cursor = 1, .detail = 1};
+            detail.defeated[0] = 1u << 1;
+            detail.dropped[0][0] = 1u << 1; /* common drop seen */
+            detail.hp = 18;
+            detail.experience = 12;
+            detail.weak = 0x04;
+            detail.resist = 0x01;
+            detail.common_item = 1;
+            detail.rare_item = 0;
+            detail.soul_type = 1;
+            detail.soul_index = 2;
+            detail.soul_owned = 1;
+            assert(aos_pause_graphics_render_enemy_detail(
+                &graphics, &detail, rgba, 240 * 160 * 4));
+            /* Enemy number "002" right-aligned ending col 8 row 1;
+             * digits are palette-1 entries 0x1300|digit. */
+            assert(graphics.bg0_map[1 * 32 + 8] == (0x1300 | 2));
+            /* HP "0018" ends col 0x14 row 2; EXP "00000012" ends
+             * col 0x1B row 0xB. */
+            assert(graphics.bg0_map[2 * 32 + 0x14] == (0x1300 | 8));
+            assert(graphics.bg0_map[0xB * 32 + 0x1B] == (0x1300 | 2));
+            /* Name underline strip and element icon grids. */
+            assert(graphics.bg0_map[0xC * 32 + 2] == 0x1310);
+            assert(graphics.bg0_map[4 * 32 + 0x15] == 0xD36F);
+            assert(graphics.bg0_map[6 * 32 + 0x15] == 0xD3AF);
+            /* Owned soul, view off: 0x134E marker row 0x10 and the
+             * 0xCC0/0xCD0 soul icon strips. */
+            assert(graphics.bg0_map[0x10 * 32 + 0x1C] == 0x134E);
+            assert(graphics.bg0_map[1 * 32 + 0x18] == 0xCC0);
+            assert(graphics.bg0_map[2 * 32 + 0x18] == 0xCD0);
+            /* Soul bars rows 0xE-0x10. */
+            assert(graphics.bg0_map[0xE * 32 + 3] == 0x1200);
+            assert(graphics.bg0_map[0x10 * 32 + 3] == 0x1280);
+        }
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

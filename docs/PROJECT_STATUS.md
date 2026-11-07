@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0793 - START enemy detail native BG0
+
+- Ported `sub_0804CDF4` and its sub-draws (`sub_0804CFE8`,
+  `sub_0804D0D0`, `sub_0804D1DC`, `sub_0804D768`) to BG0: enemy
+  number, HP and experience through a faithful `sub_08046FFC`
+  port (single-row right-aligned digits, palette<<12|0x300 entries,
+  0xD blanks for exhausted high digits), common/rare drop names
+  gated by the 0x133B0/0x133C0 bitsets (0x34F/0xA/0x5A+item), the
+  0x1310 name underline, element-icon grids from the extracted
+  0x0852551C table for the record +0x1A/+0x1C masks, the three
+  soul-bar strips, owned markers and the 0x399/0x3A9/0xCC0/0xCD0
+  soul icon states.
+- Corrected the list renderer to the real `sub_08046FFC` semantics
+  (separator dash + right-aligned number, 2 digits with zeros to
+  99, 3 above) and the defeated/undiscovered name palettes 15/14.
+- Still unported: the enemy portrait, drop/soul OBJ icons
+  (`sub_0804090C`), the soul name/description message window, the
+  list header/footer decorations and page numbers, and transitions.
+
 ## Patch 0792 - START enemy list native BG0
 
 - Audited `sub_0804D2C8` (the enemy-list draw called on every cursor

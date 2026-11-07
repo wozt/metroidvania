@@ -63,9 +63,21 @@ enum {
 };
 
 typedef struct {
-    uint32_t defeated[4]; /* stats->defeated: word enemy>>5, bit enemy&31 */
-    uint8_t top;          /* first enemy index shown (multiple of 10) */
-    uint8_t cursor;       /* selected enemy index */
+    uint32_t defeated[4];          /* stats->defeated: word enemy>>5, bit enemy&31 */
+    uint32_t dropped[2][4];        /* stats->dropped: [0] common 0x133B0, [1] rare 0x133C0 */
+    uint8_t top;                   /* first enemy index shown (multiple of 10) */
+    uint8_t cursor;                /* selected enemy index */
+    uint8_t detail;                /* nonzero renders the detail view for cursor */
+    /* Detail record fields (enemy == cursor), from the 0x080E9644 row. */
+    int16_t hp;                    /* +0x0C */
+    uint16_t experience;           /* +0x10 */
+    uint16_t weak, resist;         /* +0x1A, +0x1C element bitmasks */
+    uint16_t common_item;          /* +0x08, 0 = no common drop */
+    uint16_t rare_item;            /* +0x0A, 0 = no rare drop */
+    uint8_t soul_type;             /* +0x17 */
+    uint8_t soul_index;            /* +0x18, index + 1; 0 = no soul */
+    uint8_t soul_owned;            /* SoulInventory_GetSoulTotal != 0 */
+    uint8_t soul_view;             /* menu soul-view toggle */
 } AosPauseEnemyValues;
 
 enum {
@@ -151,6 +163,17 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
                                      const AosPauseEnemyValues *values,
                                      uint8_t *rgba, size_t rgba_size);
+/* sub_0804CDF4 + sub-draws: the enemy detail view. Draws the enemy
+ * number, HP and experience through sub_08046FFC, the common/rare
+ * drop names (0x34F/0xA/0x5A+item gated by the drop bitsets), the
+ * name with its 0x1310 underline, the soul-type icon when the soul
+ * view is active and owned, the three soul-bar strips and the owned
+ * markers. The portrait, drop/soul icons (sub_0804090C sprites), the
+ * soul name/description message window and the intro state machine
+ * remain unported. */
+bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
+                                            const AosPauseEnemyValues *values,
+                                            uint8_t *rgba, size_t rgba_size);
 /* sub_0804B6C4/sub_0804B494: the Item Use page. Four rows of two slots
  * reuse the baked strips at columns 2/0x11 rows 11-14, the bottom
  * description bars sit at column 5 rows 16-18, names are text IDs

@@ -4459,19 +4459,41 @@ static bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
 
 static bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
                               AosPauseGraphics *graphics,
-                              const AosSoulMenu *menu, const AosStats *stats) {
+                              const AosSoulMenu *menu, const AosStats *stats,
+                              const AriaObjects *objects) {
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
-        menu->page != AOS_SOUL_MENU_PAGE_ENEMY || menu->enemy.detail)
+        menu->page != AOS_SOUL_MENU_PAGE_ENEMY)
         return false;
     AosPauseEnemyValues values = {
         .top = menu->enemy.top,
         .cursor = menu->enemy.cursor,
+        .detail = menu->enemy.detail,
     };
     memcpy(values.defeated, stats->defeated, sizeof values.defeated);
+    memcpy(values.dropped, stats->dropped, sizeof values.dropped);
+    if (menu->enemy.detail && objects && menu->enemy.cursor < ENEMY_KINDS) {
+        const AosEnemyStats *es = &objects->enemies[menu->enemy.cursor].stats;
+        const AosEnemyDrops *ed = &objects->enemies[menu->enemy.cursor].drops;
+        values.hp = es->hp;
+        values.experience = es->experience;
+        values.weak = es->weak;
+        values.resist = es->resist;
+        values.common_item = ed->common_item;
+        values.rare_item = ed->rare_item;
+        values.soul_type = ed->soul_type;
+        values.soul_index = ed->soul_index;
+        values.soul_owned =
+            ed->soul_index != 0 &&
+            aos_souls_total(stats, ed->soul_type, ed->soul_index - 1) != 0;
+        values.soul_view = menu->enemy.soul_view;
+    }
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
-    if (!aos_pause_graphics_render_enemy(graphics, &values,
-                                         pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+    bool ok = menu->enemy.detail
+                  ? aos_pause_graphics_render_enemy_detail(
+                        graphics, &values, pixels, sizeof pixels)
+                  : aos_pause_graphics_render_enemy(graphics, &values,
+                                                    pixels, sizeof pixels);
+    if (!ok || !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
         return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
@@ -7069,7 +7091,7 @@ int aria_runtime_main(int argc, char **argv) {
                  !draw_native_item_use(renderer, pause_texture, &pause_graphics,
                                        &soul_menu, &progress) &&
                  !draw_native_enemy(renderer, pause_texture, &pause_graphics,
-                                    &soul_menu, &progress) &&
+                                    &soul_menu, &progress, &objects) &&
                  !draw_native_sleep(renderer, pause_texture, &pause_graphics,
                                     &soul_menu))
             draw_soul_menu(renderer, &soul_menu, &progress,

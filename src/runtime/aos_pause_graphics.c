@@ -724,6 +724,37 @@ bool aos_pause_graphics_render_item_use(
     return true;
 }
 
+/* sub_08046FFC: right-aligned single-row digits ending at column x on
+ * tile row y. Entries are (palette << 12) | 0x300 | digit; exhausted
+ * high digits become base | 0xD unless show_zeros is set. Writes at
+ * least `digits` tiles and keeps going while the value has more. */
+static void put_bignum(AosPauseGraphics *graphics, int x, int y,
+                       int32_t value, int digits, int palette,
+                       int show_zeros) {
+    if (!graphics || value < 0 || digits <= 0 || y < 0 || y >= 32)
+        return;
+    uint16_t base = (uint16_t)(((palette & 0xF) << 12) | 0x300);
+    uint32_t v = (uint32_t)value;
+    int col = x;
+    for (int i = 0;; ++i) {
+        if (col < 0 || y * 32 + col >= (int)(sizeof graphics->bg0_map / 2))
+            return;
+        unsigned d = v % 10;
+        uint16_t entry = (i > 0 && v == 0 && !show_zeros)
+                             ? (uint16_t)(base | 0xD)
+                             : (uint16_t)(base | d);
+        graphics->bg0_map[y * 32 + col--] = entry;
+        v /= 10;
+        if (i + 1 >= digits && v == 0) break;
+    }
+}
+
+/* sub_08047128: fills n cells starting at (x, y) with tile 0x330D. */
+static void put_dashes(AosPauseGraphics *graphics, int x, int y, int n) {
+    for (int i = 0; i < n && x + i < 32; ++i)
+        graphics->bg0_map[y * 32 + x + i] = 0x330D;
+}
+
 static bool enemy_defeated(const AosPauseEnemyValues *values, unsigned enemy) {
     return enemy < AOS_PAUSE_ENEMY_RECORDS &&
            (values->defeated[enemy >> 5] & (1u << (enemy & 31))) != 0;
@@ -748,19 +779,149 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
         put_tiles(graphics, (int)(slot & 1u ? 0x14 : 6),
                   (int)(5 + (slot / 2) * 2),
                   (uint16_t)(0xF320 + slot * 0x10), 10);
-        /* Names through the context-B cursor: column 0/0x15, row
-         * 8+slot/2 -> pixel (0|126, (8+slot/2)*8). Defeated enemies use
-         * text 0x25D+enemy; undiscovered ones 0x34E "????????". */
-        uint16_t id = enemy_defeated(values, enemy)
-                          ? (uint16_t)(0x25D + enemy) : 0x34E;
+        /* sub_0804D2C8: separator dash then the enemy number through
+         * sub_08046FFC — 2 digits palette 1 with zeros shown up to 99,
+         * 3 digits without leading-zero blanks above. */
+        int row = (int)(5 + (slot / 2) * 2);
+        int num_x = (int)(slot & 1u ? 0x12 : 4);
+        put_dashes(graphics, slot & 1u ? 0x10 : 2, row, 1);
+        unsigned number = enemy + 1;
+        if (number > 99)
+            put_bignum(graphics, num_x, row, (int32_t)number, 3, 1, 0);
+        else
+            put_bignum(graphics, num_x, row, (int32_t)number, 2, 1, 1);
+        /* Names: palette 15 when defeated, 14 with 0x34E otherwise
+         * (sub_080412F0 calls in the loop). */
+        bool found = enemy_defeated(values, enemy);
+        uint16_t id = found ? (uint16_t)(0x25D + enemy) : 0x34E;
         if (!place_text_id(graphics, id, true, slot & 1u ? 126u : 0u,
-                           (8u + slot / 2u) * 8u, 110, 3, &next_tile))
+                           (8u + slot / 2u) * 8u, 110,
+                           found ? 15 : 14, &next_tile))
             return false;
-        /* Enemy number via the two-row digit path (sub_08046FFC),
-         * right-aligned ending at column 5/0x15 on the strip row. */
-        put_large_number(graphics, (int)(slot & 1u ? 0x15 : 5),
-                         (int)(5 + (slot / 2) * 2), enemy + 1,
-                         enemy + 1 > 99 ? 3 : 2, 3);
+    }
+    composite(graphics, rgba);
+    return true;
+}
+
+static bool drop_text_id(const AosPauseEnemyValues *values, unsigned enemy,
+                         uint16_t item, int which, uint16_t *id) {
+    if (item == 0) {
+        *id = 0x34F;
+        return true;
+    }
+    const uint32_t *bits = values->dropped[which];
+    if ((bits[enemy >> 5] & (1u << (enemy & 31))) == 0) {
+        *id = 0xA;
+        return true;
+    }
+    *id = (uint16_t)(0x5A + item);
+    return true;
+}
+
+/* sub_0804D768 + the CDF4 icon loops: element icons for the set bits
+ * of a record mask, packed row-major from (x0, y0) five per row, then
+ * 0x330D dashes fill the remaining cells. Entries come from the
+ * 0x0852551C table (palette 13). */
+static void element_grid(AosPauseGraphics *graphics, uint16_t mask,
+                         int x0, int y0) {
+    static const uint16_t icons[8] = {0xD36F, 0xD39F, 0xD3AF, 0xD3BF,
+                                      0xD3CF, 0xD3DF, 0xD3FF, 0xD3FE};
+    int x = x0, y = y0, clear = 0;
+    for (unsigned bit = 0; bit < 8; ++bit) {
+        if (mask & (1u << bit)) {
+            graphics->bg0_map[y * 32 + x] = icons[bit];
+            if (++x - x0 == 5) { x = x0; ++y; }
+        } else {
+            ++clear;
+        }
+    }
+    for (int i = 0; i < clear; ++i) {
+        graphics->bg0_map[y * 32 + x] = 0x330D;
+        if (++x - x0 == 5) { x = x0; ++y; }
+    }
+}
+
+bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
+                                            const AosPauseEnemyValues *values,
+                                            uint8_t *rgba, size_t rgba_size) {
+    if (!values || values->cursor >= AOS_PAUSE_ENEMY_RECORDS ||
+        !graphics || !graphics->text_ready ||
+        !valid_output(graphics, rgba, rgba_size))
+        return false;
+    unsigned enemy = values->cursor;
+    reset_bg0(graphics);
+    clear_bg0_tiles(graphics, 0x380, 0x80);
+    unsigned next_tile = 0;
+    /* sub_0804CDF4 header numbers. */
+    put_dashes(graphics, 6, 1, 1);
+    unsigned number = enemy + 1;
+    put_bignum(graphics, 8, 1, (int32_t)number,
+               number > 99 ? 3 : 2, 1, 1);
+    put_bignum(graphics, 0x14, 2, values->hp, 4, 1, 0);
+    put_bignum(graphics, 0x1B, 0xB, (int32_t)values->experience, 8, 1, 0);
+    /* Record +0x1C (resist) icons rows 4+, +0x1A (weak) rows 6+,
+     * column 0x15, five per row. */
+    element_grid(graphics, values->resist, 0x15, 4);
+    element_grid(graphics, values->weak, 0x15, 6);
+    /* sub_0804CFE8: common drop at window (0,9), rare at (0x15,9)
+     * -> pixel rows 72. The 0x80 drop icon is an OBJ sprite. */
+    uint16_t drop_id = 0;
+    if (!drop_text_id(values, enemy, values->common_item, 0, &drop_id) ||
+        !place_text_id(graphics, drop_id, true, 0, 72, 110, 3, &next_tile))
+        return false;
+    if (!drop_text_id(values, enemy, values->rare_item, 1, &drop_id) ||
+        !place_text_id(graphics, drop_id, true, 126, 72, 110, 3,
+                       &next_tile))
+        return false;
+    /* sub_0804D0D0: dash fill then the 0x1310 underline and the enemy
+     * name through the context-B window at cell (0x15,8). */
+    put_dashes(graphics, 2, 0xC, 0x14);
+    put_tiles(graphics, 2, 0xC, 0x1310, 0xC);
+    bool found = enemy_defeated(values, enemy);
+    if (!place_text_id(graphics,
+                       found ? (uint16_t)(0x25D + enemy) : 0x34E,
+                       true, 126, 64, 110, 3, &next_tile))
+        return false;
+    /* Soul-type icon tile on the underline, only in soul view while
+     * the soul exists and is owned (r6 gate in sub_0804D0D0). */
+    if (values->soul_view && values->soul_owned && values->soul_index) {
+        static const uint16_t soul_icon[4] = {0xD3FD, 0xD3FC, 0xD3FB,
+                                              0xD3A8};
+        graphics->bg0_map[0xC * 32 + 2] =
+            soul_icon[values->soul_type & 3];
+    }
+    /* sub_0804D1DC: three soul-bar strips rows 14-16, cols 3-27. */
+    put_tiles(graphics, 3, 0xE, 0x1200, 0x19);
+    put_tiles(graphics, 3, 0xF, 0x1240, 0x19);
+    put_tiles(graphics, 3, 0x10, 0x1280, 0x19);
+    /* sub_0804D1DC tail: owned markers at column 0x1C rows 0xE/0x10 —
+     * 0x134E bottom in soul view off, 0x134D top in soul view on,
+     * dashes on the other row; unowned or absent souls dash both. */
+    bool has_soul = values->soul_type || values->soul_index;
+    bool owned = has_soul && values->soul_owned;
+    if (owned && !values->soul_view) {
+        graphics->bg0_map[0x10 * 32 + 0x1C] = 0x134E;
+        put_dashes(graphics, 0x1C, 0xE, 1);
+    } else if (owned && values->soul_view) {
+        graphics->bg0_map[0xE * 32 + 0x1C] = 0x134D;
+        put_dashes(graphics, 0x1C, 0x10, 1);
+    } else {
+        put_dashes(graphics, 0x1C, 0xE, 1);
+        put_dashes(graphics, 0x1C, 0x10, 1);
+    }
+    /* sub_0804CDF4 tail: the soul icon at column 0x18 rows 1-2 —
+     * 0x399/0x3A9 bars without a soul, dashes when unowned, and the
+     * 0xCC0/0xCD0 strips when owned. */
+    if (!has_soul) {
+        put_dashes(graphics, 0x18, 2, 3);
+        put_tiles(graphics, 0x19, 1, 0x399, 2);
+        put_tiles(graphics, 0x19, 2, 0x3A9, 2);
+    } else if (!owned) {
+        put_dashes(graphics, 0x18, 1, 3);
+        put_dashes(graphics, 0x18, 2, 3);
+    } else {
+        put_tiles(graphics, 0x18, 1, 0xCC0, 3);
+        put_tiles(graphics, 0x18, 2, 0xCD0, 3);
     }
     composite(graphics, rgba);
     return true;

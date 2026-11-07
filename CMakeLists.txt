@@ -130,6 +130,10 @@ add_executable(aos_mgba_lab src/tools/aos_mgba_lab.c
 target_include_directories(aos_mgba_lab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
 target_link_libraries(aos_mgba_lab PRIVATE ${MGBA_LIBRARY} pthread)
 fusion_enable_warnings(aos_mgba_lab)
+add_executable(aos_lab_frame src/tools/aos_lab_frame.c)
+target_include_directories(aos_lab_frame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
+target_link_libraries(aos_lab_frame PRIVATE png)
+fusion_enable_warnings(aos_lab_frame)
 add_executable(aos_lab_worker src/tools/aos_lab_worker.c
     $<TARGET_OBJECTS:aos_mgba_session> $<TARGET_OBJECTS:aos_lab_db>
     $<TARGET_OBJECTS:aos_lab_vision>)

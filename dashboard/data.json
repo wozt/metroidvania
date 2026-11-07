@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T22:19:28+00:00",
+ "generated_at": "2026-11-07T22:20:49+00:00",
  "git": {
-  "commit": "fac9922e",
+  "commit": "279c0a27",
   "branch": "main",
   "dirty": true
  },
@@ -16819,7 +16819,8 @@
     "src/tools/aos_lab_worker.c",
     "src/tools/aos_lab_viewer.c",
     "src/tools/aos_lab_vision.c",
-    "src/tools/aos_lab_vision.h"
+    "src/tools/aos_lab_vision.h",
+    "src/tools/aos_lab_frame.c"
    ],
    "tests": [],
    "dependencies": [],
@@ -20317,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "279c0a27",
+   "date": "2026-11-07",
+   "subject": "Lab: global fleet controls, aspect-locked video, frame grabber tool",
+   "scope": "project"
+  },
+  {
    "commit": "fac9922e",
    "date": "2026-11-07",
    "subject": "Lab: 4x2 live emulator grid, resizable panes, per-trial visual signatures",
@@ -20788,12 +20795,6 @@
    "commit": "cf6ea200",
    "date": "2026-11-07",
    "subject": "Document the dialogue BG2/BG3 layer model",
-   "scope": "project"
-  },
-  {
-   "commit": "fff20655",
-   "date": "2026-11-07",
-   "subject": "Render the native dialogue window frame in the opening",
    "scope": "project"
   }
  ],

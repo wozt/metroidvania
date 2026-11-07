@@ -19,6 +19,8 @@ Last updated: **2026-11-07**.
 - Per-worker speed sliders (Auto..x16 = N*60 fps cap) are stored in
   `worker.<id>.speed` meta and applied per trial through
   `AosRunSpec.fps_cap`.
+- `aos_lab_frame WORKER_ID OUT.png [SCALE]` dumps a worker's live
+  shm framebuffer to PNG for external inspection (pure C + libpng).
 - A global fleet bar adds Pause all / Resume all, Stop all and a
   global speed slider that writes every `worker.<id>.speed` at once;
   video cells keep the 3:2 aspect ratio (GTK_CONTENT_FIT_CONTAIN).

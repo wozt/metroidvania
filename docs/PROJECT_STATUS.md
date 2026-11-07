@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0789 - START sleep page native strings
+
+- Decoded the asm-only sleep routines (`sub_0804BD38` init, `sub_0804BE0C`
+  update) and their text IDs from the ROM: `0x36A` "Pause the game?",
+  `0x34B` "Yes", `0x34D` "No", `0x361` "Cannot save until you have saved
+  once in a save room." and `0x386` "Save failed." — the same text
+  engine (`sub_08046BC8`/`sub_08040AB8`) as the intro.
+- `sub_0804066C` positions text in 6x12-pixel cells; the Yes/No labels
+  sit at cells (4,1) and (0xC,1), mapping to pixel columns 24 and 72 on
+  the pause background's bottom text band.
+- `aos_pause_graphics_render_sleep` draws the native strings through
+  the existing BG0 text path (`place_text_id`, small font, palette 3)
+  for both the confirm and the cannot-save states; the SDL diagnostic
+  overlay no longer covers the sleep page. The message-window frame and
+  the selection arrow remain OBJ-layer gaps shared with
+  `aos.menus.text_window`, and the question row is an estimate pending
+  an emulator capture.
+
 ## Patch 0788 - START config page native tile strips
 
 - Audited the asm-only config page (`sub_0804BF8C` init, `sub_0804C05C`

@@ -110,6 +110,13 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
                                       uint8_t *rgba, size_t rgba_size);
+/* sub_0804BD38/sub_0804BE0C: the Sleep confirm page's native strings
+ * (0x36A "Pause the game?", 0x34B "Yes", 0x34D "No") or the 0x361
+ * cannot-save message. The selection arrow and window frame are OBJ and
+ * remain unrendered. */
+bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
+                                     bool can_sleep, uint8_t *rgba,
+                                     size_t rgba_size);
 void aos_pause_graphics_free(AosPauseGraphics *graphics);
 
 #endif /* AOS_PAUSE_GRAPHICS_H */

@@ -593,3 +593,33 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
     composite(graphics, rgba);
     return true;
 }
+
+bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
+                                     bool can_sleep, uint8_t *rgba,
+                                     size_t rgba_size) {
+    if (!valid_output(graphics, rgba, rgba_size)) return false;
+    reset_bg0(graphics);
+    unsigned next_tile = 0;
+    if (!can_sleep) {
+        /* sub_0804BD38's refusal: text 0x361 "Cannot save until you have
+         * saved once in a save room." */
+        if (!place_text_id(graphics, 0x361, false, 24, 64, 192, 3,
+                           &next_tile))
+            return false;
+    } else {
+        /* sub_0804BD38/sub_0804BE0C: text 0x36A "Pause the game?" then the
+         * Yes/No labels. Native cursor cells (4,1) and (0xC,1) of
+         * sub_0804066C map to pixel (24,128) and (72,128) on the pause
+         * background's bottom text band; the question sits one 12-pixel
+         * row above. The selection arrow is OBJ and stays unrendered. */
+        if (!place_text_id(graphics, 0x36A, true, 24, 116, 192, 3,
+                           &next_tile) ||
+            !place_text_id(graphics, 0x34B, true, 24, 128, 96, 3,
+                           &next_tile) ||
+            !place_text_id(graphics, 0x34D, true, 72, 128, 96, 3,
+                           &next_tile))
+            return false;
+    }
+    composite(graphics, rgba);
+    return true;
+}

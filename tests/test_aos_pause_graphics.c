@@ -256,6 +256,10 @@ int main(int argc, char **argv) {
                                                     rgba, 240 * 160 * 4));
             write_ppm(argv[4], rgba);
         }
+        assert(aos_pause_graphics_render_sleep(&graphics, false,
+                                               rgba, 240 * 160 * 4));
+        assert(aos_pause_graphics_render_sleep(&graphics, true,
+                                               rgba, 240 * 160 * 4));
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

@@ -4387,6 +4387,21 @@ static bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
+static bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
+                              AosPauseGraphics *graphics,
+                              const AosSoulMenu *menu) {
+    if (!renderer || !texture || !graphics || !menu || !menu->open ||
+        menu->page != AOS_SOUL_MENU_PAGE_SLEEP)
+        return false;
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_pause_graphics_render_sleep(graphics, menu->sleep_available,
+                                         pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
 static bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosQuickMap *map, const AosStats *stats,
                                   uint32_t animation_frame) {
@@ -6973,7 +6988,9 @@ int aria_runtime_main(int argc, char **argv) {
                                    &soul_menu, &progress, &soma,
                                    has_active_save ? active_save.play_frames : (uint32_t)step) &&
                  !draw_native_config(renderer, pause_texture, &pause_graphics,
-                                     &soul_menu))
+                                     &soul_menu) &&
+                 !draw_native_sleep(renderer, pause_texture, &pause_graphics,
+                                    &soul_menu))
             draw_soul_menu(renderer, &soul_menu, &progress,
                            have_equipment ? &equipment : NULL,
                            have_item_use ? item_use : NULL, &soma, &objects);

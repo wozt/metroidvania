@@ -29,6 +29,7 @@ typedef struct {
     AosObjSheet cursor_sheet;
     uint16_t cursor_palette[16];
     bool cursor_ready;
+    uint32_t cursor_tick;      /* frame counter driving bob and frame cycle */
 } AosPauseGraphics;
 
 typedef struct {

@@ -49,9 +49,11 @@ Last updated: **2026-11-07**.
   `0x0820C2C0` palette blocks, and composites record 6 — the extended
   pointing pose of the decoded idle cycle — at `sub_08048AD8`'s native
   hub cell `(1, selected + 0xC)`, pixel `(14, 99 + selected*8)`.
-- Source-derived and unit-tested, not emulator-compared. The idle frame
-  cycle and `sub_08048018`'s vertical bob remain unwired, and the palette
-  row's upper half is approximated from the following ROM block.
+- Wired the cursor's idle animation: records 2-8 of the pointing strip
+  cycle at four ticks a step and `sub_08048018`'s horizontal +-3px
+  wiggle is reproduced from a per-render frame counter (`reset_bg0`
+  ticks once per page draw). The palette row's upper half remains
+  approximated from the following ROM block.
 - Extended the hand to all seven pause pages with each page's decoded
   `sub_08048AD8` placement: hub `(1, selected+0xC)`, sleep `(1, 0x10)`,
   ability `((cursor&1)?0x10:2, 4+2*(cursor>>1))`, item use

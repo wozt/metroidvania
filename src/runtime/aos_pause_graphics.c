@@ -258,15 +258,19 @@ static void composite_on_backdrop(const AosPauseGraphics *graphics,
 
 /* sub_08048AD8 positions the hand entity at cell_x*8+6, cell_y*8+3 and its
  * frame pieces hang off that anchor (the first record's -8,-8 offset makes
- * the 16 x 16 hand span anchor-8..anchor+8). Record 6 is the extended
- * pointing pose of the idle cycle (records 2-8 animate point/retract at
- * four frames a step); the vertical bob of sub_08048018 is not wired yet. */
+ * the 16 x 16 hand span anchor-8..anchor+8). `record` opens the pointing
+ * strip: the idle cycle walks records 2-8 at four ticks a step and
+ * sub_08048018 adds its +-3px horizontal wiggle to the anchor's X from the
+ * shared frame counter. */
 static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
                         int cell_x, int cell_y, unsigned record) {
-    if (!graphics->cursor_ready || record >= graphics->cursor_sheet.frame_count)
+    if (!graphics->cursor_ready || record + 6 >= graphics->cursor_sheet.frame_count)
         return;
-    const AosObjFrame *frame = &graphics->cursor_sheet.frames[record];
-    int anchor_x = cell_x * 8 + 6, anchor_y = cell_y * 8 + 3;
+    unsigned frame_index = record + (graphics->cursor_tick / 4) % 7;
+    const AosObjFrame *frame = &graphics->cursor_sheet.frames[frame_index];
+    int step = (int)((graphics->cursor_tick >> 1) & 7);
+    int wiggle = (graphics->cursor_tick >> 4) & 1 ? 3 - step : step - 3;
+    int anchor_x = cell_x * 8 + 6 + wiggle, anchor_y = cell_y * 8 + 3;
     for (unsigned k = 0; k < frame->count; ++k) {
         const AosObjPiece *piece = &frame->pieces[k];
         for (int py = 0; py < piece->height; ++py)
@@ -294,6 +298,7 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
 }
 
 static void reset_bg0(AosPauseGraphics *graphics) {
+    ++graphics->cursor_tick;
     memcpy(graphics->bg0_chars, graphics->bg0_base_chars,
            sizeof graphics->bg0_chars);
     for (size_t index = 0; index < 32 * 32; ++index)
@@ -349,7 +354,7 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
 
     composite(graphics, rgba);
     /* sub_08047818's hub placement: sub_08048AD8(1, selected + 0xC). */
-    draw_cursor(graphics, rgba, 1, 12 + (int)selected, 6);
+    draw_cursor(graphics, rgba, 1, 12 + (int)selected, 2);
     return true;
 }
 
@@ -524,7 +529,7 @@ bool aos_pause_graphics_render_soul_set(
     /* sub_08048EA4: column 2 or 0x10 on the flat slot's bit 0, row
      * 0xA + slot/2 where slot = selected - top in the eight-entry list. */
     draw_cursor(graphics, rgba, (selected - top) & 1 ? 0x10 : 2,
-                0xA + (int)(selected - top) / 2, 6);
+                0xA + (int)(selected - top) / 2, 2);
     return true;
 }
 
@@ -654,11 +659,11 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         for (unsigned entry = 0; entry < values->item_count; ++entry)
             if (values->items[entry] == values->selected_item) {
                 draw_cursor(graphics, rgba, entry & 1 ? 0x10 : 2,
-                            0xB + (int)(entry / 2), 6);
+                            0xB + (int)(entry / 2), 2);
                 break;
             }
     } else {
-        draw_cursor(graphics, rgba, 2, 5 + 2 * (int)values->slot, 6);
+        draw_cursor(graphics, rgba, 2, 5 + 2 * (int)values->slot, 2);
     }
     return true;
 }
@@ -688,7 +693,7 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
     }
     composite(graphics, rgba);
     /* sub_0804C3AC: sub_08048AD8(5, cursor*2 + 4) beside the rows. */
-    draw_cursor(graphics, rgba, 5, 4 + 2 * (int)cursor, 6);
+    draw_cursor(graphics, rgba, 5, 4 + 2 * (int)cursor, 2);
     return true;
 }
 
@@ -755,7 +760,7 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
      * 4 + 2*(cursor>>1) — the hand sits left of the selected strip. */
     draw_cursor(graphics, rgba,
                 values->cursor & 1 ? 0x10 : 2,
-                4 + 2 * (int)(values->cursor >> 1), 6);
+                4 + 2 * (int)(values->cursor >> 1), 2);
     return true;
 }
 
@@ -832,7 +837,7 @@ bool aos_pause_graphics_render_item_use(
                 int slot = (int)o - (int)values->top;
                 if (slot >= 0 && slot < (int)AOS_PAUSE_ITEM_USE_VISIBLE)
                     draw_cursor(graphics, rgba, slot & 1 ? 0x10 : 1,
-                                0xB + slot / 2, 6);
+                                0xB + slot / 2, 2);
                 break;
             }
     composite(graphics, rgba);
@@ -921,7 +926,7 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
         values->cursor - values->top < AOS_PAUSE_ENEMY_PAGE)
         draw_cursor(graphics, rgba,
                     (values->cursor - values->top) & 1 ? 0x10 : 2,
-                    5 + (int)((values->cursor - values->top) / 2), 6);
+                    5 + (int)((values->cursor - values->top) / 2), 2);
     return true;
 }
 
@@ -1079,6 +1084,6 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
          * the selection. */
     }
     composite(graphics, rgba);
-    if (can_sleep) draw_cursor(graphics, rgba, 1, 16, 6);
+    if (can_sleep) draw_cursor(graphics, rgba, 1, 16, 2);
     return true;
 }

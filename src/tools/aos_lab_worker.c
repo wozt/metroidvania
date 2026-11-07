@@ -803,6 +803,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* Waypoint picker: every stored checkpoint stays reachable so a
+     * fraction of trials restart from a different saved state — the
+     * campaign front advances from whichever checkpoint proved most
+     * interesting instead of replaying only the base state forever. */
+    int scount = 0;
+    AosStateRow *srows = aos_labdb_states(db, 512, &scount);
+
     /* publish the live framebuffer for the GTK viewer */
     AosFbMirror fb;
     int fb_ok = fb_attach(&fb, worker_id) == 0;
@@ -1026,13 +1033,32 @@ int main(int argc, char **argv) {
                 (void)shot_path;
             }
 
+            /* Waypoint restart: ~25% of trials begin from a random
+             * stored checkpoint (novel scenes, scout finds, manual
+             * records) so learning branches off the deepest states. */
+            int64_t used_state_id = state_id;
+            const uint8_t *load_blob = state_blob;
+            size_t load_size = blob_size;
+            uint8_t *alt_blob = NULL;
+            if (scount > 1 && (rand() % 100) < 25) {
+                AosStateRow *pick = &srows[rand() % scount];
+                size_t asz = 0;
+                alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
+                if (alt_blob) {
+                    load_blob = alt_blob;
+                    load_size = asz;
+                    used_state_id = pick->id;
+                }
+            }
+
             gettimeofday(&t0, NULL);
             /* reload state blob */
-            if (!aos_mgba_load_state_blob(session, state_blob, blob_size)) {
+            if (!aos_mgba_load_state_blob(session, load_blob, load_size)) {
                 fprintf(stderr, "state reload failed\n");
             }
             AosRunResult res;
             aos_mgba_run(session, &spec, &res);
+            free(alt_blob);
             gettimeofday(&t1, NULL);
             int duration_ms = (int)((t1.tv_sec - t0.tv_sec) * 1000 +
                                     (t1.tv_usec - t0.tv_usec) / 1000);
@@ -1130,7 +1156,7 @@ int main(int argc, char **argv) {
             }
 
             int64_t trial_id = aos_labdb_add_trial(
-                db, run_id, state_id, action->id, drawn, keys_label,
+                db, run_id, used_state_id, action->id, drawn, keys_label,
                 frames, outcome, reward, metrics, duration_ms);
             ++trials_done;
             total_frames += frames;
@@ -1175,6 +1201,7 @@ int main(int argc, char **argv) {
     (void)rate;
 
     free(state_blob);
+    aos_labdb_free_state_rows(srows, scount);
     aos_labdb_free_action_rows(all, acount);
     fb_detach(&fb);
     aos_mgba_close(session);

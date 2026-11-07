@@ -38,8 +38,15 @@ Last updated: **2026-11-07**.
   gold_gain, clean_traverse, clean_move, ability_used, healed,
   damage, death. Bonuses feed `reward` and the bandit now selects
   actions by average reward, so exploration events steer learning.
-  Route reference: castlevaniaspeedruns Any% No 0HP order (Chapel ->
-  Manticore -> Study -> Great Armor -> Arena -> Balore -> Chaos).
+  Waypoint restarts: ~25% of trials begin from a random stored
+  checkpoint (scout finds, novel-scene auto states, manual records)
+  so learning branches off the deepest states; the trial row records
+  the actual starting state.
+  Route reference: glitchless order — the agent must play normally,
+  no movement exploits (Chapel -> Manticore/Ghost Dancers -> Study ->
+  Great Armor -> Arena climb -> Balore/Forbidden Area -> Claimh ->
+  Top Floor Graham -> Chaos). Souls are earned through normal combat
+  and soul manipulation only where it is regular gameplay.
 - OCR of in-game text is planned (BG tilemap in VRAM via session
   peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.

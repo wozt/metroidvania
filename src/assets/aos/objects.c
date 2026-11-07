@@ -335,6 +335,22 @@ static const EntitySpec entities[] = {
     STATIC("wall_17", 0x0825EADC, 0x08209C88, 6, 0x0820F314, 1, 6),
 };
 
+/* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0
+ * hardcoded {graphics, palette, bank, frames} resources; param0 selects the
+ * behavior table, not the sprite. Only ids whose create resolves cleanly are
+ * listed; the rest use the +0x30 packed-record path and are not exported yet. */
+static const EntitySpec special_objects[] = {
+    ENTITY("special_07", 0x081CBE74, 0x08209F54, 0, 0x0821017C),
+    ENTITY("special_10", 0x08268450, 0x082097B0, 0, 0x08268648),
+    ENTITY("special_13", 0x081CBE7C, 0x08209FD8, 0, 0x08210264),
+    ENTITY("special_14", 0x081CBEA4, 0x0820A0DC, 0, 0x08210B60),
+    ENTITY("special_15", 0x081CBEE4, 0x0820A1C4, 8, 0x082115F8),
+    ENTITY("special_17", 0x081CBE9C, 0x08209FD8, 4, 0x08210A90),
+    ENTITY("special_18", 0x0825EAF4, 0x082663E4, 0, 0x08266C00),
+    ENTITY("special_19", 0x0825EAFC, 0x08266408, 0, 0x08266C50),
+    ENTITY("special_21", 0x081CBE84, 0x08209FD8, 1, 0x08210318),
+};
+
 static const EffectSpec effects[] = {
     {"flame", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {0}, -1},
     {"blood", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
@@ -778,11 +794,14 @@ static bool export_animation(const FusionRom *rom,
                           error, error_size);
         if (!animation) return false;
         count = read_u16(animation);
-        if (read_u16(animation + 2) != 1 || count == 0 || count > MAX_FRAMES) {
+        if (read_u16(animation + 2) != 1 || count > MAX_FRAMES) {
             set_error(error, error_size,
                       "unsupported entity animation encoding");
             return false;
         }
+        /* Native descriptors may declare empty animations (count 0): they
+         * carry no frames, so there is nothing to export for them. */
+        if (count == 0) return true;
     }
     int anchors_x[MAX_FRAMES], anchors_y[MAX_FRAMES], edges_x[MAX_FRAMES], edges_y[MAX_FRAMES];
     char key[96];
@@ -895,8 +914,8 @@ static bool append_buer_death_offsets(const FusionRom *rom, Text *rows,
 }
 
 static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
-                          const EntitySpec *entity, Text *rows,
-                          char *error, size_t error_size) {
+                          const EntitySpec *entity, const char *key_prefix,
+                          Text *rows, char *error, size_t error_size) {
     TileSheet sheet;
     if (!load_tile_sheet(rom, entity->graphics, &sheet, error, error_size))
         return false;
@@ -924,7 +943,7 @@ static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
             pointer = read_u32(entry);
         }
         success = export_animation(
-            rom, library, "Enemy", entity->name, entity->frames, &sheet,
+            rom, library, key_prefix, entity->name, entity->frames, &sheet,
             palette, number, pointer, (uint8_t)number, animation_count == 0,
             true, rows, error, error_size);
     }
@@ -1445,7 +1464,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
         return false;
     }
     *summary = (FusionAosObjectExportSummary){0};
-    Text rows = {0}, stats = {0}, money = {0}, item_use = {0}, equipment = {0},
+    Text rows = {0}, object_rows = {0}, stats = {0}, money = {0}, item_use = {0}, equipment = {0},
          red_souls = {0}, blue_souls = {0}, yellow_souls = {0}, skill_throws = {0}, bursts = {0}, item_icons = {0};
     FusionSpriteLibrary library = {0};
     bool success = fusion_export_ensure_directory(metadata_output, error,
@@ -1460,8 +1479,17 @@ bool fusion_aos_export_objects(const FusionRom *rom,
             "\tattack x\ty\twidth\theight\n");
     for (size_t index = 0;
          success && index < sizeof entities / sizeof entities[0]; ++index)
-        success = export_entity(rom, &library, &entities[index], &rows,
+        success = export_entity(rom, &library, &entities[index], "Enemy", &rows,
                                 error, error_size);
+    if (success) success = text_append(&object_rows,
+        "schema\tmetroidvania-aos-object-frames-v1\n"
+        "# object\tanimation\tindex\tframe\tticks\tmode\thurt x\ty\twidth\theight"
+        "\tattack x\ty\twidth\theight\n");
+    for (size_t index = 0;
+         success && index < sizeof special_objects / sizeof special_objects[0];
+         ++index)
+        success = export_entity(rom, &library, &special_objects[index], "Object",
+                                &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)
         success = export_effect(rom, &library, &effects[index],
@@ -1476,6 +1504,8 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            append_enemy_stats(rom, &stats, error, error_size) &&
                            write_text_file(metadata_output, "enemy_frames.tsv",
                                            &rows, error, error_size) &&
+                           write_text_file(metadata_output, "object_frames.tsv",
+                                           &object_rows, error, error_size) &&
                            write_text_file(metadata_output, "enemies.tsv",
                                            &stats, error, error_size) &&
                            append_money(rom, &money, error, error_size) &&
@@ -1519,6 +1549,7 @@ bool fusion_aos_export_objects(const FusionRom *rom,
     }
     fusion_sprite_library_free(&library);
     free(rows.data);
+    free(object_rows.data);
     free(stats.data);
     free(money.data);
     free(item_use.data);

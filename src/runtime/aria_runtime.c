@@ -2972,7 +2972,8 @@ typedef struct {
         AosAnimDef defs[AOS_ENEMY_MAX_ANIMS];
         AosAnimSet set;
         bool loaded;
-    } opening_actors[AOS_OPENING_ACTOR_COUNT]; /* Enemy/opening_actor_N */
+    } opening_actors[AOS_OPENING_ACTOR_COUNT], /* Enemy/opening_actor_N */
+      special_objects[64];                     /* Object/special_NN */
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -3652,6 +3653,32 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             }
             continue;
         }
+        /* Object/special_NN/anim_M: room SPECIAL object sprites. The object
+         * id is the SPECIAL entity id; animation selection per object is a
+         * later audit, so every exported animation is kept. */
+        char object_name[24];
+        int object_id = -1, object_style = -1;
+        if (sscanf(line, "Object/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", object_name,
+                   &object_style, &frame, &ticks, &ox, &oy, frame_path) == 7 &&
+            sscanf(object_name, "special_%d", &object_id) == 1 &&
+            object_id >= 0 && object_id < 64 && object_style >= 0 &&
+            object_style < AOS_ENEMY_MAX_ANIMS && frame >= 0 &&
+            frame < MAX_FRAMES && ticks >= 1 && ticks <= 255) {
+            __typeof__(objects->special_objects[0]) *art = &objects->special_objects[object_id];
+            if (frame != art->defs[object_style].count ||
+                !load_frame(&art->frames[object_style][frame], frame_path, ox, oy,
+                            renderer)) {
+                ok = false;
+                break;
+            }
+            art->ticks[object_style][frame] = (uint8_t)ticks;
+            art->defs[object_style].durations = art->ticks[object_style];
+            art->defs[object_style].count++;
+            art->loaded = true;
+            if (object_style + 1 > art->set.count)
+                art->set.count = (uint16_t)(object_style + 1);
+            continue;
+        }
         int icon;
         if (sscanf(line, "Icon/i%d/anim_0\t%d\t%d\t%d\t%d\t%511s", &icon, &frame, &ticks, &ox,
                    &oy, frame_path) == 6) {
@@ -3681,6 +3708,8 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     }
     fclose(f);
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
+    for (int id = 0; id < 64; ++id)
+        objects->special_objects[id].set.anims = objects->special_objects[id].defs;
     for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
     for (int k = 0; k < SKILL_ARTS; ++k) objects->skills[k].set.anims = objects->skills[k].defs;
     return ok;
@@ -3705,6 +3734,11 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->opening_actors[actor].frames[i][j].texture)
                     SDL_DestroyTexture(objects->opening_actors[actor].frames[i][j].texture);
+    for (int id = 0; id < 64; ++id)
+        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+            for (int j = 0; j < MAX_FRAMES; ++j)
+                if (objects->special_objects[id].frames[i][j].texture)
+                    SDL_DestroyTexture(objects->special_objects[id].frames[i][j].texture);
     for (int k = 0; k < AOS_EFFECT_KINDS; ++k)
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
@@ -3860,6 +3894,36 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
                                  degrees != 0 ? &centre : NULL, mode);
         if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 255);
+    }
+}
+
+/* Room SPECIAL objects (kind 2): drawn from their exported sprite sheets.
+ * Animation selection per object id is not yet audited against the native
+ * update routines, so the first exported animation plays on a loop; ids
+ * whose create exports raw still frames as separate animations show
+ * animation 0's first frame for now. */
+static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
+                                 const AriaObjects *objects, int cam_x, int cam_y,
+                                 unsigned step) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
+            continue;
+        const __typeof__(objects->special_objects[0]) *art =
+            &objects->special_objects[e->id];
+        if (!art->loaded || !art->defs[0].count) continue;
+        unsigned total = 0;
+        for (unsigned f = 0; f < art->defs[0].count; ++f) total += art->ticks[0][f];
+        if (!total) continue;
+        unsigned t = (step / 4) % total, index = 0;
+        while (index + 1 < art->defs[0].count && t >= art->ticks[0][index])
+            t -= art->ticks[0][index++];
+        const AriaFrame *frame = &art->frames[0][index];
+        if (!frame->texture) continue;
+        int ex = e->x, ey = e->y;
+        SDL_FRect rect = {(float)(ex + frame->offset_x - cam_x),
+                          (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
+        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
     }
 }
 
@@ -6645,6 +6709,7 @@ int aria_runtime_main(int argc, char **argv) {
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
+        if (objects_ok) draw_special_objects(renderer, &room, &objects, cam_x, cam_y, step);
         /* Object20's actors stay in the room for the proximity chatter. */
         if ((opening.active || opening_epilogue) && objects_ok)
             draw_opening_actors(renderer, &objects, &opening_actors, cam_x, cam_y);

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 77 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 78 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 987 | 2586 |
+| Castlevania: Aria of Sorrow | 997 | 2576 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1848,6 +1848,15 @@ Tests: [`tests/test_aos_door.c`](../tests/test_aos_door.c), [`tests/test_native_
 Known divergences: The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) is not modelled. Door state now synchronizes gEwramData + 0x42C bits 0x101 for the pickup path and yellow-soul hold check; other readers and + 0xA074 bit 1 are not modelled; sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry.  
 Next action: Trace the setter of + 0x59 bit 2 to model the cleanup state 0x63.
 Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)`.
+
+[~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 7,10,13,14,15,17,18,19,21).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object0DCreate`, `aos:asm:asm/code/code_08050A3C.s:Object10Create`, `aos:asm:asm/code/code_08050A3C.s:Object13Create`, `aos:asm:asm/code/code_08050A3C.s:Object14Create`, `aos:asm:asm/code/code_08050A3C.s:Object14Update`, `aos:asm:asm/code/code_08050A3C.s:Object15Create`, `aos:asm:asm/code/code_08050A3C.s:Object17Create`, `aos:asm:asm/code/code_08050A3C.s:Object18Create`, `aos:asm:asm/code/code_08050A3C.s:Object19Create`, `aos:asm:asm/code/code_08050A3C.s:Object1BCreate`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`.  
+Local implementation: [`src/assets/aos/objects.c`](../src/assets/aos/objects.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.environment.wooden_doors`, `aos.environment.breakable_walls`.  
+Known divergences: Only the nine most-placed SPECIAL ids are exported (ids 14 and 15 alone cover 335 room placements); the remaining ids and the indirect/table-driven creates (Object0E, Object12, Object16) are not exported. Per-object animation and behaviour selection is not audited: the runtime draws animation 0 looping for every SPECIAL entity, and ids whose create exports raw still frames as separate animations show the first frame. param0 (entity + 0x30) selects the native state table, not the sprite. Object20 (id 26) is never room-placed: it is spawned by event controllers for cutscene actors.  
+Next action: Audit each object's animation/state selection against its update state tables, extend the export to the remaining SPECIAL ids and the indirect creates, then compare a room's object layer against an emulator.
 
 ### Rooms, areas and maps
 

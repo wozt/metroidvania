@@ -30,10 +30,10 @@ enum {
      * above the sub_0805AFC0 ornament strips at map rows 16-19
      * (y128-159); the scripts page at three text rows, matching
      * window (0,1,0x25,3). */
-    AOS_OPENING_TEXT_PANEL_X = 8,
+    AOS_OPENING_TEXT_PANEL_X = 4,
     AOS_OPENING_TEXT_PANEL_Y = 8,
-    AOS_OPENING_TEXT_PANEL_WIDTH = 224,
-    AOS_OPENING_TEXT_PANEL_HEIGHT = 116,
+    AOS_OPENING_TEXT_PANEL_WIDTH = 232,
+    AOS_OPENING_TEXT_PANEL_HEIGHT = 104,
     AOS_OPENING_TEXT_X = 14,
     AOS_OPENING_TEXT_Y = 42,
     AOS_OPENING_PROMPT_X = AOS_OPENING_TEXT_PANEL_X + 193,

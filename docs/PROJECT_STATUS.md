@@ -5,7 +5,7 @@ Last updated: **2026-11-06**.
 ## Patch 0794 - Opening dialogue box anchored to the native window band
 
 - The first-room dialogue presentation was rebuilt from the
-  reference capture: a large translucent slate box (8,8,224,116)
+  reference capture: a large translucent slate box (4,8,232,104)
   covers the upper screen with the portrait inside on the right,
   the speaker row and three 12-pixel text rows sit inside it, and
   the `sub_0805AFC0` ornament strips remain the bottom band at

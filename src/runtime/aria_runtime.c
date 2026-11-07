@@ -4791,29 +4791,47 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
     return true;
 }
 
-/* Fallback for dialogue entries whose native portrait resource cannot be
- * decoded (for example when the runtime is launched without --rom). */
-static const AriaFrame *opening_portrait_frame(const AosOpeningEvent *event,
-                                               const AriaObjects *objects,
-                                               const AriaLibrary *library,
-                                               const AosOpeningActors *actors) {
-    if (event->speaker == 2 && objects && actors &&
-        objects->opening_actors[0].loaded) {
-        const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[0];
-        int animation = actors->animation[0];
-        if (animation >= 0 && animation < AOS_ENEMY_MAX_ANIMS && art->defs[animation].count)
-            return &art->frames[animation][0];
-    }
-    if (event->speaker == 7 && objects && actors &&
-        objects->opening_actors[1].loaded) {
-        const __typeof__(objects->opening_actors[1]) *art = &objects->opening_actors[1];
-        int animation = actors->animation[1];
-        if (animation >= 0 && animation < AOS_ENEMY_MAX_ANIMS && art->defs[animation].count)
-            return &art->frames[animation][0];
-    }
-    if (event->speaker == 1 && library && library->defs[0].count)
-        return &library->frames[0][0];
-    return NULL;
+/* sub_0800E708(0, 0, 1) selects text 0xE3 for Winged Skeleton and
+ * sub_0800E540 selects 0x1E4 for its description. Decode those verified-ROM
+ * scripts through the same bounded parser as dialogue; no localized string
+ * is embedded in the runtime. */
+static bool render_opening_soul_entry(AosIntroResources *resources,
+                                      const AosIntroFont *font,
+                                      AosIntroTextTiles *tiles, uint16_t id,
+                                      unsigned y) {
+    const uint8_t *script = NULL;
+    size_t script_size = 0;
+    if (!aos_intro_resources_entry(resources, 1, id, &script, &script_size))
+        return false;
+    AosOpeningEvent text;
+    if (!aos_opening_event_init(&text, script, script_size)) return false;
+    aos_opening_event_set_resolver(&text, resolve_opening_text, resources);
+    for (unsigned frame = 0; frame < 1024 && text.active; ++frame)
+        aos_opening_event_update(&text, text.waiting ? AOS_KEY_A : 0);
+    if (!text.complete || text.malformed) return false;
+    for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
+        if (!aos_intro_font_render_span(font, tiles, 24, y + line * 12,
+                                        192, 8, text.glyphs[line],
+                                        text.glyph_counts[line]))
+            return false;
+    return true;
+}
+
+/* sub_0800E708's obtained-soul window uses the same dark field and native
+ * font tiles as the dialogue panel; it sits at the top of the viewport
+ * while states 1-2 of the modal sequence are visible. */
+static void draw_opening_soul_notice(SDL_Renderer *renderer,
+                                     const AosIntroTextTiles *tiles) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
+    SDL_FRect panel = {16, 24, 208, 56};
+    SDL_RenderFillRect(renderer, &panel);
+    SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
+    for (unsigned y = 0; y < 80; ++y)
+        for (unsigned x = 0; x < 240; ++x)
+            if (aos_intro_text_tiles_pixel(tiles, x, y))
+                SDL_RenderPoint(renderer, (float)x, (float)y);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 static bool load_opening_portrait(SDL_Renderer *renderer, const FusionRom *rom,
@@ -4849,9 +4867,6 @@ static bool load_opening_portrait(SDL_Renderer *renderer, const FusionRom *rom,
 static void draw_opening_text(SDL_Renderer *renderer,
                               const AosOpeningEvent *event,
                               const AosIntroTextTiles *tiles,
-                              const AriaObjects *objects,
-                              const AriaLibrary *library,
-                              const AosOpeningActors *actors,
                               const FusionRom *rom,
                               SDL_Texture **portrait_texture,
                               uint8_t *portrait_id) {
@@ -4859,18 +4874,21 @@ static void draw_opening_text(SDL_Renderer *renderer,
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     /* sub_080676BC draws the portrait as BG0, using the 12-byte descriptor
      * at 0x08526C78: tiles, palette row 13 and native metatile map. The
-     * decoded texture is a full transparent 240x160 screen layer. */
+     * decoded texture is a full transparent 240x160 screen layer. Only the
+     * native portrait resource is drawn; a decode failure is reported once
+     * per portrait id instead of substituting gameplay sprites. */
+    static uint8_t reported_portrait = 0xFF;
     bool native_portrait = load_opening_portrait(renderer, rom, event->portrait,
                                                  portrait_texture, portrait_id);
-    const AriaFrame *portrait = native_portrait ? NULL
-        : opening_portrait_frame(event, objects, library, actors);
+    if (!native_portrait && reported_portrait != event->portrait) {
+        reported_portrait = event->portrait;
+        fprintf(stderr, "Aria opening portrait 0x%02X unavailable: "
+                "native portrait resource could not be decoded\n",
+                event->portrait);
+    }
     if (native_portrait && portrait_texture && *portrait_texture) {
         SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
-    } else if (portrait && portrait->texture) {
-        SDL_FRect source = {0, 0, portrait->w, portrait->h * 0.68f};
-        SDL_FRect destination = {162, 10, 68, 82};
-        SDL_RenderTexture(renderer, portrait->texture, &source, &destination);
     }
     SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
     /* The portrait's lowest opaque row and the centred text field meet. */
@@ -4917,9 +4935,14 @@ static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
         aos_audio_play_song(0x6B);
         break;
     case AOS_OPENING_CUE_SOUL_ABSORBED:
-        /* State 5's absorption impact. The story reward remains committed
-         * by Object20 instead of creating a collectible room pickup. */
+        /* State 5: SE_0x197 followed by sub_0805B878(0x1040), which mutes
+         * music player 0 while sub_0800E708 displays the obtained soul. */
         aos_audio_play_song(0x197);
+        aos_audio_play_song(AOS_AUDIO_PLAYER_MUTE_BASE);
+        break;
+    case AOS_OPENING_CUE_SOUL_NOTICE_DISMISS:
+        /* State 5's modal window advance sound. */
+        aos_audio_play_song(0x132);
         break;
     case AOS_OPENING_CUE_AFTER_BATTLE:
         /* sub_0805D410 state 6: MUS_23, Premonition. */
@@ -5221,7 +5244,9 @@ int aria_runtime_main(int argc, char **argv) {
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
     static AosIntroTextTiles opening_tiles;
+    static AosIntroTextTiles opening_soul_tiles;
     bool opening_text_ready = false;
+    bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
     uint8_t opening_portrait_id = 0xFF;
     int rc = 1;
@@ -5431,6 +5456,15 @@ int aria_runtime_main(int argc, char **argv) {
             fprintf(stderr, "Cannot render the Aria opening dialogue\n");
             goto cleanup;
         }
+        aos_intro_text_tiles_clear(&opening_soul_tiles);
+        opening_soul_text_ready = render_opening_soul_entry(
+                                      &opening_resources, &opening_font,
+                                      &opening_soul_tiles, 0xE3, 32) &&
+                                  render_opening_soul_entry(
+                                      &opening_resources, &opening_font,
+                                      &opening_soul_tiles, 0x1E4, 50);
+        if (!opening_soul_text_ready)
+            fprintf(stderr, "Aria opening soul notice text unavailable\n");
         opening.dirty = false;
         aos_audio_play_song(0x1000);
         if (start_song < 0) {
@@ -5767,6 +5801,9 @@ int aria_runtime_main(int argc, char **argv) {
                 /* The scene owns Soma's pose until Object20 commits. */
                 soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
                 soma.anim.frame = 0;
+                /* The modal obtained-soul window consumes its own A presses;
+                 * they must not also advance the blocked text script. */
+                aos_opening_actors_input(&opening_actors, aria_input.new_input);
                 AosOpeningCue script_cue = AOS_OPENING_CUE_NONE;
                 if (!aos_opening_actors_blocks_script(&opening_actors)) {
                     aos_opening_event_update(&opening, aria_input.new_input);
@@ -6849,9 +6886,11 @@ int aria_runtime_main(int argc, char **argv) {
             draw_soul_menu(renderer, &soul_menu, &progress,
                            have_equipment ? &equipment : NULL,
                            have_item_use ? item_use : NULL, &soma, &objects);
-        if (opening_text_ready)
-            draw_opening_text(renderer, &opening, &opening_tiles, objects_ok ? &objects : NULL,
-                              &library, &opening_actors, &opening_rom,
+        if (opening_soul_text_ready &&
+            (opening_actors.soul_notice == 1 || opening_actors.soul_notice == 2))
+            draw_opening_soul_notice(renderer, &opening_soul_tiles);
+        else if (opening_text_ready)
+            draw_opening_text(renderer, &opening, &opening_tiles, &opening_rom,
                               &opening_portrait_texture, &opening_portrait_id);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {

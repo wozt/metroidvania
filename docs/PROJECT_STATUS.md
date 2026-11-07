@@ -22,6 +22,26 @@ Last updated: **2026-11-05**.
 Next: continue the unfinished Aria opening sequence (soul-obtained
 presentation, portraits, scripted actors) from commit 7172cac.
 
+## Patch 0780 - Restore the Aria opening soul-obtained window
+
+- Reconstructed state 5's modal obtained-soul window (sub_0800E708): it
+  opens at battle timer 0x8F together with SE_0x197 and the music-player-0
+  mute, decodes the ROM text entries 0xE3 (soul name) and 0x1E4
+  (description) through the same bounded parser as dialogue, stays modal
+  until the player presses A (SE_0x132 per dismiss), closes via the
+  sub_0800F0AC equivalent, and only then lets the script reach state 6's
+  MUS_23. `aos_opening_actors_blocks_script` now covers the whole window,
+  so rapid A presses cannot skip it.
+- Removed the opening dialogue's gameplay-sprite portrait fallback:
+  portraits now come only from `aos_portrait_decode`'s native ROM
+  resources, and a decode failure is reported once per portrait id.
+- Added a Stop button to `fusion_sfx_browser` and fixed its early-tick
+  GtkCheckButton critical; the tick now mirrors the runtime's MP2K pause
+  and player-finished sync.
+
+Next: emulator/listening comparison of the opening scene and the remaining
+Object20 parity gaps (native window frame, exact sub-state timings).
+
 ## Patch 0778 - Separate launcher SFX and add a native sound browser
 
 - Added independent host mixer gains per native audio player. The shared

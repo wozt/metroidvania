@@ -637,6 +637,11 @@ static void update_emitted(AosOpeningActors *actors) {
     }
 }
 
+void aos_opening_actors_input(AosOpeningActors *actors, uint16_t new_input) {
+    if (!actors) return;
+    actors->notice_input |= new_input;
+}
+
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     if (!actors || !actors->active || cue == AOS_OPENING_CUE_NONE) return;
     switch (cue) {
@@ -667,6 +672,8 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         break;
     case AOS_OPENING_CUE_AFTER_BATTLE:
         actors->soul_active = false;
+        actors->soul_notice = 0;
+        actors->notice_input = 0;
         actors->soma_hidden = false;
         actors->soma_animation = 0x51;
         actors->scene_state = 6;
@@ -687,7 +694,7 @@ bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
     switch (actors->scene_state) {
     case 3: return actors->scene_step < 3;
     case 4: return actors->scene_step < 2;
-    case 5: return !actors->soul_absorbed;
+    case 5: return !actors->soul_absorbed || actors->soul_notice != 0;
     default: return false;
     }
 }
@@ -823,6 +830,7 @@ scene:
                 due = AOS_OPENING_CUE_SOUL_ABSORBED;
                 actors->soul_active = false;
                 actors->soul_absorbed = true;
+                actors->soul_notice = 1;
                 actors->soul_x = AOS_OPENING_SOMA_X << 16;
                 actors->soul_y = (AOS_OPENING_SOMA_Y - 16) << 16;
                 actors->soma_animation = 0x52;
@@ -844,6 +852,26 @@ scene:
     default:
         break;
     }
+    /* sub_0805D410 state 5, sub-state 3: the sub_0800E708 obtained-soul
+     * window opens with the absorption, stays modal while the player has
+     * not pressed A (each press plays SE_0x132), then sub_0800F0AC closes
+     * it before the script may continue to state 6. */
+    if (actors->soul_notice == 1) {
+        actors->soul_notice = 2;
+    } else if (actors->soul_notice == 2 &&
+               (actors->notice_input & (AOS_KEY_A | AOS_KEY_START)) != 0) {
+        actors->notice_input = 0;
+        actors->soul_notice = 3;
+        actors->soul_notice_timer = 0x20;
+        if (output == AOS_OPENING_CUE_NONE)
+            output = AOS_OPENING_CUE_SOUL_NOTICE_DISMISS;
+        else
+            actors->pending_cue = AOS_OPENING_CUE_SOUL_NOTICE_DISMISS;
+    } else if (actors->soul_notice == 3 && actors->soul_notice_timer &&
+               --actors->soul_notice_timer == 0) {
+        actors->soul_notice = 0;
+    }
+    actors->notice_input = 0;
     return output;
 }
 

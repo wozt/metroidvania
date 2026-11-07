@@ -57,6 +57,7 @@ typedef enum {
     AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN,
     AOS_OPENING_CUE_ENEMY_DEFEATED,
     AOS_OPENING_CUE_SOUL_ABSORBED,
+    AOS_OPENING_CUE_SOUL_NOTICE_DISMISS,
     AOS_OPENING_CUE_AFTER_BATTLE,
     AOS_OPENING_CUE_COMPLETE,
 } AosOpeningCue;
@@ -222,6 +223,12 @@ typedef struct {
     uint16_t soul_age;
     bool soul_active;
     bool soul_absorbed;
+    /* sub_0800E708's obtained-soul window: 0 closed, 1 opening, 2 waiting
+     * for the player, 3 closing after sub_0800F0AC. The script stays
+     * blocked while it is nonzero, matching the native modal window. */
+    uint8_t soul_notice;
+    uint8_t soul_notice_timer;
+    uint16_t notice_input;
 } AosOpeningActors;
 
 bool aos_opening_event_should_start(uint8_t area, uint16_t room,
@@ -249,6 +256,9 @@ void aos_opening_actors_set_motion(AosOpeningActors *actors,
                                    void *context);
 /* Connects a script control-2 beat to sub_0805D410's actor state. */
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue);
+/* Feeds edge input to the modal obtained-soul window; consumed by the next
+ * aos_opening_actors_update. Other scene input stays with the text parser. */
+void aos_opening_actors_input(AosOpeningActors *actors, uint16_t new_input);
 /* True while an Object20 beat owns the scene. The text parser waits instead
  * of accepting the next page early, so rapid A presses cannot skip or strand
  * the enemy reveal, attack or soul absorption. */

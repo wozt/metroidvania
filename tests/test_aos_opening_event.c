@@ -337,11 +337,24 @@ static void test_trigger(void) {
            actors.soul_x == (AOS_OPENING_SOMA_X << 16) &&
            actors.soul_y == ((AOS_OPENING_SOMA_Y - 16) << 16) &&
            actors.soma_animation == 0x52);
-    assert(!aos_opening_actors_blocks_script(&actors));
+    /* sub_0800E708's obtained-soul window stays modal until the player
+     * dismisses it; the script cannot advance to state 6 meanwhile. */
+    assert(aos_opening_actors_blocks_script(&actors));
+    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+           AOS_OPENING_CUE_NONE);
+    assert(actors.soul_notice == 2);
+    aos_opening_actors_input(&actors, AOS_KEY_A);
+    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+           AOS_OPENING_CUE_SOUL_NOTICE_DISMISS);
+    assert(actors.soul_notice == 3 && actors.soul_notice_timer == 0x20);
     bool hidden = actors.soma_hidden;
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_NONE);
     assert(actors.soma_hidden != hidden && actors.soma_animation == 0x52);
+    for (unsigned frame = 0; frame < 0x1F; ++frame)
+        aos_opening_actors_update(&actors, durations, NULL, 0);
+    assert(actors.soul_notice == 0);
+    assert(!aos_opening_actors_blocks_script(&actors));
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);
     assert(!actors.soul_active && !actors.soma_hidden &&
            actors.soma_animation == 0x51);

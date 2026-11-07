@@ -43,13 +43,22 @@ Last updated: **2026-11-07**.
   frames; the golden fixture was regenerated. Id 15's shared-flame path
   (`0x0820ED60` + palette row `param0 >> 8`) and the indirect creates
   of ids 7 and 10 remain open.
+- Id 15's shared-flame path is now exported: `sub_0803AFB8` resolves the
+  tile sheet `0x081C15F4`'s palette slot to the 16-bank palette
+  `0x0826F8A4` (the state-3 alternative `0x082718A8` is not selected for
+  Soma — divergence noted) and `sub_0803B924` draws the shared frames
+  `0x0820ED60` with OBJ palette row `param0 >> 8` (default 7). Three
+  variants export as `special_15_v6/v7/v9`; the runtime compares
+  `(param0 >> 8) ?: 7` for this id and animation 0 is the shared flame
+  look. The export grew to 940 sequences / 2931 frames. The indirect
+  creates of ids 7 and 10 remain open.
 - Regenerated the `aos_native_golden` fixture for the corrected object
   outputs. Source-derived and unit-tested, not emulator-compared.
 
-Next: export id 15's flame variants (shared effect frames with palette
-rows 6/7/9), decode the indirect creates of 7 and 10, then audit each
-object's animation/state selection and compare a room's object layer
-against an emulator.
+Next: decode the indirect creates of ids 7 and 10, audit each object's
+animation/state selection (id 15's brain `sub_08050F08` and the
+`sub_0803F2C8` animation argument are not yet traced) and compare a
+room's object layer against an emulator.
 
 ## Patch 0800 - Native menu audio ducking and opening music ownership
 

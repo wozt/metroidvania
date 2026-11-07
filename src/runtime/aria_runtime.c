@@ -3954,9 +3954,17 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
             continue;
         const __typeof__(objects->special_objects[0]) *art = NULL;
+        /* Object0FCreate (id 15) selects the OBJ palette row param0 >> 8,
+         * defaulting to 7; its variant suffix carries that row. Other
+         * variant ids match the raw param0. */
+        int variant_key = e->param0;
+        if (e->id == 15) {
+            variant_key = e->param0 >> 8;
+            if (!variant_key) variant_key = 7;
+        }
         for (int v = 0; v < 24; ++v)
             if (objects->special_variants[v].id == e->id &&
-                objects->special_variants[v].param0 == e->param0 &&
+                objects->special_variants[v].param0 == variant_key &&
                 objects->special_variants[v].loaded) {
                 art = &objects->special_variants[v];
                 break;

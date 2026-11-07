@@ -391,6 +391,20 @@ static const EntitySpec special18_variants[] = {
     ENTITY("special_18_v03", 0x081CBEAC, 0x0820A100, 0, 0x08210C30),
 };
 
+/* Id 15 (Object0FCreate): a shared-flame object. sub_0803AFB8 resolves
+ * the palette slot of tile sheet 0x081C15F4 to the 16-bank palette
+ * 0x0826F8A4 (the state-3 alternative 0x082718A8 is not selected for
+ * Soma; divergence noted) and sub_0803B924 draws frames 0x0820ED60 with
+ * OBJ palette row param0 >> 8, defaulting to 7 when the high byte is 0.
+ * The variant suffix carries the resolved row, not the raw param0: the
+ * runtime compares (param0 >> 8) ?: 7 for this id. Rows seen in rooms:
+ * 6 (param0 0x600), 7 (param0 0 and low-byte variants) and 9 (0x900). */
+static const EntitySpec special15_variants[] = {
+    ENTITY("special_15_v6", 0x081C15F4, 0x0826F8A4, 6, 0x0820ED60),
+    ENTITY("special_15_v7", 0x081C15F4, 0x0826F8A4, 7, 0x0820ED60),
+    ENTITY("special_15_v9", 0x081C15F4, 0x0826F8A4, 9, 0x0820ED60),
+};
+
 static const EffectSpec effects[] = {
     {"flame", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {0}, -1},
     {"blood", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
@@ -1539,6 +1553,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special18_variants / sizeof special18_variants[0];
          ++index)
         success = export_entity(rom, &library, &special18_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special15_variants / sizeof special15_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special15_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)

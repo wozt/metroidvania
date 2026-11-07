@@ -52,13 +52,21 @@ Last updated: **2026-11-07**.
   `(param0 >> 8) ?: 7` for this id and animation 0 is the shared flame
   look. The export grew to 940 sequences / 2931 frames. The indirect
   creates of ids 7 and 10 remain open.
+- Ids 7 and 10 are logic objects, not sprites: `Object07Create` (id 7)
+  dispatches `param0` through a 5-case jump table (the dominant
+  `param0=1` only clears `+0x10`; cases 0/2 spawn children via
+  `sub_0804F374` indexed by `param1` through `0x085255AC`), and
+  `Object0ACreate` (id 10) is an entity spawner dispatching
+  `param0 & 0xFF` through 36-byte records at `0x080E9644`, deleting
+  itself when the `+0x37E` bit is clear. Neither calls
+  `sub_0806E0D0`, so there is no object art to export; their behaviour
+  ports remain open. Sprite coverage of the SPECIAL layer is complete.
 - Regenerated the `aos_native_golden` fixture for the corrected object
   outputs. Source-derived and unit-tested, not emulator-compared.
 
-Next: decode the indirect creates of ids 7 and 10, audit each object's
-animation/state selection (id 15's brain `sub_08050F08` and the
-`sub_0803F2C8` animation argument are not yet traced) and compare a
-room's object layer against an emulator.
+Next: audit each object's animation/state selection (id 15's brain
+`sub_08050F08`, the `sub_0803F2C8` animation argument, the id 7/10
+behaviours) and compare a room's object layer against an emulator.
 
 ## Patch 0800 - Native menu audio ducking and opening music ownership
 

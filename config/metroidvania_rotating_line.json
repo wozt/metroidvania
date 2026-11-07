@@ -1,0 +1,36 @@
+{
+  "section_count": 2,
+  "rotation_speed": 10.0,
+  "line_width": 0.0,
+  "show_divider": false,
+  "colors": {
+    "violet": "#8737CD",
+    "cyan": "#19DBE8",
+    "divider": "#FFFFFF"
+  },
+  "sections": [
+    {
+      "formula": "metroid_horizontal",
+      "amplitude": 30.0,
+      "cycles": 8,
+      "phase_speed": 0.2,
+      "stagger_delay": 0.4,
+      "repeat_visible": true,
+      "gap_pixels": 0.0,
+      "animated": false,
+      "loop": true
+    },
+    {
+      "formula": "fermat_horizontal",
+      "amplitude": 15.0,
+      "cycles": 8,
+      "phase_speed": 0.2,
+      "stagger_delay": 0.4,
+      "spiral_layout": 1,
+      "repeat_visible": true,
+      "gap_pixels": 0.0,
+      "animated": false,
+      "loop": true
+    }
+  ]
+}

@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0776 - Integrate the animated Metroid Vania divider
+
+- Replaced the straight rotating divider with the prototype's actual C11
+  parametric rasterizer and patch-0046 configuration: eight staggered Aria
+  Fermat spirals and eight staggered Metroid bipolar triangles, with automatic
+  animation and rotation. The later patch-0047/0048 polarity mirror is
+  intentionally absent.
+- Preserved both live native title screens and their music while adding the
+  prototype's synchronized X Metroid lightning pulse and Y Aria spiral and
+  heartbeat pulse. Holding either key for three seconds now selects that game
+  once through the existing in-process frontend transition; releasing early
+  cancels, and the START flow is unchanged.
+- Hardcoded the supplied JSON values as defaults and added the optional
+  `--split-config FILE.json` override using the ported strict configuration
+  parser. The sample remains in `config/metroidvania_rotating_line.json`.
+- Added deterministic tests for the exact early bipolar periods, absence of
+  the polarity mirror, Fermat synchronization, pulse geometry and audio, JSON
+  loading, cancellation and one-shot hold selection. Headless captures were
+  image-checked. This is source-derived and prototype-matched, not
+  emulator-compared.
+
+Next: reconstruct Equip's native title/frame and equipment/cursor OAM layers,
+then apply the same icon/cursor layer to Soul Set.
+
 ## Patch 0775 - Reconstruct the native Aria Equip data page
 
 - Replaced Equip's diagnostic data layout with a reusable C11 BG0 renderer

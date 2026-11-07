@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Metroid Vania launcher: the native title screens of Aria of Sorrow
  * (aos_title_screen) and of Zero Mission (mzm_title_screen) at once, split
- * by the rotating line of metroidvania_split. The music is the one of the
+ * by the animated patch-0046 geometry of metroidvania_split. The music is the one of the
  * game covering most of the bottom half (the one START launches); the other
  * fades out and pauses until its turn comes back. A first
  * START skips both titles' openings; once both wait for START, START goes
@@ -30,6 +30,7 @@
 #include "mzm_screen.h"
 #include "mzm_sfx.h"
 #include "mzm_title_screen.h"
+#include "rotating_line/pulse_audio.h"
 
 /* The embedded frontends (FUSION_EMBEDDED). */
 int room_runtime_main(int argc, char **argv);
@@ -162,8 +163,14 @@ static int run_frontend(const char *program, int argc, char **argv) {
     return 1;
 }
 
+static void trigger_split_pulse(MvSplit *split, SDL_AudioStream *audio,
+                                bool aria) {
+    float duration = proto_pulse_audio_emit(audio, aria);
+    mv_split_trigger_pulse(split, aria, duration);
+}
+
 typedef struct {
-    const char *aria_rom_path, *capture_dir;
+    const char *aria_rom_path, *capture_dir, *split_config_path;
     bool mute;
     long capture_frames[MAX_PRESSES], presses[MAX_PRESSES];
     int capture_count, press_count;
@@ -177,10 +184,15 @@ enum { TITLE_QUIT = 0, TITLE_CHOSEN = 1, TITLE_ERROR = -1,
 /* The shared title screen until a game is chosen (*chosen) or the window
  * closes; `window` is NULL for headless captures. */
 static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_game) {
+    static MvSplit split;
+    char error[256] = "";
+    if (!mv_split_init(&split, o->split_config_path, error, sizeof error)) {
+        fprintf(stderr, "Invalid rotating divider: %s\n", error);
+        return TITLE_ERROR;
+    }
     /* Aria: the title's layers, sheets and palette rows from the ROM. */
     FusionRom aria_rom = {0};
     static AosTitleGraphics aria_graphics;
-    char error[256] = "";
     if (!fusion_rom_open(FUSION_ASSET_GAME_ARIA, o->aria_rom_path, &aria_rom, error, sizeof error) ||
         !aos_title_graphics_init(&aria_graphics, &aria_rom, error, sizeof error) ||
         aria_rom.size < 0x20A000) {
@@ -208,6 +220,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
     aos_mp2k_engine_init(&mp2k);
     aos_audio_reset();
     SDL_AudioStream *aria_stream = NULL;
+    SDL_AudioStream *pulse_stream = NULL;
     static MzmPull pull;
     memset(&pull, 0, sizeof pull);
     if (!o->mute) {
@@ -233,6 +246,8 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
         } else {
             fprintf(stderr, "No Aria sound: %s\n", error);
         }
+        pulse_stream = proto_pulse_audio_open();
+        if (!pulse_stream) fprintf(stderr, "No divider pulse audio: %s\n", SDL_GetError());
     }
 
     SDL_Renderer *renderer = NULL;
@@ -273,7 +288,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
     int choosing_frames = 0;
     MvGame chosen = MV_GAME_ARIA;
     uint16_t mzm_held = 0;
-    uint32_t turn = 0;          /* the line's frames */
+    MvSplitHold aria_hold = {0}, metroid_hold = {0};
     float gain[2] = {0.0f, 1.0f};   /* Zero Mission is at the bottom first */
     uint64_t next_frame = SDL_GetTicksNS();
     for (long frame = 0; running; ++frame) {
@@ -286,18 +301,68 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                      (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER))
                 start = true;
-            else if (event.type == SDL_EVENT_GAMEPAD_ADDED) {
+            else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                     event.key.key == SDLK_X) {
+                if (mv_split_hold_press(&metroid_hold))
+                    trigger_split_pulse(&split, pulse_stream, false);
+            } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+                       event.key.key == SDLK_Y) {
+                if (mv_split_hold_press(&aria_hold))
+                    trigger_split_pulse(&split, pulse_stream, true);
+            } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_X) {
+                mv_split_hold_release(&metroid_hold);
+            } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_Y) {
+                mv_split_hold_release(&aria_hold);
+            } else if (event.type == SDL_EVENT_GAMEPAD_ADDED) {
                 for (int k = 0; k < 8; ++k)
                     if (!pads[k]) {
                         pads[k] = SDL_OpenGamepad(event.gdevice.which);
                         break;
                     }
+            } else if (event.type == SDL_EVENT_GAMEPAD_REMOVED) {
+                for (int k = 0; k < 8; ++k)
+                    if (pads[k] && SDL_GetGamepadID(pads[k]) == event.gdevice.which) {
+                        SDL_CloseGamepad(pads[k]);
+                        pads[k] = NULL;
+                    }
+                mv_split_hold_release(&metroid_hold);
+                mv_split_hold_release(&aria_hold);
             } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
                        event.gbutton.button == SDL_GAMEPAD_BUTTON_START)
                 start = true;
+            else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
+                     event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
+                if (mv_split_hold_press(&metroid_hold))
+                    trigger_split_pulse(&split, pulse_stream, false);
+            } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
+                       event.gbutton.button == SDL_GAMEPAD_BUTTON_WEST) {
+                if (mv_split_hold_press(&aria_hold))
+                    trigger_split_pulse(&split, pulse_stream, true);
+            } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_UP &&
+                       event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
+                mv_split_hold_release(&metroid_hold);
+            } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_UP &&
+                       event.gbutton.button == SDL_GAMEPAD_BUTTON_WEST) {
+                mv_split_hold_release(&aria_hold);
+            }
         }
         if (!running) break;
-        uint16_t angle = mv_split_angle(turn);
+        unsigned metroid_pulses = 0, aria_pulses = 0;
+        bool launch_metroid = mv_split_hold_tick(
+            &metroid_hold, PROTO_FIXED_TIMESTEP, &metroid_pulses);
+        bool launch_aria = mv_split_hold_tick(
+            &aria_hold, PROTO_FIXED_TIMESTEP, &aria_pulses);
+        while (metroid_pulses--)
+            trigger_split_pulse(&split, pulse_stream, false);
+        while (aria_pulses--)
+            trigger_split_pulse(&split, pulse_stream, true);
+        if (!chosen_done && (launch_metroid || launch_aria)) {
+            chosen = launch_metroid ? MV_GAME_MZM : MV_GAME_ARIA;
+            chosen_done = true;
+            choosing = true;
+            skipping = false;
+        }
+        uint16_t angle = mv_split_rotation_angle(&split);
         bool both_ready = aria_ready(&aria) && mzm_title_ready(&mzm);
         uint16_t aria_input = 0, mzm_press = 0;
         if (start && !choosing) {
@@ -377,7 +442,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
                 SDL_PutAudioStreamData(aria_stream, pcm, sizeof pcm);
         }
         if (aria_stream) SDL_SetAudioStreamGain(aria_stream, gain[MV_GAME_ARIA]);
-        if (!choosing) ++turn;
+        mv_split_tick(&split, PROTO_FIXED_TIMESTEP, !choosing);
 
         aos_title_screen_render(&aria, aria_pixels);
         gba_ppu_render(mzm_screen.ppu, MV_SCREEN_W, MV_SCREEN_H, false, mzm_argb,
@@ -389,7 +454,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             mzm_pixels[k * 4 + 2] = (uint8_t)c;
             mzm_pixels[k * 4 + 3] = 255;
         }
-        mv_split_compose(angle, aria_pixels, mzm_pixels, pixels);
+        mv_split_compose(&split, aria_pixels, mzm_pixels, pixels);
 
         if (!window) {
             if (listed(o->capture_frames, o->capture_count, frame)) {
@@ -424,6 +489,7 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
     mzm_stream = NULL;
     mzm_sfx_set_sink(NULL, NULL);
     if (aria_stream) SDL_DestroyAudioStream(aria_stream);
+    if (pulse_stream) SDL_DestroyAudioStream(pulse_stream);
     aos_audio_set_start_sink(NULL, NULL);
     aos_mp2k_engine_destroy(&mp2k);
     mzm_audio_close();
@@ -439,9 +505,11 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
 }
 
 int main(int argc, char **argv) {
-    static Options o = {DEFAULT_ARIA_ROM, NULL, false, {0}, {0}, 0, 0, {NULL}, 0};
+    static Options o = {.aria_rom_path = DEFAULT_ARIA_ROM};
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--aria-rom") && i + 1 < argc) o.aria_rom_path = argv[++i];
+        else if (!strcmp(argv[i], "--split-config") && i + 1 < argc)
+            o.split_config_path = argv[++i];
         else if (!strcmp(argv[i], "--mute")) o.mute = true;
         else if (!strcmp(argv[i], "--capture") && i + 2 < argc) {
             /* --capture DIR F1,F2,...: headless, BMPs of those frames. */
@@ -454,7 +522,8 @@ int main(int argc, char **argv) {
         } else if (!strcmp(argv[i], "--frontend-arg") && i + 1 < argc && o.frontend_arg_count < 16) {
             o.frontend_args[o.frontend_arg_count++] = argv[++i];
         } else {
-            fprintf(stderr, "Usage: fusion_metroidvania [--aria-rom FILE] [--mute] "
+            fprintf(stderr, "Usage: fusion_metroidvania [--aria-rom FILE] "
+                            "[--split-config FILE.json] [--mute] "
                             "[--capture DIR FRAME,...] [--press FRAME,...] [--frontend-arg ARG]\n");
             return 2;
         }

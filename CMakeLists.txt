@@ -226,8 +226,12 @@ fusion_enable_warnings(fusion_aria_runtime)
 get_target_property(fusion_mzm_frontend_sources fusion_room_runtime SOURCES)
 get_target_property(fusion_aria_frontend_sources fusion_aria_runtime SOURCES)
 get_target_property(fusion_aria_menu_sources fusion_aria_title_preview SOURCES)
+set(fusion_rotating_line_sources
+    src/runtime/rotating_line/curve.c src/runtime/rotating_line/config.c
+    src/runtime/rotating_line/expression.c src/runtime/rotating_line/parametric.c)
 set(fusion_metroidvania_sources src/runtime/metroidvania_launcher.c
-    src/runtime/metroidvania_split.c ${fusion_mzm_frontend_sources}
+    src/runtime/metroidvania_split.c ${fusion_rotating_line_sources}
+    src/runtime/rotating_line/pulse_audio.c ${fusion_mzm_frontend_sources}
     ${fusion_aria_frontend_sources} ${fusion_aria_menu_sources})
 list(REMOVE_DUPLICATES fusion_metroidvania_sources)
 add_executable(fusion_metroidvania ${fusion_metroidvania_sources})
@@ -922,11 +926,22 @@ if(BUILD_TESTING)
     add_test(NAME fusion_host COMMAND fusion_host_tests)
 
     add_executable(fusion_metroidvania_split_tests tests/test_metroidvania_split.c
-                   src/runtime/metroidvania_split.c)
+                   src/runtime/metroidvania_split.c ${fusion_rotating_line_sources})
     target_include_directories(fusion_metroidvania_split_tests PRIVATE src/runtime)
+    target_compile_definitions(fusion_metroidvania_split_tests PRIVATE
+        MV_SPLIT_SAMPLE_CONFIG="${CMAKE_CURRENT_SOURCE_DIR}/config/metroidvania_rotating_line.json")
     target_link_libraries(fusion_metroidvania_split_tests PRIVATE m)
     fusion_enable_warnings(fusion_metroidvania_split_tests)
     add_test(NAME metroidvania_split COMMAND fusion_metroidvania_split_tests)
+
+    add_executable(fusion_metroidvania_pulse_audio_tests
+                   tests/test_metroidvania_pulse_audio.c
+                   src/runtime/rotating_line/pulse_audio.c
+                   src/runtime/rotating_line/parametric.c)
+    target_include_directories(fusion_metroidvania_pulse_audio_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_metroidvania_pulse_audio_tests PRIVATE SDL3::SDL3 m)
+    fusion_enable_warnings(fusion_metroidvania_pulse_audio_tests)
+    add_test(NAME metroidvania_pulse_audio COMMAND fusion_metroidvania_pulse_audio_tests)
 
     add_executable(fusion_aos_title_screen_tests tests/test_aos_title_screen.c
                    src/runtime/aos_title_screen.c src/runtime/aos_obj.c src/runtime/aos_anim.c)

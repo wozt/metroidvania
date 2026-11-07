@@ -249,9 +249,11 @@ with "MISSION ACCOMPLISHED!", followed by the credits and Samus's end
 screen (`src/runtime/mzm_credits.c`); the ending image and the unlocked
 options are not ported, so the runtime then returns to the intro. The demos and the other cutscenes are not ported yet.
 
-The Metroid Vania launcher shows both native title screens at once, split by
-a line through the screen centre that turns clockwise (10 degrees a second,
-Aria on top at the start). The music is the one of the game covering most of
+The Metroid Vania launcher shows both native title screens at once, separated
+by the animated patch-0046 prototype geometry: eight staggered Metroid bipolar
+triangles and eight staggered Aria Fermat spirals rotate clockwise at 10
+degrees a second. It intentionally excludes the later polarity mirror. The
+music is the one of the game covering most of
 the bottom half, cross-faded when it changes; the other game's music pauses
 until its turn comes back. A first START (Enter, or a
 gamepad's START) skips both titles' openings; the next one goes to the game
@@ -265,6 +267,13 @@ exported Zero Mission ROM bank and sounds:
 ```sh
 ./build/fusion_metroidvania --aria-rom "roms/Castlevania - Aria of Sorrow (USA).gba"
 ```
+
+X triggers a synchronized Metroid lightning pulse and sound; Y triggers an
+Aria spiral pulse and heartbeat. Holding X or Y for three seconds launches
+that game's existing native runtime in process, once per hold; releasing early
+cancels the hold. START keeps the title-driven selection described above. The
+compiled defaults reproduce `config/metroidvania_rotating_line.json`; pass
+`--split-config FILE.json` to override them.
 
 A game's way back to its own title (B in its file screen, for example)
 returns to the shared title. `--mute` silences it, `--capture DIR FRAME,...`

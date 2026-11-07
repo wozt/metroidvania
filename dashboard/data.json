@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T19:46:17+00:00",
+ "generated_at": "2026-11-07T19:47:11+00:00",
  "git": {
-  "commit": "9790683",
+  "commit": "aa9715e",
   "branch": "main",
   "dirty": true
  },
@@ -13396,7 +13396,7 @@
     "sub_0804AFD4",
     "sub_0804B26C"
    ],
-   "limitations": "The native C11 BG0 renderer consumes the verified ROM's localized names, descriptions, small and proportional fonts, language-bank labels, digit and comparison tiles and source coordinates. Its title banner, page frame, item icon and cursor OAM layers and exact transitions remain absent. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. The runtime now passes that live list to a source-derived sub_0804A95C BG0 view with the three equipped names, selected category, quantities, localized description and six current-versus-preview values. sub_0804AED4 removes a selected last copy from the recent cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names and were rendered locally from the verified ROM. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-derived, unit-tested and image-checked, not emulator-compared. The icon system is decoded: sub_0804090C(icon,slot) writes a single icon descriptor at gEwramData+0x115B2..+0x115BA (icon/6, slot, icon%6, icon index clamped to 0xF0, slot*12; slot clamped to 0x1F) and sub_08040970(x,y,w,h) sets the window rect at +0x115BC (x<=0x28, y<=0x1F tile clamps); sub_080404A0/sub_08040508/sub_0804039C are attribute-bit writers over the 0x03001A18 window tilemap (row = icon>>3 via the +0x11598 base, column block = slot<<10), so the icon index (0-0xF0) is most likely a direct tile index in the window tileset and menu icons are BG tiles, not OBJ sprites; sub_08041204 walks the window rect (+0x115BC..+0x115C2) each frame calling sub_080411AC per cell, which resets the descriptor counters; call-site decode: each site pairs sub_08040970(x,y,w,h) window rects in tiles with sub_0804090C(icon,arg2) where arg2 tracks the window row (8/9/14/15) and icon IDs seen are 0x01, 0x60, 0x80, 0xB0 - now resolved against the real tileset: bg0_base_chars holds only tiles 0x300-0x3FF (the BG1-rendered window tileset), and tile 0x300+icon_id dumps as frame fragments, not icons, so the id is not a direct tile index; the descriptor fields icon/6 (row) and icon%6 (column) imply a 6-column icon sheet; sub_08041204 iterates the configured window rect (+0x115BC..+0x115C2) calling sub_080411AC(x,y) per cell, which fills +0x115B2=x, +0x115B4=y, +0x115B6=0, +0x115B8=x*6, +0x115BA=y*8 then runs sub_080410BC: it picks attribute writer sub_080404A0 vs sub_08040508 by column parity ((x*6)&7+6 > 7) and advances a +0x115B6 cursor by 6 wrapping at 6, so icon placement emerges from the shared text-window cell engine rather than a per-icon formula; e.g. sub_0804CFE8 draws drop-name windows (0,9,14,1) and (0x15,9,14,1) with icon 0x80, sub_0804D0D0 the name window (0x15,8,18,1) with icon 0xB0, sub_0804D2C8 list/header icons 0x60/0x80.",
+   "limitations": "The native C11 BG0 renderer consumes the verified ROM's localized names, descriptions, small and proportional fonts, language-bank labels, digit and comparison tiles and source coordinates. Its title banner, page frame, item icon and cursor OAM layers and exact transitions remain absent. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. The runtime now passes that live list to a source-derived sub_0804A95C BG0 view with the three equipped names, selected category, quantities, localized description and six current-versus-preview values. sub_0804AED4 removes a selected last copy from the recent cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names and were rendered locally from the verified ROM. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-derived, unit-tested and image-checked, not emulator-compared. The icon system is decoded: sub_0804090C(icon,slot) writes a single icon descriptor at gEwramData+0x115B2..+0x115BA (icon/6, slot, icon%6, icon index clamped to 0xF0, slot*12; slot clamped to 0x1F) and sub_08040970(x,y,w,h) sets the window rect at +0x115BC (x<=0x28, y<=0x1F tile clamps); sub_080404A0/sub_08040508/sub_0804039C are attribute-bit writers over the 0x03001A18 window tilemap (row = icon>>3 via the +0x11598 base, column block = slot<<10), so the icon index (0-0xF0) is most likely a direct tile index in the window tileset and menu icons are BG tiles, not OBJ sprites; sub_08041204 walks the window rect (+0x115BC..+0x115C2) each frame calling sub_080411AC per cell, which resets the descriptor counters; call-site decode: each site pairs sub_08040970(x,y,w,h) window rects in tiles with sub_0804090C(icon,arg2) where arg2 tracks the window row (8/9/14/15) and icon IDs seen are 0x01, 0x60, 0x80, 0xB0 - now resolved against the real tileset: bg0_base_chars holds only tiles 0x300-0x3FF (the BG1-rendered window tileset), and tile 0x300+icon_id dumps as frame fragments, not icons, so the id is not a direct tile index; the descriptor fields icon/6 (row) and icon%6 (column) imply a 6-column icon sheet; sub_08041204 iterates the configured window rect (+0x115BC..+0x115C2) calling sub_080411AC(x,y) per cell, which fills +0x115B2=x, +0x115B4=y, +0x115B6=0, +0x115B8=x*6, +0x115BA=y*8 then runs sub_080410BC: it picks attribute writer sub_080404A0 vs sub_08040508 by column parity ((x*6)&7+6 > 7) and advances a +0x115B6 cursor by 6 wrapping at 6, and the deepest layer is now decoded: 0x03001A18 is a 32-bit-per-cell software framebuffer (12 cells per row) written by sub_0803FEA4, the glyph blitter that reads 14-byte font metrics at 0x0850A136 indexed by char-0x20 and merges attribute bits; icons are composited through this same cell engine, so a faithful port means reimplementing the window cell renderer, not placing tiles; e.g. sub_0804CFE8 draws drop-name windows (0,9,14,1) and (0x15,9,14,1) with icon 0x80, sub_0804D0D0 the name window (0x15,8,18,1) with icon 0xB0, sub_0804D2C8 list/header icons 0x60/0x80.",
    "next_action": "Reconstruct the Equip title, frame and the icon-list tile writes (sub_0804090C/sub_08040970/sub_0804039C plus the icon tileset bank), then complete all weapon entity classes, resistance and record-specific accessory effects.",
    "evidence": {
     "unit_tests": [
@@ -20209,6 +20209,12 @@
  },
  "timeline": [
   {
+   "commit": "aa9715e",
+   "date": "2026-11-07",
+   "subject": "Trace the per-cell window engine behind menu icons",
+   "scope": "project"
+  },
+  {
    "commit": "9790683",
    "date": "2026-11-07",
    "subject": "Resolve pause icon tile hypothesis against the real tileset",
@@ -20680,12 +20686,6 @@
    "commit": "7172cac",
    "date": "2026-11-07",
    "subject": "unfinished job of codex, aria intro fix",
-   "scope": "project"
-  },
-  {
-   "commit": "a7a80b6",
-   "date": "2026-11-07",
-   "subject": "Add native SFX browser and independent pulse mixing",
    "scope": "project"
   }
  ],

@@ -761,6 +761,14 @@ static void attack_state(AosSoma *soma, const AosCollision *layer, uint16_t held
  * ground, back to state 0 when the cast animation ends. The pose-3 recoil
  * (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled. */
 static void cast_state(AosSoma *soma, const AosCollision *layer, uint16_t held) {
+    /* _0801C6F2: the pose-3 recoil fires once, when the cast animation
+     * reaches frame 3 (+0x6E): sound 0xEB and a 4.0 lunge toward the
+     * facing direction (+0x58 bit 0x40 picks the sign). */
+    if (soma->recoil && soma->anim.frame == 3) {
+        aos_audio_play_song(0xEB);
+        soma->recoil = 0;
+        soma->vx = soma->facing_left ? (int32_t)0xFFFC0000 : 0x40000;
+    }
     int32_t speed = (soma->abilities & AOS_ABILITY_FAST_WALK) ? AOS_FAST_WALK_SPEED
                                                               : AOS_WALK_SPEED;
     if ((soma->flags & AOS_FLAG_AIRBORNE) && (held & AOS_KEY_LEFT)) {

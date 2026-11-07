@@ -163,6 +163,15 @@ Last updated: **2026-11-06**.
   wiring the discovery bits through room entry and a save-schema field
   remains open.
 
+## Patch 0788 - Aria Soma cast recoil
+
+- Ported the pose-3 recoil of `sub_0801B0D8` case 2 (`_0801C6F2`): when
+  the cast animation reaches frame `+0x6E == 3`, sound `0xEB` plays
+  once and Soma lunges 4.0 pixels per frame toward the facing direction
+  (`+0x58` bit `0x40` picks the sign). The recoil byte was previously
+  set but never consumed. Deterministic test covers the timing, the
+  sound request and the post-friction velocity.
+
 ## Patch 0787 - Aria Soma hard-landing attack cancel
 
 - Ported the case-4 tail of `sub_0801B0D8` (`_0801CA60`): while the hard

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T15:08:34+00:00",
+ "generated_at": "2026-11-07T15:24:22+00:00",
  "git": {
-  "commit": "aa68b09",
+  "commit": "aa79e93",
   "branch": "main",
   "dirty": true
  },
@@ -13820,7 +13820,7 @@
     "sub_08041318",
     "sub_08041338"
    ],
-   "limitations": "Cursor and window state only: the 4-bpp tile blitters (sub_0803FF64, sub_08040048, sub_080402DC, sub_0804039C) and the cell erasers (sub_08040E90, sub_080410BC, through sub_08040F84 and sub_080411AC) are not ported; callbacks receive each glyph and cell position, and the frontend draws glyphs with the existing proportional-font renderer. Context B's font (metrics 0x080E2EC0) is not loaded, so only context A is drawn. The native print loop is unbounded; the port stops at the entry's end. Both text cursors of gEwramData + 0x115A0 (context A, 12-pixel rows up to 20) and + 0x115B2 (context B, 8-pixel rows up to 31) are ported from the assembly: cell and pixel cursors (with the native 12-pixel row of sub_0804090C in context B), windows (right edge x + w - 2, bottom y + h - 1, clamped after the store), newline and glyph advance with the single 6-pixel carry, right-edge and bottom wrapping, positioned puts, window clears (left column to one past the right) and the print loops that stop at the first control. The main menu prints its prompt at (0, 1) of window (0, 1, 0x25, 3) and the copy/delete YES/NO entries at (9, 2) and (0x14, 2) for COPY or (0xA, 2) and (0x15, 2) for DELETE; the frontend shows text tiles 0x20-0x9F through the native BG0 map from screen tile (2, 15). With the verified ROM all ten menu texts fit their row in the three languages (optional local test). Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "Cursor and window state only: the 4-bpp tile blitters (sub_0803FF64, sub_08040048, sub_080402DC, sub_0804039C) and the cell erasers (sub_08040E90, sub_080410BC, through sub_08040F84 and sub_080411AC) are not ported; callbacks receive each glyph and cell position, and the frontend draws glyphs with the existing proportional-font renderer. Context B's font (metrics 0x080E2EC0) is not loaded, so only context A is drawn. The native print loop is unbounded; the port stops at the entry's end. Both text cursors of gEwramData + 0x115A0 (context A, 12-pixel rows up to 20) and + 0x115B2 (context B, 8-pixel rows up to 31) are ported from the assembly: cell and pixel cursors (with the native 12-pixel row of sub_0804090C in context B), windows (right edge x + w - 2, bottom y + h - 1, clamped after the store), newline and glyph advance with the single 6-pixel carry, right-edge and bottom wrapping, positioned puts, window clears (left column to one past the right) and the print loops that stop at the first control. The main menu prints its prompt at (0, 1) of window (0, 1, 0x25, 3) and the copy/delete YES/NO entries at (9, 2) and (0x14, 2) for COPY or (0xA, 2) and (0x15, 2) for DELETE; the frontend shows text tiles 0x20-0x9F through the native BG0 map from screen tile (2, 15). With the verified ROM all ten menu texts fit their row in the three languages (optional local test). Source-derived and unit-tested, not emulator-compared. Audit: sub_08040748 takes (x, y, w, h) in cells and stores the window at gEwramData+0x115A0; dialogue windows use (0,1-2,0x25,3) and (0,0,0x29,4). sub_08040FE0 clears rows through sub_08040F84; sub_08046BC8 prints via the jump table at 0x08046C48; sub_0803FF64 patches tilemap entries at WRAM 0x03001A18 with a per-row bitmask built from window flags at +0x115A6/+0x115A8 (border attribute pass, 12 rows); sub_080473CC writes u16 tile entries straight into the 0x0600E000 BG0 map (x*2 + y*64 byte offset, n entries).",
    "next_action": "Port the tile blitters and cell erasers with VRAM tile output, load context B's font for the language menu, and move the file names and statistics onto this window.",
    "evidence": {
     "unit_tests": [
@@ -13887,7 +13887,7 @@
     "sub_08019BB0",
     "sub_08021994"
    ],
-   "limitations": "A new file now starts with no movement ability bits; the first five enabled ability souls drive backdash, slide, double jump, dive kick and high jump, while explicit diagnostics retain their override. Movement and the currently traced ability states are ported; the full native player state machine is not complete. State 9 (sub_0801A94C) is ported: the guardian transformation with its pose, start, loop and end animations of 0x084F10A0, the forward charge with the 0x080E12EF wall probes, the ceiling test that ends the soul (sub_0802DFF0) and the invulnerability it keeps. + 0x1E is now the invulnerability counter: sub_08021654 ignores hits while it is set and _0801CCC0 counts it down, clearing the recent-hit slots at 0. sub_08021654 takes the hit's elements (aos_soma_take_elemental_hit): resisted elements quarter the damage, the stone status doubles it, 0x13260 bit 0x2000 evades it (0x13B), 0xB3 is the hurt sound, and the elements' bits 6-8 set poison, curse or stone (unless all resisted) with the 0x080E1338 timers and sounds. A petrified Soma reacts with state 15 (sub_08019BB0, animations 0x49 / 0x4A) until A, B and D-pad presses wear the 15 stone points off (sub_08021994, 0xB0 / 0xAF); poison quarters STR, CON and INT and curse drains max MP / 128 every 4 frames instead of regenerating, each for 600 frames. The contact elements are set for the grenade (2), a gold Medusa Head and the Gorgon breath (0x100); the other enemies' contact callbacks (about 150 with their own constants) default to 0. Soma's sounds are played where his routines call PlaySong: 0xB9 for the ground jump, the mid-air jump (sub_080190E0), the dive kick's bounce (sub_08017F94) and the air recovery (sub_080199A0), 0xBA for the high jump, 0xA9 for the backdash (also from an attack, _0801C6A0) and the dive kick (sub_08017D90), 0xBD for the slide, 0xB8 for the ceiling crash (sub_08017CC8), the cries 0x19B (flinch, _0801B780) and 0x195 (knockback, _0801B9AC), the hard landing's 0x199 three times in four (_0801C9BC, through the new random callback, RandomNumberGenerator in the runtime) and the death's 0x197 (sub_0801AF20). Not played: the grab state's 0x196 and the red soul recoil's 0xEB, whose states are not ported; Julius' routines (sub_0801F*) are excluded with Julius mode. Unit-tested for the jump, backdash, slide, flinch, knockback and death. Case 4 (hard landing) now runs sub_080197B4 while flag 0x80 is set (_0801CA60), so the attack button cancels the landing recovery — including out of a knockback landing — using the crouch posture the state raises first.",
+   "limitations": "A new file now starts with no movement ability bits; the first five enabled ability souls drive backdash, slide, double jump, dive kick and high jump, while explicit diagnostics retain their override. Movement and the currently traced ability states are ported; the full native player state machine is not complete. State 9 (sub_0801A94C) is ported: the guardian transformation with its pose, start, loop and end animations of 0x084F10A0, the forward charge with the 0x080E12EF wall probes, the ceiling test that ends the soul (sub_0802DFF0) and the invulnerability it keeps. + 0x1E is now the invulnerability counter: sub_08021654 ignores hits while it is set and _0801CCC0 counts it down, clearing the recent-hit slots at 0. sub_08021654 takes the hit's elements (aos_soma_take_elemental_hit): resisted elements quarter the damage, the stone status doubles it, 0x13260 bit 0x2000 evades it (0x13B), 0xB3 is the hurt sound, and the elements' bits 6-8 set poison, curse or stone (unless all resisted) with the 0x080E1338 timers and sounds. A petrified Soma reacts with state 15 (sub_08019BB0, animations 0x49 / 0x4A) until A, B and D-pad presses wear the 15 stone points off (sub_08021994, 0xB0 / 0xAF); poison quarters STR, CON and INT and curse drains max MP / 128 every 4 frames instead of regenerating, each for 600 frames. The contact elements are set for the grenade (2), a gold Medusa Head and the Gorgon breath (0x100); the other enemies' contact callbacks (about 150 with their own constants) default to 0. Soma's sounds are played where his routines call PlaySong: 0xB9 for the ground jump, the mid-air jump (sub_080190E0), the dive kick's bounce (sub_08017F94) and the air recovery (sub_080199A0), 0xBA for the high jump, 0xA9 for the backdash (also from an attack, _0801C6A0) and the dive kick (sub_08017D90), 0xBD for the slide, 0xB8 for the ceiling crash (sub_08017CC8), the cries 0x19B (flinch, _0801B780) and 0x195 (knockback, _0801B9AC), the hard landing's 0x199 three times in four (_0801C9BC, through the new random callback, RandomNumberGenerator in the runtime) and the death's 0x197 (sub_0801AF20). Not played: the grab state's 0x196 and the red soul recoil's 0xEB, whose states are not ported; Julius' routines (sub_0801F*) are excluded with Julius mode. Unit-tested for the jump, backdash, slide, flinch, knockback and death. Case 4 (hard landing) now runs sub_080197B4 while flag 0x80 is set (_0801CA60), so the attack button cancels the landing recovery — including out of a knockback landing — using the crouch posture the state raises first. The cast state's pose-3 recoil is now ported (_0801C6F2): at animation frame +0x6E==3 it plays sound 0xEB once and lunges Soma 4.0 pixels per frame toward the facing direction.",
    "next_action": "Port the remaining native Soma states.",
    "evidence": {
     "unit_tests": [
@@ -20139,6 +20139,18 @@
  },
  "timeline": [
   {
+   "commit": "aa79e93",
+   "date": "2026-11-07",
+   "subject": "Document the Aria text-window asm audit findings",
+   "scope": "project"
+  },
+  {
+   "commit": "77dad15",
+   "date": "2026-11-07",
+   "subject": "Port the Aria hard-landing attack cancel (sub_0801B0D8 case 4)",
+   "scope": "project"
+  },
+  {
    "commit": "aa68b09",
    "date": "2026-11-07",
    "subject": "Fix Aria intro presentation: skip overlay, castle wrap, music timing",
@@ -20604,18 +20616,6 @@
    "commit": "5cb37ea",
    "date": "2026-11-03",
    "subject": "Port the Shadow Knight and Alura Une blue souls",
-   "scope": "project"
-  },
-  {
-   "commit": "d65f5d3",
-   "date": "2026-11-03",
-   "subject": "Port the Devil and Manticore blue souls",
-   "scope": "project"
-  },
-  {
-   "commit": "538aa78",
-   "date": "2026-11-03",
-   "subject": "Port the Persephone and Great Armor blue souls",
    "scope": "project"
   }
  ],

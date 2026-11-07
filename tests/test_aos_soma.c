@@ -707,10 +707,17 @@ static void soul_tests(void) {
     /* Pose 3 sets the recoil byte; in the air every pose uses its air
      * animation (pose 0: 49). */
     cast_pose_result = 3;
+    anim_defs[80] = (AosAnimDef){4, one_step};
     soma = caster(100, 159, AOS_FLAG_GROUNDED);
     soma.cast = scripted_cast;
     frame(&soma, AOS_KEY_UP, AOS_KEY_ATTACK);
     assert(soma.recoil == 1 && soma.cast_1e == 0x31 && soma.anim.id == 80);
+    /* _0801C6F2: at animation frame 3 the recoil fires once — sound 0xEB
+     * and a 4.0 lunge toward the facing direction (friction already
+     * applied this frame, so 0x3C000 on the ground). */
+    for (int i = 0; i < 10 && soma.recoil; ++i) frame(&soma, 0, 0);
+    assert(!soma.recoil && soma.vx == 0x3C000 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0xEB) == 1);
     cast_pose_result = 0;
     soma = caster(100, 100, AOS_FLAG_AIRBORNE);
     soma.cast = scripted_cast;

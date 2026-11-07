@@ -37,6 +37,23 @@ Last updated: **2026-11-07**.
   same cadence and box during `soma.state == 16`; the kind-to-animation
   mapping and the emitter's own bounce remain approximations.
 
+## Patch 0799 - Draw the native selection hand on the pause hub
+
+- Completed the cursor decode begun in the menu audit: `sub_08048C74`
+  spawns the hand entity at `gEwramData+0xE2C` through `sub_0803B800` +
+  `sub_0803C7B4` (sheet by language, palette block of `0x0820C2C0`), and
+  `sub_08048B0C` frames it through `sub_0803B924`/`sub_08039614` with OAM
+  tables `0x08256EF8`/`0x0827B1F0`.
+- `aos_pause_graphics` now decodes those exact sheet/frame pairs per
+  language through the existing `aos_obj_sheet_decode` path plus the
+  `0x0820C2C0` palette blocks, and composites record 6 — the extended
+  pointing pose of the decoded idle cycle — at `sub_08048AD8`'s native
+  hub cell `(1, selected + 0xC)`, pixel `(14, 99 + selected*8)`.
+- Source-derived and unit-tested, not emulator-compared. The idle frame
+  cycle and `sub_08048018`'s vertical bob remain unwired, the palette
+  row's upper half is approximated from the following ROM block, and the
+  other six pause pages still need their own `sub_08048AD8` placements.
+
 ## Patch 0798 - Reconstruct the opening obtained-soul windows
 
 - Replaced the SDL approximation used after the Winged Skeleton absorption

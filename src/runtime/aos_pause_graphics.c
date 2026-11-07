@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_pause_graphics.h"
 
+#include "aos_obj_rom.h"
 #include "aos_rom_graphics.h"
 
 #include <stdio.h>
@@ -16,6 +17,15 @@ enum {
     AOS_PAUSE_BANK_FRENCH = 0x08277984,
     AOS_PAUSE_BANK_GERMAN = 0x0826C848,
     AOS_PAUSE_BG0_FILL = 0x330D,
+    /* sub_08048C74: the hand's sheet per language (the *(gEwramData+0x4D0)
+     * value selects 2 -> 0x0827798C, 3 -> 0x0826C840, else 0x082052D8)
+     * and sub_08048B0C's frame descriptor (3 -> 0x0827B1F0). The hand's
+     * OBJ palette row gets block 1's first eight colours of 0x0820C2C0
+     * through sub_0803C7B4; indices 8-15 keep the row's upper half, taken
+     * here from the following block. */
+    AOS_CURSOR_SHEETS = 3,
+    AOS_CURSOR_PALETTE = 0x0820C2C0 + 4 + 32,
+    AOS_CURSOR_PALETTE_UPPER = 0x0820C2C0 + 4 + 64,
     AOS_PAUSE_WIDTH = 240,
     AOS_PAUSE_HEIGHT = 160,
     AOS_WEAPON_RECORDS = 0x08505D3C,
@@ -101,6 +111,34 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         graphics->text_ready =
             aos_intro_resources_init(&graphics->text, rom, NULL, 0) &&
             aos_intro_font_init(&graphics->font, rom, NULL, 0);
+        /* sub_08048C74 loads the hand through sub_0803B800/sub_0803C7B4 and
+         * sub_08048B0C frames it through sub_0803B924: sheet and frame
+         * descriptor by language, palette block 1 of 0x0820C2C0. */
+        static const uint32_t cursor_graphics[AOS_CURSOR_SHEETS] = {
+            0x082052D8, 0x0827798C, 0x0826C840,
+        };
+        static const uint32_t cursor_frames[AOS_CURSOR_SHEETS] = {
+            0x08256EF8, 0x08256EF8, 0x0827B1F0,
+        };
+        const uint8_t *palette = rom->data +
+            (size_t)(AOS_CURSOR_PALETTE - AOS_ROM_BASE);
+        const uint8_t *palette_upper = rom->data +
+            (size_t)(AOS_CURSOR_PALETTE_UPPER - AOS_ROM_BASE);
+        if (palette + 16 <= rom->data + rom->size &&
+            palette_upper + 16 <= rom->data + rom->size &&
+            aos_obj_sheet_decode(&graphics->cursor_sheet, rom,
+                                  cursor_graphics[language - 1],
+                                  cursor_frames[language - 1],
+                                  error, error_size)) {
+            for (unsigned k = 0; k < 8; ++k) {
+                graphics->cursor_palette[k] =
+                    (uint16_t)(palette[k * 2] | palette[k * 2 + 1] << 8);
+                graphics->cursor_palette[k + 8] =
+                    (uint16_t)(palette_upper[k * 2] |
+                               palette_upper[k * 2 + 1] << 8);
+            }
+            graphics->cursor_ready = true;
+        }
     }
     free(memory);
     if (!ok) {
@@ -218,6 +256,43 @@ static void composite_on_backdrop(const AosPauseGraphics *graphics,
         }
 }
 
+/* sub_08048AD8 positions the hand entity at cell_x*8+6, cell_y*8+3 and its
+ * frame pieces hang off that anchor (the first record's -8,-8 offset makes
+ * the 16 x 16 hand span anchor-8..anchor+8). Record 6 is the extended
+ * pointing pose of the idle cycle (records 2-8 animate point/retract at
+ * four frames a step); the vertical bob of sub_08048018 is not wired yet. */
+static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
+                        int cell_x, int cell_y, unsigned record) {
+    if (!graphics->cursor_ready || record >= graphics->cursor_sheet.frame_count)
+        return;
+    const AosObjFrame *frame = &graphics->cursor_sheet.frames[record];
+    int anchor_x = cell_x * 8 + 6, anchor_y = cell_y * 8 + 3;
+    for (unsigned k = 0; k < frame->count; ++k) {
+        const AosObjPiece *piece = &frame->pieces[k];
+        for (int py = 0; py < piece->height; ++py)
+            for (int px = 0; px < piece->width; ++px) {
+                int sx = piece->source_x +
+                    (piece->hflip ? piece->width - 1 - px : px);
+                int sy = piece->source_y +
+                    (piece->vflip ? piece->height - 1 - py : py);
+                unsigned color =
+                    graphics->cursor_sheet.pixels[sy * AOS_OBJ_SHEET_SIZE + sx];
+                if (!color || color > 15) continue;
+                int x = anchor_x + piece->x + px;
+                int y = anchor_y + piece->y + py;
+                if (x < 0 || y < 0 || x >= AOS_PAUSE_WIDTH ||
+                    y >= AOS_PAUSE_HEIGHT)
+                    continue;
+                uint16_t bgr = graphics->cursor_palette[color];
+                uint8_t *out = rgba + ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
+                out[0] = (uint8_t)(((bgr & 31) * 255) / 31);
+                out[1] = (uint8_t)((((bgr >> 5) & 31) * 255) / 31);
+                out[2] = (uint8_t)((((bgr >> 10) & 31) * 255) / 31);
+                out[3] = 255;
+            }
+    }
+}
+
 static void reset_bg0(AosPauseGraphics *graphics) {
     memcpy(graphics->bg0_chars, graphics->bg0_base_chars,
            sizeof graphics->bg0_chars);
@@ -273,6 +348,8 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
     put_tiles(graphics, 12, 9, (uint16_t)(0x330A + status_variant * 0x10), 4);
 
     composite(graphics, rgba);
+    /* sub_08047818's hub placement: sub_08048AD8(1, selected + 0xC). */
+    draw_cursor(graphics, rgba, 1, 12 + (int)selected, 6);
     return true;
 }
 

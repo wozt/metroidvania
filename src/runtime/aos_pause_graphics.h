@@ -9,6 +9,7 @@
 #include "aos_button_config.h"
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"
+#include "aos_obj.h"
 #include "fusion/assets/aos.h"
 
 typedef struct {
@@ -23,6 +24,11 @@ typedef struct {
     AosIntroFont font;
     AosIntroTextTiles text_tiles;
     bool text_ready;
+    /* sub_08048C74/sub_08048B0C: the selection hand's sheet, frame records
+     * and its OBJ palette row (0x0820C2C0 blocks 1-2). */
+    AosObjSheet cursor_sheet;
+    uint16_t cursor_palette[16];
+    bool cursor_ready;
 } AosPauseGraphics;
 
 typedef struct {

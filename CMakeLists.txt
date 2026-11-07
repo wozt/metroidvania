@@ -196,6 +196,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion
                src/runtime/aos_intro_resources.c src/runtime/aos_intro_font.c
                src/runtime/aos_opening_event.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_obj.c
+               src/runtime/aos_obj_rom.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
@@ -1071,6 +1072,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_pause_graphics_tests
                    tests/test_aos_pause_graphics.c
                    src/runtime/aos_pause_graphics.c
+                   src/runtime/aos_obj_rom.c
                    src/runtime/aos_rom_graphics.c
                    src/runtime/aos_intro_resources.c
                    src/runtime/aos_intro_entities.c

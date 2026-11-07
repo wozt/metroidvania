@@ -25,14 +25,16 @@ enum {
     AOS_OPENING_ARIKADO_Y = 0x2C0,
     AOS_OPENING_SKELETON_X = 0x16F,
     AOS_OPENING_SKELETON_Y = 0x268,
-    /* The 208-pixel native dialogue field is centred in the 240-pixel
-     * viewport. Portrait BG0 ends immediately above it. */
-    AOS_OPENING_TEXT_PANEL_X = 16,
-    AOS_OPENING_TEXT_PANEL_Y = 92,
-    AOS_OPENING_TEXT_PANEL_WIDTH = 208,
-    AOS_OPENING_TEXT_PANEL_HEIGHT = 68,
-    AOS_OPENING_TEXT_X = AOS_OPENING_TEXT_PANEL_X + 2,
-    AOS_OPENING_TEXT_Y = AOS_OPENING_TEXT_PANEL_Y + 8,
+    /* sub_0806724C's hardware window clips the dialogue layers to
+     * y[120,152] and sub_0805AFC0's strips occupy map rows 16-19
+     * (y128-159); the backing field is bottom-anchored to match. The
+     * scripts page at three text rows, matching window (0,1,0x25,3). */
+    AOS_OPENING_TEXT_PANEL_X = 8,
+    AOS_OPENING_TEXT_PANEL_Y = 110,
+    AOS_OPENING_TEXT_PANEL_WIDTH = 224,
+    AOS_OPENING_TEXT_PANEL_HEIGHT = 50,
+    AOS_OPENING_TEXT_X = 18,
+    AOS_OPENING_TEXT_Y = 110,
     AOS_OPENING_PROMPT_X = AOS_OPENING_TEXT_PANEL_X + 193,
     AOS_OPENING_PROMPT_Y = 154,
     AOS_OPENING_LINES = 4,

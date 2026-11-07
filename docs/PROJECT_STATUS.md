@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0794 - Opening dialogue box anchored to the native window band
+
+- The first-room dialogue backing field moved from the centred
+  208 by 68 editor layout to (8,110,224,50), bottom-anchored against
+  the native hardware window band decoded from `sub_0806724C`
+  (WIN0 x[40,240], WIN1 x[0,40], both y[120,152]) and the
+  `sub_0805AFC0` strips at BG0 map rows 16-19. The speaker row and
+  the three 12-pixel text rows now sit inside the band; the opening
+  scripts already page at three rows, matching window
+  (0,1,0x25,3). The bottom-anchor invariant is unit-tested.
+- Source-derived layout correction; the SDL backing panel, canvas
+  tilemap composition and portrait OAM remain open.
+
 ## Patch 0793 - START enemy detail native BG0
 
 - Ported `sub_0804CDF4` and its sub-draws (`sub_0804CFE8`,

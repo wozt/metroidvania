@@ -353,6 +353,20 @@ static void mixer_test(void) {
     aos_mp2k_mix(&engine, out, 1);
     assert(out[0] == 2 * 29 && c->mix_volume == 254);
 
+    /* Host player gains separate title music from native SFX without
+     * changing either player's MP2K state. */
+    bank[3] = 0;
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8,
+                          .right_volume = 255, .left_volume = 255, .player = 0};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0xFF};
+    engine.direct[1] = *c;
+    engine.direct[1].player = 1;
+    aos_mp2k_player_host_gain(&engine, 0, 0);
+    aos_mp2k_mix(&engine, out, 1);
+    assert(out[0] == 9 && engine.host_player_gain[0] == 0 &&
+           engine.host_player_gain[1] == 255);
+    aos_mp2k_player_host_gain(&engine, 0, 255);
+
     /* Interpolated at the mixing rate: 10512 * 798 is just under one
      * sample a step, so the second output is nearly the next sample. */
     bank[3] = 0;

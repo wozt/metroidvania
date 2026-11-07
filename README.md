@@ -212,6 +212,16 @@ Run the active editor:
 ./build/fusion_map_editor
 ```
 
+Browse and audition every locally extracted native sound entry from either
+game, with decimal and hexadecimal IDs, previous/next, play, pause and repeat:
+
+```sh
+./build/fusion_sfx_browser
+```
+
+The browser decodes the private sound banks in memory and never writes or
+copies ROM audio into the repository.
+
 Run the shared backend without a display server:
 
 ```sh

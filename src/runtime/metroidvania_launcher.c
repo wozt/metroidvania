@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Metroid Vania launcher: the native title screens of Aria of Sorrow
  * (aos_title_screen) and of Zero Mission (mzm_title_screen) at once, split
- * by the animated patch-0046 geometry of metroidvania_split. The music is the one of the
- * game covering most of the bottom half (the one START launches); the other
- * fades out and pauses until its turn comes back. A first
+ * by the animated patch-0046 geometry of metroidvania_split. The music is
+ * the one of the game covering most of the bottom half (the one START
+ * launches); independent host gains keep both games' SFX audible. A first
  * START skips both titles' openings; once both wait for START, START goes
  * to the game covering most of the bottom half: its title plays its own
  * exit, then that game's frontend (fusion_aria_title_preview --main-menu or
@@ -417,12 +417,10 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             if (gain[g] < target) gain[g] = gain[g] + step > target ? target : gain[g] + step;
             else gain[g] = gain[g] - step < target ? target : gain[g] - step;
         }
-        bool aria_plays = heard == MV_GAME_ARIA || gain[MV_GAME_ARIA] > 0.0f;
-        bool mzm_plays = heard == MV_GAME_MZM || gain[MV_GAME_MZM] > 0.0f;
         if (mzm_stream) {
-            if (mzm_plays) SDL_ResumeAudioStreamDevice(mzm_stream);
-            else SDL_PauseAudioStreamDevice(mzm_stream);
-            SDL_SetAudioStreamGain(mzm_stream, gain[MV_GAME_MZM]);
+            SDL_LockAudioStream(mzm_stream);
+            mzm_audio_set_player_gain(0, (uint8_t)(gain[MV_GAME_MZM] * 255.0f));
+            SDL_UnlockAudioStream(mzm_stream);
         }
         /* MUS_27 plays once (the game leaves for its introduction before it
          * ends); here the title stays, so it starts again. */
@@ -430,7 +428,9 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
         if (aria_stream && aria.stage >= 2 && aria.stage <= 8 && !aria.chosen &&
             aos_audio_song_info(27, &title_song) && mp2k.players[title_song.player].ended)
             aos_audio_play_song(27);
-        if (aria_stream && aria_plays) {
+        if (aria_stream) {
+            aos_mp2k_player_host_gain(&mp2k, 0,
+                (uint8_t)(gain[MV_GAME_ARIA] * 255.0f));
             aos_audio_volume_update();
             aos_mp2k_engine_frame(&mp2k);
             int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
@@ -439,7 +439,6 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             if (SDL_GetAudioStreamQueued(aria_stream) < (int)sizeof pcm * AOS_MP2K_HOST_QUEUE_FRAMES)
                 SDL_PutAudioStreamData(aria_stream, pcm, sizeof pcm);
         }
-        if (aria_stream) SDL_SetAudioStreamGain(aria_stream, gain[MV_GAME_ARIA]);
         mv_split_tick(&split, PROTO_FIXED_TIMESTEP, !choosing);
 
         aos_title_screen_render(&aria, aria_pixels);

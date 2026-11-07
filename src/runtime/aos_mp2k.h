@@ -155,6 +155,7 @@ typedef struct {
     AosMp2kPlayer players[AOS_MP2K_PLAYER_COUNT];
     AosMp2kChannel direct[AOS_MP2K_DIRECT_CHANNELS];   /* SoundMixerState + 0x50 */
     AosMp2kChannel cgb[AOS_MP2K_CGB_CHANNELS];         /* cgbChans */
+    uint8_t host_player_gain[AOS_MP2K_PLAYER_COUNT];   /* Host-only 0..255 mix gain. */
     uint32_t serial;
     size_t dropped_notes;   /* notes MP2K_event_nxx found no channel or tone for */
     size_t missing_samples; /* DirectSound mixes whose sample is outside the bank */
@@ -183,6 +184,9 @@ const AosMp2kPlayer *aos_mp2k_player(const AosMp2kEngine *engine, uint8_t player
  * four into every existing track's volPublic field. */
 void aos_mp2k_player_volume(AosMp2kEngine *engine, uint8_t player,
                             uint8_t volume);
+/* Host mixer gain; unlike MPlay volume this does not alter native state. */
+void aos_mp2k_player_host_gain(AosMp2kEngine *engine, uint8_t player,
+                               uint8_t gain);
 /* MPlayStop/m4aMPlayContinue. Stopping releases and detaches the
  * player's live channels; continuing resumes its sequencer position. */
 void aos_mp2k_player_pause(AosMp2kEngine *engine, uint8_t player, bool paused);

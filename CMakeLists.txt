@@ -259,6 +259,19 @@ if(GTK4_FOUND)
     target_link_libraries(fusion_map_editor
         PRIVATE fusion_native_editor_core PkgConfig::GTK4)
     fusion_enable_warnings(fusion_map_editor)
+
+    add_executable(fusion_sfx_browser
+        src/tools/sfx_browser_gtk.c
+        src/runtime/aos_audio.c
+        src/runtime/aos_mp2k.c
+        src/runtime/mzm_audio.c
+        src/runtime/gba_psg.c)
+    target_include_directories(fusion_sfx_browser PRIVATE src/runtime)
+    target_compile_definitions(fusion_sfx_browser PRIVATE
+        FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_link_libraries(fusion_sfx_browser
+        PRIVATE PkgConfig::GTK4 SDL3::SDL3 m)
+    fusion_enable_warnings(fusion_sfx_browser)
 elseif(NOT PkgConfig_FOUND)
     message(STATUS "pkg-config not found: optional fusion_map_editor disabled")
 else()
@@ -435,6 +448,12 @@ if(BUILD_TESTING)
     add_test(NAME native_selection_contract COMMAND fusion_native_selection_tests)
 
     if(GTK4_FOUND)
+        add_test(NAME sfx_browser_native_banks
+            COMMAND ${CMAKE_COMMAND} -E env SDL_AUDIODRIVER=dummy
+                    $<TARGET_FILE:fusion_sfx_browser> --check)
+        set_tests_properties(sfx_browser_native_banks PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
         add_test(NAME map_editor_headless
             COMMAND ${CMAKE_COMMAND} -E env --unset=DISPLAY --unset=WAYLAND_DISPLAY
                     $<TARGET_FILE:fusion_map_editor> --headless

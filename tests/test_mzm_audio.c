@@ -229,6 +229,16 @@ static void test_engine(void) {
     render(4, &peak, &crossings);
     CHECK(peak == 0);
 
+    /* A host can mute native music player 0 without muting SFX players. */
+    mzm_audio_set_player_gain(0, 0);
+    mzm_music_play(1, 0);
+    render(8, &peak, &crossings);
+    CHECK(peak == 0);
+    CHECK(mzm_audio_sound_player(2) == 3);
+    mzm_audio_initialize();
+    mzm_audio_set_player_gain(0, 255);
+    render(4, &peak, &crossings);
+
     /* The song: one DirectSound channel at the native rate. */
     mzm_music_play(1, 0);
     CHECK(mzm_music_current() == 1);

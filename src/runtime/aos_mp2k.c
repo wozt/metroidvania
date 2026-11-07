@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum {
     MP2K_WAIT_FIRST = 0x80,
@@ -244,7 +245,9 @@ static void set_error(char *error, size_t error_size, const char *message) {
 }
 
 void aos_mp2k_engine_init(AosMp2kEngine *engine) {
-    if (engine) *engine = (AosMp2kEngine){.bank_base = AOS_MP2K_BANK_BASE};
+    if (!engine) return;
+    *engine = (AosMp2kEngine){.bank_base = AOS_MP2K_BANK_BASE};
+    memset(engine->host_player_gain, 0xFF, sizeof engine->host_player_gain);
 }
 
 void aos_mp2k_engine_destroy(AosMp2kEngine *engine) {
@@ -262,6 +265,7 @@ bool aos_mp2k_engine_set_bank(AosMp2kEngine *engine, const uint8_t *bank,
         .bank_size = size,
         .bank_base = address_base,
     };
+    memset(engine->host_player_gain, 0xFF, sizeof engine->host_player_gain);
     return true;
 }
 
@@ -384,6 +388,12 @@ void aos_mp2k_player_volume(AosMp2kEngine *engine, uint8_t player,
     for (uint8_t track = 0; track < state->track_count; ++track)
         if (state->tracks[track].active)
             state->tracks[track].vol_public = public_volume;
+}
+
+void aos_mp2k_player_host_gain(AosMp2kEngine *engine, uint8_t player,
+                               uint8_t gain) {
+    if (engine && player < AOS_MP2K_PLAYER_COUNT)
+        engine->host_player_gain[player] = gain;
 }
 
 void aos_mp2k_player_pause(AosMp2kEngine *engine, uint8_t player,
@@ -790,8 +800,9 @@ static bool wrap(AosMp2kChannel *channel, const Wave *wave) {
     return true;
 }
 
-static void mix_channel(AosMp2kChannel *channel, const Wave *wave, int8_t *out, size_t count) {
-    int volume = channel->mix_volume;
+static void mix_channel(AosMp2kChannel *channel, const Wave *wave, int8_t *out,
+                        size_t count, uint8_t host_gain) {
+    int volume = channel->mix_volume * host_gain / 255;
     if (channel->type & 8) {
         /* Fixed frequency: one sample per output. */
         for (size_t index = 0; index < count; ++index) {
@@ -835,6 +846,7 @@ void aos_mp2k_mix(AosMp2kEngine *engine, int8_t *out, size_t count) {
             continue;
         }
         if (!envelope(channel, &wave)) continue;
-        mix_channel(channel, &wave, out, count);
+        mix_channel(channel, &wave, out, count,
+                    engine->host_player_gain[channel->player]);
     }
 }

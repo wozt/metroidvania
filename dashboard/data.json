@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T11:44:06+00:00",
+ "generated_at": "2026-11-07T11:57:14+00:00",
  "git": {
-  "commit": "74e715e",
+  "commit": "14e9bcf",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 220,
+   "total": 221,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 53,
-    "functional": 156,
+    "functional": 157,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 156,
-   "functional_or_better_percent": 70.9,
-   "with_passing_tests": 207,
+   "functional_or_better": 157,
+   "functional_or_better_percent": 71.0,
+   "with_passing_tests": 208,
    "with_passing_tests_percent": 94.1,
    "unknown_or_blocked": 1,
    "features": [
@@ -301,6 +301,7 @@
     "tools.rebuild",
     "tools.room_editor",
     "tools.room_viewers",
+    "tools.sfx_browser",
     "tools.sprite_editor",
     "tools.world_atlas",
     "assets.aria_early_enemy_components_0477",
@@ -604,21 +605,21 @@
    "areas": [
     "tools"
    ],
-   "total": 13,
+   "total": 14,
    "by_status": {
     "not_started": 1,
     "in_progress": 0,
     "partial": 8,
-    "functional": 4,
+    "functional": 5,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 4,
-   "functional_or_better_percent": 30.8,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 84.6,
+   "functional_or_better": 5,
+   "functional_or_better_percent": 35.7,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 85.7,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -632,6 +633,7 @@
     "tools.rebuild",
     "tools.room_editor",
     "tools.room_viewers",
+    "tools.sfx_browser",
     "tools.sprite_editor",
     "tools.world_atlas"
    ]
@@ -975,7 +977,7 @@
     "unk_38d8",
     "UpdateMusicAfterAlarmDisable"
    ],
-   "limitations": "Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO that keeps the held sample across GBA frames (the port once reset it to zero at each frame's start, a 60 Hz buzz) and PSG steps that carry their fractional cycles; the sound device pulls the output (SDL's stream callback): each pull runs UpdateAudio and renders one GBA frame (280896 cycles) at a time at the 65.536 kHz PWM rate that MZM selects in SOUNDBIAS, and SDL's band-limited resampler converts it for the device; the game only changes the engine's state under the stream's lock, so a slow game frame can no longer starve the device (the earlier push from the game steps ran the queue dry and crackled), and the music keeps the hardware's 59.73 Hz frame clock independently of the game's speed; REG_VCOUNT reads as 160 during UpdateAudio. The room's track is chosen when the destination room is loaded (natively when the door is touched) and starts when the door fade ends; the Norfair and cutscene music cases (the gMusicTrackInfo.unk checks) are not ported. The 7-entry channel backups drop what would overflow them instead of writing past the array. A zero divisor in unk_1ccc is taken as a zero quotient. The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; the gameplay modules request their sound effects through mzm_sfx (identifiers generated from the decompilation's Sound enum by fusion_sound_ids, src/tools/sound_ids.c), which the runtime forwards to the engine. InsertMusicAndQueueCurrent saves the channels of players 1, 3, 6 and 8 (unk_34ac), stops the others and plays the inserted music on player 0; its 0xB6 end runs ReplayQueuedMusic, which restores them (unk_35d0) and restarts the current music. BackupTrackData2SoundChannels / RetrieveTrackData2SoundChannels release and restore the channels of player 2; mzm_sfx carries PlayMusic, UpdateMusicPriority, FadeMusic, the insertion and the backup requests. With the extracted bank the item jingle plays 355 frames before Brinstar resumes (an engine-only check: captures have no sound). The pause lowers the music (DecreaseMusicVolume: the pause sound, the other players' channels saved, unk_3058 with gUnk_Audio0x50 on players 0 and 1, kept by ReplayQueuedMusic) and ResetMusicVolume restores it when the pause screen closes. DecreaseMusicVolume (the pause) plays SOUND_63 (0x63); the port once queued sound 63 (MUSIC_IMAGO_COCOON_BATTLE), which replaced the room's music after the pause. Rendering the extracted Brinstar music offline confirmed the fix: the per-frame spike of the output's second difference fell from about ten times its mean to the level of the FIFO's own steps; what remains (the envelopes applied once a frame) is already in the mixer's output. Under the stealth and alarm priorities, CheckSetNewMusicTrack (unk_378c) keeps the stealth or detected music for the stealth area tracks and only remembers them under the alarm, CheckPlayTransitionMusicTrack (unk_38d8) starts nothing under the alarm, and UpdateMusicAfterAlarmDisable fades back to the remembered stealth track or to the detected music; the audio test checks that the alarm priority holds the current track through a room change. Every entry of sSoundDataEntries plays through the engine with the extracted bank (a bank-backed test): 612 of the 708 are audible within four seconds, and the 95 silent ones are silent in the ROM itself (the empty song shared by the unused entries, songs whose tracks set VOL 0 such as SOUND_ATOMIC_CHARGE_SILENT, and MUSIC_33, 38 and 47 at VOL 6 or 7 with velocity 12, below the 8-bit mixer's resolution). Promoted to functional on the user's review of the in-game playback (captures carry no sound).",
+   "limitations": "Not compared with hardware or an emulator. MidiKey2Freq (BIOS) uses the high-level formula; the PSG and the output mixer are an emulation of the GBA sound hardware, resampled to 48 kHz with a zero-order hold of the FIFO that keeps the held sample across GBA frames (the port once reset it to zero at each frame's start, a 60 Hz buzz) and PSG steps that carry their fractional cycles; the sound device pulls the output (SDL's stream callback): each pull runs UpdateAudio and renders one GBA frame (280896 cycles) at a time at the 65.536 kHz PWM rate that MZM selects in SOUNDBIAS, and SDL's band-limited resampler converts it for the device; the game only changes the engine's state under the stream's lock, so a slow game frame can no longer starve the device (the earlier push from the game steps ran the queue dry and crackled), and the music keeps the hardware's 59.73 Hz frame clock independently of the game's speed; REG_VCOUNT reads as 160 during UpdateAudio. The room's track is chosen when the destination room is loaded (natively when the door is touched) and starts when the door fade ends; the Norfair and cutscene music cases (the gMusicTrackInfo.unk checks) are not ported. The 7-entry channel backups drop what would overflow them instead of writing past the array. A zero divisor in unk_1ccc is taken as a zero quotient. The custom C engine is ported routine by routine with the assembly mixer: the sequencer commands, DirectSound channels with the native envelope, allocation and group-of-four mixing paths, the four PSG channels through their registers, reverb, fades and the sound queue. ROM data (songs, voice groups, samples) is read through its GBA addresses from a private sound bank; out-of-table ROM reads of GetNoteDelay and unk_1ccc are exported. Rooms export their musicTrack and the runtime plays it through CheckSetNewMusicTrack and CheckPlayTransitionMusicTrack; the gameplay modules request their sound effects through mzm_sfx (identifiers generated from the decompilation's Sound enum by fusion_sound_ids, src/tools/sound_ids.c), which the runtime forwards to the engine. InsertMusicAndQueueCurrent saves the channels of players 1, 3, 6 and 8 (unk_34ac), stops the others and plays the inserted music on player 0; its 0xB6 end runs ReplayQueuedMusic, which restores them (unk_35d0) and restarts the current music. BackupTrackData2SoundChannels / RetrieveTrackData2SoundChannels release and restore the channels of player 2; mzm_sfx carries PlayMusic, UpdateMusicPriority, FadeMusic, the insertion and the backup requests. With the extracted bank the item jingle plays 355 frames before Brinstar resumes (an engine-only check: captures have no sound). The pause lowers the music (DecreaseMusicVolume: the pause sound, the other players' channels saved, unk_3058 with gUnk_Audio0x50 on players 0 and 1, kept by ReplayQueuedMusic) and ResetMusicVolume restores it when the pause screen closes. DecreaseMusicVolume (the pause) plays SOUND_63 (0x63); the port once queued sound 63 (MUSIC_IMAGO_COCOON_BATTLE), which replaced the room's music after the pause. Rendering the extracted Brinstar music offline confirmed the fix: the per-frame spike of the output's second difference fell from about ten times its mean to the level of the FIFO's own steps; what remains (the envelopes applied once a frame) is already in the mixer's output. Under the stealth and alarm priorities, CheckSetNewMusicTrack (unk_378c) keeps the stealth or detected music for the stealth area tracks and only remembers them under the alarm, CheckPlayTransitionMusicTrack (unk_38d8) starts nothing under the alarm, and UpdateMusicAfterAlarmDisable fades back to the remembered stealth track or to the detected music; the audio test checks that the alarm priority holds the current track through a room change. Every entry of sSoundDataEntries plays through the engine with the extracted bank (a bank-backed test): 612 of the 708 are audible within four seconds, and the 95 silent ones are silent in the ROM itself (the empty song shared by the unused entries, songs whose tracks set VOL 0 such as SOUND_ATOMIC_CHARGE_SILENT, and MUSIC_33, 38 and 47 at VOL 6 or 7 with velocity 12, below the 8-bit mixer's resolution). Promoted to functional on the user's review of the in-game playback (captures carry no sound). Patch 0778 adds a host-only per-player DirectSound gain after native envelope calculation; the shared launcher cross-fades player 0 while player-2 SFX remain audible, without mutating sequencer state. The synthetic-bank audio test covers music isolation and SFX group discovery.",
    "next_action": "Trigger the sounds of the systems still to port as they arrive; compare a rendered track with an emulator capture.",
    "evidence": {
     "unit_tests": [
@@ -8615,7 +8617,7 @@
     "MPlayStop",
     "m4aMPlayContinue"
    ],
-   "limitations": "MP2KPlayerMain is ported for its sequencer clock and channel gates only: FadeOutBody and track LFOs are incomplete. CGB channels are allocated but neither computed with MidiKeyToCgbFreq nor synthesized; SoundMainRAM reverb and XCMD pseudo echo are not ported. The mixer runs at the host fixed 60 Hz step rather than the GBA 59.73 Hz VBlank and has not been compared by ear or against an emulator. TrkVolPitSet runs without modCalculated LFO state. Track-address ordering is represented by player and track indices. PORT, XCMD and the native tempo-to-VBlank scheduler are absent. Room music derives save, warp and transition flags from any room map cell rather than the cell under the camera; unk_37E, boss-mode and unk_4BE event branches stay clear, and the transition fade flag is not cleared because that path is not traced. The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. A bounded host-neutral MP2K track decoder now reproduces the native wait clock table, running status, FINE, GOTO, three-level PATT and PEND, REPT, EOT, note parsing and the PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS, LFODL, MOD, MODT and TUNE state changes. Invalid pointers, recursive command loops and unsupported PORT or XCMD streams fail closed. Source-derived and unit-tested, not emulator-compared. The private MP2K bank (0x0827B2C0-0x084F08F8: the voice groups the song headers use, from the decompilation's audio segment, through gMPlayTable and the song data) is exported as sound/runtime/sound_bank.bin; aos_mp2k_player_start reads a song header (track count, block count, priority, reverb, voice group) and starts each track at its pointer, failing closed outside the bank. StartSong calls it only after its player-priority replacement accepts the song. A local --check run initialized all 495 song headers of the exported table. aos_mp2k_player_frame ports MP2KPlayerMain's tempo clock: each frame the counter (+ 0x22) gains the interval (+ 0x20); while it is at least 150 every existing track advances one clock, MP2K_event_tempo sets the raw tempo to twice its value and the interval to raw * scale >> 8, the clock (+ 0x0C) counts, and a clock that finds no track ends the player (+ 0x04 = 0x80000000); then the counter loses 150. The runtime runs it for every player each frame after the volume update. A local --check ran all 495 songs for 600 frames each: 340 ended and none hit an unsupported or invalid stream. The channel side of MP2K_event_nxx is ported: each note (logged with the voice and track priority current when it was read) resolves its tone from the voice group (key split 0x40 through its key table, rhythm 0x80 with the entry's key and pan, a nested split or rhythm dropped), takes priority min(255, player + track) and a channel: its CGB channel when free, stopping, lower or equal from a track not before it; otherwise the first free of the 8 DirectSound channels of DEFAULT_SOUND_MODE, else the best stopping one, else the lowest active one not above it. Gates count down at each track clock and stop their channel at 0; MP2K_event_endtie stops the newest unstopped channel of the track with its key; MPlayStart's TrackStop stops and unlinks the player's channels. A local --check gave 5640 channel notes and 54 dropped ones over 600 frames of every song. TrkVolPitSet (volume split by pan, key shift and pitch from bend, range, tune and the public controls), ChnVolSetAsm (each channel's right and left volume from its velocity and rhythm pan) and MidiKeyToFreq (gScaleTable as its closed form, gFreqTable, the 178 clamp) are ported; they run at each note and after every player frame for the linked channels, which gives the values the native VOLSET and PITSET flags guard. A local --check read every DirectSound sample's rate from the exported bank (none outside it). SoundMainRAM without reverb is ported as aos_mp2k_mix: per frame each DirectSound channel's envelope steps (a start begins the attack with the wave's loop flag, attack to 0xFF, decay to sustain, release on a stop down to the echo volume, the echo countdown), its mix volume is (right + left) * envelope >> 9 with master volume 15, and 176 signed 8-bit mono samples at 10512 Hz (DEFAULT_SOUND_MODE, divFreq 798) are mixed with the native wrapping byte sums: fixed-frequency tones one sample per output, the others linearly interpolated in 23-bit steps of frequency * divFreq, looping waves restarting inside their loop. The runtime plays it through an SDL audio stream (--mute disables it) and can record it (--audio-wav); --play-song requests a song at the start. A local offscreen run recorded 600 frames of song 1 as 105600 samples, 95 percent non-zero, RMS 10-15 per second. sub_08013960 is ported as aos_room_music_enter and runs at the start and at each room change: save and warp rooms quiet the music, transition rooms mute player 0 once (sub_08013F6C(0x1040)) and forget the song, other rooms set it loud and play the area's song (sUnk_084F106C, sUnk_084F1086 for Julius) or a room's special song (0x2A, 0x27, 0x29, 0x25 by their room and event bits), stopping the previous one. The sound export writes metadata room_music.tsv (save and warp bits of the map table 0x08116650, transition rooms from sUnk_0850E968: 17 save, 8 warp and 16 transition rooms). A local run of room 0/3 recorded the area's song with no --play-song. The held-sound list unk_254C4 of sub_08013D60 / sub_08013E18 (4 slots scanned from the last) is ported as aos_audio_hold and aos_audio_release. When the portable sequencer reaches FINE or fails, aria_runtime clears the mirrored PlaySong player-active state; a finished higher-priority effect can no longer reject later lower-priority Soma sounds on the same player. This lifecycle is deterministic and unit-tested. m4aMPlayVolumeControl now propagates each volume ramp into every MP2K track's volPublic field. The host also mirrors MPlayStop and m4aMPlayContinue into the portable sequencer: a stopped player releases and detaches its live channels, does not advance, and resumes at its saved stream position. This prevents replaced opening-scene music from continuing underneath its successor.",
+   "limitations": "MP2KPlayerMain is ported for its sequencer clock and channel gates only: FadeOutBody and track LFOs are incomplete. CGB channels are allocated but neither computed with MidiKeyToCgbFreq nor synthesized; SoundMainRAM reverb and XCMD pseudo echo are not ported. The mixer runs at the host fixed 60 Hz step rather than the GBA 59.73 Hz VBlank and has not been compared by ear or against an emulator. TrkVolPitSet runs without modCalculated LFO state. Track-address ordering is represented by player and track indices. PORT, XCMD and the native tempo-to-VBlank scheduler are absent. Room music derives save, warp and transition flags from any room map cell rather than the cell under the camera; unk_37E, boss-mode and unk_4BE event branches stay clear, and the transition fade flag is not cleared because that path is not traced. The native C11 importer reads all 495 gSongTable entries plus each fixed MP2K header, and aria_sound exports their header pointer, player, channel, track count, block count, priority and reverb into a private manifest guarded by a golden digest. The Aria runtime loads the player and priority fields before PlaySong runs and advances MPlayVolumeUpdate once per lifecycle frame. A bounded host-neutral MP2K track decoder now reproduces the native wait clock table, running status, FINE, GOTO, three-level PATT and PEND, REPT, EOT, note parsing and the PRIO, TEMPO, KEYSH, VOICE, VOL, PAN, BEND, BENDR, LFOS, LFODL, MOD, MODT and TUNE state changes. Invalid pointers, recursive command loops and unsupported PORT or XCMD streams fail closed. Source-derived and unit-tested, not emulator-compared. The private MP2K bank (0x0827B2C0-0x084F08F8: the voice groups the song headers use, from the decompilation's audio segment, through gMPlayTable and the song data) is exported as sound/runtime/sound_bank.bin; aos_mp2k_player_start reads a song header (track count, block count, priority, reverb, voice group) and starts each track at its pointer, failing closed outside the bank. StartSong calls it only after its player-priority replacement accepts the song. A local --check run initialized all 495 song headers of the exported table. aos_mp2k_player_frame ports MP2KPlayerMain's tempo clock: each frame the counter (+ 0x22) gains the interval (+ 0x20); while it is at least 150 every existing track advances one clock, MP2K_event_tempo sets the raw tempo to twice its value and the interval to raw * scale >> 8, the clock (+ 0x0C) counts, and a clock that finds no track ends the player (+ 0x04 = 0x80000000); then the counter loses 150. The runtime runs it for every player each frame after the volume update. A local --check ran all 495 songs for 600 frames each: 340 ended and none hit an unsupported or invalid stream. The channel side of MP2K_event_nxx is ported: each note (logged with the voice and track priority current when it was read) resolves its tone from the voice group (key split 0x40 through its key table, rhythm 0x80 with the entry's key and pan, a nested split or rhythm dropped), takes priority min(255, player + track) and a channel: its CGB channel when free, stopping, lower or equal from a track not before it; otherwise the first free of the 8 DirectSound channels of DEFAULT_SOUND_MODE, else the best stopping one, else the lowest active one not above it. Gates count down at each track clock and stop their channel at 0; MP2K_event_endtie stops the newest unstopped channel of the track with its key; MPlayStart's TrackStop stops and unlinks the player's channels. A local --check gave 5640 channel notes and 54 dropped ones over 600 frames of every song. TrkVolPitSet (volume split by pan, key shift and pitch from bend, range, tune and the public controls), ChnVolSetAsm (each channel's right and left volume from its velocity and rhythm pan) and MidiKeyToFreq (gScaleTable as its closed form, gFreqTable, the 178 clamp) are ported; they run at each note and after every player frame for the linked channels, which gives the values the native VOLSET and PITSET flags guard. A local --check read every DirectSound sample's rate from the exported bank (none outside it). SoundMainRAM without reverb is ported as aos_mp2k_mix: per frame each DirectSound channel's envelope steps (a start begins the attack with the wave's loop flag, attack to 0xFF, decay to sustain, release on a stop down to the echo volume, the echo countdown), its mix volume is (right + left) * envelope >> 9 with master volume 15, and 176 signed 8-bit mono samples at 10512 Hz (DEFAULT_SOUND_MODE, divFreq 798) are mixed with the native wrapping byte sums: fixed-frequency tones one sample per output, the others linearly interpolated in 23-bit steps of frequency * divFreq, looping waves restarting inside their loop. The runtime plays it through an SDL audio stream (--mute disables it) and can record it (--audio-wav); --play-song requests a song at the start. A local offscreen run recorded 600 frames of song 1 as 105600 samples, 95 percent non-zero, RMS 10-15 per second. sub_08013960 is ported as aos_room_music_enter and runs at the start and at each room change: save and warp rooms quiet the music, transition rooms mute player 0 once (sub_08013F6C(0x1040)) and forget the song, other rooms set it loud and play the area's song (sUnk_084F106C, sUnk_084F1086 for Julius) or a room's special song (0x2A, 0x27, 0x29, 0x25 by their room and event bits), stopping the previous one. The sound export writes metadata room_music.tsv (save and warp bits of the map table 0x08116650, transition rooms from sUnk_0850E968: 17 save, 8 warp and 16 transition rooms). A local run of room 0/3 recorded the area's song with no --play-song. The held-sound list unk_254C4 of sub_08013D60 / sub_08013E18 (4 slots scanned from the last) is ported as aos_audio_hold and aos_audio_release. When the portable sequencer reaches FINE or fails, aria_runtime clears the mirrored PlaySong player-active state; a finished higher-priority effect can no longer reject later lower-priority Soma sounds on the same player. This lifecycle is deterministic and unit-tested. m4aMPlayVolumeControl now propagates each volume ramp into every MP2K track's volPublic field. The host also mirrors MPlayStop and m4aMPlayContinue into the portable sequencer: a stopped player releases and detaches its live channels, does not advance, and resumes at its saved stream position. This prevents replaced opening-scene music from continuing underneath its successor. Patch 0778 adds a host-only per-player mixer gain after native channel volume calculation; the shared launcher cross-fades player 0 while player-5 SFX remain audible, without mutating MP2K state. The focused mixer test covers isolated player output.",
    "next_action": "Listen to and compare the output (emulator capture), then port the CGB channels (MidiKeyToCgbFreq, CgbSound), the reverb path, the LFO, and wire the native PlaySong requests of rooms, monsters and menus.",
    "evidence": {
     "unit_tests": [
@@ -15997,9 +15999,12 @@
    "local_sources": [
     "src/runtime/metroidvania_launcher.c",
     "src/runtime/metroidvania_split.c",
+    "src/runtime/metroidvania_split_audio.h",
     "src/runtime/rotating_line/curve.c",
     "src/runtime/rotating_line/parametric.c",
     "src/runtime/rotating_line/config.c",
+    "src/runtime/aos_mp2k.c",
+    "src/runtime/mzm_audio.c",
     "src/runtime/fusion_host.c",
     "src/runtime/aos_title_screen.c",
     "src/runtime/mzm_title_screen.c",
@@ -16009,16 +16014,20 @@
    ],
    "tests": [
     "tests/test_metroidvania_split.c",
+    "tests/test_aos_mp2k.c",
+    "tests/test_mzm_audio.c",
     "tests/test_fusion_host.c",
     "tests/test_aos_game_lifecycle.c"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later patch-0047/0048 polarity mirror. X triggers a synchronized Metroid lightning pulse using Zero Mission's native SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC; Y triggers an Aria spiral pulse using the ROM's short Legion double-impact sequence 0x11C. Both route through the games' already-active native engines, with no synthetic pulse clip. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. The music is the one of the game covering most of the bottom half; START keeps the original title-driven in-process launch flow. A frontend going back to its own title returns to the shared title in the same window. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Checked with deterministic native-ID routing, geometry, JSON, hold and cancellation tests plus headless image captures. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared.",
+   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later polarity mirror. X uses Zero Mission SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC and Y uses Aria's Legion double-impact sequence 0x11C. Independent host-only per-player gains cross-fade native music player 0 while leaving SFX players audible at every divider angle; neither sequencer state nor native volume is changed. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. START retains the title-driven in-process launch flow. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Deterministic tests cover native-ID routing, separate player gains, geometry, JSON, hold and cancellation; headless captures cover composition. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_metroidvania_split.c",
+     "tests/test_aos_mp2k.c",
+     "tests/test_mzm_audio.c",
      "tests/test_fusion_host.c",
      "tests/test_aos_game_lifecycle.c"
     ],
@@ -16038,6 +16047,26 @@
       "registered": true,
       "ctest": [
        "metroidvania_split"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_mp2k.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_mp2k"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_audio.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_audio"
       ],
       "outcome": "passed",
       "exists": true
@@ -17102,6 +17131,73 @@
     "verdict": "untested",
     "warnings": [],
     "verified_on": null
+   }
+  },
+  {
+   "id": "tools.sfx_browser",
+   "area": "tools",
+   "category": "audio",
+   "title": "Native SFX browser",
+   "status": "functional",
+   "fidelity": "n/a",
+   "local_sources": [
+    "src/tools/sfx_browser_gtk.c",
+    "src/runtime/aos_audio.c",
+    "src/runtime/aos_mp2k.c",
+    "src/runtime/mzm_audio.c",
+    "src/runtime/gba_psg.c",
+    "src/runtime/metroidvania_split_audio.h"
+   ],
+   "tests": [
+    "tests/test_aos_mp2k.c",
+    "tests/test_mzm_audio.c"
+   ],
+   "dependencies": [
+    "aos.audio.play_song",
+    "mzm.audio.sound_engine"
+   ],
+   "native_routines": [],
+   "limitations": "The GTK4 browser selects either game, traverses every native sound-table ID, displays decimal and hexadecimal IDs plus the native player, and provides previous, next, play, pause/resume and repeat. It decodes local extracted banks in memory through the same C11 engines as the runtimes and writes no audio assets. Its no-display check verifies 495 Aria and 708 Zero Mission entries; the window was image-checked under Xvfb. Sound names and waveform visualization are not yet available.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_mp2k.c",
+     "tests/test_mzm_audio.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-11-07",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_mp2k.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_mp2k"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_mzm_audio.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_audio"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -19334,6 +19430,11 @@
     "outcome": "passed"
    },
    {
+    "name": "sfx_browser_native_banks",
+    "files": [],
+    "outcome": "passed"
+   },
+   {
     "name": "map_editor_headless",
     "files": [],
     "outcome": "passed"
@@ -20005,12 +20106,18 @@
    }
   ],
   "summary": {
-   "passed": 129,
+   "passed": 130,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "14e9bcf",
+   "date": "2026-11-07",
+   "subject": "Use native game sounds for launcher pulses",
+   "scope": "project"
+  },
   {
    "commit": "74e715e",
    "date": "2026-11-07",
@@ -20483,12 +20590,6 @@
    "commit": "dcec318",
    "date": "2026-11-02",
    "subject": "Port the Skeleton's AI from its native routines",
-   "scope": "project"
-  },
-  {
-   "commit": "038c205",
-   "date": "2026-11-02",
-   "subject": "Record the traced native structure of the Skeleton and Nemesis",
    "scope": "project"
   }
  ],

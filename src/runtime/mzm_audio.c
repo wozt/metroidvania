@@ -107,6 +107,7 @@ static PsgSoundData gPsgSoundsArea[5];
 #define gUnk_300376C gPsgSoundsArea
 static SoundQueue gSoundQueue[NUM_MUSIC_PLAYERS];
 static TrackGroupRomData sMusicTrackDataRom[NUM_MUSIC_PLAYERS];
+static uint8_t gHostPlayerGain[NUM_MUSIC_PLAYERS];
 
 /* gNumMusicPlayers, gUnk_Audio0x64 and gUnk_Audio0x194F700 (link-time
  * constants of the decompilation). */
@@ -128,6 +129,16 @@ static struct {
     /* The ROM bytes of sUnk_808cc4d from index -64 to 64 (unk_1ccc). */
     uint8_t sUnk_808cc4d_window[129];
 } T;
+
+static uint8_t host_gain_for_variables(const TrackVariables *variables) {
+    if (!variables) return 0xFF;
+    for (int player = 0; player < NUM_MUSIC_PLAYERS; ++player) {
+        const TrackVariables *first = sMusicTrackDataRom[player].pVariables;
+        const TrackVariables *last = first + sMusicTrackDataRom[player].maxAmountOfTracks;
+        if (variables >= first && variables < last) return gHostPlayerGain[player];
+    }
+    return 0xFF;
+}
 
 static uint8_t rd8(uint32_t address) {
     uint32_t offset = address - g_bank_base;
@@ -757,8 +768,9 @@ static void UpdateMusic(void) {
         }
         pChannel->unk_10 = (uint8_t)var_1;
         int16_t var_2 = (int16_t)((var_1 * (gMusicInfo.volume + 1)) >> 4);
-        pChannel->unk_11 = (uint8_t)((var_2 * pChannel->unk_4) >> 8);
-        pChannel->unk_12 = (uint8_t)((var_2 * pChannel->unk_5) >> 8);
+        uint8_t host_gain = host_gain_for_variables(pVariables);
+        pChannel->unk_11 = (uint8_t)((((var_2 * pChannel->unk_4) >> 8) * host_gain) / 255);
+        pChannel->unk_12 = (uint8_t)((((var_2 * pChannel->unk_5) >> 8) * host_gain) / 255);
         SoundCodeA(pChannel, gMusicInfo.musicRawData, (var_6 + var_3) * 4);
     }
 
@@ -2236,6 +2248,14 @@ bool mzm_audio_player_playing(int player) {
     return player >= 0 && player < NUM_MUSIC_PLAYERS && gTrackData[player].flags & 2;
 }
 
+int mzm_audio_sound_player(uint16_t sound) {
+    return sound < g_entry_count ? entry_group(sound) : -1;
+}
+
+void mzm_audio_set_player_gain(int player, uint8_t gain) {
+    if (player >= 0 && player < NUM_MUSIC_PLAYERS) gHostPlayerGain[player] = gain;
+}
+
 /* ---- Loading ---- */
 
 static bool parse_table(const char *list, void *destination, int width, int count) {
@@ -2254,6 +2274,7 @@ static bool parse_table(const char *list, void *destination, int width, int coun
 
 bool mzm_audio_open(const char *bank_path, const char *tables_path) {
     mzm_audio_close();
+    memset(gHostPlayerGain, 0xFF, sizeof gHostPlayerGain);
     FILE *f = fopen(bank_path, "rb");
     if (!f) return false;
     uint8_t header[16];

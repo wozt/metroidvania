@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "metroidvania_split_audio.h"
 #include "rotating_line/curve.h"
 
 typedef enum { MV_GAME_ARIA = 0, MV_GAME_MZM = 1 } MvGame;
@@ -30,11 +31,6 @@ typedef struct {
     float elapsed;
     float pulse_elapsed;
 } MvSplitHold;
-
-enum {
-    MV_SPLIT_ARIA_HEARTBEAT_SOUND = 0x11C,
-    MV_SPLIT_MZM_LIGHTNING_SOUND = 0x1DC,
-};
 
 /* Patch-0046 defaults from prototype_aria_metroid_horizontal_a.json. */
 void mv_split_config_defaults(ProtoConfig *config);

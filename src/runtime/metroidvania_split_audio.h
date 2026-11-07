@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+#ifndef METROIDVANIA_SPLIT_AUDIO_H
+#define METROIDVANIA_SPLIT_AUDIO_H
+
+enum {
+    MV_SPLIT_ARIA_HEARTBEAT_SOUND = 0x11C,
+    MV_SPLIT_MZM_LIGHTNING_SOUND = 0x1DC,
+};
+
+#endif

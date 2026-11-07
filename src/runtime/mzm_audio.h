@@ -67,5 +67,9 @@ uint16_t mzm_music_current(void);
  * music player (sMusicTrackDataRom index) is playing. */
 int mzm_audio_active_channels(void);
 bool mzm_audio_player_playing(int player);
+/* Native sound-table group, used by host tools to observe completion. */
+int mzm_audio_sound_player(uint16_t sound);
+/* Host-only gain for native music player 0 or SFX players 1..8. */
+void mzm_audio_set_player_gain(int player, uint8_t gain);
 
 #endif /* MZM_AUDIO_H */

@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0778 - Separate launcher SFX and add a native sound browser
+
+- Added independent host mixer gains per native audio player. The shared
+  launcher now keeps both engines advancing while cross-fading only their
+  music player 0, so Aria player-5 and Zero Mission player-2 pulse effects
+  remain audible at every divider angle without exposing the inactive title
+  music. Native sequencer state and volumes are left unchanged.
+- Added `fusion_sfx_browser`, a compact GTK4 tool that decodes the two local
+  extracted sound banks through the existing C11 engines. Its game selector,
+  numeric ID field, decimal/hex identity label, previous/next, play,
+  pause/resume and repeat controls cover all 495 Aria entries and all 708 Zero
+  Mission entries. It starts on the two current divider candidates.
+- Added a no-display native-bank contract and focused player-gain regressions.
+  The GTK window was also launched and image-checked under Xvfb. No ROM audio
+  or rendered proprietary clip is written to the repository.
+
+Next: use the browser to record the preferred Aria and Zero Mission IDs, then
+replace the two divider defaults if needed before returning to Aria's Equip
+title/frame and equipment/cursor OAM layers.
+
 ## Patch 0777 - Use native ROM sounds for the divider pulses
 
 - Replaced both synthesized pulse clips with sound sequences decoded by the

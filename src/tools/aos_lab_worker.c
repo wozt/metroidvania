@@ -561,19 +561,30 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
     uint64_t seen[1024];
     int nseen = 0, validated = 0, resp_streak = 0, stop = 0;
     int last_new_chunk = 0;
+    int in_game = 0;      /* sticky: mode 4 was reached once */
+    int prev_mode = -1;   /* gameMode at end of previous chunk */
     for (int chunk = 0; chunk < max_chunks && !stop; ++chunk) {
         char *ctl = aos_labdb_meta_get(db, ctrl_key);
         if (ctl && !strcmp(ctl, "stop")) stop = 1;
         free(ctl);
         if (stop) break;
 
-        /* phase 1: 520 frames advancing text/menus (A taps, START) */
+        /* phase 1: 520 frames advancing text/menus.
+         * START only navigates title/menu phases — once free gameplay
+         * (mode 4) was reached it would just reopen the pause menu and
+         * trap every later chunk, so it is disabled from then on. */
         AosKeyEvent ev[32];
         int ne = 0;
         ev[ne++] = (AosKeyEvent){0, 0};
-        if (chunk % 3 == 0) {
+        if (!in_game && chunk % 3 == 0) {
             ev[ne++] = (AosKeyEvent){40, 8};
             ev[ne++] = (AosKeyEvent){55, 0};
+        }
+        /* if the previous chunk ended outside gameplay while we were
+         * in game, a menu is probably open: B cancels back out */
+        if (in_game && prev_mode != 4 && prev_mode >= 0) {
+            ev[ne++] = (AosKeyEvent){30, 2};
+            ev[ne++] = (AosKeyEvent){45, 0};
         }
         for (int f = 120; f < 510; f += 140) {
             ev[ne++] = (AosKeyEvent){f, 1};
@@ -633,6 +644,8 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         /* >0.8% of central pixels changed during the 80-frame pulse:
          * walking moves far more, idle animation far less */
         int responsive = motion > 0.008;
+        if (mode == 4) in_game = 1;
+        prev_mode = mode;
         aos_mgba_free_result(&res2);
 
         const uint32_t *fbpx = aos_mgba_framebuffer(session);
@@ -725,6 +738,7 @@ int main(int argc, char **argv) {
     int action_count = 0;
     const char *define_action = NULL;
     int worker_id = 0, scout = 0, scout_chunks = 100, purge = 0;
+    const char *glyphs_dir = NULL;
 
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
@@ -751,6 +765,9 @@ int main(int argc, char **argv) {
         }
         else if (!strcmp(arg, "--scout")) { scout = 1; }
         else if (!strcmp(arg, "--purge")) { purge = 1; }
+        else if (!strcmp(arg, "--glyphs") && value) {
+            glyphs_dir = value; ++i;
+        }
         else if (!strcmp(arg, "--scout-chunks") && value) {
             scout_chunks = atoi(value); ++i;
         }
@@ -849,6 +866,32 @@ int main(int argc, char **argv) {
         aos_mgba_close(session);
         aos_labdb_close(db);
         return 1;
+    }
+
+    if (glyphs_dir) {
+        /* one-shot OCR dump: run 120 frames from the state, snapshot
+         * VRAM + video regs, write every used tile as a PGM bitmap */
+        AosPeekRequest gp[1] = {{-1, 0x06000000, 0x18000}};
+        AosRunSpec gspec;
+        memset(&gspec, 0, sizeof gspec);
+        gspec.frames = 120;
+        gspec.peeks = gp;
+        gspec.peek_count = 1;
+        if (!aos_mgba_load_state_blob(session, state_blob, blob_size))
+            fprintf(stderr, "state reload failed\n");
+        AosRunResult gres;
+        aos_mgba_run(session, &gspec, &gres);
+        int n = 0;
+        if (gres.peek_count > 0 && gres.peeks[0].data)
+            n = aos_vision_glyph_dump(gres.video_regs,
+                                      gres.peeks[0].data,
+                                      gres.peeks[0].size, glyphs_dir);
+        printf("glyphs: %d tiles dumped to %s\n", n, glyphs_dir);
+        aos_mgba_free_result(&gres);
+        free(state_blob);
+        aos_mgba_close(session);
+        aos_labdb_close(db);
+        return n > 0 ? 0 : 1;
     }
 
     /* Waypoint picker: every stored checkpoint stays reachable so a

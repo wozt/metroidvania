@@ -249,3 +249,91 @@ double aos_vision_motion(const uint32_t *a, const uint32_t *b,
                                     : 0.0;
     return total ? (double)changed / (double)total : 0.0;
 }
+
+/* ---- glyph bitmap dump ----------------------------------------------
+ * Renders every tile used by enabled text BGs as an 8x8 bitmap.
+ * 4bpp tiles: 32 bytes (2 pixels/byte, low nibble first).
+ * 8bpp tiles (256-color BG): 64 bytes.
+ * Writes PGM files tile_<bg>_<idx>.pgm plus a per-BG ASCII map of the
+ * screen block so glyph identity can be matched to screen position. */
+static int tile_pixel_4bpp(const uint8_t *t, int x, int y) {
+    int byte = t[y * 8 + x / 2];
+    int shift = (x & 1) ? 4 : 0;
+    return (byte >> shift) & 0xF;
+}
+static int tile_pixel_8bpp(const uint8_t *t, int x, int y) {
+    return t[y * 8 + x];
+}
+
+int aos_vision_glyph_dump(const uint16_t *regs,
+                          const uint8_t *vram, size_t vram_size,
+                          const char *dir) {
+    if (!regs || !vram || vram_size < 0x10000 || !dir) return 0;
+    uint16_t dispcnt = regs[0];
+    int mode = dispcnt & 7;
+    int enabled = (dispcnt >> 8) & 0xF;
+    int written = 0;
+    for (int bg = 0; bg < 4; ++bg) {
+        int is_text = (mode == 0) || (mode == 1 && bg < 2);
+        if (!is_text || !(enabled & (1 << bg))) continue;
+        uint16_t bgcnt = regs[1 + bg];
+        uint32_t char_base = ((bgcnt >> 2) & 3) * 0x4000;
+        uint32_t screen = ((bgcnt >> 8) & 0x1F) * 0x800;
+        int wide = (bgcnt >> 6) & 1; /* 256-color */
+        if (screen + 0x800 > vram_size) continue;
+        /* collect used tile indices */
+        uint16_t used[1024];
+        int nused = 0;
+        for (int i = 0; i < 1024; ++i) {
+            uint16_t e = vram[screen + i * 2] |
+                         (vram[screen + i * 2 + 1] << 8);
+            uint16_t tile = e & 0x3FF;
+            if (!tile) continue;
+            int dup = 0;
+            for (int k = 0; k < nused; ++k)
+                if (used[k] == tile) { dup = 1; break; }
+            if (!dup && nused < 1024) used[nused++] = tile;
+        }
+        for (int u = 0; u < nused; ++u) {
+            uint16_t tile = used[u];
+            uint32_t toff = char_base + (uint32_t)tile *
+                            (wide ? 64 : 32);
+            if (toff + (wide ? 64 : 32) > vram_size) continue;
+            const uint8_t *tp = vram + toff;
+            char path[512];
+            snprintf(path, sizeof path, "%s/bg%d_t%03d.pgm", dir, bg,
+                     tile);
+            FILE *f = fopen(path, "wb");
+            if (!f) continue;
+            fprintf(f, "P5\n8 8\n255\n");
+            for (int y = 0; y < 8; ++y) {
+                for (int x = 0; x < 8; ++x) {
+                    int px = wide ? tile_pixel_8bpp(tp, x, y)
+                                  : tile_pixel_4bpp(tp, x, y);
+                    uint8_t v = px ? (uint8_t)(255 - px * 24) : 0;
+                    fputc(px ? 255 : 0, f);
+                    (void)v;
+                }
+            }
+            fclose(f);
+            ++written;
+        }
+        /* ASCII map of the screen block: tile index per cell */
+        char mpath[512];
+        snprintf(mpath, sizeof mpath, "%s/bg%d_map.txt", dir, bg);
+        FILE *mf = fopen(mpath, "w");
+        if (mf) {
+            for (int ty = 0; ty < 32; ++ty) {
+                for (int tx = 0; tx < 32; ++tx) {
+                    uint16_t e = vram[screen + (ty * 32 + tx) * 2] |
+                                 (vram[screen + (ty * 32 + tx) * 2 + 1]
+                                  << 8);
+                    fprintf(mf, "%03x ", e & 0x3FF);
+                }
+                fputc('\n', mf);
+            }
+            fclose(mf);
+        }
+    }
+    return written;
+}

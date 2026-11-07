@@ -45,3 +45,9 @@ uint64_t aos_vision_tilemap(const uint16_t *regs,
  * plus optional direction (-1 left .. +1 right). */
 double aos_vision_motion(const uint32_t *a, const uint32_t *b,
                          int w, int h, double *dir_out);
+
+/* Dump every tile used by enabled text BGs as 8x8 PGM bitmaps plus a
+ * per-BG ASCII tile-index map. Returns tiles written. */
+int aos_vision_glyph_dump(const uint16_t *regs,
+                          const uint8_t *vram, size_t vram_size,
+                          const char *dir);

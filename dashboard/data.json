@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T23:09:20+00:00",
+ "generated_at": "2026-11-07T23:15:21+00:00",
  "git": {
-  "commit": "e103e0ff",
+  "commit": "96634c2b",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "96634c2b",
+   "date": "2026-11-08",
+   "subject": "Lab: reward-driven actions — learning loop verified end to end",
+   "scope": "project"
+  },
+  {
    "commit": "e103e0ff",
    "date": "2026-11-08",
    "subject": "Lab: motion-based responsiveness — first validated gameplay state",
@@ -20789,12 +20795,6 @@
    "commit": "e05c75f5",
    "date": "2026-11-07",
    "subject": "Drop the pink window strips from the opening dialogue",
-   "scope": "project"
-  },
-  {
-   "commit": "12fb800f",
-   "date": "2026-11-07",
-   "subject": "Lower the opening dialogue text and soften the box fill",
    "scope": "project"
   }
  ],

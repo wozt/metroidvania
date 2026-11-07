@@ -47,6 +47,15 @@ Last updated: **2026-11-07**.
   Great Armor -> Arena climb -> Balore/Forbidden Area -> Claimh ->
   Top Floor Graham -> Chaos). Souls are earned through normal combat
   and soul manipulation only where it is regular gameplay.
+- Menu-aware scout: START is only sent while navigating title/menu
+  phases; once mode 4 (free gameplay) is reached it is disabled, and
+  a B tap closes any menu the previous chunk left open — fixes
+  workers trapped in the START menu.
+- OCR brick 2: `--glyphs DIR` one-shot mode runs 120 frames from a
+  state and dumps every tile used by enabled text BGs as 8x8 PGM
+  bitmaps plus per-BG ASCII tile-index maps (aos_vision_glyph_dump).
+  Tile->char mapping still needs the font table (decomp too partial);
+  next step is correlating dumps with known dialogue screens.
 - OCR brick 1 live: every trial snapshots VRAM (96 KiB post-run
   peek) plus DISPCNT/BGCNT0..3 (session video_regs) and hashes each
   enabled text BG's 32x32 tile-index grid into metrics.tilemap,

@@ -1,0 +1,142 @@
+# Aria of Sorrow — Autonomous Learning Lab
+
+Design document for the emulator laboratory in `src/tools/`. The lab's
+enduring objective: **finish Castlevania: Aria of Sorrow on its own**,
+playing strictly glitchless casual routes (no zips, no 0 HP exploit, no
+sequence breaks), using only the real ROM, real inputs and local
+instrumentation. Everything is C + SQLite; no ROM data or proprietary
+assets are committed.
+
+## Reference route (glitchless)
+
+Campaign skeleton used as progress prior:
+Chapel → Manticore room → Study → Great Armor → Arena → Balore →
+Claimh → Top Floor Graham → Chaos. Waypoints are discovered, not
+hardcoded: the fleet advances by reward, rooms and checkpoints.
+
+## Game knowledge encoded in the code
+
+`aos_lab_worker.c` embeds the rules the AI needs:
+
+- **Controls** (GBA masks): A=1 attack / advance text, B=2 jump /
+  cancel, SELECT=4, START=8 pause menu, arrows 16/32/64/128
+  (right/left/up/down), R=256, L=512 ability buttons.
+- **Menu discipline**: START only before gameplay mode 4; never during
+  play; B closes accidental menus; dialogue advances with A.
+- **Movement policy**: pulses biased RIGHT (early route pushes
+  right), LEFT ~30% for backtracking; B jump every 5th chunk; A attack
+  every 4th chunk while moving; UP tap every 6th chunk because doors
+  open with UP.
+- **WRAM map** (verified against the decomp):
+  gameMode `0x02000010`, song/area/room block `0x02000090`
+  (area=+14, room=+15), player pointer via
+  `gEwramData->unk_13110` → entity `+0x524` (unreliable — motion is
+  measured from the framebuffer instead), level `0x02013279`,
+  HP/MP `0x0201327A..80`, XP/gold `0x0201328C`, items `0x02013294`,
+  souls `0x0201331C`. VRAM `0x06000000` (96 KiB) feeds tilemap OCR.
+
+## Architecture
+
+- `aos_mgba_session` — synchronous mGBA core wrapper: state blob
+  load/save, key schedules, memory peeks, framebuffer mirror, video
+  register snapshot (`DISPCNT`/`BGCNT0..3` from `memory.io[]`).
+- `aos_lab_vision` — per-frame signatures: scene/HUD tile hashes,
+  ink rows, tile stats, RGB histogram, center-screen motion +
+  direction, 32×32 tilemap hashes per text BG, glyph bitmap dumps.
+- `aos_lab_db` — SQLite (WAL, effectively RAM-resident:
+  `synchronous=OFF`, `temp_store=MEMORY`, `mmap_size=1 GiB`,
+  64 MiB page cache). Tables: meta, runs, states (blobs), actions,
+  weights, trials. Meta keys coordinate the fleet: `lab.rooms`
+  (global room registry), `lab.dead.<state>` (lethal branches),
+  `lab.macros`, `worker.N.*` (phase/status/hb/rsum/rn/speed/launch),
+  `lab.control.N` (pause/resume/stop/best), `lab.bg`.
+- `aos_lab_worker` — two modes:
+  - **scout**: boots the ROM, plays chunks (text advance → directional
+    pulse → room/scene capture), validates free gameplay via
+    framebuffer motion (≥0.8% center pixels, 2 consecutive chunks in
+    mode 4), saves `scout_play_*` checkpoints and capped scene dumps.
+  - **trials**: bandit over actions weighted by mean reward; waypoint
+    restarts (~25%, prefers `play` states, skips lethal branches);
+    smart restart hops to the fleet's best-value checkpoint.
+- `aos_lab_viewer` — GTK4 supervisor: 4×2 live framebuffer grid,
+  per-worker Pause/Stop/Play/Best + speed, fleet controls, state
+  picker (launch-worthy states only), live registry tables, in-memory
+  log, settings (background mode), best-worker green highlight.
+
+## Reward model
+
+Trial reward = action probe score (0/0.5/1) + exploration bonus,
+clamped to [-1.5, 4.0]. Bonus tags:
+
+| Tag | Trigger | Points |
+|---|---|---|
+| new_room | first fleet visit to (area,room) | +0.8 (+depth) |
+| clean_traverse | room change, no damage | +0.5 |
+| new_area_song | song/map change | +0.6 |
+| new_area | area byte change | +0.5 |
+| mode_change | gameMode change | +0.5 |
+| item_found / soul_gained | inventory diff | +0.6 / +0.5 |
+| level_up / exp_gain / gold_gain | progression | +1.0 / +0.5 / +0.3 |
+| healed / ability_used | HP/MP gain | +0.4 / +0.1 |
+| new_scene | unseen visual hash | +0.4 |
+| clean_move | screen motion, no damage | +0.2 |
+| damage | HP loss fraction | −0.3 → −1.0 |
+| death | HP → 0 | −1.0 + branch ban |
+
+The bandit ranks actions by `reward_sum/attempts`, not binary success.
+
+## Branch management
+
+- **Waypoint restarts**: ~25% of trials reload a random stored state
+  (60% preference for `scout_play_*` when present).
+- **Smart restart**: every 60 trials (and on demand via the Best
+  button / `lab.control.N=best`) the worker compares its reward EMA to
+  `aos_labdb_best_state` (state whose trials reached max reward) and
+  hops when clearly behind; a 400-trial barren streak also hops
+  (max 8 hops) before declaring stuck.
+- **Lethal branches**: any trial ending in `death` marks
+  `lab.dead.<state_id>`; waypoint picks and smart hops skip those
+  states — game overs literally make the fleet forget the branch.
+- **Auto-purge** (every 200 trials + manual/CLI): zero-reward fail
+  trials, hopeless weight combos, capped scene states, dedup of
+  same-named checkpoints, top-300 states by value
+  (reward + scout_play/manual bonus − scene-dump penalty), orphaned
+  trials removed, trial log capped at 8000 rows.
+
+## Macro synthesis (long sequences from short ones)
+
+Every 250 trials `maybe_make_macro` fuses the two best actions by
+accumulated reward into a reusable `script` action named
+`macro_<a>+<b>`: hold-style params become `frame:mask` events, the
+second sequence is offset by the first's duration + 20 frames. The
+bandit weighs macros like any action, so proven primitives (walk,
+jump, attack, menu taps) compound into longer campaigns. Capped at 40
+macros (`lab.macros`).
+
+## Viewer lifecycle
+
+Workers are child processes tracked by pid per slot. Closing the
+window sends cooperative stop + SIGTERM to all children **unless** the
+Settings "Background workers" switch (`lab.bg`, off by default) is on —
+then workers keep running unsupervised and a later session reattaches
+through the database and `/dev/shm/aoslab_fb_*` segments. Play buttons
+respawn dead workers from `worker.N.launch`.
+
+## Known gaps / roadmap
+
+- **OCR validation**: tilemap hashes + glyph dumps exist; decoding
+  glyphs→characters needs a dialogue-visible state and correlation
+  with known Aria text (decomp `charmap.txt` is empty — rebuild the
+  table by observation).
+- **Boss/monster/item detectors**: WRAM entity tables and kill
+  detection are not yet instrumented; rewards currently infer progress
+  from vitals/inventory/rooms only.
+- **Completion metric**: no explicit "campaign progress" scalar yet —
+  deepest (area,room) + level + items should feed a `lab.progress`
+  meta and viewer badge.
+- **8-worker culling**: smart restart hops branches but does not yet
+  kill whole underperforming workers to reallocate slots to the best
+  candidates (planned: compare worker reward EMAs, stop worst quartile
+  when a clearly better branch exists).
+- **Macro v2**: macros are unordered pairs today; sequencing with
+  conditions ("if room X then…") and macro-of-macros are future work.

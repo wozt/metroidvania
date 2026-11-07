@@ -205,7 +205,10 @@ static gboolean on_log_pipe(GIOChannel *channel, GIOCondition cond,
     LogPipe *pipe = data;
     Viewer *v = g_viewer;
     if (cond & (G_IO_HUP | G_IO_ERR | G_IO_NVAL)) {
-        g_io_channel_unref(channel);
+        /* do NOT unref the channel here: g_io_add_watch holds its own
+         * reference and frees it when the watch is removed — an extra
+         * unref inside the callback double-frees and segfaults when
+         * several workers exit at once (the "stop all" crash) */
         v->pipes = g_list_remove(v->pipes, pipe);
         g_free(pipe);
         return G_SOURCE_REMOVE;
@@ -432,7 +435,7 @@ static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
 /* ---- refresh -------------------------------------------------------- */
 
 static void refresh_trials(Viewer *v) {
-    if (!v->trials_store) return;
+    if (!v->trials_store || !G_IS_LIST_STORE(v->trials_store)) return;
     int count = 0;
     AosTrialRow *rows = aos_labdb_recent_trials(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->trials_store);
@@ -474,8 +477,8 @@ static void refresh_trials(Viewer *v) {
 }
 
 static void refresh_weights(Viewer *v) {
-    if (!v->weights_store) return;
-    if (!v->weights_store) return;
+    if (!v->weights_store || !G_IS_LIST_STORE(v->weights_store)) return;
+    if (!v->weights_store || !G_IS_LIST_STORE(v->weights_store)) return;
     int count = 0;
     AosWeightRow *rows = aos_labdb_weights(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->weights_store);
@@ -501,8 +504,8 @@ static void refresh_weights(Viewer *v) {
 }
 
 static void refresh_states(Viewer *v) {
-    if (!v->states_store) return;
-    if (!v->states_store) return;
+    if (!v->states_store || !G_IS_LIST_STORE(v->states_store)) return;
+    if (!v->states_store || !G_IS_LIST_STORE(v->states_store)) return;
     int count = 0;
     AosStateRow *rows = aos_labdb_states(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->states_store);
@@ -543,8 +546,8 @@ static void refresh_states(Viewer *v) {
 }
 
 static void refresh_runs(Viewer *v) {
-    if (!v->runs_store) return;
-    if (!v->runs_store) return;
+    if (!v->runs_store || !G_IS_LIST_STORE(v->runs_store)) return;
+    if (!v->runs_store || !G_IS_LIST_STORE(v->runs_store)) return;
     int count = 0;
     AosRunRow *rows = aos_labdb_runs(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->runs_store);

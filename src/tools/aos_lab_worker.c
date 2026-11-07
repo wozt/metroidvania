@@ -541,6 +541,135 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
     return bonus;
 }
 
+
+/* ---- lethal branches + macro synthesis ------------------------------
+ * Game-over rule: a trial that ends in death marks the state it
+ * started from as lethal — waypoint restarts and smart hops forget
+ * that branch so the fleet never replays a known kill. */
+static int state_dead(AosLabDb *db, int64_t id) {
+    char k[64];
+    snprintf(k, sizeof k, "lab.dead.%lld", (long long)id);
+    char *v = aos_labdb_meta_get(db, k);
+    int d = v && atoi(v) > 0;
+    free(v);
+    return d;
+}
+
+static void state_dead_mark(AosLabDb *db, int64_t id) {
+    char k[64], b[16];
+    snprintf(k, sizeof k, "lab.dead.%lld", (long long)id);
+    char *v = aos_labdb_meta_get(db, k);
+    snprintf(b, sizeof b, "%d", (v ? atoi(v) : 0) + 1);
+    aos_labdb_meta_set(db, k, b);
+    free(v);
+}
+
+/* Convert a hold-style action's template params into a key script
+ * "frame:mask,frame:mask" using the low ends of its ranges. */
+static char *hold_to_script(const char *params, int *out_end) {
+    ActionParams p;
+    params_parse(params, &p);
+    if (!p.mask) { *out_end = 0; return NULL; }
+    int at = p.at_min, hold = p.hold_min > 0 ? p.hold_min : 1;
+    char *sc = malloc(64);
+    snprintf(sc, 64, "%d:%u,%d:0", at, p.mask, at + hold);
+    *out_end = at + hold;
+    return sc;
+}
+
+/* Long-sequence construction: every call picks the two best actions
+ * by accumulated reward and fuses them into one reusable script
+ * action ("macro_<a>+<b>"). The bandit then weighs the macro like any
+ * other action — short proven primitives compound into longer
+ * campaigns. Capped at 40 macros. */
+static void maybe_make_macro(AosLabDb *db, AosActionRow *all, int acount) {
+    char *mc = aos_labdb_meta_get(db, "lab.macros");
+    int made = mc ? atoi(mc) : 0;
+    free(mc);
+    if (made >= 40) return;
+    int wcount = 0;
+    AosWeightRow *w = aos_labdb_weights(db, 512, &wcount);
+    if (!w || wcount < 2) { aos_labdb_free_weight_rows(w, wcount); return; }
+    /* top-2 distinct actions by reward_sum */
+    AosActionRow *top[2] = {NULL, NULL};
+    double tops[2] = {0, 0};
+    for (int wi = 0; wi < wcount; ++wi) {
+        for (int ai = 0; ai < acount; ++ai) {
+            if (all[ai].id != w[wi].action_id) continue;
+            if (!top[0] || w[wi].reward_sum > tops[0]) {
+                if (top[0] && top[0] != top[1]) { top[1] = top[0]; tops[1] = tops[0]; }
+                top[0] = &all[ai]; tops[0] = w[wi].reward_sum;
+            } else if (!top[1] || w[wi].reward_sum > tops[1]) {
+                if (top[1] != top[0]) { top[1] = &all[ai]; tops[1] = w[wi].reward_sum; }
+            }
+            break;
+        }
+    }
+    aos_labdb_free_weight_rows(w, wcount);
+    if (!top[0] || !top[1] || tops[0] < 1.5 || tops[1] < 1.0) return;
+    if (!strcmp(top[0]->name, top[1]->name)) return;
+    /* build scripts for both */
+    char *sa = NULL, *sb = NULL;
+    int ea = 0, eb = 0;
+    if (top[0]->script && *top[0]->script) {
+        sa = strdup(top[0]->script);
+        for (char *p = sa; *p; ++p) if (*p == ',') {}
+        /* end frame = last "N:" number */
+        int last = 0;
+        for (char *p = sa; *p; ++p)
+            if (*p >= '0' && *p <= '9') { int v = atoi(p); if (v > last) last = v; }
+        ea = last;
+    } else {
+        sa = hold_to_script(top[0]->params, &ea);
+    }
+    if (top[1]->script && *top[1]->script) {
+        sb = strdup(top[1]->script);
+        int last = 0;
+        for (char *p = sb; *p; ++p)
+            if (*p >= '0' && *p <= '9') { int v = atoi(p); if (v > last) last = v; }
+        eb = last;
+    } else {
+        sb = hold_to_script(top[1]->params, &eb);
+    }
+    (void)eb;
+    if (!sa || !sb) { free(sa); free(sb); return; }
+    int gap = 20, off = ea + gap;
+    /* offset every frame number in sb by `off` */
+    char sb2[512];
+    size_t sl = 0;
+    sb2[0] = 0;
+    char *p = sb;
+    while (*p && sl < sizeof sb2 - 16) {
+        if (*p >= '0' && *p <= '9') {
+            int v = atoi(p);
+            sl += snprintf(sb2 + sl, sizeof sb2 - sl, "%d:", v + off);
+            while (*p >= '0' && *p <= '9') ++p;
+            if (*p == ':') ++p;
+        } else {
+            sb2[sl++] = *p++;
+            sb2[sl] = 0;
+        }
+    }
+    char name[96];
+    snprintf(name, sizeof name, "macro_%s+%s",
+             top[0]->name ? top[0]->name : "a",
+             top[1]->name ? top[1]->name : "b");
+    /* dedupe: skip if a macro with this name exists */
+    for (int ai = 0; ai < acount; ++ai)
+        if (all[ai].name && !strcmp(all[ai].name, name)) {
+            free(sa); free(sb); return;
+        }
+    char script[768];
+    snprintf(script, sizeof script, "%s,%s", sa, sb2);
+    aos_labdb_add_action(db, name, "script", "", "", script);
+    char nb[16];
+    snprintf(nb, sizeof nb, "%d", made + 1);
+    aos_labdb_meta_set(db, "lab.macros", nb);
+    printf("macro synthesized: %s (%s + %s)\n", name,
+           top[0]->name, top[1]->name);
+    free(sa); free(sb);
+}
+
 /* ---- scout mode: autonomous early-game player ----------------------
  * Boots the ROM and plays chunks of 600 frames: A taps advance text
  * and menus, a RIGHT pulse at the end probes whether the player entity
@@ -1113,6 +1242,7 @@ int main(int argc, char **argv) {
             if (branch_request || (trials_done && trials_done % 60 == 0)) {
                 double bv = 0.0;
                 int64_t bs = aos_labdb_best_state(db, &bv);
+                if (bs > 0 && state_dead(db, bs)) bs = -1;
                 if (bs > 0 && bs != state_id && branch_hops < 8 &&
                     (branch_request || bv > reward_ema + 0.35)) {
                     size_t nsz = 0;
@@ -1273,6 +1403,10 @@ int main(int argc, char **argv) {
                             want-- == 0) { pick_i = si; break; }
                 }
                 if (pick_i < 0) pick_i = rand() % scount;
+                /* never restart from a lethal branch */
+                for (int tr = 0; tr < 8 && state_dead(db, srows[pick_i].id);
+                     ++tr)
+                    pick_i = rand() % scount;
                 AosStateRow *pick = &srows[pick_i];
                 size_t asz = 0;
                 alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
@@ -1405,6 +1539,7 @@ int main(int argc, char **argv) {
             }
 
             /* exploration bonus on top of the action probe */
+            int trial_died = 0;
             {
                 int scene_new = 0;
                 for (int si = 0; si < seen_count; ++si)
@@ -1427,6 +1562,7 @@ int main(int argc, char **argv) {
                     }
                 }
                 reward += bonus;
+                trial_died = strstr(btags, "death") != NULL;
                 if (reward > 4.0) reward = 4.0;
                 if (reward < -1.5) reward = -1.5;
                 /* merge tags into metrics before the closing brace */
@@ -1441,6 +1577,10 @@ int main(int argc, char **argv) {
                 }
             }
 
+            /* game-over rule: a lethal branch is forgotten — mark the
+             * starting state so waypoint restarts and smart hops skip
+             * it from now on */
+            if (trial_died) state_dead_mark(db, used_state_id);
             /* refined success rule: a probe-fail that still scored
              * exploration reward is a partial, not a dead spin */
             if (!strcmp(outcome, "fail") && reward > 0.0)
@@ -1450,6 +1590,10 @@ int main(int argc, char **argv) {
                 frames, outcome, reward, metrics, duration_ms);
             ++trials_done;
             total_frames += frames;
+            /* long-sequence construction: every 250 trials fuse the
+             * two best actions into a reusable macro action */
+            if (trials_done % 250 == 249)
+                maybe_make_macro(db, all, acount);
             /* automatic aggressive purge: every 200 trials drop the
              * dead weight so the DB stays lean */
             if (trials_done % 200 == 0) {
@@ -1503,6 +1647,7 @@ int main(int argc, char **argv) {
                  * giving up — a fresh frontier beats spinning wheels */
                 double bv = 0.0;
                 int64_t bs = aos_labdb_best_state(db, &bv);
+                if (bs > 0 && state_dead(db, bs)) bs = -1;
                 if (bs > 0 && bs != state_id && branch_hops < 8) {
                     size_t nsz = 0;
                     uint8_t *nb = aos_labdb_state_blob(db, bs, &nsz);

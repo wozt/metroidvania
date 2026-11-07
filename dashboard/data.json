@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T19:31:36+00:00",
+ "generated_at": "2026-11-07T19:34:02+00:00",
  "git": {
-  "commit": "e3d332a",
+  "commit": "143fbed",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 157,
    "functional_or_better_percent": 71.0,
-   "with_passing_tests": 208,
-   "with_passing_tests_percent": 94.1,
+   "with_passing_tests": 207,
+   "with_passing_tests_percent": 93.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -719,8 +719,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 2,
-   "with_passing_tests_percent": 66.7,
+   "with_passing_tests": 1,
+   "with_passing_tests_percent": 33.3,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -13396,8 +13396,8 @@
     "sub_0804AFD4",
     "sub_0804B26C"
    ],
-   "limitations": "The native C11 BG0 renderer consumes the verified ROM's localized names, descriptions, small and proportional fonts, language-bank labels, digit and comparison tiles and source coordinates. Its title banner, page frame, item icon and cursor OAM layers and exact transitions remain absent. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. The runtime now passes that live list to a source-derived sub_0804A95C BG0 view with the three equipped names, selected category, quantities, localized description and six current-versus-preview values. sub_0804AED4 removes a selected last copy from the recent cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names and were rendered locally from the verified ROM. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-derived, unit-tested and image-checked, not emulator-compared.",
-   "next_action": "Reconstruct the Equip title, frame, item icons and cursor OAM, then complete all weapon entity classes, resistance and record-specific accessory effects.",
+   "limitations": "The native C11 BG0 renderer consumes the verified ROM's localized names, descriptions, small and proportional fonts, language-bank labels, digit and comparison tiles and source coordinates. Its title banner, page frame, item icon and cursor OAM layers and exact transitions remain absent. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. The runtime now passes that live list to a source-derived sub_0804A95C BG0 view with the three equipped names, selected category, quantities, localized description and six current-versus-preview values. sub_0804AED4 removes a selected last copy from the recent cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names and were rendered locally from the verified ROM. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-derived, unit-tested and image-checked, not emulator-compared. The icon system is decoded: sub_0804090C(icon,slot) appends to the WRAM icon list at gEwramData+0x115B2 (icon clamped to 0xF0, slot to 0x1F) and sub_08040970(x,y,w,h) sets its window rect at +0x115BC (x<=0x28, y<=0x1F tile clamps); sub_0804039C then consumes the list and writes BG tilemap entries (icon>>3 selects the row, slot<<10 the column block through the +0x11598 map base), so menu icons are BG tiles, not OBJ sprites; fifteen call sites span Soul Set, Equip, Item Use, Config and the Enemy detail.",
+   "next_action": "Reconstruct the Equip title, frame and the icon-list tile writes (sub_0804090C/sub_08040970/sub_0804039C plus the icon tileset bank), then complete all weapon entity classes, resistance and record-specific accessory effects.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_pause_graphics.c",
@@ -19251,12 +19251,14 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "passed"
+      "outcome": "failed"
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-07"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19394,7 +19396,7 @@
    {
     "name": "fusion_checklist_current",
     "files": [],
-    "outcome": "passed"
+    "outcome": "failed"
    },
    {
     "name": "native_inventory_writer",
@@ -20202,12 +20204,18 @@
    }
   ],
   "summary": {
-   "passed": 132,
-   "failed": 0,
+   "passed": 131,
+   "failed": 1,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "143fbed",
+   "date": "2026-11-07",
+   "subject": "Duck menu music and gate opening room-music entry",
+   "scope": "project"
+  },
   {
    "commit": "e3d332a",
    "date": "2026-11-07",
@@ -20680,12 +20688,6 @@
    "commit": "f64d703",
    "date": "2026-11-06",
    "subject": "Compose all Aria introduction actors",
-   "scope": "project"
-  },
-  {
-   "commit": "debf16a",
-   "date": "2026-11-06",
-   "subject": "Restore Aria intro Soma and zombie blood",
    "scope": "project"
   }
  ],

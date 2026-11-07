@@ -65,6 +65,7 @@ typedef struct {
     AosPeekResult *peeks; /* peek_count entries */
     int peek_count;
     bool state_out_ok;
+    uint16_t video_regs[8]; /* DISPCNT + BGCNT0..3 at run end */
 } AosRunResult;
 
 /* Open a session and load the ROM. On failure returns NULL and fills err. */

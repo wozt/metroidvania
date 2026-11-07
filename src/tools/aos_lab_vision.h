@@ -32,3 +32,11 @@ void aos_vision_metrics_append(char *metrics, size_t size,
                                const AosSceneFeat *feat);
 
 #endif
+
+/* BG tilemap signature: hashes each enabled text BG's 32x32 tile-index
+ * grid (VRAM screen blocks) from DISPCNT+BGCNT0..3 (`regs`, as
+ * snapshot by the session at run end) and the VRAM window.
+ * Appends "bgN:hash,..." into `out`; returns combined hash. */
+uint64_t aos_vision_tilemap(const uint16_t *regs,
+                            const uint8_t *vram, size_t vram_size,
+                            char *out, size_t out_size);

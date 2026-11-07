@@ -137,3 +137,85 @@ void aos_vision_metrics_append(char *metrics, size_t size,
         strncat(metrics, add, size - len);
     }
 }
+
+/* ---- BG tilemap signature ------------------------------------------
+ * Reads the emulated IO registers (DISPCNT + BGCNT0..3, 16 bytes from
+ * 0x04000000) and the 96 KiB VRAM window, then hashes the 32x32 tile
+ * index grid of every enabled text-mode background.  This is the first
+ * OCR brick: it tells the lab *which tiles* (glyphs, sprites-in-BG,
+ * HUD elements) occupy the screen without decoding them yet. */
+static uint16_t vrd16(const uint8_t *p) {
+    return (uint16_t)(p[0] | (p[1] << 8));
+}
+
+uint64_t aos_vision_tilemap(const uint16_t *regs,
+                            const uint8_t *vram, size_t vram_size,
+                            char *out, size_t out_size) {
+    if (!regs || !vram || vram_size < 0x10000 ||
+        !out || out_size < 8) {
+        if (out && out_size) out[0] = 0;
+        return 0;
+    }
+    /* regs[0]=DISPCNT, regs[1..4]=BGCNT0..3 */
+    uint16_t dispcnt = regs[0];
+    int mode = dispcnt & 7;
+    int enabled = (dispcnt >> 8) & 0xF;
+    uint64_t all = 1469598103934665603ULL;
+    size_t ol = 0;
+    out[0] = 0;
+    int txt_rows_total = 0, tile_total = 0;
+
+    for (int bg = 0; bg < 4; ++bg) {
+        int is_text = (mode == 0) || (mode == 1 && bg < 2);
+        if (!is_text || !(enabled & (1 << bg))) continue;
+        uint16_t bgcnt = regs[1 + bg];
+        uint32_t screen = ((bgcnt >> 8) & 0x1F) * 0x800;
+        if (screen + 0x800 > vram_size) continue;
+
+        uint64_t h = 1469598103934665603ULL;
+        uint16_t seen[1024];
+        int nseen = 0;
+        int txt_rows = 0;
+        for (int ty = 0; ty < 32; ++ty) {
+            int row_tiles = 0;
+            uint16_t row_idx[32];
+            for (int tx = 0; tx < 32; ++tx) {
+                uint16_t e = vrd16(vram + screen +
+                                   (ty * 32 + tx) * 2);
+                uint16_t tile = e & 0x3FF;
+                uint16_t cell = (uint16_t)(tile |
+                                           ((e >> 10) & 3) << 10);
+                h ^= cell; h *= 1099511628211ULL;
+                all ^= cell; all *= 1099511628211ULL;
+                row_idx[tx] = tile;
+                if (tile) {
+                    ++tile_total;
+                    int dup = 0;
+                    for (int k = 0; k < nseen; ++k)
+                        if (seen[k] == tile) { dup = 1; break; }
+                    if (!dup && nseen < 1024) seen[nseen++] = tile;
+                    ++row_tiles;
+                }
+            }
+            /* a row with many distinct nonzero tiles smells like a
+             * line of text or a dense sprite strip */
+            int distinct = 0;
+            for (int i = 0; i < 32; ++i) {
+                int dup = 0;
+                for (int j = 0; j < i; ++j)
+                    if (row_idx[j] == row_idx[i]) { dup = 1; break; }
+                if (row_idx[i] && !dup) ++distinct;
+            }
+            if (distinct >= 5) ++txt_rows;
+        }
+        txt_rows_total += txt_rows;
+        int w = snprintf(out + ol, out_size - ol,
+                         "bg%d:%016llx,", bg,
+                         (unsigned long long)h);
+        if (w > 0 && (size_t)w < out_size - ol) ol += (size_t)w;
+    }
+    int w = snprintf(out + ol, out_size - ol,
+                     "txtrows:%d,tileuses:%d", txt_rows_total, tile_total);
+    (void)w;
+    return all;
+}

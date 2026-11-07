@@ -983,7 +983,7 @@ int main(int argc, char **argv) {
 
             /* reward peeks always run (before@0 / after@last); the
              * action probe, when present, occupies the last two slots */
-            AosPeekRequest peeks[2 * RK_COUNT + 2];
+            AosPeekRequest peeks[2 * RK_COUNT + 3];
             int peek_count = 0;
             for (int side = 0; side < 2; ++side) {
                 int fr = side ? frames - 1 : 0;
@@ -1002,6 +1002,17 @@ int main(int argc, char **argv) {
                 peeks[peek_count].frame = frames - 1;
                 peeks[peek_count].address = probe.address;
                 peeks[peek_count].size = probe.size;
+                ++peek_count;
+            }
+
+            /* OCR brick: post-run snapshot of the text-BG tilemaps.
+             * IO regs (DISPCNT+BGCNT) at 0x04000000, VRAM window at
+             * 0x06000000 — the vision module hashes each enabled BG's
+             * 32x32 tile grid into the metrics JSON. */
+            if (peek_count < 2 * RK_COUNT + 3) {
+                peeks[peek_count].frame = -1;
+                peeks[peek_count].address = 0x06000000;
+                peeks[peek_count].size = 0x18000;
                 ++peek_count;
             }
 
@@ -1065,7 +1076,7 @@ int main(int argc, char **argv) {
 
             char outcome[32] = "fail";
             double reward = 0.0;
-            char metrics[512] = "{}";
+            char metrics[1024] = "{}";
             int probe_base = 2 * RK_COUNT;
             if (has_probe && res.peek_count >= probe_base + 2) {
                 eval_score(&probe, &res.peeks[probe_base],
@@ -1094,6 +1105,35 @@ int main(int argc, char **argv) {
                                    &feat);
                 aos_vision_metrics_append(metrics, sizeof metrics, &feat);
                 scene_hash = feat.scene_hash;
+                /* tilemap OCR signature from the post-run VRAM peek
+                 * plus the session's video-register snapshot */
+                {
+                    int vram_i = -1;
+                    for (int pi = 0; pi < res.peek_count; ++pi)
+                        if (res.peeks[pi].address == 0x06000000)
+                            vram_i = pi;
+                    if (vram_i >= 0 && res.peeks[vram_i].data) {
+                        char tm[256];
+                        aos_vision_tilemap(res.video_regs,
+                            res.peeks[vram_i].data,
+                            res.peeks[vram_i].size,
+                            tm, sizeof tm);
+                        if (tm[0]) {
+                            size_t ml = strlen(metrics);
+                            if (ml && metrics[ml - 1] == '}') {
+                                metrics[ml - 1] = 0;
+                                strncat(metrics, ",\"tilemap\":\"",
+                                        sizeof metrics - ml - 1);
+                                ml = strlen(metrics);
+                                strncat(metrics, tm,
+                                        sizeof metrics - ml - 1);
+                                ml = strlen(metrics);
+                                strncat(metrics, "\"}",
+                                        sizeof metrics - ml - 1);
+                            }
+                        }
+                    }
+                }
                 int seen = 0;
                 for (int si = 0; si < seen_count; ++si)
                     if (seen_scenes[si] == scene_hash) { seen = 1; break; }

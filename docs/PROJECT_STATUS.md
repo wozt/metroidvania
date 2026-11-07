@@ -47,7 +47,12 @@ Last updated: **2026-11-07**.
   Great Armor -> Arena climb -> Balore/Forbidden Area -> Claimh ->
   Top Floor Graham -> Chaos). Souls are earned through normal combat
   and soul manipulation only where it is regular gameplay.
-- OCR of in-game text is planned (BG tilemap in VRAM via session
+- OCR brick 1 live: every trial snapshots VRAM (96 KiB post-run
+  peek) plus DISPCNT/BGCNT0..3 (session video_regs) and hashes each
+  enabled text BG's 32x32 tile-index grid into metrics.tilemap,
+  with txtrows (dense tile rows = text/UI lines) and tileuses.
+  Glyph decoding still needs the font table; tile identity is now
+  tracked per trial. OCR of in-game text is planned (BG tilemap in VRAM via session
   peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.
 

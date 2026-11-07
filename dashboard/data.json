@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T22:48:30+00:00",
+ "generated_at": "2026-11-07T22:58:06+00:00",
  "git": {
-  "commit": "25f02b89",
+  "commit": "22af35ae",
   "branch": "main",
   "dirty": true
  },
@@ -16825,7 +16825,7 @@
    "tests": [],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API (aos_mgba_session): frame stepping, scripted key masks, PPM screenshots, save states and WRAM peeks. aos_lab_worker records state blobs, runs scripted actions with parameter jitter against memory-probe evals, and accumulates per-parameter success weights in a local SQLite database (aos_lab_db, WAL). aos_lab_viewer is a GTK4 registry that polls trials, weights, states and runs live, with a bandit action selector, guaranteed randomized inputs, novelty auto-checkpoints, verified WRAM probes (position/HP/MP/gold), an autonomous scout mode that plays the early game and validates free-gameplay checkpoints, plus a WRAM reward layer (new rooms/scenes/items/souls/level-ups/clean traversals vs damage/death) driving the bandit, with waypoint restarts from random checkpoints and eight colour-coded parallel worker slots (per-worker pause/resume/stop, batch spawning, save-state recording, per-worker speed caps) and an in-memory live log. Workers publish live 240x160 framebuffers over POSIX shm shown as a draggable 4x2 video grid (aspect-locked), with a global fleet bar for pause-all/stop-all/global speed, and every trial stores a visual scene signature (tile hash, HUD hash, text-ink rows, tile count, RGB histogram) in its metrics JSON. Verified end-to-end: state capture, trial batches, weight updates and shm video. Still open: calibrated gameplay probes (player position/HP addresses), menu-navigation scripts for the scrolling intro, vendored mGBA sources and a spawn-batch button in the viewer.",
+   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API (aos_mgba_session): frame stepping, scripted key masks, PPM screenshots, save states and WRAM peeks. aos_lab_worker records state blobs, runs scripted actions with parameter jitter against memory-probe evals, and accumulates per-parameter success weights in a local SQLite database (aos_lab_db, WAL). aos_lab_viewer is a GTK4 registry that polls trials, weights, states and runs live, with a bandit action selector, guaranteed randomized inputs, novelty auto-checkpoints, verified WRAM probes (position/HP/MP/gold), an autonomous scout mode that plays the early game and validates free-gameplay checkpoints, plus a WRAM reward layer (new rooms/scenes/items/souls/level-ups/clean traversals vs damage/death) driving the bandit, with waypoint restarts from random checkpoints and a VRAM tilemap signature per trial (first OCR brick) and eight colour-coded parallel worker slots (per-worker pause/resume/stop, batch spawning, save-state recording, per-worker speed caps) and an in-memory live log. Workers publish live 240x160 framebuffers over POSIX shm shown as a draggable 4x2 video grid (aspect-locked), with a global fleet bar for pause-all/stop-all/global speed, and every trial stores a visual scene signature (tile hash, HUD hash, text-ink rows, tile count, RGB histogram) in its metrics JSON. Verified end-to-end: state capture, trial batches, weight updates and shm video. Still open: calibrated gameplay probes (player position/HP addresses), menu-navigation scripts for the scrolling intro, vendored mGBA sources and a spawn-batch button in the viewer.",
    "next_action": "",
    "evidence": {
     "unit_tests": [],
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "22af35ae",
+   "date": "2026-11-07",
+   "subject": "Lab: waypoint restarts + glitchless route reference",
+   "scope": "project"
+  },
+  {
    "commit": "25f02b89",
    "date": "2026-11-07",
    "subject": "Lab: WRAM reward layer with exploration bonuses and global room registry",
@@ -20789,12 +20795,6 @@
    "commit": "9b53ba41",
    "date": "2026-11-07",
    "subject": "Anchor the opening dialogue box to the native window band",
-   "scope": "project"
-  },
-  {
-   "commit": "9550e27c",
-   "date": "2026-11-07",
-   "subject": "Decode the complete text-render pipeline",
    "scope": "project"
   }
  ],

@@ -301,6 +301,16 @@ static void run_on_thread(struct mCoreThread *thread) {
     if (spec->state_out && g_ctx.result)
         g_ctx.result->state_out_ok =
             save_state_file_on_thread(core, spec->state_out);
+    /* snapshot video registers for tilemap/OCR analysis */
+    if (g_ctx.result) {
+        struct GBA *gba = (struct GBA *)core->board;
+        if (gba) {
+            g_ctx.result->video_regs[0] = gba->memory.io[0]; /* DISPCNT */
+            for (int i = 0; i < 4; ++i)
+                g_ctx.result->video_regs[1 + i] =
+                    gba->memory.io[4 + i]; /* BGCNT0..3 */
+        }
+    }
     (void)thread;
 }
 

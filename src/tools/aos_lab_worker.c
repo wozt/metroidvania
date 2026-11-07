@@ -411,7 +411,9 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
             ev[ne++] = (AosKeyEvent){f, 1};
             ev[ne++] = (AosKeyEvent){f + 12, 0};
         }
-        ev[ne++] = (AosKeyEvent){520, 16};
+        /* alternate pulse direction: RIGHT can stall against a wall,
+         * LEFT explores the other way */
+        ev[ne++] = (AosKeyEvent){520, (chunk & 1) ? 32 : 16};
         ev[ne++] = (AosKeyEvent){599, 0};
 
         AosPeekRequest pk[3];
@@ -446,7 +448,7 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         int32_t x1 = res.peeks[1].data ? peek_i32(&res.peeks[1]) : 0;
         /* real walking gives ~1.5px/frame -> >4px in the 80-frame
          * pulse; cutscene drift stays below that */
-        int responsive = (x1 - x0) > 0x40000;
+        int responsive = (x1 - x0 > 0x40000) || (x0 - x1 > 0x40000);
 
         const uint32_t *fbpx = aos_mgba_framebuffer(session);
         AosSceneFeat feat;

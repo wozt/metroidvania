@@ -568,3 +568,28 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
     composite_on_backdrop(graphics, rgba);
     return true;
 }
+
+bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
+                                      const uint8_t config[AOS_BUTTON_ACTIONS],
+                                      uint8_t *rgba, size_t rgba_size) {
+    if (!config || !valid_output(graphics, rgba, rgba_size)) return false;
+    reset_bg0(graphics);
+    /* sub_0804C264: four rows at tile rows 4,6,8,10. The action label is a
+     * baked seven- or six-tile strip at entry 0x3359+row*0x10 (row 1 is six
+     * tiles wide natively); the assigned button name is the three-tile
+     * strip at 0x32A0+index*3 in column 0x12. Row order follows table
+     * 0x08525510 {0,1,3,2} = attack, jump, guardian, ability. */
+    static const uint8_t row_actions[AOS_BUTTON_ACTIONS] = {0, 1, 3, 2};
+    static const unsigned label_tiles[AOS_BUTTON_ACTIONS] = {7, 6, 7, 7};
+    for (unsigned row = 0; row < AOS_BUTTON_ACTIONS; ++row) {
+        unsigned y = 4 + row * 2;
+        put_tiles(graphics, 6, (int)y,
+                  (uint16_t)(0x3359 + row * 0x10), label_tiles[row]);
+        unsigned index = config[row_actions[row]];
+        if (index > 3) index = 0;
+        put_tiles(graphics, 0x12, (int)y,
+                  (uint16_t)(0x32A0 + index * 3), 3);
+    }
+    composite(graphics, rgba);
+    return true;
+}

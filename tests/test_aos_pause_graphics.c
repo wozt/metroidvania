@@ -173,6 +173,21 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[10 * 32] & 0x3FF) < 0x200);
     assert((graphics.bg0_map[16 * 32 + 5] & 0x3FF) < 0x200);
     assert(graphics.bg0_chars[0x340 * 32] == 0);
+    /* sub_0804C264: rows 4,6,8,10 show actions {0,1,3,2}; the name strip
+     * is 0x32A0+button_index*3 in column 0x12. */
+    {
+        uint8_t config[AOS_BUTTON_ACTIONS] = {1, 0, 3, 2};
+        assert(aos_pause_graphics_render_config(&graphics, config,
+                                                rgba, 240 * 160 * 4));
+        assert(graphics.bg0_map[4 * 32 + 6] == 0x3359);
+        assert(graphics.bg0_map[4 * 32 + 12] == 0x335F);
+        assert(graphics.bg0_map[4 * 32 + 18] == 0x32A3);
+        assert(graphics.bg0_map[4 * 32 + 20] == 0x32A5);
+        assert(graphics.bg0_map[6 * 32 + 11] == 0x336E);
+        assert(graphics.bg0_map[6 * 32 + 18] == 0x32A0);
+        assert(graphics.bg0_map[8 * 32 + 18] == 0x32A6);
+        assert(graphics.bg0_map[10 * 32 + 18] == 0x32A9);
+    }
     assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
                                          rgba, 240 * 160 * 4));
     assert(memcmp(graphics.bg0_chars + 0x340 * 32,

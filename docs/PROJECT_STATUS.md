@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0788 - START config page native tile strips
+
+- Audited the asm-only config page (`sub_0804BF8C` init, `sub_0804C05C`
+  update, `sub_0804C264` draw, `sub_0804C3AC`/`sub_0804C3C8` cursor and
+  defaults) and extracted the native tables from the ROM:
+  `0x08525504` = the four configurable buttons {A, B, R, L},
+  `0x0852550C` = default indices {1,0,3,2} and `0x08525510` = the row
+  order {0,1,3,2} = attack, jump, guardian, ability — matching the
+  portable `aos_button_config` model exactly.
+- `sub_08046DD4` is a tilemap filler: `sub_0804C264` draws four rows at
+  tile rows 4,6,8,10 — baked action-label strips at entries
+  `0x3359+row*0x10` (seven tiles, six on row 1) in column 6 and the
+  assigned button's three-tile name strip at `0x32A0+index*3` in column
+  0x12, all palette 3 from the language bank.
+- `aos_pause_graphics_render_config` reproduces those strips on the
+  shared pause background through the existing BG0 tile path; the SDL
+  diagnostic overlay no longer covers the config page. The cursor
+  sprite (`sub_08048AD8`), button icons (`sub_08040C60` 0x80-0x87) and
+  transitions remain OBJ-layer work, as with the other pause pages.
+
 ## Patch 0787 - SELECT secret-room edge flags and save schema v14
 
 - `aos_quick_map.c` now carries the `sUnk_081183B0` table verbatim (the

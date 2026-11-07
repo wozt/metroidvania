@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "aos_button_config.h"
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"
 #include "fusion/assets/aos.h"
@@ -101,6 +102,14 @@ bool aos_pause_graphics_render_soul_set(
 bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
                                      const AosPauseEquipValues *values,
                                      uint8_t *rgba, size_t rgba_size);
+/* sub_0804BF8C/sub_0804C264/sub_0804C3AC: the button-configuration page.
+ * The four action rows reuse the baked label strips at tilemap entries
+ * 0x3359+row*0x10 and the per-button name strips at 0x32A0+index*3 from
+ * the language bank. Rows follow the native 0x08525510 order {0,1,3,2};
+ * the cursor and button icons are OBJ sprites and remain unrendered. */
+bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
+                                      const uint8_t config[AOS_BUTTON_ACTIONS],
+                                      uint8_t *rgba, size_t rgba_size);
 void aos_pause_graphics_free(AosPauseGraphics *graphics);
 
 #endif /* AOS_PAUSE_GRAPHICS_H */

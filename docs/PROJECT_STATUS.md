@@ -163,6 +163,18 @@ Last updated: **2026-11-06**.
   wiring the discovery bits through room entry and a save-schema field
   remains open.
 
+## Patch 0787 - Aria Soma hard-landing attack cancel
+
+- Ported the case-4 tail of `sub_0801B0D8` (`_0801CA60`): while the hard
+  landing recovery runs and flag 0x80 is set, `sub_080197B4` processes
+  the attack button, so Soma can swing out of the landing — the quick
+  re-attack after touching down, including out of a knockback landing
+  (state 13 sets 0x80 with `0x82`). The state raises the crouch flag
+  first, so the cancel uses the crouch attack posture like the native
+  path. Deterministic test covers the cancel; the mid-air attack to
+  landing chain was already ported through the weapon's 0x2000
+  landing-attack flag (only weapon record 5 carries it).
+
 ## Patch 0786 - Aria intro presentation fixes
 
 - Removed the leftover `A OR START: SKIP` SDL debug overlay from the

@@ -807,7 +807,7 @@ static void dive_kick_state(AosSoma *soma, const AosCollision *layer) {
 
 /* sub_0801B0D8 case 4 (_0801C994): hard landing. The slide branch taken
  * with flag 0x80 is not ported. */
-static void hard_landing_state(AosSoma *soma) {
+static void hard_landing_state(AosSoma *soma, uint16_t pressed) {
     soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFD000 : 0x3000; /* 0.1875 */
     apply_friction(soma);
     /* _0801C9BC: on its seventh frame a fast hard landing (flag 0x80,
@@ -822,7 +822,12 @@ static void hard_landing_state(AosSoma *soma) {
     if ((soma->flags & (AOS_FLAG_GROUNDED | AOS_FLAG_ANIM_DONE)) != AOS_FLAG_GROUNDED) {
         soma->flags &= 0xFFFEFF7Fu;
         soma->state = 0;
+        return;
     }
+    /* _0801CA60: while the landing recovery runs, flag 0x80 lets the
+     * attack button cancel it through sub_080197B4 — the quick re-attack
+     * after touching down, including out of a knockback landing. */
+    if (soma->flags & AOS_FLAG_STOP_AT_WALL) attack_start(soma, pressed);
 }
 
 static void transform_play(AosSoma *soma, unsigned id, bool loop);
@@ -1202,7 +1207,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     case 1: attack_state(soma, layer, held, pressed); break;
     case 2: cast_state(soma, layer, held); break;
     case 3: slide_state(soma, layer); break;
-    case 4: hard_landing_state(soma); break;
+    case 4: hard_landing_state(soma, pressed); break;
     case 5: high_jump_state(soma, layer, held); break;
     case 6:     /* _0801CBC6: ceiling crash, until its animation ends */
         if (soma->flags & AOS_FLAG_ANIM_DONE) soma->state = 0;

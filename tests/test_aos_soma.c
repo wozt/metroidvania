@@ -502,6 +502,24 @@ static void attack_tests(void) {
     soma.weapon = (AosWeapon){5, 0, {0x30, 0x31, 0x32, 0x33, 0x34}, 15, 0, 0};
     frame(&soma, AOS_KEY_ATTACK, AOS_KEY_ATTACK);
     assert(soma.state == 0);
+
+    /* _0801CA60: a hard landing carrying flag 0x80 (a knockback landing)
+     * lets the attack button cancel the recovery through sub_080197B4. */
+    fill(0, 20, W - 1, 79, 0x00);
+    fill(0, 80, W - 1, H - 1, 0x03);
+    soma = at(100, 40, AOS_FLAG_AIRBORNE | AOS_FLAG_STOP_AT_WALL);
+    soma.weapon = sword;
+    landing = AOS_LANDING_NONE;
+    for (int i = 0; i < 200 && landing == AOS_LANDING_NONE; ++i)
+        landing = frame(&soma, 0, 0);
+    assert(landing == AOS_LANDING_HARD && soma.state == 4);
+    /* Without the attack press the recovery plays out to state 0. */
+    frame(&soma, 0, AOS_KEY_ATTACK);
+    /* Case 4 raises the crouch flag first, so the cancel uses the crouch
+     * attack posture like the native path. */
+    assert(soma.state == 1 && (soma.flags & AOS_FLAG_ATTACKING) &&
+           soma.anim.id == 0x31);
+    fill(0, 20, W - 1, 79, 0x03);
     memset(cells, 0, sizeof(cells));
 }
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T18:45:33+00:00",
+ "generated_at": "2026-11-07T18:51:41+00:00",
  "git": {
-  "commit": "ee77699",
+  "commit": "af2f1e9",
   "branch": "main",
   "dirty": true
  },
@@ -14454,7 +14454,7 @@
     "sub_0804D2C8",
     "sub_0804D73C"
    ],
-   "limitations": "The hub uses the source BG1, portrait, frame, language-bank labels, digit tiles, palettes and BG0 layout decoded directly from a verified ROM; its cursor OAM and exact fades remain absent. Soul Set uses its source BG0 labels and coordinates, stats, palette selection, ROM-localized equipped/list names and descriptions, and both native proportional fonts. Equip uses source list ordering and a native BG0 data view with ROM-localized equipment text and stat comparison. Both subpages still lack their title/frame and icon/cursor OAM layers; Soul Set also lacks recent-four ordering and exact category transitions, and L/R remains a source-adapted colour shortcut. Config draws its native label and button-name strips, Sleep its native Yes/No strings, and Ability its sub_0804BA18 window fill, twelve row strips, per-ability ON/OFF tile pairs and localized names (0x156-0x15B or 0x34F) on BG0; all still lack their OBJ cursor, window frame and icon layers. Item Use draws its native BG0 grid, names, quantities and empty-slot dashes (icons stay OBJ); Enemy's list and detail views draw their native BG0 layouts while both lack the portrait, OBJ icons, soul message window, header/footer decorations and exact transitions. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub through the source-derived sub_08047520/sub_08047C4C presentation in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters all seven usable pages; B returns from a page and B or START from the hub resumes play. The Soul Set renderer reconstructs sub_08048D84, sub_080493E8, sub_080494F8 and sub_08049DB4, while the Equip renderer reconstructs sub_0804A95C, sub_08049F34, sub_0804A2A4, sub_0804A00C and sub_0804A120 from the verified ROM without tracked extracted assets. Soul Set equips owned coloured souls, Equip changes all three equipment slots and previews all six affected values, Item Use consumes owned usable items, Ability toggles owned ability souls and draws their native BG0 page and Config applies unique action-button assignments. Sleep creates a one-use quicksave from the current runtime state and returns through the frontend after its source-timed fade. Enemy lists the source's 112 visible records, gates details on defeat and shows exported combat, drop and soul facts. The schema-v9 save bridge persists inventories, selections, button mappings, bestiary and drop discoveries at the next save-room write. Source-derived, deterministic-tested and verified-ROM image-checked; not emulator-compared.",
+   "limitations": "The hub uses the source BG1, portrait, frame, language-bank labels, digit tiles, palettes and BG0 layout decoded directly from a verified ROM; its cursor OAM and exact fades remain absent. Soul Set uses its source BG0 labels and coordinates, stats, palette selection, ROM-localized equipped/list names and descriptions, and both native proportional fonts. Equip uses source list ordering and a native BG0 data view with ROM-localized equipment text and stat comparison. Both subpages still lack their title/frame and icon/cursor OAM layers; Soul Set also lacks recent-four ordering and exact category transitions, and L/R remains a source-adapted colour shortcut. Config draws its native label and button-name strips, Sleep its native Yes/No strings, and Ability its sub_0804BA18 window fill, twelve row strips, per-ability ON/OFF tile pairs and localized names (0x156-0x15B or 0x34F) on BG0; all still lack their OBJ cursor, window frame and icon layers. Item Use draws its native BG0 grid, names, quantities and empty-slot dashes (icons stay OBJ); Enemy's list and detail views draw their native BG0 layouts while both lack the portrait, OBJ icons, soul message window, header/footer decorations and exact transitions. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. Cursor OAM located: the selection hand is a dedicated sprite entity at gEwramData+0xE2C - sub_08048AD8(cell_x,cell_y) writes its position as x*8+6/y*8+3 and sub_08048B0C frames it through sub_0803B924 with OAM tables 0x08256EF8 (shared with the portrait frames) or 0x0827B1F0; its tiles come from the menu OBJ upload, not the object library. START freezes gameplay and opens the seven-entry hub through the source-derived sub_08047520/sub_08047C4C presentation in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters all seven usable pages; B returns from a page and B or START from the hub resumes play. The Soul Set renderer reconstructs sub_08048D84, sub_080493E8, sub_080494F8 and sub_08049DB4, while the Equip renderer reconstructs sub_0804A95C, sub_08049F34, sub_0804A2A4, sub_0804A00C and sub_0804A120 from the verified ROM without tracked extracted assets. Soul Set equips owned coloured souls, Equip changes all three equipment slots and previews all six affected values, Item Use consumes owned usable items, Ability toggles owned ability souls and draws their native BG0 page and Config applies unique action-button assignments. Sleep creates a one-use quicksave from the current runtime state and returns through the frontend after its source-timed fade. Enemy lists the source's 112 visible records, gates details on defeat and shows exported combat, drop and soul facts. The schema-v9 save bridge persists inventories, selections, button mappings, bestiary and drop discoveries at the next save-room write. Source-derived, deterministic-tested and verified-ROM image-checked; not emulator-compared.",
    "next_action": "Add the native title, frame, item/soul icons and cursor OAM to Equip and Soul Set, then port Soul Set's recent-four ordering before an emulator comparison.",
    "evidence": {
     "unit_tests": [
@@ -20209,6 +20209,12 @@
  },
  "timeline": [
   {
+   "commit": "af2f1e9",
+   "date": "2026-11-07",
+   "subject": "Emit the native death sparkles during Soma's death",
+   "scope": "project"
+  },
+  {
    "commit": "ee77699",
    "date": "2026-11-07",
    "subject": "Correct the Object20 projectile gap: sub_0805DC80 is dead code",
@@ -20680,12 +20686,6 @@
    "commit": "410cd94",
    "date": "2026-11-06",
    "subject": "Port Aria pickup collection flags",
-   "scope": "project"
-  },
-  {
-   "commit": "e07d30c",
-   "date": "2026-11-06",
-   "subject": "Connect Aria recent equipment ordering",
    "scope": "project"
   }
  ],

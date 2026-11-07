@@ -36,6 +36,9 @@ int main(int argc, char **argv) {
     assert(!aos_window_frame_pixel(&frame, 2, 0, &color));
     frame.map[0] = 0xF421; /* horizontal flip */
     assert(aos_window_frame_pixel(&frame, 7, 0, &color) && color == 0x001F);
+    assert(aos_window_frame_entry_pixel(&frame, 0xF021, 0, 0, &color) &&
+           color == 0x001F);
+    assert(!aos_window_frame_entry_pixel(&frame, 0xF021, 8, 0, &color));
 
     /* Optional local check with the verified ROM: every language loads a
      * non-empty window sheet and the dialogue palette row. */
@@ -53,6 +56,20 @@ int main(int argc, char **argv) {
             assert(opaque);
             assert(frame.palette[15 * 32] != 0 ||
                    frame.palette[15 * 32 + 1] != 0);
+            /* sub_08067A04 alternates these native 8x16 marker pairs while
+             * waiting for A. Each pair must contain visible sheet pixels. */
+            for (unsigned variant = 0; variant < 2; ++variant) {
+                bool marker = false;
+                for (unsigned y = 0; y < 16; ++y)
+                    for (unsigned x = 0; x < 8; ++x)
+                        if (aos_window_frame_entry_pixel(
+                            &frame, (uint16_t)(0xF0CE + variant +
+                                              (y >= 8 ? 0x10 : 0)),
+                            x, y & 7, &color)) {
+                            marker = true;
+                        }
+                assert(marker);
+            }
         }
         assert(!aos_window_frame_init(&frame, &rom, 4, error, sizeof error));
         fusion_rom_close(&rom);

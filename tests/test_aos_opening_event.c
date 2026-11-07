@@ -468,6 +468,7 @@ int main(int argc, char **argv) {
     assert(AOS_OPENING_TEXT_PANEL_Y == 88 &&
            AOS_OPENING_TEXT_PANEL_Y + AOS_OPENING_TEXT_PANEL_HEIGHT == 160);
     assert(AOS_OPENING_TEXT_X + 6 == 40 && AOS_OPENING_TEXT_Y == 96);
+    assert(AOS_OPENING_PROMPT_X == 216 && AOS_OPENING_PROMPT_Y == 140);
     test_emitted_motion();
     test_skeleton_collision_flight();
     test_emitted_attack_tails();

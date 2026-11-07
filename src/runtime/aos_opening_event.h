@@ -35,8 +35,12 @@ enum {
     AOS_OPENING_TEXT_PANEL_HEIGHT = 72,
     AOS_OPENING_TEXT_X = 34,
     AOS_OPENING_TEXT_Y = 96,
-    AOS_OPENING_PROMPT_X = 220,
-    AOS_OPENING_PROMPT_Y = 154,
+    /* sub_08067A04 writes the 8x16 wait marker to map cell (27,18), then
+     * the vertically adjacent cell, compensating the tile portion of BG0's
+     * portrait scroll. Its remaining four-pixel VOFS fraction places it at
+     * screen y=140. */
+    AOS_OPENING_PROMPT_X = 216,
+    AOS_OPENING_PROMPT_Y = 140,
     AOS_OPENING_LINES = 4,
     AOS_OPENING_GLYPHS_PER_LINE = 80,
     AOS_OPENING_EMISSION_MAX_SPAWNS = 6,

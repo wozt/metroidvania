@@ -11,7 +11,9 @@
  * sub_0805AE64 uploads the language's window sheet to VRAM 0x06000000
  * (English descriptor 0x0815E084 -> tiles 0x000-0x0FF, French
  * 0x0815E09C, German the pair 0x0815E08C/0x0815E094 -> tiles
- * 0x000-0x1FF) and palette row 0 of 0x081183F4 to BG palette row 15.
+ * 0x000-0x1FF). sub_080676BC then copies bytes 0x400..0x7FF of the
+ * selected language bank to VRAM 0x5800 (tiles 0xC0..0xDF), including the
+ * wait marker. Palette row 0 of 0x081183F4 goes to BG palette row 15.
  * The state machine then clears the 32x32 map at 0x0600E000 and writes
  * four strips with sub_08046DD4: 29 consecutive entries at (2, 16+r),
  * bases 0xF060 + r*0x20 for r = 0..3 (tiles 0x060-0x0DC of the sheet).
@@ -38,4 +40,8 @@ void aos_window_frame_build(AosWindowFrame *frame);
 /* The BGR555 colour of screen pixel (x, y); false when transparent. */
 bool aos_window_frame_pixel(const AosWindowFrame *frame, unsigned x,
                             unsigned y, uint16_t *color);
+/* Decode one pixel from an explicit BG map entry. This also exposes the
+ * two-tile wait marker written by sub_08067A04 without inventing host art. */
+bool aos_window_frame_entry_pixel(const AosWindowFrame *frame, uint16_t entry,
+                                  unsigned x, unsigned y, uint16_t *color);
 #endif

@@ -59,6 +59,7 @@
 #include "aos_save_room.h"
 #include "aos_soma.h"
 #include "aos_weapon.h"
+#include "aos_window_frame.h"
 #include "debug_menu.h"
 #include "gba_input.h"
 #include "aos_input.h"
@@ -5026,9 +5027,10 @@ static void draw_opening_backdrop(SDL_Renderer *renderer,
                                   uint8_t *portrait_id) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    /* WIN0's source-derived fully-open rectangle. It is a BG layer behind
-     * gameplay objects, rather than a veil painted over Soma and the floor. */
-    SDL_SetRenderDrawColor(renderer, 40, 48, 74, 170);
+    /* sub_08067804 selects brightness decrease and BLDY=8 inside WIN0.
+     * BG1-3, OBJ and the backdrop are targets; BG0 (portrait and text) is
+     * deliberately excluded. A half-black veil reproduces that operation. */
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
     SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
                        AOS_OPENING_TEXT_PANEL_Y,
                        AOS_OPENING_TEXT_PANEL_WIDTH,
@@ -5049,15 +5051,21 @@ static void draw_opening_backdrop(SDL_Renderer *renderer,
                 event->portrait);
     }
     if (native_portrait && portrait_texture && *portrait_texture) {
-        SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
-        SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
+        /* The decoded map already includes BG0VOFS. Crop its first four
+         * output rows at composition time to match screenshots/dialogue.jpeg's
+         * visible portrait anchor without altering the reusable resource. */
+        SDL_FRect source = {0, 4, VIEW_W, VIEW_H - 4};
+        SDL_FRect destination = {0, 0, VIEW_W, VIEW_H - 4};
+        SDL_RenderTexture(renderer, *portrait_texture, &source, &destination);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 static void draw_opening_text(SDL_Renderer *renderer,
                               const AosOpeningEvent *event,
-                              const AosIntroTextTiles *tiles) {
+                              const AosIntroTextTiles *tiles,
+                              const AosWindowFrame *window,
+                              uint32_t frame) {
     if (!event->active) return;
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
     for (unsigned y = 0; y < 64; ++y)
@@ -5065,7 +5073,25 @@ static void draw_opening_text(SDL_Renderer *renderer,
             if (aos_intro_text_tiles_pixel(tiles, x, y))
                 SDL_RenderPoint(renderer, AOS_OPENING_TEXT_X + (float)x,
                                 AOS_OPENING_TEXT_Y + (float)y);
-    /* The native window shows no advance prompt; A/START still pages. */
+    if (!event->waiting || !window) return;
+    /* sub_08067A04 writes one of two 8x16 pairs at BG0 cells (27,18) and
+     * (27,19). gEwramData bit 3 selects the pair every eight frames. */
+    unsigned variant = (frame & 8u) ? 0u : 1u;
+    for (unsigned y = 0; y < 16; ++y) {
+        uint16_t entry = (uint16_t)(0xF0CE + variant + (y >= 8 ? 0x10 : 0));
+        for (unsigned x = 0; x < 8; ++x) {
+            uint16_t color;
+            if (!aos_window_frame_entry_pixel(window, entry, x, y & 7u, &color))
+                continue;
+            SDL_SetRenderDrawColor(renderer,
+                                   (uint8_t)((color & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 5) & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 10) & 31u) * 255u / 31u),
+                                   255);
+            SDL_RenderPoint(renderer, AOS_OPENING_PROMPT_X + (float)x,
+                            AOS_OPENING_PROMPT_Y + (float)y);
+        }
+    }
 }
 
 static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
@@ -5407,9 +5433,11 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
+    AosWindowFrame opening_window = {0};
     static AosIntroTextTiles opening_tiles;
     static AosIntroTextTiles opening_soul_tiles;
     bool opening_text_ready = false;
+    bool opening_window_ready = false;
     bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
     uint8_t opening_portrait_id = 0xFF;
@@ -5597,6 +5625,8 @@ int aria_runtime_main(int argc, char **argv) {
                                       error, sizeof error) ||
             !aos_intro_font_init(&opening_font, &opening_rom,
                                  error, sizeof error) ||
+            !aos_window_frame_init(&opening_window, &opening_rom, 1,
+                                   error, sizeof error) ||
             !aos_intro_resources_entry(&opening_resources, 1,
                                        AOS_OPENING_TEXT_ID, &script,
                                        &script_size) ||
@@ -5604,6 +5634,7 @@ int aria_runtime_main(int argc, char **argv) {
             fprintf(stderr, "Cannot start the Aria opening scene: %s\n", error);
             goto cleanup;
         }
+        opening_window_ready = true;
         aos_opening_event_set_resolver(&opening, resolve_opening_text,
                                        &opening_resources);
         aos_opening_actors_init(&opening_actors);
@@ -6483,10 +6514,6 @@ int aria_runtime_main(int argc, char **argv) {
             if (hud_texture) SDL_SetTextureColorMod(hud_texture, mod, mod, mod);
         }
         SDL_RenderTexture(renderer, background, &src, &dst);
-        if (opening.active && opening_actors.soul_notice == 0)
-            draw_opening_backdrop(renderer, &opening, &opening_rom,
-                                  &opening_portrait_texture,
-                                  &opening_portrait_id);
         draw_save_point(renderer, &room, cam_x, cam_y,
                         aos_save_room_player_inside(sx, sy), step);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
@@ -7108,11 +7135,19 @@ int aria_runtime_main(int argc, char **argv) {
             draw_soul_menu(renderer, &soul_menu, &progress,
                            have_equipment ? &equipment : NULL,
                            have_item_use ? item_use : NULL, &soma, &objects);
+        /* Object20's dialogue effect is applied after every targeted scene
+         * layer. BG0's portrait and glyphs are then composed above it. */
+        if (opening.active && opening_actors.soul_notice == 0)
+            draw_opening_backdrop(renderer, &opening, &opening_rom,
+                                  &opening_portrait_texture,
+                                  &opening_portrait_id);
         if (opening_soul_text_ready &&
             (opening_actors.soul_notice == 1 || opening_actors.soul_notice == 2))
             draw_opening_soul_notice(renderer, &opening_soul_tiles);
         else if (opening_text_ready)
-            draw_opening_text(renderer, &opening, &opening_tiles);
+            draw_opening_text(renderer, &opening, &opening_tiles,
+                              opening_window_ready ? &opening_window : NULL,
+                              (uint32_t)step);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

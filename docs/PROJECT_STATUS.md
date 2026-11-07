@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0796 - Reproduce the native opening-dialogue blend and wait marker
+
+- Replaced the synthetic blue-grey dialogue fill with the operation used by
+  `sub_08067804`: a `BLDY=8` brightness decrease over BG1-3, OBJ and the
+  backdrop inside `WIN0`. The effect is now applied after the room actors,
+  while BG0's portrait and text remain undimmed.
+- Ported `sub_08067A04`'s two-frame 8x16 wait marker. The renderer loads the
+  exact `+0x400` DMA slice of the selected language bank, uses the palette row
+  installed by `sub_080676BC`, and compensates the portrait BG0 scroll to draw
+  the marker at screen `(216,140)` while A is awaited.
+- Moved the composed portrait four pixels upward after comparison with
+  `screenshots/dialogue.jpeg`. Focused window, opening-event and portrait tests
+  pass, and an offscreen fresh-file capture confirms the corrected layering,
+  portrait anchor and visible white marker. The opening remains partial: its
+  host-composed text canvas has not been emulator-compared pixel for pixel.
+
 ## Patch 0795 - Match the opening dialogue window geometry and layer order
 
 - Replaced the upper-screen slate approximation with the register-derived

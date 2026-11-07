@@ -520,9 +520,36 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
         "DELETE FROM states WHERE name LIKE 'auto_%'"
         " AND id NOT IN (SELECT DISTINCT state_id FROM trials"
         " WHERE state_id IS NOT NULL)",
+        /* scout scene states: keep only the newest 100 that no trial
+         * referenced — older ones are superseded intro footage */
+        "DELETE FROM states WHERE name LIKE 'scout_c%'"
+        " AND id NOT IN (SELECT DISTINCT state_id FROM trials"
+        " WHERE state_id IS NOT NULL)"
+        " AND id NOT IN (SELECT id FROM states WHERE name LIKE 'scout_c%'"
+        " ORDER BY id DESC LIMIT 100)",
+        /* duplicate scout states: same name saved by several workers —
+         * keep only the newest copy of each unreferenced name */
+        "DELETE FROM states WHERE name LIKE 'scout_c%'"
+        " AND id NOT IN (SELECT DISTINCT state_id FROM trials"
+        " WHERE state_id IS NOT NULL)"
+        " AND id NOT IN (SELECT MAX(id) FROM states"
+        " WHERE name LIKE 'scout_c%' GROUP BY name)",
+        /* same dedup for validated play checkpoints: 4 scouts save the
+         * same scout_play_NNN names — keep the newest copy each */
+        "DELETE FROM states WHERE name LIKE 'scout_play%'"
+        " AND id NOT IN (SELECT DISTINCT state_id FROM trials"
+        " WHERE state_id IS NOT NULL)"
+        " AND id NOT IN (SELECT MAX(id) FROM states"
+        " WHERE name LIKE 'scout_play%' GROUP BY name)",
+        /* same cap for any other unreferenced auto-ish states */
+        "DELETE FROM states WHERE name LIKE 'auto_%'"
+        " AND id NOT IN (SELECT DISTINCT state_id FROM trials"
+        " WHERE state_id IS NOT NULL)"
+        " AND id < (SELECT COALESCE(MAX(id),0) FROM states"
+        " WHERE name LIKE 'auto_%') - 50",
     };
-    int counts[3] = {0, 0, 0};
-    for (int i = 0; i < 3; ++i) {
+    int counts[7] = {0, 0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < 7; ++i) {
         sqlite3_stmt *st = NULL;
         if (sqlite3_prepare_v2(db->handle, sqls[i], -1, &st, NULL) !=
             SQLITE_OK)
@@ -533,6 +560,8 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
     }
     if (out_trials) *out_trials = counts[0];
     if (out_weights) *out_weights = counts[1];
-    if (out_states) *out_states = counts[2];
-    return counts[0] + counts[1] + counts[2];
+    if (out_states) *out_states = counts[2] + counts[3] + counts[4] +
+                                   counts[5] + counts[6];
+    return counts[0] + counts[1] + counts[2] + counts[3] + counts[4] +
+           counts[5] + counts[6];
 }

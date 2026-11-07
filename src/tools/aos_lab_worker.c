@@ -615,14 +615,30 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         /* phase 2: 80-frame directional pulse. fb_first = the frame
          * right before the pulse, so screen motion measures exactly
          * the player's response — no WRAM entity layout needed. */
-        uint32_t pulse = (chunk & 1) ? 32 : 16; /* LEFT / RIGHT */
-        AosKeyEvent pev[2] = {{0, pulse}, {79, 0}};
+        /* game knowledge: the early game pushes RIGHT (start ->
+         * chapel -> study); LEFT only 30% to backtrack */
+        uint32_t pulse = (chunk % 10 < 7) ? 16 : 32; /* RIGHT / LEFT */
+        AosKeyEvent pev[8];
+        int pne = 0;
+        pev[pne++] = (AosKeyEvent){0, pulse};
+        /* every 5th chunk: jump (B) mid-pulse to clear gaps */
+        if (chunk % 5 == 4) {
+            pev[pne++] = (AosKeyEvent){30, 2};
+            pev[pne++] = (AosKeyEvent){40, 0};
+        }
+        /* every 4th chunk: attack (A) while moving — early rooms have
+         * mandatory fights (Manticore room, Great Armor approach) */
+        if (chunk % 4 == 3) {
+            pev[pne++] = (AosKeyEvent){45, 1};
+            pev[pne++] = (AosKeyEvent){57, 0};
+        }
+        pev[pne++] = (AosKeyEvent){79, 0};
         AosPeekRequest pk[1] = {{-1, 0x02000010, 4}}; /* gameMode end */
         AosRunSpec spec2;
         memset(&spec2, 0, sizeof spec2);
         spec2.frames = 80;
         spec2.keys = pev;
-        spec2.key_count = 2;
+        spec2.key_count = pne;
         spec2.peeks = pk;
         spec2.peek_count = 1;
         spec2.fps_cap = spec.fps_cap;
@@ -1147,7 +1163,21 @@ int main(int argc, char **argv) {
             size_t load_size = blob_size;
             uint8_t *alt_blob = NULL;
             if (scount > 1 && (rand() % 100) < 25) {
-                AosStateRow *pick = &srows[rand() % scount];
+                /* prefer validated gameplay checkpoints (scout_play_*)
+                 * — they are the proven frontier of the campaign */
+                int pick_i = -1, play_n = 0;
+                for (int si = 0; si < scount; ++si)
+                    if (srows[si].name &&
+                        strstr(srows[si].name, "play")) ++play_n;
+                if (play_n && (rand() % 100) < 60) {
+                    int want = rand() % play_n;
+                    for (int si = 0; si < scount; ++si)
+                        if (srows[si].name &&
+                            strstr(srows[si].name, "play") &&
+                            want-- == 0) { pick_i = si; break; }
+                }
+                if (pick_i < 0) pick_i = rand() % scount;
+                AosStateRow *pick = &srows[pick_i];
                 size_t asz = 0;
                 alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
                 if (alt_blob) {
@@ -1316,6 +1346,15 @@ int main(int argc, char **argv) {
                 frames, outcome, reward, metrics, duration_ms);
             ++trials_done;
             total_frames += frames;
+            /* automatic aggressive purge: every 200 trials drop the
+             * dead weight so the DB stays lean */
+            if (trials_done % 200 == 0) {
+                int pt = 0, pw = 0, ps = 0;
+                int pn = aos_labdb_purge(db, &pt, &pw, &ps);
+                if (pn)
+                    printf("auto-purge: %d rows (t%d w%d s%d)\n",
+                           pn, pt, pw, ps);
+            }
             char status[256];
             snprintf(status, sizeof status,
                      "trial %lld action=%lld %s -> %s",
@@ -1330,6 +1369,24 @@ int main(int argc, char **argv) {
                 snprintf(hbv, sizeof hbv, "%lld",
                          (long long)hb.tv_sec * 1000 + hb.tv_usec / 1000);
                 aos_labdb_meta_set(db, hb_key, hbv);
+            }
+            /* cumulative reward score for the viewer's best-worker
+             * highlight: rsum/rn = mean reward over this worker's
+             * trials */
+            {
+                char rk[80], sk2[80];
+                snprintf(rk, sizeof rk, "worker.%d.rsum", worker_id);
+                snprintf(sk2, sizeof sk2, "worker.%d.rn", worker_id);
+                char *os = aos_labdb_meta_get(db, rk);
+                char *on = aos_labdb_meta_get(db, sk2);
+                double rsum = (os ? atof(os) : 0.0) + reward;
+                long rn = (on ? atol(on) : 0) + 1;
+                char bv[48];
+                snprintf(bv, sizeof bv, "%.4f", rsum);
+                aos_labdb_meta_set(db, rk, bv);
+                snprintf(bv, sizeof bv, "%ld", rn);
+                aos_labdb_meta_set(db, sk2, bv);
+                free(os); free(on);
             }
             /* stuck detection: long streak of zero-reward fails on the
              * same scene means the worker is spinning wheels */

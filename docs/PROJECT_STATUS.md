@@ -83,8 +83,24 @@ Last updated: **2026-11-07**.
   of spinning forever.
 - DB purge: `aos_lab_worker --db X --purge` (also a Purge DB button
   in the viewer) deletes zero-reward fail trials, hopeless weight
-  combos and auto checkpoints no trial ever referenced.
-  peeks + font tables from the decomp) but not implemented yet; the
+  combos and auto checkpoints no trial ever referenced. The purge is
+  aggressive and automatic: it caps unreferenced `scout_c*` scene
+  states at the newest 100, deduplicates same-named `scout_c*` /
+  `scout_play*` states (workers saving identical checkpoints),
+  bounds `auto_*` states to the newest 50, and re-runs periodically
+  inside long-running workers. States referenced by any trial are
+  always kept.
+- Game rules for the scout ("conscious AI"): the embedded policy now
+  documents Aria controls in comments — D-pad moves, B jumps, A
+  attacks/advances text, L/R are ability buttons, START opens the
+  pause menu and must never be pressed during gameplay (mode 4), B
+  closes menus, dialogue advances with A. Scout behavior follows it:
+  START only before mode 4, B tap when gameplay exits to a menu,
+  directional pulses for movement probing.
+- Best-worker highlight: the viewer computes each worker's mean
+  reward (worker.N.rsum / worker.N.rn meta, updated per trial) and
+  draws a green outline on the top-performing slot.
+- peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.
 
 ## Patch 0804 - Emulator lab supervision UI + per-trial visual signatures

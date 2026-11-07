@@ -481,7 +481,8 @@ static void fb_try_attach(WorkerCard *wc, int id) {
 
 /* Push a new frame to the widget when the worker produced one. */
 static void fb_refresh_frame(WorkerCard *wc, GtkWidget *picture) {
-    if (!wc->fb_seq || !wc->fb_rgba) return;
+    if (!wc->fb_seq || !wc->fb_rgba || !picture ||
+        !GTK_IS_PICTURE(picture)) return;
     uint64_t seq = *wc->fb_seq;
     if (seq == wc->last_seq) return;
     wc->last_seq = seq;
@@ -499,8 +500,9 @@ static void fb_refresh_frame(WorkerCard *wc, GtkWidget *picture) {
                                         GDK_MEMORY_R8G8B8A8, bytes,
                                         240 * 4);
     g_bytes_unref(bytes);
-    gtk_picture_set_paintable(GTK_PICTURE(picture),
-                              GDK_PAINTABLE(wc->fb_tex));
+    if (wc->fb_tex)
+        gtk_picture_set_paintable(GTK_PICTURE(picture),
+                                  GDK_PAINTABLE(wc->fb_tex));
     g_object_unref(wc->fb_tex);
 }
 
@@ -537,6 +539,22 @@ static void on_purge_clicked(GtkButton *button, gpointer data) {
 static void refresh_workers(Viewer *v) {
     static const char *phase_css[] = {"", "w-running", "w-paused",
                                       "w-stuck"};
+    /* best worker = highest mean reward (rsum/rn metas written by
+     * each trial); highlighted with a thick green border */
+    double best_score = -1.0;
+    int best_i = -1;
+    for (int i = 0; i < 8; ++i) {
+        char rk[64], nk[64];
+        snprintf(rk, sizeof rk, "worker.%d.rsum", i);
+        snprintf(nk, sizeof nk, "worker.%d.rn", i);
+        char *rs = aos_labdb_meta_get(v->db, rk);
+        char *rn = aos_labdb_meta_get(v->db, nk);
+        if (rs && rn && atol(rn) > 0) {
+            double sc = atof(rs) / (double)atol(rn);
+            if (sc > best_score) { best_score = sc; best_i = i; }
+        }
+        free(rs); free(rn);
+    }
     for (int i = 0; i < 8; ++i) {
         WorkerCard *wc = &v->workers[i];
         char pk[64], sk[64], ck[64], vk[64];
@@ -567,10 +585,18 @@ static void refresh_workers(Viewer *v) {
             } else stale = 1; /* never beat: old worker binary */
         }
         if (stale) phase_id = 3;
-        gtk_widget_set_css_classes(wc->card,
-                                  phase_css[phase_id] ?
-                                  (const char *[]){phase_css[phase_id], NULL}
-                                  : NULL);
+        if (i == best_i) {
+            const char *cls = phase_css[phase_id] ? phase_css[phase_id]
+                                                  : "";
+            gtk_widget_set_css_classes(
+                wc->card, (const char *[]){"w-best", cls, NULL});
+        } else {
+            gtk_widget_set_css_classes(wc->card,
+                                      phase_css[phase_id] ?
+                                      (const char *[]){phase_css[phase_id],
+                                                       NULL}
+                                      : NULL);
+        }
         char head[64];
         snprintf(head, sizeof head, "Worker %d", i);
         gtk_label_set_text(GTK_LABEL(wc->name), head);
@@ -608,6 +634,7 @@ static void refresh_workers(Viewer *v) {
 static gboolean poll_fb(gpointer data) {
     Viewer *v = data;
     for (int i = 0; i < 8; ++i) {
+        if (!v->workers[i].picture) continue;
         fb_try_attach(&v->workers[i], i);
         fb_refresh_frame(&v->workers[i], v->workers[i].picture);
     }
@@ -843,6 +870,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         "frame.w-running { border: 2px solid #43a047; border-radius: 6px; }"
         "frame.w-paused  { border: 2px solid #fb8c00; border-radius: 6px; }"
         "frame.w-stuck   { border: 2px solid #e53935; border-radius: 6px; }"
+        "frame.w-best    { border: 3px solid #00c853; border-radius: 6px; }"
         "frame           { border: 1px solid #546e7a; border-radius: 6px; }"
         "label.w-phase   { font-weight: bold; }"
         "label.score-pass{ color: #66cc66; font-weight: bold; }"

@@ -557,6 +557,15 @@ int main(int argc, char **argv) {
             spec.key_count = schedule_count;
             spec.peeks = peeks;
             spec.peek_count = peek_count;
+            /* live speed slider: 0 = auto (unthrottled), N = N×60 fps */
+            {
+                char sk[64];
+                snprintf(sk, sizeof sk, "worker.%d.speed", worker_id);
+                char *sv = aos_labdb_meta_get(db, sk);
+                int speed = sv ? atoi(sv) : 0;
+                free(sv);
+                spec.fps_cap = speed > 0 ? 60.0 * speed : 0.0;
+            }
             char shot_path[1100];
             if (shots_dir) {
                 /* capture only after we know the trial id: use a temp

@@ -24,8 +24,10 @@ Last updated: **2026-11-07**.
   system drive; the viewer defaults to `database/lab.db`. The viewer
   shows eight colour-coded worker cards with pause/resume/stop, a batch
   launcher (worker slot, save-state picker, trial count), a save-state
-  recorder, and a live log streamed in memory — worker stdout is piped
-  into the window and never written to disk.
+  recorder, a per-worker speed slider (Auto = unthrottled, 1-16 caps
+  emulation at that multiple of 60 fps via `AosRunSpec.fps_cap`), and a
+  live log streamed in memory — worker stdout is piped into the window
+  and never written to disk.
 - Verified locally: state capture from boot, action definition, trial
   batches, weight accumulation and two parallel workers with isolated
   control channels all work end to end. Gameplay probes still need real

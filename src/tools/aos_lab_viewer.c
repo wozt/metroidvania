@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -33,6 +34,8 @@ typedef struct {
     GtkWidget *phase;
     GtkWidget *detail;
     GtkWidget *pause_button;
+    GtkWidget *speed_scale;
+    GtkWidget *speed_label;
 } WorkerCard;
 
 typedef struct {
@@ -433,13 +436,15 @@ static void refresh_workers(Viewer *v) {
     static const char *phase_css[] = {"", "w-running", "w-paused"};
     for (int i = 0; i < 8; ++i) {
         WorkerCard *wc = &v->workers[i];
-        char pk[64], sk[64], ck[64];
+        char pk[64], sk[64], ck[64], vk[64];
         snprintf(pk, sizeof pk, "worker.%d.phase", i);
         snprintf(sk, sizeof sk, "worker.%d.status", i);
         snprintf(ck, sizeof ck, "lab.control.%d", i);
+        snprintf(vk, sizeof vk, "worker.%d.speed", i);
         char *phase = aos_labdb_meta_get(v->db, pk);
         char *wstatus = aos_labdb_meta_get(v->db, sk);
         char *control = aos_labdb_meta_get(v->db, ck);
+        char *speed = aos_labdb_meta_get(v->db, vk);
         const char *phase_str = phase ? phase : "idle";
         int phase_id = !strcmp(phase_str, "running") ? 1 :
                        !strcmp(phase_str, "paused") ? 2 : 0;
@@ -457,9 +462,24 @@ static void refresh_workers(Viewer *v) {
                              control && !strcmp(control, "pause")
                                  ? "Resume" : "Pause");
         gtk_widget_set_sensitive(wc->pause_button, phase_id != 0);
+        /* speed slider: meta wins unless the user is mid-drag */
+        int speed_val = speed ? atoi(speed) : 0;
+        double cur = gtk_range_get_value(GTK_RANGE(wc->speed_scale));
+        if (fabs(cur - speed_val) >= 0.5)
+            gtk_range_set_value(GTK_RANGE(wc->speed_scale), speed_val);
+        char speed_txt[16];
+        snprintf(speed_txt, sizeof speed_txt, "%s",
+                 speed_val > 0 ? "" : "Auto");
+        if (speed_val > 0) {
+            char tmp[16];
+            snprintf(tmp, sizeof tmp, "x%d", speed_val);
+            snprintf(speed_txt, sizeof speed_txt, "%s", tmp);
+        }
+        gtk_label_set_text(GTK_LABEL(wc->speed_label), speed_txt);
         free(phase);
         free(wstatus);
         free(control);
+        free(speed);
     }
 }
 
@@ -498,6 +518,16 @@ static void on_stop_clicked(GtkButton *button, gpointer user_data) {
     Viewer *v = user_data;
     int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "wid"));
     worker_control(v, id, "stop");
+}
+
+static void on_speed_changed(GtkRange *range, gpointer user_data) {
+    Viewer *v = user_data;
+    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(range), "wid"));
+    int speed = (int)gtk_range_get_value(range);
+    char key[64], val[8];
+    snprintf(key, sizeof key, "worker.%d.speed", id);
+    snprintf(val, sizeof val, "%d", speed);
+    aos_labdb_meta_set(v->db, key, val);
 }
 
 static void on_launch_clicked(GtkButton *button, gpointer user_data) {
@@ -708,6 +738,32 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         g_signal_connect(stop, "clicked", G_CALLBACK(on_stop_clicked), v);
         gtk_box_append(GTK_BOX(btns), stop);
         gtk_box_append(GTK_BOX(vbox), btns);
+
+        GtkWidget *sbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+        gtk_box_append(GTK_BOX(vbox), sbox);
+        gtk_box_append(GTK_BOX(sbox), gtk_label_new("Speed:"));
+        wc->speed_label = gtk_label_new("Auto");
+        gtk_widget_set_size_request(wc->speed_label, 42, -1);
+        gtk_label_set_xalign(GTK_LABEL(wc->speed_label), 0.0);
+        gtk_box_append(GTK_BOX(sbox), wc->speed_label);
+        wc->speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
+                                                 0, 16, 1);
+        gtk_scale_set_draw_value(GTK_SCALE(wc->speed_scale), FALSE);
+        gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 0, GTK_POS_BOTTOM,
+                           "Auto");
+        gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 16, GTK_POS_BOTTOM,
+                           "x16");
+        gtk_widget_set_hexpand(wc->speed_scale, TRUE);
+        gtk_widget_set_tooltip_text(
+            wc->speed_scale,
+            "Emulation speed cap: Auto = unthrottled (fastest), "
+            "1-16 = capped at that multiple of 60 fps. Applies to the "
+            "next trial of this worker.");
+        g_object_set_data(G_OBJECT(wc->speed_scale), "wid",
+                          GINT_TO_POINTER(i));
+        g_signal_connect(wc->speed_scale, "value-changed",
+                         G_CALLBACK(on_speed_changed), v);
+        gtk_box_append(GTK_BOX(sbox), wc->speed_scale);
 
         gtk_grid_attach(GTK_GRID(grid), card, i % 4, i / 4, 1, 1);
     }

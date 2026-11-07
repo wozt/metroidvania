@@ -53,6 +53,7 @@ typedef struct {
     const char *state_out;     /* path, may be NULL */
     const AosPeekRequest *peeks;
     int peek_count;
+    double fps_cap;           /* max emulated fps; 0 = unthrottled */
 } AosRunSpec;
 
 typedef struct {

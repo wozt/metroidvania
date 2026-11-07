@@ -167,6 +167,12 @@ static void run_on_thread(struct mCoreThread *thread) {
         g_ctx.result->peek_count = spec->peek_count;
     }
 
+    /* Optional fps cap: sleep so emulation never exceeds spec->fps_cap.
+     * 0 means unthrottled (max speed). */
+    double frame_budget = spec->fps_cap > 0.0 ? 1.0 / spec->fps_cap : 0.0;
+    struct timespec next_frame;
+    clock_gettime(CLOCK_MONOTONIC, &next_frame);
+
     for (int frame = 0; frame < spec->frames; ++frame) {
         while (key_index < spec->key_count &&
                spec->keys[key_index].frame == frame) {
@@ -175,6 +181,31 @@ static void run_on_thread(struct mCoreThread *thread) {
         }
         core->setKeys(core, keys);
         core->runFrame(core);
+        if (frame_budget > 0.0) {
+            struct timespec now;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            double ahead = (double)(next_frame.tv_sec - now.tv_sec) +
+                           (double)(next_frame.tv_nsec - now.tv_nsec) / 1e9;
+            if (ahead > 0.0) {
+                struct timespec ts = {
+                    .tv_sec = (time_t)ahead,
+                    .tv_nsec = (long)((ahead - (time_t)ahead) * 1e9)
+                };
+                nanosleep(&ts, NULL);
+            }
+            /* schedule the next slot one budget after the previous one */
+            next_frame.tv_nsec += (long)(frame_budget * 1e9);
+            while (next_frame.tv_nsec >= 1000000000L) {
+                next_frame.tv_nsec -= 1000000000L;
+                ++next_frame.tv_sec;
+            }
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            if ((double)(next_frame.tv_sec - now.tv_sec) +
+                (double)(next_frame.tv_nsec - now.tv_nsec) / 1e9 < -1.0) {
+                /* fell behind by more than a second: resync */
+                next_frame = now;
+            }
+        }
         if (spec->shot_prefix && is_capture_frame(spec, frame)) {
             char path[1024];
             snprintf(path, sizeof path, "%s_%05d.ppm", spec->shot_prefix,

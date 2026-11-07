@@ -30,6 +30,16 @@ Last updated: **2026-11-07**.
   gives >4px per pulse; cutscene drift stays below). Early runs reach
   gameMode 4 and capture dozens of checkpoints; real free-roam
   validation is still being tuned.
+- Exploration reward layer: every trial peeks 8 fixed WRAM regions
+  (mode, area/room/song, position, HP/MP, XP/gold, level, item and
+  soul inventories) before and after the run; compute_bonus scores
+  new_scene, new_room (global fleet registry `lab.rooms`), new_area,
+  new_area_song, item_found, soul_gained, level_up, exp_gain,
+  gold_gain, clean_traverse, clean_move, ability_used, healed,
+  damage, death. Bonuses feed `reward` and the bandit now selects
+  actions by average reward, so exploration events steer learning.
+  Route reference: castlevaniaspeedruns Any% No 0HP order (Chapel ->
+  Manticore -> Study -> Great Armor -> Arena -> Balore -> Chaos).
 - OCR of in-game text is planned (BG tilemap in VRAM via session
   peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.

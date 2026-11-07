@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -373,6 +374,172 @@ static int record_state(AosMgbaSession *session, AosLabDb *db,
     return 0;
 }
 
+/* ---- reward layer ---------------------------------------------------
+ * Every trial peeks a fixed set of WRAM regions before and after the
+ * run; compute_bonus turns the diffs into a score for exploration
+ * events the action probe cannot see: new scenes/rooms, items, souls,
+ * level-ups, clean traversals, damage and death. */
+enum {
+    RK_MODE = 0,   /* 0x02000010:4  gameMode..input */
+    RK_AREA = 1,   /* 0x02000090:16 song,pad,area,room,mapXY */
+    RK_POS  = 2,   /* 0x02000524:8  player posX,posY (16.16) */
+    RK_VIT  = 3,   /* 0x0201327A:8  hp,mp,maxhp,maxmp */
+    RK_XP   = 4,   /* 0x0201328C:8  exp,gold */
+    RK_LVL  = 5,   /* 0x02013279:4  level + hp head */
+    RK_ITEM = 6,   /* 0x02013294:136 inventories */
+    RK_SOUL = 7,   /* 0x0201331C:122 soul inventories */
+    RK_COUNT = 8,
+    RK_ACTION = 8 /* action probe occupies last two slots */
+};
+
+static const struct { uint32_t addr, size; } REWARD_PEEKS[RK_COUNT] = {
+    {0x02000010, 4}, {0x02000090, 16}, {0x02000524, 8},
+    {0x0201327A, 8}, {0x0201328C, 8}, {0x02013279, 4},
+    {0x02013294, 136}, {0x0201331C, 122},
+};
+
+static int16_t rd16(const AosPeekResult *r, int off) {
+    if (!r->data || r->size < (uint32_t)(off + 2)) return 0;
+    uint16_t v;
+    memcpy(&v, r->data + off, 2);
+    return (int16_t)v;
+}
+static uint32_t rd32(const AosPeekResult *r, int off) {
+    if (!r->data || r->size < (uint32_t)(off + 4)) return 0;
+    uint32_t v;
+    memcpy(&v, r->data + off, 4);
+    return v;
+}
+
+/* Global explored-rooms registry kept in meta "lab.rooms" as a
+ * comma list of "area:room" pairs shared by every worker, so the whole
+ * fleet knows which rooms the campaign has already discovered. */
+static int room_seen(AosLabDb *db, int area, int room) {
+    char key[32];
+    snprintf(key, sizeof key, "%d:%d", area, room);
+    char *list = aos_labdb_meta_get(db, "lab.rooms");
+    int found = 0;
+    if (list) {
+        found = strstr(list, key) != NULL;
+        /* avoid prefix collisions like 1:2 matching 1:23 */
+        if (found) {
+            char *p = strstr(list, key);
+            char next = p[strlen(key)];
+            if (next && (isdigit(next) || next == ':')) found = 0;
+        }
+    }
+    free(list);
+    return found;
+}
+
+static void room_mark(AosLabDb *db, int area, int room) {
+    char key[32];
+    snprintf(key, sizeof key, "%d:%d", area, room);
+    char *list = aos_labdb_meta_get(db, "lab.rooms");
+    size_t need = (list ? strlen(list) : 0) + strlen(key) + 2;
+    char *nl = malloc(need);
+    snprintf(nl, need, "%s%s%s", list ? list : "", list ? "," : "", key);
+    aos_labdb_meta_set(db, "lab.rooms", nl);
+    free(nl);
+    free(list);
+}
+
+static int room_count(AosLabDb *db) {
+    char *list = aos_labdb_meta_get(db, "lab.rooms");
+    int n = 0;
+    if (list) for (char *p = list; *p; ++p) if (*p == ',') ++n;
+    free(list);
+    return list ? n + 1 : 0;
+}
+
+/* Returns bonus reward; appends human-readable tags to `tags`. */
+static double compute_bonus(AosLabDb *db, const AosRunResult *res,
+                            int nreward, int scene_is_new,
+                            char *tags, size_t tags_size) {
+    (void)scene_is_new;
+    if (!res->peeks || res->peek_count < 2 * RK_COUNT) return 0.0;
+    double bonus = 0.0;
+    size_t tl = 0;
+    tags[0] = 0;
+#define TAG(t) do {         if (tl + sizeof(t) + 1 < tags_size) {             if (tl) { tags[tl++] = ','; tags[tl] = 0; }             memcpy(tags + tl, t, sizeof(t) - 1); tl += sizeof(t) - 1;             tags[tl] = 0; }     } while (0)
+    if (scene_is_new) { bonus += 0.4; TAG("new_scene"); }
+
+    /* before-side reward peeks occupy [0,RK_COUNT), after-side
+     * [RK_COUNT,2*RK_COUNT); nreward arg kept for clarity */
+    const AosPeekResult *b = res->peeks, *a = res->peeks + RK_COUNT;
+    (void)nreward;
+    /* mode / area / room / song */
+    if (rd32(&b[RK_MODE], 0) != rd32(&a[RK_MODE], 0)) {
+        bonus += 0.5; TAG("mode_change");
+    }
+    /* area=+0xE room=+0xF inside the 0x90 block; song=+0x0 u16 */
+    if (b[RK_AREA].data && a[RK_AREA].data &&
+        b[RK_AREA].size >= 16 && a[RK_AREA].size >= 16) {
+        if (b[RK_AREA].data[14] != a[RK_AREA].data[14]) {
+            bonus += 0.5; TAG("new_area");
+        }
+        if (b[RK_AREA].data[15] != a[RK_AREA].data[15]) {
+            int area = b[RK_AREA].data[14], room = a[RK_AREA].data[15];
+            if (!room_seen(db, area, room)) {
+                bonus += 0.8 + 0.2 * (room_count(db) > 20 ? 1 : 0);
+                TAG("new_room");
+                room_mark(db, area, room);
+                /* reaching a room the fleet never saw is the campaign
+                 * progressing: extra credit scaled by exploration depth */
+            }
+        }
+        uint16_t s0, s1;
+        memcpy(&s0, b[RK_AREA].data, 2);
+        memcpy(&s1, a[RK_AREA].data, 2);
+        if (s0 != s1) { bonus += 0.6; TAG("new_area_song"); }
+    }
+    /* vitals: hp@0 mp@2 maxhp@4 maxmp@6 (s16/u16 LE) */
+    int hp_b = rd16(&b[RK_VIT], 0), hp_a = rd16(&a[RK_VIT], 0);
+    int mp_b = rd16(&b[RK_VIT], 2), mp_a = rd16(&a[RK_VIT], 2);
+    int maxhp = rd16(&a[RK_VIT], 4);
+    if (maxhp <= 0) maxhp = 1;
+    if (hp_a <= 0 && hp_b > 0) { bonus -= 1.0; TAG("death"); }
+    else if (hp_a < hp_b) {
+        double frac = (double)(hp_b - hp_a) / maxhp;
+        bonus -= 0.3 + 0.7 * frac; TAG("damage");
+    } else if (hp_a > hp_b) { bonus += 0.4; TAG("healed"); }
+    if (mp_a < mp_b) { bonus += 0.1; TAG("ability_used"); }
+    /* clean traverse: room changed and hp untouched */
+    if (tags[0] && strstr(tags, "new_room") && hp_a == hp_b) {
+        bonus += 0.5; TAG("clean_traverse");
+    }
+    /* xp / gold */
+    if (rd32(&b[RK_XP], 0) != rd32(&a[RK_XP], 0)) {
+        bonus += 0.5; TAG("exp_gain");
+    }
+    if (rd32(&b[RK_XP], 4) != rd32(&a[RK_XP], 4)) {
+        bonus += 0.3; TAG("gold_gain");
+    }
+    if (b[RK_LVL].data && a[RK_LVL].data &&
+        b[RK_LVL].data[0] != a[RK_LVL].data[0]) {
+        bonus += 1.0; TAG("level_up");
+    }
+    /* items / souls inventories: any byte diff counts */
+    if (b[RK_ITEM].data && a[RK_ITEM].data &&
+        b[RK_ITEM].size == a[RK_ITEM].size &&
+        memcmp(b[RK_ITEM].data, a[RK_ITEM].data, b[RK_ITEM].size)) {
+        bonus += 0.6; TAG("item_found");
+    }
+    if (b[RK_SOUL].data && a[RK_SOUL].data &&
+        b[RK_SOUL].size == a[RK_SOUL].size &&
+        memcmp(b[RK_SOUL].data, a[RK_SOUL].data, b[RK_SOUL].size)) {
+        bonus += 0.5; TAG("soul_gained");
+    }
+    /* movement without damage */
+    int32_t dx = (int32_t)(rd32(&a[RK_POS], 0) - rd32(&b[RK_POS], 0));
+    int32_t dy = (int32_t)(rd32(&a[RK_POS], 4) - rd32(&b[RK_POS], 4));
+    if ((dx || dy) && hp_a == hp_b) { bonus += 0.2; TAG("clean_move"); }
+    if (bonus > 2.5) bonus = 2.5;
+    if (bonus < -1.5) bonus = -1.5;
+#undef TAG
+    return bonus;
+}
+
 /* ---- scout mode: autonomous early-game player ----------------------
  * Boots the ROM and plays chunks of 600 frames: A taps advance text
  * and menus, a RIGHT pulse at the end probes whether the player entity
@@ -713,7 +880,8 @@ int main(int argc, char **argv) {
                 action = &chosen[rand() % chosen_count];
             } else {
                 /* pick randomly among the actions tied at the best
-                 * observed success rate (ties are common early on) */
+                 * observed average reward (success rate + exploration
+                 * bonuses) */
                 int wcount = 0;
                 AosWeightRow *w = aos_labdb_weights(db, 8192, &wcount);
                 double best_rate = -1.0;
@@ -723,7 +891,7 @@ int main(int argc, char **argv) {
                     for (int wi = 0; wi < wcount; ++wi)
                         if (w[wi].action_id == chosen[ci].id &&
                             w[wi].attempts > 0)
-                            rate = w[wi].success_rate;
+                            rate = w[wi].reward_sum / w[wi].attempts;
                     rates[ci] = rate > best_rate ? (int)(rate * 1000000) : -1;
                     if (rate > best_rate) best_rate = rate;
                 }
@@ -806,17 +974,28 @@ int main(int argc, char **argv) {
                          "rnd:%x@%d+%d", base.mask, base.at, base.hold);
             }
 
-            /* baseline probe at frame 0, final at last frame */
-            AosPeekRequest peeks[2];
+            /* reward peeks always run (before@0 / after@last); the
+             * action probe, when present, occupies the last two slots */
+            AosPeekRequest peeks[2 * RK_COUNT + 2];
             int peek_count = 0;
+            for (int side = 0; side < 2; ++side) {
+                int fr = side ? frames - 1 : 0;
+                for (int r = 0; r < RK_COUNT; ++r) {
+                    peeks[peek_count].frame = fr;
+                    peeks[peek_count].address = REWARD_PEEKS[r].addr;
+                    peeks[peek_count].size = REWARD_PEEKS[r].size;
+                    ++peek_count;
+                }
+            }
             if (has_probe) {
-                peeks[0].frame = 0;
-                peeks[0].address = probe.address;
-                peeks[0].size = probe.size;
-                peeks[1].frame = frames - 1;
-                peeks[1].address = probe.address;
-                peeks[1].size = probe.size;
-                peek_count = 2;
+                peeks[peek_count].frame = 0;
+                peeks[peek_count].address = probe.address;
+                peeks[peek_count].size = probe.size;
+                ++peek_count;
+                peeks[peek_count].frame = frames - 1;
+                peeks[peek_count].address = probe.address;
+                peeks[peek_count].size = probe.size;
+                ++peek_count;
             }
 
             AosRunSpec spec;
@@ -861,8 +1040,10 @@ int main(int argc, char **argv) {
             char outcome[32] = "fail";
             double reward = 0.0;
             char metrics[512] = "{}";
-            if (has_probe && res.peek_count == 2) {
-                eval_score(&probe, &res.peeks[0], &res.peeks[1], outcome,
+            int probe_base = 2 * RK_COUNT;
+            if (has_probe && res.peek_count >= probe_base + 2) {
+                eval_score(&probe, &res.peeks[probe_base],
+                           &res.peeks[probe_base + 1], outcome,
                            sizeof outcome, &reward, metrics,
                            sizeof metrics);
             } else if (!has_probe) {
@@ -909,6 +1090,42 @@ int main(int argc, char **argv) {
                         (void)nid;
                         free(blob);
                     }
+                }
+            }
+
+            /* exploration bonus on top of the action probe */
+            {
+                int scene_new = 0;
+                for (int si = 0; si < seen_count; ++si)
+                    if (seen_scenes[si] == scene_hash) { scene_new = 0; break; }
+                /* scene_hash was already registered above when new */
+                char btags[256];
+                double bonus = compute_bonus(db, &res, RK_COUNT, 0,
+                                             btags, sizeof btags);
+                /* novelty tag handled via seen set: recompute flag */
+                {
+                    /* if it was just added this trial it is 'new' */
+                    scene_new = (seen_count > 0 &&
+                                 seen_scenes[seen_count - 1] == scene_hash);
+                    if (scene_new) {
+                        bonus += 0.4;
+                        size_t tl = strlen(btags);
+                        snprintf(btags + tl, sizeof btags - tl,
+                                 "%snew_scene", tl ? "," : "");
+                    }
+                }
+                reward += bonus;
+                if (reward > 4.0) reward = 4.0;
+                if (reward < -1.5) reward = -1.5;
+                /* merge tags into metrics before the closing brace */
+                size_t ml = strlen(metrics);
+                if (ml && metrics[ml - 1] == '}') {
+                    char extra[320];
+                    snprintf(extra, sizeof extra,
+                             ",\"bonus\":%.2f,\"tags\":\"%s\"}",
+                             bonus, btags);
+                    metrics[ml - 1] = 0;
+                    strncat(metrics, extra, sizeof metrics - ml - 1);
                 }
             }
 

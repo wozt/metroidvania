@@ -454,7 +454,7 @@ static int room_count(AosLabDb *db) {
 
 /* Returns bonus reward; appends human-readable tags to `tags`. */
 static double compute_bonus(AosLabDb *db, const AosRunResult *res,
-                            int nreward, int scene_is_new,
+                            int nreward, int scene_is_new, double motion,
                             char *tags, size_t tags_size) {
     (void)scene_is_new;
     if (!res->peeks || res->peek_count < 2 * RK_COUNT) return 0.0;
@@ -530,10 +530,11 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         memcmp(b[RK_SOUL].data, a[RK_SOUL].data, b[RK_SOUL].size)) {
         bonus += 0.5; TAG("soul_gained");
     }
-    /* movement without damage */
-    int32_t dx = (int32_t)(rd32(&a[RK_POS], 0) - rd32(&b[RK_POS], 0));
-    int32_t dy = (int32_t)(rd32(&a[RK_POS], 4) - rd32(&b[RK_POS], 4));
-    if ((dx || dy) && hp_a == hp_b) { bonus += 0.2; TAG("clean_move"); }
+    /* movement without damage: screen motion is the reliable signal
+     * (WRAM entity position proved layout-dependent) */
+    if (motion > 0.008 && hp_a == hp_b) {
+        bonus += 0.2; TAG("clean_move");
+    }
     if (bonus > 2.5) bonus = 2.5;
     if (bonus < -1.5) bonus = -1.5;
 #undef TAG
@@ -1146,6 +1147,7 @@ int main(int argc, char **argv) {
                          "{\"note\":\"probe data missing\"}");
             }
 
+            double trial_motion = 0.0;
             /* visual signature of the final frame -> metrics JSON;
              * a never-seen scene hash becomes a new auto checkpoint */
             uint64_t scene_hash = 0;
@@ -1159,10 +1161,11 @@ int main(int argc, char **argv) {
                 /* motion between frame 0 and the last frame — the
                  * reliable "did anything move" signal that does not
                  * depend on WRAM entity layout */
-                double motion = 0.0, movedir = 0.0;
+                double movedir = 0.0;
                 if (res.fb_first) {
-                    motion = aos_vision_motion(res.fb_first, fb,
+                    trial_motion = aos_vision_motion(res.fb_first, fb,
                         AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT, &movedir);
+                    double motion = trial_motion;
                     size_t ml = strlen(metrics);
                     if (ml && metrics[ml - 1] == '}') {
                         char extra[80];
@@ -1236,7 +1239,8 @@ int main(int argc, char **argv) {
                 /* scene_hash was already registered above when new */
                 char btags[256];
                 double bonus = compute_bonus(db, &res, RK_COUNT, 0,
-                                             btags, sizeof btags);
+                                             trial_motion, btags,
+                                             sizeof btags);
                 /* novelty tag handled via seen set: recompute flag */
                 {
                     /* if it was just added this trial it is 'new' */

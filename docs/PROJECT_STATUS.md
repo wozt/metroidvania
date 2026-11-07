@@ -62,7 +62,10 @@ Last updated: **2026-11-07**.
   entityData[0] was empty in gameplay states. First validated
   checkpoint: scout_play_010.
 - Per-trial motion metric (motion/mdir in metrics JSON) replaces the
-  unreliable position probe as the movement signal.
+  unreliable position probe; clean_move bonus now keys off screen
+  motion. DB actions redefined without dead WRAM probes so the bandit
+  learns purely from the reward layer (verified: clean_move bonuses
+  flowing on scout_play_010 trials).
 - Worker liveness: every trial/chunk updates worker.N.hb (epoch ms);
   the viewer flags any slot claiming to run with a heartbeat older
   than 15 s as STALE (red border). Workers self-detect stalls: 400

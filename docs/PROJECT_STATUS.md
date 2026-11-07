@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0785 - Aria introduction alpha and fade fidelity
+
+- Audited `GameModeIntroCutsceneUpdate` (stages 0-6), `sub_0803FC6C`/
+  `sub_0803FAE0` (BG scroll), `sub_08008F40`/`sub_08009054`/`sub_08009178`/
+  `sub_080092A0`/`sub_08009648`/`sub_080093E0` (the six intro entities and
+  text script), `sub_0806D4A8` (velocity damping) and `sub_08041318`/
+  `sub_08040AB8` (glyph emission) against the portable controller.
+- Fixed the BLDALPHA packing: `alpha_pack` now stores EVA in bits 0-4 and
+  EVB in bits 8-12 like `C_16_2_8`, so the panel blend, stage-4 pulse and
+  stage-5 flicker carry the native coefficients (previously swapped, which
+  inverted every blend).
+- The SDL host now feeds semi-transparent OBJ pixels from the merged
+  `alpha_blend` register, which persists between frames like the native
+  `gDisplayRegisters.bldAlpha`; before, only frames where an entity wrote
+  the override were blended and the panels rendered opaque.
+- Stage 6 now renders the `sub_0803D18C`/`sub_0803CDF0` palette fade as a
+  brightness ramp to black over the native 0x78 frames (the timer was
+  previously write-only).
+- The stage-5 flicker uses the native `RandomNumberGenerator` recurrence
+  seeded with `sub_08004160`'s 0x1967 new-game value.
+- Confirmed the stage 4-5 alpha blend targets an empty first-target set on
+  hardware, so its only visible effect is on the semi-transparent panels —
+  now rendered through the corrected register path.
+
 ## Patch 0784 - Persist the SELECT quick map's explored cells
 
 - Save schema v13 adds `map=`: the 64 x 35 explored-cell grid packed one

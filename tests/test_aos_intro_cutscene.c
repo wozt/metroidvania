@@ -23,7 +23,7 @@ int main(void) {
            intro.entities.entities[AOS_INTRO_ENTITY_MAIN].x == 0x780000);
     assert(intro.entities.entities[AOS_INTRO_ENTITY_PANEL_LEFT].x ==
            0xF7F000);
-    assert(intro.alpha_blend == 0x060A);
+    assert(intro.alpha_blend == 0x0A06);
 
     unsigned frames = 0;
     uint16_t audio[AOS_INTRO_AUDIO_CAPACITY] = {0};
@@ -78,11 +78,18 @@ int main(void) {
 
     frames = 0;
     int32_t result = AOS_MODE_SAME;
+    uint16_t previous_brightness = 0;
     while (result == AOS_MODE_SAME) {
         result = tick(&mode, &intro, 0);
         ++frames;
+        /* sub_0803D18C/sub_0803CDF0 fade the palette to black over 0x78
+         * frames; brightness models the same ramp. */
+        assert(intro.brightness >= previous_brightness &&
+               intro.brightness <= 16);
+        previous_brightness = intro.brightness;
     }
-    assert(frames == 120 && result == AOS_MODE_IN_GAME);
+    assert(frames == 120 && result == AOS_MODE_IN_GAME &&
+           intro.brightness == 16);
     assert(intro.cleanup_requested && intro.restore_backgrounds_requested &&
            intro.gameplay_setup_requested);
     assert(intro.start_area == 0 && intro.start_room == 0 &&
@@ -117,7 +124,8 @@ int main(void) {
            audio[0] == AOS_INTRO_AUDIO_MUTE);
     for (unsigned i = 0; i < 119; ++i)
         assert(tick(&mode, &intro, 0) == AOS_MODE_SAME);
-    assert(tick(&mode, &intro, 0) == AOS_MODE_KONAMI_LOGO);
+    assert(tick(&mode, &intro, 0) == AOS_MODE_KONAMI_LOGO &&
+           intro.brightness == 16);
 
     intro.music_start_requested = true;
     intro.entities.affine_sound_requested = true;

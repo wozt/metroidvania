@@ -336,7 +336,8 @@ static void render_intro_backgrounds(
 static void render_intro_actors(SDL_Renderer *renderer,
                                 SDL_Texture *texture,
                                 const AosIntroGraphics *graphics,
-                                const AosIntroEntities *actors) {
+                                const AosIntroEntities *actors,
+                                uint16_t alpha_blend) {
     if (!texture) return;
     static AosObjLayer layer;
     static uint8_t pixels[GBA_W * GBA_H * 4];
@@ -392,9 +393,9 @@ static void render_intro_actors(SDL_Renderer *renderer,
             aos_obj_layer_draw(&layer, graphics->actors, &sprite);
         }
     }
-    unsigned first_alpha = actors->alpha_override_valid
-                               ? actors->alpha_override & 0x1Fu
-                               : 16u;
+    /* BLDALPHA's EVA coefficient drives semi-transparent OBJ pixels; the
+     * controller merges stage and entity writes into alpha_blend. */
+    unsigned first_alpha = alpha_blend & 0x1Fu;
     if (first_alpha > 16) first_alpha = 16;
     for (int index = 0; index < GBA_W * GBA_H; ++index) {
         uint16_t color = graphics->object_palette[layer.index[index]];
@@ -1008,7 +1009,8 @@ int aria_title_preview_main(int argc, char **argv) {
                                      &lifecycle.intro_cutscene);
             render_intro_actors(
                 renderer, intro_actor_texture, &intro_graphics,
-                &lifecycle.intro_cutscene.entities);
+                &lifecycle.intro_cutscene.entities,
+                lifecycle.intro_cutscene.alpha_blend);
         } else if (in_main_menu && have_main_menu_graphics) {
             render_main_menu_backgrounds(
                 renderer, &main_menu_graphics, main_menu_textures,

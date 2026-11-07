@@ -31,8 +31,9 @@ static int32_t intro_sine(uint32_t angle) {
     return sign * (int32_t)sine_table[value >> 4];
 }
 
-static uint16_t alpha_pack(unsigned first, unsigned second) {
-    return (uint16_t)((first & 0x1Fu) | ((second & 0x1Fu) << 8));
+/* BLDALPHA layout: EVA in bits 0-4, EVB in bits 8-12. */
+static uint16_t alpha_pack(unsigned eva, unsigned evb) {
+    return (uint16_t)((eva & 0x1Fu) | ((evb & 0x1Fu) << 8));
 }
 
 enum { NO_ANIMATION = 0xFF };
@@ -307,7 +308,8 @@ static void update_panel(AosIntroEntities *group, AosIntroEntity *entity,
         entity->state = 1;
         if (entity->variant == 0) {
             group->alpha_override_valid = true;
-            group->alpha_override = alpha_pack(10, 6);
+            /* C_16_2_8(10, 6): EVB=10, EVA=6. */
+            group->alpha_override = alpha_pack(6, 10);
         }
     }
     if (entity->state == 1) {
@@ -321,9 +323,11 @@ static void update_panel(AosIntroEntities *group, AosIntroEntity *entity,
         if (entity->timer != 0) {
             --entity->timer;
             if (entity->variant == 0) {
-                unsigned first = 16u - entity->timer / 48u;
+                /* C_16_2_8(u, 16-u) with u = 16 - timer/48 puts
+                 * EVA = timer/48, EVB = u: the panel fades out. */
+                unsigned evb = 16u - entity->timer / 48u;
                 group->alpha_override_valid = true;
-                group->alpha_override = alpha_pack(first, 16u - first);
+                group->alpha_override = alpha_pack(16u - evb, evb);
             }
         } else {
             entity->alive = false;

@@ -10,8 +10,11 @@ enum {
     AOS_INTRO_PALETTE_FADE_FRAMES = 0x78,
 };
 
-static uint16_t alpha_pack(unsigned first, unsigned second) {
-    return (uint16_t)((first & 0x1Fu) | ((second & 0x1Fu) << 8));
+/* BLDALPHA layout: EVA (first-target coefficient) in bits 0-4, EVB
+ * (second-target) in bits 8-12. C_16_2_8(high, low) passes the EVB value
+ * first, so native call sites swap argument order here. */
+static uint16_t alpha_pack(unsigned eva, unsigned evb) {
+    return (uint16_t)((eva & 0x1Fu) | ((evb & 0x1Fu) << 8));
 }
 
 static void clear_requests(AosIntroCutscene *intro) {
@@ -30,9 +33,10 @@ static void clear_requests(AosIntroCutscene *intro) {
 void aos_intro_cutscene_prepare(AosIntroCutscene *intro, bool preview_only) {
     *intro = (AosIntroCutscene){
         .preview_only = preview_only,
-        /* The native seed source is not traced. The controller still uses
-         * the original RandomNumberGenerator recurrence for the flicker. */
-        .random_state = 0,
+        /* sub_08004160 reseeds gEwramData->randomNumber to 0x1967 on the
+         * new-game path; no intro entity draws from it before stage 5,
+         * so the flicker sequence matches the native recurrence. */
+        .random_state = 0x1967,
     };
 }
 
@@ -139,9 +143,9 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
         case 4:
             ++intro->timer;
             if (!(intro->timer & 7u)) {
-                unsigned first = (intro->timer & 2u) +
-                                 (16u - (intro->timer >> 4));
-                intro->alpha_blend = alpha_pack(first, 16u - first);
+                unsigned evb = (intro->timer & 2u) +
+                               (16u - (intro->timer >> 4));
+                intro->alpha_blend = alpha_pack(16u - evb, evb);
                 if ((intro->timer >> 3) > 10) {
                     intro->timer = 0;
                     mode->update_stage = 5;
@@ -155,9 +159,9 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
             intro->random_state = (intro->random_state >> 8) * 0x3243F6ADu +
                                   0x1B0CB175u;
             {
-                unsigned first = (intro->timer & 1u) +
-                                 ((intro->random_state & 1u) * 2u) + 13u;
-                intro->alpha_blend = alpha_pack(first, 16u - first);
+                unsigned evb = (intro->timer & 1u) +
+                               ((intro->random_state & 1u) * 2u) + 13u;
+                intro->alpha_blend = alpha_pack(16u - evb, evb);
             }
             if (intro->timer > 0x77 || (pressed & (AOS_KEY_A | AOS_KEY_START))) {
                 intro->palette_fade_requested = true;
@@ -170,6 +174,11 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
 
         case 6:
             if (intro->palette_fade_timer != 0) --intro->palette_fade_timer;
+            /* sub_0803D18C/sub_0803CDF0 interpolate the palette to black
+             * over 0x78 frames; brightness models the same fade-out. */
+            intro->brightness = (uint16_t)(
+                (AOS_INTRO_PALETTE_FADE_FRAMES - intro->palette_fade_timer) *
+                AOS_INTRO_BRIGHTNESS_MAX / AOS_INTRO_PALETTE_FADE_FRAMES);
             if (intro->palette_fade_timer == 0)
                 return finish(intro, false);
             break;

@@ -40,7 +40,7 @@ int main(void) {
     assert(group.entities[AOS_INTRO_ENTITY_PANEL_LEFT].double_draw &&
            group.entities[AOS_INTRO_ENTITY_PANEL_LEFT].x == 0xF7F000);
     assert(group.entities[AOS_INTRO_ENTITY_PANEL_RIGHT].x == -0x7F000);
-    assert(group.alpha_override_valid && group.alpha_override == 0x060A);
+    assert(group.alpha_override_valid && group.alpha_override == 0x0A06);
 
     /* The supporting descriptor supplies the native four-step stair walk.
      * Its action index changes the follower's vertical velocity before the
@@ -158,7 +158,7 @@ int main(void) {
     aos_intro_entities_update(&group, 3, 0x1FFFFF, 0, 0);
     assert(left->state == 2 && left->timer == 0x120);
     aos_intro_entities_update(&group, 3, 0x1FFFFF, 0, 0);
-    assert(left->timer == 0x11F && group.alpha_override == 0x050B);
+    assert(left->timer == 0x11F && group.alpha_override == 0x0B05);
     for (unsigned frame = 1; frame < 288; ++frame)
         aos_intro_entities_update(&group, 3, 0x1FFFFF, 0, 0);
     assert(left->alive && left->timer == 0);

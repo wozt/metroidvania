@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T21:27:44+00:00",
+ "generated_at": "2026-11-07T21:39:04+00:00",
  "git": {
-  "commit": "e18d58ac",
+  "commit": "63c0bc8b",
   "branch": "main",
   "dirty": true
  },
@@ -16807,16 +16807,22 @@
    "id": "tools.mgba_lab",
    "area": "tools",
    "category": "diagnostics",
-   "title": "Headless mGBA reference runner",
+   "title": "Headless mGBA reference runner and trial laboratory",
    "status": "partial",
    "fidelity": "n/a",
    "local_sources": [
-    "src/tools/aos_mgba_lab.c"
+    "src/tools/aos_mgba_lab.c",
+    "src/tools/aos_mgba_session.c",
+    "src/tools/aos_mgba_session.h",
+    "src/tools/aos_lab_db.c",
+    "src/tools/aos_lab_db.h",
+    "src/tools/aos_lab_worker.c",
+    "src/tools/aos_lab_viewer.c"
    ],
    "tests": [],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API: frame stepping, scripted key masks, PPM screenshots, mGBA save states and WRAM peeks. Verified locally to boot the ROM and capture real frames (title, file flow, in-game room). The save-state trial database, input-replay learning loop and GTK viewer are not implemented yet; menu navigation still needs calibration and no BIOS image is bundled.",
+   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API (aos_mgba_session): frame stepping, scripted key masks, PPM screenshots, save states and WRAM peeks. aos_lab_worker records state blobs, runs scripted actions with parameter jitter against memory-probe evals, and accumulates per-parameter success weights in a local SQLite database (aos_lab_db, WAL). aos_lab_viewer is a GTK4 registry that polls trials, weights, states and runs live. Verified end-to-end: state capture, trial batches and weight updates. Still open: calibrated gameplay probes (player position/HP addresses), menu-navigation scripts for the scrolling intro, vendored mGBA sources and a spawn-batch button in the viewer.",
    "next_action": "",
    "evidence": {
     "unit_tests": [],
@@ -20309,6 +20315,12 @@
  },
  "timeline": [
   {
+   "commit": "63c0bc8b",
+   "date": "2026-11-07",
+   "subject": "Add headless mGBA lab runner and fix object animation capacity",
+   "scope": "project"
+  },
+  {
    "commit": "e18d58ac",
    "date": "2026-11-07",
    "subject": "Classify ids 7 and 10 as logic SPECIAL objects",
@@ -20780,12 +20792,6 @@
    "commit": "ae000d08",
    "date": "2026-11-07",
    "subject": "Audit remaining Aria Soma dispatcher states",
-   "scope": "project"
-  },
-  {
-   "commit": "edcec05e",
-   "date": "2026-11-07",
-   "subject": "Match the Aria hit-state exit mask and audit case 13",
    "scope": "project"
   }
  ],

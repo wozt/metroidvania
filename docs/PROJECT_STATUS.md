@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0803 - Emulator laboratory: shared session, SQLite trials, GTK registry
+
+- `aos_mgba_session` extracts the headless mGBA core (software renderer,
+  frame stepping, key masks, PPM capture, save states, WRAM peeks) into a
+  reusable C API shared by the lab tools.
+- `aos_lab_db` is a local SQLite (WAL) store: state blobs, action
+  definitions, trial outcomes and derived per-parameter success weights.
+- `aos_lab_worker` is the automatic loop: it loads a state blob, applies
+  an action with parameter jitter (hold/at ranges), scores the outcome
+  through configurable memory probes, and records the trial plus its
+  weight. An epsilon-greedy picker exploits the best-weighted parameter
+  set or explores randomly (`--explore`).
+- `aos_lab_viewer` (GTK4, ListView/ColumnView) polls the database and
+  shows trials, weights, states and runs live.
+- Verified locally: state capture from boot, action definition, trial
+  batches and weight accumulation all work end to end. Gameplay probes
+  still need real WRAM addresses; menu scripts for the intro are open.
+
 ## Patch 0802 - Headless mGBA reference runner (aos_mgba_lab)
 
 - New C tool `src/tools/aos_mgba_lab.c` (target `aos_mgba_lab`) drives

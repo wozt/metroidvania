@@ -115,9 +115,23 @@ target_compile_definitions(fusion_rebuild PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOU
 fusion_enable_warnings(fusion_rebuild)
 
 find_library(MGBA_LIBRARY NAMES mgba REQUIRED)
-add_executable(aos_mgba_lab src/tools/aos_mgba_lab.c)
+find_library(SQLITE3_LIBRARY NAMES sqlite3 REQUIRED)
+add_library(aos_mgba_session OBJECT src/tools/aos_mgba_session.c)
+target_include_directories(aos_mgba_session PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
+target_link_libraries(aos_mgba_session PRIVATE ${MGBA_LIBRARY} pthread)
+add_library(aos_lab_db OBJECT src/tools/aos_lab_db.c)
+target_include_directories(aos_lab_db PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
+target_link_libraries(aos_lab_db PRIVATE ${SQLITE3_LIBRARY})
+add_executable(aos_mgba_lab src/tools/aos_mgba_lab.c
+    $<TARGET_OBJECTS:aos_mgba_session>)
+target_include_directories(aos_mgba_lab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
 target_link_libraries(aos_mgba_lab PRIVATE ${MGBA_LIBRARY} pthread)
 fusion_enable_warnings(aos_mgba_lab)
+add_executable(aos_lab_worker src/tools/aos_lab_worker.c
+    $<TARGET_OBJECTS:aos_mgba_session> $<TARGET_OBJECTS:aos_lab_db>)
+target_include_directories(aos_lab_worker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
+target_link_libraries(aos_lab_worker PRIVATE ${MGBA_LIBRARY} ${SQLITE3_LIBRARY} pthread)
+fusion_enable_warnings(aos_lab_worker)
 
 add_executable(fusion_checklist src/tools/fusion_checklist.c)
 target_link_libraries(fusion_checklist PRIVATE fusion_pipeline)
@@ -278,6 +292,13 @@ if(GTK4_FOUND)
     target_link_libraries(fusion_sfx_browser
         PRIVATE PkgConfig::GTK4 SDL3::SDL3 m)
     fusion_enable_warnings(fusion_sfx_browser)
+
+    add_executable(aos_lab_viewer src/tools/aos_lab_viewer.c
+        $<TARGET_OBJECTS:aos_lab_db>)
+    target_include_directories(aos_lab_viewer PRIVATE src/tools)
+    target_link_libraries(aos_lab_viewer
+        PRIVATE PkgConfig::GTK4 ${SQLITE3_LIBRARY})
+    fusion_enable_warnings(aos_lab_viewer)
 elseif(NOT PkgConfig_FOUND)
     message(STATUS "pkg-config not found: optional fusion_map_editor disabled")
 else()

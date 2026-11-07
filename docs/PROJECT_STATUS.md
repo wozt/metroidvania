@@ -2,25 +2,13 @@
 
 Last updated: **2026-11-05**.
 
-## Patch 0779 - Restore Aria MP2K host gains and SFX playback
+## Patch 0781 - Aria title pulse uses sound entry 0x081
 
-- Fixed `aos_mp2k_engine_load_bank`: it replaced the engine with a
-  compound-literal initializer that zeroed `host_player_gain[]`, muting every
-  MP2K player after any disk-loaded bank (the Aria heartbeat `0x11C` on player
-  5 and every browser entry). `init`, `set_bank` and `load_bank` now share one
-  `engine_replace` routine that restores the 0xFF defaults; failed loads still
-  report their error and leave the previous engine untouched.
-- Added `fusion_aos_mp2k_tests` regressions: default gains after init,
-  `set_bank` and `load_bank`, per-player muting in the mixer, failed-load
-  preservation, and a real-bank check that song `0x11C` (player 5) renders
-  nonzero PCM. All 72 silent table entries were audited: every one is a
-  legitimate zero-track ROM entry, so no CGB/PSG path is implicated.
-- `fusion_sfx_browser` now reports bank, table, device and player-start
-  failures on stderr/status, and `--check` renders both title pulses offline
-  and fails when either produces silence.
-
-Next: continue the unfinished Aria opening sequence (soul-obtained
-presentation, portraits, scripted actors) from commit 7172cac.
+- The shared launcher's Y pulse now plays Aria sound-table entry `0x081`
+  (MP2K player 3) instead of `0x11C`, by user request. The SFX browser
+  defaults and its offline `--check` follow the same constant, and the
+  real-bank PCM check now covers `0x081`. Zero Mission's `0x1DC` pulse is
+  unchanged.
 
 ## Patch 0780 - Restore the Aria opening soul-obtained window
 
@@ -41,6 +29,26 @@ presentation, portraits, scripted actors) from commit 7172cac.
 
 Next: emulator/listening comparison of the opening scene and the remaining
 Object20 parity gaps (native window frame, exact sub-state timings).
+
+## Patch 0779 - Restore Aria MP2K host gains and SFX playback
+
+- Fixed `aos_mp2k_engine_load_bank`: it replaced the engine with a
+  compound-literal initializer that zeroed `host_player_gain[]`, muting every
+  MP2K player after any disk-loaded bank (the Aria heartbeat `0x11C` on player
+  5 and every browser entry). `init`, `set_bank` and `load_bank` now share one
+  `engine_replace` routine that restores the 0xFF defaults; failed loads still
+  report their error and leave the previous engine untouched.
+- Added `fusion_aos_mp2k_tests` regressions: default gains after init,
+  `set_bank` and `load_bank`, per-player muting in the mixer, failed-load
+  preservation, and a real-bank check that song `0x11C` (player 5) renders
+  nonzero PCM. All 72 silent table entries were audited: every one is a
+  legitimate zero-track ROM entry, so no CGB/PSG path is implicated.
+- `fusion_sfx_browser` now reports bank, table, device and player-start
+  failures on stderr/status, and `--check` renders both title pulses offline
+  and fails when either produces silence.
+
+Next: continue the unfinished Aria opening sequence (soul-obtained
+presentation, portraits, scripted actors) from commit 7172cac.
 
 ## Patch 0778 - Separate launcher SFX and add a native sound browser
 

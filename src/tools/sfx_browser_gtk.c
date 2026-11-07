@@ -213,7 +213,8 @@ static void game_changed(GObject *object, GParamSpec *spec, gpointer userdata) {
     (void)spec;
     Browser *browser = userdata;
     browser->selected_game = (BrowserGame)gtk_drop_down_get_selected(GTK_DROP_DOWN(object));
-    select_id(browser, browser->selected_game == BROWSER_ARIA ? 0x11C : 0x1DC);
+    select_id(browser, browser->selected_game == BROWSER_ARIA
+                            ? MV_SPLIT_ARIA_HEARTBEAT_SOUND : MV_SPLIT_MZM_LIGHTNING_SOUND);
     gtk_label_set_text(GTK_LABEL(browser->status), "Select an ID and press Play");
 }
 
@@ -323,7 +324,7 @@ static void activate(GtkApplication *application, gpointer userdata) {
     g_signal_connect(play, "clicked", G_CALLBACK(play_clicked), browser);
     g_signal_connect(browser->pause, "clicked", G_CALLBACK(pause_clicked), browser);
     g_signal_connect(browser->stop, "clicked", G_CALLBACK(stop_clicked), browser);
-    select_id(browser, 0x11C);
+    select_id(browser, MV_SPLIT_ARIA_HEARTBEAT_SOUND);
     gtk_window_present(GTK_WINDOW(window));
 }
 

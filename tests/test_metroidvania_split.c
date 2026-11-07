@@ -26,7 +26,7 @@ static void check_defaults(const ProtoConfig *config) {
 }
 
 int main(void) {
-    assert(mv_split_native_sound(true) == 0x11C);
+    assert(mv_split_native_sound(true) == 0x081);
     assert(mv_split_native_sound(false) ==
            MZM_SOUND_RUINS_TEST_SHOOTING_LIGHTNING);
     assert(mv_split_angle(0) == 0 && mv_split_angle(540) == 0x4000 &&

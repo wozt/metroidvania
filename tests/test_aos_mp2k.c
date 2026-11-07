@@ -498,9 +498,9 @@ static void host_gain_mix_test(void) {
     #undef RESET_CHANNELS
 }
 
-/* With the extracted Aria bank: the title heartbeat (song 0x11C, MP2K
- * player 5) produces nonzero PCM. Skipped when the private extraction is
- * absent, like the Zero Mission whole-bank check. */
+/* With the extracted Aria bank: the title pulse (song 0x81, a non-zero
+ * MP2K player) produces nonzero PCM. Skipped when the private extraction
+ * is absent, like the Zero Mission whole-bank check. */
 static void extracted_bank_test(void) {
     const char *bank_path = "assets/extracted/aria/sound/runtime/sound_bank.bin";
     const char *table_path = "assets/extracted/aria/sound/runtime/song_table.tsv";
@@ -521,7 +521,7 @@ static void extracted_bank_test(void) {
         unsigned row_id, row_player;
         unsigned row_header;
         if (sscanf(line, "song\t%u\t0x%x\t%u", &row_id, &row_header,
-                   &row_player) == 3 && row_id == 0x11C) {
+                   &row_player) == 3 && row_id == 0x81) {
             id = row_id;
             header = row_header;
             player = row_player;
@@ -530,7 +530,7 @@ static void extracted_bank_test(void) {
         }
     }
     fclose(table);
-    assert(found && id == 0x11C);
+    assert(found && id == 0x81);
 
     AosMp2kEngine engine;
     aos_mp2k_engine_init(&engine);

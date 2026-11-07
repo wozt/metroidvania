@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T12:35:37+00:00",
+ "generated_at": "2026-11-07T12:41:03+00:00",
  "git": {
-  "commit": "b5a1d22",
+  "commit": "08fcb69",
   "branch": "main",
   "dirty": true
  },
@@ -16021,7 +16021,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later polarity mirror. X uses Zero Mission SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC and Y uses Aria's Legion double-impact sequence 0x11C. Independent host-only per-player gains cross-fade native music player 0 while leaving SFX players audible at every divider angle; neither sequencer state nor native volume is changed. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. START retains the title-driven in-process launch flow. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Deterministic tests cover native-ID routing, separate player gains, geometry, JSON, hold and cancellation; headless captures cover composition. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x11C and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
+   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later polarity mirror. X uses Zero Mission SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC and Y uses Aria sound-table entry 0x081. Independent host-only per-player gains cross-fade native music player 0 while leaving SFX players audible at every divider angle; neither sequencer state nor native volume is changed. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. START retains the title-driven in-process launch flow. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Deterministic tests cover native-ID routing, separate player gains, geometry, JSON, hold and cancellation; headless captures cover composition. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x081 and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -17157,7 +17157,7 @@
     "mzm.audio.sound_engine"
    ],
    "native_routines": [],
-   "limitations": "The GTK4 browser selects either game, traverses every native sound-table ID, displays decimal and hexadecimal IDs plus the native player, and provides previous, next, play, pause/resume and repeat. It decodes local extracted banks in memory through the same C11 engines as the runtimes and writes no audio assets. Its no-display check verifies 495 Aria and 708 Zero Mission entries; the window was image-checked under Xvfb. Sound names and waveform visualization are not yet available. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x11C and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
+   "limitations": "The GTK4 browser selects either game, traverses every native sound-table ID, displays decimal and hexadecimal IDs plus the native player, and provides previous, next, play, pause/resume and repeat. It decodes local extracted banks in memory through the same C11 engines as the runtimes and writes no audio assets. Its no-display check verifies 495 Aria and 708 Zero Mission entries; the window was image-checked under Xvfb. Sound names and waveform visualization are not yet available. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x081 and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -18430,7 +18430,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "Zero Mission: its sound bank and engine tables are exported privately; the music and the sound effects of the ported systems (Samus, weapons, hatches, blocks, enemies, drops) play through the ported engine, with the item jingles inserted in front of the music and the current track replayed after them, and the Chozo hint music; the audio device pulls the sound frame by frame at the hardware's 65.536 kHz rate (resampled by SDL), so game slowdowns cannot starve it; not yet compared with hardware. Liquids, ground effects, charge beams, bombs and bosses have no sounds yet. Aria: the C11 importer exports all 495 gSongTable records, MP2K headers, required voice groups and samples into a private golden-guarded bank. PlaySong routes native player priorities and control commands into the portable MP2K sequencer; its track decoder, DirectSound allocation, envelopes, pitch, mono mixer and SDL/WAV output are connected in the runtime. Volume ramps now update every track's volPublic control, and stop/continue state suspends the sequencer and releases live channels, preventing replaced opening-scene music from continuing underneath its successor. CGB synthesis, reverb, LFO modulation, hardware-rate scheduling and emulator/listening comparison remain incomplete. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x11C and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
+   "limitations": "Zero Mission: its sound bank and engine tables are exported privately; the music and the sound effects of the ported systems (Samus, weapons, hatches, blocks, enemies, drops) play through the ported engine, with the item jingles inserted in front of the music and the current track replayed after them, and the Chozo hint music; the audio device pulls the sound frame by frame at the hardware's 65.536 kHz rate (resampled by SDL), so game slowdowns cannot starve it; not yet compared with hardware. Liquids, ground effects, charge beams, bombs and bosses have no sounds yet. Aria: the C11 importer exports all 495 gSongTable records, MP2K headers, required voice groups and samples into a private golden-guarded bank. PlaySong routes native player priorities and control commands into the portable MP2K sequencer; its track decoder, DirectSound allocation, envelopes, pitch, mono mixer and SDL/WAV output are connected in the runtime. Volume ramps now update every track's volPublic control, and stop/continue state suspends the sequencer and releases live channels, preventing replaced opening-scene music from continuing underneath its successor. CGB synthesis, reverb, LFO modulation, hardware-rate scheduling and emulator/listening comparison remain incomplete. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x081 and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -20113,6 +20113,12 @@
  },
  "timeline": [
   {
+   "commit": "08fcb69",
+   "date": "2026-11-07",
+   "subject": "Complete Aria opening story and soul presentation",
+   "scope": "project"
+  },
+  {
    "commit": "b5a1d22",
    "date": "2026-11-07",
    "subject": "Add Stop button to the SFX browser and fix early-tick GTK warning",
@@ -20584,12 +20590,6 @@
    "commit": "e4a4cba",
    "date": "2026-11-02",
    "subject": "Port the Nemesis soul and complete Nemesis",
-   "scope": "project"
-  },
-  {
-   "commit": "b52482d",
-   "date": "2026-11-02",
-   "subject": "Port Nemesis's AI from its native routines",
    "scope": "project"
   }
  ],

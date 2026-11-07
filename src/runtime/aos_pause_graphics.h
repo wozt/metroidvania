@@ -124,6 +124,7 @@ typedef struct {
     uint8_t item_count;
     uint8_t selected_item;
     bool preview_active;
+    bool selecting;               /* item list open (sub_0804AFD4 state) */
 } AosPauseEquipValues;
 
 /* sub_08047684 and sub_08047520: decode the pause hub's actual BG1 tiles,
@@ -159,6 +160,7 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
  * the cursor and button icons are OBJ sprites and remain unrendered. */
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
+                                      uint8_t cursor,
                                       uint8_t *rgba, size_t rgba_size);
 /* sub_0804D2C8: the Enemy list page. Ten slots in two columns of five;
  * defeated enemies show name text 0x25D+enemy through the context-B

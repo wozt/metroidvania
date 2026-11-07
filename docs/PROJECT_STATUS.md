@@ -50,9 +50,16 @@ Last updated: **2026-11-07**.
   pointing pose of the decoded idle cycle — at `sub_08048AD8`'s native
   hub cell `(1, selected + 0xC)`, pixel `(14, 99 + selected*8)`.
 - Source-derived and unit-tested, not emulator-compared. The idle frame
-  cycle and `sub_08048018`'s vertical bob remain unwired, the palette
-  row's upper half is approximated from the following ROM block, and the
-  other six pause pages still need their own `sub_08048AD8` placements.
+  cycle and `sub_08048018`'s vertical bob remain unwired, and the palette
+  row's upper half is approximated from the following ROM block.
+- Extended the hand to all seven pause pages with each page's decoded
+  `sub_08048AD8` placement: hub `(1, selected+0xC)`, sleep `(1, 0x10)`,
+  ability `((cursor&1)?0x10:2, 4+2*(cursor>>1))`, item use
+  `((slot&1)?0x10:1, 0xB+slot/2)`, equip `(2, 5+2*slot)` plus the item
+  list's flat slot formula, config `(5, cursor*2+4)`, soul set
+  `((slot&1)?0x10:2, 0xA+slot/2)` and enemy
+  `((slot&1)?0x10:2, 5+slot/2)`. The enemy detail view, soul set's
+  second placement and every page's frame animation remain open.
 
 ## Patch 0798 - Reconstruct the opening obtained-soul windows
 

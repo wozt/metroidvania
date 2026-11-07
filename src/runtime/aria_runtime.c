@@ -4328,6 +4328,7 @@ static bool draw_native_equip(SDL_Renderer *renderer, SDL_Texture *texture,
                              ? menu->equip_choice
                              : aos_equipment_current(stats, menu->equip_slot),
         .preview_active = menu->equip_selecting && equipment,
+        .selecting = menu->equip_selecting,
     };
     memcpy(values.preview, values.current, sizeof values.preview);
     if (values.preview_active) {
@@ -4382,6 +4383,7 @@ static bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
         return false;
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_config(graphics, menu->config_buttons,
+                                          menu->config_cursor,
                                           pixels, sizeof pixels) ||
         !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
         return false;

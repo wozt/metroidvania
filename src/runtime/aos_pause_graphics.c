@@ -521,6 +521,10 @@ bool aos_pause_graphics_render_soul_set(
         return false;
 
     composite_on_backdrop(graphics, rgba);
+    /* sub_08048EA4: column 2 or 0x10 on the flat slot's bit 0, row
+     * 0xA + slot/2 where slot = selected - top in the eight-entry list. */
+    draw_cursor(graphics, rgba, (selected - top) & 1 ? 0x10 : 2,
+                0xA + (int)(selected - top) / 2, 6);
     return true;
 }
 
@@ -643,13 +647,28 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         return false;
 
     composite_on_backdrop(graphics, rgba);
+    /* sub_0804AAF0 holds the hand at cell (2, 5 + 2*slot) on the equipped
+     * rows; sub_0804AFD4 moves it to the flat item slot
+     * ((entry&1) ? 0x10 : 2, 0xB + entry/2) while the list is open. */
+    if (values->selecting) {
+        for (unsigned entry = 0; entry < values->item_count; ++entry)
+            if (values->items[entry] == values->selected_item) {
+                draw_cursor(graphics, rgba, entry & 1 ? 0x10 : 2,
+                            0xB + (int)(entry / 2), 6);
+                break;
+            }
+    } else {
+        draw_cursor(graphics, rgba, 2, 5 + 2 * (int)values->slot, 6);
+    }
     return true;
 }
 
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
+                                      uint8_t cursor,
                                       uint8_t *rgba, size_t rgba_size) {
-    if (!config || !valid_output(graphics, rgba, rgba_size)) return false;
+    if (!config || cursor >= AOS_BUTTON_ACTIONS ||
+        !valid_output(graphics, rgba, rgba_size)) return false;
     reset_bg0(graphics);
     /* sub_0804C264: four rows at tile rows 4,6,8,10. The action label is a
      * baked seven- or six-tile strip at entry 0x3359+row*0x10 (row 1 is six
@@ -668,6 +687,8 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                   (uint16_t)(0x32A0 + index * 3), 3);
     }
     composite(graphics, rgba);
+    /* sub_0804C3AC: sub_08048AD8(5, cursor*2 + 4) beside the rows. */
+    draw_cursor(graphics, rgba, 5, 4 + 2 * (int)cursor, 6);
     return true;
 }
 
@@ -730,6 +751,11 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
             return false;
     }
     composite(graphics, rgba);
+    /* sub_0804BA18's placement: column 2 or 0x10 on cursor bit 0, row
+     * 4 + 2*(cursor>>1) — the hand sits left of the selected strip. */
+    draw_cursor(graphics, rgba,
+                values->cursor & 1 ? 0x10 : 2,
+                4 + 2 * (int)(values->cursor >> 1), 6);
     return true;
 }
 
@@ -797,6 +823,18 @@ bool aos_pause_graphics_render_item_use(
         !place_text_id(graphics, (uint16_t)(0x15C + values->selected),
                        false, 40, 130, 192, 3, &next_tile))
         return false;
+    /* sub_0804B808's placement: column 1 or 0x10 on the flat slot's bit 0,
+     * row 0xB + slot/2 where slot is the selected owned ordinal minus the
+     * scroll top. */
+    if (values->selected != 0xFF)
+        for (unsigned o = 0; o < owned_count; ++o)
+            if (owned[o] == values->selected) {
+                int slot = (int)o - (int)values->top;
+                if (slot >= 0 && slot < (int)AOS_PAUSE_ITEM_USE_VISIBLE)
+                    draw_cursor(graphics, rgba, slot & 1 ? 0x10 : 1,
+                                0xB + slot / 2, 6);
+                break;
+            }
     composite(graphics, rgba);
     return true;
 }
@@ -877,6 +915,13 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
             return false;
     }
     composite(graphics, rgba);
+    /* sub_0804C668/sub_0804C770: column 2 or 0x10 on the slot's bit 0,
+     * row 5 + slot/2 where slot = cursor - top on the ten-entry page. */
+    if (!values->detail && values->cursor >= values->top &&
+        values->cursor - values->top < AOS_PAUSE_ENEMY_PAGE)
+        draw_cursor(graphics, rgba,
+                    (values->cursor - values->top) & 1 ? 0x10 : 2,
+                    5 + (int)((values->cursor - values->top) / 2), 6);
     return true;
 }
 
@@ -1029,7 +1074,11 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
             !place_text_id(graphics, 0x34D, true, 72, 128, 96, 3,
                            &next_tile))
             return false;
+        /* sub_0804BE0C's only placement: sub_08048AD8(1, 0x10), the hand
+         * held at the left of the Yes/No row while the text cursor marks
+         * the selection. */
     }
     composite(graphics, rgba);
+    if (can_sleep) draw_cursor(graphics, rgba, 1, 16, 6);
     return true;
 }

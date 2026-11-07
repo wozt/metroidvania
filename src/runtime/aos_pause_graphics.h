@@ -58,6 +58,16 @@ typedef struct {
 } AosPauseSoulSetValues;
 
 enum {
+    AOS_PAUSE_ABILITY_COUNT = 6,
+};
+
+typedef struct {
+    uint8_t owned[AOS_PAUSE_ABILITY_COUNT];   /* SoulInventory_GetSoulTotal(3,i) > 0 */
+    uint8_t enabled[AOS_PAUSE_ABILITY_COUNT]; /* sub_08032AB8 bit i set */
+    uint8_t cursor;
+} AosPauseAbilityValues;
+
+enum {
     AOS_PAUSE_EQUIP_SLOTS = 3,
     AOS_PAUSE_EQUIP_VISIBLE = 8,
     AOS_PAUSE_EQUIP_STATS = 6,
@@ -110,6 +120,14 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
                                       uint8_t *rgba, size_t rgba_size);
+/* sub_0804BA18/sub_0804BB40: the Ability page. The bottom message window
+ * (sub_080472B0), the twelve baked row strips, the per-ability ON/OFF tile
+ * pairs and the localized names (0x156-0x15B, or 0x34F "---") are BG0. The
+ * selection arrow, window frame and description popup remain OBJ/other
+ * layers and are unrendered. */
+bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
+                                       const AosPauseAbilityValues *values,
+                                       uint8_t *rgba, size_t rgba_size);
 /* sub_0804BD38/sub_0804BE0C: the Sleep confirm page's native strings
  * (0x36A "Pause the game?", 0x34B "Yes", 0x34D "No") or the 0x361
  * cannot-save message. The selection arrow and window frame are OBJ and

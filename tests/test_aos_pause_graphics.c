@@ -260,6 +260,39 @@ int main(int argc, char **argv) {
                                                rgba, 240 * 160 * 4));
         assert(aos_pause_graphics_render_sleep(&graphics, true,
                                                rgba, 240 * 160 * 4));
+        /* sub_0804BA18/sub_0804BB40: window fill, strips, ON/OFF pairs and
+         * names. Ability 0 owned+enabled, 1 owned+disabled, 2 unowned. */
+        {
+            AosPauseAbilityValues ability = {.cursor = 0};
+            ability.owned[0] = 1;
+            ability.enabled[0] = 1;
+            ability.owned[1] = 1;
+            ability.owned[3] = 1;
+            ability.enabled[3] = 1;
+            assert(aos_pause_graphics_render_ability(&graphics, &ability,
+                                                     rgba, 240 * 160 * 4));
+            /* Window fill below the text band: cell (17*32+10) is
+             * i=4,j=6 -> 0x3200+4*32+6 = 0x3286; (18*32+26) -> 0x32B6. */
+            assert(graphics.bg0_map[17 * 32 + 10] == 0x3286);
+            assert(graphics.bg0_map[18 * 32 + 26] == 0x32B6);
+            /* Strips above the name rows (text occupies tile rows
+             * 12-14): i=0 row 4 -> 0x3380/0x3390, i=3 row 10 ->
+             * 0x33E0/0x33F0. */
+            assert(graphics.bg0_map[4 * 32 + 3] == 0x3380);
+            assert(graphics.bg0_map[4 * 32 + 12] == 0x3389);
+            assert(graphics.bg0_map[4 * 32 + 17] == 0x3390);
+            assert(graphics.bg0_map[10 * 32 + 3] == 0x33E0);
+            assert(graphics.bg0_map[10 * 32 + 17] == 0x33F0);
+            /* ON/OFF pairs: ability 0 even -> x 0xD row 4 tile 0xB31E;
+             * ability 1 odd -> x 0x1B row 4 tile 0xB30E; ability 3 odd ->
+             * x 0x1B row 6 tile 0xB31E. */
+            assert(graphics.bg0_map[4 * 32 + 0xD] == 0xB31E);
+            assert(graphics.bg0_map[4 * 32 + 0xE] == 0xB31F);
+            assert(graphics.bg0_map[4 * 32 + 0x1B] == 0xB30E);
+            assert(graphics.bg0_map[6 * 32 + 0x1B] == 0xB31E);
+            /* Unowned ability 2 writes no marker. */
+            assert(graphics.bg0_map[4 * 32 + 0xD] != 0xB30E);
+        }
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

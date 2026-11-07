@@ -4402,6 +4402,30 @@ static bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
+static bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
+                                AosPauseGraphics *graphics,
+                                const AosSoulMenu *menu, const AosStats *stats) {
+    if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
+        menu->page != AOS_SOUL_MENU_PAGE_ABILITY)
+        return false;
+    AosPauseAbilityValues values = {
+        .cursor = menu->cursor[AOS_SOUL_MENU_ABILITY],
+    };
+    for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
+        values.owned[i] =
+            aos_souls_total(stats, AOS_SOUL_ABILITY, (int32_t)i) != 0;
+        values.enabled[i] =
+            (stats->abilities[i >> 3] & (1u << (i & 7))) != 0;
+    }
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_pause_graphics_render_ability(graphics, &values,
+                                           pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
 static bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosQuickMap *map, const AosStats *stats,
                                   uint32_t animation_frame) {
@@ -6989,6 +7013,8 @@ int aria_runtime_main(int argc, char **argv) {
                                    has_active_save ? active_save.play_frames : (uint32_t)step) &&
                  !draw_native_config(renderer, pause_texture, &pause_graphics,
                                      &soul_menu) &&
+                 !draw_native_ability(renderer, pause_texture, &pause_graphics,
+                                      &soul_menu, &progress) &&
                  !draw_native_sleep(renderer, pause_texture, &pause_graphics,
                                     &soul_menu))
             draw_soul_menu(renderer, &soul_menu, &progress,

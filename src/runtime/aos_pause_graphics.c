@@ -594,6 +594,68 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
     return true;
 }
 
+/* sub_080472B0: fills a tilemap rectangle with consecutive tile indices.
+ * Native column/row counts derive from the last two arguments as
+ * (arg3 * 6) >> 3 and (arg4 * 12) >> 3; tile (i, j) is arg2 + i * 32 + j. */
+static void window_fill(AosPauseGraphics *graphics, unsigned column,
+                        unsigned row, uint16_t tile_base, unsigned dim_a,
+                        unsigned dim_b) {
+    unsigned columns = (dim_a * 3 * 2) >> 3;
+    unsigned rows = (dim_b * 3 * 4) >> 3;
+    for (unsigned i = 0; i < rows; ++i)
+        for (unsigned j = 0; j < columns; ++j) {
+            size_t cell = (size_t)(row + i) * 32 + column + j;
+            if (cell < 32 * 32)
+                graphics->bg0_map[cell] =
+                    (uint16_t)(tile_base + i * 32 + j);
+        }
+}
+
+bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
+                                       const AosPauseAbilityValues *values,
+                                       uint8_t *rgba, size_t rgba_size) {
+    if (!values || values->cursor >= AOS_PAUSE_ABILITY_COUNT ||
+        !graphics || !graphics->text_ready ||
+        !valid_output(graphics, rgba, rgba_size))
+        return false;
+    reset_bg0(graphics);
+    /* sub_08041204-style placeholder clear shared with the soul pages. */
+    clear_bg0_tiles(graphics, 0x380, 0x80);
+    /* sub_0804BA18 init: the bottom message window then, for each of the
+     * six abilities, a ten-tile strip at column 3 (tiles 0x3380+i*0x20)
+     * and one at column 0x11 (tiles 0x3390+i*0x20), rows 4+2i. */
+    window_fill(graphics, 4, 0xD, 0x3200, 0x1F, 4);
+    for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
+        put_tiles(graphics, 3, (int)(4 + i * 2),
+                  (uint16_t)(0x3380 + i * 0x20), 10);
+        put_tiles(graphics, 0x11, (int)(4 + i * 2),
+                  (uint16_t)(0x3390 + i * 0x20), 10);
+    }
+    /* sub_0804BB40's per-frame loop: each owned ability gets a two-tile
+     * ON/OFF marker. Column is 0xD for even indices, 0x1B for odd; row is
+     * 4 + 2*(i>>1). sub_08032AB8 returns the ability's mask bit, so
+     * (state >> i) << 4 adds 0x10 to 0xB30E when enabled (0xB31E). */
+    for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
+        if (!values->owned[i]) continue;
+        put_tiles(graphics, (int)(i & 1 ? 0x1B : 0xD),
+                  (int)(4 + (i >> 1) * 2),
+                  (uint16_t)(values->enabled[i] ? 0xB31E : 0xB30E), 2);
+    }
+    /* Names print through the context-B cursor: window column 0 or 0x15
+     * and row 0xC + i/2 give pixel (0|126, (12+i/2)*8); the window spans
+     * 14 cells so text wraps at about 78 pixels. */
+    unsigned next_tile = 0;
+    for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
+        if (!place_text_id(graphics,
+                           values->owned[i] ? (uint16_t)(0x156 + i) : 0x34F,
+                           true, (i & 1u) ? 126u : 0u,
+                           (12u + i / 2u) * 8u, 78, 3, &next_tile))
+            return false;
+    }
+    composite(graphics, rgba);
+    return true;
+}
+
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
                                      bool can_sleep, uint8_t *rgba,
                                      size_t rgba_size) {

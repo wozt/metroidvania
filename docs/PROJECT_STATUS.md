@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0790 - START ability page native BG0
+
+- Audited the asm-only ability page (`sub_0804BA18` init, `sub_0804BB40`
+  update/draw): six ability slots in two columns of three, soul totals
+  read through `SoulInventory_GetSoulTotal(3, i)` and on/off state
+  through `sub_08032AB8`/`sub_08032ADC` on the `unk_13396` bits — both
+  already mirrored by `aos_souls_total`/`stats->abilities`.
+- `sub_080472B0` is a tilemap rectangle filler writing into the BG0 map
+  at `0x0600E000`: the page opens the bottom message window at column 4,
+  row 13 with tile base `0x3200`, then `sub_0804BA18` lays twelve baked
+  ten-tile strips at columns 3 and 17, rows `4+2i`, entries
+  `0x3380+i*0x20`/`0x3390+i*0x20`.
+- `sub_0804BB40`'s per-frame loop gives each owned ability a two-tile
+  ON/OFF marker at column `0xD` (even) or `0x1B` (odd), row
+  `4+2*(i>>1)`: tile `0xB30E` off, `0xB31E` on.
+- Names print through the context-B cursor (`sub_08040970` window
+  column 0 or `0x15`, row `0xC+i/2`): pixel columns 0/126, rows
+  96/104/112, text IDs `0x156`-`0x15B` (the six ability names decoded
+  from the ROM) or `0x34F` "---" when unowned.
+- `aos_pause_graphics_render_ability` reproduces the window fill, strips,
+  ON/OFF pairs and names on BG0; the selection arrow, window frame and
+  the description popup remain OBJ/other-layer gaps. Item Use and Enemy
+  are now the only START pages still on the diagnostic SDL path.
+
 ## Patch 0789 - START sleep page native strings
 
 - Decoded the asm-only sleep routines (`sub_0804BD38` init, `sub_0804BE0C`

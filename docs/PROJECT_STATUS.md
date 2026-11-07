@@ -24,13 +24,22 @@ Last updated: **2026-11-07**.
   `special_objects[64]` and draws each spawned SPECIAL entity with
   animation 0 looping; per-object animation/behaviour selection is not
   yet audited.
+- Param0 census across all rooms (`--aria-entities`): id 14 uses record
+  indices 0-14, id 18 uses 0-3, id 15 is mostly param0 0 plus palette
+  variants 0x600/0x900, id 7 is mostly param0 1. The ROM tables are
+  decoded: id 14's `entity+0x30` indexes 12-byte records at
+  `0x085262BC` whose byte0 selects a `{gfx,palette,frames}` triple at
+  `0x08526214 + group*12` (groups 0-13) and byte1 the palette bank;
+  id 18's param0 indexes 24-byte records at `0x085263A8`
+  (gfx@0, palette@4, frames@8, bank@0xC); id 15 draws the shared flame
+  frames `0x0820ED60` with palette row `param0 >> 8` (default 7).
 - Regenerated the `aos_native_golden` fixture for the corrected object
   outputs. Source-derived and unit-tested, not emulator-compared.
 
-Next: resolve the param0-driven resource tables for ids 14 and 18 (and
-the shared-flame path of 15), decode the indirect creates of 7 and 10,
-then audit each object's animation/state selection and compare a room's
-object layer against an emulator.
+Next: export each used param0 variant of ids 14, 18 and 15, wire the
+runtime param0->variant lookup, decode the indirect creates of 7 and
+10, then audit each object's animation/state selection and compare a
+room's object layer against an emulator.
 
 ## Patch 0800 - Native menu audio ducking and opening music ownership
 

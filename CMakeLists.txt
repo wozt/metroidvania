@@ -696,7 +696,8 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_mp2k_tests tests/test_aos_mp2k.c src/runtime/aos_mp2k.c)
     target_include_directories(fusion_aos_mp2k_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_mp2k_tests)
-    add_test(NAME aos_mp2k COMMAND fusion_aos_mp2k_tests)
+    add_test(NAME aos_mp2k COMMAND fusion_aos_mp2k_tests
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_executable(fusion_aos_skill_axe_tests tests/test_aos_skill_axe.c
                    src/runtime/aos_skill_axe.c src/runtime/aos_audio.c)

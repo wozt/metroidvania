@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "../src/runtime/aos_mp2k.h"
 
@@ -412,12 +413,153 @@ static void player_tempo_test(void) {
     assert(scaled.tempo_interval == 60);
 }
 
+/* Every engine replacement restores the host gain contract: all eight
+ * players at 255, whatever path installed the bank. */
+static void host_gain_default_test(void) {
+    AosMp2kEngine engine;
+    uint8_t bank[64] = {0};
+
+    aos_mp2k_engine_init(&engine);
+    for (unsigned player = 0; player < AOS_MP2K_PLAYER_COUNT; ++player)
+        assert(engine.host_player_gain[player] == 255);
+
+    assert(aos_mp2k_engine_set_bank(&engine, bank, sizeof bank, BASE));
+    for (unsigned player = 0; player < AOS_MP2K_PLAYER_COUNT; ++player)
+        assert(engine.host_player_gain[player] == 255);
+
+    /* A file-backed bank of the declared size loads the same defaults. */
+    const char *path = "fusion_test_mp2k_bank.bin";
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    uint8_t *zeros = calloc(1, AOS_MP2K_BANK_SIZE);
+    assert(zeros && fwrite(zeros, 1, AOS_MP2K_BANK_SIZE, file) == AOS_MP2K_BANK_SIZE);
+    assert(fclose(file) == 0);
+    free(zeros);
+    char error[128];
+    aos_mp2k_player_host_gain(&engine, 3, 7);
+    assert(aos_mp2k_engine_load_bank(&engine, path, error, sizeof error));
+    assert(error[0] == '\0' && engine.owned_bank && engine.bank == engine.owned_bank);
+    for (unsigned player = 0; player < AOS_MP2K_PLAYER_COUNT; ++player)
+        assert(engine.host_player_gain[player] == 255);
+
+    /* A failed load reports the error and leaves the valid engine alone. */
+    const uint8_t *old_bank = engine.bank;
+    size_t old_size = engine.bank_size;
+    assert(!aos_mp2k_engine_load_bank(&engine, "fusion_test_no_such_bank.bin",
+                                      error, sizeof error));
+    assert(error[0] != '\0');
+    assert(engine.bank == old_bank && engine.bank_size == old_size &&
+           engine.owned_bank != NULL);
+    for (unsigned player = 0; player < AOS_MP2K_PLAYER_COUNT; ++player)
+        assert(engine.host_player_gain[player] == 255);
+    remove(path);
+    aos_mp2k_engine_destroy(&engine);
+}
+
+/* A host gain of 0 silences only its own player; the other keeps playing. */
+static void host_gain_mix_test(void) {
+    static uint8_t bank[64];
+    for (size_t i = 0; i < sizeof bank; ++i) bank[i] = 0;
+    bank[12] = 4;
+    bank[16] = 10;
+    bank[17] = 20;
+    bank[18] = 30;
+    bank[19] = 40;
+    AosMp2kEngine engine;
+    aos_mp2k_engine_init(&engine);
+    assert(aos_mp2k_engine_set_bank(&engine, bank, sizeof bank, BASE));
+    int8_t out[4];
+    /* A fresh looping-free channel per mix: sample 10 at full volume is 9. */
+    #define RESET_CHANNELS() do { \
+        engine.direct[0] = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, \
+            .type = 8, .right_volume = 255, .left_volume = 255, .player = 0}; \
+        engine.direct[0].tone = (AosMp2kTone){.type = 8, .wav = BASE, \
+                                              .attack = 0xFF}; \
+        engine.direct[1] = engine.direct[0]; \
+        engine.direct[1].player = 1; \
+    } while (0)
+
+    RESET_CHANNELS();
+    aos_mp2k_mix(&engine, out, 1);
+    assert(out[0] == 18);   /* both channels add: 9 + 9 */
+    aos_mp2k_player_host_gain(&engine, 0, 0);
+    RESET_CHANNELS();
+    aos_mp2k_mix(&engine, out, 1);
+    assert(out[0] == 9);    /* only player 1 remains */
+    aos_mp2k_player_host_gain(&engine, 1, 0);
+    RESET_CHANNELS();
+    aos_mp2k_mix(&engine, out, 1);
+    assert(out[0] == 0);
+    aos_mp2k_player_host_gain(&engine, 0, 255);
+    aos_mp2k_player_host_gain(&engine, 1, 255);
+    RESET_CHANNELS();
+    aos_mp2k_mix(&engine, out, 1);
+    assert(out[0] == 18);
+    #undef RESET_CHANNELS
+}
+
+/* With the extracted Aria bank: the title heartbeat (song 0x11C, MP2K
+ * player 5) produces nonzero PCM. Skipped when the private extraction is
+ * absent, like the Zero Mission whole-bank check. */
+static void extracted_bank_test(void) {
+    const char *bank_path = "assets/extracted/aria/sound/runtime/sound_bank.bin";
+    const char *table_path = "assets/extracted/aria/sound/runtime/song_table.tsv";
+    FILE *probe = fopen(bank_path, "rb");
+    if (!probe) {
+        puts("aos_mp2k: no extracted Aria bank, the PCM check is skipped");
+        return;
+    }
+    fclose(probe);
+    FILE *table = fopen(table_path, "rb");
+    assert(table);
+    char line[512];
+    assert(fgets(line, sizeof line, table));   /* schema */
+    unsigned id = 0, player = 0;
+    unsigned header = 0;
+    bool found = false;
+    while (fgets(line, sizeof line, table)) {
+        unsigned row_id, row_player;
+        unsigned row_header;
+        if (sscanf(line, "song\t%u\t0x%x\t%u", &row_id, &row_header,
+                   &row_player) == 3 && row_id == 0x11C) {
+            id = row_id;
+            header = row_header;
+            player = row_player;
+            found = true;
+            break;
+        }
+    }
+    fclose(table);
+    assert(found && id == 0x11C);
+
+    AosMp2kEngine engine;
+    aos_mp2k_engine_init(&engine);
+    char error[128];
+    assert(aos_mp2k_engine_load_bank(&engine, bank_path, error, sizeof error));
+    for (unsigned p = 0; p < AOS_MP2K_PLAYER_COUNT; ++p)
+        assert(engine.host_player_gain[p] == 255);
+    assert(aos_mp2k_player_start(&engine, (uint8_t)player, header));
+    int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
+    int peak = 0;
+    for (int frame = 0; frame < 600 && peak == 0; ++frame) {
+        aos_mp2k_engine_player_frame(&engine, (uint8_t)player);
+        aos_mp2k_mix(&engine, pcm, sizeof pcm);
+        for (size_t i = 0; i < sizeof pcm; ++i)
+            if (pcm[i] < -peak || pcm[i] > peak) peak = pcm[i] < 0 ? -pcm[i] : pcm[i];
+    }
+    assert(peak > 0);
+    aos_mp2k_engine_destroy(&engine);
+}
+
 int main(void) {
     player_tempo_test();
     channel_test();
     allocation_test();
     mix_test();
     mixer_test();
+    host_gain_default_test();
+    host_gain_mix_test();
+    extracted_bank_test();
     engine_song_start_test();
     parameter_and_note_test();
     pattern_and_repeat_test();

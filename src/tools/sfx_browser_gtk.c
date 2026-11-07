@@ -32,7 +32,7 @@ typedef struct {
     MzmPull mzm_pull;
     BrowserGame selected_game;
     int selected_id, player, repeat_delay;
-    bool ready[2], playing, paused;
+    bool ready[2], playing, paused, aria_start_ok;
     gint64 last_tick;
     double aria_accumulator;
     guint timer;
@@ -40,8 +40,15 @@ typedef struct {
 
 static void aria_start_song(void *context, uint16_t song,
                             const AosAudioSongInfo *info) {
+    Browser *browser = context;
     (void)song;
-    (void)aos_mp2k_player_start(context, info->player, info->header_pointer);
+    browser->aria_start_ok =
+        aos_mp2k_player_start(&browser->aria, info->player,
+                              info->header_pointer);
+    if (g_getenv("FUSION_SFX_DEBUG"))
+        fprintf(stderr, "[sfx-browser] PlaySong 0x%03X -> MP2K player %u: %s\n",
+                song, info->player,
+                browser->aria_start_ok ? "started" : "rejected");
 }
 
 static void SDLCALL mzm_pull(void *userdata, SDL_AudioStream *stream,
@@ -109,10 +116,21 @@ static void play_current(Browser *browser) {
     browser->player = -1;
     if (game == BROWSER_ARIA) {
         AosAudioSongInfo info;
-        if (!aos_audio_song_info((size_t)browser->selected_id, &info)) return;
+        if (!aos_audio_song_info((size_t)browser->selected_id, &info)) {
+            gtk_label_set_text(GTK_LABEL(browser->status),
+                               "Unknown Aria sound ID: no song-table entry");
+            return;
+        }
         browser->player = info.player;
         SDL_ClearAudioStream(browser->aria_stream);
+        browser->aria_start_ok = false;
         aos_audio_play_song((uint16_t)browser->selected_id);
+        if (!browser->aria_start_ok) {
+            gtk_label_set_text(GTK_LABEL(browser->status),
+                "Aria sound not started: bank stream invalid or a higher-priority player is active");
+            browser->playing = false;
+            return;
+        }
         if (browser->mzm_stream) SDL_PauseAudioStreamDevice(browser->mzm_stream);
         SDL_ResumeAudioStreamDevice(browser->aria_stream);
     } else {
@@ -274,23 +292,37 @@ static bool audio_init(Browser *browser) {
     char error[256];
     aos_mp2k_engine_init(&browser->aria);
     aos_audio_reset();
-    browser->ready[BROWSER_ARIA] =
-        aos_audio_load_song_table(ARIA_TABLE, error, sizeof error) &&
+    bool table_ok =
+        aos_audio_load_song_table(ARIA_TABLE, error, sizeof error);
+    if (!table_ok)
+        fprintf(stderr, "[sfx-browser] Aria song table: %s\n", error);
+    bool bank_ok =
         aos_mp2k_engine_load_bank(&browser->aria, ARIA_BANK, error, sizeof error);
+    if (!bank_ok)
+        fprintf(stderr, "[sfx-browser] Aria sound bank: %s\n", error);
+    browser->ready[BROWSER_ARIA] = table_ok && bank_ok;
     if (browser->ready[BROWSER_ARIA]) {
-        aos_audio_set_start_sink(aria_start_song, &browser->aria);
+        aos_audio_set_start_sink(aria_start_song, browser);
         SDL_AudioSpec spec = {SDL_AUDIO_S8, 1, AOS_MP2K_HOST_RATE};
         browser->aria_stream = SDL_OpenAudioDeviceStream(
             SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
         browser->ready[BROWSER_ARIA] = browser->aria_stream != NULL;
+        if (!browser->ready[BROWSER_ARIA])
+            fprintf(stderr, "[sfx-browser] Aria playback device: %s\n",
+                    SDL_GetError());
     }
     browser->ready[BROWSER_MZM] = mzm_audio_open(MZM_BANK, MZM_TABLES);
+    if (!browser->ready[BROWSER_MZM])
+        fprintf(stderr, "[sfx-browser] Zero Mission sound bank unavailable\n");
     if (browser->ready[BROWSER_MZM]) {
         mzm_audio_initialize();
         SDL_AudioSpec spec = {SDL_AUDIO_S16LE, 2, 65536};
         browser->mzm_stream = SDL_OpenAudioDeviceStream(
             SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, mzm_pull, &browser->mzm_pull);
         browser->ready[BROWSER_MZM] = browser->mzm_stream != NULL;
+        if (!browser->ready[BROWSER_MZM])
+            fprintf(stderr, "[sfx-browser] Zero Mission playback device: %s\n",
+                    SDL_GetError());
     }
     if (browser->aria_stream) SDL_PauseAudioStreamDevice(browser->aria_stream);
     if (browser->mzm_stream) SDL_PauseAudioStreamDevice(browser->mzm_stream);
@@ -316,13 +348,42 @@ int main(int argc, char **argv) {
                aria_default.player,
                MV_SPLIT_MZM_LIGHTNING_SOUND,
                mzm_audio_sound_player(MV_SPLIT_MZM_LIGHTNING_SOUND));
+        /* Render each title pulse offline: a valid entry must reach the
+         * mixer as nonzero PCM, not only pass PlaySong validation. */
+        int aria_peak = 0, mzm_peak = 0;
+        if (browser.ready[BROWSER_ARIA]) {
+            aos_audio_play_song(MV_SPLIT_ARIA_HEARTBEAT_SOUND);
+            int8_t pcm[AOS_MP2K_SAMPLES_PER_FRAME];
+            for (int frame = 0; frame < 600 && !aria_peak; ++frame) {
+                aos_mp2k_engine_frame(&browser.aria);
+                aos_mp2k_mix(&browser.aria, pcm, sizeof pcm);
+                for (size_t i = 0; i < sizeof pcm; ++i)
+                    if (pcm[i] < -aria_peak || pcm[i] > aria_peak)
+                        aria_peak = pcm[i] < 0 ? -(int)pcm[i] : pcm[i];
+            }
+        }
+        if (browser.ready[BROWSER_MZM]) {
+            static int16_t pcm[2048 * 2];
+            mzm_sound_play(MV_SPLIT_MZM_LIGHTNING_SOUND);
+            for (int frame = 0; frame < 240 && !mzm_peak; ++frame) {
+                mzm_audio_update();
+                int count = mzm_audio_render(pcm, 2048, 65536);
+                for (int i = 0; i < count * 2; ++i) {
+                    int v = pcm[i] < 0 ? -(int)pcm[i] : pcm[i];
+                    if (v > mzm_peak) mzm_peak = v;
+                }
+            }
+        }
+        printf("Pulse PCM peaks: Aria %d, Zero Mission %d\n",
+               aria_peak, mzm_peak);
         if (browser.aria_stream) SDL_DestroyAudioStream(browser.aria_stream);
         if (browser.mzm_stream) SDL_DestroyAudioStream(browser.mzm_stream);
         aos_audio_set_start_sink(NULL, NULL);
         aos_mp2k_engine_destroy(&browser.aria);
         mzm_audio_close();
         SDL_QuitSubSystem(SDL_INIT_AUDIO);
-        return browser.ready[BROWSER_ARIA] && browser.ready[BROWSER_MZM] ? 0 : 1;
+        return browser.ready[BROWSER_ARIA] && browser.ready[BROWSER_MZM] &&
+               aria_peak > 0 && mzm_peak > 0 ? 0 : 1;
     }
     browser.timer = g_timeout_add(8, audio_tick, &browser);
     GtkApplication *application = gtk_application_new(

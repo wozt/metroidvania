@@ -244,10 +244,22 @@ static void set_error(char *error, size_t error_size, const char *message) {
     error[error_size - 1] = '\0';
 }
 
+/* Replaces the engine wholesale; every host-visible default (the player
+ * gains) is restored so a fresh bank never inherits stale or zeroed state. */
+static void engine_replace(AosMp2kEngine *engine, uint8_t *owned_bank,
+                           const uint8_t *bank, size_t size, uint32_t base) {
+    *engine = (AosMp2kEngine){
+        .owned_bank = owned_bank,
+        .bank = bank,
+        .bank_size = size,
+        .bank_base = base,
+    };
+    memset(engine->host_player_gain, 0xFF, sizeof engine->host_player_gain);
+}
+
 void aos_mp2k_engine_init(AosMp2kEngine *engine) {
     if (!engine) return;
-    *engine = (AosMp2kEngine){.bank_base = AOS_MP2K_BANK_BASE};
-    memset(engine->host_player_gain, 0xFF, sizeof engine->host_player_gain);
+    engine_replace(engine, NULL, NULL, 0, AOS_MP2K_BANK_BASE);
 }
 
 void aos_mp2k_engine_destroy(AosMp2kEngine *engine) {
@@ -260,12 +272,7 @@ bool aos_mp2k_engine_set_bank(AosMp2kEngine *engine, const uint8_t *bank,
                               size_t size, uint32_t address_base) {
     if (!engine || !bank || !size) return false;
     free(engine->owned_bank);
-    *engine = (AosMp2kEngine){
-        .bank = bank,
-        .bank_size = size,
-        .bank_base = address_base,
-    };
-    memset(engine->host_player_gain, 0xFF, sizeof engine->host_player_gain);
+    engine_replace(engine, NULL, bank, size, address_base);
     return true;
 }
 
@@ -306,12 +313,7 @@ bool aos_mp2k_engine_load_bank(AosMp2kEngine *engine, const char *path,
         return false;
     }
     free(engine->owned_bank);
-    *engine = (AosMp2kEngine){
-        .owned_bank = bank,
-        .bank = bank,
-        .bank_size = AOS_MP2K_BANK_SIZE,
-        .bank_base = AOS_MP2K_BANK_BASE,
-    };
+    engine_replace(engine, bank, bank, AOS_MP2K_BANK_SIZE, AOS_MP2K_BANK_BASE);
     if (error && error_size) error[0] = '\0';
     return true;
 }

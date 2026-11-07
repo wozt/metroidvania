@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T20:24:49+00:00",
+ "generated_at": "2026-11-07T20:31:33+00:00",
  "git": {
-  "commit": "63b1b1ad",
+  "commit": "bceb6111",
   "branch": "main",
   "dirty": true
  },
@@ -13925,7 +13925,7 @@
     "Object14Update"
    ],
    "limitations": "The create table sUnk_084F0DF8 was dumped from the ROM: entity id = table index and the decompiler's ObjectNN suffix is the hex id, so earlier decimal-labelled exports were remapped to the true ids. Ids 7, 10, 14, 15, 17 and 18 are not yet exported: 14 and 18 index param0-driven resource tables (0x085262BC records -> 0x08526214 triples; 0x085263A8 8-byte records), 15 uses the shared flame frames 0x0820ED60 with a param0-selected palette row, 17 is a spawner that deletes itself and creates via EntityCreateInRange, and 7/10 dispatch indirectly. Per-object animation and behaviour selection is not audited: the runtime draws animation 0 looping for every SPECIAL entity, and ids whose create exports raw still frames as separate animations show the first frame. param0 (entity + 0x30) selects the native state table, not the sprite. Object20 (id 26) is never room-placed: it is spawned by event controllers for cutscene actors. sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Resolve the param0-driven resource tables for ids 14 and 18 (and the shared-flame path of 15), decode the indirect creates of 7 and 10, then audit animation/state selection per object and compare a room's object layer against an emulator.",
+   "next_action": "Tables decoded from the ROM: id 14 param0 (signed, entity + 0x30) indexes 12-byte records at 0x085262BC (used values 0-14); record byte0 selects a {gfx,palette,frames} triple at 0x08526214 + group*12 (groups 0-13 valid), byte1 is the palette-bank argument. Id 18 param0 (values 0-3) indexes 24-byte records at 0x085263A8 with gfx@0, palette@4, frames@8, bank@0xC. Id 15 param0 is mostly 0 with palette-row variants 0x600/0x900 (high byte -> flame palette row, default 7) over shared frames 0x0820ED60. Export each used variant, wire the runtime param0->variant lookup, decode ids 7 and 10, then audit animation/state selection and compare a room's object layer against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_native_golden.c"
@@ -20275,6 +20275,18 @@
  },
  "timeline": [
   {
+   "commit": "bceb6111",
+   "date": "2026-11-07",
+   "subject": "Decode param0-driven SPECIAL object resource tables",
+   "scope": "project"
+  },
+  {
+   "commit": "5b3afcff",
+   "date": "2026-11-07",
+   "subject": "Correct SPECIAL object ids against the ROM create table",
+   "scope": "project"
+  },
+  {
    "commit": "63b1b1ad",
    "date": "2026-11-07",
    "subject": "Export and draw the nine frequent Aria SPECIAL objects",
@@ -20740,18 +20752,6 @@
    "commit": "aa68b098",
    "date": "2026-11-07",
    "subject": "Fix Aria intro presentation: skip overlay, castle wrap, music timing",
-   "scope": "project"
-  },
-  {
-   "commit": "a4433579",
-   "date": "2026-11-07",
-   "subject": "Render the START enemy detail view on native BG0",
-   "scope": "project"
-  },
-  {
-   "commit": "66363554",
-   "date": "2026-11-07",
-   "subject": "Render the START enemy list on native BG0",
    "scope": "project"
   }
  ],

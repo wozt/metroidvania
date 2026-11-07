@@ -33,13 +33,23 @@ Last updated: **2026-11-07**.
   id 18's param0 indexes 24-byte records at `0x085263A8`
   (gfx@0, palette@4, frames@8, bank@0xC); id 15 draws the shared flame
   frames `0x0820ED60` with palette row `param0 >> 8` (default 7).
+- Param0-driven variants are now exported and drawn: id 14's fifteen
+  room-used records (0-14) resolve through `0x085262BC`/`0x08526214` to
+  fourteen sprite groups plus a palette-bank twin, and id 18's four
+  records at `0x085263A8` export as `Object/special_14_vNN` and
+  `Object/special_18_vNN`. The runtime keeps `special_variants[24]`,
+  matches `entity->param0` to the `_vP` suffix and falls back to the
+  base `special_objects` art. The export grew to 874 sequences / 2484
+  frames; the golden fixture was regenerated. Id 15's shared-flame path
+  (`0x0820ED60` + palette row `param0 >> 8`) and the indirect creates
+  of ids 7 and 10 remain open.
 - Regenerated the `aos_native_golden` fixture for the corrected object
   outputs. Source-derived and unit-tested, not emulator-compared.
 
-Next: export each used param0 variant of ids 14, 18 and 15, wire the
-runtime param0->variant lookup, decode the indirect creates of 7 and
-10, then audit each object's animation/state selection and compare a
-room's object layer against an emulator.
+Next: export id 15's flame variants (shared effect frames with palette
+rows 6/7/9), decode the indirect creates of 7 and 10, then audit each
+object's animation/state selection and compare a room's object layer
+against an emulator.
 
 ## Patch 0800 - Native menu audio ducking and opening music ownership
 

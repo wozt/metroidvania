@@ -2972,8 +2972,12 @@ typedef struct {
         AosAnimDef defs[AOS_ENEMY_MAX_ANIMS];
         AosAnimSet set;
         bool loaded;
+        int id, param0; /* special_variants only: -1 id = free slot */
     } opening_actors[AOS_OPENING_ACTOR_COUNT], /* Enemy/opening_actor_N */
-      special_objects[64];                     /* Object/special_NN */
+      special_objects[64],                     /* Object/special_NN */
+      /* Object/special_NN_vP: param0-driven variants of SPECIAL objects
+       * (ids 14 and 18 resolve their sprite through entity->param0). */
+      special_variants[24];
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -3523,6 +3527,7 @@ static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Ren
 static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *renderer) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
+    for (int v = 0; v < 24; ++v) objects->special_variants[v].id = -1;
     char line[1024];
     bool ok = fgets(line, sizeof line, f) && !strncmp(line, INDEX_SCHEMA, strlen(INDEX_SCHEMA));
     while (ok && fgets(line, sizeof line, f)) {
@@ -3653,18 +3658,49 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             }
             continue;
         }
-        /* Object/special_NN/anim_M: room SPECIAL object sprites. The object
-         * id is the SPECIAL entity id; animation selection per object is a
-         * later audit, so every exported animation is kept. */
+        /* Object/special_NN/anim_M and Object/special_NN_vP/anim_M: room
+         * SPECIAL object sprites. The object id is the SPECIAL entity id;
+         * the optional _vP suffix is the param0-driven variant (ids 14 and
+         * 18 resolve their sprite through entity->param0). Animation
+         * selection per object is a later audit, so every exported
+         * animation is kept. */
         char object_name[24];
-        int object_id = -1, object_style = -1;
+        int object_id = -1, object_param = -1, object_style = -1;
         if (sscanf(line, "Object/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", object_name,
-                   &object_style, &frame, &ticks, &ox, &oy, frame_path) == 7 &&
-            sscanf(object_name, "special_%d", &object_id) == 1 &&
-            object_id >= 0 && object_id < 64 && object_style >= 0 &&
-            object_style < AOS_ENEMY_MAX_ANIMS && frame >= 0 &&
-            frame < MAX_FRAMES && ticks >= 1 && ticks <= 255) {
-            __typeof__(objects->special_objects[0]) *art = &objects->special_objects[object_id];
+                   &object_style, &frame, &ticks, &ox, &oy, frame_path) != 7)
+            goto not_object;
+        if (sscanf(object_name, "special_%d_v%d", &object_id, &object_param) < 1)
+            goto not_object;
+        if (object_param < 0 &&
+            sscanf(object_name, "special_%d", &object_id) != 1)
+            goto not_object;
+        if (object_id < 0 || object_id >= 64 || object_style < 0 ||
+            object_style >= AOS_ENEMY_MAX_ANIMS || frame < 0 ||
+            frame >= MAX_FRAMES || ticks < 1 || ticks > 255) {
+            ok = false;
+            break;
+        }
+        {
+            __typeof__(objects->special_objects[0]) *art = NULL;
+            if (object_param >= 0) {
+                for (int v = 0; v < 24; ++v)
+                    if (objects->special_variants[v].id == object_id &&
+                        objects->special_variants[v].param0 == object_param) {
+                        art = &objects->special_variants[v];
+                        break;
+                    }
+                if (!art)
+                    for (int v = 0; v < 24; ++v)
+                        if (objects->special_variants[v].id < 0) {
+                            objects->special_variants[v].id = object_id;
+                            objects->special_variants[v].param0 = object_param;
+                            art = &objects->special_variants[v];
+                            break;
+                        }
+                if (!art) { ok = false; break; }
+            } else {
+                art = &objects->special_objects[object_id];
+            }
             if (frame != art->defs[object_style].count ||
                 !load_frame(&art->frames[object_style][frame], frame_path, ox, oy,
                             renderer)) {
@@ -3679,6 +3715,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
                 art->set.count = (uint16_t)(object_style + 1);
             continue;
         }
+    not_object:;
         int icon;
         if (sscanf(line, "Icon/i%d/anim_0\t%d\t%d\t%d\t%d\t%511s", &icon, &frame, &ticks, &ox,
                    &oy, frame_path) == 6) {
@@ -3710,6 +3747,8 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
     for (int id = 0; id < 64; ++id)
         objects->special_objects[id].set.anims = objects->special_objects[id].defs;
+    for (int v = 0; v < 24; ++v)
+        objects->special_variants[v].set.anims = objects->special_variants[v].defs;
     for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
     for (int k = 0; k < SKILL_ARTS; ++k) objects->skills[k].set.anims = objects->skills[k].defs;
     return ok;
@@ -3739,6 +3778,11 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_objects[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->special_objects[id].frames[i][j].texture);
+    for (int v = 0; v < 24; ++v)
+        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+            for (int j = 0; j < MAX_FRAMES; ++j)
+                if (objects->special_variants[v].frames[i][j].texture)
+                    SDL_DestroyTexture(objects->special_variants[v].frames[i][j].texture);
     for (int k = 0; k < AOS_EFFECT_KINDS; ++k)
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
@@ -3909,8 +3953,15 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         const AriaEntity *e = &room->entities[i];
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
             continue;
-        const __typeof__(objects->special_objects[0]) *art =
-            &objects->special_objects[e->id];
+        const __typeof__(objects->special_objects[0]) *art = NULL;
+        for (int v = 0; v < 24; ++v)
+            if (objects->special_variants[v].id == e->id &&
+                objects->special_variants[v].param0 == e->param0 &&
+                objects->special_variants[v].loaded) {
+                art = &objects->special_variants[v];
+                break;
+            }
+        if (!art) art = &objects->special_objects[e->id];
         if (!art->loaded || !art->defs[0].count) continue;
         unsigned total = 0;
         for (unsigned f = 0; f < art->defs[0].count; ++f) total += art->ticks[0][f];

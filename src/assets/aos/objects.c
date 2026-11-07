@@ -359,6 +359,38 @@ static const EntitySpec special_objects[] = {
     ENTITY("special_27", 0x081CBE84, 0x08209FD8, 1, 0x08210318),
 };
 
+/* SPECIAL ids whose create resolves sprites through param0. Names carry
+ * "special_<id>_v<param0>" and the runtime maps entity->param0 to the
+ * same variant. Id 14: param0 indexes the 12-byte records at 0x085262BC
+ * (room-used values 0-14); record byte0 selects a {gfx,palette,frames}
+ * triple at 0x08526214 + group*12 (groups 0-13) and byte1 the palette
+ * bank argument. Id 18: param0 indexes the 24-byte records at
+ * 0x085263A8 (gfx@0, palette@4, frames@8, bank@0xC), values 0-3. */
+static const EntitySpec special14_variants[] = {
+    ENTITY("special_14_v00", 0x081CBE34, 0x08209E34, 0, 0x0820F64C),
+    ENTITY("special_14_v01", 0x081CBE3C, 0x08209E58, 0, 0x0820F7C4),
+    ENTITY("special_14_v02", 0x081CBE44, 0x08209E7C, 0, 0x0820F944),
+    ENTITY("special_14_v03", 0x081CBE4C, 0x08209EA0, 0, 0x0820FAC4),
+    ENTITY("special_14_v04", 0x081CBE54, 0x08209EC4, 0, 0x0820FC3C),
+    ENTITY("special_14_v05", 0x082591DC, 0x0825C248, 0, 0x0825C574),
+    ENTITY("special_14_v06", 0x082591E4, 0x0825C26C, 0, 0x0825C6F4),
+    ENTITY("special_14_v07", 0x082591EC, 0x0825C290, 0, 0x0825C8D0),
+    ENTITY("special_14_v08", 0x082591F4, 0x0825C2B4, 0, 0x0825C9A0),
+    ENTITY("special_14_v09", 0x082591FC, 0x0825C2D8, 0, 0x0825CA70),
+    ENTITY("special_14_v10", 0x08259204, 0x0825C2FC, 0, 0x0825CB40),
+    ENTITY("special_14_v11", 0x0825EAE4, 0x0826639C, 0, 0x08266A70),
+    ENTITY("special_14_v12", 0x0825EAEC, 0x082663C0, 0, 0x08266B38),
+    ENTITY("special_14_v13", 0x0826800C, 0x08268014, 0, 0x0826822C),
+    ENTITY("special_14_v14", 0x0826800C, 0x08268014, 1, 0x0826822C),
+};
+
+static const EntitySpec special18_variants[] = {
+    ENTITY("special_18_v00", 0x081CBE64, 0x08209F0C, 0, 0x0820FFB4),
+    ENTITY("special_18_v01", 0x081CBE6C, 0x08209F30, 0, 0x08210028),
+    ENTITY("special_18_v02", 0x081CBEAC, 0x0820A100, 0, 0x08210C30),
+    ENTITY("special_18_v03", 0x081CBEAC, 0x0820A100, 0, 0x08210C30),
+};
+
 static const EffectSpec effects[] = {
     {"flame", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {0}, -1},
     {"blood", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
@@ -1498,6 +1530,16 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          ++index)
         success = export_entity(rom, &library, &special_objects[index], "Object",
                                 &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special14_variants / sizeof special14_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special14_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special18_variants / sizeof special18_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special18_variants[index],
+                                "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)
         success = export_effect(rom, &library, &effects[index],

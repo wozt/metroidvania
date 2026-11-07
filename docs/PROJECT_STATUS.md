@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0800 - Native menu audio ducking and opening music ownership
+
+- START and SELECT no longer pause the music: the pause hub, the quick map
+  and their closes issue `AOS_AUDIO_SONG_QUIET`/`AOS_AUDIO_SONG_LOUD`
+  (native commands 0x1012/0x1011, volume ramp to 0x90 and back to 0xFF)
+  instead of the pause/resume pair, matching `sub_080473F4`'s mode entry
+  which issues no stop command — gameplay music keeps playing reduced.
+- Fixed the opening's music ownership: the per-frame room-music enter no
+  longer fires on frame 1 while Object20 runs (it overwrote MUS_28 with
+  the area theme), and the area theme now enters only after the state-8
+  return pan hands control back, so the last track arrives after the soul
+  sequence like the native flow.
+- Source-derived; the audible result still needs an emulator comparison.
+
 ## Opening scene: camera beats and proximity conversations
 
 - Wired the decoded Object20 camera phases to script beats: the first
@@ -21,11 +35,10 @@ Last updated: **2026-11-07**.
   boxes, approximating the native input lock and velocity freeze by skipping
   the gameplay update while the event is active. Speaker id 3 now resolves
   to Genya Arikado.
-- Source-derived and unit-tested, not emulator-compared. The initial room
-  reveal remains the known Object20 gap; the projectile pair spawner
-  `sub_0805DC80` is dead code (its address appears nowhere in the ROM),
-  while `sub_0805DAA0` is the skeleton's live brain, approximated by the
-  scene-state timers.
+- Source-derived and unit-tested, not emulator-compared. The projectile
+  pair spawner `sub_0805DC80` is dead code (its address appears nowhere in
+  the ROM), while `sub_0805DAA0` is the skeleton's live brain, approximated
+  by the scene-state timers.
 - Ported the pre-dialogue room reveal: `sub_0805CED0` case 0 holds the
   script on the spawn camera phase before the window opens, so the actors
   now spawn with camera mode 5 (the -0x80000 pan to X 0x20) and the event

@@ -6010,8 +6010,12 @@ int aria_runtime_main(int argc, char **argv) {
             aos_game_lifecycle_update(&lifecycle);
             /* The room's area music enters with the room like the native
              * flow; Object20's story cues (MUS_16 confrontation, MUS_23
-             * after the battle) override it mid-scene. */
+             * after the battle) override it mid-scene. While the opening
+             * runs, sub_0805CED0 owns the song: the area theme must not
+             * fire on the first frame and overwrite MUS_28, and it enters
+             * only once the state-8 return pan hands control back. */
             if (have_room_music && start_song < 0 &&
+                !(opening.active || opening_actors.camera_active) &&
                 (room.area != music_area || room.number != music_room)) {
                 music_area = room.area;
                 music_room = room.number;
@@ -6144,7 +6148,7 @@ int aria_runtime_main(int argc, char **argv) {
                 if (quick_map_open && quick_map_bldY == 0 && !quick_map_closing &&
                     (aria_input.new_input & (AOS_KEY_SELECT | AOS_KEY_B))) {
                     quick_map_closing = true;
-                    aos_audio_play_song(AOS_AUDIO_RESUME);
+                    aos_audio_play_song(AOS_AUDIO_SONG_LOUD);
                 }
                 ++step;
                 if (has_active_save) active_save.play_frames++;
@@ -6160,7 +6164,7 @@ int aria_runtime_main(int argc, char **argv) {
                     quick_map_open = true;
                     quick_map_bldY = 16;
                     quick_map_closing = false;
-                    aos_audio_play_song(AOS_AUDIO_PAUSE);
+                    aos_audio_play_song(AOS_AUDIO_SONG_QUIET);
                     printf("Quick map opened\n");
                 } else {
                     fprintf(stderr, "Cannot place the quick-map cursor: %s\n", error);
@@ -6192,7 +6196,7 @@ int aria_runtime_main(int argc, char **argv) {
             }
             if (soul_menu_event & AOS_SOUL_MENU_OPENED) {
                 aos_pickup_icon_backup(&room.pickup_icons);
-                aos_audio_play_song(AOS_AUDIO_PAUSE);
+                aos_audio_play_song(AOS_AUDIO_SONG_QUIET);
                 printf("Pause hub opened\n");
             }
             if (soul_menu_event & AOS_SOUL_MENU_MOVED) aos_audio_play_song(0xF1);
@@ -6272,7 +6276,7 @@ int aria_runtime_main(int argc, char **argv) {
             }
             if (soul_menu_event & AOS_SOUL_MENU_CLOSED) {
                 aos_pickup_icon_restore(&room.pickup_icons);
-                aos_audio_play_song(AOS_AUDIO_RESUME);
+                aos_audio_play_song(AOS_AUDIO_SONG_LOUD);
                 printf("Pause hub closed\n");
             }
             if (soul_menu.open || soul_menu_event) {

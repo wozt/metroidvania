@@ -228,8 +228,14 @@ Last updated: **2026-11-06**.
   window path) decodes to WIN0 x[40,240] and WIN1 x[0,40], both y[120,152]
   (`win0H=0x28F0`, `win1H=0x0028`, `win0V=win1V=0x7898` packed with
   `C_16_2_8(start,end)`), so the native dialogue box is a 32px
-  full-width bottom band split at x=40 for the portrait zone; the
-  portable panel geometry still awaits that mapping.
+  full-width bottom band split at x=40 for the portrait zone.
+  `gDisplayRegisters` was also re-anchored: it points at BG0CNT, so
+  `sub_0805AE64` actually programs BG0CNT=0x1C04 (map 0x0600E000, char
+  base 1 = 0x06004000 glyph sheet) and BG1CNT=0x1D01 (map 0x0600E800,
+  char base 0 = 0x06000000 window sheet); the language bank lands at
+  0x0600A000 (BG0-reachable tiles 0x300+) and `sub_080412DC` stores the
+  engine glyph sheet base, not a tilemap. The portable panel geometry
+  still awaits that mapping.
 - Verified the gameplay HUD renders Soma's HP/MP bars (native `hud.bin`
   tiles); no code change was needed — a missing `assets/extracted/aria/
   metadata/hud.bin` next to the launched binary disables it silently.

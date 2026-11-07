@@ -58,6 +58,17 @@ typedef struct {
 } AosPauseSoulSetValues;
 
 enum {
+    AOS_PAUSE_ITEM_USE_RECORDS = 32,
+    AOS_PAUSE_ITEM_USE_VISIBLE = 8,
+};
+
+typedef struct {
+    uint8_t counts[AOS_PAUSE_ITEM_USE_RECORDS]; /* item_counts slot order */
+    uint8_t selected;                           /* item index or 0xFF */
+    uint8_t top;                                /* first visible owned ordinal */
+} AosPauseItemUseValues;
+
+enum {
     AOS_PAUSE_ABILITY_COUNT = 6,
 };
 
@@ -120,6 +131,16 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
                                       uint8_t *rgba, size_t rgba_size);
+/* sub_0804B6C4/sub_0804B494: the Item Use page. Four rows of two slots
+ * reuse the baked strips at columns 2/0x11 rows 11-14, the bottom
+ * description bars sit at column 5 rows 16-18, names are text IDs
+ * 0x5B+item through the context-B cursor, quantities are 0x3300 digit
+ * tiles ending at column 0xD/0x1C and empty slots get two 0x330D dashes.
+ * Item icons are OBJ sprites and the description popup's exact window
+ * placement is approximate; both remain documented gaps. */
+bool aos_pause_graphics_render_item_use(AosPauseGraphics *graphics,
+                                        const AosPauseItemUseValues *values,
+                                        uint8_t *rgba, size_t rgba_size);
 /* sub_0804BA18/sub_0804BB40: the Ability page. The bottom message window
  * (sub_080472B0), the twelve baked row strips, the per-ability ON/OFF tile
  * pairs and the localized names (0x156-0x15B, or 0x34F "---") are BG0. The

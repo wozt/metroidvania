@@ -4426,6 +4426,37 @@ static bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
+static bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
+                                 AosPauseGraphics *graphics,
+                                 const AosSoulMenu *menu, const AosStats *stats) {
+    if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
+        menu->page != AOS_SOUL_MENU_PAGE_ITEM_USE)
+        return false;
+    AosPauseItemUseValues values = {.selected = 0xFF};
+    memcpy(values.counts, stats->item_counts, sizeof values.counts);
+    int choices = aos_item_choice_count(stats);
+    int cursor = 0;
+    for (int ordinal = 0; ordinal < choices; ++ordinal)
+        if (aos_item_choice_at(stats, ordinal) == menu->item_cursor) {
+            cursor = ordinal;
+            break;
+        }
+    int top = cursor - 3;
+    if (top > choices - AOS_PAUSE_ITEM_USE_VISIBLE)
+        top = choices - AOS_PAUSE_ITEM_USE_VISIBLE;
+    if (top < 0) top = 0;
+    values.top = (uint8_t)top;
+    if (menu->item_cursor < AOS_PAUSE_ITEM_USE_RECORDS)
+        values.selected = menu->item_cursor;
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_pause_graphics_render_item_use(graphics, &values,
+                                            pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
 static bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosQuickMap *map, const AosStats *stats,
                                   uint32_t animation_frame) {
@@ -7015,6 +7046,8 @@ int aria_runtime_main(int argc, char **argv) {
                                      &soul_menu) &&
                  !draw_native_ability(renderer, pause_texture, &pause_graphics,
                                       &soul_menu, &progress) &&
+                 !draw_native_item_use(renderer, pause_texture, &pause_graphics,
+                                       &soul_menu, &progress) &&
                  !draw_native_sleep(renderer, pause_texture, &pause_graphics,
                                     &soul_menu))
             draw_soul_menu(renderer, &soul_menu, &progress,

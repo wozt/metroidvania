@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0791 - START item-use page native BG0
+
+- Audited the asm-only item-use routines (`sub_0804B6C4` draw/setup,
+  `sub_0804B494` list, `sub_0804B36C` effect): the inventory is 32
+  count slots indexed by item record `0x08505B3C + slot*16`; field +8
+  is the effect kind and +10 the amount, matching `item_use.tsv`.
+- Extracted the native name chain: record field +0 indexes the u16
+  table `0x08506734`, which yields text IDs `0x5B`-`0x7A` — the 32
+  item names in slot order (Potion .. CASTLE MAP 3). Descriptions
+  come from `0x08506936` = `0x15C`-`0x17B`.
+- `sub_0804B6C4` draws four slot rows of the baked strips at columns
+  2/0x11 rows 11-14 (entries `0x3380`/`0x3390+i*0x20`) and three
+  24-tile description bars at column 5 rows 16-18 (`0x3200+i*0x20`).
+- `sub_0804B494` fills an 8-slot 4x2 grid in slot order: names via
+  the context-B cursor at pixel columns 0/126 rows 96-120, quantities
+  as `0x3300` digits right-aligned ending at columns 0xD/0x1C rows
+  11-14 (`sub_08046EF4`), and `sub_08047098` writes the same `0x330D`
+  dash tile to both cells of each empty slot.
+- `aos_pause_graphics_render_item_use` reproduces all of it on BG0;
+  item icons remain OBJ sprites, the description popup placement is
+  approximated on the bars and the scroll window is source-adapted.
+  Enemy is now the only START page still on the diagnostic SDL path.
+
 ## Patch 0790 - START ability page native BG0
 
 - Audited the asm-only ability page (`sub_0804BA18` init, `sub_0804BB40`

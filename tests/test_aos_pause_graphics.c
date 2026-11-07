@@ -293,6 +293,44 @@ int main(int argc, char **argv) {
             /* Unowned ability 2 writes no marker. */
             assert(graphics.bg0_map[4 * 32 + 0xD] != 0xB30E);
         }
+        /* sub_0804B6C4/sub_0804B494: slot strips rows 11-14, bottom bars
+         * rows 16-18, dashes for empty slots, quantity digits. */
+        {
+            AosPauseItemUseValues items = {.selected = 0xFF, .top = 0};
+            items.counts[0] = 3;   /* Potion x3 */
+            items.counts[5] = 1;   /* Mind Up x1 */
+            items.counts[9] = 12;  /* Cream Soda x12 */
+            assert(aos_pause_graphics_render_item_use(&graphics, &items,
+                                                      rgba, 240 * 160 * 4));
+            /* Strips: left col x=2 row 11 entry 0x3380; right col x=0x11
+             * row 14 entry 0x3390+3*0x20 = 0x33F0. */
+            assert(graphics.bg0_map[11 * 32 + 2] == 0x3380);
+            assert(graphics.bg0_map[14 * 32 + 0x11] == 0x33F0);
+            /* Bottom bars: row 16 col 5 = 0x3200, row 18 col 28 = 0x3240+23
+             * = 0x3257. */
+            assert(graphics.bg0_map[16 * 32 + 5] == 0x3200);
+            assert(graphics.bg0_map[18 * 32 + 28] == 0x3257);
+            /* Slot 0 (item 0, qty 3): name text overwrote cells near
+             * (0,96); quantity digit '3' = 0x3303 at col 0xD row 0xB. */
+            assert(graphics.bg0_map[0xB * 32 + 0xD] == 0x3303);
+            /* Slot 1 (item 5, qty 1): odd column, digit at col 0x1C row
+             * 0xB = 0x3301. */
+            assert(graphics.bg0_map[0xB * 32 + 0x1C] == 0x3301);
+            /* Slot 2 (item 9, qty 12): two digits 1,2 ending col 0xD ->
+             * col 0xC = 0x3301, col 0xD = 0x3302. */
+            assert(graphics.bg0_map[0xC * 32 + 0xC] == 0x3301);
+            assert(graphics.bg0_map[0xC * 32 + 0xD] == 0x3302);
+            /* Slots 3-7 empty: slot 3 (odd) dashes at cols 0x1B/0x1C
+             * row 0xC; slot 4 (even) at cols 0xC/0xD row 0xD. */
+            assert(graphics.bg0_map[0xC * 32 + 0x1B] == 0x330D);
+            assert(graphics.bg0_map[0xC * 32 + 0x1C] == 0x330D);
+            assert(graphics.bg0_map[0xD * 32 + 0xC] == 0x330D);
+            assert(graphics.bg0_map[0xD * 32 + 0xD] == 0x330D);
+            /* Description of selected item 0 = text 0x15C on the bars. */
+            items.selected = 0;
+            assert(aos_pause_graphics_render_item_use(&graphics, &items,
+                                                      rgba, 240 * 160 * 4));
+        }
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

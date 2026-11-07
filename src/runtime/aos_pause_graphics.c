@@ -656,6 +656,74 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
     return true;
 }
 
+bool aos_pause_graphics_render_item_use(
+    AosPauseGraphics *graphics, const AosPauseItemUseValues *values,
+    uint8_t *rgba, size_t rgba_size) {
+    if (!values ||
+        (values->selected != 0xFF &&
+         values->selected >= AOS_PAUSE_ITEM_USE_RECORDS) ||
+        !graphics || !graphics->text_ready ||
+        !valid_output(graphics, rgba, rgba_size))
+        return false;
+    reset_bg0(graphics);
+    clear_bg0_tiles(graphics, 0x380, 0x80);
+    /* sub_0804B6C4: four slot rows of strips at columns 2 and 0x11, tile
+     * rows 11-14 (entries 0x3380/0x3390+i*0x20), then three 24-tile
+     * description bars at column 5, rows 16-18 (0x3200+i*0x20). */
+    for (unsigned i = 0; i < 4; ++i) {
+        put_tiles(graphics, 2, (int)(11 + i),
+                  (uint16_t)(0x3380 + i * 0x20), 10);
+        put_tiles(graphics, 0x11, (int)(11 + i),
+                  (uint16_t)(0x3390 + i * 0x20), 10);
+    }
+    for (unsigned i = 0; i < 3; ++i)
+        put_tiles(graphics, 5, (int)(16 + i),
+                  (uint16_t)(0x3200 + i * 0x20), 24);
+    /* sub_0804B494: owned items in slot order fill the 4x2 grid; names
+     * are text 0x5B+item at context-B cells column 0/0x15 row 0xC+j/2,
+     * quantities are 0x3300 digits ending at column 0xD/0x1C row
+     * 0xB+j/2, and unused slots get two 0x330D dashes (sub_08047098). */
+    uint8_t owned[AOS_PAUSE_ITEM_USE_RECORDS];
+    unsigned owned_count = 0;
+    for (unsigned item = 0; item < AOS_PAUSE_ITEM_USE_RECORDS; ++item)
+        if (values->counts[item]) owned[owned_count++] = (uint8_t)item;
+    unsigned next_tile = 0;
+    for (unsigned slot = 0; slot < AOS_PAUSE_ITEM_USE_VISIBLE; ++slot) {
+        unsigned ordinal = values->top + slot;
+        bool filled = ordinal < owned_count;
+        uint8_t item = filled ? owned[ordinal] : 0;
+        unsigned x = slot & 1u ? 126u : 0u;
+        unsigned y = (12u + slot / 2u) * 8u;
+        if (filled &&
+            !place_text_id(graphics, (uint16_t)(0x5B + item), true, x, y,
+                           78, 3, &next_tile))
+            return false;
+        unsigned quantity_x = slot & 1u ? 0x1Cu : 0xDu;
+        unsigned quantity_y = 0xBu + slot / 2u;
+        if (filled)
+            put_number(graphics, (int)quantity_x, (int)quantity_y,
+                       values->counts[item], 1, 0x3300, false);
+        else {
+            /* sub_08047098 writes the same 0x330D tile to both cells,
+             * walking left from the quantity column. */
+            size_t dash = (size_t)quantity_y * 32 + quantity_x;
+            if (dash < 32 * 32) graphics->bg0_map[dash] = 0x330D;
+            if (dash >= 1 && dash - 1 < 32 * 32)
+                graphics->bg0_map[dash - 1] = 0x330D;
+        }
+    }
+    /* The selected item's description (text 0x15C+item via table
+     * 0x08506936) prints into the bottom message window; its exact
+     * cursor placement is approximated on the description bars. */
+    if (values->selected < AOS_PAUSE_ITEM_USE_RECORDS &&
+        values->counts[values->selected] &&
+        !place_text_id(graphics, (uint16_t)(0x15C + values->selected),
+                       false, 40, 130, 192, 3, &next_tile))
+        return false;
+    composite(graphics, rgba);
+    return true;
+}
+
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
                                      bool can_sleep, uint8_t *rgba,
                                      size_t rgba_size) {

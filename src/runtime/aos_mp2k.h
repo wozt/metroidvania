@@ -75,7 +75,10 @@ typedef struct {
     uint8_t echo_volume;    /* + 0x0C */
     uint8_t echo_length;    /* + 0x0D */
     int32_t remaining;      /* + 0x18: samples left before the end */
-    uint32_t fine;          /* + 0x1C: 23-bit position fraction */
+    uint32_t fine;          /* + 0x1C: 23-bit position fraction (16.16 host
+                             * rate accumulator on fixed-frequency channels) */
+    uint32_t host_step;     /* host-only 16.16 playback rate for type-8
+                             * channels, which ignore channel->frequency */
     uint32_t position;      /* + 0x28 as an index into the sample data */
     AosMp2kTone tone;
     bool linked;            /* in its track's chain (+ 0x2C, + 0x30, + 0x34) */

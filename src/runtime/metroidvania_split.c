@@ -176,7 +176,7 @@ bool mv_split_hold_tick(MvSplitHold *hold, float dt, unsigned *pulse_count) {
 }
 
 int mv_split_pulse_semitones(unsigned pulse_index) {
-    int semitones = -2 + (int)pulse_index;
+    int semitones = -6 + (int)pulse_index;
     return semitones > 12 ? 12 : semitones;
 }
 

@@ -165,7 +165,7 @@ static int run_frontend(const char *program, int argc, char **argv) {
 
 static void trigger_split_pulse(MvSplit *split, bool aria, MvSplitHold *hold) {
     uint16_t sound = mv_split_native_sound(aria);
-    /* Each beat climbs one semitone from two below the source pitch. */
+    /* Each beat climbs one semitone from six below the source pitch. */
     int semitones = mv_split_pulse_semitones(hold ? hold->pulse_index : 0);
     if (hold) ++hold->pulse_index;
     if (aria) {

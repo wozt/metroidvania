@@ -349,7 +349,26 @@ static void mixer_test(void) {
     aos_mp2k_mix(&engine, out, 8);
     assert(out[3] == 39 && out[4] == 29 && out[5] == 39 && out[6] == 29 &&
            (c->status & AOS_MP2K_CHANNEL_LOOP));
+    /* The host pitch step retimes fixed-frequency channels: half rate
+     * repeats each source sample, double rate skips one. */
+    bank[3] = 0;
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8, .right_volume = 255,
+                          .left_volume = 255, .host_step = 0x8000};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0xFF};
+    aos_mp2k_mix(&engine, out, 8);
+    assert(out[0] == 9 && out[1] == 9 && out[2] == 19 && out[3] == 19 &&
+           out[4] == 29 && out[5] == 29);
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8, .right_volume = 255,
+                          .left_volume = 255, .host_step = 0x20000};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0xFF};
+    aos_mp2k_mix(&engine, out, 4);
+    assert(out[0] == 9 && out[1] == 29 && out[2] == 0 && out[3] == 0);
     /* Two channels add, wrapping as bytes. */
+    bank[3] = 0x40;
+    *c = (AosMp2kChannel){.status = AOS_MP2K_CHANNEL_START, .type = 8, .right_volume = 255,
+                          .left_volume = 255};
+    c->tone = (AosMp2kTone){.type = 8, .wav = BASE, .attack = 0xFF, .sustain = 0xFF};
+    aos_mp2k_mix(&engine, out, 8);
     engine.direct[1] = *c;
     aos_mp2k_mix(&engine, out, 1);
     assert(out[0] == 2 * 29 && c->mix_volume == 254);

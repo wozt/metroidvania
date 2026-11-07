@@ -530,8 +530,25 @@ void aos_mp2k_track_vol_pit_set(AosMp2kTrack *track) {
 }
 
 /* ChnVolSetAsm and the frequency part of MP2K_event_nxx / MP2KPlayerMain. */
+/* 2^(semitones / 12) as a 16.16 fixed-point playback rate, clamped to
+ * +/- 24 semitones. Only the host key_shift_public feeds it through
+ * channel_mix, so native pitch controls never reach it. */
+static const uint32_t kHostStepUp = 69469;    /* 2^(1/12) * 65536 */
+static const uint32_t kHostStepDown = 61859;  /* 2^(-1/12) * 65536 */
+
+static uint32_t host_pitch_step(int semitones) {
+    if (semitones > 24) semitones = 24;
+    else if (semitones < -24) semitones = -24;
+    uint32_t step = 0x10000;
+    for (int i = 0; i < (semitones < 0 ? -semitones : semitones); ++i)
+        step = (uint32_t)(((uint64_t)step *
+                           (semitones < 0 ? kHostStepDown : kHostStepUp)) >> 16);
+    return step;
+}
+
 static void channel_mix(AosMp2kEngine *engine, AosMp2kChannel *channel,
                         const AosMp2kTrack *track) {
+    channel->host_step = host_pitch_step(track->key_shift_public);
     int32_t right = ((0x80 + channel->rhythm_pan) * channel->velocity * track->vol_right) >> 14;
     int32_t left = ((0x7F - channel->rhythm_pan) * channel->velocity * track->vol_left) >> 14;
     channel->right_volume = (uint8_t)(right > 0xFF ? 0xFF : right);
@@ -815,12 +832,21 @@ static void mix_channel(AosMp2kChannel *channel, const Wave *wave, int8_t *out,
                         size_t count, uint8_t host_gain) {
     int volume = channel->mix_volume * host_gain / 255;
     if (channel->type & 8) {
-        /* Fixed frequency: one sample per output. */
+        /* Fixed frequency: one source sample per output at unity host
+         * pitch; the host step retimes it like the pitched path does. */
+        uint32_t step = channel->host_step ? channel->host_step : 0x10000;
         for (size_t index = 0; index < count; ++index) {
             int value = sample_at(wave, channel->position);
             out[index] = (int8_t)(uint8_t)(out[index] + ((value * volume) >> 8));
-            channel->position++;
-            if (--channel->remaining == 0 && !wrap(channel, wave)) return;
+            channel->fine += step;
+            uint32_t advance = channel->fine >> 16;
+            channel->fine &= 0xFFFF;
+            channel->remaining -= (int32_t)advance;
+            if (channel->remaining <= 0) {
+                if (!wrap(channel, wave)) return;
+            } else {
+                channel->position += advance;
+            }
         }
         return;
     }

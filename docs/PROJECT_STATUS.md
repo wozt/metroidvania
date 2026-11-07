@@ -5,22 +5,25 @@ Last updated: **2026-11-05**.
 ## Patch 0782 - Held title pulses climb one semitone per beat
 
 - While X or Y stays held on the shared title screen, each 0.5-second
-  pulse now starts two semitones below the native pitch and rises one
+  pulse now starts six semitones below the native pitch and rises one
   semitone per beat, saturating at +12; releasing the key resets the
   progression for the next hold. The 0.5-second timing and the visual
   pulse are unchanged.
 - Aria: `aos_mp2k_player_pitch()` writes the host-only
   `key_shift_public` control on the pulse player's active tracks
-  (player 3 for `0x081`), which `player_mix` folds into every linked
-  channel's live frequency without touching sequencer state.
+  (player 3 for `0x081`). Pitch-sensitive channels retune through
+  `key_shift_calculated`, and the fixed-frequency (type 8) channels —
+  the only kind song `0x081` uses — are retimed by a host-only 16.16
+  playback step derived from the same control, leaving native pitch
+  state untouched.
 - Zero Mission: `mzm_audio_set_player_pitch()` stores a per-player
   semitone offset applied inside the native pitch routine
   (`unk_4eb4`), so both DirectSound and PSG voices retune; it covers
   the `0x1DC` player without affecting music player 0.
-- Tests: the split test covers the -2/+12 progression and the
+- Tests: the split test covers the -6/+12 progression and the
   press/release reset, the MP2K test covers per-player track
-  transposition, and the MZM engine test measures a higher PSG
-  sign-change rate at +12 semitones.
+  transposition and the fixed-frequency retiming, and the MZM engine
+  test measures a higher PSG sign-change rate at +12 semitones.
 
 ## Patch 0781 - Aria title pulse uses sound entry 0x081
 

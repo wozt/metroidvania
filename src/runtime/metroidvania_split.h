@@ -50,7 +50,7 @@ bool mv_split_hold_press(MvSplitHold *hold);
 void mv_split_hold_release(MvSplitHold *hold);
 /* Returns true once at three seconds. pulse_count reports each 0.5 s beat. */
 bool mv_split_hold_tick(MvSplitHold *hold, float dt, unsigned *pulse_count);
-/* Whole-semitone shift for the pulse_index-th beat: -2 at the press,
+/* Whole-semitone shift for the pulse_index-th beat: -6 at the press,
  * rising one note per beat up to +12 while the key stays held. */
 int mv_split_pulse_semitones(unsigned pulse_index);
 

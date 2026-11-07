@@ -5031,7 +5031,7 @@ static void draw_opening_text(SDL_Renderer *renderer,
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     /* The dialogue box: a large translucent slate panel over the upper
      * screen, matching the native window's grey fill. */
-    SDL_SetRenderDrawColor(renderer, 64, 76, 108, 208);
+    SDL_SetRenderDrawColor(renderer, 64, 76, 108, 190);
     SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
                        AOS_OPENING_TEXT_PANEL_Y,
                        AOS_OPENING_TEXT_PANEL_WIDTH,

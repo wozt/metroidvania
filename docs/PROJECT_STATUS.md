@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0783 - Aria opening death and window fidelity pass
+
+- Timer 0xD0 of sub_0805D410 state 5 now runs the native death together
+  instead of hiding the Winged Skeleton instantly: sub_0805E9F0's six
+  winged debris pieces (the first six records of 0x08526802),
+  sub_0806D578's mirrored flame, sub_0805EAFC's soul orb, SE_0x6B and the
+  enemy generic_death — the 0x08118CE0 blink table over a 0x28-frame
+  timer with a flame every fourth frame, drawn through the native
+  AOS_EFFECT_FLAME frames.
+- Pose 0x52 and the absorption visibility blink now cover the whole
+  0xD2 countdown and the window wait, matching native sub-states 2-3;
+  the blink stops when the window starts closing, as in sub-state 5.
+- The obtained-soul window no longer over-blocks: the script resumes as
+  soon as sub_0800F0AC begins the close (native sub-states 4-6), so the
+  post-battle beats are not held for the 0x20-frame cleanup timer.
+- Scene-state 7's completion now plays sub_0805B878(0x1041), muting
+  music player 1 after state 6's MUS_23.
+
 ## Patch 0782 - Held title pulses climb one semitone per beat
 
 - While X or Y stays held on the shared title screen, each 0.5-second

@@ -143,6 +143,19 @@ typedef struct {
     bool active;
 } AosOpeningProjectile;
 
+/* sub_0806D578's death flame and generic_death's four-frame respawns around
+ * the scripted Winged Skeleton. */
+typedef struct {
+    int32_t x;
+    int32_t y;
+    uint8_t age;
+    uint8_t timer;
+    bool active;
+    bool mirrored;
+} AosOpeningFlame;
+
+#define AOS_OPENING_FLAME_CAPACITY 12
+
 typedef uint32_t (*AosOpeningRandom)(void *context);
 typedef int32_t (*AosOpeningSine)(uint32_t angle, void *context);
 typedef uint16_t (*AosOpeningAngle)(int16_t x, int16_t y, void *context);
@@ -197,8 +210,15 @@ typedef struct {
     AosOpeningEntity emitted[AOS_OPENING_EMITTED_CAPACITY];
     AosOpeningDebris debris[AOS_OPENING_DEBRIS_CAPACITY];
     AosOpeningProjectile projectiles[AOS_OPENING_PROJECTILE_CAPACITY];
+    AosOpeningFlame flames[AOS_OPENING_FLAME_CAPACITY];
     uint8_t debris_count;
     uint8_t projectile_count;
+    uint8_t flame_count;
+    /* sub_0805D410 state 5, timer 0xD0: entity[0x1c] + 0x58 bit 0x20 enters
+     * the Winged Skeleton's generic death, a 0x28-frame blink (table
+     * 0x08118CE0) with sub_0806D578 flames while sub_0805E9F0's six pieces
+     * and sub_0805EAFC's soul orb are already in flight. */
+    uint8_t skeleton_death;
     AosOpeningRandom random;
     AosOpeningSine sine;
     AosOpeningAngle angle;
@@ -225,7 +245,8 @@ typedef struct {
     bool soul_absorbed;
     /* sub_0800E708's obtained-soul window: 0 closed, 1 opening, 2 waiting
      * for the player, 3 closing after sub_0800F0AC. The script stays
-     * blocked while it is nonzero, matching the native modal window. */
+     * blocked while it is 1 or 2; native state 5 continues as soon as the
+     * window starts closing, so 3 does not block. */
     uint8_t soul_notice;
     uint8_t soul_notice_timer;
     uint16_t notice_input;

@@ -325,11 +325,21 @@ static void test_trigger(void) {
         if (frame == 17) assert(cue == AOS_OPENING_CUE_ENEMY_DEFEATED);
         else assert(cue == AOS_OPENING_CUE_NONE);
     }
-    assert(!actors.visible[2] && actors.soul_active && !actors.soul_absorbed);
+    /* Timer 0xD0: sub_0805E9F0's six pieces, sub_0806D578's flame,
+     * sub_0805EAFC's soul orb and the 0x28-frame blink death all start;
+     * the body is not removed instantly. */
+    assert(actors.skeleton_death == 0x28 && actors.soul_active &&
+           !actors.soul_absorbed);
+    unsigned death_pieces = 0;
+    for (unsigned piece = 0; piece < actors.debris_count; ++piece)
+        if (actors.debris[piece].active &&
+            actors.debris[piece].source_type == 8) ++death_pieces;
+    assert(death_pieces == 6);
     int32_t soul_start_x = actors.soul_x;
     int32_t soul_start_y = actors.soul_y;
     for (unsigned frame = 0; frame < 64; ++frame)
         assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
+    assert(!actors.visible[2] && actors.skeleton_death == 0);
     assert(actors.soul_x != soul_start_x || actors.soul_y != soul_start_y);
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
@@ -337,8 +347,8 @@ static void test_trigger(void) {
            actors.soul_x == (AOS_OPENING_SOMA_X << 16) &&
            actors.soul_y == ((AOS_OPENING_SOMA_Y - 16) << 16) &&
            actors.soma_animation == 0x52);
-    /* sub_0800E708's obtained-soul window stays modal until the player
-     * dismisses it; the script cannot advance to state 6 meanwhile. */
+    /* The script stays blocked only while the window is open or waiting;
+     * native state 5 resumes as soon as sub_0800F0AC starts the close. */
     assert(aos_opening_actors_blocks_script(&actors));
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_NONE);
@@ -347,10 +357,11 @@ static void test_trigger(void) {
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_SOUL_NOTICE_DISMISS);
     assert(actors.soul_notice == 3 && actors.soul_notice_timer == 0x20);
-    bool hidden = actors.soma_hidden;
+    assert(!aos_opening_actors_blocks_script(&actors));
+    /* sub-state 5 keeps pose 0x52 once, without the absorption blink. */
     assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
            AOS_OPENING_CUE_NONE);
-    assert(actors.soma_hidden != hidden && actors.soma_animation == 0x52);
+    assert(!actors.soma_hidden && actors.soma_animation == 0x52);
     for (unsigned frame = 0; frame < 0x1F; ++frame)
         aos_opening_actors_update(&actors, durations, NULL, 0);
     assert(actors.soul_notice == 0);

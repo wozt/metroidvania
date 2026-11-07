@@ -361,10 +361,10 @@ static const OpeningDebrisSpec winged_debris[7] = {
 };
 
 static void append_debris(AosOpeningActors *actors,
-                          const AosOpeningEntity *entity) {
+                          const AosOpeningEntity *entity, unsigned piece_count) {
     const OpeningDebrisSpec *specs = entity->entity_type == 8
                                          ? winged_debris : skeleton_debris;
-    for (unsigned i = 0; i < 7 &&
+    for (unsigned i = 0; i < piece_count &&
                          actors->debris_count < AOS_OPENING_DEBRIS_CAPACITY;
          ++i) {
         const OpeningDebrisSpec *spec = &specs[i];
@@ -436,6 +436,67 @@ static void update_debris(AosOpeningActors *actors) {
     }
 }
 
+/* 0x08118CE0: the shared enemy death-blink table consumed by
+ * generic_death's `kind->blink[timer] & 1`; a set bit hides the actor. */
+static const uint8_t opening_death_blink[40] = {
+    0x00, 0x01, 0x01, 0x01, 0x00, 0x01, 0x01, 0x00,
+    0x01, 0x01, 0x00, 0x01, 0x01, 0x00, 0x01, 0x00,
+    0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00,
+    0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+};
+
+/* sub_0806D578(x, y, priority): one flame at the death point, mirrored at
+ * random like the ported enemy path. */
+static void append_opening_flame(AosOpeningActors *actors, int32_t x,
+                                 int32_t y) {
+    if (actors->flame_count >= AOS_OPENING_FLAME_CAPACITY) return;
+    actors->flames[actors->flame_count++] = (AosOpeningFlame){
+        .x = x, .y = y, .timer = 0x20, .active = true,
+        .mirrored = actors->random
+                        ? (actors->random(actors->motion_context) & 1) != 0
+                        : false,
+    };
+}
+
+static void update_opening_flames(AosOpeningActors *actors) {
+    for (unsigned i = 0; i < actors->flame_count; ++i) {
+        AosOpeningFlame *flame = &actors->flames[i];
+        if (!flame->active) continue;
+        if (flame->age < UINT8_MAX) ++flame->age;
+        if (flame->timer) --flame->timer;
+        if (!flame->timer) flame->active = false;
+    }
+}
+
+/* sub_0805D410 state 5 at timer 0xD0 on entity[0x1c]: the dying mark,
+ * sub_0806D578's flame, sub_0805E9F0's six winged pieces (the first six
+ * records of 0x08526802), sub_0805EAFC's soul orb and SE_0x6B all fire
+ * together; the body then runs generic_death's 0x28-frame blink. */
+static void begin_skeleton_death(AosOpeningActors *actors) {
+    AosOpeningEntity body = {
+        .x = actors->x[2],
+        .y = actors->y[2],
+        .entity_type = 8,
+        .mirrored = true,
+    };
+    append_debris(actors, &body, 6);
+    append_opening_flame(actors, actors->x[2], actors->y[2] - 0x60000);
+    actors->skeleton_death = 0x28;
+}
+
+/* generic_death: hidden while the blink table says so, a flame every
+ * fourth timer, removed when the 0x28-frame timer expires. */
+static void update_skeleton_death(AosOpeningActors *actors) {
+    if (!actors->skeleton_death) return;
+    uint8_t timer = actors->skeleton_death;
+    actors->visible[2] = timer > 0x27 || !(opening_death_blink[timer] & 1);
+    if ((timer & 3) == 0)
+        append_opening_flame(actors, actors->x[2],
+                             actors->y[2] - 0x60000);
+    if (--actors->skeleton_death == 0) actors->visible[2] = false;
+}
+
 static uint16_t turn_projectile(AosOpeningActors *actors,
                                 const AosOpeningProjectile *projectile) {
     uint16_t wanted = angle_to(actors, projectile->x, projectile->y,
@@ -494,7 +555,7 @@ static void finish_emitted(AosOpeningActors *actors, AosOpeningEntity *entity,
     if (emitted_in_impact_margin(actors, entity)) {
         entity->events |= AOS_OPENING_ENTITY_EVENT_SOUND_0X6B |
                           AOS_OPENING_ENTITY_EVENT_DEBRIS;
-        append_debris(actors, entity);
+        append_debris(actors, entity, 7);
     }
     if (projectile) {
         entity->events |= AOS_OPENING_ENTITY_EVENT_PROJECTILE;
@@ -694,7 +755,8 @@ bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
     switch (actors->scene_state) {
     case 3: return actors->scene_step < 3;
     case 4: return actors->scene_step < 2;
-    case 5: return !actors->soul_absorbed || actors->soul_notice != 0;
+    case 5: return !actors->soul_absorbed || actors->soul_notice == 1 ||
+                   actors->soul_notice == 2;
     default: return false;
     }
 }
@@ -739,6 +801,8 @@ AosOpeningCue aos_opening_actors_update(
     update_projectiles(actors);
     update_emitted(actors);
     update_opening_soul(actors);
+    update_opening_flames(actors);
+    update_skeleton_death(actors);
     /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
     if (actors->state == 0) {
         if (actors->timer) --actors->timer;
@@ -823,7 +887,7 @@ scene:
             --actors->scene_timer;
             AosOpeningCue due = AOS_OPENING_CUE_NONE;
             if (actors->scene_timer == 0xD0) {
-                actors->visible[2] = false;
+                begin_skeleton_death(actors);
                 begin_opening_soul(actors);
                 due = AOS_OPENING_CUE_ENEMY_DEFEATED;
             } else if (actors->scene_timer == 0x8F) {
@@ -842,11 +906,17 @@ scene:
                 else actors->pending_cue = due;
             }
         }
-        if (actors->scene_step == 2) {
-            /* sub_0805D410 case 5 keeps pose 0x52 and alternates the player
-             * object's visibility during the absorption flash. */
+        /* sub_0805D410 state 5 keeps pose 0x52 from the start of the
+         * 0xD2 countdown through the window wait, alternating the player
+         * object's visibility on the timer's bit 0. The blink stops once
+         * the window starts closing (sub-state 5 sets the pose once more
+         * without blinking). */
+        if (actors->scene_step >= 1) {
             actors->soma_animation = 0x52;
-            actors->soma_hidden = (actors->frame & 1u) != 0;
+            bool flashing = actors->scene_step == 1 ||
+                            actors->soul_notice == 1 ||
+                            actors->soul_notice == 2;
+            actors->soma_hidden = flashing && (actors->frame & 1u) != 0;
         }
         break;
     default:

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T12:59:28+00:00",
+ "generated_at": "2026-11-07T13:22:40+00:00",
  "git": {
-  "commit": "fb3594c",
+  "commit": "6b9afd6",
   "branch": "main",
   "dirty": true
  },
@@ -12847,7 +12847,7 @@
     "sub_0800F038",
     "sub_0805B878"
    ],
-   "limitations": "The dialogue field remains an SDL overlay rather than the native BG text tilemap. The initial pre-dialogue room reveal, the projectile's combat callback and secondary sub_08045B44 sparks, the exact soul-notice BG0 tilemap, mode-4 return pan and later proximity conversations from states 10 and 11 remain absent. The alternating OBJ attribute is approximated by visibility until its native palette path is available. Animation durations and common animation 0x16 come from the user's generated object library and are not committed. No current Object20 emission parameter sets bit 3. The state-3 pan, construction, child motion and source-visible attack paths are not emulator-compared. The 208 by 68 dialogue field now has symmetric 16-pixel horizontal margins, with its text and wait marker positioned relative to that editor-visible layout; the centering invariant is unit-tested. State 5's obtained-soul window is ported as soul_notice states 1-3: ROM texts 0xE3/0x1E4, music-player mute, modal A-dismiss and close; the script stays blocked until it closes. The runtime reads localized entry 0x000C, holds Soma on animation 0x51 at the lower floor position, uses native portraits and both native font contexts, and freezes gameplay. Control 02 advances Object20 without an artificial confirmation; control 05 owns the wait. State 3 constructs and renders six sub_0805D2C8 and four sub_0805D35C children around the 0x38000 camera pan and two 0x20-frame holds. Private type 8 uses Winged Skeleton animation 4 with its RNG phase and quarter-amplitude sine bob from sub_0805E2D8. Type 10 uses Skeleton Knight art and sub_0805E5D4's per-variant random start, optional second selector, sixteen one-in-three half-pixel rises and parameter-selected state-2 animation. Its parameter-bit-3 path now applies animation 1 and a 160-opportunity one-in-two descent: open air restores the tentative quarter-pixel X shift and moves two pixels down, while floor contact retains X plus the native wall push and snaps Y through injected sub_0806E140-compatible collision queries. At Arikado animation 2 completion both callbacks run their native tail gates. In-margin finishes create the seven actor-specific pieces from 0x085267D8 or 0x08526802; they render from the Skeleton and Winged Skeleton sheets, move with 0x3000 gravity and retire by lifetime, Y limit or sub_08068AD4. Every type-10 finish creates the common-animation-0x16 sub_0805ED80 projectile, which turns by the accelerating sub_0802D408 step, accelerates from 3 to 8 pixels per frame, uses its 200 plus 64-frame lifetime and plays 0xBC on contact with the principal enemy. RNG, sine, ArcTan2, floor depth and wall push remain injected for runtime and editor use. The principal enemy and soul timer, scene music, persistence and Winged Skeleton soul grant remain connected. Source-derived, unit-tested and locally reviewed, not emulator-compared. Object20 state 5 now follows the source 0xD2 countdown: at 0xD0 the principal enemy disappears with sound 0x6B, and at 0x8F sub_0800F038/sub_0800E708 are represented by the ROM-localized Winged Skeleton name and description, sound 0x197 and player-0 mute 0x1040. Soma stays on pose 0x52 and alternates visibility until the following beat. A fresh-file local run completed the story, set event 0x20 and granted and equipped the soul.",
+   "limitations": "The dialogue field remains an SDL overlay rather than the native BG text tilemap. The initial pre-dialogue room reveal, the projectile's combat callback and secondary sub_08045B44 sparks, the exact soul-notice BG0 tilemap, mode-4 return pan and later proximity conversations from states 10 and 11 remain absent. The alternating OBJ attribute is approximated by visibility until its native palette path is available. Animation durations and common animation 0x16 come from the user's generated object library and are not committed. No current Object20 emission parameter sets bit 3. The state-3 pan, construction, child motion and source-visible attack paths are not emulator-compared. The 208 by 68 dialogue field now has symmetric 16-pixel horizontal margins, with its text and wait marker positioned relative to that editor-visible layout; the centering invariant is unit-tested. State 5's obtained-soul window is ported as soul_notice states 1-3: ROM texts 0xE3/0x1E4, music-player mute, modal A-dismiss and close; the script resumes as soon as the close starts, matching native sub-states 4-6. Timer 0xD0 now runs the native death together: sub_0805E9F0's six winged pieces, sub_0806D578's flame, the 0x08118CE0 blink table over the 0x28-frame generic_death and sub_0805EAFC's soul orb; pose 0x52 and the absorption blink cover the whole 0xD2 countdown and window wait. State 7's sub_0805B878(0x1041) is played on completion. The runtime reads localized entry 0x000C, holds Soma on animation 0x51 at the lower floor position, uses native portraits and both native font contexts, and freezes gameplay. Control 02 advances Object20 without an artificial confirmation; control 05 owns the wait. State 3 constructs and renders six sub_0805D2C8 and four sub_0805D35C children around the 0x38000 camera pan and two 0x20-frame holds. Private type 8 uses Winged Skeleton animation 4 with its RNG phase and quarter-amplitude sine bob from sub_0805E2D8. Type 10 uses Skeleton Knight art and sub_0805E5D4's per-variant random start, optional second selector, sixteen one-in-three half-pixel rises and parameter-selected state-2 animation. Its parameter-bit-3 path now applies animation 1 and a 160-opportunity one-in-two descent: open air restores the tentative quarter-pixel X shift and moves two pixels down, while floor contact retains X plus the native wall push and snaps Y through injected sub_0806E140-compatible collision queries. At Arikado animation 2 completion both callbacks run their native tail gates. In-margin finishes create the seven actor-specific pieces from 0x085267D8 or 0x08526802; they render from the Skeleton and Winged Skeleton sheets, move with 0x3000 gravity and retire by lifetime, Y limit or sub_08068AD4. Every type-10 finish creates the common-animation-0x16 sub_0805ED80 projectile, which turns by the accelerating sub_0802D408 step, accelerates from 3 to 8 pixels per frame, uses its 200 plus 64-frame lifetime and plays 0xBC on contact with the principal enemy. RNG, sine, ArcTan2, floor depth and wall push remain injected for runtime and editor use. The principal enemy and soul timer, scene music, persistence and Winged Skeleton soul grant remain connected. Source-derived, unit-tested and locally reviewed, not emulator-compared. Object20 state 5 now follows the source 0xD2 countdown: at 0xD0 the principal enemy disappears with sound 0x6B, and at 0x8F sub_0800F038/sub_0800E708 are represented by the ROM-localized Winged Skeleton name and description, sound 0x197 and player-0 mute 0x1040. Soma stays on pose 0x52 and alternates visibility until the following beat. A fresh-file local run completed the story, set event 0x20 and granted and equipped the soul.",
    "next_action": "Reconstruct the initial reveal, projectile sparks and combat callback, exact soul-notice BG0 map, mode-4 return pan and later conversations before emulator comparison.",
    "evidence": {
     "unit_tests": [
@@ -20113,6 +20113,12 @@
  },
  "timeline": [
   {
+   "commit": "6b9afd6",
+   "date": "2026-11-07",
+   "subject": "Lower pulse base pitch and retime Aria fixed-frequency channels",
+   "scope": "project"
+  },
+  {
    "commit": "fb3594c",
    "date": "2026-11-07",
    "subject": "Climb title pulse pitch one semitone per held beat",
@@ -20584,12 +20590,6 @@
    "commit": "3229468",
    "date": "2026-11-02",
    "subject": "Rewrite Buer from its native routines",
-   "scope": "project"
-  },
-  {
-   "commit": "bd69bb8",
-   "date": "2026-11-02",
-   "subject": "Port Killer Fish's AI from its native routines",
    "scope": "project"
   }
  ],

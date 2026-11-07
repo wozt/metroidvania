@@ -3954,6 +3954,34 @@ static void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objec
             renderer, frame->texture, NULL, &rect, 0, NULL,
             debris->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     }
+    const __typeof__(objects->effects[0]) *flame_art =
+        &objects->effects[AOS_EFFECT_FLAME];
+    unsigned flame_total = 0;
+    for (unsigned frame = 0; frame < flame_art->def.count; ++frame)
+        flame_total += flame_art->ticks[frame];
+    if (flame_total) {
+        for (unsigned index = 0; index < actors->flame_count; ++index) {
+            const AosOpeningFlame *flame = &actors->flames[index];
+            if (!flame->active) continue;
+            unsigned age = flame->age % flame_total;
+            unsigned frame = 0;
+            while (frame + 1 < flame_art->def.count &&
+                   age >= flame_art->ticks[frame])
+                age -= flame_art->ticks[frame++];
+            const AriaFrame *art = &flame_art->frames[frame];
+            if (!art->texture) continue;
+            int x = flame->x >> 16, y = flame->y >> 16;
+            float draw_x = flame->mirrored
+                               ? (float)(x - art->offset_x) - art->w
+                               : (float)(x + art->offset_x);
+            SDL_FRect rect = {draw_x - (float)cam_x,
+                              (float)(y + art->offset_y - cam_y),
+                              art->w, art->h};
+            SDL_RenderTextureRotated(
+                renderer, art->texture, NULL, &rect, 0, NULL,
+                flame->mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+        }
+    }
     const __typeof__(objects->effects[0]) *projectile_art =
         &objects->effects[AOS_EFFECT_OPENING_PROJECTILE];
     unsigned projectile_total = 0;
@@ -4947,6 +4975,10 @@ static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
     case AOS_OPENING_CUE_AFTER_BATTLE:
         /* sub_0805D410 state 6: MUS_23, Premonition. */
         aos_room_music_change(music, 0x17);
+        break;
+    case AOS_OPENING_CUE_COMPLETE:
+        /* sub_0805D410 state 7's one-shot sub_0805B878(0x1041). */
+        aos_audio_play_song(0x1041);
         break;
     default:
         break;

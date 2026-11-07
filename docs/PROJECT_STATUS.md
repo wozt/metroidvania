@@ -26,6 +26,10 @@ Last updated: **2026-11-07**.
   `sub_0805DC80` is dead code (its address appears nowhere in the ROM),
   while `sub_0805DAA0` is the skeleton's live brain, approximated by the
   scene-state timers.
+- Ported the pre-dialogue room reveal: `sub_0805CED0` case 0 holds the
+  script on the spawn camera phase before the window opens, so the actors
+  now spawn with camera mode 5 (the -0x80000 pan to X 0x20) and the event
+  update plus both window draws stay gated until `reveal_done` latches.
 - Decoded `sub_0801B03C`, Soma's death particle emitter: a drifting
   sparkle entity (`sub_08045C9C`) bounces with +-0x200 gravity flips and
   emits animation-0xD effects every four frames in an 8x8 box offset

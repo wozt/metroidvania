@@ -216,6 +216,9 @@ typedef struct {
     uint8_t emitted_count;
     bool camera_active;
     bool camera_initialized;
+    /* sub_0805CED0 case 0 waits on the spawn camera phase before the text
+     * window opens; mode 5 is that initial reveal pan. */
+    bool reveal_done;
     AosOpeningEntity emitted[AOS_OPENING_EMITTED_CAPACITY];
     AosOpeningDebris debris[AOS_OPENING_DEBRIS_CAPACITY];
     AosOpeningProjectile projectiles[AOS_OPENING_PROJECTILE_CAPACITY];

@@ -193,6 +193,11 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
         .active = true,
         .soma_animation = 0x51,
         .soma_x = AOS_OPENING_SOMA_X << 16,
+        /* sub_0805CE28: with the camera already past 0x1F the spawn writes
+         * entity+0x38=5, the reveal pan that sub_0805CED0 case 0 waits on
+         * before the text window opens. */
+        .camera_mode = 5,
+        .camera_active = true,
     };
 }
 
@@ -794,17 +799,20 @@ static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
     }
     actors->camera_x += velocity[actors->camera_mode];
     *camera_x = actors->camera_x >> 16;
+    bool done;
     switch (actors->camera_mode) {
-    case 0: return *camera_x > 0x1F;
-    case 1: return *camera_x > 0x5F;
-    case 2: return *camera_x > 0xDD;
-    case 3: return *camera_x <= 0x60;
+    case 0: done = *camera_x > 0x1F; break;
+    case 1: done = *camera_x > 0x5F; break;
+    case 2: done = *camera_x > 0xDD; break;
+    case 3: done = *camera_x <= 0x60; break;
     /* Mode 4 ends when Soma reaches screen X 0x78 rather than at a camera
      * threshold: sub_0805CCE4's sixth case compares the player position. */
-    case 4: return (actors->soma_x >> 16) - *camera_x >= 0x78;
-    case 5: return *camera_x <= 0x20;
-    default: return false;
+    case 4: done = (actors->soma_x >> 16) - *camera_x >= 0x78; break;
+    case 5: done = *camera_x <= 0x20; break;
+    default: done = false; break;
     }
+    if (actors->camera_mode == 5 && done) actors->reveal_done = true;
+    return done;
 }
 
 AosOpeningCue aos_opening_actors_update(

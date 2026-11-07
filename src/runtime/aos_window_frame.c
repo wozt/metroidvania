@@ -7,7 +7,6 @@
 #include <string.h>
 
 enum {
-    AOS_ROM_BASE = 0x08000000,
     AOS_WINDOW_PALETTE = 0x081183F4,
     AOS_PORTRAIT_UI_PALETTE = 0x080E5C20,
     /* sub_0805AE64's per-language window sheet descriptors; German
@@ -55,15 +54,13 @@ bool aos_window_frame_init(AosWindowFrame *frame, const FusionRom *rom,
     if (!aos_rom_load_graphics_resource(rom, banks[language - 1], bank,
                                         sizeof bank, error, error_size))
         return false;
-    /* sub_0803B9B4 leaves the four-byte expanded header in EWRAM, whereas
-     * aos_rom_load_graphics_resource normalizes it away. Rebase the native
-     * +0x400 DMA source for compressed banks. */
-    size_t bank_rom_offset = banks[language - 1] - AOS_ROM_BASE;
-    size_t bank_offset = bank_rom_offset < rom->size &&
-                                 rom->data[bank_rom_offset] == 1
-                             ? 0x3FCu : 0x400u;
-    memcpy(frame->tiles + 0x1800, bank + bank_offset, 0x400);
+    /* sub_0803B9B4 expands at EWRAM + 0x153F4; sub_080676BC reads from
+     * +0x153F8 and then adds 0x400. The normalized resource starts at that
+     * +4 payload, so the native DMA slice remains payload +0x400. */
+    memcpy(frame->tiles + 0x1800, bank + 0x400, 0x400);
     if (!aos_rom_load_palette_range(rom, AOS_WINDOW_PALETTE, 0, 1, 0xF,
+                                    frame->palette, error, error_size) ||
+        !aos_rom_load_palette_range(rom, AOS_WINDOW_PALETTE, 0, 1, 0xE,
                                     frame->palette, error, error_size) ||
         /* sub_080676BC replaces row 15 immediately before the portrait
          * and wait marker are displayed. */
@@ -110,4 +107,31 @@ bool aos_window_frame_pixel(const AosWindowFrame *frame, unsigned x,
                                     AOS_WINDOW_FRAME_MAP_SIZE +
                                 x / 8 % AOS_WINDOW_FRAME_MAP_SIZE];
     return aos_window_frame_entry_pixel(frame, entry, x % 8, y % 8, color);
+}
+
+bool aos_window_frame_dialogue_pixel(const AosWindowFrame *frame,
+                                     const AosIntroTextTiles *text,
+                                     unsigned screen_x, unsigned screen_y,
+                                     uint16_t *color) {
+    if (!frame || !text || !color) return false;
+    unsigned source_x, source_y;
+    /* scroll=(8,52). Map (6,19), entries E0C0..E0CA. */
+    if (screen_x >= 40 && screen_x < 128 &&
+        screen_y >= 100 && screen_y < 108) {
+        source_x = screen_x - 40;
+        source_y = screen_y - 100 + 48;
+    /* Map (6,21)..(27,25), entries E000..E095. */
+    } else if (screen_x >= 40 && screen_x < 216 &&
+               screen_y >= 116 && screen_y < 156) {
+        source_x = screen_x - 40;
+        source_y = screen_y - 116;
+    } else {
+        return false;
+    }
+    unsigned index = aos_intro_text_tiles_pixel(text, source_x, source_y);
+    if (!index) return false;
+    size_t slot = (14u * 16u + index) * 2u;
+    *color = (uint16_t)(frame->palette[slot] |
+                        (uint16_t)frame->palette[slot + 1] << 8);
+    return true;
 }

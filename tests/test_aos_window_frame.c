@@ -40,6 +40,19 @@ int main(int argc, char **argv) {
            color == 0x001F);
     assert(!aos_window_frame_entry_pixel(&frame, 0xF021, 8, 0, &color));
 
+    /* sub_08067A04's two dynamic BG0 mappings with scroll (8,52). */
+    AosIntroTextTiles text = {0};
+    text.data[0] = 8;
+    text.data[192 * 32] = 15; /* tile 0xC0, context-B row 6 */
+    frame.palette[(14 * 16 + 8) * 2] = 0x1F;
+    frame.palette[(14 * 16 + 15) * 2 + 1] = 0x7C;
+    assert(aos_window_frame_dialogue_pixel(&frame, &text, 40, 116, &color) &&
+           color == 0x001F);
+    assert(aos_window_frame_dialogue_pixel(&frame, &text, 40, 100, &color) &&
+           color == 0x7C00);
+    assert(!aos_window_frame_dialogue_pixel(&frame, &text, 39, 116, &color));
+    assert(!aos_window_frame_dialogue_pixel(&frame, &text, 40, 115, &color));
+
     /* Optional local check with the verified ROM: every language loads a
      * non-empty window sheet and the dialogue palette row. */
     if (argc == 2) {
@@ -68,7 +81,9 @@ int main(int argc, char **argv) {
                             x, y & 7, &color)) {
                             marker = true;
                         }
-                assert(marker);
+                /* CE/DE are the folded-page image; CF/DF are intentionally
+                 * empty, making the whole marker blink off in one phase. */
+                assert(marker == (variant == 0));
             }
         }
         assert(!aos_window_frame_init(&frame, &rom, 4, error, sizeof error));

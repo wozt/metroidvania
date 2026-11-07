@@ -26,15 +26,16 @@ enum {
     AOS_OPENING_SKELETON_X = 0x16F,
     AOS_OPENING_SKELETON_Y = 0x268,
     /* sub_08067934 writes WIN0H=0x08E8 (x=8..232). sub_08067804 opens
-     * WIN0V around y=124 to y=88..160. screenshots/dialogue.jpeg shows
-     * the first glyph at the x=40 split used by sub_0806724C; the software
-     * canvas keeps its native six-pixel left inset. */
+     * WIN0V around y=124 to y=88..160. sub_08067A04 maps the speaker row
+     * at screen y=100 and the dialogue canvas at (40,116). */
     AOS_OPENING_TEXT_PANEL_X = 8,
     AOS_OPENING_TEXT_PANEL_Y = 88,
     AOS_OPENING_TEXT_PANEL_WIDTH = 224,
     AOS_OPENING_TEXT_PANEL_HEIGHT = 72,
-    AOS_OPENING_TEXT_X = 34,
-    AOS_OPENING_TEXT_Y = 96,
+    AOS_OPENING_SPEAKER_X = 40,
+    AOS_OPENING_SPEAKER_Y = 100,
+    AOS_OPENING_TEXT_X = 40,
+    AOS_OPENING_TEXT_Y = 116,
     /* sub_08067A04 writes the 8x16 wait marker to map cell (27,18), then
      * the vertically adjacent cell, compensating the tile portion of BG0's
      * portrait scroll. Its remaining four-pixel VOFS fraction places it at

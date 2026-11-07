@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "aos_intro_font.h"
 #include "fusion/assets/rom.h"
 
 /* The gameplay dialogue window's BG0 frame as sub_0805AFC0 leaves it:
@@ -44,4 +45,11 @@ bool aos_window_frame_pixel(const AosWindowFrame *frame, unsigned x,
  * two-tile wait marker written by sub_08067A04 without inventing host art. */
 bool aos_window_frame_entry_pixel(const AosWindowFrame *frame, uint16_t entry,
                                   unsigned x, unsigned y, uint16_t *color);
+/* Compose the dynamic dialogue text through sub_08067A04's BG0 map:
+ * speaker tiles 0xC0..0xCA and five body rows 0x00..0x95, including BG0
+ * scroll. False means that the mapped text pixel is transparent. */
+bool aos_window_frame_dialogue_pixel(const AosWindowFrame *frame,
+                                     const AosIntroTextTiles *text,
+                                     unsigned screen_x, unsigned screen_y,
+                                     uint16_t *color);
 #endif

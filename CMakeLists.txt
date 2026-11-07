@@ -920,7 +920,8 @@ if(BUILD_TESTING)
     add_test(NAME aos_menu_bg0 COMMAND fusion_aos_menu_bg0_tests)
 
     add_executable(fusion_aos_window_frame_tests tests/test_aos_window_frame.c
-                   src/runtime/aos_window_frame.c src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos_window_frame.c src/runtime/aos_rom_graphics.c
+                   src/runtime/aos_intro_font.c)
     target_include_directories(fusion_aos_window_frame_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_window_frame_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_window_frame_tests)

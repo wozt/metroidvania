@@ -4935,13 +4935,15 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
                                  AosIntroTextTiles *tiles) {
     aos_intro_text_tiles_clear(tiles);
     const char *speaker = aos_opening_event_speaker_name(event->speaker);
-    if (!aos_intro_font_render_small_span(font, tiles, 6, 0, 190, 15,
+    /* Context B maps its row 6 (tiles 0xC0..0xCA) at screen (40,100).
+     * Context A maps tiles 0x00..0x95 at screen (40,116). */
+    if (!aos_intro_font_render_small_span(font, tiles, 0, 48, 88, 8,
                                           (const uint8_t *)speaker,
                                           strlen(speaker)))
         return false;
     for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
-        if (!aos_intro_font_render_span(font, tiles, 6, 16 + line * 12,
-                                        190, 8, event->glyphs[line],
+        if (!aos_intro_font_render_span(font, tiles, 0, line * 12,
+                                        176, 8, event->glyphs[line],
                                         event->glyph_counts[line]))
             return false;
     return true;
@@ -5067,13 +5069,20 @@ static void draw_opening_text(SDL_Renderer *renderer,
                               const AosWindowFrame *window,
                               uint32_t frame) {
     if (!event->active) return;
-    SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
-    for (unsigned y = 0; y < 64; ++y)
-        for (unsigned x = 0; x < 200; ++x)
-            if (aos_intro_text_tiles_pixel(tiles, x, y))
-                SDL_RenderPoint(renderer, AOS_OPENING_TEXT_X + (float)x,
-                                AOS_OPENING_TEXT_Y + (float)y);
-    if (!event->waiting || !window) return;
+    if (!window) return;
+    for (unsigned y = 88; y < 160; ++y)
+        for (unsigned x = 8; x < 232; ++x) {
+            uint16_t color;
+            if (!aos_window_frame_dialogue_pixel(window, tiles, x, y, &color))
+                continue;
+            SDL_SetRenderDrawColor(renderer,
+                                   (uint8_t)((color & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 5) & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 10) & 31u) * 255u / 31u),
+                                   255);
+            SDL_RenderPoint(renderer, (float)x, (float)y);
+        }
+    if (!event->waiting) return;
     /* sub_08067A04 writes one of two 8x16 pairs at BG0 cells (27,18) and
      * (27,19). gEwramData bit 3 selects the pair every eight frames. */
     unsigned variant = (frame & 8u) ? 0u : 1u;

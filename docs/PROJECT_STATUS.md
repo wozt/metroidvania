@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0797 - Compose opening text through the native BG0 map
+
+- Replaced the opening dialogue's direct SDL canvas offset with the map built
+  by `sub_08067A04`: context B's speaker tiles `0xC0..0xCA` appear at
+  `(40,100)`, and context A's five mapped rows `0x00..0x95` begin at
+  `(40,116)`. Both use palette row 14 loaded from `0x081183F4`.
+- Corrected the language-bank DMA slice used by the folded-page wait marker.
+  `sub_0803B9B4` expands at EWRAM `+0x153F4`, the native code starts from
+  `+0x153F8`, then adds `0x400`; the normalized resource therefore uses
+  payload `+0x400`, not `+0x3FC`. The visible `CE/DE` phase is now aligned and
+  the `CF/DF` phase is fully transparent, eliminating the two-pixel ghost.
+- Focused font, window, opening-event and portrait tests pass. A fresh-file
+  offscreen capture was reviewed with the visible folded-page phase. The
+  scene remains partial pending emulator comparison and the other Object20
+  gaps already listed in the parity registry.
+
 ## Patch 0796 - Reproduce the native opening-dialogue blend and wait marker
 
 - Replaced the synthetic blue-grey dialogue fill with the operation used by

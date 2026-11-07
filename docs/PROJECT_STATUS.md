@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0792 - START enemy list native BG0
+
+- Audited `sub_0804D2C8` (the enemy-list draw called on every cursor
+  move): ten slots in two columns of five per page, row strips at
+  columns 6/0x14 rows 5-13 with entries `0xF320+slot*0x10` (palette
+  15), names through the context-B cursor at cells column 0/0x15
+  row 8+slot/2 gated by the defeated bitfield (`0x133A0` layout,
+  mirrored by `stats->defeated`), text `0x25D`-`0x2CD` per enemy or
+  `0x34E` "????????" when undiscovered, and enemy numbers through the
+  two-row digit path `sub_08046FFC`.
+- `aos_pause_graphics_render_enemy` reproduces the strips, names and
+  numbers on BG0 for the list view; the header/footer strips, page
+  numbers, button hints, the detail view (portrait, drop icons, soul
+  block — still diagnostic SDL) and transitions remain unported.
+- Every START hub page now has a native BG0 presentation; only the
+  enemy detail view remains on the diagnostic path.
+
 ## Patch 0791 - START item-use page native BG0
 
 - Audited the asm-only item-use routines (`sub_0804B6C4` draw/setup,

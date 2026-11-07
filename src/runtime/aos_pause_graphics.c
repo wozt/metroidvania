@@ -724,6 +724,48 @@ bool aos_pause_graphics_render_item_use(
     return true;
 }
 
+static bool enemy_defeated(const AosPauseEnemyValues *values, unsigned enemy) {
+    return enemy < AOS_PAUSE_ENEMY_RECORDS &&
+           (values->defeated[enemy >> 5] & (1u << (enemy & 31))) != 0;
+}
+
+bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
+                                     const AosPauseEnemyValues *values,
+                                     uint8_t *rgba, size_t rgba_size) {
+    if (!values || values->top >= AOS_PAUSE_ENEMY_RECORDS ||
+        values->cursor >= AOS_PAUSE_ENEMY_RECORDS ||
+        !graphics || !graphics->text_ready ||
+        !valid_output(graphics, rgba, rgba_size))
+        return false;
+    reset_bg0(graphics);
+    clear_bg0_tiles(graphics, 0x380, 0x80);
+    unsigned next_tile = 0;
+    for (unsigned slot = 0; slot < AOS_PAUSE_ENEMY_PAGE; ++slot) {
+        unsigned enemy = values->top + slot;
+        if (enemy >= AOS_PAUSE_ENEMY_RECORDS) break;
+        /* sub_0804D2C8 intro loop: ten-tile row strips at columns 6/0x14,
+         * rows 5+2*(slot/2), entries 0xF320+slot*0x10 (palette 15). */
+        put_tiles(graphics, (int)(slot & 1u ? 0x14 : 6),
+                  (int)(5 + (slot / 2) * 2),
+                  (uint16_t)(0xF320 + slot * 0x10), 10);
+        /* Names through the context-B cursor: column 0/0x15, row
+         * 8+slot/2 -> pixel (0|126, (8+slot/2)*8). Defeated enemies use
+         * text 0x25D+enemy; undiscovered ones 0x34E "????????". */
+        uint16_t id = enemy_defeated(values, enemy)
+                          ? (uint16_t)(0x25D + enemy) : 0x34E;
+        if (!place_text_id(graphics, id, true, slot & 1u ? 126u : 0u,
+                           (8u + slot / 2u) * 8u, 110, 3, &next_tile))
+            return false;
+        /* Enemy number via the two-row digit path (sub_08046FFC),
+         * right-aligned ending at column 5/0x15 on the strip row. */
+        put_large_number(graphics, (int)(slot & 1u ? 0x15 : 5),
+                         (int)(5 + (slot / 2) * 2), enemy + 1,
+                         enemy + 1 > 99 ? 3 : 2, 3);
+    }
+    composite(graphics, rgba);
+    return true;
+}
+
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
                                      bool can_sleep, uint8_t *rgba,
                                      size_t rgba_size) {

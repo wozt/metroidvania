@@ -331,6 +331,25 @@ int main(int argc, char **argv) {
             assert(aos_pause_graphics_render_item_use(&graphics, &items,
                                                       rgba, 240 * 160 * 4));
         }
+        /* sub_0804D2C8 list: strips, names gated by defeated bits, big
+         * enemy numbers. Enemies 0 and 11 defeated on page 0/10. */
+        {
+            AosPauseEnemyValues enemy = {.top = 0, .cursor = 0};
+            enemy.defeated[0] = 1u | (1u << 11); /* enemies 0 and 11 */
+            assert(aos_pause_graphics_render_enemy(&graphics, &enemy,
+                                                   rgba, 240 * 160 * 4));
+            /* Slot strips at columns 6/0x14 rows 5+2*(slot/2); the big
+             * enemy numbers overlap the strip's left cells, so assert on
+             * cells past the number reach (col 25). */
+            assert(graphics.bg0_map[5 * 32 + 25] == 0xF335);
+            assert(graphics.bg0_map[13 * 32 + 25] == 0xF3B5);
+            enemy.top = 10;
+            enemy.cursor = 10;
+            assert(aos_pause_graphics_render_enemy(&graphics, &enemy,
+                                                   rgba, 240 * 160 * 4));
+            /* Enemy 11 defeated -> name text written near (0,64);
+             * undiscovered enemies render 0x34E instead. */
+        }
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

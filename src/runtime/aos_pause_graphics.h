@@ -58,6 +58,17 @@ typedef struct {
 } AosPauseSoulSetValues;
 
 enum {
+    AOS_PAUSE_ENEMY_RECORDS = 112,
+    AOS_PAUSE_ENEMY_PAGE = 10,
+};
+
+typedef struct {
+    uint32_t defeated[4]; /* stats->defeated: word enemy>>5, bit enemy&31 */
+    uint8_t top;          /* first enemy index shown (multiple of 10) */
+    uint8_t cursor;       /* selected enemy index */
+} AosPauseEnemyValues;
+
+enum {
     AOS_PAUSE_ITEM_USE_RECORDS = 32,
     AOS_PAUSE_ITEM_USE_VISIBLE = 8,
 };
@@ -131,6 +142,15 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
                                       uint8_t *rgba, size_t rgba_size);
+/* sub_0804D2C8: the Enemy list page. Ten slots in two columns of five;
+ * defeated enemies show name text 0x25D+enemy through the context-B
+ * cursor, undiscovered ones 0x34E "????????". Row strips use entries
+ * 0xF320+slot*0x10 and the enemy numbers use the two-row digit path.
+ * The header/footer strips, button hints and the detail view remain
+ * unported; the detail page keeps the diagnostic presentation. */
+bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
+                                     const AosPauseEnemyValues *values,
+                                     uint8_t *rgba, size_t rgba_size);
 /* sub_0804B6C4/sub_0804B494: the Item Use page. Four rows of two slots
  * reuse the baked strips at columns 2/0x11 rows 11-14, the bottom
  * description bars sit at column 5 rows 16-18, names are text IDs

@@ -13,6 +13,7 @@
 typedef struct {
     FusionAosRenderedBackground background;
     uint16_t bg0_map[32 * 32];
+    uint8_t bg0_base_chars[0x8000];
     uint8_t bg0_chars[0x8000];
     uint8_t palette[0x200];
     uint8_t backdrop_rgb[3];
@@ -55,6 +56,25 @@ typedef struct {
     uint8_t counts[AOS_PAUSE_SOUL_FAMILIES][AOS_PAUSE_SOUL_RECORDS];
 } AosPauseSoulSetValues;
 
+enum {
+    AOS_PAUSE_EQUIP_SLOTS = 3,
+    AOS_PAUSE_EQUIP_VISIBLE = 8,
+    AOS_PAUSE_EQUIP_STATS = 6,
+    AOS_PAUSE_EQUIP_NONE = 0xFF,
+};
+
+typedef struct {
+    int16_t current[AOS_PAUSE_EQUIP_STATS]; /* ATK, DEF, STR, CON, INT, LCK. */
+    int16_t preview[AOS_PAUSE_EQUIP_STATS];
+    uint8_t equipped[AOS_PAUSE_EQUIP_SLOTS];
+    uint8_t items[AOS_PAUSE_EQUIP_VISIBLE];
+    uint8_t quantities[AOS_PAUSE_EQUIP_VISIBLE];
+    uint8_t slot;
+    uint8_t item_count;
+    uint8_t selected_item;
+    bool preview_active;
+} AosPauseEquipValues;
+
 /* sub_08047684 and sub_08047520: decode the pause hub's actual BG1 tiles,
  * palette and block map from the verified Aria ROM. Dynamic BG0 text and OBJ
  * layers are deliberately separate so the runtime and editor can share this
@@ -75,6 +95,12 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_soul_set(
     AosPauseGraphics *graphics, const AosPauseSoulSetValues *values,
     uint8_t *rgba, size_t rgba_size);
+/* sub_0804A95C/sub_08049F34/sub_0804A2A4/sub_0804A00C: reconstruct the
+ * Equip BG0 page and localized ROM text. Item icons and cursor OAM remain a
+ * separate compositing layer. */
+bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
+                                     const AosPauseEquipValues *values,
+                                     uint8_t *rgba, size_t rgba_size);
 void aos_pause_graphics_free(AosPauseGraphics *graphics);
 
 #endif /* AOS_PAUSE_GRAPHICS_H */

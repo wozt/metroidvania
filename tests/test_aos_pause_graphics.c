@@ -149,9 +149,34 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[3 * 32 + 6] & 0xF000) == 0x8000);
     assert((graphics.bg0_map[5 * 32 + 6] & 0xF000) == 0x3000);
     assert(graphics.bg0_map[2 * 32 + 22] == 0x3305);
-    assert((graphics.bg0_map[10 * 32 + 15] & 0x3FF) >= 0x200);
-    assert((graphics.bg0_map[12 * 32] & 0x3FF) >= 0x200);
-    assert((graphics.bg0_map[15 * 32 + 7] & 0x3FF) >= 0x200);
+    assert((graphics.bg0_map[10 * 32 + 15] & 0x3FF) < 0x200);
+    assert((graphics.bg0_map[12 * 32] & 0x3FF) < 0x200);
+    assert((graphics.bg0_map[15 * 32 + 7] & 0x3FF) < 0x200);
+
+    AosPauseEquipValues equip = {
+        .current = {15, 16, 11, 12, 13, 14},
+        .preview = {18, 17, 12, 12, 13, 14},
+        .equipped = {0, 0, 25},
+        .items = {AOS_PAUSE_EQUIP_NONE, 0},
+        .quantities = {0, 2},
+        .slot = 0,
+        .item_count = 2,
+        .selected_item = 0,
+        .preview_active = true,
+    };
+    assert(aos_pause_graphics_render_equip(&graphics, &equip,
+                                            rgba, 240 * 160 * 4));
+    assert(graphics.bg0_map[3 * 32 + 2] == 0x33D0);
+    assert(graphics.bg0_map[2 * 32 + 22] == 0x3305);
+    assert((graphics.bg0_map[2 * 32 + 24] & 0x3FF) == 0x34A);
+    assert((graphics.bg0_map[8 * 32 + 15] & 0x3FF) < 0x200);
+    assert((graphics.bg0_map[10 * 32] & 0x3FF) < 0x200);
+    assert((graphics.bg0_map[16 * 32 + 5] & 0x3FF) < 0x200);
+    assert(graphics.bg0_chars[0x340 * 32] == 0);
+    assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
+                                         rgba, 240 * 160 * 4));
+    assert(memcmp(graphics.bg0_chars + 0x340 * 32,
+                  graphics.bg0_base_chars + 0x340 * 32, 32) == 0);
     aos_pause_graphics_free(&graphics);
     free(rgba);
     free(decoded);
@@ -188,6 +213,33 @@ int main(int argc, char **argv) {
             assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
                                                        rgba, 240 * 160 * 4));
             write_ppm(argv[3], rgba);
+        }
+        static const unsigned first_item[] = {0, 0, 25};
+        static const unsigned item_count[] = {59, 25, 20};
+        equip.item_count = 1;
+        equip.preview_active = true;
+        for (unsigned slot = 0; slot < 3; ++slot) {
+            equip.slot = (uint8_t)slot;
+            for (unsigned index = 0; index < item_count[slot]; ++index) {
+                unsigned item = first_item[slot] + index;
+                equip.items[0] = (uint8_t)item;
+                equip.selected_item = (uint8_t)item;
+                equip.equipped[slot] = (uint8_t)item;
+                if (!aos_pause_graphics_render_equip(
+                        &graphics, &equip, rgba, 240 * 160 * 4)) {
+                    fprintf(stderr, "Equip render failed for slot %u item %u\n",
+                            slot, item);
+                    assert(false);
+                }
+            }
+        }
+        if (argc >= 5) {
+            equip.slot = 0;
+            equip.items[0] = 0;
+            equip.selected_item = 0;
+            assert(aos_pause_graphics_render_equip(&graphics, &equip,
+                                                    rgba, 240 * 160 * 4));
+            write_ppm(argv[4], rgba);
         }
         free(rgba);
         aos_pause_graphics_free(&graphics);

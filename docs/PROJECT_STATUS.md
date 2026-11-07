@@ -1,6 +1,34 @@
 # Project status
 
-Last updated: **2026-11-06**.
+Last updated: **2026-11-07**.
+
+## Patch 0775 - Reconstruct the native Aria Equip data page
+
+- Replaced Equip's diagnostic data layout with a reusable C11 BG0 renderer
+  derived from `sub_0804A95C`, `sub_08049F34`, `sub_0804A00C`,
+  `sub_0804A0B4`, `sub_0804A120` and `sub_0804A2A4`. It reads all equipment
+  names and descriptions from the verified ROM, shows the three equipped
+  records, the source-ordered two-column owned list and quantities, and the
+  six native current-versus-preview values for weapon, armor and accessory.
+- Connected the runtime's live equipment, inventory, recent-item order and
+  recalculated stats to that renderer. Its data contract is independent of
+  SDL and can be reused by the editor rather than duplicating ROM table
+  interpretation in a frontend.
+- Corrected the shared Soul Set and Equip text composition: each page now
+  restores its ROM character bank, clears the language-bank placeholders
+  that the original text routines rewrite, uses the pause palette's font
+  colour and composites subpages on their native solid backdrop instead of
+  retaining the START hub portrait. Returning to the hub restores its labels.
+- Extended the deterministic graphics test and exercised every localized
+  record against the local verified ROM: 59 weapons, 25 armor pieces and 20
+  accessories rendered with their descriptions and preview path. This is
+  source-derived and image-checked, not emulator-compared.
+- Status remains partial. The title banner, complete page frame, equipment
+  icons, animated cursor OAM and exact transition layer are still missing;
+  no fidelity or emulator-validation claim is made for the composed page.
+
+Next: reconstruct Equip's native title/frame and equipment/cursor OAM layers,
+then apply the same icon/cursor layer to Soul Set.
 
 ## Patch 0774 - Reconstruct the native Aria Soul Set page
 

@@ -4280,6 +4280,70 @@ static bool draw_native_soul_set(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
+static bool draw_native_equip(SDL_Renderer *renderer, SDL_Texture *texture,
+                              AosPauseGraphics *graphics,
+                              const AosSoulMenu *menu, const AosStats *stats,
+                              const AosEquipmentTables *equipment) {
+    if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
+        menu->page != AOS_SOUL_MENU_PAGE_EQUIP ||
+        menu->equip_slot >= AOS_EQUIP_SLOTS)
+        return false;
+    AosPauseEquipValues values = {
+        .current = {stats->atk, stats->def,
+                    stats->current[AOS_STAT_STR], stats->current[AOS_STAT_CON],
+                    stats->current[AOS_STAT_INT], stats->current[AOS_STAT_LCK]},
+        .equipped = {stats->weapon, stats->armor, stats->accessory},
+        .slot = menu->equip_slot,
+        .selected_item = menu->equip_selecting
+                             ? menu->equip_choice
+                             : aos_equipment_current(stats, menu->equip_slot),
+        .preview_active = menu->equip_selecting && equipment,
+    };
+    memcpy(values.preview, values.current, sizeof values.preview);
+    if (values.preview_active) {
+        AosStats preview = *stats;
+        uint8_t *slot = menu->equip_slot == AOS_EQUIP_WEAPON ? &preview.weapon
+                        : menu->equip_slot == AOS_EQUIP_ARMOR ? &preview.armor
+                                                              : &preview.accessory;
+        *slot = values.selected_item;
+        aos_stats_refresh(&preview, equipment);
+        values.preview[0] = preview.atk;
+        values.preview[1] = preview.def;
+        memcpy(values.preview + 2, preview.current, sizeof preview.current);
+    }
+
+    int choices = aos_equipment_choice_count(stats, menu->equip_slot);
+    int cursor = 0;
+    for (int ordinal = 0; ordinal < choices; ++ordinal)
+        if (aos_equipment_ordered_choice_at(stats, menu->recent_items,
+                                            menu->equip_slot, ordinal) ==
+            values.selected_item) {
+            cursor = ordinal;
+            break;
+        }
+    int top = cursor - 3;
+    if (top > choices - AOS_PAUSE_EQUIP_VISIBLE)
+        top = choices - AOS_PAUSE_EQUIP_VISIBLE;
+    if (top < 0) top = 0;
+    for (int entry = 0;
+         entry < AOS_PAUSE_EQUIP_VISIBLE && top + entry < choices; ++entry) {
+        uint8_t item = aos_equipment_ordered_choice_at(
+            stats, menu->recent_items, menu->equip_slot, top + entry);
+        values.items[values.item_count] = item;
+        values.quantities[values.item_count] =
+            aos_equipment_quantity(stats, menu->equip_slot, item);
+        ++values.item_count;
+    }
+
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_pause_graphics_render_equip(graphics, &values,
+                                         pixels, sizeof pixels) ||
+        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
 static bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosQuickMap *map, const AosStats *stats,
                                   uint32_t animation_frame) {
@@ -6811,7 +6875,10 @@ int aria_runtime_main(int argc, char **argv) {
         if (quick_map_open)
             draw_native_quick_map(renderer, quick_map_texture, &quick_map,
                                   &progress, (uint32_t)step);
-        else if (!draw_native_soul_set(renderer, pause_texture, &pause_graphics,
+        else if (!draw_native_equip(renderer, pause_texture, &pause_graphics,
+                                    &soul_menu, &progress,
+                                    have_equipment ? &equipment : NULL) &&
+                 !draw_native_soul_set(renderer, pause_texture, &pause_graphics,
                                        &soul_menu, &progress) &&
                  !draw_native_pause_hub(renderer, pause_texture, &pause_graphics,
                                    &soul_menu, &progress, &soma,

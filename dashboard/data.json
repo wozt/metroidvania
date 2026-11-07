@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-06T22:19:55+00:00",
+ "generated_at": "2026-11-07T02:55:39+00:00",
  "git": {
-  "commit": "c4536a7",
+  "commit": "6336d41",
   "branch": "main",
   "dirty": true
  },
@@ -816,7 +816,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -899,7 +899,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1028,7 +1028,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1099,7 +1099,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1227,7 +1227,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1316,7 +1316,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1395,7 +1395,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1467,7 +1467,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1540,7 +1540,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1618,7 +1618,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1710,7 +1710,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1784,7 +1784,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1858,7 +1858,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -1940,7 +1940,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2005,7 +2005,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2087,7 +2087,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2149,7 +2149,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2237,7 +2237,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2337,7 +2337,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2396,7 +2396,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2469,7 +2469,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2538,7 +2538,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2609,7 +2609,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2667,7 +2667,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2745,7 +2745,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2803,7 +2803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2891,7 +2891,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -2974,7 +2974,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3061,7 +3061,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3167,7 +3167,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3285,7 +3285,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3343,7 +3343,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3418,7 +3418,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3511,7 +3511,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3569,7 +3569,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3664,7 +3664,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3728,7 +3728,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3798,7 +3798,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3858,7 +3858,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -3970,7 +3970,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4037,7 +4037,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4097,7 +4097,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4156,7 +4156,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4282,7 +4282,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4354,7 +4354,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4439,7 +4439,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4497,7 +4497,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4556,7 +4556,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4679,7 +4679,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4741,7 +4741,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4809,7 +4809,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4868,7 +4868,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4926,7 +4926,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -4984,7 +4984,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5074,7 +5074,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5146,7 +5146,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5246,7 +5246,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5325,7 +5325,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5438,7 +5438,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5507,7 +5507,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5633,7 +5633,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5732,7 +5732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5852,7 +5852,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5917,7 +5917,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -5992,7 +5992,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6090,7 +6090,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6178,7 +6178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6327,7 +6327,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6399,7 +6399,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6476,7 +6476,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6551,7 +6551,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6612,7 +6612,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6701,7 +6701,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6764,7 +6764,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6857,7 +6857,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -6952,7 +6952,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7142,7 +7142,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7231,7 +7231,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7355,7 +7355,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7414,7 +7414,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7522,7 +7522,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7604,7 +7604,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7681,7 +7681,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7760,7 +7760,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7886,7 +7886,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -7973,7 +7973,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8050,7 +8050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8148,7 +8148,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8251,7 +8251,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8340,7 +8340,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8432,7 +8432,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8537,7 +8537,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8689,7 +8689,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8804,7 +8804,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -8928,7 +8928,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9001,7 +9001,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9084,7 +9084,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9166,7 +9166,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9246,7 +9246,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9333,7 +9333,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9404,7 +9404,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9473,7 +9473,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9551,7 +9551,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9625,7 +9625,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9700,7 +9700,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9769,7 +9769,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9838,7 +9838,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9914,7 +9914,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -9990,7 +9990,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10062,7 +10062,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10138,7 +10138,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10217,7 +10217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10292,7 +10292,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10361,7 +10361,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10442,7 +10442,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10524,7 +10524,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10604,7 +10604,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10685,7 +10685,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10775,7 +10775,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10857,7 +10857,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -10933,7 +10933,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11010,7 +11010,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11090,7 +11090,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11168,7 +11168,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11243,7 +11243,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11331,7 +11331,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11412,7 +11412,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11487,7 +11487,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11565,7 +11565,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11642,7 +11642,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11711,7 +11711,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11796,7 +11796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11871,7 +11871,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -11952,7 +11952,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12023,7 +12023,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12099,7 +12099,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12177,7 +12177,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12265,7 +12265,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12343,7 +12343,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12446,7 +12446,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12522,7 +12522,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12605,7 +12605,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12698,7 +12698,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12767,7 +12767,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -12942,7 +12942,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13007,7 +13007,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13133,7 +13133,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13207,7 +13207,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13304,7 +13304,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13315,6 +13315,9 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
+    "src/runtime/aos_pause_graphics.c",
+    "src/runtime/aos_intro_resources.c",
+    "src/runtime/aos_intro_font.c",
     "src/runtime/aos_soul_menu.c",
     "src/runtime/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
@@ -13323,6 +13326,7 @@
     "src/runtime/aos_save.c"
    ],
    "tests": [
+    "tests/test_aos_pause_graphics.c",
     "tests/test_aos_soul_menu.c",
     "tests/test_aos_pickup.c",
     "tests/test_aos_stats.c",
@@ -13337,6 +13341,9 @@
     "aos.saves.portable_slots"
    ],
    "native_routines": [
+    "sub_08049F34",
+    "sub_0804A00C",
+    "sub_0804A0B4",
     "sub_0804A95C",
     "sub_0804AAF0",
     "sub_0804A120",
@@ -13346,10 +13353,11 @@
     "sub_0804AFD4",
     "sub_0804B26C"
    ],
-   "limitations": "The page uses a diagnostic SDL overlay instead of native text tiles, icons, description records, cursor OAM and transitions. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. sub_0804AED4 removes a selected last copy from that cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-adapted and unit-tested, not emulator-compared.",
-   "next_action": "Render the native equipment resources and descriptions, complete all weapon entity classes, then port resistance and record-specific accessory effects.",
+   "limitations": "The native C11 BG0 renderer consumes the verified ROM's localized names, descriptions, small and proportional fonts, language-bank labels, digit and comparison tiles and source coordinates. Its title banner, page frame, item icon and cursor OAM layers and exact transitions remain absent. Weapon records without reconstructed entity art remain equipped for stats but cannot draw or attack. Record-specific armor and accessory effects and resistance damage are still absent. The Equip hub entry exposes weapon, armor and accessory slots. A opens an owned-item list with None, repeated Up/Down wraps it and A applies the choice. The list follows sub_0804A2A4: up to four valid recent records appear first, followed by every other owned record in table order. The runtime now passes that live list to a source-derived sub_0804A95C BG0 view with the three equipped names, selected category, quantities, localized description and six current-versus-preview values. sub_0804AED4 removes a selected last copy from the recent cache, removes the old equipment, compacts survivors to the right and inserts the old equipment immediately before them. All 59 weapons, 25 armor pieces and 20 accessories have identified English names and were rendered locally from the verified ROM. Each choice previews and refreshes STR, CON, INT, LCK, ATK, DEF and resistance; runtime combat consumes ATK and DEF immediately, and a weapon change reloads its exported behavior and available sprite frames. Save rooms persist all three slots through schema v7. Source-derived, unit-tested and image-checked, not emulator-compared.",
+   "next_action": "Reconstruct the Equip title, frame, item icons and cursor OAM, then complete all weapon entity classes, resistance and record-specific accessory effects.",
    "evidence": {
     "unit_tests": [
+     "tests/test_aos_pause_graphics.c",
      "tests/test_aos_soul_menu.c",
      "tests/test_aos_pickup.c",
      "tests/test_aos_stats.c",
@@ -13357,7 +13365,7 @@
      "tests/test_aos_save.c"
     ],
     "in_game_check": [
-     "aria area_00_room_003: reviewed capture shows Equip enabled in the seven-entry hub; deterministic controller tests cover recent-first owned lists, cache exchange and all three slot changes"
+     "aria area_00_room_003: Equip is reachable from the seven-entry hub; deterministic controller tests cover recent-first owned lists, cache exchange and all three slot changes; a verified-ROM test rendered all 59 weapons, 25 armor pieces and 20 accessories with their native text"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -13368,6 +13376,16 @@
     "sources_found": true,
     "missing_sources": [],
     "tests": [
+     {
+      "test": "tests/test_aos_pause_graphics.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_pause_graphics"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
      {
       "test": "tests/test_aos_soul_menu.c",
       "kind": "ctest",
@@ -13421,7 +13439,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13514,7 +13532,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13584,7 +13602,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13646,7 +13664,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13732,7 +13750,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13814,7 +13832,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13881,7 +13899,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -13954,7 +13972,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -14029,7 +14047,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -14134,7 +14152,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -14315,7 +14333,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -14380,8 +14398,8 @@
     "sub_0804D2C8",
     "sub_0804D73C"
    ],
-   "limitations": "The hub uses the source BG1, portrait, frame, language-bank labels, digit tiles, palettes and BG0 layout decoded directly from a verified ROM; its cursor OAM and exact fades remain absent. Soul Set now uses its source BG0 labels and coordinates, stats, palette selection, ROM-localized equipped/list names and descriptions, and both native proportional fonts. Its soul icons, animated cursor OAM, recent-four list ordering and exact category transitions remain absent; L/R is still a source-adapted colour shortcut. The other six usable subpages retain diagnostic SDL presentation. Enemy lacks native tiles, icons, localized descriptions, animated previews and exact transitions. Sleep uses a diagnostic confirmation and fade. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub through the source-derived sub_08047520/sub_08047C4C presentation in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters all seven usable pages; B returns from a page and B or START from the hub resumes play. The Soul Set renderer reconstructs sub_08048D84, sub_080493E8, sub_080494F8 and sub_08049DB4 from the verified ROM without tracked extracted assets. Soul Set equips owned coloured souls, Equip changes all three equipment slots, Item Use consumes owned usable items, Ability toggles owned ability souls and Config applies unique action-button assignments. Sleep creates a one-use quicksave from the current runtime state and returns through the frontend after its source-timed fade. Enemy lists the source's 112 visible records, gates details on defeat and shows exported combat, drop and soul facts. The schema-v9 save bridge persists inventories, selections, button mappings, bestiary and drop discoveries at the next save-room write. Source-derived, deterministic-tested and verified-ROM image-checked; not emulator-compared.",
-   "next_action": "Reconstruct the native Equip page, then add Soul Set icons, cursor OAM and recent-four ordering before comparing either page with an emulator.",
+   "limitations": "The hub uses the source BG1, portrait, frame, language-bank labels, digit tiles, palettes and BG0 layout decoded directly from a verified ROM; its cursor OAM and exact fades remain absent. Soul Set uses its source BG0 labels and coordinates, stats, palette selection, ROM-localized equipped/list names and descriptions, and both native proportional fonts. Equip uses source list ordering and a native BG0 data view with ROM-localized equipment text and stat comparison. Both subpages still lack their title/frame and icon/cursor OAM layers; Soul Set also lacks recent-four ordering and exact category transitions, and L/R remains a source-adapted colour shortcut. The other five usable subpages retain diagnostic SDL presentation. Enemy lacks native tiles, icons, localized descriptions, animated previews and exact transitions. Sleep uses a diagnostic confirmation and fade. Pause and native menu sounds are requested through the native audio controller, but the MP2K host is not emulator-compared. START freezes gameplay and opens the seven-entry hub through the source-derived sub_08047520/sub_08047C4C presentation in native order: Soul Set, Equip, Item Use, Ability, Sleep, Config and Enemy. Repeated Up/Down wraps the cursor; A enters all seven usable pages; B returns from a page and B or START from the hub resumes play. The Soul Set renderer reconstructs sub_08048D84, sub_080493E8, sub_080494F8 and sub_08049DB4, while the Equip renderer reconstructs sub_0804A95C, sub_08049F34, sub_0804A2A4, sub_0804A00C and sub_0804A120 from the verified ROM without tracked extracted assets. Soul Set equips owned coloured souls, Equip changes all three equipment slots and previews all six affected values, Item Use consumes owned usable items, Ability toggles owned ability souls and Config applies unique action-button assignments. Sleep creates a one-use quicksave from the current runtime state and returns through the frontend after its source-timed fade. Enemy lists the source's 112 visible records, gates details on defeat and shows exported combat, drop and soul facts. The schema-v9 save bridge persists inventories, selections, button mappings, bestiary and drop discoveries at the next save-room write. Source-derived, deterministic-tested and verified-ROM image-checked; not emulator-compared.",
+   "next_action": "Add the native title, frame, item/soul icons and cursor OAM to Equip and Soul Set, then port Soul Set's recent-four ordering before an emulator comparison.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_pause_graphics.c",
@@ -14390,7 +14408,7 @@
      "tests/test_aos_save.c"
     ],
     "in_game_check": [
-     "aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the seven-entry hub; a verified-ROM image check shows the native Soul Set composition, localized text and description"
+     "aria area_00_room_003 (--red-soul 14): START opens a reviewed local capture of the seven-entry hub; verified-ROM image checks cover Soul Set and all 104 equipment records with localized names, descriptions and stat previews"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -14444,7 +14462,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -14520,7 +14538,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -14996,7 +15014,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -15085,7 +15103,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -15252,7 +15270,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -15483,7 +15501,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -15638,7 +15656,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -15703,7 +15721,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -15778,7 +15796,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16044,7 +16062,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16198,7 +16216,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16312,7 +16330,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16380,7 +16398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16429,7 +16447,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16491,7 +16509,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16540,7 +16558,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16600,7 +16618,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16758,7 +16776,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16835,7 +16853,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16896,7 +16914,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -16980,7 +16998,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17047,7 +17065,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17159,7 +17177,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17210,7 +17228,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17273,7 +17291,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17322,7 +17340,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17530,7 +17548,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17594,7 +17612,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17719,7 +17737,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17768,7 +17786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17818,7 +17836,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17867,7 +17885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17917,7 +17935,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -17995,7 +18013,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18085,7 +18103,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18150,7 +18168,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18228,7 +18246,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18278,7 +18296,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18420,7 +18438,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18499,7 +18517,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18563,7 +18581,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18640,7 +18658,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18731,7 +18749,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18809,7 +18827,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -18967,7 +18985,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -19014,7 +19032,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -19057,7 +19075,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-06"
+    "verified_on": "2026-11-07"
    }
   },
   {
@@ -19991,6 +20009,12 @@
  },
  "timeline": [
   {
+   "commit": "6336d41",
+   "date": "2026-11-06",
+   "subject": "Reconstruct Aria native Soul Set page",
+   "scope": "project"
+  },
+  {
    "commit": "c4536a7",
    "date": "2026-11-06",
    "subject": "Reconstruct Aria native pause and quick map",
@@ -20463,12 +20487,6 @@
    "date": "2026-11-02",
    "subject": "Port Soma's state 9 transformation and Curly's blue soul",
    "scope": "project"
-  },
-  {
-   "commit": "a9bc5f0",
-   "date": "2026-11-02",
-   "subject": "Port the Killer Doll decoy soul and the enemies' aim at it",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -20529,9 +20547,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 984,
-    "routines_attached_to_features": 984,
-    "unassigned_routines": 2589,
+    "routines_cited_by_features": 987,
+    "routines_attached_to_features": 987,
+    "unassigned_routines": 2586,
     "call_edges": 14228
    }
   },

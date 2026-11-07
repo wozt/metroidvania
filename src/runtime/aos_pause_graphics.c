@@ -18,6 +18,11 @@ enum {
     AOS_PAUSE_BG0_FILL = 0x330D,
     AOS_PAUSE_WIDTH = 240,
     AOS_PAUSE_HEIGHT = 160,
+    AOS_WEAPON_RECORDS = 0x08505D3C,
+    AOS_ARMOR_RECORDS = 0x085063B0,
+    AOS_EQUIPMENT_NAME_IDS = 0x08506734,
+    AOS_EQUIPMENT_DESCRIPTION_IDS = 0x08506936,
+    AOS_ROM_BASE = 0x08000000,
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -88,7 +93,9 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
     if (ok) {
         color_rgb(memory->palette, 0, graphics->backdrop_rgb);
         memcpy(graphics->palette, memory->palette, sizeof graphics->palette);
-        memcpy(graphics->bg0_chars, memory->vram + 0x4000,
+        memcpy(graphics->bg0_base_chars, memory->vram + 0x4000,
+               sizeof graphics->bg0_base_chars);
+        memcpy(graphics->bg0_chars, graphics->bg0_base_chars,
                sizeof graphics->bg0_chars);
         graphics->language = language;
         graphics->text_ready =
@@ -200,6 +207,31 @@ static void composite(const AosPauseGraphics *graphics, uint8_t *rgba) {
         }
 }
 
+static void composite_on_backdrop(const AosPauseGraphics *graphics,
+                                  uint8_t *rgba) {
+    for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
+        for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
+            size_t out = ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
+            memcpy(rgba + out, graphics->backdrop_rgb, 3);
+            rgba[out + 3] = 255;
+            bg0_pixel(graphics, x, y, rgba + out);
+        }
+}
+
+static void reset_bg0(AosPauseGraphics *graphics) {
+    memcpy(graphics->bg0_chars, graphics->bg0_base_chars,
+           sizeof graphics->bg0_chars);
+    for (size_t index = 0; index < 32 * 32; ++index)
+        graphics->bg0_map[index] = AOS_PAUSE_BG0_FILL;
+}
+
+static void clear_bg0_tiles(AosPauseGraphics *graphics,
+                            unsigned first, unsigned count) {
+    if (first >= 0x400 || count > 0x400 - first) return;
+    memset(graphics->bg0_chars + (size_t)first * 32, 0,
+           (size_t)count * 32);
+}
+
 bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                                    const AosPauseHubValues *values,
                                    uint8_t selected, uint8_t *rgba,
@@ -207,8 +239,7 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
     if (!values || selected >= 7 ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
-    for (size_t index = 0; index < 32 * 32; ++index)
-        graphics->bg0_map[index] = AOS_PAUSE_BG0_FILL;
+    reset_bg0(graphics);
 
     /* sub_08047C4C: seven six-tile labels, palette 3 selected and palette 7
      * otherwise. The tile sequence is the language bank at VRAM 0xA000. */
@@ -265,18 +296,18 @@ static bool place_text(AosPauseGraphics *graphics, const AosNativeText *text,
     unsigned height = offset_y + (unsigned)line_count * line_height;
     unsigned tile_width = (offset_x + width + 7u) / 8u;
     unsigned tile_height = (height + 7u) / 8u;
-    if (*next_tile + tile_width * tile_height > 0x300u) return false;
+    if (*next_tile + tile_width * tile_height > 0x200u) return false;
 
     aos_intro_text_tiles_clear(&graphics->text_tiles);
     for (size_t line = 0; line < line_count; ++line) {
         bool rendered = small
             ? aos_intro_font_render_small_span(
                   &graphics->font, &graphics->text_tiles, offset_x,
-                  offset_y + (unsigned)line * line_height, width, 8,
+                  offset_y + (unsigned)line * line_height, width, 1,
                   text->glyphs[line], text->glyph_counts[line])
             : aos_intro_font_render_span(
                   &graphics->font, &graphics->text_tiles, offset_x,
-                  offset_y + (unsigned)line * line_height, width, 8,
+                  offset_y + (unsigned)line * line_height, width, 1,
                   text->glyphs[line], text->glyph_counts[line]);
         if (!rendered) return false;
     }
@@ -286,13 +317,27 @@ static bool place_text(AosPauseGraphics *graphics, const AosNativeText *text,
         for (unsigned column = 0; column < tile_width; ++column) {
             unsigned tile = (*next_tile)++;
             size_t source = ((size_t)row * 32 + column) * 32;
-            memcpy(graphics->bg0_chars + (size_t)tile * 32,
-                   graphics->text_tiles.data + source, 32);
             unsigned map_x = destination_x + column;
             unsigned map_y = destination_y + row;
-            if (map_x < 32 && map_y < 32)
+            uint8_t *destination =
+                graphics->bg0_chars + (size_t)tile * 32;
+            if (map_x < 32 && map_y < 32) {
+                uint16_t previous = graphics->bg0_map[map_y * 32 + map_x];
+                memcpy(destination,
+                       graphics->bg0_chars + (size_t)(previous & 0x3FF) * 32,
+                       32);
+                const uint8_t *glyph = graphics->text_tiles.data + source;
+                for (unsigned byte = 0; byte < 32; ++byte) {
+                    uint8_t low = glyph[byte] & 0x0F;
+                    uint8_t high = glyph[byte] & 0xF0;
+                    if (low) destination[byte] =
+                        (uint8_t)((destination[byte] & 0xF0) | low);
+                    if (high) destination[byte] =
+                        (uint8_t)((destination[byte] & 0x0F) | high);
+                }
                 graphics->bg0_map[map_y * 32 + map_x] =
                     (uint16_t)(tile | palette << 12);
+            }
         }
     return true;
 }
@@ -325,8 +370,10 @@ bool aos_pause_graphics_render_soul_set(
         !graphics || !graphics->text_ready ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
-    for (size_t index = 0; index < 32 * 32; ++index)
-        graphics->bg0_map[index] = AOS_PAUSE_BG0_FILL;
+    reset_bg0(graphics);
+    /* sub_08041204 clears the language-bank placeholders before the small
+     * font renderer rewrites their character data. */
+    clear_bg0_tiles(graphics, 0x380, 0x80);
 
     put_number(graphics, 22, 2, values->attack, 3, 0x3300, false);
     put_number(graphics, 22, 3, values->defence, 3, 0x3300, false);
@@ -349,7 +396,7 @@ bool aos_pause_graphics_render_soul_set(
                   10 + (int)(entry / 2),
                   (uint16_t)(0x3380 + entry * 0x10), 10);
 
-    unsigned next_tile = 0x200;
+    unsigned next_tile = 0;
     for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category) {
         unsigned x = category == 0 ? 126 : category == 1 ? 0 : 126;
         unsigned y = category == 0 ? 80 : 88;
@@ -396,6 +443,128 @@ bool aos_pause_graphics_render_soul_set(
                        false, 56, 120, 174, 3, &next_tile))
         return false;
 
-    composite(graphics, rgba);
+    composite_on_backdrop(graphics, rgba);
+    return true;
+}
+
+static bool rom_u16(const AosPauseGraphics *graphics, uint32_t address,
+                    uint16_t *value) {
+    if (!graphics || !graphics->text.rom || !graphics->text.rom->data ||
+        !value || address < AOS_ROM_BASE)
+        return false;
+    size_t offset = (size_t)(address - AOS_ROM_BASE);
+    if (offset + 2 > graphics->text.rom->size) return false;
+    const uint8_t *bytes = graphics->text.rom->data + offset;
+    *value = (uint16_t)(bytes[0] | bytes[1] << 8);
+    return true;
+}
+
+static bool equipment_text_ids(const AosPauseGraphics *graphics,
+                               unsigned slot, unsigned item,
+                               uint16_t *name, uint16_t *description) {
+    if (slot >= AOS_PAUSE_EQUIP_SLOTS || !name || !description) return false;
+    if (item == AOS_PAUSE_EQUIP_NONE) {
+        *name = 0x34F;
+        *description = 0x351;
+        return true;
+    }
+    if ((slot == 0 && item >= 59) || (slot != 0 && item >= 45)) return false;
+    uint32_t records = slot == 0 ? AOS_WEAPON_RECORDS : AOS_ARMOR_RECORDS;
+    unsigned record_size = slot == 0 ? 28 : 20;
+    uint16_t text_index;
+    return rom_u16(graphics, records + item * record_size, &text_index) &&
+           rom_u16(graphics, AOS_EQUIPMENT_NAME_IDS + text_index * 2, name) &&
+           rom_u16(graphics,
+                   AOS_EQUIPMENT_DESCRIPTION_IDS + text_index * 2,
+                   description);
+}
+
+static void put_comparison(AosPauseGraphics *graphics, int y,
+                           int16_t current, int16_t preview) {
+    unsigned kind = preview == current ? 0 : preview > current ? 1 : 2;
+    static const uint16_t tiles[] = {0x34C, 0x34A, 0x34B};
+    static const unsigned palettes[] = {3, 9, 8};
+    put_tiles(graphics, 24, y,
+              (uint16_t)(tiles[kind] | palettes[kind] << 12), 2);
+    put_number(graphics, 27, y, preview, 3, 0x3300, false);
+}
+
+bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
+                                     const AosPauseEquipValues *values,
+                                     uint8_t *rgba, size_t rgba_size) {
+    if (!values || values->slot >= AOS_PAUSE_EQUIP_SLOTS ||
+        values->item_count > AOS_PAUSE_EQUIP_VISIBLE ||
+        !graphics || !graphics->text_ready ||
+        !valid_output(graphics, rgba, rgba_size))
+        return false;
+    reset_bg0(graphics);
+    clear_bg0_tiles(graphics, 0x340, 0x80);
+
+    put_number(graphics, 22, 2, values->current[0], 3, 0x3300, false);
+    put_number(graphics, 22, 3, values->current[1], 3, 0x3300, false);
+    for (int stat = 0; stat < 4; ++stat)
+        put_number(graphics, 22, 5 + stat, values->current[2 + stat],
+                   3, 0x3300, false);
+    if (values->preview_active) {
+        put_comparison(graphics, 2, values->current[0], values->preview[0]);
+        put_comparison(graphics, 3, values->current[1], values->preview[1]);
+        for (int stat = 0; stat < 4; ++stat)
+            put_comparison(graphics, 5 + stat, values->current[2 + stat],
+                           values->preview[2 + stat]);
+    }
+
+    put_tiles(graphics, 2, 3, (uint16_t)(0x33D0 + values->slot * 0x10), 11);
+    put_tiles(graphics, 3, 5, 0x3310, 9);
+    put_tiles(graphics, 3, 7, 0x3320, 9);
+    put_tiles(graphics, 3, 9, 0x3330, 9);
+    for (unsigned entry = 0; entry < AOS_PAUSE_EQUIP_VISIBLE; ++entry)
+        put_tiles(graphics, entry & 1u ? 17 : 3,
+                  11 + (int)(entry / 2),
+                  (uint16_t)(0x3340 + entry * 0x10), 9);
+    for (unsigned row = 0; row < 3; ++row)
+        put_tiles(graphics, 5, 16 + (int)row,
+                  (uint16_t)(0x3200 + row * 0x20), 24);
+
+    unsigned next_tile = 0;
+    static const unsigned equipped_x[] = {126, 0, 126};
+    static const unsigned equipped_y[] = {64, 72, 72};
+    for (unsigned slot = 0; slot < AOS_PAUSE_EQUIP_SLOTS; ++slot) {
+        uint16_t name, description;
+        if (!equipment_text_ids(graphics, slot, values->equipped[slot],
+                                &name, &description) ||
+            !place_text_id(graphics, name, true, equipped_x[slot],
+                           equipped_y[slot], 84,
+                           slot == values->slot ? 9 : 3, &next_tile))
+            return false;
+    }
+
+    for (unsigned entry = 0; entry < values->item_count; ++entry) {
+        uint16_t name, description;
+        unsigned item = values->items[entry];
+        if (!equipment_text_ids(graphics, values->slot, item,
+                                &name, &description))
+            return false;
+        unsigned x = entry & 1u ? 126 : 0;
+        unsigned y = (10 + entry / 2) * 8;
+        if (!place_text_id(graphics, name, true, x, y, 78,
+                           item == values->selected_item ? 9 : 3,
+                           &next_tile))
+            return false;
+        put_number(graphics, entry & 1u ? 27 : 13,
+                   11 + (int)(entry / 2), values->quantities[entry],
+                   1, 0x3300, false);
+    }
+
+    uint16_t name, description;
+    if (!equipment_text_ids(graphics, values->slot, values->selected_item,
+                            &name, &description))
+        return false;
+    if (values->selected_item == AOS_PAUSE_EQUIP_NONE && values->preview_active)
+        description = 0x350;
+    if (!place_text_id(graphics, description, false, 40, 128, 192,
+                       3, &next_tile))
+        return false;
+
+    composite_on_backdrop(graphics, rgba);
     return true;
 }

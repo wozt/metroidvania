@@ -2,31 +2,35 @@
 
 Last updated: **2026-11-07**.
 
-## Patch 0801 - Export and draw the nine frequent Aria SPECIAL objects
+## Patch 0801 - Export and draw Aria SPECIAL objects with verified ids
 
-- Decoded `sub_0806E0D0(entity, gfx, palette, bank, frames)`: most
-  `ObjectXXCreate` functions pass hard-coded sprite resources, while
-  `entity+0x30/+0x32` carry the room record's `param0/param1` and select
-  behaviour through per-object state tables (e.g. `Object14Update`'s
-  `0x08526408`), not appearance.
-- Extracted the resource triplets of the nine most-placed SPECIAL ids
-  (7, 10, 13, 14, 15, 17, 18, 19, 21 — ids 14 and 15 alone cover 335 room
-  placements) and added them to the C11 object exporter as
-  `Object/special_NN/anim_M` sequences with a new
-  `metadata/object_frames.tsv` (`metroidvania-aos-object-frames-v1`).
-  Empty native animations (frame count 0) are now skipped instead of
-  rejected; the export produced 846 sequences / 2425 frames.
-- The runtime loads the object index rows into `special_objects[64]`,
-  frees their textures and draws each spawned SPECIAL entity with
-  animation 0 looping. Per-object animation/behaviour selection against
-  the native update state tables is not yet audited, so ids whose create
-  exports raw still frames show animation 0's first frame.
-- Regenerated the `aos_native_golden` fixture for the new object outputs.
-  Source-derived and unit-tested, not emulator-compared.
+- Dumped the ROM create table `sUnk_084F0DF8`: the kind-2 entity id is
+  the table index, and the decompiler's `ObjectNN` suffix is the hex id
+  (`Object13Create` = id 0x13 = 19). The first export pass had attached
+  each sheet to a decimal-shifted id; the specs were remapped to the
+  true ids 13, 16, 19, 20, 21, 23, 24, 25 and 27 after matching every
+  create address to its label and `sub_0806E0D0` arguments.
+- `sub_0806E0D0(entity, gfx, palette, bank, frames)` is decoded: ids
+  with hard-coded resources export directly; ids 14 and 18 index
+  param0-driven resource tables (`0x085262BC` records -> `0x08526214`
+  triples, and `0x085263A8` 8-byte records), id 15 uses the shared flame
+  frames `0x0820ED60` with a param0-selected palette row, id 17 is a
+  spawner (`EntityCreateInRange` + self-delete) and ids 7/10 dispatch
+  indirectly — all decoded but not yet exported.
+- The nine verified specs export as `Object/special_NN/anim_M`
+  sequences with `metadata/object_frames.tsv`
+  (`metroidvania-aos-object-frames-v1`); empty native animations are
+  skipped (846 sequences / 2425 frames). The runtime loads them into
+  `special_objects[64]` and draws each spawned SPECIAL entity with
+  animation 0 looping; per-object animation/behaviour selection is not
+  yet audited.
+- Regenerated the `aos_native_golden` fixture for the corrected object
+  outputs. Source-derived and unit-tested, not emulator-compared.
 
-Next: audit each object's animation/state selection (param0-driven state
-tables) and extend the export to the remaining SPECIAL ids, then compare a
-room's object layer against an emulator.
+Next: resolve the param0-driven resource tables for ids 14 and 18 (and
+the shared-flame path of 15), decode the indirect creates of 7 and 10,
+then audit each object's animation/state selection and compare a room's
+object layer against an emulator.
 
 ## Patch 0800 - Native menu audio ducking and opening music ownership
 

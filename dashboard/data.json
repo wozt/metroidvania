@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T20:21:26+00:00",
+ "generated_at": "2026-11-07T20:24:49+00:00",
  "git": {
-  "commit": "b664e690",
+  "commit": "63b1b1ad",
   "branch": "main",
   "dirty": true
  },
@@ -13897,7 +13897,7 @@
    "id": "aos.objects.special_sprites",
    "area": "aos",
    "category": "environment",
-   "title": "SPECIAL room object sprites (ids 7,10,13,14,15,17,18,19,21)",
+   "title": "SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27)",
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
@@ -13924,8 +13924,8 @@
     "Object1BCreate",
     "Object14Update"
    ],
-   "limitations": "Only the nine most-placed SPECIAL ids are exported (ids 14 and 15 alone cover 335 room placements); the remaining ids and the indirect/table-driven creates (Object0E, Object12, Object16) are not exported. Per-object animation and behaviour selection is not audited: the runtime draws animation 0 looping for every SPECIAL entity, and ids whose create exports raw still frames as separate animations show the first frame. param0 (entity + 0x30) selects the native state table, not the sprite. Object20 (id 26) is never room-placed: it is spawned by event controllers for cutscene actors. sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Audit each object's animation/state selection against its update state tables, extend the export to the remaining SPECIAL ids and the indirect creates, then compare a room's object layer against an emulator.",
+   "limitations": "The create table sUnk_084F0DF8 was dumped from the ROM: entity id = table index and the decompiler's ObjectNN suffix is the hex id, so earlier decimal-labelled exports were remapped to the true ids. Ids 7, 10, 14, 15, 17 and 18 are not yet exported: 14 and 18 index param0-driven resource tables (0x085262BC records -> 0x08526214 triples; 0x085263A8 8-byte records), 15 uses the shared flame frames 0x0820ED60 with a param0-selected palette row, 17 is a spawner that deletes itself and creates via EntityCreateInRange, and 7/10 dispatch indirectly. Per-object animation and behaviour selection is not audited: the runtime draws animation 0 looping for every SPECIAL entity, and ids whose create exports raw still frames as separate animations show the first frame. param0 (entity + 0x30) selects the native state table, not the sprite. Object20 (id 26) is never room-placed: it is spawned by event controllers for cutscene actors. sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Resolve the param0-driven resource tables for ids 14 and 18 (and the shared-flame path of 15), decode the indirect creates of 7 and 10, then audit animation/state selection per object and compare a room's object layer against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_native_golden.c"
@@ -20275,6 +20275,12 @@
  },
  "timeline": [
   {
+   "commit": "63b1b1ad",
+   "date": "2026-11-07",
+   "subject": "Export and draw the nine frequent Aria SPECIAL objects",
+   "scope": "project"
+  },
+  {
    "commit": "b664e690",
    "date": "2026-11-07",
    "subject": "Decode SPECIAL object sprite resources per create",
@@ -20746,12 +20752,6 @@
    "commit": "66363554",
    "date": "2026-11-07",
    "subject": "Render the START enemy list on native BG0",
-   "scope": "project"
-  },
-  {
-   "commit": "2f20c7f5",
-   "date": "2026-11-07",
-   "subject": "Document the Aria enemy-page asm audit findings",
    "scope": "project"
   }
  ],

@@ -339,16 +339,24 @@ static const EntitySpec entities[] = {
  * hardcoded {graphics, palette, bank, frames} resources; param0 selects the
  * behavior table, not the sprite. Only ids whose create resolves cleanly are
  * listed; the rest use the +0x30 packed-record path and are not exported yet. */
+/* SPECIAL object ids are the create/update table indices (kind-2 entity
+ * id). Resources were verified against the ROM table sUnk_084F0DF8: the
+ * create address of each id was matched to its ObjectXXCreate label, so
+ * the decompiler's hex suffix IS the entity id (Object13Create = id 0x13
+ * = 19). Ids 7, 10, 14, 15, 17 and 18 do not pass hard-coded resources:
+ * 14 and 18 index param0-driven tables (0x085262BC/0x08526214 and
+ * 0x085263A8), 15 uses the shared flame frames 0x0820ED60, 17 is a
+ * spawner and 7/10 dispatch indirectly; they are decoded separately. */
 static const EntitySpec special_objects[] = {
-    ENTITY("special_07", 0x081CBE74, 0x08209F54, 0, 0x0821017C),
-    ENTITY("special_10", 0x08268450, 0x082097B0, 0, 0x08268648),
-    ENTITY("special_13", 0x081CBE7C, 0x08209FD8, 0, 0x08210264),
-    ENTITY("special_14", 0x081CBEA4, 0x0820A0DC, 0, 0x08210B60),
-    ENTITY("special_15", 0x081CBEE4, 0x0820A1C4, 8, 0x082115F8),
-    ENTITY("special_17", 0x081CBE9C, 0x08209FD8, 4, 0x08210A90),
-    ENTITY("special_18", 0x0825EAF4, 0x082663E4, 0, 0x08266C00),
-    ENTITY("special_19", 0x0825EAFC, 0x08266408, 0, 0x08266C50),
-    ENTITY("special_21", 0x081CBE84, 0x08209FD8, 1, 0x08210318),
+    ENTITY("special_13", 0x081CBE74, 0x08209F54, 0, 0x0821017C),
+    ENTITY("special_16", 0x08268450, 0x082097B0, 0, 0x08268648),
+    ENTITY("special_19", 0x081CBE7C, 0x08209FD8, 0, 0x08210264),
+    ENTITY("special_20", 0x081CBEA4, 0x0820A0DC, 0, 0x08210B60),
+    ENTITY("special_21", 0x081CBEE4, 0x0820A1C4, 8, 0x082115F8),
+    ENTITY("special_23", 0x081CBE9C, 0x08209FD8, 4, 0x08210A90),
+    ENTITY("special_24", 0x0825EAF4, 0x082663E4, 0, 0x08266C00),
+    ENTITY("special_25", 0x0825EAFC, 0x08266408, 0, 0x08266C50),
+    ENTITY("special_27", 0x081CBE84, 0x08209FD8, 1, 0x08210318),
 };
 
 static const EffectSpec effects[] = {

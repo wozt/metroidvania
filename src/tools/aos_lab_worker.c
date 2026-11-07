@@ -559,6 +559,7 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
 
     uint64_t seen[1024];
     int nseen = 0, validated = 0, resp_streak = 0, stop = 0;
+    int last_new_chunk = 0;
     for (int chunk = 0; chunk < max_chunks && !stop; ++chunk) {
         char *ctl = aos_labdb_meta_get(db, ctrl_key);
         if (ctl && !strcmp(ctl, "stop")) stop = 1;
@@ -627,6 +628,7 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 if (seen[i] == feat.scene_hash) { found = 1; break; }
             is_new = !found;
         }
+        if (is_new) last_new_chunk = chunk;
         if (is_new && nseen < 1024) {
             seen[nseen++] = feat.scene_hash;
             size_t ns = 0;
@@ -659,6 +661,26 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 free(blob);
             }
         }
+        /* heartbeat + stuck detection: no novel scene for 80 chunks
+         * means the scout is wandering in circles */
+        {
+            struct timeval hb;
+            gettimeofday(&hb, NULL);
+            char hbv[32];
+            snprintf(hbv, sizeof hbv, "%lld",
+                     (long long)hb.tv_sec * 1000 + hb.tv_usec / 1000);
+            char hbk[64];
+            snprintf(hbk, sizeof hbk, "worker.%d.hb", worker_id);
+            aos_labdb_meta_set(db, hbk, hbv);
+        }
+        if (chunk - last_new_chunk > 80) {
+            aos_labdb_meta_set(db, phase_key, "stuck");
+            aos_labdb_meta_set(db, status_key,
+                               "stuck: no new scene for 80 chunks");
+            printf("scout worker %d stuck at chunk %d — exiting\n",
+                   worker_id, chunk);
+            break;
+        }
         char st[160];
         snprintf(st, sizeof st,
                  "chunk %d mode=%d pos=%d->%d resp=%d states=%d",
@@ -686,7 +708,7 @@ int main(int argc, char **argv) {
     int action_ids[64];
     int action_count = 0;
     const char *define_action = NULL;
-    int worker_id = 0, scout = 0, scout_chunks = 100;
+    int worker_id = 0, scout = 0, scout_chunks = 100, purge = 0;
 
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
@@ -712,6 +734,7 @@ int main(int argc, char **argv) {
             worker_id = atoi(value); ++i;
         }
         else if (!strcmp(arg, "--scout")) { scout = 1; }
+        else if (!strcmp(arg, "--purge")) { purge = 1; }
         else if (!strcmp(arg, "--scout-chunks") && value) {
             scout_chunks = atoi(value); ++i;
         }
@@ -720,7 +743,7 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
-    if (!db_path || (!rom && !define_action)) {
+    if (!db_path || (!rom && !define_action && !purge)) {
         fprintf(stderr, "usage: aos_lab_worker --db PATH --rom PATH ...\n");
         return 2;
     }
@@ -733,6 +756,15 @@ int main(int argc, char **argv) {
         fprintf(stderr, "db open failed: %s\n", err);
         return 1;
     }
+    if (purge) {
+        int t = 0, w = 0, st = 0;
+        int n = aos_labdb_purge(db, &t, &w, &st);
+        printf("purge: %d rows removed (trials=%d weights=%d states=%d)\n",
+               n, t, w, st);
+        aos_labdb_close(db);
+        return 0;
+    }
+
     if (define_action) {
         /* "name|kind|params|eval|script" — inserts and exits */
         char *copy = strdup(define_action);
@@ -857,9 +889,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "no actions in db - using built-in curriculum\n");
     }
 
-    char phase_key[64], status_key[64], run_key[64], ctrl_key[64];
+    char phase_key[64], status_key[64], run_key[64], ctrl_key[64],
+         hb_key[64];
     snprintf(phase_key, sizeof phase_key, "worker.%d.phase", worker_id);
     snprintf(status_key, sizeof status_key, "worker.%d.status", worker_id);
+    snprintf(hb_key, sizeof hb_key, "worker.%d.hb", worker_id);
     snprintf(run_key, sizeof run_key, "worker.%d.run_id", worker_id);
     snprintf(ctrl_key, sizeof ctrl_key, "lab.control.%d", worker_id);
     aos_labdb_meta_set(db, ctrl_key, "run");
@@ -871,6 +905,8 @@ int main(int argc, char **argv) {
     aos_labdb_meta_set(db, run_key, run_buf);
     int total_frames = 0, trials_done = 0;
     int stop_requested = 0;
+    int stuck_streak = 0;
+    uint64_t last_scene = 0;
     struct timeval t0, t1;
 
     /* bandit over actions: weights table gives each (action,params)
@@ -1206,6 +1242,28 @@ int main(int argc, char **argv) {
                      (long long)trial_id, (long long)action->id, drawn,
                      outcome);
             aos_labdb_meta_set(db, status_key, status);
+            /* heartbeat: epoch ms so the viewer can flag stale workers */
+            {
+                struct timeval hb;
+                gettimeofday(&hb, NULL);
+                char hbv[32];
+                snprintf(hbv, sizeof hbv, "%lld",
+                         (long long)hb.tv_sec * 1000 + hb.tv_usec / 1000);
+                aos_labdb_meta_set(db, hb_key, hbv);
+            }
+            /* stuck detection: long streak of zero-reward fails on the
+             * same scene means the worker is spinning wheels */
+            if (reward <= 0.0 && scene_hash == last_scene) ++stuck_streak;
+            else if (reward > 0.0) { stuck_streak = 0; last_scene = scene_hash; }
+            else last_scene = scene_hash;
+            if (stuck_streak >= 400) {
+                aos_labdb_meta_set(db, phase_key, "stuck");
+                aos_labdb_meta_set(db, status_key,
+                                   "stuck: 400 barren trials");
+                printf("worker %d stuck after %d barren trials — exiting\n",
+                       worker_id, stuck_streak);
+                break;
+            }
             printf("trial %lld action=%lld params=%s -> %s (r=%.2f, %dms)\n",
                    (long long)trial_id, (long long)action->id, drawn,
                    outcome, reward, duration_ms);

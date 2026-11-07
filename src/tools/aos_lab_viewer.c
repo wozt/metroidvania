@@ -504,8 +504,39 @@ static void fb_refresh_frame(WorkerCard *wc, GtkWidget *picture) {
     g_object_unref(wc->fb_tex);
 }
 
+static void on_purge_clicked(GtkButton *button, gpointer data) {
+    (void)button;
+    Viewer *v = data;
+    if (!v->worker_path[0] || !v->db_path[0]) {
+        log_append(v, -1, "purge: worker path or db missing", 32);
+        return;
+    }
+    char *wq = g_shell_quote(v->worker_path);
+    char *dq = g_shell_quote(v->db_path);
+    char *cmd = g_strdup_printf("%s --db %s --purge", wq, dq);
+    gchar *out = NULL, *err = NULL;
+    gint rc = 1;
+    gboolean ok = g_spawn_command_line_sync(cmd, &out, &err, &rc, NULL);
+    if (ok && out) {
+        char *save = NULL;
+        for (char *line = strtok_r(out, "\n", &save); line;
+             line = strtok_r(NULL, "\n", &save)) {
+            log_append(v, -1, line, (int)strlen(line));
+            log_append(v, -1, "\n", 1);
+        }
+    } else if (err && *err) {
+        log_append(v, -1, err, (int)strlen(err));
+        log_append(v, -1, "\n", 1);
+    } else {
+        log_append(v, -1, "purge failed to launch\n", 22);
+    }
+    g_free(wq); g_free(dq); g_free(cmd);
+    g_free(out); g_free(err);
+}
+
 static void refresh_workers(Viewer *v) {
-    static const char *phase_css[] = {"", "w-running", "w-paused"};
+    static const char *phase_css[] = {"", "w-running", "w-paused",
+                                      "w-stuck"};
     for (int i = 0; i < 8; ++i) {
         WorkerCard *wc = &v->workers[i];
         char pk[64], sk[64], ck[64], vk[64];
@@ -513,13 +544,29 @@ static void refresh_workers(Viewer *v) {
         snprintf(sk, sizeof sk, "worker.%d.status", i);
         snprintf(ck, sizeof ck, "lab.control.%d", i);
         snprintf(vk, sizeof vk, "worker.%d.speed", i);
+        char hk[64];
+        snprintf(hk, sizeof hk, "worker.%d.hb", i);
         char *phase = aos_labdb_meta_get(v->db, pk);
         char *wstatus = aos_labdb_meta_get(v->db, sk);
         char *control = aos_labdb_meta_get(v->db, ck);
         char *speed = aos_labdb_meta_get(v->db, vk);
         const char *phase_str = phase ? phase : "idle";
         int phase_id = !strcmp(phase_str, "running") ? 1 :
-                       !strcmp(phase_str, "paused") ? 2 : 0;
+                       !strcmp(phase_str, "paused") ? 2 :
+                       !strcmp(phase_str, "scouting") ? 1 :
+                       !strcmp(phase_str, "stuck") ? 3 : 0;
+        /* stale worker: claims to run but heartbeat is old — its
+         * process died or wedged without updating phase */
+        int stale = 0;
+        if (phase_id == 1) {
+            char *hb = aos_labdb_meta_get(v->db, hk);
+            if (hb) {
+                long long now_ms = (long long)time(NULL) * 1000;
+                if (now_ms - atoll(hb) > 15000) stale = 1;
+                free(hb);
+            } else stale = 1; /* never beat: old worker binary */
+        }
+        if (stale) phase_id = 3;
         gtk_widget_set_css_classes(wc->card,
                                   phase_css[phase_id] ?
                                   (const char *[]){phase_css[phase_id], NULL}
@@ -527,7 +574,10 @@ static void refresh_workers(Viewer *v) {
         char head[64];
         snprintf(head, sizeof head, "Worker %d", i);
         gtk_label_set_text(GTK_LABEL(wc->name), head);
-        gtk_label_set_text(GTK_LABEL(wc->phase), phase_str);
+        char phase_disp[80];
+        snprintf(phase_disp, sizeof phase_disp, "%s%s",
+                 phase_str, stale ? " STALE" : "");
+        gtk_label_set_text(GTK_LABEL(wc->phase), phase_disp);
         gtk_label_set_text(GTK_LABEL(wc->detail),
                            wstatus ? wstatus : "");
         gtk_button_set_label(GTK_BUTTON(wc->pause_button),
@@ -792,6 +842,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         css,
         "frame.w-running { border: 2px solid #43a047; border-radius: 6px; }"
         "frame.w-paused  { border: 2px solid #fb8c00; border-radius: 6px; }"
+        "frame.w-stuck   { border: 2px solid #e53935; border-radius: 6px; }"
         "frame           { border: 1px solid #546e7a; border-radius: 6px; }"
         "label.w-phase   { font-weight: bold; }"
         "label.score-pass{ color: #66cc66; font-weight: bold; }"
@@ -847,6 +898,18 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                      G_CALLBACK(on_all_stop_clicked), v);
     gtk_box_append(GTK_BOX(fleet), v->all_stop_button);
 
+    GtkWidget *purge_button = gtk_button_new_with_label("Purge DB");
+    gtk_widget_add_css_class(purge_button, "destructive-action");
+    gtk_widget_set_tooltip_text(
+        purge_button,
+        "Delete dead weight from the database: zero-reward fail "
+        "trials, hopeless weight combos and auto checkpoints no "
+        "trial ever used. Validated states and successful trials "
+        "are kept.");
+    g_signal_connect(purge_button, "clicked",
+                     G_CALLBACK(on_purge_clicked), v);
+    gtk_box_append(GTK_BOX(fleet), purge_button);
+
     GtkWidget *gsp = gtk_label_new("Global speed:");
     gtk_box_append(GTK_BOX(fleet), gsp);
     v->all_speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
@@ -857,7 +920,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_scale_add_mark(GTK_SCALE(v->all_speed_scale), 16,
                        GTK_POS_BOTTOM, "x16");
     gtk_widget_set_hexpand(v->all_speed_scale, TRUE);
-    gtk_widget_set_size_request(v->all_speed_scale, 220, -1);
+    gtk_widget_set_size_request(v->all_speed_scale, 220, 24);
     gtk_widget_set_tooltip_text(
         v->all_speed_scale,
         "Speed cap applied to ALL workers: Auto = unthrottled, "
@@ -978,7 +1041,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 16, GTK_POS_BOTTOM,
                            "x16");
         gtk_widget_set_hexpand(wc->speed_scale, TRUE);
-        gtk_widget_set_size_request(wc->speed_scale, 140, -1);
+        gtk_widget_set_size_request(wc->speed_scale, 140, 24);
         gtk_widget_set_tooltip_text(
             wc->speed_scale,
             "Emulation speed cap: Auto = unthrottled (fastest), "

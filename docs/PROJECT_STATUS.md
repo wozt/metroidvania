@@ -52,7 +52,16 @@ Last updated: **2026-11-07**.
   enabled text BG's 32x32 tile-index grid into metrics.tilemap,
   with txtrows (dense tile rows = text/UI lines) and tileuses.
   Glyph decoding still needs the font table; tile identity is now
-  tracked per trial. OCR of in-game text is planned (BG tilemap in VRAM via session
+  tracked per trial.
+- Worker liveness: every trial/chunk updates worker.N.hb (epoch ms);
+  the viewer flags any slot claiming to run with a heartbeat older
+  than 15 s as STALE (red border). Workers self-detect stalls: 400
+  consecutive zero-reward fails on the same scene, or 80 scout
+  chunks without a novel scene, mark phase "stuck" and exit instead
+  of spinning forever.
+- DB purge: `aos_lab_worker --db X --purge` (also a Purge DB button
+  in the viewer) deletes zero-reward fail trials, hopeless weight
+  combos and auto checkpoints no trial ever referenced.
   peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.
 

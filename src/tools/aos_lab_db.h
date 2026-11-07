@@ -111,6 +111,11 @@ void aos_labdb_free_run_rows(AosRunRow *rows, int count);
 bool aos_labdb_meta_set(AosLabDb *db, const char *key, const char *value);
 char *aos_labdb_meta_get(AosLabDb *db, const char *key);
 
+/* Delete barren rows: zero-reward fail trials, hopeless weight combos
+ * and unreferenced auto checkpoints. Returns total rows removed. */
+int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
+                    int *out_states);
+
 #ifdef __cplusplus
 }
 #endif

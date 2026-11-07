@@ -505,3 +505,34 @@ char *aos_labdb_meta_get(AosLabDb *db, const char *key) {
     sqlite3_finalize(st);
     return value;
 }
+
+/* Purge dead weight: zero-reward fail trials, hopeless weight rows and
+ * auto checkpoints no trial ever used. Returns per-table counts. */
+int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
+                    int *out_states) {
+    static const char *sqls[] = {
+        /* barren trials: hard fails that scored nothing */
+        "DELETE FROM trials WHERE outcome='fail' AND reward<=0",
+        /* action/param combos that never produced anything */
+        "DELETE FROM weights WHERE attempts>0 AND successes=0"
+        " AND reward_sum<=0",
+        /* auto checkpoints never referenced by any trial */
+        "DELETE FROM states WHERE name LIKE 'auto_%'"
+        " AND id NOT IN (SELECT DISTINCT state_id FROM trials"
+        " WHERE state_id IS NOT NULL)",
+    };
+    int counts[3] = {0, 0, 0};
+    for (int i = 0; i < 3; ++i) {
+        sqlite3_stmt *st = NULL;
+        if (sqlite3_prepare_v2(db->handle, sqls[i], -1, &st, NULL) !=
+            SQLITE_OK)
+            continue;
+        if (sqlite3_step(st) == SQLITE_DONE)
+            counts[i] = sqlite3_changes(db->handle);
+        sqlite3_finalize(st);
+    }
+    if (out_trials) *out_trials = counts[0];
+    if (out_weights) *out_weights = counts[1];
+    if (out_states) *out_states = counts[2];
+    return counts[0] + counts[1] + counts[2];
+}

@@ -224,6 +224,12 @@ Last updated: **2026-11-06**.
   0xF060/0xF080/0xF0A0/0xF0C0), drawn over the remaining backing panel.
   The text-window engine's own frame/fill tiles on map 0x06004000 and
   the portrait OAM path remain open fidelity items.
+  `sub_0806724C` (the hardware-window setup reached from the dialogue
+  window path) decodes to WIN0 x[40,240] and WIN1 x[0,40], both y[120,152]
+  (`win0H=0x28F0`, `win1H=0x0028`, `win0V=win1V=0x7898` packed with
+  `C_16_2_8(start,end)`), so the native dialogue box is a 32px
+  full-width bottom band split at x=40 for the portrait zone; the
+  portable panel geometry still awaits that mapping.
 - Verified the gameplay HUD renders Soma's HP/MP bars (native `hud.bin`
   tiles); no code change was needed — a missing `assets/extracted/aria/
   metadata/hud.bin` next to the launched binary disables it silently.

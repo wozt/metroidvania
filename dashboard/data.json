@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T12:41:03+00:00",
+ "generated_at": "2026-11-07T12:53:22+00:00",
  "git": {
-  "commit": "08fcb69",
+  "commit": "85bdf78",
   "branch": "main",
   "dirty": true
  },
@@ -16021,7 +16021,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later polarity mirror. X uses Zero Mission SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC and Y uses Aria sound-table entry 0x081. Independent host-only per-player gains cross-fade native music player 0 while leaving SFX players audible at every divider angle; neither sequencer state nor native volume is changed. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. START retains the title-driven in-process launch flow. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Deterministic tests cover native-ID routing, separate player gains, geometry, JSON, hold and cancellation; headless captures cover composition. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x081 and Zero Mission 0x1DC pulses offline and fails on silent PCM.",
+   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later polarity mirror. X uses Zero Mission SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC and Y uses Aria sound-table entry 0x081. Independent host-only per-player gains cross-fade native music player 0 while leaving SFX players audible at every divider angle; neither sequencer state nor native volume is changed. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. START retains the title-driven in-process launch flow. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Deterministic tests cover native-ID routing, separate player gains, geometry, JSON, hold and cancellation; headless captures cover composition. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared. aos_mp2k_engine_load_bank now restores the 0xFF host player gains like init and set_bank (a shared engine_replace), so bank-loaded engines no longer mute every MP2K player; fusion_aos_mp2k_tests covers the defaults, per-player muting and a failed load, and fusion_sfx_browser --check now renders the Aria 0x081 and Zero Mission 0x1DC pulses offline and fails on silent PCM. Held X/Y pulses now climb one semitone per 0.5 s beat from two below the native pitch (saturating at +12) through host-only per-player pitch controls (aos_mp2k_player_pitch key_shift_public, mzm_audio_set_player_pitch in the native pitch routine); releasing the key resets the progression.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -20113,6 +20113,12 @@
  },
  "timeline": [
   {
+   "commit": "85bdf78",
+   "date": "2026-11-07",
+   "subject": "Use Aria sound entry 0x081 for the title pulse",
+   "scope": "project"
+  },
+  {
    "commit": "08fcb69",
    "date": "2026-11-07",
    "subject": "Complete Aria opening story and soul presentation",
@@ -20584,12 +20590,6 @@
    "commit": "10ca0a3",
    "date": "2026-11-02",
    "subject": "Port Rock Armor's AI from its native routines",
-   "scope": "project"
-  },
-  {
-   "commit": "e4a4cba",
-   "date": "2026-11-02",
-   "subject": "Port the Nemesis soul and complete Nemesis",
    "scope": "project"
   }
  ],

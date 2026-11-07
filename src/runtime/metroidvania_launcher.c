@@ -60,6 +60,7 @@ typedef struct {
 } MzmPull;
 
 static SDL_AudioStream *mzm_stream;
+static AosMp2kEngine mp2k;
 
 static void SDLCALL mzm_pull(void *userdata, SDL_AudioStream *stream, int additional, int total) {
     MzmPull *pull = userdata;
@@ -162,10 +163,21 @@ static int run_frontend(const char *program, int argc, char **argv) {
     return 1;
 }
 
-static void trigger_split_pulse(MvSplit *split, bool aria) {
+static void trigger_split_pulse(MvSplit *split, bool aria, MvSplitHold *hold) {
     uint16_t sound = mv_split_native_sound(aria);
-    if (aria) aos_audio_play_song(sound);
-    else mzm_sfx_play(sound);
+    /* Each beat climbs one semitone from two below the source pitch. */
+    int semitones = mv_split_pulse_semitones(hold ? hold->pulse_index : 0);
+    if (hold) ++hold->pulse_index;
+    if (aria) {
+        aos_audio_play_song(sound);
+        AosAudioSongInfo info;
+        if (aos_audio_song_info(sound, &info))
+            aos_mp2k_player_pitch(&mp2k, info.player, (int8_t)semitones);
+    } else {
+        mzm_sfx_play(sound);
+        int player = mzm_audio_sound_player(sound);
+        if (player >= 0) mzm_audio_set_player_pitch(player, (int8_t)semitones);
+    }
     /* Both native effects complete inside the prototype's visual wave. */
     mv_split_trigger_pulse(split, aria, 0.22f);
 }
@@ -217,7 +229,6 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
 
     /* Both games' sound runs all the time; the gains cross-fade toward the
      * game at the top. */
-    static AosMp2kEngine mp2k;
     aos_mp2k_engine_init(&mp2k);
     aos_audio_reset();
     SDL_AudioStream *aria_stream = NULL;
@@ -302,11 +313,11 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                      event.key.key == SDLK_X) {
                 if (mv_split_hold_press(&metroid_hold))
-                    trigger_split_pulse(&split, false);
+                    trigger_split_pulse(&split, false, &metroid_hold);
             } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                        event.key.key == SDLK_Y) {
                 if (mv_split_hold_press(&aria_hold))
-                    trigger_split_pulse(&split, true);
+                    trigger_split_pulse(&split, true, &aria_hold);
             } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_X) {
                 mv_split_hold_release(&metroid_hold);
             } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_Y) {
@@ -331,11 +342,11 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
                      event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
                 if (mv_split_hold_press(&metroid_hold))
-                    trigger_split_pulse(&split, false);
+                    trigger_split_pulse(&split, false, &metroid_hold);
             } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
                        event.gbutton.button == SDL_GAMEPAD_BUTTON_WEST) {
                 if (mv_split_hold_press(&aria_hold))
-                    trigger_split_pulse(&split, true);
+                    trigger_split_pulse(&split, true, &aria_hold);
             } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_UP &&
                        event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
                 mv_split_hold_release(&metroid_hold);
@@ -351,9 +362,9 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
         bool launch_aria = mv_split_hold_tick(
             &aria_hold, PROTO_FIXED_TIMESTEP, &aria_pulses);
         while (metroid_pulses--)
-            trigger_split_pulse(&split, false);
+            trigger_split_pulse(&split, false, &metroid_hold);
         while (aria_pulses--)
-            trigger_split_pulse(&split, true);
+            trigger_split_pulse(&split, true, &aria_hold);
         if (!chosen_done && (launch_metroid || launch_aria)) {
             chosen = launch_metroid ? MV_GAME_MZM : MV_GAME_ARIA;
             chosen_done = true;

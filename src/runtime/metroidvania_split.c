@@ -175,6 +175,11 @@ bool mv_split_hold_tick(MvSplitHold *hold, float dt, unsigned *pulse_count) {
     return false;
 }
 
+int mv_split_pulse_semitones(unsigned pulse_index) {
+    int semitones = -2 + (int)pulse_index;
+    return semitones > 12 ? 12 : semitones;
+}
+
 uint16_t mv_split_angle(uint32_t frame) {
     return (uint16_t)(((uint64_t)(frame % MV_FRAMES_PER_TURN) << 16) /
                       MV_FRAMES_PER_TURN);

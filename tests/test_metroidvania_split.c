@@ -116,9 +116,19 @@ int main(void) {
         pulse_total += pulses;
     }
     assert(pulse_total >= 3 && !hold.launched);
+    /* Each held beat climbs one semitone from two below the source pitch,
+     * saturating at +12; releasing the key resets the progression. */
+    assert(mv_split_pulse_semitones(0) == -2);
+    assert(mv_split_pulse_semitones(1) == -1);
+    assert(mv_split_pulse_semitones(2) == 0);
+    assert(mv_split_pulse_semitones(13) == 11);
+    assert(mv_split_pulse_semitones(14) == 12);
+    assert(mv_split_pulse_semitones(100) == 12);
+    hold.pulse_index = 4;
     mv_split_hold_release(&hold);
-    assert(!hold.held && hold.elapsed == 0.0f);
+    assert(!hold.held && hold.elapsed == 0.0f && hold.pulse_index == 0);
     assert(mv_split_hold_press(&hold));
+    assert(hold.pulse_index == 0);
     bool launched = false;
     for (int frame = 0; frame < 182; ++frame) {
         unsigned pulses;

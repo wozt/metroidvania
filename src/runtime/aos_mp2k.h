@@ -187,6 +187,11 @@ void aos_mp2k_player_volume(AosMp2kEngine *engine, uint8_t player,
 /* Host mixer gain; unlike MPlay volume this does not alter native state. */
 void aos_mp2k_player_host_gain(AosMp2kEngine *engine, uint8_t player,
                                uint8_t gain);
+/* Host-only whole-semitone transpose on the player's active tracks
+ * (key_shift_public). player_mix recomputes every linked channel's
+ * frequency each frame, so live notes retune immediately. */
+void aos_mp2k_player_pitch(AosMp2kEngine *engine, uint8_t player,
+                           int8_t semitones);
 /* MPlayStop/m4aMPlayContinue. Stopping releases and detaches the
  * player's live channels; continuing resumes its sequencer position. */
 void aos_mp2k_player_pause(AosMp2kEngine *engine, uint8_t player, bool paused);

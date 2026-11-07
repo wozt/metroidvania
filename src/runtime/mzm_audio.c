@@ -108,6 +108,8 @@ static PsgSoundData gPsgSoundsArea[5];
 static SoundQueue gSoundQueue[NUM_MUSIC_PLAYERS];
 static TrackGroupRomData sMusicTrackDataRom[NUM_MUSIC_PLAYERS];
 static uint8_t gHostPlayerGain[NUM_MUSIC_PLAYERS];
+/* Host-only whole-semitone transpose per player (the launcher pulses). */
+static int8_t gHostPitch[NUM_MUSIC_PLAYERS];
 
 /* gNumMusicPlayers, gUnk_Audio0x64 and gUnk_Audio0x194F700 (link-time
  * constants of the decompilation). */
@@ -130,14 +132,19 @@ static struct {
     uint8_t sUnk_808cc4d_window[129];
 } T;
 
-static uint8_t host_gain_for_variables(const TrackVariables *variables) {
-    if (!variables) return 0xFF;
+static int host_player_for_variables(const TrackVariables *variables) {
+    if (!variables) return -1;
     for (int player = 0; player < NUM_MUSIC_PLAYERS; ++player) {
         const TrackVariables *first = sMusicTrackDataRom[player].pVariables;
         const TrackVariables *last = first + sMusicTrackDataRom[player].maxAmountOfTracks;
-        if (variables >= first && variables < last) return gHostPlayerGain[player];
+        if (variables >= first && variables < last) return player;
     }
-    return 0xFF;
+    return -1;
+}
+
+static uint8_t host_gain_for_variables(const TrackVariables *variables) {
+    int player = host_player_for_variables(variables);
+    return player >= 0 ? gHostPlayerGain[player] : 0xFF;
 }
 
 static uint8_t rd8(uint32_t address) {
@@ -388,6 +395,8 @@ static void unk_4eb4(TrackVariables *pVariables) {
     value += (int32_t)(word >> 24);
     if (pVariables->lfoSpeed && pVariables->modulationDepth && pVariables->modulationType == 0)
         value += pVariables->unk_13 * 4 * 12;
+    int host_player = host_player_for_variables(pVariables);
+    if (host_player >= 0) value += (int32_t)gHostPitch[host_player] * 0x100;
     pVariables->unk_17 = (int8_t)(value >> 8);
     pVariables->unk_18 = (uint8_t)value;
 }
@@ -2256,6 +2265,10 @@ void mzm_audio_set_player_gain(int player, uint8_t gain) {
     if (player >= 0 && player < NUM_MUSIC_PLAYERS) gHostPlayerGain[player] = gain;
 }
 
+void mzm_audio_set_player_pitch(int player, int8_t semitones) {
+    if (player >= 0 && player < NUM_MUSIC_PLAYERS) gHostPitch[player] = semitones;
+}
+
 /* ---- Loading ---- */
 
 static bool parse_table(const char *list, void *destination, int width, int count) {
@@ -2275,6 +2288,7 @@ static bool parse_table(const char *list, void *destination, int width, int coun
 bool mzm_audio_open(const char *bank_path, const char *tables_path) {
     mzm_audio_close();
     memset(gHostPlayerGain, 0xFF, sizeof gHostPlayerGain);
+    memset(gHostPitch, 0, sizeof gHostPitch);
     FILE *f = fopen(bank_path, "rb");
     if (!f) return false;
     uint8_t header[16];

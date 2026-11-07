@@ -413,6 +413,35 @@ static void player_tempo_test(void) {
     assert(scaled.tempo_interval == 60);
 }
 
+/* The host pitch control transposes only the targeted player's active
+ * tracks; TrkVolPitSet folds it into the calculated key shift. */
+static void player_pitch_test(void) {
+    AosMp2kEngine engine;
+    aos_mp2k_engine_init(&engine);
+    engine.players[0].active = true;
+    engine.players[0].track_count = 1;
+    engine.players[0].tracks[0].active = true;
+    AosMp2kPlayer *player = &engine.players[3];
+    player->active = true;
+    player->track_count = 1;
+    AosMp2kTrack *track = &player->tracks[0];
+    track->active = true;
+    track->key_shift = 5;
+
+    aos_mp2k_player_pitch(&engine, 3, -2);
+    assert(track->key_shift_public == -2);
+    assert(engine.players[0].tracks[0].key_shift_public == 0);
+    /* (5 - 2) << 8 folds into the calculated shift; the fine byte stays 0. */
+    aos_mp2k_track_vol_pit_set(track);
+    assert(track->key_shift_calculated == 3 && track->pitch_calculated == 0);
+
+    /* Out-of-range players are ignored and inactive tracks keep 0. */
+    player->tracks[1].active = false;
+    player->track_count = 2;
+    aos_mp2k_player_pitch(&engine, AOS_MP2K_PLAYER_COUNT, 4);
+    assert(track->key_shift_public == -2 && player->tracks[1].key_shift_public == 0);
+}
+
 /* Every engine replacement restores the host gain contract: all eight
  * players at 255, whatever path installed the bank. */
 static void host_gain_default_test(void) {
@@ -559,6 +588,7 @@ int main(void) {
     mixer_test();
     host_gain_default_test();
     host_gain_mix_test();
+    player_pitch_test();
     extracted_bank_test();
     engine_song_start_test();
     parameter_and_note_test();

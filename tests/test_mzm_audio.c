@@ -276,6 +276,23 @@ static void test_engine(void) {
     render(2, &peak, &crossings);
     CHECK(peak == 0);
 
+    /* Host pitch transpose: +12 semitones on player 3 raises the PSG
+     * square's frequency through the note-delay table. */
+    mzm_sound_play(2);
+    render(6, &peak, &crossings);
+    int base_crossings = crossings;
+    mzm_sound_stop(2);
+    render(2, &peak, &crossings);
+    mzm_audio_set_player_pitch(3, 12);
+    mzm_sound_play(2);
+    render(6, &peak, &crossings);
+    int pitched_crossings = crossings;
+    mzm_sound_stop(2);
+    render(2, &peak, &crossings);
+    mzm_audio_set_player_pitch(3, 0);
+    CHECK(base_crossings > 20);
+    CHECK(pitched_crossings > base_crossings + base_crossings / 10);
+
     /* DecreaseMusicVolume (the pause) plays SOUND_63 (0x63) and keeps the
      * room's music; ResetMusicVolume leaves it playing. */
     mzm_music_play(3, 0);

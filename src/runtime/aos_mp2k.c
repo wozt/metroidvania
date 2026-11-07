@@ -398,6 +398,15 @@ void aos_mp2k_player_host_gain(AosMp2kEngine *engine, uint8_t player,
         engine->host_player_gain[player] = gain;
 }
 
+void aos_mp2k_player_pitch(AosMp2kEngine *engine, uint8_t player,
+                           int8_t semitones) {
+    if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return;
+    AosMp2kPlayer *state = &engine->players[player];
+    for (uint8_t track = 0; track < state->track_count; ++track)
+        if (state->tracks[track].active)
+            state->tracks[track].key_shift_public = semitones;
+}
+
 void aos_mp2k_player_pause(AosMp2kEngine *engine, uint8_t player,
                            bool paused) {
     if (!engine || player >= AOS_MP2K_PLAYER_COUNT) return;

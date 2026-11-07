@@ -71,5 +71,7 @@ bool mzm_audio_player_playing(int player);
 int mzm_audio_sound_player(uint16_t sound);
 /* Host-only gain for native music player 0 or SFX players 1..8. */
 void mzm_audio_set_player_gain(int player, uint8_t gain);
+/* Host-only whole-semitone transpose on one player's notes. */
+void mzm_audio_set_player_pitch(int player, int8_t semitones);
 
 #endif /* MZM_AUDIO_H */

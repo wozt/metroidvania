@@ -5650,6 +5650,10 @@ int aria_runtime_main(int argc, char **argv) {
         aos_opening_event_set_resolver(&opening, resolve_opening_text,
                                        &opening_resources);
         aos_opening_actors_init(&opening_actors);
+        /* sub_0805CED0 case 0 opens with PlaySong(0x1000): the AudioCommand
+         * STOP that silences whatever the introduction left playing before
+         * the scene's own cues take over. */
+        aos_audio_play_song(0x1000);
         aos_opening_actors_set_motion(&opening_actors, opening_random,
                                       opening_sine, opening_angle,
                                       opening_floor_depth, opening_wall_push,

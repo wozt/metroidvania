@@ -1,6 +1,22 @@
 # Project status
 
-Last updated: **2026-11-06**.
+Last updated: **2026-11-07**.
+
+## Patch 0795 - Match the opening dialogue window geometry and layer order
+
+- Replaced the upper-screen slate approximation with the register-derived
+  dialogue window: `sub_08067934` writes `WIN0H=0x08E8` (`x=8..232`) and
+  `sub_08067804` expands it around `y=124` to `y=88..160`. The software
+  canvas retains its six-pixel inset, placing the first glyph at screen
+  `x=40` as in `screenshots/dialogue.jpeg`.
+- Split the dialogue backing layer from the glyph layer. The translucent
+  field and decoded ROM portrait now render before gameplay objects, keeping
+  Soma, the other actors and the foreground floor in front. Object20 also
+  suppresses the normal gameplay HUD while it owns the dialogue layers.
+- The verified-ROM opening test passes, and an offscreen fresh-file capture
+  was compared directly with the reference. The exact native canvas tilemap
+  and blend coefficients remain open, so the feature stays partial and is
+  not claimed emulator-faithful.
 
 ## Patch 0794 - Opening dialogue box anchored to the native window band
 

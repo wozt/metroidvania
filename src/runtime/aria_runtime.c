@@ -5019,30 +5019,21 @@ static bool load_opening_portrait(SDL_Renderer *renderer, const FusionRom *rom,
     return true;
 }
 
-static void draw_opening_text(SDL_Renderer *renderer,
-                              const AosOpeningEvent *event,
-                              const AosIntroTextTiles *tiles,
-                              const FusionRom *rom,
-                              SDL_Texture **portrait_texture,
-                              uint8_t *portrait_id) {
+static void draw_opening_backdrop(SDL_Renderer *renderer,
+                                  const AosOpeningEvent *event,
+                                  const FusionRom *rom,
+                                  SDL_Texture **portrait_texture,
+                                  uint8_t *portrait_id) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    /* The dialogue box: a large translucent slate panel over the upper
-     * screen, matching the native window's grey fill. */
-    SDL_SetRenderDrawColor(renderer, 64, 76, 108, 190);
+    /* WIN0's source-derived fully-open rectangle. It is a BG layer behind
+     * gameplay objects, rather than a veil painted over Soma and the floor. */
+    SDL_SetRenderDrawColor(renderer, 40, 48, 74, 170);
     SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
                        AOS_OPENING_TEXT_PANEL_Y,
                        AOS_OPENING_TEXT_PANEL_WIDTH,
                        AOS_OPENING_TEXT_PANEL_HEIGHT};
     SDL_RenderFillRect(renderer, &panel);
-    /* The box's darker lower band, translucent like the native dim
-     * over the scene; the language-sheet strips are not drawn —
-     * their pink ornament does not match the capture. */
-    SDL_SetRenderDrawColor(renderer, 40, 48, 74, 170);
-    SDL_FRect frame_edge = {AOS_OPENING_TEXT_PANEL_X, AOS_OPENING_FRAME_Y,
-                            AOS_OPENING_TEXT_PANEL_WIDTH,
-                            AOS_OPENING_FRAME_HEIGHT};
-    SDL_RenderFillRect(renderer, &frame_edge);
     /* sub_080676BC draws the portrait as BG0, using the 12-byte descriptor
      * at 0x08526C78: tiles, palette row 13 and native metatile map. The
      * decoded texture is a full transparent 240x160 screen layer. Only the
@@ -5061,6 +5052,13 @@ static void draw_opening_text(SDL_Renderer *renderer,
         SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
     }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+static void draw_opening_text(SDL_Renderer *renderer,
+                              const AosOpeningEvent *event,
+                              const AosIntroTextTiles *tiles) {
+    if (!event->active) return;
     SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
     for (unsigned y = 0; y < 64; ++y)
         for (unsigned x = 0; x < 200; ++x)
@@ -5068,7 +5066,6 @@ static void draw_opening_text(SDL_Renderer *renderer,
                 SDL_RenderPoint(renderer, AOS_OPENING_TEXT_X + (float)x,
                                 AOS_OPENING_TEXT_Y + (float)y);
     /* The native window shows no advance prompt; A/START still pages. */
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 static void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
@@ -6486,6 +6483,10 @@ int aria_runtime_main(int argc, char **argv) {
             if (hud_texture) SDL_SetTextureColorMod(hud_texture, mod, mod, mod);
         }
         SDL_RenderTexture(renderer, background, &src, &dst);
+        if (opening.active && opening_actors.soul_notice == 0)
+            draw_opening_backdrop(renderer, &opening, &opening_rom,
+                                  &opening_portrait_texture,
+                                  &opening_portrait_id);
         draw_save_point(renderer, &room, cam_x, cam_y,
                         aos_save_room_player_inside(sx, sy), step);
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
@@ -7033,7 +7034,9 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_RenderRect(renderer, &box);
             }
         }
-        if (hud_texture) {
+        /* Object20 owns BG0/BG1 and suppresses the gameplay HUD while its
+         * dialogue or obtained-soul window is active. */
+        if (hud_texture && !opening.active) {
             if (hud_dirty || hud_drawn_revision != hud.revision ||
                 memcmp(hud_drawn, hud.map, sizeof hud_drawn)) {
                 static uint8_t pixels[240 * 160 * 4];
@@ -7109,8 +7112,7 @@ int aria_runtime_main(int argc, char **argv) {
             (opening_actors.soul_notice == 1 || opening_actors.soul_notice == 2))
             draw_opening_soul_notice(renderer, &opening_soul_tiles);
         else if (opening_text_ready)
-            draw_opening_text(renderer, &opening, &opening_tiles, &opening_rom,
-                              &opening_portrait_texture, &opening_portrait_id);
+            draw_opening_text(renderer, &opening, &opening_tiles);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

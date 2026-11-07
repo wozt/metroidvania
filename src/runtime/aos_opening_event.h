@@ -25,23 +25,17 @@ enum {
     AOS_OPENING_ARIKADO_Y = 0x2C0,
     AOS_OPENING_SKELETON_X = 0x16F,
     AOS_OPENING_SKELETON_Y = 0x268,
-    /* The dialogue box is the large translucent slate panel covering
-     * the upper screen (portrait on its right), bottom-anchored just
-     * above the sub_0805AFC0 ornament strips at map rows 16-19
-     * (y128-159); the scripts page at three text rows, matching
-     * window (0,1,0x25,3). */
-    AOS_OPENING_TEXT_PANEL_X = 4,
-    AOS_OPENING_TEXT_PANEL_Y = 8,
-    AOS_OPENING_TEXT_PANEL_WIDTH = 232,
-    AOS_OPENING_TEXT_PANEL_HEIGHT = 84,
-    /* The box's darker lower band above the screen bottom; it
-     * replaces the language-sheet strips, whose pink ornament does
-     * not match the native presentation. */
-    AOS_OPENING_FRAME_Y = 92,
-    AOS_OPENING_FRAME_HEIGHT = 68,
-    AOS_OPENING_TEXT_X = 14,
-    AOS_OPENING_TEXT_Y = 56,
-    AOS_OPENING_PROMPT_X = AOS_OPENING_TEXT_PANEL_X + 193,
+    /* sub_08067934 writes WIN0H=0x08E8 (x=8..232). sub_08067804 opens
+     * WIN0V around y=124 to y=88..160. screenshots/dialogue.jpeg shows
+     * the first glyph at the x=40 split used by sub_0806724C; the software
+     * canvas keeps its native six-pixel left inset. */
+    AOS_OPENING_TEXT_PANEL_X = 8,
+    AOS_OPENING_TEXT_PANEL_Y = 88,
+    AOS_OPENING_TEXT_PANEL_WIDTH = 224,
+    AOS_OPENING_TEXT_PANEL_HEIGHT = 72,
+    AOS_OPENING_TEXT_X = 34,
+    AOS_OPENING_TEXT_Y = 96,
+    AOS_OPENING_PROMPT_X = 220,
     AOS_OPENING_PROMPT_Y = 154,
     AOS_OPENING_LINES = 4,
     AOS_OPENING_GLYPHS_PER_LINE = 80,

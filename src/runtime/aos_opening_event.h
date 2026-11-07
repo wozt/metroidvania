@@ -25,16 +25,17 @@ enum {
     AOS_OPENING_ARIKADO_Y = 0x2C0,
     AOS_OPENING_SKELETON_X = 0x16F,
     AOS_OPENING_SKELETON_Y = 0x268,
-    /* sub_0806724C's hardware window clips the dialogue layers to
-     * y[120,152] and sub_0805AFC0's strips occupy map rows 16-19
-     * (y128-159); the backing field is bottom-anchored to match. The
-     * scripts page at three text rows, matching window (0,1,0x25,3). */
+    /* The dialogue box is the large translucent slate panel covering
+     * the upper screen (portrait on its right), bottom-anchored just
+     * above the sub_0805AFC0 ornament strips at map rows 16-19
+     * (y128-159); the scripts page at three text rows, matching
+     * window (0,1,0x25,3). */
     AOS_OPENING_TEXT_PANEL_X = 8,
-    AOS_OPENING_TEXT_PANEL_Y = 110,
+    AOS_OPENING_TEXT_PANEL_Y = 8,
     AOS_OPENING_TEXT_PANEL_WIDTH = 224,
-    AOS_OPENING_TEXT_PANEL_HEIGHT = 50,
-    AOS_OPENING_TEXT_X = 18,
-    AOS_OPENING_TEXT_Y = 110,
+    AOS_OPENING_TEXT_PANEL_HEIGHT = 116,
+    AOS_OPENING_TEXT_X = 14,
+    AOS_OPENING_TEXT_Y = 42,
     AOS_OPENING_PROMPT_X = AOS_OPENING_TEXT_PANEL_X + 193,
     AOS_OPENING_PROMPT_Y = 154,
     AOS_OPENING_LINES = 4,

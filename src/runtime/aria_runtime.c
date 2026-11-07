@@ -5029,6 +5029,14 @@ static void draw_opening_text(SDL_Renderer *renderer,
                               uint8_t *portrait_id) {
     if (!event->active) return;
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* The dialogue box: a large translucent slate panel over the upper
+     * screen, matching the native window's grey fill. */
+    SDL_SetRenderDrawColor(renderer, 64, 76, 108, 208);
+    SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
+                       AOS_OPENING_TEXT_PANEL_Y,
+                       AOS_OPENING_TEXT_PANEL_WIDTH,
+                       AOS_OPENING_TEXT_PANEL_HEIGHT};
+    SDL_RenderFillRect(renderer, &panel);
     /* sub_080676BC draws the portrait as BG0, using the 12-byte descriptor
      * at 0x08526C78: tiles, palette row 13 and native metatile map. The
      * decoded texture is a full transparent 240x160 screen layer. Only the
@@ -5047,15 +5055,8 @@ static void draw_opening_text(SDL_Renderer *renderer,
         SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
         SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
     }
-    SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
-    /* The portrait's lowest opaque row and the centred text field meet. */
-    SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
-                       AOS_OPENING_TEXT_PANEL_Y,
-                       AOS_OPENING_TEXT_PANEL_WIDTH,
-                       AOS_OPENING_TEXT_PANEL_HEIGHT};
-    SDL_RenderFillRect(renderer, &panel);
-    /* sub_0805AFC0's native border: the language window sheet's four
-     * strips on BG0 at tile rows 16-19, drawn over the backing. */
+    /* sub_0805AFC0's native bottom ornament: the language window sheet's
+     * four strips on BG0 at tile rows 16-19. */
     if (frame) {
         /* Only map rows 16-19 carry entries (the four border strips). */
         for (unsigned y = 128; y < 160; ++y)

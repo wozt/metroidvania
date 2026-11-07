@@ -83,6 +83,17 @@ AosMgbaSession *aos_mgba_open(const char *rom_path, char *err, size_t err_size) 
         goto fail;
     }
     vf->close(vf);
+    /* Pick up a battery save sitting next to the ROM (<name>.sav) in
+     * temporary mode so trials never rewrite the player's real save. */
+    {
+        size_t rl = strlen(rom_path);
+        char sav[1200];
+        if (rl + 5 < sizeof sav) {
+            memcpy(sav, rom_path, rl);
+            memcpy(sav + rl, ".sav", 5);
+            mCoreLoadSaveFile(s->core, sav, true);
+        }
+    }
     memset(&s->thread, 0, sizeof s->thread);
     s->thread.core = s->core;
     if (!mCoreThreadStart(&s->thread)) {
@@ -151,6 +162,35 @@ static bool is_capture_frame(const AosRunSpec *spec, int frame) {
     return false;
 }
 
+/* Called on the emulation thread: load/save must go through the core
+ * directly here — aos_mgba_load/save_state_blob would deadlock by
+ * dispatching another function onto the same thread. */
+static bool load_state_file_on_thread(struct mCore *core, const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    uint8_t *blob = malloc(size > 0 ? (size_t)size : 1);
+    bool ok = blob && fread(blob, 1, (size_t)size, f) == (size_t)size &&
+              core->loadState(core, blob);
+    fclose(f);
+    free(blob);
+    return ok;
+}
+
+static bool save_state_file_on_thread(struct mCore *core, const char *path) {
+    size_t state_size = core->stateSize(core);
+    uint8_t *blob = malloc(state_size);
+    if (!blob) return false;
+    bool ok = core->saveState(core, blob);
+    FILE *f = ok ? fopen(path, "wb") : NULL;
+    ok = ok && f && fwrite(blob, 1, state_size, f) == state_size;
+    if (f) fclose(f);
+    free(blob);
+    return ok;
+}
+
 static void run_on_thread(struct mCoreThread *thread) {
     AosMgbaSession *s = g_ctx.session;
     const AosRunSpec *spec = g_ctx.spec;
@@ -158,7 +198,8 @@ static void run_on_thread(struct mCoreThread *thread) {
     uint32_t keys = 0;
     int key_index = 0;
 
-    if (spec->state_in && !aos_mgba_load_state(s, spec->state_in))
+    if (spec->state_in &&
+        !load_state_file_on_thread(core, spec->state_in))
         fprintf(stderr, "warning: state load failed for %s\n",
                 spec->state_in);
 
@@ -252,7 +293,8 @@ static void run_on_thread(struct mCoreThread *thread) {
         }
 
     if (spec->state_out && g_ctx.result)
-        g_ctx.result->state_out_ok = aos_mgba_save_state(s, spec->state_out);
+        g_ctx.result->state_out_ok =
+            save_state_file_on_thread(core, spec->state_out);
     (void)thread;
 }
 

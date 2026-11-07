@@ -206,9 +206,22 @@ static gboolean on_log_pipe(GIOChannel *channel, GIOCondition cond,
 
 /* Spawn a worker with stdout+stderr merged into one pipe watched by GTK.
  * Returns TRUE on success. Nothing touches the disk. */
+static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
+                                  int iterations, int worker_id,
+                                  const char *record_name, int record_frames,
+                                  const char *keys_spec);
+
 static gboolean spawn_worker(Viewer *v, const char *state_id_str,
                              int iterations, int worker_id,
                              const char *record_name, int record_frames) {
+    return spawn_worker_keys(v, state_id_str, iterations, worker_id,
+                             record_name, record_frames, NULL);
+}
+
+static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
+                                  int iterations, int worker_id,
+                                  const char *record_name, int record_frames,
+                                  const char *keys_spec) {
     if (!v->rom_path[0] || !v->worker_path[0]) {
         gtk_label_set_text(GTK_LABEL(v->worker_label),
                            "Set --rom and keep aos_lab_worker next to "
@@ -235,6 +248,9 @@ static gboolean spawn_worker(Viewer *v, const char *state_id_str,
         argv[n++] = "--record-state"; argv[n++] = record_name;
         argv[n++] = "--frames";        argv[n++] = frames_buf;
         argv[n++] = "--state-note";    argv[n++] = "captured from viewer";
+        if (keys_spec) {
+            argv[n++] = "--keys";      argv[n++] = keys_spec;
+        }
     } else {
         argv[n++] = "--state";     argv[n++] = state_buf;
         argv[n++] = "--iterations"; argv[n++] = iters_buf;
@@ -283,18 +299,11 @@ static gboolean spawn_worker(Viewer *v, const char *state_id_str,
         /* store pipe on the channel so the callback can find it */
         g_object_set_data(G_OBJECT(ch), "logpipe", pipe);
         v->pipes = g_list_prepend(v->pipes, pipe);
-        /* redirect watch data through a tiny adapter: keep LogPipe in
-         * channel user data via a wrapper struct would be cleaner; here
-         * we abuse the channel's data slot is not possible (viewer uses
-         * it), so store pipe pointer in a parallel list is messy —
-         * instead attach via g_object_set_data and fetch in callback. */
+        /* viewer must be attached before the watch can fire */
+        g_object_set_data(G_OBJECT(ch), "viewer", v);
         g_io_add_watch(ch, G_IO_IN | G_IO_HUP,
                        (GIOFunc)on_log_pipe, pipe);
-        /* viewer pointer: stash on the Viewer via a second watch data is
-         * not supported; use a global-ish lookup through pipe->viewer */
         pipe->fd = fd;
-        /* viewer is fetched from channel data; set it now */
-        g_object_set_data(G_OBJECT(ch), "viewer", v);
     }
     char msg[160];
     if (record_name)
@@ -558,7 +567,14 @@ typedef struct {
     Viewer *viewer;
     GtkWidget *name_entry;
     GtkWidget *frames_spin;
+    GtkWidget *keys_entry;
 } RecordDialog;
+
+static void on_record_window_destroy(GtkWidget *widget,
+                                     gpointer user_data) {
+    (void)widget;
+    g_free(user_data);
+}
 
 static void on_record_confirm(GtkButton *button, gpointer user_data) {
     (void)button;
@@ -566,10 +582,12 @@ static void on_record_confirm(GtkButton *button, gpointer user_data) {
     const char *name = gtk_editable_get_text(GTK_EDITABLE(d->name_entry));
     int frames_n = gtk_spin_button_get_value_as_int(
         GTK_SPIN_BUTTON(d->frames_spin));
+    const char *keys = gtk_editable_get_text(GTK_EDITABLE(d->keys_entry));
     char clean[128];
     snprintf(clean, sizeof clean, "%s",
              (name && *name) ? name : "gui-state");
-    spawn_worker(d->viewer, NULL, 0, -1, clean, frames_n);
+    spawn_worker_keys(d->viewer, NULL, 0, -1, clean, frames_n,
+                      (keys && *keys) ? keys : NULL);
     gtk_window_destroy(GTK_WINDOW(gtk_widget_get_ancestor(
         GTK_WIDGET(button), GTK_TYPE_WINDOW)));
 }
@@ -594,8 +612,9 @@ static void on_record_clicked(GtkButton *button, gpointer user_data) {
     gtk_window_set_title(GTK_WINDOW(win), "Record save state");
     gtk_window_set_transient_for(GTK_WINDOW(win), GTK_WINDOW(v->window));
     gtk_window_set_modal(GTK_WINDOW(win), TRUE);
-    gtk_window_set_default_size(GTK_WINDOW(win), 340, -1);
-    g_signal_connect(win, "destroy", G_CALLBACK(g_free), d);
+    gtk_window_set_default_size(GTK_WINDOW(win), 460, -1);
+    g_signal_connect(win, "destroy",
+                     G_CALLBACK(on_record_window_destroy), d);
     GtkWidget *grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
     gtk_grid_set_column_spacing(GTK_GRID(grid), 8);
@@ -617,9 +636,20 @@ static void on_record_clicked(GtkButton *button, gpointer user_data) {
         "How many emulated frames to run before the checkpoint "
         "(60 fps: 6000 = 100 s)");
     gtk_grid_attach(GTK_GRID(grid), d->frames_spin, 1, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Keys:"), 0, 2, 1, 1);
+    d->keys_entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(d->keys_entry),
+        "frame:mask,…  e.g. 900:8,950:0 (8=START,1=A)");
+    gtk_widget_set_hexpand(d->keys_entry, TRUE);
+    gtk_widget_set_tooltip_text(
+        d->keys_entry,
+        "Optional input script: frame:mask pairs, mask held until the "
+        "next event. A=1 B=2 SELECT=4 START=8 arrows=16/32/64/128 "
+        "R=256 L=512");
+    gtk_grid_attach(GTK_GRID(grid), d->keys_entry, 1, 2, 1, 1);
     GtkWidget *btns = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_widget_set_halign(btns, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(grid), btns, 0, 2, 2, 1);
+    gtk_grid_attach(GTK_GRID(grid), btns, 0, 3, 2, 1);
     GtkWidget *cancel = gtk_button_new_with_label("Cancel");
     g_signal_connect(cancel, "clicked", G_CALLBACK(on_record_cancel), d);
     gtk_box_append(GTK_BOX(btns), cancel);
@@ -902,7 +932,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_notebook_append_page(GTK_NOTEBOOK(v->notebook), p1, t1);
 
     const char *weight_titles[] = {"action", "params", "attempts",
-                                   "successes", "rate", "reward"};
+                                   "successes", "rate", "reward", NULL};
     const char *weight_tips[] = {
         "Action id", "Parameter set", "Times tried",
         "Times it scored", "Success percentage — higher is better",
@@ -916,7 +946,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_notebook_append_page(GTK_NOTEBOOK(v->notebook), p2, t2);
 
     const char *state_titles[] = {"id", "name", "note", "parent",
-                                  "bytes", "created"};
+                                  "bytes", "created", NULL};
     const char *state_tips[] = {
         "State id", "Checkpoint name", "Free-form note",
         "Parent state id", "Save-state size in bytes",
@@ -929,7 +959,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_notebook_append_page(GTK_NOTEBOOK(v->notebook), p3, t3);
 
     const char *run_titles[] = {"id", "started", "rom", "note",
-                                "frames", "trials"};
+                                "frames", "trials", NULL};
     const char *run_tips[] = {
         "Run id", "Start timestamp", "ROM path", "Run note",
         "Total emulated frames", "Trials completed", NULL};

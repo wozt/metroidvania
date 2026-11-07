@@ -43,6 +43,9 @@ bool aos_intro_font_render_small_span(const AosIntroFont *font,
                                       unsigned max_width, uint8_t color,
                                       const uint8_t *glyphs,
                                       size_t glyph_count);
+unsigned aos_intro_font_measure_small(const AosIntroFont *font,
+                                      const uint8_t *glyphs,
+                                      size_t glyph_count);
 /* Draws one glyph (code 0x20-0xFF) with its native left offset and width at
  * a pixel position: the glyph rows of sub_0803FF64/sub_08040048. */
 bool aos_intro_font_draw_glyph(const AosIntroFont *font, AosIntroTextTiles *tiles,

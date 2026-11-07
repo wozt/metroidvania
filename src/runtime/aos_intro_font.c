@@ -241,6 +241,21 @@ bool aos_intro_font_render_small_span(const AosIntroFont *font,
     return true;
 }
 
+unsigned aos_intro_font_measure_small(const AosIntroFont *font,
+                                      const uint8_t *glyphs,
+                                      size_t glyph_count) {
+    if (!font || !font->small_metrics || (!glyphs && glyph_count)) return 0;
+    unsigned width = 0;
+    for (size_t index = 0; index < glyph_count; ++index) {
+        uint8_t code = glyphs[index];
+        if (code < AOS_FONT_FIRST_GLYPH) continue;
+        size_t glyph = (size_t)(code - AOS_FONT_FIRST_GLYPH);
+        if (glyph < AOS_FONT_GLYPH_COUNT)
+            width += font->small_metrics[glyph * AOS_FONT_METRIC_SIZE + 1];
+    }
+    return width;
+}
+
 bool aos_intro_font_draw_glyph(const AosIntroFont *font, AosIntroTextTiles *tiles,
                                unsigned pixel_x, unsigned pixel_y, uint8_t code) {
     if (!font || !font->metrics || !font->glyphs || !tiles ||

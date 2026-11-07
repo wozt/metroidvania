@@ -28,6 +28,7 @@
 #include "aos_stats.h"
 #include "aos_pickup.h"
 #include "aos_soul.h"
+#include "aos_soul_notice.h"
 #include "aos_soul_menu.h"
 #include "aos_skill_axe.h"
 #include "aos_skill_crow.h"
@@ -4953,43 +4954,42 @@ static bool rebuild_opening_text(const AosOpeningEvent *event,
  * sub_0800E540 selects 0x1E4 for its description. Decode those verified-ROM
  * scripts through the same bounded parser as dialogue; no localized string
  * is embedded in the runtime. */
-static bool render_opening_soul_entry(AosIntroResources *resources,
-                                      const AosIntroFont *font,
-                                      AosIntroTextTiles *tiles, uint16_t id,
-                                      unsigned y) {
+static bool decode_opening_soul_entry(AosIntroResources *resources,
+                                      uint16_t id, AosOpeningEvent *text) {
     const uint8_t *script = NULL;
     size_t script_size = 0;
     if (!aos_intro_resources_entry(resources, 1, id, &script, &script_size))
         return false;
-    AosOpeningEvent text;
-    if (!aos_opening_event_init(&text, script, script_size)) return false;
-    aos_opening_event_set_resolver(&text, resolve_opening_text, resources);
-    for (unsigned frame = 0; frame < 1024 && text.active; ++frame)
-        aos_opening_event_update(&text, text.waiting ? AOS_KEY_A : 0);
-    if (!text.complete || text.malformed) return false;
-    for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
-        if (!aos_intro_font_render_span(font, tiles, 24, y + line * 12,
-                                        192, 8, text.glyphs[line],
-                                        text.glyph_counts[line]))
-            return false;
-    return true;
+    if (!aos_opening_event_init(text, script, script_size)) return false;
+    aos_opening_event_set_resolver(text, resolve_opening_text, resources);
+    for (unsigned frame = 0; frame < 1024 && text->active; ++frame)
+        aos_opening_event_update(text, text->waiting ? AOS_KEY_A : 0);
+    return text->complete && !text->malformed;
 }
 
-/* sub_0800E708's obtained-soul window uses the same dark field and native
- * font tiles as the dialogue panel; it sits at the top of the viewport
- * while states 1-2 of the modal sequence are visible. */
+static size_t flatten_opening_text(const AosOpeningEvent *text, uint8_t *out,
+                                   size_t capacity) {
+    size_t count = 0;
+    for (unsigned line = 0; line < AOS_OPENING_LINES; ++line)
+        for (unsigned i = 0; i < text->glyph_counts[line] && count < capacity; ++i)
+            out[count++] = text->glyphs[line][i];
+    return count;
+}
+
 static void draw_opening_soul_notice(SDL_Renderer *renderer,
-                                     const AosIntroTextTiles *tiles) {
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 7, 8, 24, 236);
-    SDL_FRect panel = {16, 24, 208, 56};
-    SDL_RenderFillRect(renderer, &panel);
-    SDL_SetRenderDrawColor(renderer, 244, 240, 224, 255);
-    for (unsigned y = 0; y < 80; ++y)
+                                     const AosSoulNotice *notice,
+                                     uint32_t frame) {
+    for (unsigned y = 0; y < VIEW_H; ++y)
         for (unsigned x = 0; x < 240; ++x)
-            if (aos_intro_text_tiles_pixel(tiles, x, y))
-                SDL_RenderPoint(renderer, (float)x, (float)y);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+        {
+            uint16_t color;
+            if (!aos_soul_notice_pixel(notice, frame, x, y, &color)) continue;
+            SDL_SetRenderDrawColor(renderer,
+                                   (uint8_t)((color & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 5) & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 10) & 31u) * 255u / 31u), 255);
+            SDL_RenderPoint(renderer, (float)x, (float)y);
+        }
 }
 
 static bool load_opening_portrait(SDL_Renderer *renderer, const FusionRom *rom,
@@ -5443,6 +5443,7 @@ int aria_runtime_main(int argc, char **argv) {
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
     AosWindowFrame opening_window = {0};
+    AosSoulNotice opening_soul_notice = {0};
     static AosIntroTextTiles opening_tiles;
     static AosIntroTextTiles opening_soul_tiles;
     bool opening_text_ready = false;
@@ -5664,13 +5665,43 @@ int aria_runtime_main(int argc, char **argv) {
             fprintf(stderr, "Cannot render the Aria opening dialogue\n");
             goto cleanup;
         }
-        aos_intro_text_tiles_clear(&opening_soul_tiles);
-        opening_soul_text_ready = render_opening_soul_entry(
-                                      &opening_resources, &opening_font,
-                                      &opening_soul_tiles, 0xE3, 32) &&
-                                  render_opening_soul_entry(
-                                      &opening_resources, &opening_font,
-                                      &opening_soul_tiles, 0x1E4, 50);
+        AosOpeningEvent soul_name, acquired, soul_description;
+        uint8_t name_glyphs[256], acquired_glyphs[256];
+        opening_soul_text_ready = aos_soul_notice_init(
+                                      &opening_soul_notice, &opening_rom,
+                                      error, sizeof error) &&
+                                  decode_opening_soul_entry(
+                                      &opening_resources, 0xE3, &soul_name) &&
+                                  decode_opening_soul_entry(
+                                      &opening_resources, 0x35E, &acquired) &&
+                                  decode_opening_soul_entry(
+                                      &opening_resources, 0x1E4, &soul_description);
+        if (opening_soul_text_ready) {
+            size_t name_count = flatten_opening_text(
+                &soul_name, name_glyphs, sizeof name_glyphs);
+            size_t acquired_count = flatten_opening_text(
+                &acquired, acquired_glyphs, sizeof acquired_glyphs);
+            unsigned name_width = aos_intro_font_measure_small(
+                &opening_font, name_glyphs, name_count);
+            aos_intro_text_tiles_clear(&opening_soul_tiles);
+            opening_soul_text_ready =
+                aos_intro_font_render_small_span(
+                    &opening_font, &opening_soul_tiles, 0, 0, 240, 15,
+                    name_glyphs, name_count) &&
+                aos_intro_font_render_small_span(
+                    &opening_font, &opening_soul_tiles, name_width, 0,
+                    240 - name_width, 15, acquired_glyphs, acquired_count);
+            for (unsigned line = 0;
+                 opening_soul_text_ready && line < AOS_OPENING_LINES; ++line)
+                opening_soul_text_ready = aos_intro_font_render_span(
+                    &opening_font, &opening_soul_tiles, 42, 24 + line * 12,
+                    180, 15, soul_description.glyphs[line],
+                    soul_description.glyph_counts[line]);
+            if (opening_soul_text_ready)
+                aos_soul_notice_build(&opening_soul_notice,
+                                      &opening_soul_tiles,
+                                      (name_width + 7) / 8, true);
+        }
         if (!opening_soul_text_ready)
             fprintf(stderr, "Aria opening soul notice text unavailable\n");
         opening.dirty = false;
@@ -7152,7 +7183,8 @@ int aria_runtime_main(int argc, char **argv) {
                                   &opening_portrait_id);
         if (opening_soul_text_ready &&
             (opening_actors.soul_notice == 1 || opening_actors.soul_notice == 2))
-            draw_opening_soul_notice(renderer, &opening_soul_tiles);
+            draw_opening_soul_notice(renderer, &opening_soul_notice,
+                                     (uint32_t)step);
         else if (opening_text_ready)
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,
@@ -7164,10 +7196,11 @@ int aria_runtime_main(int argc, char **argv) {
             if (shot) SDL_DestroySurface(shot);
             if (!saved) { fprintf(stderr, "Capture failed: %s\n", SDL_GetError()); goto cleanup; }
             printf("Captured frame %ld: %s (x=%d y=%d state=%u anim=%u frame=%u flags=%08x "
-                   "effects=%zu opening=%u/%u blocked=%u text=%zu waiting=%u)\n",
+                   "effects=%zu opening=%u/%u notice=%u blocked=%u text=%zu waiting=%u)\n",
                    step, capture_path, sx, sy, soma.state, soma.anim.id, soma.anim.frame,
                    (unsigned)soma.flags, room.effect_count,
                    opening_actors.scene_state, opening_actors.scene_step,
+                   opening_actors.soul_notice,
                    aos_opening_actors_blocks_script(&opening_actors) ? 1u : 0u,
                    opening.position, opening.waiting ? 1u : 0u);
             running = false;

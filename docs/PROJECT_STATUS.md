@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0798 - Reconstruct the opening obtained-soul windows
+
+- Replaced the SDL approximation used after the Winged Skeleton absorption
+  with the BG0 maps built by `sub_0800E708(0,0,1)` and
+  `sub_0800E540(0,1)`. The centered red name banner, the 30-tile description
+  field and its folded-page indicator now use the HUD tiles at `0x0827B208`
+  and native palette rows 14 and 15 from `0x0820C428`.
+- Rendered the ROM-localized soul name, acquired suffix and description into
+  the native dynamic tile ranges, including `sub_0800E380`'s generated field
+  colors and BG0's six-pixel vertical scroll. The model is portable C11 and
+  can be reused by the editor without SDL state.
+- Added deterministic map, palette and pixel tests plus a verified-ROM decode
+  path. A fresh-file capture of the visible notice was reviewed and the story
+  still resumes through event `0x20`; this remains source-derived and locally
+  reviewed, not emulator-compared.
+
 ## Patch 0797 - Compose opening text through the native BG0 map
 
 - Replaced the opening dialogue's direct SDL canvas offset with the map built

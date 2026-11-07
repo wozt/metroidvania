@@ -542,6 +542,55 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
 }
 
 
+
+/* Fleet culling: every call ranks this worker's mean reward against
+ * every other worker's (worker.N.rsum/rn metas). A worker that is
+ * clearly in the bottom while a much better branch exists stops
+ * itself — its slot frees for a fresh candidate that smart-restart
+ * will pull toward the best checkpoint anyway. */
+static int fleet_cull_check(AosLabDb *db, int worker_id,
+                            double own_ema, int trials_done) {
+    (void)own_ema;
+    if (trials_done < 300) return 0;
+    double means[8], best = -1e9;
+    int active = 0, own_rank_bottom = 1;
+    for (int i = 0; i < 8; ++i) {
+        char rk[64], nk[64];
+        snprintf(rk, sizeof rk, "worker.%d.rsum", i);
+        snprintf(nk, sizeof nk, "worker.%d.rn", i);
+        char *rs = aos_labdb_meta_get(db, rk);
+        char *rn = aos_labdb_meta_get(db, nk);
+        means[i] = -1.0;
+        if (rs && rn && atol(rn) > 0) {
+            means[i] = atof(rs) / (double)atol(rn);
+            if (means[i] > best) best = means[i];
+            ++active;
+        }
+        free(rs); free(rn);
+    }
+    if (active < 3 || means[worker_id] < 0) return 0;
+    /* bottom-half check: at least half the fleet must beat us */
+    int beaten = 0;
+    for (int i = 0; i < 8; ++i)
+        if (means[i] >= 0 && means[i] > means[worker_id]) ++beaten;
+    if (beaten * 2 < active) own_rank_bottom = 0;
+    /* cull only when clearly outclassed: best mean exceeds ours by a
+     * wide margin and we are not producing anything */
+    if (own_rank_bottom && best > means[worker_id] + 0.5 &&
+        means[worker_id] < 0.15) {
+        char st[128];
+        snprintf(st, sizeof st,
+                 "culled: mean=%.2f best=%.2f — freeing slot",
+                 means[worker_id], best);
+        char pk[64];
+        snprintf(pk, sizeof pk, "worker.%d.status", worker_id);
+        aos_labdb_meta_set(db, pk, st);
+        printf("worker %d %s\n", worker_id, st);
+        return 1;
+    }
+    return 0;
+}
+
 /* ---- lethal branches + macro synthesis ------------------------------
  * Game-over rule: a trial that ends in death marks the state it
  * started from as lethal — waypoint restarts and smart hops forget
@@ -1590,6 +1639,31 @@ int main(int argc, char **argv) {
                 frames, outcome, reward, metrics, duration_ms);
             ++trials_done;
             total_frames += frames;
+            /* campaign progress metric: deepest room count + max
+             * level seen by the whole fleet */
+            {
+                int lvl = (res.peek_count > RK_COUNT + RK_LVL &&
+                           res.peeks[RK_COUNT + RK_LVL].data)
+                              ? res.peeks[RK_COUNT + RK_LVL].data[0] : 0;
+                char *ml = aos_labdb_meta_get(db, "lab.maxlevel");
+                int cur = ml ? atoi(ml) : 0;
+                if (lvl > cur) {
+                    char b[16];
+                    snprintf(b, sizeof b, "%d", lvl);
+                    aos_labdb_meta_set(db, "lab.maxlevel", b);
+                }
+                free(ml);
+                char prog[64], old[64] = "";
+                char *ml2 = aos_labdb_meta_get(db, "lab.maxlevel");
+                snprintf(prog, sizeof prog, "rooms=%d level=%d",
+                         room_count(db), ml2 ? atoi(ml2) : 0);
+                free(ml2);
+                char *op = aos_labdb_meta_get(db, "lab.progress");
+                if (op) snprintf(old, sizeof old, "%s", op);
+                if (strcmp(old, prog))
+                    aos_labdb_meta_set(db, "lab.progress", prog);
+                free(op);
+            }
             /* long-sequence construction: every 250 trials fuse the
              * two best actions into a reusable macro action */
             if (trials_done % 250 == 249)
@@ -1635,6 +1709,13 @@ int main(int argc, char **argv) {
                 snprintf(bv, sizeof bv, "%ld", rn);
                 aos_labdb_meta_set(db, sk2, bv);
                 free(os); free(on);
+            }
+            /* fleet culling: stop when clearly outclassed so the
+             * slot can be reused by a better candidate */
+            if (fleet_cull_check(db, worker_id, reward_ema,
+                                 trials_done)) {
+                aos_labdb_meta_set(db, phase_key, "idle");
+                break;
             }
             /* stuck detection: long streak of zero-reward fails on the
              * same scene means the worker is spinning wheels */

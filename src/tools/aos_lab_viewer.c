@@ -443,9 +443,11 @@ static void refresh_trials(Viewer *v) {
     int pass = 0;
     for (int i = 0; i < count; ++i)
         if (rows[i].outcome && !strcmp(rows[i].outcome, "success")) ++pass;
-    char score[96];
-    snprintf(score, sizeof score, "Scenarios: %d pass / %d trials",
-             pass, count);
+    char score[160];
+    char *prog = aos_labdb_meta_get(v->db, "lab.progress");
+    snprintf(score, sizeof score, "Scenarios: %d pass / %d trials%s%s",
+             pass, count, prog ? "  •  " : "", prog ? prog : "");
+    free(prog);
     gtk_label_set_text(GTK_LABEL(v->score_label), score);
     gtk_widget_set_css_classes(v->score_label,
         (const char *[]){pass > 0 ? "score-pass" : "dim-label", NULL});
@@ -1220,10 +1222,6 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     v->all_speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
                                                   0, 16, 1);
     gtk_scale_set_draw_value(GTK_SCALE(v->all_speed_scale), FALSE);
-    gtk_scale_add_mark(GTK_SCALE(v->all_speed_scale), 0,
-                       GTK_POS_BOTTOM, "Auto");
-    gtk_scale_add_mark(GTK_SCALE(v->all_speed_scale), 16,
-                       GTK_POS_BOTTOM, "x16");
     gtk_widget_set_hexpand(v->all_speed_scale, TRUE);
     gtk_widget_set_size_request(v->all_speed_scale, 220, -1);
     gtk_widget_set_tooltip_text(
@@ -1233,6 +1231,9 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     g_signal_connect(v->all_speed_scale, "value-changed",
                      G_CALLBACK(on_all_speed_changed), v);
     gtk_box_append(GTK_BOX(fleet), v->all_speed_scale);
+    GtkWidget *srange = gtk_label_new("Auto..x16");
+    gtk_widget_add_css_class(srange, "dim-label");
+    gtk_box_append(GTK_BOX(fleet), srange);
 
     /* Resizable sections with draggable splitters (FileZilla-style):
      * top pane = live emulator grid, bottom split = controls/log vs
@@ -1359,10 +1360,6 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         wc->speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
                                                  0, 16, 1);
         gtk_scale_set_draw_value(GTK_SCALE(wc->speed_scale), FALSE);
-        gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 0, GTK_POS_BOTTOM,
-                           "Auto");
-        gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 16, GTK_POS_BOTTOM,
-                           "x16");
         gtk_widget_set_hexpand(wc->speed_scale, TRUE);
         gtk_widget_set_size_request(wc->speed_scale, 140, -1);
         gtk_widget_set_tooltip_text(

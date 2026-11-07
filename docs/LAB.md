@@ -131,12 +131,13 @@ respawn dead workers from `worker.N.launch`.
 - **Boss/monster/item detectors**: WRAM entity tables and kill
   detection are not yet instrumented; rewards currently infer progress
   from vitals/inventory/rooms only.
-- **Completion metric**: no explicit "campaign progress" scalar yet —
-  deepest (area,room) + level + items should feed a `lab.progress`
-  meta and viewer badge.
-- **8-worker culling**: smart restart hops branches but does not yet
-  kill whole underperforming workers to reallocate slots to the best
-  candidates (planned: compare worker reward EMAs, stop worst quartile
-  when a clearly better branch exists).
+- **Completion metric**: `lab.progress` tracks rooms visited + max
+  level fleet-wide and shows in the viewer score line; boss kills and
+  area milestones are not yet folded in.
+- **Worker culling**: implemented — every 300+ trials a worker ranks
+  its mean reward against the fleet (worker.N.rsum/rn metas) and stops
+  itself when bottom-half, clearly behind the best (>0.5) and
+  producing nothing (<0.15 mean), freeing the slot for a better
+  candidate.
 - **Macro v2**: macros are unordered pairs today; sequencing with
   conditions ("if room X then…") and macro-of-macros are future work.

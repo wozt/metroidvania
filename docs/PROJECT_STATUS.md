@@ -26,6 +26,12 @@ Last updated: **2026-11-07**.
   `sub_0805DC80` is dead code (its address appears nowhere in the ROM),
   while `sub_0805DAA0` is the skeleton's live brain, approximated by the
   scene-state timers.
+- Decoded `sub_0801B03C`, Soma's death particle emitter: a drifting
+  sparkle entity (`sub_08045C9C`) bounces with +-0x200 gravity flips and
+  emits animation-0xD effects every four frames in an 8x8 box offset
+  -16px. The runtime now spawns `AOS_EFFECT_SPARKLE` drift effects on the
+  same cadence and box during `soma.state == 16`; the kind-to-animation
+  mapping and the emitter's own bounce remain approximations.
 
 ## Patch 0798 - Reconstruct the opening obtained-soul windows
 

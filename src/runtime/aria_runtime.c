@@ -6501,6 +6501,19 @@ int aria_runtime_main(int argc, char **argv) {
                 running = false;
                 break;
             }
+            /* sub_0801B03C: while Soma dies, a drifting sparkle entity
+             * (callback sub_08045C9C, animation 0xD) emits one effect every
+             * four frames inside an 8x8 pixel box 16..8 pixels above the
+             * corpse. The kind mapping is approximate pending art audit. */
+            if (soma.state == 16 && (step & 3) == 0 &&
+                room.effect_count < MAX_EFFECTS &&
+                combat.effects[AOS_EFFECT_SPARKLE]) {
+                room.effects[room.effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .drift = true,
+                    .x = soma.x + (int32_t)(aos_random() % 0x80000u),
+                    .y = soma.y + (int32_t)(aos_random() % 0x80000u) - 0x100000,
+                };
+            }
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;

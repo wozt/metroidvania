@@ -58,6 +58,7 @@ typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
  * parser does not play audio directly. */
 typedef enum {
     AOS_OPENING_CUE_NONE,
+    AOS_OPENING_CUE_ENTRY_PAN,
     AOS_OPENING_CUE_CONFRONTATION,
     AOS_OPENING_CUE_ENEMY_APPEARS,
     AOS_OPENING_CUE_ENEMY_ATTACKS,

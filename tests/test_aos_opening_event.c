@@ -406,7 +406,7 @@ static void test_script_and_commit(void) {
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.waiting && event.beat == 9 && event.speaker == 8);
-    assert(event.beat_count == 1 && event.cue == AOS_OPENING_CUE_NONE);
+    assert(event.beat_count == 1 && event.cue == AOS_OPENING_CUE_ENTRY_PAN);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'D');
     aos_opening_event_update(&event, AOS_KEY_A);
     for (unsigned frame = 0; frame < 16 && event.active; ++frame)

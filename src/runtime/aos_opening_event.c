@@ -58,8 +58,10 @@ static bool argument(AosOpeningEvent *event, uint8_t *value) {
 
 static AosOpeningCue beat_cue(uint8_t beat_count) {
     switch (beat_count) {
-    /* The first control-2 beat releases Object20's actor-entry state. The
-     * following beats select sub_0805D410 states 2 through 6. */
+    /* The first control-2 beat releases Object20's actor-entry state and
+     * advances entity+0x38 to camera phase 1. The following beats select
+     * sub_0805D410 states 2 through 6. */
+    case 1: return AOS_OPENING_CUE_ENTRY_PAN;
     case 2: return AOS_OPENING_CUE_CONFRONTATION;
     case 3: return AOS_OPENING_CUE_ENEMY_APPEARS;
     case 4: return AOS_OPENING_CUE_ENEMY_ATTACKS;
@@ -706,6 +708,14 @@ void aos_opening_actors_input(AosOpeningActors *actors, uint16_t new_input) {
 void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     if (!actors || !actors->active || cue == AOS_OPENING_CUE_NONE) return;
     switch (cue) {
+    case AOS_OPENING_CUE_ENTRY_PAN:
+        /* +0xb==1 writes entity+0x38=1 before its sub_0805CCE4 wait. */
+        actors->camera_mode = 1;
+        actors->camera_active = true;
+        actors->camera_initialized = false;
+        actors->scene_state = 1;
+        actors->pending_cue = cue;
+        break;
     case AOS_OPENING_CUE_CONFRONTATION:
         actors->scene_state = 2;
         actors->pending_cue = cue;
@@ -722,6 +732,10 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     case AOS_OPENING_CUE_ENEMY_ATTACKS:
         actors->scene_state = 4;
         actors->scene_step = 0;
+        /* +0xb==4 inner case 0 writes entity+0x38=3: the return pan. */
+        actors->camera_mode = 3;
+        actors->camera_active = true;
+        actors->camera_initialized = false;
         actor_animation(actors, 1, 2);
         actors->pending_cue = cue;
         break;
@@ -803,6 +817,11 @@ AosOpeningCue aos_opening_actors_update(
     update_opening_soul(actors);
     update_opening_flames(actors);
     update_skeleton_death(actors);
+    /* Every active pan advances each frame; scene states consume the
+     * completion flag. State 3 keeps ownership of its step transition. */
+    bool camera_done = camera_update(actors, camera_x);
+    if (camera_done && actors->scene_state != 3)
+        actors->camera_active = false;
     /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
     if (actors->state == 0) {
         if (actors->timer) --actors->timer;
@@ -833,7 +852,7 @@ scene:
         /* State 3 emits sub_0805D2C8's distant group, pans at 3.5 pixels per
          * frame until the camera passes 0xDD, then waits 0x20 frames before
          * sub_0805D35C's near group, Mina animation 5 and SE_436. */
-        if (actors->scene_step == 0 && camera_update(actors, camera_x)) {
+        if (actors->scene_step == 0 && camera_done) {
             actors->camera_active = false;
             actors->scene_step = 1;
             actors->scene_timer = 32;

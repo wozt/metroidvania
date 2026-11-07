@@ -144,6 +144,11 @@ void mv_split_pulse_tick(ProtoAnimation *animation, float dt) {
         }
 }
 
+uint16_t mv_split_native_sound(bool aria) {
+    return aria ? MV_SPLIT_ARIA_HEARTBEAT_SOUND
+                : MV_SPLIT_MZM_LIGHTNING_SOUND;
+}
+
 bool mv_split_hold_press(MvSplitHold *hold) {
     if (!hold || hold->held) return false;
     *hold = (MvSplitHold){.held = true};

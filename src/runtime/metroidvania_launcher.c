@@ -30,7 +30,6 @@
 #include "mzm_screen.h"
 #include "mzm_sfx.h"
 #include "mzm_title_screen.h"
-#include "rotating_line/pulse_audio.h"
 
 /* The embedded frontends (FUSION_EMBEDDED). */
 int room_runtime_main(int argc, char **argv);
@@ -163,10 +162,12 @@ static int run_frontend(const char *program, int argc, char **argv) {
     return 1;
 }
 
-static void trigger_split_pulse(MvSplit *split, SDL_AudioStream *audio,
-                                bool aria) {
-    float duration = proto_pulse_audio_emit(audio, aria);
-    mv_split_trigger_pulse(split, aria, duration);
+static void trigger_split_pulse(MvSplit *split, bool aria) {
+    uint16_t sound = mv_split_native_sound(aria);
+    if (aria) aos_audio_play_song(sound);
+    else mzm_sfx_play(sound);
+    /* Both native effects complete inside the prototype's visual wave. */
+    mv_split_trigger_pulse(split, aria, 0.22f);
 }
 
 typedef struct {
@@ -220,7 +221,6 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
     aos_mp2k_engine_init(&mp2k);
     aos_audio_reset();
     SDL_AudioStream *aria_stream = NULL;
-    SDL_AudioStream *pulse_stream = NULL;
     static MzmPull pull;
     memset(&pull, 0, sizeof pull);
     if (!o->mute) {
@@ -246,8 +246,6 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
         } else {
             fprintf(stderr, "No Aria sound: %s\n", error);
         }
-        pulse_stream = proto_pulse_audio_open();
-        if (!pulse_stream) fprintf(stderr, "No divider pulse audio: %s\n", SDL_GetError());
     }
 
     SDL_Renderer *renderer = NULL;
@@ -304,11 +302,11 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                      event.key.key == SDLK_X) {
                 if (mv_split_hold_press(&metroid_hold))
-                    trigger_split_pulse(&split, pulse_stream, false);
+                    trigger_split_pulse(&split, false);
             } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
                        event.key.key == SDLK_Y) {
                 if (mv_split_hold_press(&aria_hold))
-                    trigger_split_pulse(&split, pulse_stream, true);
+                    trigger_split_pulse(&split, true);
             } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_X) {
                 mv_split_hold_release(&metroid_hold);
             } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_Y) {
@@ -333,11 +331,11 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
             else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
                      event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
                 if (mv_split_hold_press(&metroid_hold))
-                    trigger_split_pulse(&split, pulse_stream, false);
+                    trigger_split_pulse(&split, false);
             } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
                        event.gbutton.button == SDL_GAMEPAD_BUTTON_WEST) {
                 if (mv_split_hold_press(&aria_hold))
-                    trigger_split_pulse(&split, pulse_stream, true);
+                    trigger_split_pulse(&split, true);
             } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_UP &&
                        event.gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
                 mv_split_hold_release(&metroid_hold);
@@ -353,9 +351,9 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
         bool launch_aria = mv_split_hold_tick(
             &aria_hold, PROTO_FIXED_TIMESTEP, &aria_pulses);
         while (metroid_pulses--)
-            trigger_split_pulse(&split, pulse_stream, false);
+            trigger_split_pulse(&split, false);
         while (aria_pulses--)
-            trigger_split_pulse(&split, pulse_stream, true);
+            trigger_split_pulse(&split, true);
         if (!chosen_done && (launch_metroid || launch_aria)) {
             chosen = launch_metroid ? MV_GAME_MZM : MV_GAME_ARIA;
             chosen_done = true;
@@ -489,7 +487,6 @@ static int shared_title(const Options *o, SDL_Window *window, MvGame *chosen_gam
     mzm_stream = NULL;
     mzm_sfx_set_sink(NULL, NULL);
     if (aria_stream) SDL_DestroyAudioStream(aria_stream);
-    if (pulse_stream) SDL_DestroyAudioStream(pulse_stream);
     aos_audio_set_start_sink(NULL, NULL);
     aos_mp2k_engine_destroy(&mp2k);
     mzm_audio_close();

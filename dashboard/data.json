@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T11:31:43+00:00",
+ "generated_at": "2026-11-07T11:44:06+00:00",
  "git": {
-  "commit": "44a3170",
+  "commit": "74e715e",
   "branch": "main",
   "dirty": true
  },
@@ -16000,7 +16000,6 @@
     "src/runtime/rotating_line/curve.c",
     "src/runtime/rotating_line/parametric.c",
     "src/runtime/rotating_line/config.c",
-    "src/runtime/rotating_line/pulse_audio.c",
     "src/runtime/fusion_host.c",
     "src/runtime/aos_title_screen.c",
     "src/runtime/mzm_title_screen.c",
@@ -16010,18 +16009,16 @@
    ],
    "tests": [
     "tests/test_metroidvania_split.c",
-    "tests/test_metroidvania_pulse_audio.c",
     "tests/test_fusion_host.c",
     "tests/test_aos_game_lifecycle.c"
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later patch-0047/0048 polarity mirror. X triggers a synchronized Metroid lightning pulse and sound, Y an Aria spiral pulse and heartbeat; holding either for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. The music is the one of the game covering most of the bottom half (the one START launches): the other game's music fades out over 40 frames, then its sequencer pauses until its turn comes back. A first START skips both titles' openings; once both wait for START, START keeps the original title-driven in-process launch flow. A frontend going back to its own title returns to the shared title in the same window. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Checked with deterministic geometry, pulse-audio, JSON, hold and cancellation tests plus headless image captures. Source-derived and prototype-matched, not emulator-compared.",
+   "limitations": "fusion_metroidvania runs both native title screens at once, separated by the source prototype's patch-0046 animated geometry: eight staggered Metroid bipolar triangles and eight staggered Aria Fermat spirals rotate clockwise at 10 degrees a second, without the later patch-0047/0048 polarity mirror. X triggers a synchronized Metroid lightning pulse using Zero Mission's native SOUND_RUINS_TEST_SHOOTING_LIGHTNING 0x1DC; Y triggers an Aria spiral pulse using the ROM's short Legion double-impact sequence 0x11C. Both route through the games' already-active native engines, with no synthetic pulse clip. Holding either key for three seconds selects its existing runtime once through fusion_host, while releasing early cancels. The supplied JSON values are compiled defaults and --split-config accepts an optional strict JSON override. The music is the one of the game covering most of the bottom half; START keeps the original title-driven in-process launch flow. A frontend going back to its own title returns to the shared title in the same window. Limitations: startup sequences, idle introduction and demos remain deliberately skipped; the Aria menu-to-gameplay chain inside the launcher was not run in this cycle. Checked with deterministic native-ID routing, geometry, JSON, hold and cancellation tests plus headless image captures. Sound choice is source-derived and locally waveform-reviewed, not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_metroidvania_split.c",
-     "tests/test_metroidvania_pulse_audio.c",
      "tests/test_fusion_host.c",
      "tests/test_aos_game_lifecycle.c"
     ],
@@ -16041,16 +16038,6 @@
       "registered": true,
       "ctest": [
        "metroidvania_split"
-      ],
-      "outcome": "passed",
-      "exists": true
-     },
-     {
-      "test": "tests/test_metroidvania_pulse_audio.c",
-      "kind": "ctest",
-      "registered": true,
-      "ctest": [
-       "metroidvania_pulse_audio"
       ],
       "outcome": "passed",
       "exists": true
@@ -19786,13 +19773,6 @@
     "outcome": "passed"
    },
    {
-    "name": "metroidvania_pulse_audio",
-    "files": [
-     "tests/test_metroidvania_pulse_audio.c"
-    ],
-    "outcome": "passed"
-   },
-   {
     "name": "aos_title_screen",
     "files": [
      "tests/test_aos_title_screen.c"
@@ -20025,12 +20005,18 @@
    }
   ],
   "summary": {
-   "passed": 130,
+   "passed": 129,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "74e715e",
+   "date": "2026-11-07",
+   "subject": "Integrate animated Metroid Vania divider",
+   "scope": "project"
+  },
   {
    "commit": "44a3170",
    "date": "2026-11-07",
@@ -20503,12 +20489,6 @@
    "commit": "038c205",
    "date": "2026-11-02",
    "subject": "Record the traced native structure of the Skeleton and Nemesis",
-   "scope": "project"
-  },
-  {
-   "commit": "d4a7b74",
-   "date": "2026-11-02",
-   "subject": "Port hit elements, Soma's statuses and petrification",
    "scope": "project"
   }
  ],

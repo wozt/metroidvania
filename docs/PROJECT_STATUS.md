@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0777 - Use native ROM sounds for the divider pulses
+
+- Replaced both synthesized pulse clips with sound sequences decoded by the
+  games' existing native audio engines. Aria's Y pulse now uses `0x11C`, the
+  short double-impact sequence requested by Legion's `sub_0809E0C0`; its ROM
+  rendering was selected after comparing the short effect waveforms. Metroid's
+  X pulse uses `SOUND_RUINS_TEST_SHOOTING_LIGHTNING` (`0x1DC`), requested by
+  `RuinsTestGroundLightning` for its native electrical shot.
+- Kept the patch-0046 geometry, pulse timing, repeated hold pulses and
+  three-second in-process selection unchanged. Removed the unused synthetic
+  SDL pulse generator and exposed the two sound IDs through the split's
+  host-neutral contract for runtime and future editor previews.
+- The sound selection is source-derived and the native IDs and routing are
+  covered by the focused split test. No emulator audio comparison is claimed.
+
+Next: reconstruct Equip's native title/frame and equipment/cursor OAM layers,
+then apply the same icon/cursor layer to Soul Set.
+
 ## Patch 0776 - Integrate the animated Metroid Vania divider
 
 - Replaced the straight rotating divider with the prototype's actual C11

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "metroidvania_split.h"
+#include "mzm_sound_ids.h"
 #include "rotating_line/parametric.h"
 
 #include <assert.h>
@@ -25,6 +26,9 @@ static void check_defaults(const ProtoConfig *config) {
 }
 
 int main(void) {
+    assert(mv_split_native_sound(true) == 0x11C);
+    assert(mv_split_native_sound(false) ==
+           MZM_SOUND_RUINS_TEST_SHOOTING_LIGHTNING);
     assert(mv_split_angle(0) == 0 && mv_split_angle(540) == 0x4000 &&
            mv_split_angle(1080) == 0x8000 && mv_split_angle(2160) == 0);
 

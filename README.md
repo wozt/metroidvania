@@ -268,11 +268,13 @@ exported Zero Mission ROM bank and sounds:
 ./build/fusion_metroidvania --aria-rom "roms/Castlevania - Aria of Sorrow (USA).gba"
 ```
 
-X triggers a synchronized Metroid lightning pulse and sound; Y triggers an
-Aria spiral pulse and heartbeat. Holding X or Y for three seconds launches
-that game's existing native runtime in process, once per hold; releasing early
-cancels the hold. START keeps the title-driven selection described above. The
-compiled defaults reproduce `config/metroidvania_rotating_line.json`; pass
+X triggers a synchronized Metroid lightning pulse with Zero Mission's native
+Ruins Test lightning-shot sound; Y triggers an Aria spiral pulse with the
+native Legion double-impact heartbeat. Holding X or Y for three seconds
+launches that game's existing native runtime in process, once per hold;
+releasing early cancels the hold. START keeps the title-driven selection
+described above. The compiled defaults reproduce
+`config/metroidvania_rotating_line.json`; pass
 `--split-config FILE.json` to override them.
 
 A game's way back to its own title (B in its file screen, for example)

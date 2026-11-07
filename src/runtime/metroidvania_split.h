@@ -31,6 +31,11 @@ typedef struct {
     float pulse_elapsed;
 } MvSplitHold;
 
+enum {
+    MV_SPLIT_ARIA_HEARTBEAT_SOUND = 0x11C,
+    MV_SPLIT_MZM_LIGHTNING_SOUND = 0x1DC,
+};
+
 /* Patch-0046 defaults from prototype_aria_metroid_horizontal_a.json. */
 void mv_split_config_defaults(ProtoConfig *config);
 bool mv_split_init(MvSplit *split, const char *json_override,
@@ -38,9 +43,11 @@ bool mv_split_init(MvSplit *split, const char *json_override,
 void mv_split_update_frame(MvSplit *split);
 void mv_split_tick(MvSplit *split, float dt, bool rotate);
 
-/* Audio duration is the exact duration returned by proto_pulse_audio_emit. */
+/* Audio duration controls the eight-cell visual wave's synchronization. */
 void mv_split_trigger_pulse(MvSplit *split, bool aria, float audio_duration);
 void mv_split_pulse_tick(ProtoAnimation *animation, float dt);
+/* ROM-native sound selected for the corresponding side. */
+uint16_t mv_split_native_sound(bool aria);
 
 bool mv_split_hold_press(MvSplitHold *hold);
 void mv_split_hold_release(MvSplitHold *hold);

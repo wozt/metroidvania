@@ -1149,7 +1149,8 @@ static void hit_state(AosSoma *soma, const AosCollision *layer) {
     soma->friction = soma->vx < 0 ? 0x8000 : (int32_t)0xFFFF8000;
     apply_friction(soma);
     if (soma->flags & AOS_FLAG_ANIM_DONE) {
-        soma->flags &= ~(uint32_t)AOS_FLAG_STOP_AT_WALL;
+        /* _0801CC1A clears ~0x81: flag 0x80 and the unnamed bit 0. */
+        soma->flags &= ~(uint32_t)(AOS_FLAG_STOP_AT_WALL | 0x1u);
         soma->state = 0;
     }
     air_routine(soma, layer);

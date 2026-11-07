@@ -210,6 +210,7 @@ typedef struct {
     uint16_t scene_timer;
     int32_t camera_x;
     int32_t camera_y;
+    int32_t soma_x;
     uint8_t camera_mode;
     uint8_t emitted_batches;
     uint8_t emitted_count;

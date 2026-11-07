@@ -191,6 +191,7 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
         .timer = 0x40,
         .active = true,
         .soma_animation = 0x51,
+        .soma_x = AOS_OPENING_SOMA_X << 16,
     };
 }
 
@@ -758,6 +759,11 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     case AOS_OPENING_CUE_COMPLETE:
         actors->scene_state = 7;
         actors->pending_cue = cue;
+        /* +0xb==8 sub-state 0 writes entity+0x38=4: the return pan that
+         * recenters on Soma before the scene flags complete. */
+        actors->camera_mode = 4;
+        actors->camera_active = true;
+        actors->camera_initialized = false;
         break;
     default:
         break;
@@ -793,7 +799,8 @@ static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
     case 2: return *camera_x > 0xDD;
     case 3: return *camera_x <= 0x60;
     /* Mode 4 ends when Soma reaches screen X 0x78 rather than at a camera
-     * threshold. It is not used by the opening state reconstructed here. */
+     * threshold: sub_0805CCE4's sixth case compares the player position. */
+    case 4: return (actors->soma_x >> 16) - *camera_x >= 0x78;
     case 5: return *camera_x <= 0x20;
     default: return false;
     }

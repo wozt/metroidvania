@@ -6039,7 +6039,10 @@ int aria_runtime_main(int argc, char **argv) {
                 wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;
-            if (opening.active) {
+            /* +0xb==8 keeps Object20 alive for the mode-4 return pan after
+             * the script's end command; the branch stays open until the
+             * camera finishes recentring on Soma. */
+            if (opening.active || opening_actors.camera_active) {
                 /* The scene owns Soma's pose until Object20 commits. */
                 soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
                 soma.anim.frame = 0;

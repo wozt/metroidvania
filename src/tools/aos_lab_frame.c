@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     }
     const uint32_t *px = (const uint32_t *)(map + FB_HDR);
 
-    /* convert 0xRRGGBB -> RGB rows, optionally NEAREST-scaled */
+    /* convert 0xAABBGGRR -> RGB rows, optionally NEAREST-scaled */
     int ow = FB_W * scale, oh = FB_H * scale;
     uint8_t *rgb = malloc((size_t)ow * oh * 3);
     if (!rgb) { munmap(map, sz); return 1; }
@@ -64,9 +64,9 @@ int main(int argc, char **argv) {
         uint8_t *d = rgb + (size_t)y * ow * 3;
         for (int x = 0; x < ow; ++x) {
             uint32_t c = src[x / scale];
-            *d++ = (c >> 16) & 0xFF;
-            *d++ = (c >> 8) & 0xFF;
             *d++ = c & 0xFF;
+            *d++ = (c >> 8) & 0xFF;
+            *d++ = (c >> 16) & 0xFF;
         }
     }
     munmap(map, sz);

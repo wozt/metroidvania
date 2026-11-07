@@ -149,6 +149,24 @@ uint8_t *aos_labdb_state_blob(AosLabDb *db, int64_t id, size_t *out_size) {
     return blob;
 }
 
+int64_t aos_labdb_update_action(AosLabDb *db, const char *name,
+                              const char *kind, const char *params,
+                              const char *eval, const char *script) {
+    sqlite3_stmt *st = NULL;
+    if (sqlite3_prepare_v2(db->handle,
+            "UPDATE actions SET kind=?,params=?,eval=?,script=?"
+            " WHERE name=?", -1, &st, NULL) != SQLITE_OK)
+        return -1;
+    bind_text(st, 1, kind);
+    bind_text(st, 2, params);
+    bind_text(st, 3, eval);
+    bind_text(st, 4, script);
+    bind_text(st, 5, name);
+    int rc = sqlite3_step(st);
+    sqlite3_finalize(st);
+    return rc == SQLITE_DONE ? sqlite3_changes(db->handle) : -1;
+}
+
 int64_t aos_labdb_add_action(AosLabDb *db, const char *name, const char *kind,
                              const char *params, const char *eval,
                              const char *script) {

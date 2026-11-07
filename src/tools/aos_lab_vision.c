@@ -15,13 +15,13 @@ static uint64_t fnv1a(uint64_t h, uint32_t v) {
 
 static uint32_t quantize(uint32_t c) {
     /* 5-6-5 -> pack into a single u32 tile color id */
-    unsigned r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
+    unsigned r = c & 0xFF, g = (c >> 8) & 0xFF, b = (c >> 16) & 0xFF;
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
 }
 
 static double lum(uint32_t c) {
-    return 0.299 * ((c >> 16) & 0xFF) + 0.587 * ((c >> 8) & 0xFF) +
-           0.114 * (c & 0xFF);
+    return 0.299 * (c & 0xFF) + 0.587 * ((c >> 8) & 0xFF) +
+           0.114 * ((c >> 16) & 0xFF);
 }
 
 void aos_vision_analyze(const uint32_t *fb, int w, int h,
@@ -56,9 +56,9 @@ void aos_vision_analyze(const uint32_t *fb, int w, int h,
                 const uint32_t *row = fb + (ty * 8 + y) * w + tx * 8;
                 for (int x = 0; x < 8; ++x) {
                     uint32_t c = row[x];
-                    sr += (c >> 16) & 0xFF;
+                    sr += c & 0xFF;
                     sg += (c >> 8) & 0xFF;
-                    sb += c & 0xFF;
+                    sb += (c >> 16) & 0xFF;
                     ++n;
                     if (x && labs((int)lum(row[x]) - (int)lum(row[x - 1])) > 60)
                         edge += 1.0;
@@ -105,9 +105,9 @@ void aos_vision_analyze(const uint32_t *fb, int w, int h,
     for (int y = 0; y < h; y += 2)
         for (int x = 0; x < w; x += 2) {
             uint32_t c = fb[y * w + x];
-            int ri = ((c >> 16) & 0xFF) * 6 / 256;
+            int ri = (c & 0xFF) * 6 / 256;
             int gi = ((c >> 8) & 0xFF) * 6 / 256;
-            int bi = (c & 0xFF) * 6 / 256;
+            int bi = ((c >> 16) & 0xFF) * 6 / 256;
             ++out->hist[ri * 36 + gi * 6 + bi];
         }
 

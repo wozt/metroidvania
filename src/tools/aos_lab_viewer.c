@@ -489,9 +489,9 @@ static void fb_refresh_frame(WorkerCard *wc, GtkWidget *picture) {
     uint8_t *out = wc->fb_rgba;
     for (int i = 0; i < 240 * 160; ++i) {
         uint32_t c = px[i];
-        *out++ = (c >> 16) & 0xFF;
-        *out++ = (c >> 8) & 0xFF;
-        *out++ = c & 0xFF;
+        *out++ = c & 0xFF;          /* R */
+        *out++ = (c >> 8) & 0xFF;   /* G */
+        *out++ = (c >> 16) & 0xFF;  /* B (mGBA 0xAABBGGRR) */
         *out++ = 0xFF;
     }
     GBytes *bytes = g_bytes_new(wc->fb_rgba, 240 * 160 * 4);

@@ -79,6 +79,9 @@ int64_t aos_labdb_add_state(AosLabDb *db, const char *name, const char *note,
                             size_t blob_size);
 /* Fetch a state blob; returns malloc'd buffer, *out_size set. */
 uint8_t *aos_labdb_state_blob(AosLabDb *db, int64_t id, size_t *out_size);
+int64_t aos_labdb_update_action(AosLabDb *db, const char *name,
+                              const char *kind, const char *params,
+                              const char *eval, const char *script);
 int64_t aos_labdb_add_action(AosLabDb *db, const char *name, const char *kind,
                              const char *params, const char *eval,
                              const char *script);

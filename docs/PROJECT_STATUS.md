@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0805 - Lab learning loop v2: bandit, auto-states, real WRAM probes
+
+- Framebuffer pixel format corrected to mGBA native 0xAABBGGRR
+  (R in the low byte) across the shm mirror, PNG dump, PPM writer and
+  the vision module — live videos and screenshots now show true colors.
+- Worker loop reworked into a bandit: each trial picks an action by
+  observed success rate (ties broken randomly) with epsilon
+  exploration, for a total budget of `--iterations` trials across all
+  actions instead of N per action sequentially.
+- Inputs are now guaranteed: trials with no scripted keys get a random
+  button/hold/at synthesized, so every trial is a real experiment.
+- Novelty checkpoints: a never-seen scene hash auto-saves a new state
+  blob (`auto_w<id>_<hash>`) parented to the trial's state.
+- `--define-action` upserts by name; a built-in curriculum (walk
+  left/right, jump, attack, random-input) engages when the actions
+  table is empty.
+- Verified WRAM map (EWRAM base 0x02000000, from cvaos decomp):
+  gameMode=+0x10, inputData=+0x14, player entity = entityData[0] at
+  +0x4E4 (pos whole X=+0x40 -> 0x02000524, Y=+0x44 -> 0x02000528),
+  level=0x02013279, HP=0x0201327A, MP=0x0201327C, maxHP=0x0201327E,
+  gold=0x02013290. Actions in lab.db now probe these addresses.
+- Known limitation: every state captured so far lands in a
+  non-interactive story sequence (player entity alive but ignores
+  input); meaningful movement/HP trials need a checkpoint recorded
+  during free gameplay.
+
 ## Patch 0804 - Emulator lab supervision UI + per-trial visual signatures
 
 - The GTK viewer now supervises up to eight live emulators: each worker

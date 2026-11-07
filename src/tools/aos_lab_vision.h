@@ -1,7 +1,7 @@
 /*
  * aos_lab_vision.h — visual feature extraction for lab trials.
  *
- * Analyzes the last emulated framebuffer (240x160, 0xRRGGBB pixels)
+ * Analyzes the last emulated framebuffer (240x160, 0xAABBGGRR pixels)
  * into compact, storable signatures: tile-grid hash, HUD strip hash,
  * text-ink row count, color histogram and brightness.  The features are
  * stored per trial in the metrics JSON so every learning signal is

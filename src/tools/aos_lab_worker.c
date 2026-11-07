@@ -297,7 +297,7 @@ static bool best_params(AosLabDb *db, int64_t action_id,
  * Each worker publishes its emulated screen to /dev/shm/aoslab_fb_<id>
  * so the GTK viewer can show up to eight live emulator windows. Layout:
  *   u32 magic 'AOSF' | u64 seq | u32 w | u32 h | u32 pad[3]  (32 bytes)
- *   then W*H u32 pixels (0xRRGGBB). The emulation thread bumps seq on
+ *   then W*H u32 pixels (0xAABBGGRR). The emulation thread bumps seq on
  *   every copy; viewers poll seq to detect new frames. */
 #define AOS_FB_MAGIC 0x414F5346u
 #define AOS_FB_HDR 32
@@ -441,8 +441,11 @@ int main(int argc, char **argv) {
             }
         }
         while (nf < 5) fields[nf++] = (char *)"";
-        int64_t id = aos_labdb_add_action(db, fields[0], fields[1],
-                                          fields[2], fields[3], fields[4]);
+        int64_t id = aos_labdb_update_action(db, fields[0], fields[1],
+                                             fields[2], fields[3], fields[4]);
+        if (id <= 0)
+            id = aos_labdb_add_action(db, fields[0], fields[1],
+                                      fields[2], fields[3], fields[4]);
         printf("action %lld defined\n", (long long)id);
         free(copy);
         aos_labdb_close(db);
@@ -506,13 +509,30 @@ int main(int argc, char **argv) {
                 }
         }
     }
+    static AosActionRow builtin_actions[4];
     if (chosen_count == 0) {
-        fprintf(stderr, "no matching actions in db\n");
-        free(state_blob);
-        aos_labdb_free_action_rows(all, acount);
-        aos_mgba_close(session);
-        aos_labdb_close(db);
-        return 1;
+        /* built-in curriculum from the verified WRAM map so a fresh
+         * database still learns something meaningful */
+        memset(builtin_actions, 0, sizeof builtin_actions);
+        struct { const char *n, *k, *pa, *ev; } defs[] = {
+            {"walk-right", "hold", "key=right,hold=80-140,at=5-20,jitter=8",
+             "probe=0x02000524:4,expect=increase,threshold=4096"},
+            {"walk-left", "hold", "key=left,hold=80-140,at=5-20,jitter=8",
+             "probe=0x02000524:4,expect=decrease,threshold=4096"},
+            {"attack", "hold", "key=a,hold=8-24,at=5-30,jitter=6",
+             "probe=0x0201327A:4,expect=decrease"},
+            {"explore-input", "hold", "",
+             "probe=0x02000000:4,expect=changed"},
+        };
+        for (int i = 0; i < 4; ++i) {
+            builtin_actions[i].id = -(i + 1);
+            builtin_actions[i].name = strdup(defs[i].n);
+            builtin_actions[i].kind = strdup(defs[i].k);
+            builtin_actions[i].params = strdup(defs[i].pa);
+            builtin_actions[i].eval = strdup(defs[i].ev);
+            chosen[chosen_count++] = builtin_actions[i];
+        }
+        fprintf(stderr, "no actions in db - using built-in curriculum\n");
     }
 
     char phase_key[64], status_key[64], run_key[64], ctrl_key[64];
@@ -531,9 +551,45 @@ int main(int argc, char **argv) {
     int stop_requested = 0;
     struct timeval t0, t1;
 
-    for (int ci = 0; ci < chosen_count && !stop_requested; ++ci) {
-        AosActionRow *action = &chosen[ci];
-        for (int it = 0; it < iterations && !stop_requested; ++it) {
+    /* bandit over actions: weights table gives each (action,params)
+     * a success rate; 1-explore picks the best action, explore picks
+     * a random one. Total budget = iterations trials. */
+    int total_trials = iterations;
+    uint64_t seen_scenes[512];
+    int seen_count = 0;
+    for (int t = 0; t < total_trials && !stop_requested; ++t) {
+        {
+            AosActionRow *action;
+            if (chosen_count == 1 ||
+                ((double)rand() / RAND_MAX) < explore) {
+                action = &chosen[rand() % chosen_count];
+            } else {
+                /* pick randomly among the actions tied at the best
+                 * observed success rate (ties are common early on) */
+                int wcount = 0;
+                AosWeightRow *w = aos_labdb_weights(db, 8192, &wcount);
+                double best_rate = -1.0;
+                int rates[64];
+                for (int ci = 0; ci < chosen_count && ci < 64; ++ci) {
+                    double rate = -1;
+                    for (int wi = 0; wi < wcount; ++wi)
+                        if (w[wi].action_id == chosen[ci].id &&
+                            w[wi].attempts > 0)
+                            rate = w[wi].success_rate;
+                    rates[ci] = rate > best_rate ? (int)(rate * 1000000) : -1;
+                    if (rate > best_rate) best_rate = rate;
+                }
+                int ties[64], nt = 0;
+                for (int ci = 0; ci < chosen_count && ci < 64; ++ci)
+                    if (best_rate >= 0 &&
+                        rates[ci] == (int)(best_rate * 1000000))
+                        ties[nt++] = ci;
+                if (nt > 0)
+                    action = &chosen[ties[rand() % nt]];
+                else
+                    action = &chosen[rand() % chosen_count];
+                aos_labdb_free_weight_rows(w, wcount);
+            }
             /* cooperative control through the meta table: the GTK
              * viewer writes lab.control = pause|resume|stop */
             char *control = aos_labdb_meta_get(db, ctrl_key);
@@ -589,6 +645,17 @@ int main(int argc, char **argv) {
                 snprintf(keys_label, sizeof keys_label,
                          "%d:%x,%d:0", base.at, base.mask,
                          base.at + base.hold);
+            } else {
+                /* no scripted input: synthesize a random press so every
+                 * trial is a real experiment, not a frozen frame */
+                static const uint32_t btns[] = {1, 2, 16, 32, 64, 128,
+                                               256, 512};
+                base.mask = btns[rand() % 8];
+                base.at = 5 + rand() % 40;
+                base.hold = 15 + rand() % 80;
+                schedule = build_schedule(&base, &schedule_count, frames);
+                snprintf(keys_label, sizeof keys_label,
+                         "rnd:%x@%d+%d", base.mask, base.at, base.hold);
             }
 
             /* baseline probe at frame 0, final at last frame */
@@ -662,13 +729,39 @@ int main(int argc, char **argv) {
                          "{\"note\":\"probe data missing\"}");
             }
 
-            /* visual signature of the final frame -> metrics JSON */
+            /* visual signature of the final frame -> metrics JSON;
+             * a never-seen scene hash becomes a new auto checkpoint */
+            uint64_t scene_hash = 0;
             {
                 const uint32_t *fb = aos_mgba_framebuffer(session);
                 AosSceneFeat feat;
                 aos_vision_analyze(fb, AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT,
                                    &feat);
                 aos_vision_metrics_append(metrics, sizeof metrics, &feat);
+                scene_hash = feat.scene_hash;
+                int seen = 0;
+                for (int si = 0; si < seen_count; ++si)
+                    if (seen_scenes[si] == scene_hash) { seen = 1; break; }
+                if (!seen && seen_count < 512) {
+                    seen_scenes[seen_count++] = scene_hash;
+                    size_t ns = 0;
+                    uint8_t *blob = aos_mgba_save_state_blob(session, &ns);
+                    if (blob) {
+                        char nm[96];
+                        snprintf(nm, sizeof nm, "auto_w%d_%08llx",
+                                 worker_id,
+                                 (unsigned long long)(scene_hash & 0xFFFFFFFF));
+                        char note[128];
+                        snprintf(note, sizeof note,
+                                 "auto scene=%016llx trial=%lld",
+                                 (unsigned long long)scene_hash,
+                                 (long long)t);
+                        int64_t nid = aos_labdb_add_state(
+                            db, nm, note, state_id, blob, (int)ns);
+                        (void)nid;
+                        free(blob);
+                    }
+                }
             }
 
             int64_t trial_id = aos_labdb_add_trial(

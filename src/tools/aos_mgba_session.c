@@ -147,7 +147,7 @@ static void write_ppm(const char *path, const uint32_t *pixels) {
     for (int y = 0; y < AOS_MGBA_HEIGHT; ++y) {
         for (int x = 0; x < AOS_MGBA_WIDTH; ++x) {
             uint32_t c = pixels[y * AOS_MGBA_WIDTH + x];
-            fputc((c >> 16) & 0xFF, f);
+            fputc(c & 0xFF, f);        /* R: low byte (0xAABBGGRR) */
             fputc((c >> 8) & 0xFF, f);
             fputc(c & 0xFF, f);
         }

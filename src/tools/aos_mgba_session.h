@@ -54,7 +54,7 @@ typedef struct {
     const AosPeekRequest *peeks;
     int peek_count;
     double fps_cap;           /* max emulated fps; 0 = unthrottled */
-    /* Optional live framebuffer mirror (W*H u32, 0xRRGGBB) plus a
+    /* Optional live framebuffer mirror (W*H u32, 0xAABBGGRR) plus a
      * sequence counter bumped on every copy; both may be NULL. */
     uint32_t *fb_mirror;
     uint64_t *fb_seq;
@@ -71,7 +71,7 @@ typedef struct {
 AosMgbaSession *aos_mgba_open(const char *rom_path, char *err, size_t err_size);
 void aos_mgba_close(AosMgbaSession *session);
 
-/* Current framebuffer: AOS_MGBA_WIDTH*AOS_MGBA_HEIGHT pixels, 0xAARRGGBB. */
+/* Current framebuffer: AOS_MGBA_WIDTH*AOS_MGBA_HEIGHT pixels, 0xAABBGGRR. */
 const uint32_t *aos_mgba_framebuffer(const AosMgbaSession *session);
 
 /* Run one job synchronously. result may be NULL. */

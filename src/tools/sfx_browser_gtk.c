@@ -26,7 +26,7 @@ typedef struct {
 } MzmPull;
 
 typedef struct {
-    GtkWidget *game, *id, *identity, *status, *pause, *repeat;
+    GtkWidget *game, *id, *identity, *status, *pause, *stop, *repeat;
     AosMp2kEngine aria;
     SDL_AudioStream *aria_stream, *mzm_stream;
     MzmPull mzm_pull;
@@ -170,6 +170,27 @@ static void pause_clicked(GtkButton *button, gpointer userdata) {
                        browser->paused ? "Paused" : "Playing native ROM sequence");
 }
 
+static void stop_clicked(GtkButton *button, gpointer userdata) {
+    Browser *browser = userdata;
+    (void)button;
+    if (!browser->playing) return;
+    if (browser->selected_game == BROWSER_ARIA) {
+        aos_audio_play_song(AOS_AUDIO_STOP);
+        for (unsigned i = 0; i < AOS_AUDIO_PLAYER_COUNT; ++i)
+            aos_mp2k_player_pause(&browser->aria, (uint8_t)i, true);
+        if (browser->aria_stream) SDL_ClearAudioStream(browser->aria_stream);
+    } else {
+        SDL_LockAudioStream(browser->mzm_stream);
+        mzm_audio_stop_all();
+        SDL_UnlockAudioStream(browser->mzm_stream);
+        SDL_ClearAudioStream(browser->mzm_stream);
+    }
+    browser->playing = false;
+    browser->paused = false;
+    gtk_button_set_label(GTK_BUTTON(browser->pause), "Pause");
+    gtk_label_set_text(GTK_LABEL(browser->status), "Stopped");
+}
+
 static void previous_clicked(GtkButton *button, gpointer userdata) {
     (void)button;
     Browser *browser = userdata;
@@ -202,6 +223,20 @@ static gboolean audio_tick(gpointer userdata) {
     if (!browser->last_tick) browser->last_tick = now;
     browser->aria_accumulator += (double)(now - browser->last_tick) / 1000000.0;
     browser->last_tick = now;
+    /* Mirror aria_runtime: the controller's paused flags drive the MP2K
+     * players, and an ended sequencer clears its active state so a later
+     * PlaySong is not rejected by a stale priority. */
+    if (browser->ready[BROWSER_ARIA]) {
+        const AosAudioState *audio = aos_audio_state();
+        for (unsigned i = 0; i < AOS_AUDIO_PLAYER_COUNT; ++i) {
+            const AosMp2kPlayer *player =
+                aos_mp2k_player(&browser->aria, (uint8_t)i);
+            if (player && player->ended && audio->players[i].active)
+                aos_audio_player_finished((unsigned)i);
+            aos_mp2k_player_pause(&browser->aria, (uint8_t)i,
+                                  audio->players[i].paused);
+        }
+    }
     if (browser->selected_game == BROWSER_ARIA && browser->playing && !browser->paused) {
         while (browser->aria_accumulator >= 1.0 / 60.0) {
             browser->aria_accumulator -= 1.0 / 60.0;
@@ -217,7 +252,8 @@ static gboolean audio_tick(gpointer userdata) {
         browser->aria_accumulator = 0.0;
     }
     if (browser->repeat_delay > 0) --browser->repeat_delay;
-    if (browser->playing && !browser->paused && browser->repeat_delay == 0 &&
+    if (browser->repeat && browser->playing && !browser->paused &&
+        browser->repeat_delay == 0 &&
         gtk_check_button_get_active(GTK_CHECK_BUTTON(browser->repeat))) {
         bool ended;
         if (browser->selected_game == BROWSER_ARIA) {
@@ -266,12 +302,14 @@ static void activate(GtkApplication *application, gpointer userdata) {
     GtkWidget *next = gtk_button_new_with_label("Next");
     GtkWidget *play = gtk_button_new_with_label("Play");
     browser->pause = gtk_button_new_with_label("Pause");
+    browser->stop = gtk_button_new_with_label("Stop");
     browser->repeat = gtk_check_button_new_with_label("Repeat");
     gtk_box_append(GTK_BOX(controls), previous);
     gtk_box_append(GTK_BOX(controls), browser->id);
     gtk_box_append(GTK_BOX(controls), next);
     gtk_box_append(GTK_BOX(controls), play);
     gtk_box_append(GTK_BOX(controls), browser->pause);
+    gtk_box_append(GTK_BOX(controls), browser->stop);
     gtk_box_append(GTK_BOX(controls), browser->repeat);
     gtk_box_append(GTK_BOX(box), controls);
 
@@ -284,6 +322,7 @@ static void activate(GtkApplication *application, gpointer userdata) {
     g_signal_connect(next, "clicked", G_CALLBACK(next_clicked), browser);
     g_signal_connect(play, "clicked", G_CALLBACK(play_clicked), browser);
     g_signal_connect(browser->pause, "clicked", G_CALLBACK(pause_clicked), browser);
+    g_signal_connect(browser->stop, "clicked", G_CALLBACK(stop_clicked), browser);
     select_id(browser, 0x11C);
     gtk_window_present(GTK_WINDOW(window));
 }

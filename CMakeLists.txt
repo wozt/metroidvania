@@ -114,6 +114,11 @@ target_link_libraries(fusion_rebuild PRIVATE fusion_pipeline)
 target_compile_definitions(fusion_rebuild PRIVATE FUSION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 fusion_enable_warnings(fusion_rebuild)
 
+find_library(MGBA_LIBRARY NAMES mgba REQUIRED)
+add_executable(aos_mgba_lab src/tools/aos_mgba_lab.c)
+target_link_libraries(aos_mgba_lab PRIVATE ${MGBA_LIBRARY} pthread)
+fusion_enable_warnings(aos_mgba_lab)
+
 add_executable(fusion_checklist src/tools/fusion_checklist.c)
 target_link_libraries(fusion_checklist PRIVATE fusion_pipeline)
 target_include_directories(fusion_checklist PRIVATE src/pipeline)

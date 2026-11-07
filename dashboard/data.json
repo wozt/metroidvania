@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T20:37:07+00:00",
+ "generated_at": "2026-11-07T21:27:44+00:00",
  "git": {
-  "commit": "7574e7cd",
+  "commit": "e18d58ac",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 222,
+   "total": 223,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
-    "partial": 54,
+    "partial": 55,
     "functional": 157,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 157,
-   "functional_or_better_percent": 70.7,
+   "functional_or_better_percent": 70.4,
    "with_passing_tests": 209,
-   "with_passing_tests_percent": 94.1,
+   "with_passing_tests_percent": 93.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -296,6 +296,7 @@
     "tools.editor_cli",
     "tools.event_editor",
     "tools.map_editor",
+    "tools.mgba_lab",
     "tools.native_asset_importer",
     "tools.native_inventory",
     "tools.object_catalog",
@@ -607,11 +608,11 @@
    "areas": [
     "tools"
    ],
-   "total": 14,
+   "total": 15,
    "by_status": {
     "not_started": 1,
     "in_progress": 0,
-    "partial": 8,
+    "partial": 9,
     "functional": 5,
     "faithful": 0,
     "validated": 0,
@@ -619,9 +620,9 @@
     "unknown": 0
    },
    "functional_or_better": 5,
-   "functional_or_better_percent": 35.7,
+   "functional_or_better_percent": 33.3,
    "with_passing_tests": 12,
-   "with_passing_tests_percent": 85.7,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -629,6 +630,7 @@
     "tools.editor_cli",
     "tools.event_editor",
     "tools.map_editor",
+    "tools.mgba_lab",
     "tools.native_asset_importer",
     "tools.native_inventory",
     "tools.object_catalog",
@@ -13925,7 +13927,7 @@
     "Object14Update"
    ],
    "limitations": "The create table sUnk_084F0DF8 was dumped from the ROM: entity id = table index and the decompiler's ObjectNN suffix is the hex id, so earlier decimal-labelled exports were remapped to the true ids. Ids 7, 10, 14, 15, 17 and 18 are not yet exported: 14 and 18 index param0-driven resource tables (0x085262BC records -> 0x08526214 triples; 0x085263A8 8-byte records), 15 uses the shared flame frames 0x0820ED60 with a param0-selected palette row, 17 is a spawner that deletes itself and creates via EntityCreateInRange, and 7/10 dispatch indirectly. Per-object animation and behaviour selection is not audited: the runtime draws animation 0 looping for every SPECIAL entity, and ids whose create exports raw still frames as separate animations show the first frame. param0 (entity + 0x30) selects the native state table, not the sprite. Object20 (id 26) is never room-placed: it is spawned by event controllers for cutscene actors. sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Tables decoded from the ROM: id 14 param0 (signed, entity + 0x30) indexes 12-byte records at 0x085262BC (used values 0-14); record byte0 selects a {gfx,palette,frames} triple at 0x08526214 + group*12 (groups 0-13 valid), byte1 is the palette-bank argument. Id 18 param0 (values 0-3) indexes 24-byte records at 0x085263A8 with gfx@0, palette@4, frames@8, bank@0xC. Id 15 param0 is mostly 0 with palette-row variants 0x600/0x900 (high byte -> flame palette row, default 7) over shared frames 0x0820ED60. Ids 14 (15 param0 records -> 14 sprite groups + bank twin) and 18 (4 records) are exported as Object/special_NN_vP variants and drawn through a param0-matched special_variants lookup. Id 15 uses shared flame frames 0x0820ED60 with palette rows param0>>8 (6/7/9) through sub_0803B924 rather than sub_0806E0D0; ids 7 and 10 dispatch indirectly. Export id 15, decode 7 and 10, then audit animation/state selection and compare a room's object layer against an emulator.",
+   "next_action": "Tables decoded from the ROM: id 14 param0 (signed, entity + 0x30) indexes 12-byte records at 0x085262BC (used values 0-14); record byte0 selects a {gfx,palette,frames} triple at 0x08526214 + group*12 (groups 0-13 valid), byte1 is the palette-bank argument. Id 18 param0 (values 0-3) indexes 24-byte records at 0x085263A8 with gfx@0, palette@4, frames@8, bank@0xC. Id 15 param0 is mostly 0 with palette-row variants 0x600/0x900 (high byte -> flame palette row, default 7) over shared frames 0x0820ED60. Ids 14 (15 param0 records -> 14 sprite groups + bank twin) and 18 (4 records) are exported as Object/special_NN_vP variants and drawn through a param0-matched special_variants lookup. Id 15 exports three flame variants (special_15_v6/v7/v9): sub_0803AFB8 resolves tile sheet 0x081C15F4 to 16-bank palette 0x0826F8A4 (state-3 alternative 0x082718A8 unselected for Soma) and sub_0803B924 draws shared frames 0x0820ED60 at OBJ palette row (param0>>8) ?: 7; the runtime normalizes the key the same way and animation 0 is the shared flame look. Ids 7 and 10 are logic objects, not sprites: Object07Create (id 7) dispatches param0 through a 5-case jump table (dominant param0=1 only clears +0x10; cases 0/2 spawn children via sub_0804F374 indexed by param1 through 0x085255AC) and Object0ACreate (id 10) is an entity spawner dispatching param0&0xFF through 36-byte records at 0x080E9644, deleting itself when the +0x37E bit is clear. Audit animation/state selection (id 15 brain sub_08050F08, sub_0803F2C8 argument, id 7/10 behaviours) and compare a room's object layer against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_native_golden.c"
@@ -16799,6 +16801,38 @@
     "verdict": "passing",
     "warnings": [],
     "verified_on": "2026-11-07"
+   }
+  },
+  {
+   "id": "tools.mgba_lab",
+   "area": "tools",
+   "category": "diagnostics",
+   "title": "Headless mGBA reference runner",
+   "status": "partial",
+   "fidelity": "n/a",
+   "local_sources": [
+    "src/tools/aos_mgba_lab.c"
+   ],
+   "tests": [],
+   "dependencies": [],
+   "native_routines": [],
+   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API: frame stepping, scripted key masks, PPM screenshots, mGBA save states and WRAM peeks. Verified locally to boot the ROM and capture real frames (title, file flow, in-game room). The save-state trial database, input-replay learning loop and GTK viewer are not implemented yet; menu navigation still needs calibration and no BIOS image is bundled.",
+   "next_action": "",
+   "evidence": {
+    "unit_tests": [],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": "2026-11-07",
+   "source": "data/dashboard/features.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [],
+    "verdict": "untested",
+    "warnings": [],
+    "verified_on": null
    }
   },
   {
@@ -20275,6 +20309,18 @@
  },
  "timeline": [
   {
+   "commit": "e18d58ac",
+   "date": "2026-11-07",
+   "subject": "Classify ids 7 and 10 as logic SPECIAL objects",
+   "scope": "project"
+  },
+  {
+   "commit": "88401d56",
+   "date": "2026-11-07",
+   "subject": "Export id 15 shared-flame SPECIAL variants",
+   "scope": "project"
+  },
+  {
    "commit": "7574e7cd",
    "date": "2026-11-07",
    "subject": "Update SPECIAL object annotation for the variant export",
@@ -20740,18 +20786,6 @@
    "commit": "edcec05e",
    "date": "2026-11-07",
    "subject": "Match the Aria hit-state exit mask and audit case 13",
-   "scope": "project"
-  },
-  {
-   "commit": "5225a56e",
-   "date": "2026-11-07",
-   "subject": "Port the Aria cast pose-3 recoil (_0801C6F2)",
-   "scope": "project"
-  },
-  {
-   "commit": "aa79e938",
-   "date": "2026-11-07",
-   "subject": "Document the Aria text-window asm audit findings",
    "scope": "project"
   }
  ],

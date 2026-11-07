@@ -1283,6 +1283,9 @@ int aria_title_preview_main(int argc, char **argv) {
             SDL_DestroySurface(shot);
             running = false;
         }
+        if (getenv("AOS_STAGE_DEBUG") && (preview_frame % 30u) == 0u)
+            fprintf(stderr, "frame %ld mode=%d stage=%d\n", preview_frame,
+                    lifecycle.game_mode.mode, lifecycle.game_mode.update_stage);
         ++preview_frame;
         SDL_RenderPresent(renderer);
         next_frame += 1000000000ull / 60ull;

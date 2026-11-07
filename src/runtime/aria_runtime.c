@@ -77,6 +77,10 @@
 #define MAX_FILE_BYTES (8L * 1024 * 1024)
 #define MAX_ANIMS 256
 #define MAX_FRAMES 80
+/* Opening actors and SPECIAL objects share one art struct; the shared
+ * flame descriptor 0x0820ED60 exports 23 animations, past the enemy
+ * AOS_ENEMY_MAX_ANIMS of 20. */
+#define OBJECT_MAX_ANIMS 24
 #define INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1"
 #define DEFAULT_ROOMS "assets/extracted/aria/rooms/runtime"
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
@@ -2967,9 +2971,9 @@ typedef struct {
         int static_count;
     } enemies[ENEMY_KINDS], variants[VARIANT_ARTS], skills[SKILL_ARTS]; /* Enemy/skill_* */
     struct {
-        AriaFrame frames[AOS_ENEMY_MAX_ANIMS][MAX_FRAMES];
-        uint8_t ticks[AOS_ENEMY_MAX_ANIMS][MAX_FRAMES];
-        AosAnimDef defs[AOS_ENEMY_MAX_ANIMS];
+        AriaFrame frames[OBJECT_MAX_ANIMS][MAX_FRAMES];
+        uint8_t ticks[OBJECT_MAX_ANIMS][MAX_FRAMES];
+        AosAnimDef defs[OBJECT_MAX_ANIMS];
         AosAnimSet set;
         bool loaded;
         int id, param0; /* special_variants only: -1 id = free slot */
@@ -3607,7 +3611,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
              * it occupies slot 2 in the compact runtime array. */
             actor = actor_key == 8 ? 2 : actor_key;
             if (actor < 0 || actor >= AOS_OPENING_ACTOR_COUNT || style < 0 ||
-                style >= AOS_ENEMY_MAX_ANIMS || frame != objects->opening_actors[actor].defs[style].count ||
+                style >= OBJECT_MAX_ANIMS || frame != objects->opening_actors[actor].defs[style].count ||
                 frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
                 !load_frame(&objects->opening_actors[actor].frames[style][frame], frame_path,
                             ox, oy, renderer)) {
@@ -3675,7 +3679,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             sscanf(object_name, "special_%d", &object_id) != 1)
             goto not_object;
         if (object_id < 0 || object_id >= 64 || object_style < 0 ||
-            object_style >= AOS_ENEMY_MAX_ANIMS || frame < 0 ||
+            object_style >= OBJECT_MAX_ANIMS || frame < 0 ||
             frame >= MAX_FRAMES || ticks < 1 || ticks > 255) {
             ok = false;
             break;
@@ -3769,17 +3773,17 @@ static void free_objects(AriaObjects *objects) {
                 if (objects->variants[v].frames[i][j].texture)
                     SDL_DestroyTexture(objects->variants[v].frames[i][j].texture);
     for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor)
-        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+        for (int i = 0; i < OBJECT_MAX_ANIMS; ++i)
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->opening_actors[actor].frames[i][j].texture)
                     SDL_DestroyTexture(objects->opening_actors[actor].frames[i][j].texture);
     for (int id = 0; id < 64; ++id)
-        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+        for (int i = 0; i < OBJECT_MAX_ANIMS; ++i)
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_objects[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->special_objects[id].frames[i][j].texture);
     for (int v = 0; v < 24; ++v)
-        for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
+        for (int i = 0; i < OBJECT_MAX_ANIMS; ++i)
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_variants[v].frames[i][j].texture)
                     SDL_DestroyTexture(objects->special_variants[v].frames[i][j].texture);

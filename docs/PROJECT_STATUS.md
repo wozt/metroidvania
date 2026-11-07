@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0802 - Headless mGBA reference runner (aos_mgba_lab)
+
+- New C tool `src/tools/aos_mgba_lab.c` (target `aos_mgba_lab`) drives
+  the pinned Aria ROM through the system libmgba core API: frame stepping,
+  scripted key masks, PPM screenshots, mGBA save states in/out and typed
+  WRAM peeks. It is the first piece of the emulator laboratory used to
+  compare the recreation against the real game frame by frame.
+- Verified locally: the tool boots the ROM headless (no BIOS image),
+  produces real 240x160 frames, navigates title -> file flow -> in-game
+  room with scripted START/A presses, and save-state round-trips work.
+- Still open: save-state trial database with success/reward tracking,
+  input-replay learning loop, GTK viewer, and menu-navigation
+  calibration for reaching the scrolling introduction reliably.
+- mGBA sources are not vendored yet; the tool links the system
+  `libmgba-dev` package. ROM/save-state/screenshot outputs stay local
+  and untracked.
+
 ## Patch 0801 - Export and draw Aria SPECIAL objects with verified ids
 
 - Dumped the ROM create table `sUnk_084F0DF8`: the kind-2 entity id is

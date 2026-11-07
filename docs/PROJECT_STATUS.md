@@ -19,6 +19,9 @@ Last updated: **2026-11-07**.
 - Per-worker speed sliders (Auto..x16 = N*60 fps cap) are stored in
   `worker.<id>.speed` meta and applied per trial through
   `AosRunSpec.fps_cap`.
+- A global fleet bar adds Pause all / Resume all, Stop all and a
+  global speed slider that writes every `worker.<id>.speed` at once;
+  video cells keep the 3:2 aspect ratio (GTK_CONTENT_FIT_CONTAIN).
 
 ## Patch 0803 - Emulator laboratory: shared session, SQLite trials, GTK registry
 

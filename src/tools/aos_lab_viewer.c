@@ -64,6 +64,10 @@ typedef struct {
     GListStore *runs_store;
     GtkWidget *status;
     GtkWidget *score_label;
+    GtkWidget *all_button;
+    GtkWidget *all_stop_button;
+    GtkWidget *all_speed_scale;
+    int all_paused;
     GtkWidget *hint;
     GtkWidget *worker_label;
     GtkWidget *launch_button;
@@ -607,6 +611,44 @@ static void on_speed_changed(GtkRange *range, gpointer user_data) {
     aos_labdb_meta_set(v->db, key, val);
 }
 
+static void on_all_clicked(GtkButton *button, gpointer user_data) {
+    (void)button;
+    Viewer *v = user_data;
+    v->all_paused = !v->all_paused;
+    const char *ctl = v->all_paused ? "pause" : "resume";
+    for (int i = 0; i < 8; ++i)
+        worker_control(v, i, ctl);
+    gtk_button_set_label(GTK_BUTTON(v->all_button),
+                         v->all_paused ? "Resume all" : "Pause all");
+    char msg[96];
+    snprintf(msg, sizeof msg, "Sent %s to every worker slot",
+             ctl);
+    gtk_label_set_text(GTK_LABEL(v->worker_label), msg);
+}
+
+static void on_all_stop_clicked(GtkButton *button, gpointer user_data) {
+    (void)button;
+    Viewer *v = user_data;
+    for (int i = 0; i < 8; ++i)
+        worker_control(v, i, "stop");
+    gtk_label_set_text(GTK_LABEL(v->worker_label),
+                       "Sent stop to every worker slot");
+}
+
+static void on_all_speed_changed(GtkRange *range, gpointer user_data) {
+    Viewer *v = user_data;
+    int speed = (int)gtk_range_get_value(range);
+    char val[8];
+    snprintf(val, sizeof val, "%d", speed);
+    for (int i = 0; i < 8; ++i) {
+        char key[64];
+        snprintf(key, sizeof key, "worker.%d.speed", i);
+        aos_labdb_meta_set(v->db, key, val);
+        gtk_range_set_value(GTK_RANGE(v->workers[i].speed_scale),
+                            speed);
+    }
+}
+
 static void on_launch_clicked(GtkButton *button, gpointer user_data) {
     (void)button;
     Viewer *v = user_data;
@@ -781,6 +823,49 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_add_css_class(v->score_label, "score-pass");
     gtk_box_append(GTK_BOX(root), v->score_label);
 
+    /* ---- global fleet controls -------------------------------------- */
+    GtkWidget *fleet = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_widget_set_margin_top(fleet, 4);
+    gtk_box_append(GTK_BOX(root), fleet);
+
+    v->all_button = gtk_button_new_with_label("Pause all");
+    gtk_widget_set_tooltip_text(
+        v->all_button,
+        "Pause or resume every worker slot at once (cooperative: "
+        "each worker checks between trials)");
+    g_signal_connect(v->all_button, "clicked",
+                     G_CALLBACK(on_all_clicked), v);
+    gtk_box_append(GTK_BOX(fleet), v->all_button);
+
+    v->all_stop_button = gtk_button_new_with_label("Stop all");
+    gtk_widget_add_css_class(v->all_stop_button, "destructive-action");
+    gtk_widget_set_tooltip_text(
+        v->all_stop_button,
+        "Stop every worker slot at once (cooperative: each worker "
+        "checks between trials)");
+    g_signal_connect(v->all_stop_button, "clicked",
+                     G_CALLBACK(on_all_stop_clicked), v);
+    gtk_box_append(GTK_BOX(fleet), v->all_stop_button);
+
+    GtkWidget *gsp = gtk_label_new("Global speed:");
+    gtk_box_append(GTK_BOX(fleet), gsp);
+    v->all_speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
+                                                  0, 16, 1);
+    gtk_scale_set_draw_value(GTK_SCALE(v->all_speed_scale), FALSE);
+    gtk_scale_add_mark(GTK_SCALE(v->all_speed_scale), 0,
+                       GTK_POS_BOTTOM, "Auto");
+    gtk_scale_add_mark(GTK_SCALE(v->all_speed_scale), 16,
+                       GTK_POS_BOTTOM, "x16");
+    gtk_widget_set_hexpand(v->all_speed_scale, TRUE);
+    gtk_widget_set_size_request(v->all_speed_scale, 220, -1);
+    gtk_widget_set_tooltip_text(
+        v->all_speed_scale,
+        "Speed cap applied to ALL workers: Auto = unthrottled, "
+        "1-16 = N*60 fps. Overwrites each card's slider.");
+    g_signal_connect(v->all_speed_scale, "value-changed",
+                     G_CALLBACK(on_all_speed_changed), v);
+    gtk_box_append(GTK_BOX(fleet), v->all_speed_scale);
+
     /* Resizable sections with draggable splitters (FileZilla-style):
      * top pane = live emulator grid, bottom split = controls/log vs
      * registry tables. */
@@ -836,7 +921,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
 
         wc->picture = gtk_picture_new();
         gtk_picture_set_content_fit(GTK_PICTURE(wc->picture),
-                                    GTK_CONTENT_FIT_FILL);
+                                    GTK_CONTENT_FIT_CONTAIN);
         gtk_widget_set_size_request(wc->picture, 300, 200);
         gtk_widget_set_tooltip_text(
             wc->picture,
@@ -893,6 +978,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         gtk_scale_add_mark(GTK_SCALE(wc->speed_scale), 16, GTK_POS_BOTTOM,
                            "x16");
         gtk_widget_set_hexpand(wc->speed_scale, TRUE);
+        gtk_widget_set_size_request(wc->speed_scale, 140, -1);
         gtk_widget_set_tooltip_text(
             wc->speed_scale,
             "Emulation speed cap: Auto = unthrottled (fastest), "

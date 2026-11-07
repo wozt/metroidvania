@@ -332,6 +332,7 @@ int main(int argc, char **argv) {
     int action_ids[64];
     int action_count = 0;
     const char *define_action = NULL;
+    int worker_id = 0;
 
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
@@ -352,6 +353,9 @@ int main(int argc, char **argv) {
         else if (!strcmp(arg, "--keys") && value) { keys_spec = value; ++i; }
         else if (!strcmp(arg, "--define-action") && value) {
             define_action = value; ++i;
+        }
+        else if (!strcmp(arg, "--worker-id") && value) {
+            worker_id = atoi(value); ++i;
         }
         else {
             fprintf(stderr, "unknown argument %s\n", arg);
@@ -457,13 +461,45 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    char phase_key[64], status_key[64], run_key[64], ctrl_key[64];
+    snprintf(phase_key, sizeof phase_key, "worker.%d.phase", worker_id);
+    snprintf(status_key, sizeof status_key, "worker.%d.status", worker_id);
+    snprintf(run_key, sizeof run_key, "worker.%d.run_id", worker_id);
+    snprintf(ctrl_key, sizeof ctrl_key, "lab.control.%d", worker_id);
+    aos_labdb_meta_set(db, ctrl_key, "run");
+
     int64_t run_id = aos_labdb_begin_run(db, rom, "worker batch");
+    aos_labdb_meta_set(db, phase_key, "running");
+    char run_buf[32];
+    snprintf(run_buf, sizeof run_buf, "%lld", (long long)run_id);
+    aos_labdb_meta_set(db, run_key, run_buf);
     int total_frames = 0, trials_done = 0;
+    int stop_requested = 0;
     struct timeval t0, t1;
 
-    for (int ci = 0; ci < chosen_count; ++ci) {
+    for (int ci = 0; ci < chosen_count && !stop_requested; ++ci) {
         AosActionRow *action = &chosen[ci];
-        for (int it = 0; it < iterations; ++it) {
+        for (int it = 0; it < iterations && !stop_requested; ++it) {
+            /* cooperative control through the meta table: the GTK
+             * viewer writes lab.control = pause|resume|stop */
+            char *control = aos_labdb_meta_get(db, ctrl_key);
+            if (control) {
+                if (!strcmp(control, "stop")) stop_requested = 1;
+                while (!strcmp(control, "pause")) {
+                    aos_labdb_meta_set(db, phase_key, "paused");
+                    free(control);
+                    usleep(400 * 1000);
+                    control = aos_labdb_meta_get(db, ctrl_key);
+                    if (!control) break;
+                }
+                if (control && !strcmp(control, "resume")) {
+                    aos_labdb_meta_set(db, ctrl_key, "run");
+                }
+                if (control && !strcmp(control, "stop")) stop_requested = 1;
+                free(control);
+            }
+            if (stop_requested) break;
+            aos_labdb_meta_set(db, phase_key, "running");
             /* choose params: exploit best weight or explore randomly */
             char params_buf[512];
             int exploring = ((double)rand() / RAND_MAX) < explore;
@@ -563,6 +599,12 @@ int main(int argc, char **argv) {
                 frames, outcome, reward, metrics, duration_ms);
             ++trials_done;
             total_frames += frames;
+            char status[256];
+            snprintf(status, sizeof status,
+                     "trial %lld action=%lld %s -> %s",
+                     (long long)trial_id, (long long)action->id, drawn,
+                     outcome);
+            aos_labdb_meta_set(db, status_key, status);
             printf("trial %lld action=%lld params=%s -> %s (r=%.2f, %dms)\n",
                    (long long)trial_id, (long long)action->id, drawn,
                    outcome, reward, duration_ms);
@@ -574,6 +616,13 @@ int main(int argc, char **argv) {
     }
 
     aos_labdb_end_run(db, run_id, total_frames, trials_done);
+    aos_labdb_meta_set(db, phase_key, "idle");
+    {
+        char done[64];
+        snprintf(done, sizeof done, "%d trials, %s", trials_done,
+                 stop_requested ? "stopped" : "done");
+        aos_labdb_meta_set(db, status_key, done);
+    }
     char *rate = NULL;
     {
         /* report top weight for visibility */

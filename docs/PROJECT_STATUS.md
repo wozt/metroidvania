@@ -15,10 +15,14 @@ Last updated: **2026-11-07**.
   weight. An epsilon-greedy picker exploits the best-weighted parameter
   set or explores randomly (`--explore`).
 - `aos_lab_viewer` (GTK4, ListView/ColumnView) polls the database and
-  shows trials, weights, states and runs live.
+  shows trials, weights, states and runs live, plus a Workers tab with
+  eight parallel slots: each worker owns `worker.<id>.*` meta keys and
+  a `lab.control.<id>` pause/resume/stop channel, and the viewer can
+  spawn batches (`--worker-id`, iterations, latest state) directly.
 - Verified locally: state capture from boot, action definition, trial
-  batches and weight accumulation all work end to end. Gameplay probes
-  still need real WRAM addresses; menu scripts for the intro are open.
+  batches, weight accumulation and two parallel workers with isolated
+  control channels all work end to end. Gameplay probes still need real
+  WRAM addresses; menu scripts for the intro are open.
 
 ## Patch 0802 - Headless mGBA reference runner (aos_mgba_lab)
 

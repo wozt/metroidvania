@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #define POLL_MS 1000
 #define MAX_ROWS 400
@@ -30,8 +32,14 @@ typedef struct {
     GListStore *states_store;
     GListStore *runs_store;
     GtkWidget *status;
+    GtkWidget *worker_label;
+    GtkWidget *launch_button;
+    GtkWidget *iterations_spin;
+    GtkWidget *worker_id_spin;
+    GtkWidget *worker_labels[8];
     char db_path[1024];
     char rom_path[1024];
+    char worker_path[4200];
     AosLabDb *db;
 } Viewer;
 
@@ -210,12 +218,98 @@ static void refresh_runs(Viewer *v) {
     aos_labdb_free_run_rows(rows, count);
 }
 
+static void worker_control(int worker_id, const char *control,
+                           gpointer user_data) {
+    Viewer *v = user_data;
+    char key[64];
+    snprintf(key, sizeof key, "lab.control.%d", worker_id);
+    aos_labdb_meta_set(v->db, key, control);
+}
+
+static void on_worker_pause(GtkButton *button, gpointer user_data) {
+    Viewer *v = user_data;
+    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "wid"));
+    char key[64];
+    snprintf(key, sizeof key, "lab.control.%d", id);
+    char *control = aos_labdb_meta_get(v->db, key);
+    worker_control(id, control && !strcmp(control, "pause") ? "resume"
+                                                          : "pause", v);
+    free(control);
+}
+
+static void on_worker_stop(GtkButton *button, gpointer user_data) {
+    Viewer *v = user_data;
+    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "wid"));
+    worker_control(id, "stop", v);
+}
+
+static void on_launch(GtkButton *button, gpointer user_data) {
+    (void)button;
+    Viewer *v = user_data;
+    if (!v->rom_path[0] || !v->worker_path[0]) {
+        gtk_label_set_text(GTK_LABEL(v->worker_label),
+                           "need --rom and aos_lab_worker beside this app");
+        return;
+    }
+    /* latest state id */
+    int scount = 0;
+    AosStateRow *states = aos_labdb_states(v->db, 1, &scount);
+    if (scount == 0) {
+        gtk_label_set_text(GTK_LABEL(v->worker_label),
+                           "no state in db — record one first");
+        aos_labdb_free_state_rows(states, scount);
+        return;
+    }
+    int iterations = gtk_spin_button_get_value_as_int(
+        GTK_SPIN_BUTTON(v->iterations_spin));
+    int worker_id = gtk_spin_button_get_value_as_int(
+        GTK_SPIN_BUTTON(v->worker_id_spin));
+    char cmd[8192];
+    snprintf(cmd, sizeof cmd,
+             "'%s' --db '%s' --rom '%s' --state %lld --iterations %d"
+             " --worker-id %d --seed %ld"
+             " >> '%s.worker%d.log' 2>&1",
+             v->worker_path, v->db_path, v->rom_path,
+             (long long)states[0].id, iterations, worker_id,
+             (long)(time(NULL) ^ (getpid() << worker_id)),
+             v->db_path, worker_id);
+    aos_labdb_free_state_rows(states, scount);
+    GError *error = NULL;
+    char *argv[] = {"/bin/sh", "-c", cmd, NULL};
+    if (!g_spawn_async(NULL, argv, NULL,
+                       G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
+                       NULL, NULL, NULL, &error)) {
+        char msg[256];
+        snprintf(msg, sizeof msg, "spawn failed: %s",
+                 error ? error->message : "unknown");
+        gtk_label_set_text(GTK_LABEL(v->worker_label), msg);
+        if (error) g_error_free(error);
+        return;
+    }
+    gtk_label_set_text(GTK_LABEL(v->worker_label), "worker launched");
+}
+
 static gboolean poll_refresh(gpointer data) {
     Viewer *v = data;
     refresh_trials(v);
     refresh_weights(v);
     refresh_states(v);
     refresh_runs(v);
+    /* per-worker status cards */
+    for (int i = 0; i < 8; ++i) {
+        char pk[64], sk[64];
+        snprintf(pk, sizeof pk, "worker.%d.phase", i);
+        snprintf(sk, sizeof sk, "worker.%d.status", i);
+        char *phase = aos_labdb_meta_get(v->db, pk);
+        char *wstatus = aos_labdb_meta_get(v->db, sk);
+        char text[600];
+        snprintf(text, sizeof text, "W%d  %s%s%s", i,
+                 phase ? phase : "-", wstatus ? " — " : "",
+                 wstatus ? wstatus : "");
+        gtk_label_set_text(GTK_LABEL(v->worker_labels[i]), text);
+        free(phase);
+        free(wstatus);
+    }
     gtk_label_set_text(GTK_LABEL(v->status), v->db_path);
     return G_SOURCE_CONTINUE;
 }
@@ -260,6 +354,53 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_set_halign(v->status, GTK_ALIGN_START);
     gtk_box_append(GTK_BOX(box), v->status);
 
+    /* Workers tab: 8 parallel slots, each with pause/stop controls. */
+    {
+        GtkWidget *grid = gtk_grid_new();
+        gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+        gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
+        for (int i = 0; i < 8; ++i) {
+            GtkWidget *card = gtk_frame_new(NULL);
+            GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+            gtk_frame_set_child(GTK_FRAME(card), vbox);
+            gtk_box_append(GTK_BOX(vbox), gtk_label_new(""));
+            v->worker_labels[i] = gtk_label_new("idle");
+            gtk_widget_set_halign(v->worker_labels[i], GTK_ALIGN_START);
+            gtk_box_append(GTK_BOX(vbox), v->worker_labels[i]);
+            GtkWidget *btns = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+            GtkWidget *pb = gtk_button_new_with_label("Pause");
+            GtkWidget *sb = gtk_button_new_with_label("Stop");
+            g_object_set_data(G_OBJECT(pb), "wid", GINT_TO_POINTER(i));
+            g_object_set_data(G_OBJECT(sb), "wid", GINT_TO_POINTER(i));
+            g_signal_connect(pb, "clicked", G_CALLBACK(on_worker_pause), v);
+            g_signal_connect(sb, "clicked", G_CALLBACK(on_worker_stop), v);
+            gtk_box_append(GTK_BOX(btns), pb);
+            gtk_box_append(GTK_BOX(btns), sb);
+            gtk_box_append(GTK_BOX(vbox), btns);
+            gtk_grid_attach(GTK_GRID(grid), card, i % 4, i / 4, 1, 1);
+        }
+        GtkWidget *scroll = gtk_scrolled_window_new();
+        gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), grid);
+        gtk_notebook_append_page(GTK_NOTEBOOK(v->notebook), scroll,
+                                 gtk_label_new("Workers"));
+    }
+
+    GtkWidget *controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_box_append(GTK_BOX(box), controls);
+    gtk_box_append(GTK_BOX(controls), gtk_label_new("worker:"));
+    v->worker_id_spin = gtk_spin_button_new_with_range(0, 7, 1);
+    gtk_box_append(GTK_BOX(controls), v->worker_id_spin);
+    gtk_box_append(GTK_BOX(controls), gtk_label_new("iters:"));
+    v->iterations_spin = gtk_spin_button_new_with_range(1, 100000, 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(v->iterations_spin), 50);
+    gtk_box_append(GTK_BOX(controls), v->iterations_spin);
+    v->launch_button = gtk_button_new_with_label("Lancer batch");
+    g_signal_connect(v->launch_button, "clicked", G_CALLBACK(on_launch), v);
+    gtk_box_append(GTK_BOX(controls), v->launch_button);
+    v->worker_label = gtk_label_new("");
+    gtk_widget_set_halign(v->worker_label, GTK_ALIGN_START);
+    gtk_box_append(GTK_BOX(box), v->worker_label);
+
     gtk_window_present(GTK_WINDOW(v->window));
     g_timeout_add(POLL_MS, poll_refresh, v);
     poll_refresh(v);
@@ -286,6 +427,21 @@ int main(int argc, char **argv) {
     if (!v.db) {
         fprintf(stderr, "db open failed: %s\n", err);
         return 1;
+    }
+
+    /* locate aos_lab_worker next to this executable */
+    {
+        char exe[4096];
+        ssize_t n = readlink("/proc/self/exe", exe, sizeof exe - 1);
+        if (n > 0) {
+            exe[n] = 0;
+            char *slash = strrchr(exe, '/');
+            if (slash) {
+                slash[1] = 0;
+                snprintf(v.worker_path, sizeof v.worker_path,
+                         "%saos_lab_worker", exe);
+            }
+        }
     }
 
     GtkApplication *app = gtk_application_new("dev.metroidvania.aos_lab",

@@ -7188,7 +7188,10 @@ int aria_runtime_main(int argc, char **argv) {
             (opening_actors.soul_notice == 1 || opening_actors.soul_notice == 2))
             draw_opening_soul_notice(renderer, &opening_soul_notice,
                                      (uint32_t)step);
-        else if (opening_text_ready)
+        /* sub_08067A04's close states retire the window once the script's
+         * end command lands; the backdrop gate above already hides it, so
+         * the glyph pass must not linger through the return pan. */
+        else if (opening.active && opening_text_ready)
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,
                               (uint32_t)step);

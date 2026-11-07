@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v13"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v14"
+#define AOS_SAVE_SCHEMA_V13 "metroidvania-aos-save-v13"
 #define AOS_SAVE_SCHEMA_V12 "metroidvania-aos-save-v12"
 #define AOS_SAVE_SCHEMA_V11 "metroidvania-aos-save-v11"
 #define AOS_SAVE_SCHEMA_V10 "metroidvania-aos-save-v10"
@@ -84,6 +85,9 @@ typedef struct {
     /* Schema v13: the quick map's explored-cell bitfield, packed by
      * aos_quick_map_pack_explored. */
     uint8_t map_explored[AOS_SAVE_MAP_BYTES];
+    /* Schema v14: the thirteen sUnk_081183B0 secret-room discovery bits
+     * (unk_60.unk_33C indices 0-12, sub_08012078). */
+    uint16_t secret_rooms;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

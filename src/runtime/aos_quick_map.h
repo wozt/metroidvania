@@ -24,6 +24,9 @@ typedef struct {
     uint8_t current_x;
     uint8_t current_y;
     bool has_current;
+    /* sub_08012078's discovery bits for the sUnk_081183B0 secret-room
+     * table: bit i marks table entry i as entered (sub_080120AC). */
+    uint16_t secret_rooms;
 } AosQuickMap;
 
 /* sub_08011338: loads the native quick-map pixels, palette, castle table and
@@ -48,5 +51,12 @@ bool aos_quick_map_render(AosQuickMap *map, bool castle_map_1,
 enum { AOS_QUICK_MAP_PACKED_BYTES = AOS_QUICK_MAP_CELLS / 8 };
 void aos_quick_map_pack_explored(const AosQuickMap *map, uint8_t *out);
 void aos_quick_map_unpack_explored(AosQuickMap *map, const uint8_t *in);
+
+/* sUnk_081183B0: the thirteen signed secret-room coordinates sub_08012104
+ * matches against a map cell. Entries with negative coordinates belong to
+ * sub_08012154's transformed space and never match a cell here. */
+enum { AOS_QUICK_MAP_SECRET_COUNT = 13 };
+int aos_quick_map_secret_index(int x, int y);
+bool aos_quick_map_secret_discovered(const AosQuickMap *map, int x, int y);
 
 #endif /* AOS_QUICK_MAP_H */

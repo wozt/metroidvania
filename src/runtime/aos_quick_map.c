@@ -100,8 +100,32 @@ bool aos_quick_map_visit(AosQuickMap *map, const FusionRom *rom,
     map->current_x = (uint8_t)x;
     map->current_y = (uint8_t)y;
     map->has_current = true;
+    /* Entering the cell marks its secret-room bit like sub_080120AC. */
+    int secret = aos_quick_map_secret_index(x, y);
+    if (secret >= 0) map->secret_rooms |= (uint16_t)(1u << secret);
     if (error && error_size) error[0] = '\0';
     return true;
+}
+
+/* sUnk_081183B0 at 0x081183B0: thirteen signed (x, y) pairs terminated by
+ * 0xFFFF, shared by sub_08012104 (raw cell lookup) and sub_08012154
+ * (transformed room-position lookup). */
+static const int8_t secret_rooms[AOS_QUICK_MAP_SECRET_COUNT][2] = {
+    {27, -9}, {24, 10}, {34, -11}, {5, -13}, {13, 14}, {16, 14}, {17, -14},
+    {47, 20}, {16, -22}, {40, -24}, {36, -26}, {43, -31}, {16, -34},
+};
+
+int aos_quick_map_secret_index(int x, int y) {
+    for (int index = 0; index < AOS_QUICK_MAP_SECRET_COUNT; ++index)
+        if (secret_rooms[index][0] == x && secret_rooms[index][1] == y)
+            return index;
+    return -1;
+}
+
+bool aos_quick_map_secret_discovered(const AosQuickMap *map, int x, int y) {
+    if (!map) return false;
+    int index = aos_quick_map_secret_index(x, y);
+    return index >= 0 && (map->secret_rooms & (1u << index)) != 0;
 }
 
 static uint16_t *cell_word(AosQuickMap *map, int block, int x, int y) {
@@ -122,7 +146,8 @@ static void vertical_edge(AosQuickMap *map, int x, int y,
     if (map->castle[y * AOS_QUICK_MAP_WIDTH + x] == 0xFFFF) color = 0;
     int block = (x >> 1) + ((y >> 1) << 5);
     edge >>= 2;
-    if (edge == 1) edge = 3; /* undiscovered breakable-map edge */
+    /* sub_080109F4: a secret edge draws discovered (2) or hidden (3). */
+    if (edge == 1) edge = aos_quick_map_secret_discovered(map, x, y) ? 2 : 3;
     int fill = edge == 0 ? (color << 4) | (color << 8) | (color << 12)
                          : edge == 2 ? 0xBBB0
                                      : (border << 4) | (border << 8) | (border << 12);
@@ -140,7 +165,7 @@ static void horizontal_edge(AosQuickMap *map, int x, int y,
                             int color, int border, int edge) {
     if (map->castle[y * AOS_QUICK_MAP_WIDTH + x] == 0xFFFF) color = 0;
     edge &= 3;
-    if (edge == 1) edge = 3;
+    if (edge == 1) edge = aos_quick_map_secret_discovered(map, x, y) ? 2 : 3;
     int block = (x >> 1) + ((y >> 1) << 5);
     uint16_t *word = cell_word(map, block, x, y);
     for (int row = 0; row < 4; ++row, word += 2) {

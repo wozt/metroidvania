@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-06**.
 
+## Patch 0787 - SELECT secret-room edge flags and save schema v14
+
+- `aos_quick_map.c` now carries the `sUnk_081183B0` table verbatim (the
+  thirteen signed coordinate pairs extracted from the ROM) and resolves
+  edge value 1 through `aos_quick_map_secret_index`/
+  `aos_quick_map_secret_discovered`, matching `sub_080109F4`/`sub_08010B04`:
+  a discovered secret edge draws as 2, an undiscovered one as 3. Before,
+  every secret edge rendered undiscovered.
+- `AosQuickMap.secret_rooms` holds the `unk_60.unk_33C` indices 0-12;
+  `aos_quick_map_visit` sets the bit when the resolved cell matches a
+  table entry (the portable's room-entry equivalent of `sub_080120AC`).
+- Save schema v14 appends `secrets=%04x` after the v13 `map=` cells; v1-v13
+  files load with no discovered secrets and keep their checksums through
+  the version-aware canonical payloads.
+- Documented divergence: native marks discovery on room entry events,
+  the portable marks it when the map cursor resolves the cell (same
+  trigger as the explored cells), and the nine negative-coordinate table
+  entries only serve `sub_08012154`'s transformed lookup, never a cell.
+
 ## Patch 0786 - SELECT quick map native brightness stages
 
 - `sub_080110E4`'s stage machine fades the map with BLDY: 16 down to 0 in

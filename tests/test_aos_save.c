@@ -80,6 +80,8 @@ int main(void) {
     /* Schema v13: explored quick-map cells 0, 7, 2239 and a mid byte. */
     source.map_explored[0] = 0x81;
     source.map_explored[279] = 0x80;
+    /* Schema v14: secret-room discovery bits 0, 2, 4, 6, 8, 10 and 12. */
+    source.secret_rooms = 0x1555;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -97,7 +99,8 @@ int main(void) {
                            "00000000,80000000\n") &&
                strstr(all, "placed_items=00000002,00000000,04000000,00000000,20000000,"
                            "00000000\n") &&
-               strstr(all, "special_souls=0042\n"));
+               strstr(all, "special_souls=0042\n") &&
+               strstr(all, "secrets=1555\n"));
         /* Schema v11 keeps placed items but initializes special souls empty. */
         char v11[2048];
         int v11_size = snprintf(v11, sizeof v11, "%s\n", AOS_SAVE_SCHEMA_V11);

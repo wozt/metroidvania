@@ -73,6 +73,19 @@ int main(int argc, char **argv) {
     aos_quick_map_unpack_explored(&restored, packed);
     assert(!restored.explored[0] && !restored.explored[AOS_QUICK_MAP_CELLS - 1]);
 
+    /* sUnk_081183B0: cell (24,10) is entry 1, (47,20) entry 7; the
+     * negative-coordinate entries never match a map cell. */
+    assert(aos_quick_map_secret_index(24, 10) == 1);
+    assert(aos_quick_map_secret_index(47, 20) == 7);
+    assert(aos_quick_map_secret_index(13, 14) == 4);
+    assert(aos_quick_map_secret_index(0, 0) < 0);
+    assert(aos_quick_map_secret_index(24, -10) < 0);
+    AosQuickMap secrets = {0};
+    assert(!aos_quick_map_secret_discovered(&secrets, 24, 10));
+    secrets.secret_rooms = (uint16_t)(1u << 1);
+    assert(aos_quick_map_secret_discovered(&secrets, 24, 10));
+    assert(!aos_quick_map_secret_discovered(&secrets, 47, 20));
+
     if (argc >= 2) {
         FusionRom local = {0};
         assert(fusion_rom_open(FUSION_ASSET_GAME_ARIA, argv[1], &local,

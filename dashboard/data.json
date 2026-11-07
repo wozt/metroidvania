@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T13:46:59+00:00",
+ "generated_at": "2026-11-07T13:52:24+00:00",
  "git": {
-  "commit": "81db89f",
+  "commit": "e4f7c48",
   "branch": "main",
   "dirty": true
  },
@@ -13635,8 +13635,8 @@
     "sub_08011338",
     "sub_08011430"
    ],
-   "limitations": "The explored-bit grid is persisted as schema v13's packed 280-byte map field and restored into the runtime quick map on load and both save paths. Secret-room edge flags are treated as undiscovered (the native sUnk_081183B0 coordinate table and the unk_60.unk_33C discovery bits marked by sub_080120AC are not yet tracked) and no emulator comparison exists. SELECT freezes gameplay and reconstructs the native quick map directly from the verified ROM: sUnk_080E3664 graphics, palette 0x081183CC, the 64 by 35 castle table and its edge nibbles. The four source edge writers build the 4-pixel cells; explored save and warp rooms use their source colours, Castle Map items 1-3 reveal their source regions, and the current screen receives the animated circular brightness window. sub_080110E4's BLDY stages are reproduced: the map fades in over four frames from bldY 16 and closes with a four-frame fade to bldY 16 before gameplay resumes. Source-derived, deterministic-tested and locally captured, not emulator-compared.",
-   "next_action": "Track the sUnk_081183B0 secret-room coordinates and unk_60.unk_33C discovery bits through room entry and save schema, then compare with an emulator.",
+   "limitations": "The explored-bit grid is persisted as schema v13's packed 280-byte map field and the secret-room discovery bits as v14's secrets= halfword and restored into the runtime quick map on load and both save paths. Secret-room discovery is marked when the map cursor visits a sUnk_081183B0 cell rather than on native room entry, secret edges outside the four non-negative-coordinate cells can never match, and no emulator comparison exists. SELECT freezes gameplay and reconstructs the native quick map directly from the verified ROM: sUnk_080E3664 graphics, palette 0x081183CC, the 64 by 35 castle table and its edge nibbles. The four source edge writers build the 4-pixel cells; explored save and warp rooms use their source colours, Castle Map items 1-3 reveal their source regions, and the current screen receives the animated circular brightness window. sub_080110E4's BLDY stages are reproduced: the map fades in over four frames from bldY 16 and closes with a four-frame fade to bldY 16 before gameplay resumes. Edge value 1 now resolves through the sUnk_081183B0 table and the discovered bits like sub_080109F4/sub_08010B04, persisted as schema v14's secrets= halfword. Source-derived, deterministic-tested and locally captured, not emulator-compared.",
+   "next_action": "Mark secret rooms on room entry like sub_080120AC instead of on map visit, then compare with an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_quick_map.c"
@@ -14090,7 +14090,7 @@
     "sub_08012048",
     "sub_08012078"
    ],
-   "limitations": "The ROM-free v13 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1-v12 host files remain readable. Only three regular files are represented; completed-file metadata, map state, native healing animation, save question and native SRAM serialization remain absent. The eight event words, six placed-item words and special-soul halfword are preserved separately, but more consumers are still being reconstructed. Portable quicksaves use companion files rather than the original odd SRAM records. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the scrolling introduction and event 0x20 suppresses the completed opening story on later loads. Save-room interaction restores HP and updates that file. Sleep snapshots the same state to a companion quicksave, exposes it at the native odd menu position, consumes it on load and resumes persistence through the regular file. Copy and delete remove the destination companion. Schema v3 adds experience and gold, v4 equipment, v5 inventory, v6 soul inventories and totals, v7 equipped souls and MP, v8 button indices, v9 bestiary/drop discovery, v10 the eight event words at gEwramData + 0x344, v11 the six one-time room-item words at +0x360, v12 the special-soul halfword at +0x37E, and v13 the packed explored quick-map cells. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "The ROM-free v13 text schema is intentionally not the native six-slot 0x47C-byte SRAM layout, although v1-v12 host files remain readable. Only three regular files are represented; completed-file metadata, map state, native healing animation, save question and native SRAM serialization remain absent. The eight event words, six placed-item words and special-soul halfword are preserved separately, but more consumers are still being reconstructed. Portable quicksaves use companion files rather than the original odd SRAM records. Checksummed atomic host files are connected to the native menu's typed create, load, copy, delete and name requests. A new file records sub_08008ED0's native area 0 room 0 Soma position (120, 141); the selected file launches the room runtime there after the scrolling introduction and event 0x20 suppresses the completed opening story on later loads. Save-room interaction restores HP and updates that file. Sleep snapshots the same state to a companion quicksave, exposes it at the native odd menu position, consumes it on load and resumes persistence through the regular file. Copy and delete remove the destination companion. Schema v3 adds experience and gold, v4 equipment, v5 inventory, v6 soul inventories and totals, v7 equipped souls and MP, v8 button indices, v9 bestiary/drop discovery, v10 the eight event words at gEwramData + 0x344, v11 the six one-time room-item words at +0x360, v12 the special-soul halfword at +0x37E, and v13 the packed explored quick-map cells, and v14 the secret-room discovery bits. Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Add the remaining progression, map and completed-file fields, then reconstruct native SRAM serialization behavior.",
    "evidence": {
     "unit_tests": [
@@ -17486,7 +17486,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "The SDL host runs the native boot, title, main-menu and scrolling-introduction controllers, maps typed file operations onto three checksummed portable files and one-use quicksave companions, and launches the room runtime only after the native gameplay handoff. It forwards --rom so a new file continues into the first-room Object20 opening story; schema v13 preserves bestiary, drop discovery, event words, one-time placed items, guaranteed boss souls and the explored quick-map cells across later saves. With --rom the frontend verifies the user's Aria image and renders the native menu and introduction resources directly from memory without exporting ROM bytes. The main menu draws its native objects and file statistics, and the title screen is native. The scrolling introduction draws its backgrounds, white text and all six actors from the native resources, including Soma's complete stair animation, the two affine actors and the alpha panels. The panels use their source 128-pixel paired draw, and MUS 21, sound 318 and the exit mute reach MP2K. Completed-file metadata and map state remain incomplete; portable quicksaves use companion files instead of native SRAM. A fresh local file completed the first-room story and persisted event 0x20 with the Winged Skeleton soul. In gameplay, START now draws the source pause hub from its verified-ROM BG1, portrait, language tiles and palettes, while SELECT reconstructs the procedural native castle map, its four-frame BLDY open/close fades and the current-screen highlight with the explored cells persisted in save schema v13; the secret-room edge flags and subordinate START pages remain partial.",
+   "limitations": "The SDL host runs the native boot, title, main-menu and scrolling-introduction controllers, maps typed file operations onto three checksummed portable files and one-use quicksave companions, and launches the room runtime only after the native gameplay handoff. It forwards --rom so a new file continues into the first-room Object20 opening story; schema v14 preserves bestiary, drop discovery, event words, one-time placed items, guaranteed boss souls, the explored quick-map cells and the secret-room discovery bits across later saves. With --rom the frontend verifies the user's Aria image and renders the native menu and introduction resources directly from memory without exporting ROM bytes. The main menu draws its native objects and file statistics, and the title screen is native. The scrolling introduction draws its backgrounds, white text and all six actors from the native resources, including Soma's complete stair animation, the two affine actors and the alpha panels. The panels use their source 128-pixel paired draw, and MUS 21, sound 318 and the exit mute reach MP2K. Completed-file metadata and map state remain incomplete; portable quicksaves use companion files instead of native SRAM. A fresh local file completed the first-room story and persisted event 0x20 with the Winged Skeleton soul. In gameplay, START now draws the source pause hub from its verified-ROM BG1, portrait, language tiles and palettes, while SELECT reconstructs the procedural native castle map, its four-frame BLDY open/close fades and the current-screen highlight with the explored cells persisted in save schema v13; the secret-room edges now follow the native discovery bits (marked on map visit rather than room entry) and the subordinate START pages remain partial.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -18139,7 +18139,7 @@
     "assets.aria_frontend_save_0478"
    ],
    "native_routines": [],
-   "limitations": "The native room exporter carries the global-map save/warp bits in schema v5, while runtime v3-v4 exports remain compatible and object 0x1C remains detectable. Up inside the native Object1C rectangle restores HP and writes a schema-v13 snapshot of room, spawn, vitals, movement, progression, equipment, inventories, souls, button configuration, bestiary, drop discovery, events, one-time placed items and the explored quick-map cells to the selected portable slot. Native healing animation, Yes/No prompt, object art, map completion and SRAM parity remain open.",
+   "limitations": "The native room exporter carries the global-map save/warp bits in schema v5, while runtime v3-v4 exports remain compatible and object 0x1C remains detectable. Up inside the native Object1C rectangle restores HP and writes a schema-v14 snapshot of room, spawn, vitals, movement, progression, equipment, inventories, souls, button configuration, bestiary, drop discovery, events, one-time placed items, the explored quick-map cells and the secret-room discovery bits to the selected portable slot. Native healing animation, Yes/No prompt, object art, map completion and SRAM parity remain open.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -20113,6 +20113,12 @@
  },
  "timeline": [
   {
+   "commit": "e4f7c48",
+   "date": "2026-11-07",
+   "subject": "Reproduce SELECT quick map native BLDY open/close stages",
+   "scope": "project"
+  },
+  {
    "commit": "81db89f",
    "date": "2026-11-07",
    "subject": "Correct Aria intro alpha blending, exit fade and flicker seed",
@@ -20584,12 +20590,6 @@
    "commit": "5f9774a",
    "date": "2026-11-02",
    "subject": "Port the Giant Ghost and Student Witch blue souls",
-   "scope": "project"
-  },
-  {
-   "commit": "da64853",
-   "date": "2026-11-02",
-   "subject": "Rewrite the Giant Ghost from its native routines",
    "scope": "project"
   }
  ],

@@ -25,6 +25,7 @@
 
 #include "aos_mgba_session.h"
 #include "aos_lab_db.h"
+#include "aos_lab_vision.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,8 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 /* ---- tiny parameter/eval helpers ---------------------------------- */
@@ -290,6 +293,53 @@ static bool best_params(AosLabDb *db, int64_t action_id,
     return false;
 }
 
+/* ---- live framebuffer mirror (shm) ---------------------------------
+ * Each worker publishes its emulated screen to /dev/shm/aoslab_fb_<id>
+ * so the GTK viewer can show up to eight live emulator windows. Layout:
+ *   u32 magic 'AOSF' | u64 seq | u32 w | u32 h | u32 pad[3]  (32 bytes)
+ *   then W*H u32 pixels (0xRRGGBB). The emulation thread bumps seq on
+ *   every copy; viewers poll seq to detect new frames. */
+#define AOS_FB_MAGIC 0x414F5346u
+#define AOS_FB_HDR 32
+#define AOS_FB_W 240
+#define AOS_FB_H 160
+#define AOS_FB_SIZE (AOS_FB_HDR + AOS_FB_W * AOS_FB_H * 4)
+
+typedef struct {
+    int fd;
+    void *map;
+    uint64_t *seq;
+    uint32_t *pixels;
+} AosFbMirror;
+
+static int fb_attach(AosFbMirror *fb, int worker_id) {
+    memset(fb, 0, sizeof *fb);
+    char name[64];
+    snprintf(name, sizeof name, "/aoslab_fb_%d", worker_id & 7);
+    fb->fd = shm_open(name, O_RDWR | O_CREAT, 0600);
+    if (fb->fd < 0) return -1;
+    if (ftruncate(fb->fd, AOS_FB_SIZE) != 0) { close(fb->fd); return -1; }
+    fb->map = mmap(NULL, AOS_FB_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+                   fb->fd, 0);
+    if (fb->map == MAP_FAILED) { close(fb->fd); return -1; }
+    uint32_t *hdr = fb->map;
+    hdr[0] = AOS_FB_MAGIC;      /* offset 0  */
+    hdr[1] = 0;                 /* offset 4  */
+    fb->seq = (uint64_t *)((char *)fb->map + 8);   /* offset 8  */
+    *fb->seq = 0;
+    hdr[4] = AOS_FB_W;          /* offset 16 */
+    hdr[5] = AOS_FB_H;          /* offset 20 */
+    *fb->seq = 0;
+    fb->pixels = (uint32_t *)((char *)fb->map + AOS_FB_HDR);
+    return 0;
+}
+
+static void fb_detach(AosFbMirror *fb) {
+    if (fb->map && fb->map != MAP_FAILED) munmap(fb->map, AOS_FB_SIZE);
+    if (fb->fd >= 0) close(fb->fd);
+    memset(fb, 0, sizeof *fb);
+}
+
 /* ---- modes --------------------------------------------------------- */
 
 static int record_state(AosMgbaSession *session, AosLabDb *db,
@@ -435,6 +485,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* publish the live framebuffer for the GTK viewer */
+    AosFbMirror fb;
+    int fb_ok = fb_attach(&fb, worker_id) == 0;
+
     /* Resolve actions: explicit ids or all rows. */
     int acount = 0;
     AosActionRow *all = aos_labdb_actions(db, &acount);
@@ -566,6 +620,11 @@ int main(int argc, char **argv) {
                 free(sv);
                 spec.fps_cap = speed > 0 ? 60.0 * speed : 0.0;
             }
+            if (fb_ok) {
+                spec.fb_mirror = fb.pixels;
+                spec.fb_seq = fb.seq;
+                spec.fb_interval = 2;
+            }
             char shot_path[1100];
             if (shots_dir) {
                 /* capture only after we know the trial id: use a temp
@@ -601,6 +660,15 @@ int main(int argc, char **argv) {
             } else {
                 snprintf(metrics, sizeof metrics,
                          "{\"note\":\"probe data missing\"}");
+            }
+
+            /* visual signature of the final frame -> metrics JSON */
+            {
+                const uint32_t *fb = aos_mgba_framebuffer(session);
+                AosSceneFeat feat;
+                aos_vision_analyze(fb, AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT,
+                                   &feat);
+                aos_vision_metrics_append(metrics, sizeof metrics, &feat);
             }
 
             int64_t trial_id = aos_labdb_add_trial(
@@ -650,6 +718,7 @@ int main(int argc, char **argv) {
 
     free(state_blob);
     aos_labdb_free_action_rows(all, acount);
+    fb_detach(&fb);
     aos_mgba_close(session);
     aos_labdb_close(db);
     return 0;

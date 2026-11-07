@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0804 - Emulator lab supervision UI + per-trial visual signatures
+
+- The GTK viewer now supervises up to eight live emulators: each worker
+  mirrors its 240x160 framebuffer into a POSIX shared-memory segment
+  (`/dev/shm/aoslab_fb_<id>`) and the viewer maps all eight into a 4x2
+  grid of live `GtkPicture` videos at the top of the window.
+- Window layout uses nested `GtkPaned` splitters (FileZilla-style):
+  draggable divider between the video grid, the controls/log section
+  and the registry tables.
+- Every trial now records a visual signature in its `metrics` JSON via
+  `aos_lab_vision`: whole-screen tile-grid hash, HUD strip hash,
+  text-ink row count, distinct tile count, brightness and a 6x6x6 RGB
+  histogram — persisted in the lab database alongside the probe
+  metrics, giving each learning signal a scene fingerprint.
+- Per-worker speed sliders (Auto..x16 = N*60 fps cap) are stored in
+  `worker.<id>.speed` meta and applied per trial through
+  `AosRunSpec.fps_cap`.
+
 ## Patch 0803 - Emulator laboratory: shared session, SQLite trials, GTK registry
 
 - `aos_mgba_session` extracts the headless mGBA core (software renderer,

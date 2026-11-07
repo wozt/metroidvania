@@ -16,7 +16,10 @@
 #include <gtk/gtk.h>
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -36,6 +39,14 @@ typedef struct {
     GtkWidget *pause_button;
     GtkWidget *speed_scale;
     GtkWidget *speed_label;
+    GtkWidget *picture;
+    /* live framebuffer mirror published by the worker via shm */
+    int fb_fd;
+    volatile uint64_t *fb_seq;
+    const uint32_t *fb_pix;
+    uint64_t last_seq;
+    uint8_t *fb_rgba;
+    GdkTexture *fb_tex;
 } WorkerCard;
 
 typedef struct {
@@ -52,6 +63,7 @@ typedef struct {
     GListStore *states_store;
     GListStore *runs_store;
     GtkWidget *status;
+    GtkWidget *score_label;
     GtkWidget *hint;
     GtkWidget *worker_label;
     GtkWidget *launch_button;
@@ -69,6 +81,8 @@ typedef struct {
     int last_state_count;
     GList *pipes;
 } Viewer;
+
+static Viewer *g_viewer; /* set in on_activate; shared by log watches */
 
 /* ---- list view helpers --------------------------------------------- */
 
@@ -171,8 +185,8 @@ static void log_append(Viewer *v, int worker_id, const char *text,
     GtkWidget *scroll = gtk_widget_get_ancestor(v->log_view,
                                                 GTK_TYPE_SCROLLED_WINDOW);
     if (scroll) {
-        GtkAdjustment *adj = gtk_scrollable_get_vadjustment(
-            GTK_SCROLLABLE(scroll));
+        GtkAdjustment *adj = gtk_scrolled_window_get_vadjustment(
+            GTK_SCROLLED_WINDOW(scroll));
         if (adj)
             gtk_adjustment_set_value(adj, gtk_adjustment_get_upper(adj));
     }
@@ -181,7 +195,7 @@ static void log_append(Viewer *v, int worker_id, const char *text,
 static gboolean on_log_pipe(GIOChannel *channel, GIOCondition cond,
                             gpointer data) {
     LogPipe *pipe = data;
-    Viewer *v = g_object_get_data(G_OBJECT(channel), "viewer");
+    Viewer *v = g_viewer;
     if (cond & (G_IO_HUP | G_IO_ERR | G_IO_NVAL)) {
         g_io_channel_unref(channel);
         v->pipes = g_list_remove(v->pipes, pipe);
@@ -294,16 +308,9 @@ static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
             pipe->tag = gtk_text_tag_new(tagname);
             gtk_text_tag_table_add(tags, pipe->tag);
         }
-        g_object_set_data_full(G_OBJECT(ch), "viewer", v, NULL);
-        g_object_set_data(G_OBJECT(ch), "pipe", pipe);
-        /* store pipe on the channel so the callback can find it */
-        g_object_set_data(G_OBJECT(ch), "logpipe", pipe);
         v->pipes = g_list_prepend(v->pipes, pipe);
-        /* viewer must be attached before the watch can fire */
-        g_object_set_data(G_OBJECT(ch), "viewer", v);
         g_io_add_watch(ch, G_IO_IN | G_IO_HUP,
                        (GIOFunc)on_log_pipe, pipe);
-        pipe->fd = fd;
     }
     char msg[160];
     if (record_name)
@@ -315,10 +322,6 @@ static gboolean spawn_worker_keys(Viewer *v, const char *state_id_str,
     return TRUE;
 }
 
-/* The callback above needs the Viewer; we stored it on the channel but
- * the watch data is the LogPipe. To keep it simple the callback resolves
- * the viewer through a file-scope pointer set at activate time. */
-static Viewer *g_viewer;
 
 /* ---- refresh -------------------------------------------------------- */
 
@@ -326,6 +329,16 @@ static void refresh_trials(Viewer *v) {
     int count = 0;
     AosTrialRow *rows = aos_labdb_recent_trials(v->db, MAX_ROWS, &count);
     g_list_store_remove_all(v->trials_store);
+    /* live "green scenarios" counter: successful trials in view */
+    int pass = 0;
+    for (int i = 0; i < count; ++i)
+        if (rows[i].outcome && !strcmp(rows[i].outcome, "success")) ++pass;
+    char score[96];
+    snprintf(score, sizeof score, "Scenarios: %d pass / %d trials",
+             pass, count);
+    gtk_label_set_text(GTK_LABEL(v->score_label), score);
+    gtk_widget_set_css_classes(v->score_label,
+        (const char *[]){pass > 0 ? "score-pass" : "dim-label", NULL});
     for (int i = 0; i < count; ++i) {
         AosTrialRow *r = &rows[i];
         GString *line = g_string_new(NULL);
@@ -441,6 +454,52 @@ static void refresh_runs(Viewer *v) {
     aos_labdb_free_run_rows(rows, count);
 }
 
+/* Attach to a worker's shared framebuffer if it exists; retried by the
+ * fast timer until the worker creates it. */
+static void fb_try_attach(WorkerCard *wc, int id) {
+    if (wc->fb_fd >= 0 || wc->fb_seq) return;
+    char name[64];
+    snprintf(name, sizeof name, "/aoslab_fb_%d", id);
+    int fd = shm_open(name, O_RDONLY, 0600);
+    if (fd < 0) return;
+    /* header is 32 bytes then 240*160 u32 pixels */
+    size_t sz = 32 + 240 * 160 * 4;
+    void *map = mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
+    if (map == MAP_FAILED) { close(fd); return; }
+    uint32_t *hdr = map;
+    if (hdr[0] != 0x414F5346u) { munmap(map, sz); close(fd); return; }
+    wc->fb_fd = fd;
+    wc->fb_seq = (volatile uint64_t *)((char *)map + 8);
+    wc->fb_pix = (const uint32_t *)((char *)map + 32);
+    wc->fb_rgba = malloc(240 * 160 * 4);
+    wc->last_seq = 0;
+}
+
+/* Push a new frame to the widget when the worker produced one. */
+static void fb_refresh_frame(WorkerCard *wc, GtkWidget *picture) {
+    if (!wc->fb_seq || !wc->fb_rgba) return;
+    uint64_t seq = *wc->fb_seq;
+    if (seq == wc->last_seq) return;
+    wc->last_seq = seq;
+    const uint32_t *px = wc->fb_pix;
+    uint8_t *out = wc->fb_rgba;
+    for (int i = 0; i < 240 * 160; ++i) {
+        uint32_t c = px[i];
+        *out++ = (c >> 16) & 0xFF;
+        *out++ = (c >> 8) & 0xFF;
+        *out++ = c & 0xFF;
+        *out++ = 0xFF;
+    }
+    GBytes *bytes = g_bytes_new(wc->fb_rgba, 240 * 160 * 4);
+    wc->fb_tex = gdk_memory_texture_new(240, 160,
+                                        GDK_MEMORY_R8G8B8A8, bytes,
+                                        240 * 4);
+    g_bytes_unref(bytes);
+    gtk_picture_set_paintable(GTK_PICTURE(picture),
+                              GDK_PAINTABLE(wc->fb_tex));
+    g_object_unref(wc->fb_tex);
+}
+
 static void refresh_workers(Viewer *v) {
     static const char *phase_css[] = {"", "w-running", "w-paused"};
     for (int i = 0; i < 8; ++i) {
@@ -490,6 +549,15 @@ static void refresh_workers(Viewer *v) {
         free(control);
         free(speed);
     }
+}
+
+static gboolean poll_fb(gpointer data) {
+    Viewer *v = data;
+    for (int i = 0; i < 8; ++i) {
+        fb_try_attach(&v->workers[i], i);
+        fb_refresh_frame(&v->workers[i], v->workers[i].picture);
+    }
+    return G_SOURCE_CONTINUE;
 }
 
 static gboolean poll_refresh(gpointer data) {
@@ -674,7 +742,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     g_viewer = v;
     v->window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(v->window), "Aria Lab — learning registry");
-    gtk_window_set_default_size(GTK_WINDOW(v->window), 1180, 780);
+    gtk_window_set_default_size(GTK_WINDOW(v->window), 1280, 860);
 
     /* status colours for worker cards */
     GtkCssProvider *css = gtk_css_provider_new();
@@ -684,6 +752,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         "frame.w-paused  { border: 2px solid #fb8c00; border-radius: 6px; }"
         "frame           { border: 1px solid #546e7a; border-radius: 6px; }"
         "label.w-phase   { font-weight: bold; }"
+        "label.score-pass{ color: #66cc66; font-weight: bold; }"
         "textview        { font-family: monospace; font-size: 11px; }");
     gtk_style_context_add_provider_for_display(
         gdk_display_get_default(), GTK_STYLE_PROVIDER(css),
@@ -707,18 +776,48 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_add_css_class(header, "dim-label");
     gtk_box_append(GTK_BOX(root), header);
 
+    v->score_label = gtk_label_new("Scenarios: 0 pass / 0 trials");
+    gtk_label_set_xalign(GTK_LABEL(v->score_label), 0.0);
+    gtk_widget_add_css_class(v->score_label, "score-pass");
+    gtk_box_append(GTK_BOX(root), v->score_label);
+
+    /* Resizable sections with draggable splitters (FileZilla-style):
+     * top pane = live emulator grid, bottom split = controls/log vs
+     * registry tables. */
+    GtkWidget *paned_main = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
+    gtk_paned_set_wide_handle(GTK_PANED(paned_main), TRUE);
+    gtk_widget_set_hexpand(paned_main, TRUE);
+    gtk_widget_set_vexpand(paned_main, TRUE);
+    gtk_widget_set_margin_top(paned_main, 4);
+    gtk_box_append(GTK_BOX(root), paned_main);
+
+    GtkWidget *top_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_paned_set_start_child(GTK_PANED(paned_main), top_box);
+
+    GtkWidget *paned_low = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
+    gtk_paned_set_wide_handle(GTK_PANED(paned_low), TRUE);
+    gtk_paned_set_end_child(GTK_PANED(paned_main), paned_low);
+
+    GtkWidget *mid_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_widget_set_vexpand(mid_box, TRUE);
+    gtk_paned_set_start_child(GTK_PANED(paned_low), mid_box);
+    /* initial splitter positions: video grid on top, controls+log
+     * middle, tables bottom */
+    gtk_paned_set_position(GTK_PANED(paned_main), 470);
+    gtk_paned_set_position(GTK_PANED(paned_low), 260);
+
     /* ---- workers section ------------------------------------------ */
     GtkWidget *workers_label = gtk_label_new("Workers — eight parallel "
                                              "learning slots");
     gtk_label_set_xalign(GTK_LABEL(workers_label), 0.0);
     gtk_widget_add_css_class(workers_label, "title-4");
-    gtk_box_append(GTK_BOX(root), workers_label);
+    gtk_box_append(GTK_BOX(top_box), workers_label);
     GtkWidget *workers_tip = gtk_label_new(
         "Each card is one emulator process. Pause freezes it between "
         "trials, Stop ends the batch, Resume continues.");
     gtk_label_set_xalign(GTK_LABEL(workers_tip), 0.0);
     gtk_widget_add_css_class(workers_tip, "dim-label");
-    gtk_box_append(GTK_BOX(root), workers_tip);
+    gtk_box_append(GTK_BOX(top_box), workers_tip);
 
     GtkWidget *grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
@@ -726,6 +825,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     for (int i = 0; i < 8; ++i) {
         GtkWidget *card = gtk_frame_new(NULL);
         WorkerCard *wc = &v->workers[i];
+        wc->fb_fd = -1;
         wc->card = card;
         GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
         gtk_frame_set_child(GTK_FRAME(card), vbox);
@@ -733,6 +833,15 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         gtk_widget_set_margin_end(vbox, 8);
         gtk_widget_set_margin_top(vbox, 6);
         gtk_widget_set_margin_bottom(vbox, 6);
+
+        wc->picture = gtk_picture_new();
+        gtk_picture_set_content_fit(GTK_PICTURE(wc->picture),
+                                    GTK_CONTENT_FIT_FILL);
+        gtk_widget_set_size_request(wc->picture, 300, 200);
+        gtk_widget_set_tooltip_text(
+            wc->picture,
+            "Live emulated screen of this worker (240x160, scaled)");
+        gtk_box_append(GTK_BOX(vbox), wc->picture);
 
         wc->name = gtk_label_new("Worker 0");
         gtk_label_set_xalign(GTK_LABEL(wc->name), 0.0);
@@ -804,7 +913,8 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(workers_scroll), grid);
     gtk_scrolled_window_set_min_content_height(
         GTK_SCROLLED_WINDOW(workers_scroll), 170);
-    gtk_box_append(GTK_BOX(root), workers_scroll);
+    gtk_widget_set_vexpand(workers_scroll, TRUE);
+    gtk_box_append(GTK_BOX(top_box), workers_scroll);
 
     /* ---- launch controls ------------------------------------------- */
     GtkWidget *launch_frame = gtk_frame_new("Start a learning batch");
@@ -814,7 +924,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_set_margin_end(lbox, 10);
     gtk_widget_set_margin_top(lbox, 8);
     gtk_widget_set_margin_bottom(lbox, 8);
-    gtk_box_append(GTK_BOX(root), launch_frame);
+    gtk_box_append(GTK_BOX(mid_box), launch_frame);
 
     gtk_box_append(GTK_BOX(lbox), gtk_label_new("Worker slot:"));
     v->worker_id_spin = gtk_spin_button_new_with_range(0, 7, 1);
@@ -864,12 +974,12 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         "from the ROM, then start batches.");
     gtk_label_set_xalign(GTK_LABEL(v->hint), 0.0);
     gtk_widget_add_css_class(v->hint, "warning");
-    gtk_box_append(GTK_BOX(root), v->hint);
+    gtk_box_append(GTK_BOX(mid_box), v->hint);
 
     v->worker_label = gtk_label_new("");
     gtk_label_set_xalign(GTK_LABEL(v->worker_label), 0.0);
     gtk_widget_add_css_class(v->worker_label, "dim-label");
-    gtk_box_append(GTK_BOX(root), v->worker_label);
+    gtk_box_append(GTK_BOX(mid_box), v->worker_label);
 
     /* ---- live log ----------------------------------------------------- */
     GtkWidget *log_label = gtk_label_new("Live log — worker output "
@@ -877,7 +987,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                                          "to disk)");
     gtk_label_set_xalign(GTK_LABEL(log_label), 0.0);
     gtk_widget_add_css_class(log_label, "title-5");
-    gtk_box_append(GTK_BOX(root), log_label);
+    gtk_box_append(GTK_BOX(mid_box), log_label);
     GtkWidget *log_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(log_scroll),
                                    GTK_POLICY_AUTOMATIC,
@@ -910,11 +1020,13 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     }
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(log_scroll),
                                   v->log_view);
-    gtk_box_append(GTK_BOX(root), log_scroll);
+    gtk_widget_set_vexpand(log_scroll, TRUE);
+    gtk_box_append(GTK_BOX(mid_box), log_scroll);
 
     /* ---- registry tables --------------------------------------------- */
     v->notebook = gtk_notebook_new();
-    gtk_box_append(GTK_BOX(root), v->notebook);
+    gtk_widget_set_vexpand(v->notebook, TRUE);
+    gtk_paned_set_end_child(GTK_PANED(paned_low), v->notebook);
 
     const char *trial_titles[] = {"id", "run", "state", "action",
                                   "outcome", "params", "frames",
@@ -976,6 +1088,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
 
     gtk_window_present(GTK_WINDOW(v->window));
     g_timeout_add(POLL_MS, poll_refresh, v);
+    g_timeout_add(100, poll_fb, v);
     poll_refresh(v);
 }
 

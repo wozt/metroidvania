@@ -122,13 +122,17 @@ target_link_libraries(aos_mgba_session PRIVATE ${MGBA_LIBRARY} pthread)
 add_library(aos_lab_db OBJECT src/tools/aos_lab_db.c)
 target_include_directories(aos_lab_db PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
 target_link_libraries(aos_lab_db PRIVATE ${SQLITE3_LIBRARY})
+add_library(aos_lab_vision OBJECT src/tools/aos_lab_vision.c)
+target_include_directories(aos_lab_vision PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
+target_link_libraries(aos_lab_vision PRIVATE m)
 add_executable(aos_mgba_lab src/tools/aos_mgba_lab.c
     $<TARGET_OBJECTS:aos_mgba_session>)
 target_include_directories(aos_mgba_lab PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
 target_link_libraries(aos_mgba_lab PRIVATE ${MGBA_LIBRARY} pthread)
 fusion_enable_warnings(aos_mgba_lab)
 add_executable(aos_lab_worker src/tools/aos_lab_worker.c
-    $<TARGET_OBJECTS:aos_mgba_session> $<TARGET_OBJECTS:aos_lab_db>)
+    $<TARGET_OBJECTS:aos_mgba_session> $<TARGET_OBJECTS:aos_lab_db>
+    $<TARGET_OBJECTS:aos_lab_vision>)
 target_include_directories(aos_lab_worker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
 target_link_libraries(aos_lab_worker PRIVATE ${MGBA_LIBRARY} ${SQLITE3_LIBRARY} pthread)
 fusion_enable_warnings(aos_lab_worker)

@@ -222,6 +222,12 @@ static void run_on_thread(struct mCoreThread *thread) {
         }
         core->setKeys(core, keys);
         core->runFrame(core);
+        if (spec->fb_mirror &&
+            (!spec->fb_interval || frame % spec->fb_interval == 0)) {
+            memcpy(spec->fb_mirror, s->framebuffer,
+                   AOS_MGBA_WIDTH * AOS_MGBA_HEIGHT * sizeof(uint32_t));
+            if (spec->fb_seq) ++*spec->fb_seq;
+        }
         if (frame_budget > 0.0) {
             struct timespec now;
             clock_gettime(CLOCK_MONOTONIC, &now);

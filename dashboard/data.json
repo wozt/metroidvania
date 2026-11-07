@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-07T21:54:47+00:00",
+ "generated_at": "2026-11-07T22:17:04+00:00",
  "git": {
-  "commit": "21073921",
+  "commit": "09356b85",
   "branch": "main",
   "dirty": true
  },
@@ -16817,12 +16817,14 @@
     "src/tools/aos_lab_db.c",
     "src/tools/aos_lab_db.h",
     "src/tools/aos_lab_worker.c",
-    "src/tools/aos_lab_viewer.c"
+    "src/tools/aos_lab_viewer.c",
+    "src/tools/aos_lab_vision.c",
+    "src/tools/aos_lab_vision.h"
    ],
    "tests": [],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API (aos_mgba_session): frame stepping, scripted key masks, PPM screenshots, save states and WRAM peeks. aos_lab_worker records state blobs, runs scripted actions with parameter jitter against memory-probe evals, and accumulates per-parameter success weights in a local SQLite database (aos_lab_db, WAL). aos_lab_viewer is a GTK4 registry that polls trials, weights, states and runs live, with eight colour-coded parallel worker slots (per-worker pause/resume/stop, batch spawning, save-state recording, per-worker speed caps) and an in-memory live log. Verified end-to-end: state capture, trial batches and weight updates. Still open: calibrated gameplay probes (player position/HP addresses), menu-navigation scripts for the scrolling intro, vendored mGBA sources and a spawn-batch button in the viewer.",
+   "limitations": "Runs the pinned Aria ROM headless through the mGBA core API (aos_mgba_session): frame stepping, scripted key masks, PPM screenshots, save states and WRAM peeks. aos_lab_worker records state blobs, runs scripted actions with parameter jitter against memory-probe evals, and accumulates per-parameter success weights in a local SQLite database (aos_lab_db, WAL). aos_lab_viewer is a GTK4 registry that polls trials, weights, states and runs live, with eight colour-coded parallel worker slots (per-worker pause/resume/stop, batch spawning, save-state recording, per-worker speed caps) and an in-memory live log. Workers publish live 240x160 framebuffers over POSIX shm shown as a draggable 4x2 video grid, and every trial stores a visual scene signature (tile hash, HUD hash, text-ink rows, tile count, RGB histogram) in its metrics JSON. Verified end-to-end: state capture, trial batches, weight updates and shm video. Still open: calibrated gameplay probes (player position/HP addresses), menu-navigation scripts for the scrolling intro, vendored mGBA sources and a spawn-batch button in the viewer.",
    "next_action": "",
    "evidence": {
     "unit_tests": [],
@@ -20315,6 +20317,18 @@
  },
  "timeline": [
   {
+   "commit": "09356b85",
+   "date": "2026-11-07",
+   "subject": "Fix viewer crash, state deadlock, and add SRAM + record keys",
+   "scope": "project"
+  },
+  {
+   "commit": "d003f07b",
+   "date": "2026-11-07",
+   "subject": "Add per-worker emulation speed caps to the lab",
+   "scope": "project"
+  },
+  {
    "commit": "21073921",
    "date": "2026-11-07",
    "subject": "Rework lab viewer into a friendly dashboard",
@@ -20780,18 +20794,6 @@
    "commit": "98292f15",
    "date": "2026-11-07",
    "subject": "Correct the dialogue charset VRAM layout",
-   "scope": "project"
-  },
-  {
-   "commit": "94ab534b",
-   "date": "2026-11-07",
-   "subject": "Map the language bank onto VRAM tiles",
-   "scope": "project"
-  },
-  {
-   "commit": "0e28f568",
-   "date": "2026-11-07",
-   "subject": "Correct the dialogue window decode",
    "scope": "project"
   }
  ],

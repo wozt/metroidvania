@@ -54,6 +54,11 @@ typedef struct {
     const AosPeekRequest *peeks;
     int peek_count;
     double fps_cap;           /* max emulated fps; 0 = unthrottled */
+    /* Optional live framebuffer mirror (W*H u32, 0xRRGGBB) plus a
+     * sequence counter bumped on every copy; both may be NULL. */
+    uint32_t *fb_mirror;
+    uint64_t *fb_seq;
+    unsigned fb_interval;     /* copy every N frames; 0 = every frame */
 } AosRunSpec;
 
 typedef struct {

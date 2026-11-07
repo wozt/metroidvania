@@ -5035,9 +5035,10 @@ static void draw_opening_text(SDL_Renderer *renderer,
                        AOS_OPENING_TEXT_PANEL_WIDTH,
                        AOS_OPENING_TEXT_PANEL_HEIGHT};
     SDL_RenderFillRect(renderer, &panel);
-    /* The box's darker lower band; the language-sheet strips are not
-     * drawn — their pink ornament does not match the capture. */
-    SDL_SetRenderDrawColor(renderer, 40, 48, 74, 214);
+    /* The box's darker lower band, translucent like the native dim
+     * over the scene; the language-sheet strips are not drawn —
+     * their pink ornament does not match the capture. */
+    SDL_SetRenderDrawColor(renderer, 40, 48, 74, 170);
     SDL_FRect frame_edge = {AOS_OPENING_TEXT_PANEL_X, AOS_OPENING_FRAME_Y,
                             AOS_OPENING_TEXT_PANEL_WIDTH,
                             AOS_OPENING_FRAME_HEIGHT};

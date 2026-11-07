@@ -33,9 +33,14 @@ enum {
     AOS_OPENING_TEXT_PANEL_X = 4,
     AOS_OPENING_TEXT_PANEL_Y = 8,
     AOS_OPENING_TEXT_PANEL_WIDTH = 232,
-    AOS_OPENING_TEXT_PANEL_HEIGHT = 104,
+    AOS_OPENING_TEXT_PANEL_HEIGHT = 84,
+    /* The box's darker lower band above the screen bottom; it
+     * replaces the language-sheet strips, whose pink ornament does
+     * not match the native presentation. */
+    AOS_OPENING_FRAME_Y = 92,
+    AOS_OPENING_FRAME_HEIGHT = 68,
     AOS_OPENING_TEXT_X = 14,
-    AOS_OPENING_TEXT_Y = 48,
+    AOS_OPENING_TEXT_Y = 56,
     AOS_OPENING_PROMPT_X = AOS_OPENING_TEXT_PANEL_X + 193,
     AOS_OPENING_PROMPT_Y = 154,
     AOS_OPENING_LINES = 4,

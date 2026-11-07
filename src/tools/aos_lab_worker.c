@@ -373,6 +373,141 @@ static int record_state(AosMgbaSession *session, AosLabDb *db,
     return 0;
 }
 
+/* ---- scout mode: autonomous early-game player ----------------------
+ * Boots the ROM and plays chunks of 600 frames: A taps advance text
+ * and menus, a RIGHT pulse at the end probes whether the player entity
+ * responds. Every novel scene hash and every validated gameplay
+ * checkpoint is stored as a state blob in the database. */
+static int scout_loop(AosMgbaSession *session, AosLabDb *db,
+                      const char *rom, int worker_id, int max_chunks) {
+    AosFbMirror fb;
+    int fb_ok = fb_attach(&fb, worker_id) == 0;
+    char phase_key[64], status_key[64], ctrl_key[64];
+    snprintf(phase_key, sizeof phase_key, "worker.%d.phase", worker_id);
+    snprintf(status_key, sizeof status_key, "worker.%d.status", worker_id);
+    snprintf(ctrl_key, sizeof ctrl_key, "lab.control.%d", worker_id);
+    aos_labdb_meta_set(db, ctrl_key, "run");
+    aos_labdb_meta_set(db, phase_key, "scouting");
+    aos_labdb_begin_run(db, rom, "scout early game");
+
+    uint64_t seen[1024];
+    int nseen = 0, validated = 0, resp_streak = 0, stop = 0;
+    for (int chunk = 0; chunk < max_chunks && !stop; ++chunk) {
+        char *ctl = aos_labdb_meta_get(db, ctrl_key);
+        if (ctl && !strcmp(ctl, "stop")) stop = 1;
+        free(ctl);
+        if (stop) break;
+
+        /* level-based schedule: A taps to advance text, occasional
+         * START for menus, RIGHT held for the last 80 frames */
+        AosKeyEvent ev[32];
+        int ne = 0;
+        ev[ne++] = (AosKeyEvent){0, 0};
+        if (chunk % 3 == 0) {
+            ev[ne++] = (AosKeyEvent){40, 8};
+            ev[ne++] = (AosKeyEvent){55, 0};
+        }
+        for (int f = 120; f < 540; f += 140) {
+            ev[ne++] = (AosKeyEvent){f, 1};
+            ev[ne++] = (AosKeyEvent){f + 12, 0};
+        }
+        ev[ne++] = (AosKeyEvent){520, 16};
+        ev[ne++] = (AosKeyEvent){599, 0};
+
+        AosPeekRequest pk[3];
+        pk[0] = (AosPeekRequest){0, 0x02000524, 4};  /* posX chunk start */
+        pk[1] = (AosPeekRequest){598, 0x02000524, 4};/* posX after pulse */
+        pk[2] = (AosPeekRequest){598, 0x02000010, 4};/* gameMode end */
+        AosRunSpec spec;
+        memset(&spec, 0, sizeof spec);
+        spec.frames = 600;
+        spec.keys = ev;
+        spec.key_count = ne;
+        spec.peeks = pk;
+        spec.peek_count = 3;
+        {
+            char sk[64];
+            snprintf(sk, sizeof sk, "worker.%d.speed", worker_id);
+            char *sv = aos_labdb_meta_get(db, sk);
+            int spd = sv ? atoi(sv) : 0;
+            free(sv);
+            spec.fps_cap = spd > 0 ? 60.0 * spd : 0.0;
+        }
+        if (fb_ok) {
+            spec.fb_mirror = fb.pixels;
+            spec.fb_seq = fb.seq;
+            spec.fb_interval = 2;
+        }
+        AosRunResult res;
+        aos_mgba_run(session, &spec, &res);
+
+        int mode = res.peeks[2].data ? res.peeks[2].data[0] : -1;
+        int32_t x0 = res.peeks[0].data ? peek_i32(&res.peeks[0]) : 0;
+        int32_t x1 = res.peeks[1].data ? peek_i32(&res.peeks[1]) : 0;
+        /* real walking gives ~1.5px/frame -> >4px in the 80-frame
+         * pulse; cutscene drift stays below that */
+        int responsive = (x1 - x0) > 0x40000;
+
+        const uint32_t *fbpx = aos_mgba_framebuffer(session);
+        AosSceneFeat feat;
+        aos_vision_analyze(fbpx, AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT, &feat);
+        int is_new;
+        {
+            int found = 0;
+            for (int i = 0; i < nseen; ++i)
+                if (seen[i] == feat.scene_hash) { found = 1; break; }
+            is_new = !found;
+        }
+        if (is_new && nseen < 1024) {
+            seen[nseen++] = feat.scene_hash;
+            size_t ns = 0;
+            uint8_t *blob = aos_mgba_save_state_blob(session, &ns);
+            if (blob) {
+                char nm[96], note[160];
+                snprintf(nm, sizeof nm, "scout_c%03d_m%d", chunk, mode);
+                snprintf(note, sizeof note,
+                         "scene=%016llx mode=%d chunk=%d",
+                         (unsigned long long)feat.scene_hash, mode, chunk);
+                aos_labdb_add_state(db, nm, note, 0, blob, ns);
+                free(blob);
+            }
+        }
+        resp_streak = (responsive && mode == 4) ? resp_streak + 1 : 0;
+        if (resp_streak >= 2) {
+            /* validated free-gameplay checkpoint: two consecutive
+             * responsive chunks rule out cutscene drift */
+            ++validated;
+            size_t ns = 0;
+            uint8_t *blob = aos_mgba_save_state_blob(session, &ns);
+            if (blob) {
+                char nm[96], note[160];
+                snprintf(nm, sizeof nm, "scout_play_%03d", chunk);
+                snprintf(note, sizeof note,
+                         "responsive RIGHT dx=%d scene=%016llx",
+                         (int)(x1 - x0),
+                         (unsigned long long)feat.scene_hash);
+                aos_labdb_add_state(db, nm, note, 0, blob, ns);
+                free(blob);
+            }
+        }
+        char st[160];
+        snprintf(st, sizeof st,
+                 "chunk %d mode=%d pos=%d->%d resp=%d states=%d",
+                 chunk, mode, (int)(x0 >> 16), (int)(x1 >> 16),
+                 responsive, nseen);
+        aos_labdb_meta_set(db, status_key, st);
+        printf("scout %s\n", st);
+        fflush(stdout);
+    }
+    aos_labdb_meta_set(db, phase_key, "idle");
+    char st[96];
+    snprintf(st, sizeof st, "scout done: %d states, %d validated",
+             nseen, validated);
+    aos_labdb_meta_set(db, status_key, st);
+    fb_detach(&fb);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     const char *db_path = NULL, *rom = NULL, *shots_dir = NULL,
                *record_name = NULL, *state_note = NULL, *keys_spec = NULL;
@@ -382,7 +517,7 @@ int main(int argc, char **argv) {
     int action_ids[64];
     int action_count = 0;
     const char *define_action = NULL;
-    int worker_id = 0;
+    int worker_id = 0, scout = 0, scout_chunks = 100;
 
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
@@ -406,6 +541,10 @@ int main(int argc, char **argv) {
         }
         else if (!strcmp(arg, "--worker-id") && value) {
             worker_id = atoi(value); ++i;
+        }
+        else if (!strcmp(arg, "--scout")) { scout = 1; }
+        else if (!strcmp(arg, "--scout-chunks") && value) {
+            scout_chunks = atoi(value); ++i;
         }
         else {
             fprintf(stderr, "unknown argument %s\n", arg);
@@ -461,6 +600,13 @@ int main(int argc, char **argv) {
     }
 
     if (shots_dir) mkdir(shots_dir, 0755);
+
+    if (scout) {
+        int rc = scout_loop(session, db, rom, worker_id, scout_chunks);
+        aos_mgba_close(session);
+        aos_labdb_close(db);
+        return rc;
+    }
 
     if (record_name) {
         int rc = record_state(session, db, record_name,

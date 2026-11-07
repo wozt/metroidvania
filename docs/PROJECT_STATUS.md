@@ -23,10 +23,16 @@ Last updated: **2026-11-07**.
   +0x4E4 (pos whole X=+0x40 -> 0x02000524, Y=+0x44 -> 0x02000528),
   level=0x02013279, HP=0x0201327A, MP=0x0201327C, maxHP=0x0201327E,
   gold=0x02013290. Actions in lab.db now probe these addresses.
-- Known limitation: every state captured so far lands in a
-  non-interactive story sequence (player entity alive but ignores
-  input); meaningful movement/HP trials need a checkpoint recorded
-  during free gameplay.
+- `--scout` mode plays the game autonomously from boot: 600-frame
+  chunks of A-taps/START for menus plus a RIGHT responsiveness pulse,
+  storing every novel scene as a state blob and validating free
+  gameplay only after two consecutive responsive chunks (real walking
+  gives >4px per pulse; cutscene drift stays below). Early runs reach
+  gameMode 4 and capture dozens of checkpoints; real free-roam
+  validation is still being tuned.
+- OCR of in-game text is planned (BG tilemap in VRAM via session
+  peeks + font tables from the decomp) but not implemented yet; the
+  vision layer currently provides scene/HUD/text-presence signatures.
 
 ## Patch 0804 - Emulator lab supervision UI + per-trial visual signatures
 

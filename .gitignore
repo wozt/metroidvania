@@ -26,3 +26,4 @@
 # Python
 __pycache__/
 *.pyc
+database/

@@ -19,6 +19,9 @@ Last updated: **2026-11-07**.
   eight parallel slots: each worker owns `worker.<id>.*` meta keys and
   a `lab.control.<id>` pause/resume/stop channel, and the viewer can
   spawn batches (`--worker-id`, iterations, latest state) directly.
+  The lab database lives in `database/` (gitignored), a symlink to the
+  bulk-storage directory so states, trials and worker logs stay off the
+  system drive; the viewer defaults to `database/lab.db`.
 - Verified locally: state capture from boot, action definition, trial
   batches, weight accumulation and two parallel workers with isolated
   control channels all work end to end. Gameplay probes still need real

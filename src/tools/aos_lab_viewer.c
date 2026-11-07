@@ -409,7 +409,8 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
 int main(int argc, char **argv) {
     Viewer v;
     memset(&v, 0, sizeof v);
-    snprintf(v.db_path, sizeof v.db_path, "aos_lab.db");
+    /* database/ is a symlink to the bulk-storage lab directory (gitignored). */
+    snprintf(v.db_path, sizeof v.db_path, "database/lab.db");
 
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--db") && i + 1 < argc) {
@@ -444,10 +445,14 @@ int main(int argc, char **argv) {
         }
     }
 
+    /* GApplication re-parses argv and rejects unknown options, so hand it
+     * a clean argv containing only the program name. */
+    char *app_argv[] = {argv[0], NULL};
+    int app_argc = 1;
     GtkApplication *app = gtk_application_new("dev.metroidvania.aos_lab",
                                               G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(app, "activate", G_CALLBACK(on_activate), &v);
-    int status = g_application_run(G_APPLICATION(app), argc, argv);
+    int status = g_application_run(G_APPLICATION(app), app_argc, app_argv);
     g_object_unref(app);
     aos_labdb_close(v.db);
     return status;

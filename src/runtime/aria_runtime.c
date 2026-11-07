@@ -5448,6 +5448,8 @@ int aria_runtime_main(int argc, char **argv) {
     static AosIntroTextTiles opening_soul_tiles;
     bool opening_text_ready = false;
     bool opening_window_ready = false;
+    bool opening_epilogue = false;
+    bool opening_talk_armed = true;
     bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
     uint8_t opening_portrait_id = 0xFF;
@@ -6267,6 +6269,59 @@ int aria_runtime_main(int argc, char **argv) {
                 ++step;
                 continue;
             }
+            /* Object20 +0xa==10: once the story commits and the return pan
+             * ends, Mina and Arikado stay in the room and repeat short
+             * proximity conversations - Arikado (entity +0x18) plays text
+             * 0xE, Mina (+0x14) text 0xD, inside a 0x40px box test
+             * (sub_08068AD4) offset by -0x20 from each actor's screen
+             * position, gated on the player being controllable. */
+            opening_epilogue = opening_needed && opening.complete &&
+                               !opening_actors.camera_active &&
+                               room.area == 0 && room.number == 0;
+            if (opening_epilogue && !opening.active &&
+                soma.hp > 0 && soma.anim.id != AOS_SOMA_ANIM_DEATH) {
+                int psx = (int)(soma.x >> 16) - cam_x;
+                int psy = (int)(soma.y >> 16) - cam_y;
+                bool near_any = false;
+                int talk = -1;
+                /* Arikado (+0x18) is tested before Mina (+0x14), matching
+                 * sub_0805D076's order. */
+                static const struct { unsigned actor; uint16_t text; } talks[] = {
+                    {1, 0xE}, {0, 0xD},
+                };
+                for (unsigned t = 0; t < 2; ++t) {
+                    int ax = (int)(opening_actors.x[talks[t].actor] >> 16) - cam_x - 0x20;
+                    int ay = (int)(opening_actors.y[talks[t].actor] >> 16) - cam_y - 0x20;
+                    if ((uint16_t)(psx - ax) <= 0x40 &&
+                        (uint16_t)(psy - ay) <= 0x40) {
+                        near_any = true;
+                        if (talk < 0) talk = (int)talks[t].text;
+                    }
+                }
+                /* Re-arm only after Soma leaves both boxes so a finished
+                 * conversation cannot retrigger on the next frame. */
+                if (!near_any) opening_talk_armed = true;
+                if (talk >= 0 && opening_talk_armed) {
+                    opening_talk_armed = false;
+                    const uint8_t *script = NULL;
+                    size_t script_size = 0;
+                    if (opening_rom.data &&
+                        aos_intro_resources_entry(&opening_resources, 1,
+                                                   (uint16_t)talk, &script,
+                                                   &script_size) &&
+                        aos_opening_event_init(&opening, script,
+                                               script_size)) {
+                        aos_opening_event_set_resolver(
+                            &opening, resolve_opening_text, &opening_resources);
+                        opening_actors.soma_animation = AOS_SOMA_ANIM_IDLE;
+                    }
+                }
+                if (opening.active) {
+                    ++step;
+                    if (has_active_save) active_save.play_frames++;
+                    continue;
+                }
+            }
             uint16_t player_held = forced_frame
                                        ? aria_input.player_held_input
                                        : aos_button_config_remap(&progress.buttons,
@@ -6563,7 +6618,8 @@ int aria_runtime_main(int argc, char **argv) {
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
-        if (opening.active && objects_ok)
+        /* Object20's actors stay in the room for the proximity chatter. */
+        if ((opening.active || opening_epilogue) && objects_ok)
             draw_opening_actors(renderer, &objects, &opening_actors, cam_x, cam_y);
         if (opening.active && opening_actors.soul_active && objects_ok) {
             AosPickup soul = {

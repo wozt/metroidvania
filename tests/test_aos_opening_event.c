@@ -375,6 +375,7 @@ static void test_trigger(void) {
     assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));
     assert(!strcmp(aos_opening_event_speaker_name(2), "Mina Hakuba"));
     assert(!strcmp(aos_opening_event_speaker_name(7), "Genya Arikado"));
+    assert(!strcmp(aos_opening_event_speaker_name(3), "Genya Arikado"));
     assert(!strcmp(aos_opening_event_speaker_name(0), ""));
     uint32_t events[8] = {0};
     assert(aos_opening_event_should_start(0, 0, 0, events, true));

@@ -2,6 +2,29 @@
 
 Last updated: **2026-11-07**.
 
+## Opening scene: camera beats and proximity conversations
+
+- Wired the decoded Object20 camera phases to script beats: the first
+  control-2 beat drives entry pan mode 1, `CUE_ENEMY_APPEARS` mode 2 and
+  `CUE_ENEMY_ATTACKS` mode 3; `camera_update` now runs every frame while
+  `camera_active`.
+- Ported the `+0xb==8` mode-4 return pan: `camera_update` ends when Soma's
+  screen X reaches the native 0x78 threshold and the runtime keeps the
+  opening branch alive while the camera is active, then hides the dialogue
+  window like the native close states.
+- Ported the post-scene proximity conversations from `sub_0805CED0` cases
+  10/11: after the story commits and the return pan ends, Mina and Arikado
+  remain in the room; an edge-armed trigger runs the native 0x40px
+  `sub_08068AD4` box test with Arikado checked first (text 0xE) then Mina
+  (text 0xD), re-initializing the same `AosOpeningEvent` window machine for
+  the short scripts. The conversation repeats only after Soma leaves both
+  boxes, approximating the native input lock and velocity freeze by skipping
+  the gameplay update while the event is active. Speaker id 3 now resolves
+  to Genya Arikado.
+- Source-derived and unit-tested, not emulator-compared. The initial room
+  reveal and the projectile combat callback with its `sub_08045B44` sparks
+  remain the known Object20 gaps.
+
 ## Patch 0798 - Reconstruct the opening obtained-soul windows
 
 - Replaced the SDL approximation used after the Winged Skeleton absorption

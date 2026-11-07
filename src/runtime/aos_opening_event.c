@@ -174,6 +174,7 @@ const char *aos_opening_event_speaker_name(uint8_t speaker) {
     switch (speaker) {
     case 1: return "Soma Cruz";
     case 2: return "Mina Hakuba";
+    case 3: return "Genya Arikado";
     case 7: return "Genya Arikado";
     default: return "";
     }

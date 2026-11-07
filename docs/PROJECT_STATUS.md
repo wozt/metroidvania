@@ -163,6 +163,22 @@ Last updated: **2026-11-06**.
   wiring the discovery bits through room entry and a save-schema field
   remains open.
 
+## Patch 0789 - Aria Soma state-table audit (cases 7, 12-17)
+
+- Re-audited the remaining `sub_0801B0D8` jump-table entries against
+  the portable dispatcher. Case 12's animation-end exit now clears
+  `~0x81` like `_0801CC1A` (flag 0x80 plus the unnamed bit 0); case 13
+  (`sub_080199A0`) already matched on friction, exit conditions and the
+  `0x400000` recovery. Case 7 (`sub_08017F94`) matches on the
+  SLOW_FALL exit, the KICK_HIT bounce (animation `0x14`, `vy` -3.5,
+  sound `0xB9`, `0x131B8 & 4` air-anim lock) and the else branch; the
+  `+0x72` bit-1 clear that gates native attack-collision code is not
+  modelled. Cases 8 (`sub_08019EF8`, `+0xB == 2`), 14
+  (`sub_08019A94`, a knockback variant forcing animation `0x11`) and 17
+  (clears bit 30 of the `0x13110` entity) are entered only through
+  unported enemy grab/curse mechanics and stay unported. Case 16's
+  `+0x1E = 4` write to the weapon-side entity is cosmetic to the port.
+
 ## Patch 0788 - Aria Soma cast recoil
 
 - Ported the pose-3 recoil of `sub_0801B0D8` case 2 (`_0801C6F2`): when

@@ -22,8 +22,10 @@ Last updated: **2026-11-07**.
   the gameplay update while the event is active. Speaker id 3 now resolves
   to Genya Arikado.
 - Source-derived and unit-tested, not emulator-compared. The initial room
-  reveal and the projectile combat callback with its `sub_08045B44` sparks
-  remain the known Object20 gaps.
+  reveal remains the known Object20 gap; the projectile pair spawner
+  `sub_0805DC80` is dead code (its address appears nowhere in the ROM),
+  while `sub_0805DAA0` is the skeleton's live brain, approximated by the
+  scene-state timers.
 
 ## Patch 0798 - Reconstruct the opening obtained-soul windows
 

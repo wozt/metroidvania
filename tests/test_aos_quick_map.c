@@ -56,6 +56,23 @@ int main(int argc, char **argv) {
     free(rgba);
     free(bytes);
 
+    /* Schema-v13 persistence: pack the explored cells and restore them. */
+    memset(map.explored, 0, sizeof map.explored);
+    map.explored[0] = 1;
+    map.explored[7] = 1;
+    map.explored[AOS_QUICK_MAP_CELLS - 1] = 1;
+    uint8_t packed[AOS_QUICK_MAP_PACKED_BYTES];
+    aos_quick_map_pack_explored(&map, packed);
+    assert(packed[0] == 0x81 && packed[AOS_QUICK_MAP_PACKED_BYTES - 1] == 0x80);
+    AosQuickMap restored = {0};
+    aos_quick_map_unpack_explored(&restored, packed);
+    assert(restored.explored[0] == 1 && restored.explored[7] == 1 &&
+           restored.explored[AOS_QUICK_MAP_CELLS - 1] == 1 &&
+           restored.explored[1] == 0 && restored.explored[100] == 0);
+    memset(packed, 0, sizeof packed);
+    aos_quick_map_unpack_explored(&restored, packed);
+    assert(!restored.explored[0] && !restored.explored[AOS_QUICK_MAP_CELLS - 1]);
+
     if (argc >= 2) {
         FusionRom local = {0};
         assert(fusion_rom_open(FUSION_ASSET_GAME_ARIA, argv[1], &local,

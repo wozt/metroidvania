@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v12"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v13"
+#define AOS_SAVE_SCHEMA_V12 "metroidvania-aos-save-v12"
 #define AOS_SAVE_SCHEMA_V11 "metroidvania-aos-save-v11"
 #define AOS_SAVE_SCHEMA_V10 "metroidvania-aos-save-v10"
 #define AOS_SAVE_SCHEMA_V9 "metroidvania-aos-save-v9"
@@ -25,6 +26,9 @@
 enum { AOS_SAVE_INVENTORY = 32 + 59 + 45, AOS_SAVE_WEAPONS = 32, AOS_SAVE_ARMOR = 32 + 59 };
 enum { AOS_SAVE_SOUL_BYTES = 56 + 26 + 36 + 3 + 2 };
 enum { AOS_SAVE_PLACED_ITEM_WORDS = 6 };
+/* Schema v13: the SELECT quick map's explored cells packed one bit per
+ * cell (64 x 35 = 2240 cells = 280 bytes). Older files explored nothing. */
+enum { AOS_SAVE_MAP_BYTES = 280 };
 
 typedef struct {
     uint8_t slot;
@@ -77,6 +81,9 @@ typedef struct {
     /* Schema v12: gEwramData + 0x37E, including the guaranteed boss-soul
      * bits used by Headhunter, Death, Legion and Balore. */
     uint16_t special_souls;
+    /* Schema v13: the quick map's explored-cell bitfield, packed by
+     * aos_quick_map_pack_explored. */
+    uint8_t map_explored[AOS_SAVE_MAP_BYTES];
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

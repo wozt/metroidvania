@@ -77,6 +77,9 @@ int main(void) {
     source.placed_items[4] = 1u << (157 - 128);
     /* Schema v12: guaranteed Death and Balore souls. */
     source.special_souls = (1u << 1) | (1u << 6);
+    /* Schema v13: explored quick-map cells 0, 7, 2239 and a mid byte. */
+    source.map_explored[0] = 0x81;
+    source.map_explored[279] = 0x80;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};

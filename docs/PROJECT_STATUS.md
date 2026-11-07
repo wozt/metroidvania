@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-05**.
 
+## Patch 0784 - Persist the SELECT quick map's explored cells
+
+- Save schema v13 adds `map=`: the 64 x 35 explored-cell grid packed one
+  bit per cell (280 bytes, 560 hex digits) after `special_souls`. The
+  pack/unpack helpers live in `aos_quick_map`; the room runtime restores
+  the grid after `aos_quick_map_init` on every load (v1-v12 files read as
+  unexplored) and writes it back on both the save-point and one-use
+  quicksave stores.
+- The canonical re-serialization now distinguishes v12 from v13 so older
+  files keep their checksum, and the text buffer grew to 2560 bytes for
+  the larger payload.
+- SELECT's explored castle therefore survives save, reload and quicksave
+  cycles; secret-room edge flags and the exact fade stages remain open.
+
 ## Patch 0783 - Aria opening death and window fidelity pass
 
 - Timer 0xD0 of sub_0805D410 state 5 now runs the native death together

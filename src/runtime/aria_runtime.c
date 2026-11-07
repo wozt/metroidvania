@@ -5435,6 +5435,8 @@ int aria_runtime_main(int argc, char **argv) {
             fprintf(stderr, "Cannot decode the native Aria quick map: %s\n", error);
             goto cleanup;
         }
+        if (has_active_save)
+            aos_quick_map_unpack_explored(&quick_map, active_save.map_explored);
         quick_map_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                                               SDL_TEXTUREACCESS_STREAMING,
                                               VIEW_W, VIEW_H);
@@ -5987,6 +5989,9 @@ int aria_runtime_main(int argc, char **argv) {
                     aos_save_quick_path(quick_path, sizeof quick_path, save_path);
                 if (saved) {
                     runtime_to_save(&active_save, &room, &soma, &progress);
+                    if (have_quick_map)
+                        aos_quick_map_pack_explored(&quick_map,
+                                                    active_save.map_explored);
                     saved = aos_save_store(quick_path, &active_save, error, sizeof error);
                 } else {
                     snprintf(error, sizeof error, "no active file slot");
@@ -6225,6 +6230,9 @@ int aria_runtime_main(int argc, char **argv) {
                 player_stats.hp = soma.hp;
                 if (has_active_save) {
                     runtime_to_save(&active_save, &room, &soma, &progress);
+                    if (have_quick_map)
+                        aos_quick_map_pack_explored(&quick_map,
+                                                    active_save.map_explored);
                     char error[256];
                     if (aos_save_store(save_path, &active_save, error, sizeof error))
                         printf("Saved Aria file %u in room %d/%d at %d,%d (frame %ld)\n",

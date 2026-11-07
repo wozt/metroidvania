@@ -42,4 +42,11 @@ bool aos_quick_map_render(AosQuickMap *map, bool castle_map_1,
                           uint32_t animation_frame,
                           uint8_t *rgba, size_t rgba_size);
 
+/* Schema-v13 persistence: the explored cells packed one bit per cell
+ * (AOS_QUICK_MAP_CELLS / 8 = 280 bytes) so a save can carry the visited
+ * castle. Unpacking an all-zero field clears the grid. */
+enum { AOS_QUICK_MAP_PACKED_BYTES = AOS_QUICK_MAP_CELLS / 8 };
+void aos_quick_map_pack_explored(const AosQuickMap *map, uint8_t *out);
+void aos_quick_map_unpack_explored(AosQuickMap *map, const uint8_t *in);
+
 #endif /* AOS_QUICK_MAP_H */

@@ -243,3 +243,18 @@ bool aos_quick_map_render(AosQuickMap *map, bool castle_map_1,
     }
     return true;
 }
+
+void aos_quick_map_pack_explored(const AosQuickMap *map, uint8_t *out) {
+    if (!map || !out) return;
+    memset(out, 0, AOS_QUICK_MAP_PACKED_BYTES);
+    for (unsigned cell = 0; cell < AOS_QUICK_MAP_CELLS; ++cell)
+        if (map->explored[cell])
+            out[cell >> 3] |= (uint8_t)(1u << (cell & 7));
+}
+
+void aos_quick_map_unpack_explored(AosQuickMap *map, const uint8_t *in) {
+    if (!map || !in) return;
+    memset(map->explored, 0, sizeof map->explored);
+    for (unsigned cell = 0; cell < AOS_QUICK_MAP_CELLS; ++cell)
+        map->explored[cell] = (uint8_t)((in[cell >> 3] >> (cell & 7)) & 1);
+}

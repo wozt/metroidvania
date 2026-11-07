@@ -119,6 +119,14 @@ Last updated: **2026-11-07**.
   (aos_labdb_valuable_states): the newest 40 scout_play_* checkpoints,
   manual records, and states whose trials scored reward > 0.5 —
   mirroring the purge keep-rules instead of dumping every scene state.
+- Scout room awareness: each pulse chunk now also peeks the
+  0x02000090 area/room block and marks every (area,room) reached in
+  the shared lab.rooms registry (shown as rooms=N in the status), and
+  every 6th chunk taps UP mid-pulse since Aria doors open with UP.
+- Refined trial rules: ~15% of trials run 3x the frame budget so
+  doors and room transitions are reachable, and a probe-fail that
+  still earned exploration reward is recorded as "partial" instead of
+  "fail" so the weight table does not treat it as a dead spin.
 - peeks + font tables from the decomp) but not implemented yet; the
   vision layer currently provides scene/HUD/text-presence signatures.
 

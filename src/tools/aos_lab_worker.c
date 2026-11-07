@@ -569,6 +569,7 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
     int last_new_chunk = 0;
     int in_game = 0;      /* sticky: mode 4 was reached once */
     int prev_mode = -1;   /* gameMode at end of previous chunk */
+    int scout_area = -1, scout_room = -1, scout_rooms = 0;
     for (int chunk = 0; chunk < max_chunks && !stop; ++chunk) {
         char *ctl = aos_labdb_meta_get(db, ctrl_key);
         if (ctl && !strcmp(ctl, "stop")) stop = 1;
@@ -624,9 +625,15 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         /* game knowledge: the early game pushes RIGHT (start ->
          * chapel -> study); LEFT only 30% to backtrack */
         uint32_t pulse = (chunk % 10 < 7) ? 16 : 32; /* RIGHT / LEFT */
-        AosKeyEvent pev[8];
+        AosKeyEvent pev[12];
         int pne = 0;
         pev[pne++] = (AosKeyEvent){0, pulse};
+        /* every 6th chunk: tap UP mid-pulse — doors in Aria open with
+         * UP, so this is how the scout actually changes rooms */
+        if (chunk % 6 == 5) {
+            pev[pne++] = (AosKeyEvent){20, 64};
+            pev[pne++] = (AosKeyEvent){34, 0};
+        }
         /* every 5th chunk: jump (B) mid-pulse to clear gaps */
         if (chunk % 5 == 4) {
             pev[pne++] = (AosKeyEvent){30, 2};
@@ -639,14 +646,15 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
             pev[pne++] = (AosKeyEvent){57, 0};
         }
         pev[pne++] = (AosKeyEvent){79, 0};
-        AosPeekRequest pk[1] = {{-1, 0x02000010, 4}}; /* gameMode end */
+        AosPeekRequest pk[2] = {{-1, 0x02000010, 4},
+                                {-1, 0x02000090, 16}}; /* mode+area/room */
         AosRunSpec spec2;
         memset(&spec2, 0, sizeof spec2);
         spec2.frames = 80;
         spec2.keys = pev;
         spec2.key_count = pne;
         spec2.peeks = pk;
-        spec2.peek_count = 1;
+        spec2.peek_count = 2;
         spec2.fps_cap = spec.fps_cap;
         if (fb_ok) {
             spec2.fb_mirror = fb.pixels;
@@ -657,6 +665,22 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         aos_mgba_run(session, &spec2, &res2);
 
         int mode = res2.peeks[0].data ? res2.peeks[0].data[0] : -1;
+        /* room registry: area=+14 room=+15 of the 0x90 block — mark
+         * every (area,room) the scout reaches so the fleet knows the
+         * campaign frontier */
+        if (res2.peek_count > 1 && res2.peeks[1].data &&
+            res2.peeks[1].size >= 16) {
+            int area = res2.peeks[1].data[14];
+            int room = res2.peeks[1].data[15];
+            if ((area || room) &&
+                (area != scout_area || room != scout_room)) {
+                scout_area = area; scout_room = room;
+                if (!room_seen(db, area, room)) {
+                    room_mark(db, area, room);
+                    ++scout_rooms;
+                }
+            }
+        }
         double mdir = 0.0;
         double motion = res2.fb_first
             ? aos_vision_motion(res2.fb_first,
@@ -735,8 +759,8 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         }
         char st[160];
         snprintf(st, sizeof st,
-                 "chunk %d mode=%d motion=%.3f resp=%d states=%d",
-                 chunk, mode, motion, responsive, nseen);
+                 "chunk %d mode=%d motion=%.3f resp=%d states=%d rooms=%d",
+                 chunk, mode, motion, responsive, nseen, scout_rooms);
         aos_labdb_meta_set(db, status_key, st);
         printf("scout %s\n", st);
         fflush(stdout);
@@ -1121,6 +1145,10 @@ int main(int argc, char **argv) {
             EvalProbe probe;
             int has_probe = eval_parse(action->eval, &probe);
             int frames = frames_override > 0 ? frames_override : 120;
+            /* completion rule: ~15% of trials run 3x longer — short
+             * probes cannot reach doors, so occasionally give the
+             * agent a real traversal budget */
+            if ((rand() % 100) < 15) frames *= 3;
 
             /* key schedule */
             AosKeyEvent *schedule = NULL;
@@ -1397,6 +1425,10 @@ int main(int argc, char **argv) {
                 }
             }
 
+            /* refined success rule: a probe-fail that still scored
+             * exploration reward is a partial, not a dead spin */
+            if (!strcmp(outcome, "fail") && reward > 0.0)
+                snprintf(outcome, sizeof outcome, "partial");
             int64_t trial_id = aos_labdb_add_trial(
                 db, run_id, used_state_id, action->id, drawn, keys_label,
                 frames, outcome, reward, metrics, duration_ms);

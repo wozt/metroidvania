@@ -127,8 +127,11 @@ of running four identical bandits.
   segment (screen motion < 0.3%) climbs a reaction ladder — jump,
   then attack, then UP for doors — and every 4th cruise segment also
   holds UP since Aria doors open on UP and smooth walks never stall.
-  Reward peeks merge across segments so `compute_bonus` sees the
-  whole run.
+  Every 3rd cruise segment also attacks proactively to clear the
+  path, and each segment's HP peek feeds a damage reaction: a drop
+  forces a counter-attack segment — real reactive combat from WRAM,
+  no image analysis needed. Reward peeks merge across segments so
+  `compute_bonus` sees the whole run.
 - **Entity activity**: a 9th reward peek diffs the 8 KiB entity
   table (0x02000400) — `entity_active` (+0.1) when enemies/AI are
   churning, `entity_still` (−0.05) when gameplay mode shows a dead

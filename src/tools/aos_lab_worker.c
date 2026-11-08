@@ -594,7 +594,7 @@ static void run_traverse(AosMgbaSession *session, int frames,
     if (dir_mask == 0) dir_mask = 16;
     const int SEG = 60;
     AosRunResult *first = NULL, *last = NULL;
-    int nseg = 0, stuck = 0;
+    int nseg = 0, stuck = 0, hp_prev = -1;
     for (int off = 0; off < frames; off += SEG) {
         int f = frames - off < SEG ? frames - off : SEG;
         /* reaction ladder: 0 cruise, 1 jump, 2 attack, 3 door-up */
@@ -615,10 +615,13 @@ static void run_traverse(AosMgbaSession *session, int frames,
             keys[kn++] = (AosKeyEvent){45, dir_mask};
             keys[kn++] = (AosKeyEvent){f, 0};
         } else {
-            /* every 4th cruise segment also holds UP — doorways in
-             * Aria open on UP and walking through never stalls, so
-             * the reaction ladder would never reach the door rule */
-            uint32_t cm = (nseg % 4 == 3) ? dir_mask | 64 : dir_mask;
+            /* proactive path clearing: every 3rd cruise segment also
+             * attacks (kills enemies on the way), every 4th holds UP
+             * (Aria doors open on UP and smooth walks never stall,
+             * so the reaction ladder alone would miss doorways) */
+            uint32_t cm = dir_mask;
+            if (nseg % 3 == 2) cm |= 1;
+            else if (nseg % 4 == 3) cm |= 64;
             keys[kn++] = (AosKeyEvent){0, cm};
             keys[kn++] = (AosKeyEvent){f, 0};
         }
@@ -654,6 +657,16 @@ static void run_traverse(AosMgbaSession *session, int frames,
             if (stuck < 3) ++stuck;
         } else {
             stuck = 0;
+        }
+        /* damage reaction: HP after this segment is peeked from WRAM —
+         * a drop means we got hit, so the next segment counter-attacks
+         * instead of whatever the stall ladder chose */
+        if (r->peeks && r->peek_count > RK_COUNT + RK_VIT &&
+            r->peeks[RK_COUNT + RK_VIT].data) {
+            int hp_now = rd16(&r->peeks[RK_COUNT + RK_VIT], 0);
+            if (hp_prev >= 0 && hp_now >= 0 && hp_now < hp_prev)
+                stuck = 2;
+            if (hp_now >= 0) hp_prev = hp_now;
         }
         if (!first) first = r; else { aos_mgba_free_result(last); last = r; }
     }

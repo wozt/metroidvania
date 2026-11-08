@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:42:09+00:00",
+ "generated_at": "2026-11-08T00:47:30+00:00",
  "git": {
-  "commit": "4de364b6",
+  "commit": "7f8d309d",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "7f8d309d",
+   "date": "2026-11-08",
+   "subject": "lab: real room-crossing budget for traverse + periodic UP pulses",
+   "scope": "project"
+  },
+  {
    "commit": "4de364b6",
    "date": "2026-11-08",
    "subject": "lab: depth-biased waypoint picks toward deepest scout_play states",
@@ -20789,12 +20795,6 @@
    "commit": "6135a3d2",
    "date": "2026-11-07",
    "subject": "Stop all music at the Object20 scene start",
-   "scope": "project"
-  },
-  {
-   "commit": "28929cc8",
-   "date": "2026-11-07",
-   "subject": "Play the native pre-dialogue room reveal pan",
    "scope": "project"
   }
  ],

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0835 - Pause cursor entity mechanics decoded
+
+- The pause-menu hand is a dedicated entity at gEwramData + 0xEB0,
+  not a pool entity: sub_08048B0C fills it with the language's frame
+  descriptor (0x08256EF8 or 0x0827B1F0), palette nibble 0xE through
+  sub_0803B924 and an animation handle from sub_0803E654(2).
+- sub_08048AD8 writes its position instantly every frame
+  (column * 8 + 6, row * 8 + 3 in pixels) — there is no slide or
+  tween when the selection changes, matching the runtime's direct
+  placement.
+- sub_08048B64 advances the animation handle (sub_0803E6BC), sets
+  +0x59 bit 8 and clears the +0x24 counter each update. The runtime's
+  7-frame wiggle ((cursor_tick >> 1) & 7 with the (>> 4) & 1 flip)
+  approximates the native hand cycle; the exact per-frame timing of
+  the cursor's animation sequence is not yet decoded.
+
 ## Patch 0834 - Death-state velocity bounce ported (sub_0801B03C)
 
 - sub_0801B03C runs on Soma's own record during state 16 (the caller

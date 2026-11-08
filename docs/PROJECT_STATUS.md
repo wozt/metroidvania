@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0806 - Pause hub 1:1 pass: entry info line
+
+- `aos_pause_graphics_render_hub` now prints the selected entry's
+  description (text 0x362+entry via sub_0804728C, called by
+  sub_08047C4C) on the bottom message band, matching the native hub.
+- Remaining 1:1 gaps are the shared OBJ/cell-engine layer: item and
+  soul icons, enemy portrait, drop icons, window frames and title
+  banners on the seven pause pages (BG0 layouts, names, stats, digits
+  and the hand cursor are already native).
+
 ## Patch 0805 - Lab learning loop v2: bandit, auto-states, real WRAM probes
 
 - Framebuffer pixel format corrected to mGBA native 0xAABBGGRR

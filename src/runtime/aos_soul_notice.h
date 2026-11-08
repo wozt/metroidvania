@@ -19,11 +19,14 @@ typedef struct {
 
 bool aos_soul_notice_init(AosSoulNotice *notice, const FusionRom *rom,
                           char *error, size_t error_size);
-/* Build sub_0800E708(0, 0, 1) and sub_0800E540(0, 1). `name_tiles` is
- * ceil(the soul-name pixel width / 8); player_low selects the upper layout. */
+/* Build sub_0800E708(0, 0, arg2) and, when `description` is set (the
+ * native arg2 != 0 path), sub_0800E540(0, 1). `name_tiles` is
+ * ceil(the soul-name pixel width / 8); player_low selects the upper
+ * layout. */
 void aos_soul_notice_build(AosSoulNotice *notice,
                            const AosIntroTextTiles *rendered,
-                           unsigned name_tiles, bool player_low);
+                           unsigned name_tiles, bool player_low,
+                           bool description);
 bool aos_soul_notice_pixel(const AosSoulNotice *notice, uint32_t frame,
                            unsigned x, unsigned y, uint16_t *color);
 #endif

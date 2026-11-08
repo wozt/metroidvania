@@ -43,7 +43,8 @@ bool aos_soul_notice_init(AosSoulNotice *notice, const FusionRom *rom,
 
 void aos_soul_notice_build(AosSoulNotice *notice,
                            const AosIntroTextTiles *rendered,
-                           unsigned name_tiles, bool player_low) {
+                           unsigned name_tiles, bool player_low,
+                           bool description) {
     if (!notice || !rendered) return;
     memset(notice->map, 0, sizeof notice->map);
     notice->dynamic_tiles = *rendered;
@@ -51,24 +52,26 @@ void aos_soul_notice_build(AosSoulNotice *notice,
     for (unsigned y = 0; y < 8; ++y)
         for (unsigned x = 0; x < name_tiles * 8; ++x)
             fill_dynamic_pixel(&notice->dynamic_tiles, x, y, 1);
-    /* sub_0800E380: five 30-tile rows at VRAM 0x5C00 use colour 2. */
-    for (unsigned y = 24; y < 64; ++y)
-        for (unsigned x = 0; x < 240; ++x)
-            fill_dynamic_pixel(&notice->dynamic_tiles, x, y, 2);
-    /* The solid top and bottom description tiles at 0x5600/0x5620. */
-    for (unsigned y = 0; y < 8; ++y)
-        for (unsigned x = 0; x < 8; ++x) {
-            unsigned top_y = y, bottom_y = y;
-            size_t top = 0x30u * 32u + top_y * 4u + x / 2u;
-            size_t bottom = 0x31u * 32u + bottom_y * 4u + x / 2u;
-            unsigned shift = (x & 1u) * 4u;
-            notice->dynamic_tiles.data[top] =
-                (uint8_t)((notice->dynamic_tiles.data[top] & ~(0xFu << shift)) |
-                          ((y == 0 ? 15u : 2u) << shift));
-            notice->dynamic_tiles.data[bottom] =
-                (uint8_t)((notice->dynamic_tiles.data[bottom] & ~(0xFu << shift)) |
-                          ((y == 7 ? 15u : 2u) << shift));
-        }
+    if (description) {
+        /* sub_0800E380: five 30-tile rows at VRAM 0x5C00 use colour 2. */
+        for (unsigned y = 24; y < 64; ++y)
+            for (unsigned x = 0; x < 240; ++x)
+                fill_dynamic_pixel(&notice->dynamic_tiles, x, y, 2);
+        /* The solid top and bottom description tiles at 0x5600/0x5620. */
+        for (unsigned y = 0; y < 8; ++y)
+            for (unsigned x = 0; x < 8; ++x) {
+                unsigned top_y = y, bottom_y = y;
+                size_t top = 0x30u * 32u + top_y * 4u + x / 2u;
+                size_t bottom = 0x31u * 32u + bottom_y * 4u + x / 2u;
+                unsigned shift = (x & 1u) * 4u;
+                notice->dynamic_tiles.data[top] =
+                    (uint8_t)((notice->dynamic_tiles.data[top] & ~(0xFu << shift)) |
+                              ((y == 0 ? 15u : 2u) << shift));
+                notice->dynamic_tiles.data[bottom] =
+                    (uint8_t)((notice->dynamic_tiles.data[bottom] & ~(0xFu << shift)) |
+                              ((y == 7 ? 15u : 2u) << shift));
+            }
+    }
 
     int banner_y = player_low ? 3 : 12;
     int x = 15 - (int)((name_tiles + 4) / 2);
@@ -95,13 +98,15 @@ void aos_soul_notice_build(AosSoulNotice *notice,
     store(notice, x++, banner_y + 2, 0xE641);
     store(notice, x, banner_y + 2, 0xE640);
 
-    int description_y = player_low ? 7 : 16;
-    for (int column = 0; column < 30; ++column) {
-        store(notice, column, description_y - 1, 0xE2B0);
-        for (int row = 0; row < 3; ++row)
-            store(notice, column, description_y + row,
-                  (uint16_t)(0xE2E0 + row * 0x20 + column));
-        store(notice, column, description_y + 3, 0xE2B1);
+    if (description) {
+        int description_y = player_low ? 7 : 16;
+        for (int column = 0; column < 30; ++column) {
+            store(notice, column, description_y - 1, 0xE2B0);
+            for (int row = 0; row < 3; ++row)
+                store(notice, column, description_y + row,
+                      (uint16_t)(0xE2E0 + row * 0x20 + column));
+            store(notice, column, description_y + 3, 0xE2B1);
+        }
     }
 }
 

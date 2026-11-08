@@ -10,7 +10,7 @@ static AosSoulNotice notice;
 int main(int argc, char **argv) {
     AosIntroTextTiles rendered = {0};
     rendered.data[0] = 0x0F;
-    aos_soul_notice_build(&notice, &rendered, 5, true);
+    aos_soul_notice_build(&notice, &rendered, 5, true, true);
     int x = 15 - (5 + 4) / 2;
     assert(notice.map[3 * 32 + x] == 0xE220);
     assert(notice.map[4 * 32 + x + 2] == 0xE280);
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
         assert(fusion_rom_open(FUSION_ASSET_GAME_ARIA, argv[1], &rom,
                                error, sizeof error));
         assert(aos_soul_notice_init(&notice, &rom, error, sizeof error));
-        aos_soul_notice_build(&notice, &rendered, 5, true);
+        aos_soul_notice_build(&notice, &rendered, 5, true, true);
         bool frame_visible = false;
         for (unsigned y = 0; y < 160; ++y)
             for (unsigned px = 0; px < 240; ++px)

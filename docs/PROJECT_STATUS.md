@@ -2,6 +2,37 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0826 - Soul notice description only for new souls + pickup-message decode
+
+- sub_080441F8's soul cases fully decoded around the collection tail:
+  SoulInventory_GetSoulTotal == 0 (a soul held zero times) takes the
+  "new" branch — sub_08045C34 builds a 64-frame soul-icon entity
+  (type 0x16/0x19, sprite 0x081C15F4, palette from sub_08032B14,
+  translucent +0x58 bit 0x20, update sub_08045654 which palette-flashes
+  through sub_08045350 and ends in a sub_08045BC8 sparkle above the
+  player), requests song 0xBE, sets r8 = 1, and enables an ability
+  soul's ability through sub_08032ADC when the pickup byte is 8.
+  A repeated soul instead calls sub_08045BC8 directly: a type-0x49
+  entity (update sub_08045164) pinned at the player's position plus
+  offset (0, -0x100000) — a small icon floating above Soma — which
+  plays song 0xBF on its first update.
+- Consequence for the banner: sub_0800E708's arg2 (r8) is 1 only on
+  the new-soul branch, so sub_0800E540's description window appears
+  ONLY for a soul being held for the first time; a repeated pickup
+  shows the name banner alone (unk_422 = 0xF0 vs the description
+  path's 2).
+- Ported: AosSoulNotice.build and the gameplay notice callback take
+  a `description`/`fresh` flag; repeated pickups now render the
+  name-only banner (the description decode and window are skipped),
+  matching the native arg2 split. The opening cutscene keeps
+  description = true.
+- Decoded, not yet ported: the sub_08045C34/sub_08045654 new-soul
+  icon entity (needs its draw placement — the create leaves +0x40/+0x44
+  unset) and the sub_08045BC8/sub_08045164 held-soul sparkle (anim
+  index 0xC of 0x0820ED60, pinned above the player, song 0xBF), plus
+  the song-0xBE request whose same-frame ordering against 0xBC is
+  unverified (our play_song replaces immediately).
+
 ## Patch 0825 - Soul pickup trail spark (sub_08045B44 type 8)
 
 - sub_080446D4's trail fully decoded at _08044756: after the collision

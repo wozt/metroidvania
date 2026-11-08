@@ -711,9 +711,9 @@ typedef struct {
     bool derive_atk, derive_def;                 /* false under --atk / --def */
     /* sub_0800E708 on every soul collection (sub_080441F8 tail): the
      * obtained-soul banner plus sub_0800E540's description when the
-     * pickup is accepted. */
+     * soul is new (sub_080441F8's GetSoulTotal == 0 branch). */
     void (*soul_notice)(void *ctx, unsigned category, unsigned soul_index,
-                        bool player_low);
+                        bool player_low, bool fresh);
     void *soul_notice_ctx;
 } AriaCombat;
 
@@ -2932,13 +2932,16 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                    aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
                                    pickup->variant),
                    combat->progress->souls_collected);
-            /* sub_0800E708(r6=soul index, r5=kind, r8=1): the obtained-soul
-             * banner with sub_0800E540's description; the banner row picks
-             * the upper layout when Soma's pixel y passes 0x70. */
+            /* sub_0800E708(r6=soul index, r5=kind, r8): the obtained-soul
+             * banner; sub_0800E540's description only joins it when the
+             * soul is new (r8 = 1 from the GetSoulTotal == 0 branch,
+             * sub_08045C34's path). The banner row picks the upper
+             * layout when Soma's pixel y passes 0x70. */
             if (combat->soul_notice)
                 combat->soul_notice(combat->soul_notice_ctx,
                                     (unsigned)(pickup->type - AOS_PICKUP_SOUL),
-                                    pickup->variant, (soma->y >> 16) > 0x70);
+                                    pickup->variant, (soma->y >> 16) > 0x70,
+                                    fresh);
             aos_audio_play_song(aos_pickup_collection_sound(pickup));
         }
         if (soul) {
@@ -5152,7 +5155,8 @@ typedef struct {
 } AriaSoulNoticeCtx;
 
 static void aria_gameplay_soul_notice(void *opaque, unsigned category,
-                                      unsigned soul_index, bool player_low) {
+                                      unsigned soul_index, bool player_low,
+                                      bool fresh) {
     AriaSoulNoticeCtx *ctx = opaque;
     /* sub_0800E708's per-kind bases: names 0xE3/0x11B/0x133/0x156 and
      * sub_0800E540's descriptions 0x1E4/0x21C/0x234/0x257, both indexed
@@ -5180,9 +5184,10 @@ static void aria_gameplay_soul_notice(void *opaque, unsigned category,
                                    (uint16_t)(name_bases[category] + soul_index),
                                    &name) ||
         !decode_opening_soul_entry(ctx->resources, 0x35E, &acquired) ||
-        !decode_opening_soul_entry(ctx->resources,
-                                   (uint16_t)(desc_bases[category] + soul_index),
-                                   &description))
+        (fresh &&
+         !decode_opening_soul_entry(ctx->resources,
+                                    (uint16_t)(desc_bases[category] + soul_index),
+                                    &description)))
         return;
     aos_intro_text_tiles_clear(ctx->tiles);
     size_t name_count = flatten_opening_text(&name, name_glyphs,
@@ -5197,16 +5202,17 @@ static void aria_gameplay_soul_notice(void *opaque, unsigned category,
         aos_intro_font_render_small_span(
             ctx->font, ctx->tiles, name_width, 0, 240 - name_width, 15,
             acquired_glyphs, acquired_count);
-    for (unsigned line = 0; ready && line < AOS_OPENING_LINES; ++line)
+    for (unsigned line = 0; ready && fresh; ++line)
         ready = aos_intro_font_render_span(
             ctx->font, ctx->tiles, 42, 24 + line * 12, 180, 15,
             description.glyphs[line], description.glyph_counts[line]);
     if (!ready) return;
     aos_soul_notice_build(ctx->notice, ctx->tiles, (name_width + 7) / 8,
-                          player_low);
-    /* sub_0800EFD4 counts unk_422 down each HUD tick; the native value is
-     * 0xF0 for the name banner (the description path stores 2, whose units
-     * are unresolved, so the shared banner lifetime is used). */
+                          player_low, fresh);
+    /* sub_0800EFD4 counts unk_422 down each HUD tick: 0xF0 on the
+     * name-only path (a repeated soul), 2 on the description path (a
+     * new soul, units unresolved — the shared banner lifetime stands
+     * in for both). */
     *ctx->timer = 0xF0;
 }
 
@@ -5955,7 +5961,7 @@ int aria_runtime_main(int argc, char **argv) {
             if (opening_soul_text_ready)
                 aos_soul_notice_build(&opening_soul_notice,
                                       &opening_soul_tiles,
-                                      (name_width + 7) / 8, true);
+                                      (name_width + 7) / 8, true, true);
         }
         if (!opening_soul_text_ready)
             fprintf(stderr, "Aria opening soul notice text unavailable\n");

@@ -97,7 +97,10 @@ clamped to [-1.5, 4.0]. Bonus tags:
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
 override) so the fleet covers both exploit and explore regimes instead
-of running four identical bandits.
+of running four identical bandits. `explore-input` (−4, random key
+mashing) is excluded from exploitation — it wins reward averages by
+luck and starves real actions; it only competes inside the random
+explore pool and the per-action warmup floor.
 
 ## Branch management
 

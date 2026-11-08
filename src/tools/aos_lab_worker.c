@@ -1638,7 +1638,13 @@ int main(int argc, char **argv) {
                         }
                     rates[ci] = att > 0 ? (int)(rsum / att * 1000000) : -1;
                     attempts[ci] = att;
-                    if (att > 0 && (double)rsum / att > best_rate)
+                    /* explore-input (-4) is a discovery primitive, not a
+                     * strategy: random key mashing wins reward averages
+                     * by luck and then starves every real action. It
+                     * stays in the random-explore pool and warmup, but
+                     * can never win exploitation */
+                    if (chosen[ci].id != -4 && att > 0 &&
+                        (double)rsum / att > best_rate)
                         best_rate = (double)rsum / att;
                 }
                 /* warmup floor: an action with almost no attempts has
@@ -1659,7 +1665,7 @@ int main(int argc, char **argv) {
                     action = &chosen[ties[rand() % nt]];
                 } else {
                     for (int ci = 0; ci < chosen_count && ci < 64; ++ci)
-                        if (best_rate >= 0 &&
+                        if (chosen[ci].id != -4 && best_rate >= 0 &&
                             rates[ci] == (int)(best_rate * 1000000))
                             ties[nt++] = ci;
                     if (nt > 0)

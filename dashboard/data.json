@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:47:30+00:00",
+ "generated_at": "2026-11-08T00:50:57+00:00",
  "git": {
-  "commit": "7f8d309d",
+  "commit": "56228872",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,18 @@
  },
  "timeline": [
   {
+   "commit": "56228872",
+   "date": "2026-11-08",
+   "subject": "lab: purge actually deletes failures — reward<=0 trials and 4000-row cap",
+   "scope": "project"
+  },
+  {
+   "commit": "816079e3",
+   "date": "2026-11-08",
+   "subject": "lab: reactive combat in traverse — counter-attack on damage, proactive path clearing",
+   "scope": "project"
+  },
+  {
    "commit": "7f8d309d",
    "date": "2026-11-08",
    "subject": "lab: real room-crossing budget for traverse + periodic UP pulses",
@@ -20783,18 +20795,6 @@
    "commit": "6890acc0",
    "date": "2026-11-07",
    "subject": "Draw the native selection hand on the pause hub",
-   "scope": "project"
-  },
-  {
-   "commit": "4b37b78d",
-   "date": "2026-11-07",
-   "subject": "Decode pause cursor frame path through the sprite table walk",
-   "scope": "project"
-  },
-  {
-   "commit": "6135a3d2",
-   "date": "2026-11-07",
-   "subject": "Stop all music at the Object20 scene start",
    "scope": "project"
   }
  ],

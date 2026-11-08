@@ -85,6 +85,10 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | exit_gameplay | leaves mode 4 (game over / menu) | −0.6 |
 | enter_gameplay | enters mode 4 | +0.3 |
 | gameover_screen | lands on a hash in lab.deathscenes | −0.8 |
+| room_revisit | enters an already-known room | −0.05 |
+| mp_empty | MP fully drained | −0.1 |
+| no_progress | no motion, no reward, no penalty | −0.1 |
+| exp_big | XP jump > 64 (kills / boss) | +0.4 extra |
 
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
@@ -103,7 +107,13 @@ of running four identical bandits.
 - **Lethal branches**: a trial ending in `death`, or leaving
   gameplay mode with damage (game overs reload the save so HP alone
   misses them), marks `lab.dead.<state_id>`; waypoint picks and smart
-  hops skip those states.
+  hops skip those states. The exact `(action, params)` combo is also
+  counted in `lab.lethal.*` — `best_params` subtracts a full point per
+  proven kill so killer combos sink below neutral rivals.
+- **Failure memory**: `weights.reward_sum` keeps every tried combo's
+  score; the bandit ranks params by *mean reward* (not just success
+  rate) and the purge only deletes combos tried ≤2 times with zero
+  reward — negative rows are the "do not retry" map.
 - **Death-scene registry**: `lab.deathscenes` keeps hashes of screens
   seen at lethal outcomes; landing on a known game-over screen costs
   −0.8 (`gameover_screen`). This is the visual half of death

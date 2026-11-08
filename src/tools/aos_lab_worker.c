@@ -264,21 +264,86 @@ typedef struct {
  * back to the action's own params when no weights exist yet. Result is
  * copied into `out` (NUL-terminated). Returns true when a weight row
  * won. */
+/* Fingerprint a params string for the lethal-combo memory. */
+static unsigned params_fprint(const char *s) {
+    unsigned h = 2166136261u;
+    if (s) for (; *s; ++s) { h ^= (unsigned char)*s; h *= 16777619u; }
+    return h;
+}
+
+/* Lethal-param memory: combos that ended in death or a damaged exit
+ * get counted in meta lab.lethal.<action>.<fp>; proven killers are
+ * avoided by the exploit path (exploration may still retry them). */
+static int lethal_count(AosLabDb *db, int64_t action_id,
+                        const char *params) {
+    char k[96];
+    snprintf(k, sizeof k, "lab.lethal.%lld.%08x",
+             (long long)action_id, params_fprint(params));
+    char *v = aos_labdb_meta_get(db, k);
+    int n = v ? atoi(v) : 0;
+    free(v);
+    return n;
+}
+
+static void lethal_mark(AosLabDb *db, int64_t action_id,
+                        const char *params) {
+    char k[96], b[16];
+    snprintf(k, sizeof k, "lab.lethal.%lld.%08x",
+             (long long)action_id, params_fprint(params));
+    char *v = aos_labdb_meta_get(db, k);
+    snprintf(b, sizeof b, "%d", (v ? atoi(v) : 0) + 1);
+    aos_labdb_meta_set(db, k, b);
+    free(v);
+}
+
 static bool best_params(AosLabDb *db, int64_t action_id,
                         const char *fallback, char *out, size_t out_size) {
     int count = 0;
     AosWeightRow *rows = aos_labdb_weights(db, 100000, &count);
     const char *best = NULL;
-    double best_rate = -1.0;
-    int best_attempts = -1;
+    /* rank by mean reward — success_rate alone keeps combos that
+     * "succeed" while scoring negative exploration bonuses. Keep the
+     * top candidates first; the lethal-memory lookup is a SQL query so
+     * it only runs on the finalists, not on every weight row. */
+    enum { TOPK = 6 };
+    const char *cand[TOPK] = {0};
+    double cand_score[TOPK];
+    int cand_att[TOPK];
+    for (int i = 0; i < TOPK; ++i) { cand_score[i] = -1e9; cand_att[i] = -1; }
     for (int i = 0; i < count; ++i) {
-        if (rows[i].action_id != action_id) continue;
-        if (rows[i].success_rate > best_rate ||
-            (rows[i].success_rate == best_rate &&
-             rows[i].attempts > best_attempts)) {
-            best_rate = rows[i].success_rate;
-            best_attempts = rows[i].attempts;
-            best = rows[i].params;
+        if (rows[i].action_id != action_id || rows[i].attempts <= 0)
+            continue;
+        double score = rows[i].reward_sum / rows[i].attempts;
+        int slot = TOPK - 1;
+        if (score > cand_score[slot] ||
+            (score == cand_score[slot] && rows[i].attempts > cand_att[slot])) {
+            while (slot > 0 &&
+                   (score > cand_score[slot - 1] ||
+                    (score == cand_score[slot - 1] &&
+                     rows[i].attempts > cand_att[slot - 1]))) --slot;
+            for (int j = TOPK - 1; j > slot; --j) {
+                cand[j] = cand[j - 1];
+                cand_score[j] = cand_score[j - 1];
+                cand_att[j] = cand_att[j - 1];
+            }
+            cand[slot] = rows[i].params;
+            cand_score[slot] = score;
+            cand_att[slot] = rows[i].attempts;
+        }
+    }
+    /* lethal memory: each proven kill on a combo subtracts a full
+     * point so it sinks below any neutral rival */
+    double best_score = -1e9;
+    int best_attempts = -1;
+    for (int i = 0; i < TOPK; ++i) {
+        if (!cand[i]) continue;
+        double score = cand_score[i] -
+                       1.0 * lethal_count(db, action_id, cand[i]);
+        if (score > best_score ||
+            (score == best_score && cand_att[i] > best_attempts)) {
+            best_score = score;
+            best_attempts = cand_att[i];
+            best = cand[i];
         }
     }
     /* copy before freeing: best points into rows */
@@ -491,6 +556,11 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
                 room_mark(db, area, room);
                 /* reaching a room the fleet never saw is the campaign
                  * progressing: extra credit scaled by exploration depth */
+            } else {
+                /* backtracking into a known room is usually wasted
+                 * motion — small penalty so the bandit prefers pushes
+                 * forward over loops */
+                bonus -= 0.05; TAG("room_revisit");
             }
         }
         uint16_t s0, s1;
@@ -509,16 +579,24 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         bonus -= 0.3 + 0.7 * frac; TAG("damage");
     } else if (hp_a > hp_b) { bonus += 0.4; TAG("healed"); }
     if (mp_a < mp_b) { bonus += 0.1; TAG("ability_used"); }
+    /* MP fully drained: cannot attack or use abilities until a refill —
+     * a soft negative so combos that burn MP for nothing lose ground */
+    if (mp_b > 0 && mp_a <= 0) { bonus -= 0.1; TAG("mp_empty"); }
     /* clean traverse: room changed and hp untouched */
     if (tags[0] && strstr(tags, "new_room") && hp_a == hp_b) {
         bonus += 0.5; TAG("clean_traverse");
     }
-    /* xp / gold */
-    if (rd32(&b[RK_XP], 0) != rd32(&a[RK_XP], 0)) {
-        bonus += 0.5; TAG("exp_gain");
-    }
-    if (rd32(&b[RK_XP], 4) != rd32(&a[RK_XP], 4)) {
-        bonus += 0.3; TAG("gold_gain");
+    /* xp / gold — magnitude matters: a big XP jump means kills or a
+     * boss, a tiny one is noise */
+    {
+        uint32_t xb = rd32(&b[RK_XP], 0), xa = rd32(&a[RK_XP], 0);
+        if (xa > xb) {
+            bonus += 0.5; TAG("exp_gain");
+            if (xa - xb > 64) { bonus += 0.4; TAG("exp_big"); }
+        }
+        if (rd32(&b[RK_XP], 4) != rd32(&a[RK_XP], 4)) {
+            bonus += 0.3; TAG("gold_gain");
+        }
     }
     if (b[RK_LVL].data && a[RK_LVL].data &&
         b[RK_LVL].data[0] != a[RK_LVL].data[0]) {
@@ -539,6 +617,11 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
      * (WRAM entity position proved layout-dependent) */
     if (motion > 0.008 && hp_a == hp_b) {
         bonus += 0.2; TAG("clean_move");
+    }
+    /* nothing happened at all: no motion, no reward, no penalty —
+     * a frozen spin against a wall or an idle loop */
+    if (motion < 0.002 && bonus <= 0.0) {
+        bonus -= 0.1; TAG("no_progress");
     }
     if (bonus > 2.5) bonus = 2.5;
     if (bonus < -1.5) bonus = -1.5;
@@ -681,23 +764,34 @@ static void maybe_make_macro(AosLabDb *db, AosActionRow *all, int acount) {
     int wcount = 0;
     AosWeightRow *w = aos_labdb_weights(db, 512, &wcount);
     if (!w || wcount < 2) { aos_labdb_free_weight_rows(w, wcount); return; }
-    /* top-2 distinct actions by reward_sum */
+    /* top-2 distinct actions by MEAN reward — only sequences that
+     * actually scored get composed; a macro of failures is just a
+     * longer failure. Requires >=8 attempts so one lucky trial cannot
+     * fuse into a "proven" primitive. */
     AosActionRow *top[2] = {NULL, NULL};
     double tops[2] = {0, 0};
     for (int wi = 0; wi < wcount; ++wi) {
+        if (w[wi].attempts < 8) continue;
+        double avg = w[wi].reward_sum / w[wi].attempts;
         for (int ai = 0; ai < acount; ++ai) {
             if (all[ai].id != w[wi].action_id) continue;
-            if (!top[0] || w[wi].reward_sum > tops[0]) {
-                if (top[0] && top[0] != top[1]) { top[1] = top[0]; tops[1] = tops[0]; }
-                top[0] = &all[ai]; tops[0] = w[wi].reward_sum;
-            } else if (!top[1] || w[wi].reward_sum > tops[1]) {
-                if (top[1] != top[0]) { top[1] = &all[ai]; tops[1] = w[wi].reward_sum; }
+            if (!top[0] || avg > tops[0]) {
+                if (top[0] && top[0] != top[1]) {
+                    top[1] = top[0]; tops[1] = tops[0];
+                }
+                top[0] = &all[ai]; tops[0] = avg;
+            } else if (!top[1] || avg > tops[1]) {
+                if (top[1] != top[0]) {
+                    top[1] = &all[ai]; tops[1] = avg;
+                }
             }
             break;
         }
     }
     aos_labdb_free_weight_rows(w, wcount);
-    if (!top[0] || !top[1] || tops[0] < 1.5 || tops[1] < 1.0) return;
+    /* both primitives must be net-positive; macros themselves qualify
+     * so proven sequences can chain into longer campaigns */
+    if (!top[0] || !top[1] || tops[0] < 0.15 || tops[1] < 0.10) return;
     if (!strcmp(top[0]->name, top[1]->name)) return;
     /* build scripts for both */
     char *sa = NULL, *sb = NULL;
@@ -1689,9 +1783,13 @@ int main(int argc, char **argv) {
                 }
             }
             /* lethal branch = death, or leaving gameplay with damage —
-             * game overs reload the save so HP alone misses them */
-            if (trial_died || trial_exit_dmg)
+             * game overs reload the save so HP alone misses them.
+             * Ban the branch AND remember the exact params combo that
+             * killed so the bandit stops replaying it. */
+            if (trial_died || trial_exit_dmg) {
                 state_dead_mark(db, used_state_id);
+                lethal_mark(db, action->id, drawn);
+            }
             /* refined success rule: a probe-fail that still scored
              * exploration reward is a partial, not a dead spin */
             if (!strcmp(outcome, "fail") && reward > 0.0)

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:02:46+00:00",
+ "generated_at": "2026-11-08T00:05:38+00:00",
  "git": {
-  "commit": "e833d70e",
+  "commit": "b11e3d7a",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "b11e3d7a",
+   "date": "2026-11-08",
+   "subject": "lab: detect game overs via mode exit + death-scene hash registry",
+   "scope": "project"
+  },
+  {
    "commit": "e833d70e",
    "date": "2026-11-08",
    "subject": "Lab: per-slot explore spread, slider min-size fix attempt",
@@ -20789,12 +20795,6 @@
    "commit": "db512be3",
    "date": "2026-11-07",
    "subject": "Map the Object20 camera-phase advance points",
-   "scope": "project"
-  },
-  {
-   "commit": "5af44f66",
-   "date": "2026-11-07",
-   "subject": "Document the Object20 camera-choreography predicates",
    "scope": "project"
   }
  ],

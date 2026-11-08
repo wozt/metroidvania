@@ -548,8 +548,11 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
     static const char *sqls[] = {
         /* barren trials: hard fails that scored nothing */
         "DELETE FROM trials WHERE outcome='fail' AND reward<=0",
-        /* action/param combos that never produced anything */
-        "DELETE FROM weights WHERE attempts>0 AND successes=0"
+        /* action/param combos barely tried with nothing learned —
+         * rows with real attempt counts or nonzero reward stay: a
+         * negative reward_sum IS the failure memory that stops the
+         * bandit from retrying proven losers */
+        "DELETE FROM weights WHERE attempts>0 AND attempts<=2"
         " AND reward_sum<=0",
         /* auto checkpoints never referenced by any trial */
         "DELETE FROM states WHERE name LIKE 'auto_%'"

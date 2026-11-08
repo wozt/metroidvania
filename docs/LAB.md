@@ -96,6 +96,16 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | lab.progress_score | weighted advancement events (see branch mgmt) | consolidation trigger |
 
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
+Trial rows are kept only when they earned it: reward >= 2.0 survives
+forever, everything else lives in a 600-row recent window — the log
+stays small because learning lives in `weights`, `lab.lethal.*` and
+Elo, not in trial history. Purge runs on wall clock (~2 min per
+worker), not trial count, so worker restarts cannot starve it. Elo
+matches only count when rewards differ by >= 0.1 and at least one
+side scored positive — noise-level outcomes no longer inflate
+ratings. `lab.motion_total` accumulates screen motion only for
+trials that actually moved (movement tags), so idle animation in
+busy rooms does not fake distance.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
 override) so the fleet covers both exploit and explore regimes instead
 of running four identical bandits. `explore-input` (−4, random key

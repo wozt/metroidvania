@@ -326,7 +326,11 @@ static void elo_match(AosLabDb *db, int64_t cur, double rcur) {
     double orw = 0.0;
     if (lm) sscanf(lm, "%lld:%lf", &oid, &orw);
     free(lm);
-    if (oid > 0 && oid != cur) {
+    /* a match only counts when the rewards actually differ — two
+     * noise-level outcomes (0.01 vs 0.02, or two failures) carry no
+     * information and were inflating ratings on bare attempts */
+    if (oid > 0 && oid != cur && fabs(rcur - orw) >= 0.1 &&
+        (rcur > 0 || orw > 0)) {
         double ra = elo_get(db, cur), rb = elo_get(db, oid);
         double ea = 1.0 / (1.0 + pow(10.0, (rb - ra) / 400.0));
         double sa = rcur > orw ? 1.0 : (rcur < orw ? 0.0 : 0.5);
@@ -2351,17 +2355,23 @@ int main(int argc, char **argv) {
             }
 
             /* distance travelled: screen-motion integral per trial —
-             * the WRAM entity position proved layout-dependent, so
-             * accumulated pixel-motion is the honest proxy for how far
-             * the campaign has actually pushed forward */
+             * but only when the trial actually moved the player
+             * (movement tags) — idle animation and enemy churn in a
+             * busy room must not inflate campaign distance */
             {
                 char mk[64], nb[32];
                 snprintf(mk, sizeof mk, "lab.motion_total");
                 char *mv = aos_labdb_meta_get(db, mk);
                 long tot = mv ? atol(mv) : 0;
                 free(mv);
+                int moved = strstr(metrics, "clean_move") ||
+                            strstr(metrics, "clean_traverse") ||
+                            strstr(metrics, "new_room") ||
+                            strstr(metrics, "new_area");
                 snprintf(nb, sizeof nb, "%ld",
-                         tot + (long)(trial_motion * 100000.0));
+                         tot + (moved
+                                ? (long)(trial_motion * 100000.0)
+                                : 0));
                 aos_labdb_meta_set(db, mk, nb);
             }
             /* game-over rule: a lethal branch is forgotten — mark the
@@ -2539,14 +2549,21 @@ int main(int argc, char **argv) {
              * two best actions into a reusable macro action */
             if (trials_done % 250 == 249)
                 maybe_make_macro(db, all, acount);
-            /* automatic aggressive purge: every 200 trials drop the
-             * dead weight so the DB stays lean */
-            if (trials_done % 200 == 0) {
-                int pt = 0, pw = 0, ps = 0;
-                int pn = aos_labdb_purge(db, &pt, &pw, &ps);
-                if (pn)
-                    printf("auto-purge: %d rows (t%d w%d s%d)\n",
-                           pn, pt, pw, ps);
+            /* automatic purge on WALL CLOCK, not trial count: workers
+             * restart often enough that a %200 counter almost never
+             * fires — every ~2 minutes each worker drops the dead
+             * weight so the DB stays lean regardless of restarts */
+            {
+                static time_t last_purge = 0;
+                time_t now = time(NULL);
+                if (now - last_purge > 120) {
+                    last_purge = now;
+                    int pt = 0, pw = 0, ps = 0;
+                    int pn = aos_labdb_purge(db, &pt, &pw, &ps);
+                    if (pn)
+                        printf("auto-purge: %d rows (t%d w%d s%d)\n",
+                               pn, pt, pw, ps);
+                }
             }
             char status[256];
             snprintf(status, sizeof status,

@@ -552,10 +552,12 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
          * failure memory that matters lives in weights.reward_sum and
          * lab.lethal.*, not in these rows */
         "DELETE FROM trials WHERE reward<=0",
-        /* keep a small window of recent losses for context, newest
-         * 4000 rows overall is plenty of learning history */
-        "DELETE FROM trials WHERE id NOT IN ("
-        " SELECT id FROM trials ORDER BY id DESC LIMIT 4000)",
+        /* keep a small window of recent losses for context plus every
+         * trial that actually scored — mediocre partial runs are the
+         * "échecs" cluttering the list, they go unless recent */
+        "DELETE FROM trials WHERE reward < 2.0"
+        " AND id NOT IN (SELECT id FROM trials ORDER BY id DESC"
+        " LIMIT 600)",
         /* action/param combos barely tried with nothing learned —
          * rows with real attempt counts or nonzero reward stay: a
          * negative reward_sum IS the failure memory that stops the

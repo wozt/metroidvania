@@ -159,6 +159,28 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
             }
             graphics->cursor_ready = true;
         }
+        /* sub_0801232C's icon sheets: three graphics resources of
+         * 16 tiles x 16 (8192 bytes of 4bpp) and the 16 colours of
+         * palette bank 2 of 0x082099FC. */
+        static const uint32_t icon_sheets[3] = {
+            0x081C5E00, 0x081C7E04, 0x081C9E08,
+        };
+        const uint8_t *icon_palette = rom->data +
+            (size_t)(0x082099FC + 4 + 2 * 32 - AOS_ROM_BASE);
+        if (icon_palette + 32 <= rom->data + rom->size) {
+            bool icons = true;
+            for (unsigned s = 0; s < 3 && icons; ++s)
+                icons = aos_rom_load_graphics_resource(
+                    rom, icon_sheets[s], graphics->icon_tiles[s],
+                    sizeof graphics->icon_tiles[s], error, error_size);
+            if (icons) {
+                for (unsigned k = 0; k < 16; ++k)
+                    graphics->icon_palette[k] =
+                        (uint16_t)(icon_palette[k * 2] |
+                                   icon_palette[k * 2 + 1] << 8);
+                graphics->icons_ready = true;
+            }
+        }
     }
     free(memory);
     if (!ok) {
@@ -315,6 +337,38 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
                 out[3] = 255;
             }
     }
+}
+
+/* sub_08048804/sub_080488FC's icon entity: icon n is the 16x16 block
+ * (n-1)%64 of sheet (n-1)/64 (eight icons per row of 16 px), sampled
+ * from the 4bpp sheets loaded at init and painted with palette bank 2
+ * of 0x082099FC — the same extraction the asset exporter uses for
+ * Icon/i<n>. The caller passes the on-screen top-left pixel. */
+static void draw_icon(const AosPauseGraphics *graphics, uint8_t *rgba,
+                      unsigned icon, int x0, int y0) {
+    if (!graphics->icons_ready || icon < 1 || icon > 192) return;
+    const uint8_t *sheet = graphics->icon_tiles[(icon - 1) / 64];
+    unsigned slot = (icon - 1) % 64;
+    unsigned origin_x = (slot % 8) * 16, origin_y = (slot / 8) * 16;
+    for (unsigned py = 0; py < 16; ++py)
+        for (unsigned px = 0; px < 16; ++px) {
+            unsigned sx = origin_x + px, sy = origin_y + py;
+            const uint8_t *tile = sheet +
+                ((size_t)(sy / 8) * 16 + sx / 8) * 32;
+            uint8_t packed = tile[(sy % 8) * 4 + (sx % 8) / 2];
+            unsigned color_index = (packed >> (4 * (sx & 1))) & 0xF;
+            if (!color_index) continue;
+            int x = x0 + (int)px, y = y0 + (int)py;
+            if (x < 0 || y < 0 || x >= AOS_PAUSE_WIDTH ||
+                y >= AOS_PAUSE_HEIGHT)
+                continue;
+            uint16_t bgr = graphics->icon_palette[color_index];
+            uint8_t *out = rgba + ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
+            out[0] = (uint8_t)(((bgr & 31) * 255) / 31);
+            out[1] = (uint8_t)((((bgr >> 5) & 31) * 255) / 31);
+            out[2] = (uint8_t)((((bgr >> 10) & 31) * 255) / 31);
+            out[3] = 255;
+        }
 }
 
 static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
@@ -979,6 +1033,12 @@ bool aos_pause_graphics_render_item_use(
         !place_text_id(graphics, (uint16_t)(0x15C + values->selected),
                        false, 40, 130, 192, 3, &next_tile))
         return false;
+    /* sub_08048804 anchors the icon entity at pixel (0x1C, 0x94); its
+     * frame's (-8, -16) piece offset puts the 16x16 icon's top-left at
+     * (20, 132). */
+    if (values->selected < AOS_PAUSE_ITEM_USE_RECORDS &&
+        values->counts[values->selected])
+        draw_icon(graphics, rgba, values->icons[values->selected], 20, 132);
     /* sub_0804B808's placement: column 1 or 0x10 on the flat slot's bit 0,
      * row 0xB + slot/2 where slot is the selected owned ordinal minus the
      * scroll top. */

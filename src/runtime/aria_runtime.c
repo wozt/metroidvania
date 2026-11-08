@@ -4559,12 +4559,15 @@ static bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
 
 static bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
                                  AosPauseGraphics *graphics,
-                                 const AosSoulMenu *menu, const AosStats *stats) {
+                                 const AosSoulMenu *menu, const AosStats *stats,
+                                 const AosItemUseRecord items[AOS_ITEM_RECORDS]) {
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
-        menu->page != AOS_SOUL_MENU_PAGE_ITEM_USE)
+        !items || menu->page != AOS_SOUL_MENU_PAGE_ITEM_USE)
         return false;
     AosPauseItemUseValues values = {.selected = 0xFF};
     memcpy(values.counts, stats->item_counts, sizeof values.counts);
+    for (unsigned item = 0; item < AOS_PAUSE_ITEM_USE_RECORDS; ++item)
+        values.icons[item] = items[item].icon;
     int choices = aos_item_choice_count(stats);
     int cursor = 0;
     for (int ordinal = 0; ordinal < choices; ++ordinal)
@@ -7381,7 +7384,8 @@ int aria_runtime_main(int argc, char **argv) {
                  !draw_native_ability(renderer, pause_texture, &pause_graphics,
                                       &soul_menu, &progress) &&
                  !draw_native_item_use(renderer, pause_texture, &pause_graphics,
-                                       &soul_menu, &progress) &&
+                                       &soul_menu, &progress,
+                                       have_item_use ? item_use : NULL) &&
                  !draw_native_enemy(renderer, pause_texture, &pause_graphics,
                                     &soul_menu, &progress, &objects) &&
                  !draw_native_sleep(renderer, pause_texture, &pause_graphics,

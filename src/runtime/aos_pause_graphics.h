@@ -40,6 +40,14 @@ typedef struct {
     const uint8_t *cells_glyph_a;  /* 0x0850A136, stride 14 */
     const uint8_t *cells_char_b;   /* 0x080E2EC0, stride 4 */
     const uint8_t *cells_glyph_b;  /* 0x08509876, stride 10 */
+    /* sub_08048804/sub_080488FC icon entities: the three 16x16-tile
+     * sheets of sub_0801232C (0x081C5E00/0x081C7E04/0x081C9E08, 8192
+     * bytes of 4bpp each) and the 16 BGR555 colours of palette bank 2
+     * of 0x082099FC. Icon n is the 16x16 block (n-1)%64 of sheet
+     * (n-1)/64, drawn at the entity anchor + the frame's (-8,-16). */
+    uint8_t icon_tiles[3][0x2000];
+    uint16_t icon_palette[16];
+    bool icons_ready;
 } AosPauseGraphics;
 
 typedef struct {
@@ -104,6 +112,7 @@ enum {
 
 typedef struct {
     uint8_t counts[AOS_PAUSE_ITEM_USE_RECORDS]; /* item_counts slot order */
+    uint8_t icons[AOS_PAUSE_ITEM_USE_RECORDS];  /* item_use.tsv icon column */
     uint8_t selected;                           /* item index or 0xFF */
     uint8_t top;                                /* first visible owned ordinal */
 } AosPauseItemUseValues;
@@ -198,8 +207,9 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
  * description bars sit at column 5 rows 16-18, names are text IDs
  * 0x5B+item through the context-B cursor, quantities are 0x3300 digit
  * tiles ending at column 0xD/0x1C and empty slots get two 0x330D dashes.
- * Item icons are OBJ sprites and the description popup's exact window
- * placement is approximate; both remain documented gaps. */
+ * The selected item's icon draws through the sub_08048804 entity at
+ * pixel (0x1C,0x94) with the frame's (-8,-16) offset; the description
+ * popup's exact window placement remains approximate. */
 bool aos_pause_graphics_render_item_use(AosPauseGraphics *graphics,
                                         const AosPauseItemUseValues *values,
                                         uint8_t *rgba, size_t rgba_size);

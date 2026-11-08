@@ -326,10 +326,24 @@ int main(int argc, char **argv) {
             assert(graphics.bg0_map[0xC * 32 + 0x1C] == 0x330D);
             assert(graphics.bg0_map[0xD * 32 + 0xC] == 0x330D);
             assert(graphics.bg0_map[0xD * 32 + 0xD] == 0x330D);
-            /* Description of selected item 0 = text 0x15C on the bars. */
+            /* Description of selected item 0 = text 0x15C on the bars,
+             * and sub_08048804's icon entity draws icon 1 (item_use.tsv)
+             * at anchor (0x1C,0x94) + frame offset (-8,-16) -> the
+             * 16x16 icon spans pixels (20,132)-(35,147). */
+            items.icons[0] = 1;
             items.selected = 0;
             assert(aos_pause_graphics_render_item_use(&graphics, &items,
                                                       rgba, 240 * 160 * 4));
+            if (graphics.icons_ready) {
+                /* Center of the icon block must carry icon colours, not
+                 * the backdrop. */
+                size_t center = ((size_t)140 * 240 + 28) * 4;
+                bool icon_pixel = rgba[center + 3] == 255 &&
+                    (rgba[center] != graphics.backdrop_rgb[0] ||
+                     rgba[center + 1] != graphics.backdrop_rgb[1] ||
+                     rgba[center + 2] != graphics.backdrop_rgb[2]);
+                assert(icon_pixel);
+            }
         }
         /* sub_0804D2C8 list: strips, names gated by defeated bits, big
          * enemy numbers. Enemies 0 and 11 defeated on page 0/10. */

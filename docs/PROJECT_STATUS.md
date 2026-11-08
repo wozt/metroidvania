@@ -2,6 +2,43 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0816 - Item icon entity layer decoded and rendered
+
+- Full icon-path decode: `sub_0804090C` is actually the context-B
+  cursor setter in PIXEL units (x px -> col=x/6, subcol=x%6, px=x;
+  y in 12px units -> row=y, py=y*12) — the earlier "icon descriptor"
+  reading was wrong. The item list loop `sub_0804B494` draws NO
+  per-slot icons at all (name via context-B + quantity digits via the
+  `sub_08046EF4` tilemap writer); the single icon lives in the
+  description popup.
+- `sub_08048804(x,y,kind,id)` / `sub_080488FC` spawn icon ENTITIES
+  (update fn `sub_0803B9D0`, pixel anchor fields +0x42/+0x46) at the
+  item-use slot `gEwramData+0xEB0` and grid slots `0x7024+idx*0x84`.
+  `sub_08044E94` resolves the sprite record: kind 2 = the 16-byte
+  item table at 0x08505B3C (byte2 = icon id, byte3 = OBJ palette row
+  6), kind 3 = souls 0x08505D3C stride 28, kind 4 = equipment
+  0x085063B0 stride 20. `sub_08048BC4`/`sub_08048C44` refresh/clear.
+- Item Use page init `sub_0804B6C4` decoded end-to-end: strips via
+  `sub_08046DD4`, window `sub_08040748(0,0,0x20,2)`, list via
+  `sub_0804B494`, then for the selected item
+  `sub_08048804(0x1C,0x94,2,record.byte2-1)` + description text
+  `sub_0804728C` (id via halfword table 0x08506936 indexed by the
+  record's word0 — a second table parallel to the name table
+  0x08506734).
+- Ported: `AosPauseGraphics` now loads the three 16x16-tile icon
+  sheets (0x081C5E00/0x081C7E04/0x081C9E08, 8192 bytes 4bpp each)
+  and palette bank 2 of 0x082099FC at init, and `draw_icon` samples
+  icon n = the 16x16 block (n-1)%64 of sheet (n-1)/64 — the same
+  extraction the exporter uses for `Icon/i<n>` assets.
+  `render_item_use` draws the selected item's icon at the native
+  anchor (0x1C,0x94) + frame offset (-8,-16) = top-left (20,132).
+  `AosPauseItemUseValues` gained the per-item icon ids fed from
+  item_use.tsv through `draw_native_item_use`.
+- Remaining gaps on this page: the description popup window's exact
+  placement, the cursor hand animation phase, and grid icons on other
+  pages (equip's three `sub_080488FC` slots, soul/enemy detail icons)
+  which use the same decoded path.
+
 ## Patch 0815 - Context-B helpers and icon-glyph decode
 
 - `aos_menu_cells_cursor_b` ports sub_08040898 (B cursor, 6px cols /

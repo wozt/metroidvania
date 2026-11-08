@@ -551,9 +551,11 @@ static uint16_t soul_name_id(unsigned category, unsigned soul) {
 }
 
 static uint16_t soul_description_id(unsigned category, unsigned soul) {
-    static const uint16_t bases[] = {0x1E3, 0x21B, 0x233};
-    static const uint16_t none[] = {0x37D, 0x37E, 0x37F};
-    return soul ? (uint16_t)(bases[category] + soul) : none[category];
+    /* sub_08047330's bases minus one: 0x1E3/0x21B/0x233 for categories
+     * 0-2 and 0x256 for category 3 (enemy 0x53 drops a type-3 soul). */
+    static const uint16_t bases[] = {0x1E3, 0x21B, 0x233, 0x256};
+    static const uint16_t none[] = {0x37D, 0x37E, 0x37F, 0x37F};
+    return soul ? (uint16_t)(bases[category & 3] + soul) : none[category & 3];
 }
 
 /* Cell-engine text path: run a localized entry through the native

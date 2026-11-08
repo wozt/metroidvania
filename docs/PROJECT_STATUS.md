@@ -2,6 +2,13 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0853 - Soul description helper covers category 3
+
+- soul_description_id now carries the verified fourth base 0x256:
+  enemy 0x53 drops a soul_type-3 soul, matching sub_08047330's fourth
+  dispatch case. The detail-page window itself still awaits the
+  window-manager decode (gEwramData+0x115A0).
+
 ## Patch 0852 - Bestiary soul text mapping resolved
 
 - sub_08047330's description bases decode to exactly the runtime's

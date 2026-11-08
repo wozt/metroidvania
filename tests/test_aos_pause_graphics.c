@@ -271,18 +271,19 @@ int main(int argc, char **argv) {
             ability.enabled[3] = 1;
             assert(aos_pause_graphics_render_ability(&graphics, &ability,
                                                      rgba, 240 * 160 * 4));
-            /* Window fill below the text band: cell (17*32+10) is
-             * i=4,j=6 -> 0x3200+4*32+6 = 0x3286; (18*32+26) -> 0x32B6. */
-            assert(graphics.bg0_map[17 * 32 + 10] == 0x3286);
-            assert(graphics.bg0_map[18 * 32 + 26] == 0x32B6);
-            /* Strips above the name rows (text occupies tile rows
-             * 12-14): i=0 row 4 -> 0x3380/0x3390, i=3 row 10 ->
-             * 0x33E0/0x33F0. */
+            /* Window fill at tilemap (6,13), 23x6: cell (17,10) is
+             * i=4,j=4 -> 0x3200+4*32+4 = 0x3284; (18,26) -> 0x32D4. */
+            assert(graphics.bg0_map[17 * 32 + 10] == 0x3284);
+            assert(graphics.bg0_map[18 * 32 + 26] == 0x32B4);
+            /* Strips: byte14>>1 = 3 iterations give rows 4,6,8 only —
+             * i=0 row 4 -> 0x3380/0x3390, i=2 row 8 -> 0x33C0/0x33D0.
+             * Row 10 stays at the 0x330D fill (no fourth strip row). */
             assert(graphics.bg0_map[4 * 32 + 3] == 0x3380);
             assert(graphics.bg0_map[4 * 32 + 12] == 0x3389);
             assert(graphics.bg0_map[4 * 32 + 17] == 0x3390);
-            assert(graphics.bg0_map[10 * 32 + 3] == 0x33E0);
-            assert(graphics.bg0_map[10 * 32 + 17] == 0x33F0);
+            assert(graphics.bg0_map[8 * 32 + 3] == 0x33C0);
+            assert(graphics.bg0_map[8 * 32 + 17] == 0x33D0);
+            assert(graphics.bg0_map[10 * 32 + 3] == 0x330D);
             /* ON/OFF pairs: ability 0 even -> x 0xD row 4 tile 0xB31E;
              * ability 1 odd -> x 0x1B row 4 tile 0xB30E; ability 3 odd ->
              * x 0x1B row 6 tile 0xB31E. */

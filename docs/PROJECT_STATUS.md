@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0822 - Config page completed: buttons row, hint text, strips
+
+- sub_0804BF8C init decoded: three 24-tile description strips at
+  tilemap (5,15..17) with ids 0x3200+i*0x20, context-A window
+  (0,0,0x20,2) and sub_0804728C(0x352) = "Press SELECT to restore /
+  the default settings." — all three were missing from the renderer.
+- sub_0804C264 head decoded: context-B window (0,5,0x1E,1) cleared by
+  sub_08041204, then eight controller glyphs 0x80,0x81,0x82,0x83,
+  0x86,0x87,0x84,0x85 printed via sub_08040C60 with manual +6..8 px
+  cursor bumps (+0x115B6/+0x115B8). Ported through the cell engine:
+  new cells_begin_b (window_b + icon_fill_rect), cells_print_glyph_b
+  and cells_commit_b helpers; cells_commit refactored onto a shared
+  cells_commit_range.
+- Row strips verified: labels 0x3359+row*0x10 at column 6 (row 1 six
+  tiles), button names 0x32A0+index*3 at column 0x12, action order
+  table 0x08525510 {0,1,3,2}.
+- Test updated for the corrected Ability geometry (window frame at
+  (6,13), three strip rows) — asserts now lock rows 4/6/8 and the
+  0x330D fill at row 10.
+
 ## Patch 0821 - Enemy detail rare-drop x corrected
 
 - sub_0804CFE8 forces the rare-drop name to x=128 through the

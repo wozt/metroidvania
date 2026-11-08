@@ -583,18 +583,15 @@ static bool cells_print_id(AosPauseGraphics *graphics, uint16_t id,
     return true;
 }
 
-static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
-                         unsigned tile_y, uint16_t col, uint16_t row,
-                         uint16_t w, uint16_t h, unsigned palette,
-                         unsigned *next_tile) {
-    if (!graphics || !next_tile || tile_x >= 32 || tile_y >= 32)
-        return false;
-    /* The window covers canvas pixels [col*6, (col+w-1)*6) x
-     * [row*12, (row+h-1)*12); cells are the 8px framebuffer grid. */
-    unsigned px_x0 = col * 6, px_x1 = (unsigned)(col + w - 1) * 6 + 6;
-    unsigned px_y0 = row * 12, px_y1 = (unsigned)(row + h - 1) * 12 + 12;
-    unsigned cx0 = px_x0 / 8, cx1 = (px_x1 - 1) / 8;
-    unsigned cy0 = px_y0 / 8, cy1 = (px_y1 - 1) / 8;
+/* Commits framebuffer cells [cx0,cx1] x [cy0,cy1] as BG0 tiles whose
+ * map position is (tile_x + cx, tile_y + cy). Shared by the context-A
+ * and context-B commit paths. */
+static bool cells_commit_range(AosPauseGraphics *graphics,
+                               unsigned tile_x, unsigned tile_y,
+                               unsigned cx0, unsigned cy0, unsigned cx1,
+                               unsigned cy1, unsigned palette,
+                               unsigned *next_tile) {
+    if (!graphics || !next_tile) return false;
     for (unsigned cy = cy0; cy <= cy1 && cy < 32; ++cy)
         for (unsigned cx = cx0; cx <= cx1 && cx < 32; ++cx) {
             const uint32_t *cell =
@@ -630,6 +627,61 @@ static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
                 (uint16_t)(tile | palette << 12);
         }
     return true;
+}
+
+/* Context-B begin: sub_08040970 window + sub_08041204 rect fill,
+ * leaving the cursor at the window origin like the native pages. */
+static bool cells_begin_b(AosPauseGraphics *graphics, uint16_t x,
+                          uint16_t y, uint16_t w, uint16_t h) {
+    if (!graphics) return false;
+    if (!(graphics->cells_char_b && graphics->cells_glyph_b))
+        return false;
+    memset(graphics->cells_fb, 0, sizeof graphics->cells_fb);
+    aos_menu_cells_set_attr(&graphics->cells, 1);
+    aos_menu_cells_set_ink(&graphics->cells, 0);
+    aos_menu_cells_cursor_b(&graphics->cells, 0, 0);
+    aos_menu_cells_window_b(&graphics->cells, x, y, w, h);
+    aos_menu_cells_icon_fill_rect(&graphics->cells);
+    return true;
+}
+
+/* One context-B glyph through the native printer (sub_08040C60). */
+static bool cells_print_glyph_b(AosPauseGraphics *graphics, uint16_t ch) {
+    if (!graphics || ch < 0x20 || ch >= 0x100) return false;
+    unsigned index = ch - 0x20;
+    const uint8_t *ci = graphics->cells_char_b + index * 4;
+    const uint8_t *gl = graphics->cells_glyph_b + index * 10;
+    return aos_menu_cells_print_b(&graphics->cells, ch, ci, gl) == -1;
+}
+
+static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
+                         unsigned tile_y, uint16_t col, uint16_t row,
+                         uint16_t w, uint16_t h, unsigned palette,
+                         unsigned *next_tile) {
+    if (!graphics || !next_tile || tile_x >= 32 || tile_y >= 32)
+        return false;
+    /* The window covers canvas pixels [col*6, (col+w-1)*6) x
+     * [row*12, (row+h-1)*12); cells are the 8px framebuffer grid. */
+    unsigned px_x0 = col * 6, px_x1 = (unsigned)(col + w - 1) * 6 + 6;
+    unsigned px_y0 = row * 12, px_y1 = (unsigned)(row + h - 1) * 12 + 12;
+    unsigned cx0 = px_x0 / 8, cx1 = (px_x1 - 1) / 8;
+    unsigned cy0 = px_y0 / 8, cy1 = (px_y1 - 1) / 8;
+    return cells_commit_range(graphics, tile_x, tile_y, cx0, cy0, cx1,
+                              cy1, palette, next_tile);
+}
+
+/* Context-B variant: window bounds are 6px columns / 8px rows, so the
+ * covered cells come from b_x0*6 .. b_x1*6+6 and b_y0*8 .. b_y1*8+8. */
+static bool cells_commit_b(AosPauseGraphics *graphics, unsigned tile_x,
+                           unsigned tile_y, unsigned palette,
+                           unsigned *next_tile) {
+    if (!graphics || !next_tile) return false;
+    unsigned cx0 = graphics->cells.b_x0 * 6 / 8;
+    unsigned cx1 = (graphics->cells.b_x1 * 6 + 6 - 1) / 8;
+    unsigned cy0 = graphics->cells.b_y0;
+    unsigned cy1 = graphics->cells.b_y1;
+    return cells_commit_range(graphics, tile_x, tile_y, cx0, cy0, cx1,
+                              cy1, palette, next_tile);
 }
 
 static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
@@ -931,6 +983,36 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
     if (!config || cursor >= AOS_BUTTON_ACTIONS ||
         !valid_output(graphics, rgba, rgba_size)) return false;
     reset_bg0(graphics);
+    /* sub_0804BF8C init: three 24-tile description strips at column 5,
+     * rows 15-17 (0x3200+i*0x20), the context-A window (0,0,0x20,2)
+     * and the hint text 0x352 via sub_0804728C. */
+    for (unsigned i = 0; i < 3; ++i)
+        put_tiles(graphics, 5, (int)(15 + i),
+                  (uint16_t)(0x3200 + i * 0x20), 24);
+    /* sub_0804C264 head: context-B window (0,5,0x1E,1) cleared by
+     * sub_08041204 then eight controller glyphs 0x80-0x87 printed with
+     * manual +6..8 px cursor bumps (the native code adds to
+     * +0x115B6/+0x115B8 before each sub_08040C60 call). */
+    static const struct {
+        uint8_t ch;
+        int8_t bump_sub, bump_px;
+    } buttons[] = {
+        {0x80, 7, 7}, {0x81, 8, 8}, {0x82, 8, 8}, {0x83, 8, 8},
+        {0x86, 7, 7}, {0x87, 7, 6}, {0x84, 7, 7}, {0x85, 7, 7},
+    };
+    unsigned next_tile = 0;
+    if (!cells_begin_b(graphics, 0, 5, 0x1E, 1))
+        return false;
+    for (size_t i = 0; i < sizeof buttons / sizeof buttons[0]; ++i) {
+        graphics->cells.b_sx =
+            (uint16_t)(graphics->cells.b_sx + buttons[i].bump_sub);
+        graphics->cells.b_px =
+            (uint16_t)(graphics->cells.b_px + buttons[i].bump_px);
+        if (!cells_print_glyph_b(graphics, buttons[i].ch))
+            return false;
+    }
+    if (!cells_commit_b(graphics, 0, 0, 3, &next_tile))
+        return false;
     /* sub_0804C264: four rows at tile rows 4,6,8,10. The action label is a
      * baked seven- or six-tile strip at entry 0x3359+row*0x10 (row 1 is six
      * tiles wide natively); the assigned button name is the three-tile
@@ -947,6 +1029,11 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
         put_tiles(graphics, 0x12, (int)y,
                   (uint16_t)(0x32A0 + index * 3), 3);
     }
+    /* sub_0804BF8C's sub_0804728C(0x352): "Press SELECT to restore /
+     * the default settings." in the bottom window at (40,128). */
+    if (!place_text_id(graphics, 0x352, false, 40, 128, 192, 3,
+                       &next_tile))
+        return false;
     composite(graphics, rgba);
     /* sub_0804C3AC: sub_08048AD8(5, cursor*2 + 4) beside the rows. */
     draw_cursor(graphics, rgba, 5, 4 + 2 * (int)cursor, 2);

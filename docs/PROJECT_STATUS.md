@@ -42,7 +42,21 @@ Last updated: **2026-11-07**.
   switch on e+0xA: 0 sub_080B0814, 1 sub_080B0898, 2 sub_080B095C,
   3 sub_08079294 (dying), 4 sub_0803F17C (removed); then
   sub_080421AC again and the shared post-step sub_0806DF20.
-  The state handlers and helpers still need porting.
+- State handlers decoded: state 0 sub_080B0814 (idle/aggro:
+  sub_0806BC40, sub_0806E29C range 0xC8/0x78, sub_0806D54C,
+  sub_080AFE08 aggro gate -> state 2), state 1 sub_080B0898
+  (chase, sub-states e+0xB: sub_0803F2C8 anim set, case 2
+  sub_0806CAF8 walker probes 0x085286F8), state 2 sub_080B095C
+  (attack, sub-states e+0xB 0-5: sub_0803F2C8 anims,
+  sub_080458E4 offsets 0x28/0xC). sub_080AFE08 decoded as the
+  aggro/notice gate: e+0x15==0 or RandomNumberGenerator2()&mask
+  -> true; needs e+0x18&2, range sub_0806E29C(0xA0,0x78) or a
+  facing-offset (e+0x58 bit 0x40, +/-0x50) LOS query
+  sub_08002058/sub_0800207C. Nearly all helpers already have
+  runtime equivalents; sub_080AFE08 is the only new decode.
+  Remaining for the port: map each helper to its aos_enemy.c
+  counterpart, wire enemy_names[21]/[88], kind tables, drops,
+  soul and tests.
 
 ## Patch 0860 - Equipment record-effect audit
 

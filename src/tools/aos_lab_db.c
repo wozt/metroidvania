@@ -632,6 +632,40 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
            counts[5] + counts[6] + counts[7] + counts[8] + counts[9];
 }
 
+/* Risk decay: lab.risk.A.R accumulates damage/death events per room,
+ * but the agent improves over time (levels, better branches) — halve
+ * every room's risk on each consolidation so deathtraps reopen once
+ * the fleet is strong enough to attempt them again. */
+static void decay_room_risk(AosLabDb *db) {
+    sqlite3_stmt *st = NULL;
+    if (sqlite3_prepare_v2(db->handle,
+            "SELECT key, value FROM meta WHERE key LIKE 'lab.risk.%'",
+            -1, &st, NULL) != SQLITE_OK) return;
+    char keys[256][80];
+    double vals[256];
+    int n = 0;
+    while (sqlite3_step(st) == SQLITE_ROW && n < 256) {
+        snprintf(keys[n], sizeof keys[n], "%s",
+                 (const char *)sqlite3_column_text(st, 0));
+        vals[n] = sqlite3_column_double(st, 1) * 0.5;
+        ++n;
+    }
+    sqlite3_finalize(st);
+    sqlite3_stmt *up = NULL;
+    if (sqlite3_prepare_v2(db->handle,
+            "UPDATE meta SET value=?2 WHERE key=?1",
+            -1, &up, NULL) != SQLITE_OK) return;
+    for (int i = 0; i < n; ++i) {
+        char vb[32];
+        snprintf(vb, sizeof vb, "%.2f", vals[i]);
+        sqlite3_reset(up);
+        sqlite3_bind_text(up, 1, keys[i], -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(up, 2, vb, -1, SQLITE_TRANSIENT);
+        sqlite3_step(up);
+    }
+    sqlite3_finalize(up);
+}
+
 /* Frontier consolidation: keep only the promising branch. The keep-set
  * is the ancestor chain of the Elo-best state (via parent_id), every
  * state whose trials scored >0.5, and the newest 80 checkpoints. All
@@ -701,6 +735,7 @@ int aos_labdb_consolidate(AosLabDb *db) {
     total += sqlite3_changes(db->handle);
     sqlite3_exec(db->handle, "DROP TABLE temp.keep_states",
                  NULL, NULL, NULL);
+    decay_room_risk(db);
     return total;
 }
 

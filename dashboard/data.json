@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T01:20:27+00:00",
+ "generated_at": "2026-11-08T01:22:08+00:00",
  "git": {
-  "commit": "696de9f6",
+  "commit": "3ae277e3",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "3ae277e3",
+   "date": "2026-11-08",
+   "subject": "lab: risk-aware filtering actually filters — deathtrap rooms starve",
+   "scope": "project"
+  },
+  {
    "commit": "696de9f6",
    "date": "2026-11-08",
    "subject": "lab: near-tie action selection — stop single-action starvation",
@@ -20789,12 +20795,6 @@
    "commit": "efd9cbe8",
    "date": "2026-11-07",
    "subject": "Extract pause-menu icon call-site arguments",
-   "scope": "project"
-  },
-  {
-   "commit": "ef6e08b9",
-   "date": "2026-11-07",
-   "subject": "Map the menu icon window-grid walker",
    "scope": "project"
   }
  ],

@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0850 - Bestiary enemy portraits rendered
+
+- The detail page now draws the enemy sprite: sub_0804CA18 spawns a real
+  enemy entity whose updates freeze under the pause menu, so the
+  portrait is the frame the create routine leaves. The runtime replays
+  each implemented enemy's create once (RNG preserved, far decoy for
+  right-facing), decodes that BMP frame to RGBA, and blits it at the
+  native (0x40,0x58) + record +0x1E/+0x20 anchor with the frame offsets.
+- enemies.tsv moved to schema v4 carrying the portrait anchor offsets;
+  the golden fixture was re-recorded (one hash line).
+- Unimplemented enemies show no portrait yet; facing, anchor and the
+  undiscovered-enemy case await emulator comparison.
+
 ## Patch 0849 - Bestiary portraits are real enemy entities
 
 - The record word-0 pointers resolve to the enemies' own create

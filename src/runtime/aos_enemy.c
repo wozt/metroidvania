@@ -19,6 +19,10 @@ void aos_random_seed(uint32_t seed) {
     random_state = seed;
 }
 
+uint32_t aos_random_get(void) {
+    return random_state;
+}
+
 static bool flag_8e_40;
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */

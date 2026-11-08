@@ -366,6 +366,7 @@ typedef struct {
  * the game starts from is not traced; aos_random_seed sets it. */
 uint32_t aos_random(void);
 void aos_random_seed(uint32_t seed);
+uint32_t aos_random_get(void);
 /* sub_080009E4: sine of a 16-bit angle (0x10000 per turn), 16.16. */
 int32_t aos_sine(uint32_t angle);
 /* ArcTan2 (BIOS call 0x0A): the angle of (x, y), 0x10000 per turn. */

@@ -3097,6 +3097,17 @@ typedef struct {
         AriaFrame statics[ENEMY_STATIC_FRAMES];
         AosBox static_attack[64];       /* by sprite frame: static_attack rows */
         int static_count;
+        /* Bestiary detail portrait (sub_0804CA18): the exported BMP path of
+         * each frame, kept so the single menu frame can be decoded to RGBA
+         * without holding every frame twice. */
+        char *paths[AOS_ENEMY_MAX_ANIMS][MAX_FRAMES];
+        char *static_paths[ENEMY_STATIC_FRAMES];
+        int16_t portrait_x, portrait_y; /* enemy record + 0x1E / + 0x20 */
+        const AriaFrame *portrait_frame;
+        uint8_t *portrait;              /* RGBA pixels of the menu frame */
+        int portrait_w, portrait_h;
+        int8_t portrait_state;          /* 0 untried, 1 ready, -1 unavailable */
+        bool portrait_flip;
     } enemies[ENEMY_KINDS], variants[VARIANT_ARTS], skills[SKILL_ARTS]; /* Enemy/skill_* */
     struct {
         AriaFrame frames[OBJECT_MAX_ANIMS][MAX_FRAMES];
@@ -3351,15 +3362,21 @@ static bool load_enemy_data(AriaObjects *objects) {
         int id, hp, field_e, contact, defence;
         unsigned weak, resist, experience = 0, common = 0, rare = 0, rarity = 0;
         unsigned common_rate = 0, rare_rate = 0, soul_type = 0, soul_index = 0;
-        /* Schema v1 exports lack the experience column, v2 the drops. */
-        int fields = sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x\t%u\t%x\t%x\t%u\t%u\t%u\t%u\t%u",
+        int portrait_x = 0, portrait_y = 0;
+        /* Schema v1 exports lack the experience column, v2 the drops, v4 the
+         * portrait anchor offsets of sub_0804CA18. */
+        int fields = sscanf(line, "%d\t%d\t%d\t%d\t%d\t%x\t%x\t%u\t%x\t%x\t%u\t%u\t%u\t%u\t%u\t%d\t%d",
                             &id, &hp, &field_e, &contact, &defence, &weak, &resist,
                             &experience, &common, &rare, &rarity, &common_rate, &rare_rate,
-                            &soul_type, &soul_index);
-        if (fields == 15 && id >= 0 && id < ENEMY_KINDS)
+                            &soul_type, &soul_index, &portrait_x, &portrait_y);
+        if (fields >= 15 && id >= 0 && id < ENEMY_KINDS)
             objects->enemies[id].drops = (AosEnemyDrops){
                 (uint16_t)common, (uint16_t)rare, (uint8_t)rarity, (uint8_t)common_rate,
                 (uint8_t)rare_rate, (uint8_t)soul_type, (uint8_t)soul_index};
+        if (fields >= 17 && id >= 0 && id < ENEMY_KINDS) {
+            objects->enemies[id].portrait_x = (int16_t)portrait_x;
+            objects->enemies[id].portrait_y = (int16_t)portrait_y;
+        }
         if (fields >= 7 && id >= 0 && id < ENEMY_KINDS)
             objects->enemies[id].stats = (AosEnemyStats){(int16_t)hp, (uint8_t)contact,
                                                          (uint8_t)defence, (uint16_t)weak,
@@ -3687,6 +3704,12 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
                     ok = false;
                     break;
                 }
+                if (id < ENEMY_KINDS) {
+                    size_t length = strlen(frame_path) + 1;
+                    art->static_paths[art->static_count] = malloc(length);
+                    if (art->static_paths[art->static_count])
+                        memcpy(art->static_paths[art->static_count], frame_path, length);
+                }
                 art->static_ids[art->static_count++] = style;
             }
             continue;
@@ -3782,6 +3805,12 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
                     !load_frame(&art->frames[style][frame], frame_path, ox, oy, renderer)) {
                     ok = false;
                     break;
+                }
+                if (id < ENEMY_KINDS) {
+                    size_t length = strlen(frame_path) + 1;
+                    art->paths[style][frame] = malloc(length);
+                    if (art->paths[style][frame])
+                        memcpy(art->paths[style][frame], frame_path, length);
                 }
                 art->ticks[style][frame] = (uint8_t)ticks;
                 art->defs[style].durations = art->ticks[style];
@@ -4755,10 +4784,99 @@ static bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
+/* sub_0804CA18: the detail page's enemy portrait is a real enemy entity —
+ * the record's +0x00 create fn runs and +0x04 becomes the entity update,
+ * but the main entity loop skips slots 0x00-0xCF while unk_A074_0 is set
+ * (the pause menu), so the portrait keeps the frame the create leaves.
+ * The create runs once per enemy with the shared RNG state preserved; a
+ * far decoy makes every enemy face right, matching the native case where
+ * the player entity sits far from the menu anchor. */
+static void enemy_portrait_init(AriaObjects *objects, int id) {
+    __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+    if (art->portrait_state) return;
+    art->portrait_state = -1;
+    if (!art->loaded) return;
+    uint32_t rng = aos_random_get();
+    aos_enemy_set_decoy(true, 0x40000000, 0);
+    AosSoma soma;
+    memset(&soma, 0, sizeof soma);
+    soma.x = 0x40000000;
+    static const uint8_t empty_cells[1] = {0};
+    AosCollision layer = {.width_cells = 1, .height_cells = 1, .cells = empty_cells};
+    AosEnemy probe;
+    bool created = aos_enemy_create(&probe, (uint8_t)id, 64, 88, 0, 0,
+                                    &soma, &layer, &art->kind, &art->stats);
+    aos_enemy_set_decoy(false, 0, 0);
+    aos_random_seed(rng);
+    if (!created) return;
+    const char *path = NULL;
+    const AriaFrame *frame = NULL;
+    if (probe.static_frame >= 0) {
+        for (int k = 0; k < art->static_count; ++k)
+            if (art->static_ids[k] == probe.static_frame) {
+                path = art->static_paths[k];
+                frame = &art->statics[k];
+                break;
+            }
+    } else if (probe.anim.id < AOS_ENEMY_MAX_ANIMS && probe.anim.frame < MAX_FRAMES) {
+        path = art->paths[probe.anim.id][probe.anim.frame];
+        frame = &art->frames[probe.anim.id][probe.anim.frame];
+    }
+    if (!path || !frame) return;
+    SDL_Surface *surface = SDL_LoadBMP(path);
+    if (!surface) return;
+    SDL_Surface *rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+    SDL_DestroySurface(surface);
+    if (!rgba) return;
+    int w = rgba->w, h = rgba->h;
+    uint8_t *pixels = malloc((size_t)w * h * 4);
+    if (!pixels) {
+        SDL_DestroySurface(rgba);
+        return;
+    }
+    for (int y = 0; y < h; ++y)
+        memcpy(pixels + (size_t)y * w * 4,
+               (const uint8_t *)rgba->pixels + (size_t)y * rgba->pitch, (size_t)w * 4);
+    SDL_DestroySurface(rgba);
+    art->portrait = pixels;
+    art->portrait_w = w;
+    art->portrait_h = h;
+    art->portrait_frame = frame;
+    art->portrait_flip = probe.mirrored;
+    art->portrait_state = 1;
+}
+
+/* The entity anchor is (0x40, 0x58) plus the record's +0x1E/+0x20 pixel
+ * offsets; the sprite hangs off it through the frame's exported offsets,
+ * flipped horizontally when the create mirrored the enemy (draw_enemies
+ * uses the same convention). */
+static void enemy_portrait_blit(AriaObjects *objects, int id, uint8_t *pixels) {
+    if (id < 0 || id >= ENEMY_KINDS) return;
+    enemy_portrait_init(objects, id);
+    const __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+    if (art->portrait_state != 1 || !art->portrait || !art->portrait_frame) return;
+    const AriaFrame *frame = art->portrait_frame;
+    int anchor_x = 0x40 + art->portrait_x, anchor_y = 0x58 + art->portrait_y;
+    int dx = art->portrait_flip ? anchor_x - frame->offset_x - art->portrait_w
+                                : anchor_x + frame->offset_x;
+    int dy = anchor_y + frame->offset_y;
+    for (int sy = 0; sy < art->portrait_h; ++sy) {
+        int y = dy + sy;
+        if (y < 0 || y >= VIEW_H) continue;
+        for (int sx = 0; sx < art->portrait_w; ++sx) {
+            int x = dx + sx;
+            if (x < 0 || x >= VIEW_W) continue;
+            const uint8_t *src = art->portrait + ((size_t)sy * art->portrait_w + sx) * 4;
+            if (!src[3]) continue;
+            memcpy(pixels + ((size_t)y * VIEW_W + x) * 4, src, 4);
+        }
+    }
+}
+
 static bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
                               AosPauseGraphics *graphics,
                               const AosSoulMenu *menu, const AosStats *stats,
-                              const AriaObjects *objects) {
+                              AriaObjects *objects) {
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
         menu->page != AOS_SOUL_MENU_PAGE_ENEMY)
         return false;
@@ -4791,6 +4909,8 @@ static bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
                         graphics, &values, pixels, sizeof pixels)
                   : aos_pause_graphics_render_enemy(graphics, &values,
                                                     pixels, sizeof pixels);
+    if (ok && menu->enemy.detail && objects)
+        enemy_portrait_blit(objects, menu->enemy.cursor, pixels);
     if (!ok || !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
         return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};

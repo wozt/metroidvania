@@ -1258,22 +1258,25 @@ static bool export_doors(const FusionRom *rom, FusionSpriteLibrary *library,
 static bool append_enemy_stats(const FusionRom *rom, Text *stats,
                                char *error, size_t error_size) {
     if (!text_append(stats,
-            "schema\tmetroidvania-aos-enemy-stats-v3\n"
+            "schema\tmetroidvania-aos-enemy-stats-v4\n"
             "# id\thp\tfield_e\tcontact\tdefence\tweak\tresist\texperience"
             "\tcommon_item\trare_item\tsoul_rarity\tcommon_rate\trare_rate"
-            "\tsoul_type\tsoul_index\n")) return false;
+            "\tsoul_type\tsoul_index\tportrait_x\tportrait_y\n")) return false;
     for (size_t enemy = 0; enemy < ENEMY_COUNT; ++enemy) {
         const uint8_t *record = slice(
             rom, ENEMY_TABLE + (uint32_t)enemy * 0x24, 0x24,
             "enemy record", error, error_size);
+        /* sub_0804CA18 adds the signed halfwords at + 0x1E / + 0x20 to the
+         * portrait entity's 0x40 / 0x58 pixel anchor on the detail page. */
         if (!record || !text_append(
                 stats, "%zu\t%u\t%u\t%u\t%u\t0x%04x\t0x%04x\t%u"
-                "\t0x%04x\t0x%04x\t%u\t%u\t%u\t%u\t%u\n",
+                "\t0x%04x\t0x%04x\t%u\t%u\t%u\t%u\t%u\t%d\t%d\n",
                 enemy, read_u16(record + 0xC), read_u16(record + 0xE),
                 record[0x13], record[0x14], read_u16(record + 0x1A),
                 read_u16(record + 0x1C), read_u16(record + 0x10),
                 read_u16(record + 0x8), read_u16(record + 0xA), record[0x12],
-                record[0x15], record[0x16], record[0x17], record[0x18])) return false;
+                record[0x15], record[0x16], record[0x17], record[0x18],
+                read_s16(record + 0x1E), read_s16(record + 0x20))) return false;
     }
     return true;
 }

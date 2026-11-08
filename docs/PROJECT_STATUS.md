@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0819 - Ability page geometry corrected against sub_0804BA18
+
+- The strip loop runs `byte14 >> 1` = 3 iterations (three rows of two
+  columns for six abilities), not six: the renderer was drawing
+  strips at tile rows 10/12/14 that do not exist natively. Fixed.
+- The message-window frame is sub_080472B0(6,0xD,0x3200,0x1F,4):
+  tilemap origin (6,13), 23x6 tiles — the call used column 4.
+- Odd-column ability names take the sub_0804090C pixel cursor at
+  x=0x80 (128 px); the renderer used 126. Fixed. (sub_0804090C fully
+  decoded: x px clamped 0xF0 -> b_col=x/6, sub-x=x%6, b_px=x;
+  y units clamped 0x1F -> b_row=y, b_py=y*12.)
+- Context-B name text needs no cell-engine migration: the existing
+  small-font path already reads the identical ROM tables
+  (0x080E2EC0 metrics / 0x08509876 glyphs, strides 4/10) that
+  sub_08041338 uses, so glyphs and advances match.
+
 ## Patch 0818 - Cell framebuffer is VRAM; Item Use strips confirmed
 
 - `sub_080412DC` stores the cell-drawing base at gEwramData+0x11598;

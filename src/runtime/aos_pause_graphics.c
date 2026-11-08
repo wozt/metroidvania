@@ -969,11 +969,14 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
     reset_bg0(graphics);
     /* sub_08041204-style placeholder clear shared with the soul pages. */
     clear_bg0_tiles(graphics, 0x380, 0x80);
-    /* sub_0804BA18 init: the bottom message window then, for each of the
-     * six abilities, a ten-tile strip at column 3 (tiles 0x3380+i*0x20)
-     * and one at column 0x11 (tiles 0x3390+i*0x20), rows 4+2i. */
-    window_fill(graphics, 4, 0xD, 0x3200, 0x1F, 4);
-    for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
+    /* sub_0804BA18 init: sub_080472B0(6,0xD,0x3200,0x1F,4) draws the
+     * bottom message window frame at tilemap (6,13), 23x6 tiles, then
+     * sets the context-A window (0,0,0x1F,4). The strip loop runs
+     * byte14>>1 = 3 iterations: per row a ten-tile strip at column 3
+     * (0x3380+i*0x20) and one at column 0x11 (0x3390+i*0x20), rows
+     * 4+2i — three rows for six abilities, two columns. */
+    window_fill(graphics, 6, 0xD, 0x3200, 0x1F, 4);
+    for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT / 2; ++i) {
         put_tiles(graphics, 3, (int)(4 + i * 2),
                   (uint16_t)(0x3380 + i * 0x20), 10);
         put_tiles(graphics, 0x11, (int)(4 + i * 2),
@@ -990,13 +993,14 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
                   (uint16_t)(values->enabled[i] ? 0xB31E : 0xB30E), 2);
     }
     /* Names print through the context-B cursor: window column 0 or 0x15
-     * and row 0xC + i/2 give pixel (0|126, (12+i/2)*8); the window spans
-     * 14 cells so text wraps at about 78 pixels. */
+     * and row 0xC + i/2; odd slots take the sub_0804090C pixel cursor at
+     * x=0x80 (128 px), even slots stay at the window origin x=0. Rows
+     * are 8px cells so text lands at (0|128, (12+i/2)*8). */
     unsigned next_tile = 0;
     for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
         if (!place_text_id(graphics,
                            values->owned[i] ? (uint16_t)(0x156 + i) : 0x34F,
-                           true, (i & 1u) ? 126u : 0u,
+                           true, (i & 1u) ? 128u : 0u,
                            (12u + i / 2u) * 8u, 78, 3, &next_tile))
             return false;
     }

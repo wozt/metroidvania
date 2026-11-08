@@ -297,7 +297,11 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "soul_container_spark1",
                                                           "soul_container_spark2",
                                                           "soul_container_spark3",
-                                                          "soul_held"};
+                                                          "soul_held",
+                                                          "soul_storm0",
+                                                          "soul_storm1",
+                                                          "soul_storm2",
+                                                          "soul_storm3"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_KIND_PICKUP 4
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
@@ -716,6 +720,8 @@ typedef struct {
     void (*soul_notice)(void *ctx, unsigned category, unsigned soul_index,
                         bool player_low, bool fresh);
     void *soul_notice_ctx;
+    uint8_t soul_storm;         /* sub_08045350's remaining spawn frames */
+    uint8_t soul_storm_kind;    /* the new soul's kind, for the palette */
 } AriaCombat;
 
 /* The homing list gEwramData + 0x13194 (sub_08021924, aged by
@@ -2820,6 +2826,23 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     int16_t top = (int16_t)((soma->y >> 16) - ((soma->flags & AOS_FLAG_CROUCH) ? 0x16 : 0x22));
     const AosEffectWorld world = {layer, cam_x, cam_y, aos_random, soma->x, top,
                                   soma->y};
+    /* sub_08045350: while the new-soul entity's +0xD stays <= 0x2F, one
+     * type-0x49 sparkle spawns per frame at the player plus a random
+     * byte-angle's sine/cosine * 48, drifting with velocity offset >> 4
+     * and acceleration -(offset * 5) >> 4 in the soul kind's palette. */
+    if (combat->soul_storm) {
+        combat->soul_storm--;
+        if (room->effect_count < MAX_EFFECTS) {
+            uint32_t angle = (uint32_t)(aos_random() & 0xFFu) << 8;
+            int32_t sx = aos_sine(angle + 0x4000), sy = aos_sine(angle);
+            room->effects[room->effect_count++] = (AosEffect){
+                .kind = (uint8_t)(AOS_EFFECT_SOUL_STORM0 + combat->soul_storm_kind),
+                .direct = true,
+                .x = soma->x + sx * 48, .y = soma->y + sy * 48,
+                .vx = sx * 3, .vy = sy * 3,
+                .ax = -(sx * 20) / 16, .ay = -(sy * 20) / 16};
+        }
+    }
     size_t kept = 0;
     for (size_t i = 0; i < room->effect_count; ++i)
         if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind], blink,
@@ -2944,6 +2967,15 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     (unsigned)(pickup->type - AOS_PICKUP_SOUL),
                                     pickup->variant, (soma->y >> 16) > 0x70,
                                     fresh);
+            /* sub_08045C34/sub_08045654: a new soul starts the 48-frame
+             * sparkle storm (sub_08045350) around Soma; the entity itself
+             * is invisible (no drawFunc). Song 0xBE's same-frame request
+             * loses to 0xBC under our immediate-replace mixer. */
+            if (fresh) {
+                combat->soul_storm = 48;
+                combat->soul_storm_kind =
+                    (uint8_t)(pickup->type - AOS_PICKUP_SOUL);
+            }
             /* sub_08045BC8/sub_08045164: the soul-absorbed sparkle pinned
              * at the player's position plus (0, -0x100000), animation 12,
              * palette nibble 6. A repeated soul spawns it at once and its

@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0830 - New-soul sparkle storm ported (sub_08045350/sub_080451F4)
+
+- A fresh soul collection now starts combat->soul_storm = 48 with the
+  soul kind; each frame before the effect pass one
+  AOS_EFFECT_SOUL_STORM0-3 direct effect spawns at the player's
+  position plus a random byte-angle's sine/cosine * 48 (one
+  RandomNumberGenerator draw, sub_080009E4 lookups at angle and
+  angle + 0x4000), with velocity offset >> 4 and acceleration
+  -(offset * 5) >> 4 — the sub_080451F4 drift terms.
+- Four new direct-effect kinds carry frames {0x49,0x36,0x35} at
+  8/8/5 ticks: the native 21-frame life (+0x19 = 0x14) ends before
+  table 0x08525138's fourth frame is reached, so the export holds
+  exactly the visible sequence, one variant per soul-kind palette
+  bank (3/2/4/6 like the container sparks).
+- Song 0xBE's same-frame request loses to the collection's 0xBC
+  under our immediate-replace mixer; documented, not queued.
+- The Aria object golden is re-recorded for the four added
+  Effect/soul_storm sequences (945 sequences, 2949 frames).
+
 ## Patch 0829 - New-soul feedback fully decoded (invisible icon + sparkle storm)
 
 - The sub_08045C34 entity (slots 0x16-0x19) never sets drawFunc —

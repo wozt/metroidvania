@@ -502,6 +502,17 @@ static const DirectEffectSpec direct_effects[] = {
      {0x49, 0x36, 0x35, 0x34}, {3, 7, 7, 3}},
     {"soul_container_spark3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 4,
      {0x49, 0x36, 0x35, 0x34}, {3, 7, 7, 3}},
+    /* sub_08045350's storm sparkles (sub_080451F4): frames {0x49,0x36,
+     * 0x35} held 8/8/5 updates — the 21-frame life ends before the table's
+     * fourth frame — one variant per soul-kind palette bank. */
+    {"soul_storm0", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 3,
+     {0x49, 0x36, 0x35}, {8, 8, 5}},
+    {"soul_storm1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 3,
+     {0x49, 0x36, 0x35}, {8, 8, 5}},
+    {"soul_storm2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 3,
+     {0x49, 0x36, 0x35}, {8, 8, 5}},
+    {"soul_storm3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 3,
+     {0x49, 0x36, 0x35}, {8, 8, 5}},
 };
 
 #undef ENTITY

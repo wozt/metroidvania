@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0807 - Menu cell engine slice 1: cell state and glyph blitters
+
+- New `src/runtime/aos_menu_cells.[ch]`: the native software cell
+  renderer state (+0x115C4 attribute, +0x115C6 ink) and the staging
+  strip at 0x03001A18, with the two primitive glyph blitters ported
+  from sub_0803FEA4 (large font, 12 pixel rows) and sub_080402DC
+  (small font, 8 rows): skip-bearing bits are consumed MSB-first,
+  `width` pixel slots emit, set bits clear their nibble and OR the
+  attribute shifted by `px * 4`, clear bits keep the replicated ink.
+- Covered by `tests/test_aos_menu_cells.c` with hand-computed words.
+- Still unported for the shared text/window path: the masked merge
+  variants (sub_0803FF64/40048/4039C), attribute writers
+  (sub_080404A0/40508), the icon/window walkers
+  (sub_080410BC/411AC/41204), the cursor printer states
+  (sub_08040AB8/40C60), the text dispatch (sub_08041434) and the
+  tilemap commit (sub_080472B0).
+
 ## Patch 0806 - Pause hub 1:1 pass: entry info line
 
 - `aos_pause_graphics_render_hub` now prints the selected entry's

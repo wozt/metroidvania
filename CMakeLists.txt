@@ -1116,6 +1116,13 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_pause_graphics_tests)
     add_test(NAME aos_pause_graphics COMMAND fusion_aos_pause_graphics_tests)
 
+    add_executable(fusion_aos_menu_cells_tests
+                   tests/test_aos_menu_cells.c
+                   src/runtime/aos_menu_cells.c)
+    target_include_directories(fusion_aos_menu_cells_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_menu_cells_tests)
+    add_test(NAME aos_menu_cells COMMAND fusion_aos_menu_cells_tests)
+
     add_executable(fusion_aos_quick_map_tests
                    tests/test_aos_quick_map.c
                    src/runtime/aos_quick_map.c

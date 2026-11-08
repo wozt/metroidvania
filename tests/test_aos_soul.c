@@ -518,6 +518,18 @@ int main(void) {
     for (int f = 0; f < 61; ++f)
         aos_yellow_soul_regen(&yellow_soul, &ys, yellow, &hp, 100, 0, 0, false);
     assert(hp == 100);
+    /* NOSOUL (challenge flag 0x200000, sub_08031F3C): souls above 2 lose
+     * their effect entity; souls 1-2 keep it. */
+    yellow[2] = (AosYellowSoulRecord){AOS_YELLOW_FLAG_ROUTINE, 0, 0, 0x400000};
+    ys.yellow_soul = 2;
+    ys.challenge_flags = 0x200000;
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(yellow_soul.active && (ys.flags & 0x400000));
+    ys.yellow_soul = 10;
+    aos_stats_frame_reset(&ys);
+    aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);
+    assert(!yellow_soul.active);
+    ys.challenge_flags = 0;
     /* Unequipped: the bits go and nothing runs. */
     ys.yellow_soul = 0;
     aos_yellow_soul_update(&yellow_soul, &ys, yellow, 100, 100);

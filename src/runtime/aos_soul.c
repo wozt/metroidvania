@@ -390,6 +390,15 @@ void aos_yellow_soul_update(AosYellowSoul *soul, AosStats *stats,
         stats->flags &= ~(uint32_t)AOS_YELLOW_FLAGS_MASK;
         soul->active = false;
     }
+    /* sub_08031F3C's name flag: with NOSOUL (unk_33C[2] & 0x200000) the
+     * effect entity is only created for souls 1-2 (+0x1326B <= 2). */
+    if (stats->yellow_soul > 2 && (stats->challenge_flags & 0x200000u)) {
+        if (soul->active) {
+            stats->flags &= ~(uint32_t)AOS_YELLOW_FLAGS_MASK;
+            soul->active = false;
+        }
+        return;
+    }
     if (stats->yellow_soul >= AOS_YELLOW_SOUL_RECORDS) return;
     const AosYellowSoulRecord *record = &records[stats->yellow_soul];
     if (!soul->active) {

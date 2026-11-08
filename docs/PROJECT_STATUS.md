@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0844 - NOSOUL name flag wired into soul gates
+
+- The name-entry unlocks were already captured (`name_unlock_flags`
+  in the main menu, persisted as `challenge_flags` in the portable
+  save) but never reached gameplay. `AosStats.challenge_flags` now
+  carries them from `active_save` and back on save.
+- `aos_yellow_soul_update` applies sub_08031F3C's second gate: with
+  `challenge_flags & 0x200000` (the "NOSOUL" name), yellow souls
+  above index 2 (+0x1326B > 2) never create their effect entity.
+- `aos_red_soul_try` gets `locked` from the same flag — sub_08019478
+  exits on `unk_33C[2] & 0x200000` with no index check, so all red
+  soul casts are refused under NOSOUL.
+- `aos_guardian_try` gets `locked` for blue souls above 3 —
+  sub_0802E0C4's `cmp +0x1326A, #3; bhi` leaves souls 1-3 usable.
+- The 0x131B8 Chaos-strip bits (0x100/0x200/0x400) stay clear: Chaos
+  is not implemented, matching normal play.
+- Julius (name -> currentCharacter 1) remains unported per the
+  project constraints; NOUSE's reader is still unmatched code.
+
 ## Patch 0843 - Obtain-window reward lists decoded
 
 - The obtain/reward window's data path is now fully mapped: the
@@ -113,8 +132,8 @@ Last updated: **2026-11-07**.
 - sub_08013404 (new-game init) saves and restores both flag bits
   around the unk_33C wipe, so the restriction is save-scoped.
 - NOUSE's 0x100000 reader is not in the decompiled code (probably an
-  unmatched soul-use routine); the naming screen itself is not ported,
-  so none of this is reachable in the runtime yet.
+  unmatched soul-use routine). Patch 0844 wired the flags into the
+  soul gates; the naming screen itself is ported.
 
 ## Patch 0836 - Held-soul sound deferred one frame (native ordering)
 

@@ -980,7 +980,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_GLADIATOR
                                                                 : -1;
     if (kind < 0) return -1;
-    int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records, false);
+    int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
+                                (souls->stats->challenge_flags & 0x200000u) != 0);
     if (slot < 0) return -1;
     AriaSkill *skill = &souls->skills[slot];
     *skill = (AriaSkill){.alive = true, .kind = kind, .slot = slot,
@@ -1221,8 +1222,12 @@ static void start_guardian(void *context) {
                : guardian->records[stats->blue_soul].argument < AOS_TRANSFORM_VARIANTS &&
                      guardian->spark_art != NULL)))
         return;
+    /* sub_0802E0C4: NOSOUL (unk_33C[2] & 0x200000) limits the guardian to
+     * blue souls 1-3 (+0x1326A <= 3). */
     if (aos_guardian_try(&guardian->core, stats, guardian->records, guardian->soma->held,
-                         guardian->soma->pressed, false, &guardian->soma->flags)) {
+                         guardian->soma->pressed,
+                         (stats->challenge_flags & 0x200000u) && stats->blue_soul > 3,
+                         &guardian->soma->flags)) {
         guardian->routine = routine;
         guardian->medusa = (AosMedusaGuardian){0};
         guardian->cagnazzo = (AosCagnazzoGuardian){0};
@@ -3570,6 +3575,7 @@ static void runtime_to_save(AosSaveData *save, const AriaRoom *room,
     save->red_soul = progress->red_soul;
     save->blue_soul = progress->blue_soul;
     save->yellow_soul = progress->yellow_soul;
+    save->challenge_flags = progress->challenge_flags;
     save->mp = progress->mp;
     for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
         save->buttons[action] = aos_button_config_index(
@@ -5886,6 +5892,7 @@ int aria_runtime_main(int argc, char **argv) {
         progress.red_soul = active_save.red_soul;
         progress.blue_soul = active_save.blue_soul;
         progress.yellow_soul = active_save.yellow_soul;
+        progress.challenge_flags = active_save.challenge_flags & 0x300000u;
     }
     static char save_weapon_name[8];
     if (weapon_override)

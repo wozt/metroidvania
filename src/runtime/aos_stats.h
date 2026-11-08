@@ -70,6 +70,9 @@ typedef struct {
      * presses that break the stone. */
     int16_t status_timers[3];
     AosButtonConfig buttons;     /* attack, jump, ability, guardian (0x13398) */
+    /* The name-entry unlocks of the save (event flags 84/85): 0x100000
+     * NOUSE and 0x200000 NOSOUL (unk_33C[2]). */
+    uint32_t challenge_flags;
 } AosStats;
 
 enum {

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0820 - Soul Set window frame and description decode
+
+- sub_08048D84 decoded: sub_080472B0(7,0xF,0x3200,0x1E,2) fills the
+  description window rect at tilemap (7,15), 22x3 tiles, and sets
+  the context-A window (0,0,0x1E,2) — 29 cols * 6px = 174 px wide,
+  home at pixel (56,120). The renderer was missing the frame fill;
+  added. The description position/width already matched.
+- sub_08049DB4 description ids confirmed identical to our
+  soul_description_id: category bases 0x1E3/0x21B/0x233 plus soul,
+  empty souls 0x37D/0x37E/0x37F.
+- Soul/category strips verified against the native 46DD4 loop:
+  category labels (6, 3+2*cat, 0x3350/0x3360/0x3370+cat*0x10, 10) and
+  eight soul strips at columns 3/0x11 rows 10+entry/2 with
+  0x3380+entry*0x10 — all matching.
+- Cursor frame variant for this page is 0x1F (sub_08048B0C arg).
+
 ## Patch 0819 - Ability page geometry corrected against sub_0804BA18
 
 - The strip loop runs `byte14 >> 1` = 3 iterations (three rows of two

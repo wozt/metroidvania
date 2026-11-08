@@ -371,6 +371,9 @@ static void draw_icon(const AosPauseGraphics *graphics, uint8_t *rgba,
         }
 }
 
+static void window_fill(AosPauseGraphics *graphics, unsigned column,
+                        unsigned row, uint16_t tile_base, unsigned dim_a,
+                        unsigned dim_b);
 static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
                           unsigned x, unsigned y, unsigned width,
                           unsigned palette, unsigned *next_tile);
@@ -671,6 +674,14 @@ bool aos_pause_graphics_render_soul_set(
                               : values->status & 4 ? 1 : 0;
     put_tiles(graphics, 21, 8, (uint16_t)(0x330A + status_variant * 0x10), 4);
 
+    /* sub_08048D84: sub_080472B0(7,0xF,0x3200,0x1E,2) fills the
+     * description window rect at tilemap (7,15), 22x3 tiles, and sets
+     * the context-A window (0,0,0x1E,2) whose home maps to pixel
+     * (56,120) — 29 cols * 6px = 174 px wide. */
+    window_fill(graphics, 7, 15, 0x3200, 0x1E, 2);
+    /* Category label strips at (6, 3+2*cat) then eight soul strips at
+     * columns 3/0x11 rows 10+entry/2 (0x3380+entry*0x10), matching the
+     * native 46DD4 loop. */
     for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category) {
         unsigned palette = category == values->category
                                ? selected_palettes[category]

@@ -2,6 +2,46 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0863 - Worm family decode (GiantWorm 62 / PoisonWorm 71)
+
+- EnemyGiantWormCreate (0x080AE360) and EnemyPoisonWormCreate
+  (0x080AE378) are stubs sharing sub_080AD7F0(e, variant):
+  variant 0 brown, 1 poison. Both updates alias
+  sub_080AE0E0, a seven-state machine on e+0xA.
+- Update head: state 0 only resets to itself; otherwise
+  sub_08021924 tracking, sub_0806AD24 hit stun (8 frozen
+  frames while alive, then sub_08021278 + sub_080421AC
+  collision without the state machine), state != 3 runs
+  sub_0806AE54.
+- State 1 (wait): +0x1D counts down; at 0 the centred
+  sub_0806CFFC box (+0x42-0xA0, +0x46-0x3C, 0x140 x 0x78)
+  decides - inside: RandomNumberGenerator & 1 or, with the
+  gEwramData + 0x13168 target set and its +0x40 left of the
+  worm, facing +0x1F = 0 else 1; outside: pure RNG & 1.
+  +0x1D reload and state 2.
+- State 2 (emerge): sub_080ADB94(e, +0x1F, 0, 0) then
+  sub_080AD9FC; step +0xB == 0 -> state 1.
+- State 3 (move): +0x1C = 1, position += velocity
+  (+0x48/+0x4C), +0x4C += 0x2000, +0x54 angle adjusted by
+  the +0x58 facing bit (0xFFFFFF00 / +0x100 subpixel
+  steps); every +0xD & 7 == 0 a sub_0806D5C0 particle at
+  (+0x40, +0x44) with (+0x5C - 2); +0xD counts to 0.
+- States 4/5: timers; at 0 the +0x58 low five bits feed
+  sub_0803E6BC then EntityDelete (state 6 is the
+  graphics-only affine variant: sub_0803E058 with the
+  mirrored angle bits, sub_0803F17C, no collision).
+- Remaining for the port: sub_080AD7F0 (resources, +0x1C
+  record), sub_080ADB94 / sub_080AD9FC (the emerge/dive
+  sequences), sub_0806CFFC box semantics, sub_0806D5C0
+  particle kind, sub_0803E058 affine mapping and the
+  +0x1C-driven attack/hurt boxes of the shared epilogue
+  (sub_08042848 / sub_080428B4 / sub_0806E314 pattern seen
+  in the Golem too).
+- Golem family recon: EnemyGolemUpdate sub_0807E35C is a
+  four-state dispatcher whose state 0 sub_0807E8EC is a
+  42-case sub-state machine (~3 KB asm) - boss-scale, not
+  a quick family port.
+
 ## Patch 0862 - Minotaur and Red Minotaur ported (ids 0x15 / 0x58)
 
 - EnemyMinotaurCreate / EnemyRedMinotaurCreate (sub_080B0AD4)

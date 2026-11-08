@@ -1840,11 +1840,31 @@ int main(int argc, char **argv) {
                     if (srows[si].name &&
                         strstr(srows[si].name, "play")) ++play_n;
                 if (play_n && (rand() % 100) < 60) {
-                    int want = rand() % play_n;
-                    for (int si = 0; si < scount; ++si)
-                        if (srows[si].name &&
-                            strstr(srows[si].name, "play") &&
-                            want-- == 0) { pick_i = si; break; }
+                    /* depth bias: scout_play_NNN numbers grow with
+                     * exploration depth — half the picks take the
+                     * deepest available checkpoint so trials push the
+                     * frontier instead of re-farming early rooms */
+                    if ((rand() % 100) < 50) {
+                        int best_suf = -1;
+                        for (int si = 0; si < scount; ++si) {
+                            const char *nm = srows[si].name;
+                            if (!nm || !strstr(nm, "play")) continue;
+                            const char *us = strrchr(nm, '_');
+                            int suf = us ? atoi(us + 1) : 0;
+                            if (suf > best_suf &&
+                                !state_dead(db, srows[si].id)) {
+                                best_suf = suf;
+                                pick_i = si;
+                            }
+                        }
+                    }
+                    if (pick_i < 0) {
+                        int want = rand() % play_n;
+                        for (int si = 0; si < scount; ++si)
+                            if (srows[si].name &&
+                                strstr(srows[si].name, "play") &&
+                                want-- == 0) { pick_i = si; break; }
+                    }
                 }
                 if (pick_i < 0) pick_i = rand() % scount;
                 /* never restart from a lethal branch */

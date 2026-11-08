@@ -131,6 +131,9 @@ of running four identical bandits.
   table (0x02000400) — `entity_active` (+0.1) when enemies/AI are
   churning, `entity_still` (−0.05) when gameplay mode shows a dead
   world.
+- **Depth bias**: half of play-checkpoint waypoint picks take the
+  deepest `scout_play_NNN` suffix available — trials push the
+  frontier instead of re-farming early rooms.
 - **Branch Elo**: branch strength is a *relative* rating, not an
   absolute score. Every trial is a match between its branch and the
   previous trial's branch (K=32, start 1500); winners gain, losers

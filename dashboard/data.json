@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:39:41+00:00",
+ "generated_at": "2026-11-08T00:40:56+00:00",
  "git": {
-  "commit": "e2d4af59",
+  "commit": "d2e88700",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "d2e88700",
+   "date": "2026-11-08",
+   "subject": "lab: WRAM-first success detection — enemy_down, tile_change, mode tags",
+   "scope": "project"
+  },
+  {
    "commit": "e2d4af59",
    "date": "2026-11-08",
    "subject": "viewer: size requests on scrolled pages kill scrollbar gizmo warnings",
@@ -20789,12 +20795,6 @@
    "commit": "03a80f0b",
    "date": "2026-11-07",
    "subject": "Locate the pause-menu selection cursor sprite",
-   "scope": "project"
-  },
-  {
-   "commit": "af2f1e97",
-   "date": "2026-11-07",
-   "subject": "Emit the native death sparkles during Soma's death",
    "scope": "project"
   }
  ],

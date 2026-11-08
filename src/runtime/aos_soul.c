@@ -669,6 +669,16 @@ bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, A
     return true;
 }
 
+void aos_stats_cure_status(AosStats *stats, uint16_t mask) {
+    /* func_08021E50: for each of bits 0-2 set in the mask, zero the
+     * +0x13272 timer halfword and clear the +0x13270 status bit. */
+    for (int bit = 0; bit < 3; ++bit) {
+        if (!(mask & (1u << bit))) continue;
+        stats->status_timers[bit] = 0;
+        stats->status = (uint16_t)(stats->status & ~(1u << bit));
+    }
+}
+
 void aos_stats_status_update(AosStats *stats, uint16_t pressed, uint16_t ticks) {
     if (stats->status_timers[2]) {
         /* Presses of A, B and the D-pad (gEwramData + 0x1E & 0xF3). */

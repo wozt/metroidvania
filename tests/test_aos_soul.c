@@ -684,6 +684,14 @@ int main(void) {
     aos_stats_status_update(&zp, 0, 0);
     aos_yellow_soul_update(&zs, &zp, yellow, 100, 100);
     assert(zp.current[AOS_STAT_STR] == 55);
+    /* func_08021E50: the mask cures only the listed status bits and
+     * zeroes their timers; mask 7 clears poison, curse and stone. */
+    AosStats cu = {.status = 7, .status_timers = {9, 8, 7}};
+    aos_stats_cure_status(&cu, 0x5);
+    assert(cu.status == 2 && cu.status_timers[0] == 0 &&
+           cu.status_timers[1] == 8 && cu.status_timers[2] == 0);
+    aos_stats_cure_status(&cu, 0x7);
+    assert(cu.status == 0 && cu.status_timers[1] == 0);
     puts("Aria red, blue and yellow soul tests passed");
     return 0;
 }

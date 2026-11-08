@@ -58,6 +58,10 @@ void aos_stats_mp_regen(AosStats *stats, uint16_t ticks);
  * every 4 frames instead of the MP regeneration of aos_stats_mp_regen,
  * which runs otherwise with `ticks`; accessory 0x2C keeps MP full. */
 void aos_stats_status_update(AosStats *stats, uint16_t pressed, uint16_t ticks);
+/* func_08021E50: cure the status bits set in `mask` (bits 0-2 =
+ * poison, curse, stone) - each matching status_timers entry is zeroed
+ * and its status bit cleared. */
+void aos_stats_cure_status(AosStats *stats, uint16_t mask);
 /* One of Soma's blue soul records (0x080E192C, metadata/blue_souls.tsv),
  * indexed by the equipped blue soul (0 is none). */
 typedef struct {

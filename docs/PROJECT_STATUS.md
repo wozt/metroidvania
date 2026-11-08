@@ -10,8 +10,13 @@ Last updated: **2026-11-07**.
   rates, 0x29 MP regen x4, 0x2A Sherman Ring, 0x2B/0x2C full
   MP via aos_stats_mp_regen.
 - The single gameplay armor check is index 0x17 in
-  func_08021710 (status cure func_08021E50 + popup) - identified
-  as the remaining record-specific effect, unported.
+  func_08021710 (status fragment: palette op + func_08042A7C
+  popup, then func_08021E50). func_08021E50 itself is now
+  ported as aos_stats_cure_status (mask bits 0-2 zero the
+  +0x13272 timers and clear the +0x13270 status bits,
+  unit-tested); the armor-0x17 trigger, its mask source
+  (func_08000A90 result & 0xF <= 3) and the popup remain
+  unported.
 
 ## Patch 0859 - Bestiary detail name centering + weakness audit
 

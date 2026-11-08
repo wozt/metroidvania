@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0842 - Drop-context flags identified as boss-rush state
+
+- `sub_080683BC`'s two remaining gates are both boss-rush flags, set
+  only by `GameModeBossRushMenuUpdate` (the hidden post-game mode):
+  `unk_60.unk_4CC_0` (bits 0-1 of `gEwramData + 0x4CC`) skips the whole
+  reward — no experience, bestiary bit or drop — and
+  `unk_60.unk_A1_4` (the high nibble of `+0xA1`) raises the
+  unowned-soul drop chance from 6 to 7 and scales the damage
+  calculation by 8/10.
+- Normal play never sets either, so the runtime's `mode = 0` and
+  `soul_flag_a1 = false` arguments already match the native values;
+  no code change was needed, only the annotation.
+
 ## Patch 0841 - Sherman Ring walking experience (_0801CCE2)
 
 - The tail of `sub_0801B0D8` grants one experience point every eighth

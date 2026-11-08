@@ -130,6 +130,12 @@ void aos_menu_cells_icon_fill_rect(AosMenuCells *cells);
 void aos_menu_cells_window_a(AosMenuCells *cells, uint16_t col,
                              uint16_t row, uint16_t w, uint16_t h);
 
+/* sub_0804066C: move the context-A cursor to (col, row) — clamped to
+ * 40x20 — clearing the sub-column offset and recomputing the absolute
+ * pixel position. */
+void aos_menu_cells_cursor_a(AosMenuCells *cells, uint16_t col,
+                             uint16_t row);
+
 /* Cell commit: each 8x8 cell of the framebuffer is already a native
  * 32-byte 4bpp tile (8 rows of one 32-bit word, low nibble = leftmost
  * pixel). `aos_menu_cells_cell_tile` copies one cell out verbatim;

@@ -9,6 +9,7 @@
 #include "aos_button_config.h"
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"
+#include "aos_menu_cells.h"
 #include "aos_obj.h"
 #include "fusion/assets/aos.h"
 
@@ -30,6 +31,15 @@ typedef struct {
     uint16_t cursor_palette[16];
     bool cursor_ready;
     uint32_t cursor_tick;      /* frame counter driving bob and frame cycle */
+    /* The native software cell renderer: fb is the 32x32-cell buffer
+     * (each cell already a 32-byte 4bpp tile), and the four pointers
+     * address the ROM char/glyph metric tables. */
+    AosMenuCells cells;
+    uint32_t cells_fb[AOS_MENU_CELLS_ROW_WORDS * 32];
+    const uint8_t *cells_char_a;   /* 0x080E2B4C, stride 4 */
+    const uint8_t *cells_glyph_a;  /* 0x0850A136, stride 14 */
+    const uint8_t *cells_char_b;   /* 0x080E2EC0, stride 4 */
+    const uint8_t *cells_glyph_b;  /* 0x08509876, stride 10 */
 } AosPauseGraphics;
 
 typedef struct {

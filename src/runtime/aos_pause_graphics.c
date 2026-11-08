@@ -111,6 +111,26 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         graphics->text_ready =
             aos_intro_resources_init(&graphics->text, rom, NULL, 0) &&
             aos_intro_font_init(&graphics->font, rom, NULL, 0);
+        /* The native cell renderer: fb buffer plus the four ROM metric
+         * tables (char records 0x080E2B4C/0x080E2EC0 stride 4, glyph
+         * records 0x0850A136 stride 14 / 0x08509876 stride 10). Each
+         * table must cover the full 0x20..0xFF character range. */
+        aos_menu_cells_init(&graphics->cells);
+        aos_menu_cells_set_fb(&graphics->cells, graphics->cells_fb);
+        const uint8_t *rom_end = rom->data + rom->size;
+        const uint8_t *t;
+        t = rom->data + (size_t)(0x080E2B4C - AOS_ROM_BASE);
+        if (t + 0xE0 * 4 <= rom_end)
+            graphics->cells_char_a = t;
+        t = rom->data + (size_t)(0x0850A136 - AOS_ROM_BASE);
+        if (t + 0xE0 * 14 <= rom_end)
+            graphics->cells_glyph_a = t;
+        t = rom->data + (size_t)(0x080E2EC0 - AOS_ROM_BASE);
+        if (t + 0xE0 * 4 <= rom_end)
+            graphics->cells_char_b = t;
+        t = rom->data + (size_t)(0x08509876 - AOS_ROM_BASE);
+        if (t + 0xE0 * 10 <= rom_end)
+            graphics->cells_glyph_b = t;
         /* sub_08048C74 loads the hand through sub_0803B800/sub_0803C7B4 and
          * sub_08048B0C frames it through sub_0803B924: sheet and frame
          * descriptor by language, palette block 1 of 0x0820C2C0. */
@@ -300,6 +320,11 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
 static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
                           unsigned x, unsigned y, unsigned width,
                           unsigned palette, unsigned *next_tile);
+static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
+                             bool small, unsigned tile_x, unsigned tile_y,
+                             uint16_t col, uint16_t row, uint16_t w,
+                             uint16_t h, unsigned palette,
+                             unsigned *next_tile);
 
 static void reset_bg0(AosPauseGraphics *graphics) {
     ++graphics->cursor_tick;
@@ -357,11 +382,14 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
     put_tiles(graphics, 12, 9, (uint16_t)(0x330A + status_variant * 0x10), 4);
 
     /* sub_08047C4C's tail: sub_0804728C(0x362 + selected) prints the
-     * selected entry's description into the bottom message window. The
-     * row is estimated on the same band as the other pages' messages. */
+     * selected entry's description into the bottom message window
+     * through the native cell engine (sub_08040748 window + context-A
+     * cursor, attr 1 / ink 0 as set by sub_08047520). The cell canvas
+     * origin is tile (0,15) = pixel (0,120); the text lands at canvas
+     * (24,12) = screen (24,132) via window column 4, row 1. */
     unsigned next_tile = 0;
-    if (!place_text_id(graphics, (uint16_t)(0x362 + selected), true,
-                       24, 132, 200, 3, &next_tile))
+    if (!place_text_cells(graphics, (uint16_t)(0x362 + selected), false,
+                          0, 15, 4, 1, 36, 2, 3, &next_tile))
         return false;
 
     composite(graphics, rgba);
@@ -445,6 +473,86 @@ static uint16_t soul_description_id(unsigned category, unsigned soul) {
     static const uint16_t bases[] = {0x1E3, 0x21B, 0x233};
     static const uint16_t none[] = {0x37D, 0x37E, 0x37F};
     return soul ? (uint16_t)(bases[category] + soul) : none[category];
+}
+
+/* Cell-engine text path: run a localized entry through the native
+ * software cell renderer, then commit each non-empty framebuffer cell
+ * as a BG0 tile. `tile_x`/`tile_y` are the BG0 map origin of the cell
+ * canvas; `col`/`row`/`w`/`h` are the context-A window arguments fed
+ * to sub_08040748 (6px columns, 12px rows). Only cells containing
+ * glyph pixels consume tiles from `next_tile` (cap 0x200 like
+ * place_text); empty cells keep the existing map entry. */
+static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
+                             bool small, unsigned tile_x, unsigned tile_y,
+                             uint16_t col, uint16_t row, uint16_t w,
+                             uint16_t h, unsigned palette,
+                             unsigned *next_tile) {
+    if (!graphics || !next_tile || tile_x >= 32 || tile_y >= 32)
+        return false;
+    const uint8_t *entry = NULL;
+    size_t entry_size = 0;
+    if (!aos_intro_resources_entry(&graphics->text, graphics->language,
+                                   id, &entry, &entry_size))
+        return false;
+    bool ready = small ? (graphics->cells_char_b && graphics->cells_glyph_b)
+                       : (graphics->cells_char_a && graphics->cells_glyph_a);
+    if (!ready) return false;
+
+    memset(graphics->cells_fb, 0, sizeof graphics->cells_fb);
+    aos_menu_cells_set_attr(&graphics->cells, 1);
+    aos_menu_cells_set_ink(&graphics->cells, 0);
+    aos_menu_cells_window_a(&graphics->cells, col, row, w, h);
+    aos_menu_cells_cursor_a(&graphics->cells, col, row);
+    if (small)
+        aos_menu_cells_run_b(&graphics->cells, entry, 0,
+                             graphics->cells_char_b, 4,
+                             graphics->cells_glyph_b, 10);
+    else
+        aos_menu_cells_run_a(&graphics->cells, entry, 0,
+                             graphics->cells_char_a, 4,
+                             graphics->cells_glyph_a, 14);
+
+    /* The window covers canvas pixels [col*6, (col+w-1)*6) x
+     * [row*12, (row+h-1)*12); cells are the 8px framebuffer grid. */
+    unsigned px_x0 = col * 6, px_x1 = (unsigned)(col + w - 1) * 6 + 6;
+    unsigned px_y0 = row * 12, px_y1 = (unsigned)(row + h - 1) * 12 + 12;
+    unsigned cx0 = px_x0 / 8, cx1 = (px_x1 - 1) / 8;
+    unsigned cy0 = px_y0 / 8, cy1 = (px_y1 - 1) / 8;
+    for (unsigned cy = cy0; cy <= cy1 && cy < 32; ++cy)
+        for (unsigned cx = cx0; cx <= cx1 && cx < 32; ++cx) {
+            const uint32_t *cell =
+                graphics->cells_fb + (size_t)cy * AOS_MENU_CELLS_ROW_WORDS +
+                cx * 8;
+            bool empty = true;
+            for (unsigned word = 0; word < 8; ++word)
+                if (cell[word]) { empty = false; break; }
+            if (empty) continue;
+            unsigned map_x = tile_x + cx, map_y = tile_y + cy;
+            if (map_x >= 32 || map_y >= 32 || *next_tile >= 0x200)
+                return false;
+            unsigned tile = (*next_tile)++;
+            uint8_t tile_data[32];
+            if (!aos_menu_cells_cell_tile(&graphics->cells,
+                                          (uint16_t)cx, (uint16_t)cy,
+                                          tile_data))
+                return false;
+            uint16_t previous = graphics->bg0_map[map_y * 32 + map_x];
+            uint8_t *destination = graphics->bg0_chars + (size_t)tile * 32;
+            memcpy(destination,
+                   graphics->bg0_chars + (size_t)(previous & 0x3FF) * 32,
+                   32);
+            for (unsigned byte = 0; byte < 32; ++byte) {
+                uint8_t low = tile_data[byte] & 0x0F;
+                uint8_t high = tile_data[byte] & 0xF0;
+                if (low) destination[byte] =
+                    (uint8_t)((destination[byte] & 0xF0) | low);
+                if (high) destination[byte] =
+                    (uint8_t)((destination[byte] & 0x0F) | high);
+            }
+            graphics->bg0_map[map_y * 32 + map_x] =
+                (uint16_t)(tile | palette << 12);
+        }
+    return true;
 }
 
 static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,

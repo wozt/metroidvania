@@ -2,6 +2,33 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0810 - Menu cell engine slice 4: first renderer integration
+
+- `aos_pause_graphics` now hosts the cell engine: a 32x32-cell
+  framebuffer (each cell already a 32-byte 4bpp tile), the four ROM
+  metric tables read live with bounds checks (char records
+  0x080E2B4C/0x080E2EC0 stride 4, glyph records 0x0850A136 stride 14 /
+  0x08509876 stride 10), and `place_text_cells`, which runs a localized
+  entry through run_a/run_b and commits each non-empty cell as a BG0
+  tile merged over the existing map entry.
+- The hub info line (text 0x362+selected entry, the native
+  sub_0804728C call in sub_08047C4C) now renders through the engine
+  instead of the approximate proportional-font path. Menu entries are
+  stored as plain ASCII and index the char tables via ch-0x20, matching
+  the native printers.
+- `aos_menu_cells_cursor_a` ports sub_0804066C (cursor placement with
+  40x20 clamps) and run_text handles control byte 6 as a newline with
+  the same reset the column wrap performs.
+- Verified against the verified ROM: entry 0x362 decodes to
+  "Change spirit's equipment." and the hub PPM shows glyphs in the
+  bottom band over the existing window frame.
+- Still provisional: the window geometry (col 4, row 1, 36x2 cells on
+  a canvas at tile (0,15)) is estimated — the exact fb base
+  0x06008000 -> tilemap mapping and the cursor position left by
+  sub_08046DD4 before sub_0804728C are not yet decoded. sub_08041434
+  language dispatch and the sub_080472B0 VRAM commit path remain
+  unported; other pages still use the approximate place_text path.
+
 ## Patch 0809 - Menu cell engine slice 3: window init and tile commit path
 
 - `aos_menu_cells_window_a` ports sub_08040748 (context-A window

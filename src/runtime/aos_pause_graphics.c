@@ -1320,6 +1320,28 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
     put_tiles(graphics, 0x15, 0xF, 0x13E4, 1);
     put_tiles(graphics, 0x19, 0xF, 0x13E8, 1);
     put_tiles(graphics, 0x1B, 0xF, 0xF3EA, 1);
+    /* sub_0804D2C8 footer (steady state after the +0xC intro phases):
+     * page numbers via sub_08046F74 at (0xD,0x11)/(0x10,0x11) with the
+     * 0x139B separator, corner singles 0x174C/0x134C/0xF3EC-0xF3EF,
+     * "ENEMY DATA" (0x3B1) and "SOUL" (0x3B2) labels through context-B
+     * windows at pixel (126,112) and (0,120). The button-hint glyphs
+     * 0x84-0x87 remain unported. */
+    unsigned total_pages = (AOS_PAUSE_ENEMY_RECORDS - 1) / 10 + 1;
+    unsigned page = values->top / 10 + 1;
+    put_bignum(graphics, 0xD, 0x11, (int32_t)page, 2, 1, 1);
+    put_tiles(graphics, 0xE, 0x11, 0x139B, 1);
+    put_bignum(graphics, 0x10, 0x11, (int32_t)total_pages, 2, 1, 1);
+    put_tiles(graphics, 2, 0x11, 0x174C, 1);
+    put_tiles(graphics, 0x1C, 0x11, 0x134C, 1);
+    put_tiles(graphics, 3, 0x11, 0xF3EC, 1);
+    put_tiles(graphics, 4, 0x11, 0xF3ED, 1);
+    put_tiles(graphics, 0x1A, 0x11, 0xF3EE, 1);
+    put_tiles(graphics, 0x1B, 0x11, 0xF3EF, 1);
+    if (!place_text_id(graphics, 0x3B1, true, 126, 112, 108, 3,
+                       &next_tile) ||
+        !place_text_id(graphics, 0x3B2, true, 0, 120, 96, 3,
+                       &next_tile))
+        return false;
     composite(graphics, rgba);
     /* sub_0804C668/sub_0804C770: column 2 or 0x10 on the slot's bit 0,
      * row 5 + slot/2 where slot = cursor - top on the ten-entry page. */

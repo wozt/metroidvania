@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0856 - Bestiary list footer ported
+
+- sub_0804D2C8 is a +0xC intro state machine (row strips, then
+  names, then footer); the steady-state footer is now drawn every
+  frame: page numbers top/10+1 over (count-1)/10+1 through
+  sub_08046F74 with the 0x139B separator, corner singles
+  0x174C/0x134C/0xF3EC-0xF3EF, and the context-B labels 0x3B1
+  "ENEMY DATA" (pixel 126,112) and 0x3B2 "SOUL" (0,120).
+- Remaining: button-hint glyphs 0x84-0x87, the intro animation
+  itself, weakness labels.
+
 ## Patch 0855 - Bestiary header/footer strips ported
 
 - sub_0804C668 list-enter draws: 0xF3D0 x14 title strip at (0xB,3),

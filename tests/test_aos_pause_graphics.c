@@ -373,6 +373,13 @@ int main(int argc, char **argv) {
             assert(graphics.bg0_map[0xF * 32 + 0x15] == 0x13E4);
             assert(graphics.bg0_map[0xF * 32 + 0x19] == 0x13E8);
             assert(graphics.bg0_map[0xF * 32 + 0x1B] == 0xF3EA);
+            /* sub_0804D2C8 footer: page "01" ends col 0xD row 0x11,
+             * separator 0x139B, total "12" ends col 0x10. */
+            assert(graphics.bg0_map[0x11 * 32 + 0xD] == 0x1301);
+            assert(graphics.bg0_map[0x11 * 32 + 0xC] == 0x1300);
+            assert(graphics.bg0_map[0x11 * 32 + 0xE] == 0x139B);
+            assert(graphics.bg0_map[0x11 * 32 + 0x10] == 0x1302);
+            assert(graphics.bg0_map[0x11 * 32 + 0xF] == 0x1301);
             enemy.top = 10;
             enemy.cursor = 10;
             assert(aos_pause_graphics_render_enemy(&graphics, &enemy,

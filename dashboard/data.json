@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:35:27+00:00",
+ "generated_at": "2026-11-08T00:39:41+00:00",
  "git": {
-  "commit": "59293331",
+  "commit": "e2d4af59",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,18 @@
  },
  "timeline": [
   {
+   "commit": "e2d4af59",
+   "date": "2026-11-08",
+   "subject": "viewer: size requests on scrolled pages kill scrollbar gizmo warnings",
+   "scope": "project"
+  },
+  {
+   "commit": "8d8207ef",
+   "date": "2026-11-08",
+   "subject": "lab: tag states with gameMode and prefer gameplay checkpoints",
+   "scope": "project"
+  },
+  {
    "commit": "59293331",
    "date": "2026-11-08",
    "subject": "lab: read gameMode low byte only — counters poisoned mode detection",
@@ -20783,18 +20795,6 @@
    "commit": "af2f1e97",
    "date": "2026-11-07",
    "subject": "Emit the native death sparkles during Soma's death",
-   "scope": "project"
-  },
-  {
-   "commit": "ee77699b",
-   "date": "2026-11-07",
-   "subject": "Correct the Object20 projectile gap: sub_0805DC80 is dead code",
-   "scope": "project"
-  },
-  {
-   "commit": "7b821d32",
-   "date": "2026-11-07",
-   "subject": "Decode the Object20 skeleton brain and projectile spawner",
    "scope": "project"
   }
  ],

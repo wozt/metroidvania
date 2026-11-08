@@ -1384,6 +1384,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(workers_scroll), grid);
     gtk_scrolled_window_set_min_content_height(
         GTK_SCROLLED_WINDOW(workers_scroll), 170);
+    gtk_widget_set_size_request(workers_scroll, 900, 170);
     gtk_widget_set_vexpand(workers_scroll, TRUE);
     gtk_box_append(GTK_BOX(top_box), workers_scroll);
 

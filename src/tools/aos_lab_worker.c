@@ -512,7 +512,8 @@ enum {
     RK_ITEM = 6,   /* 0x02013294:136 inventories */
     RK_SOUL = 7,   /* 0x0201331C:122 soul inventories */
     RK_ENT  = 8,   /* 0x02000400:8192 entity table — enemy AI, HP, AI ticks */
-    RK_COUNT = 9,
+    RK_VRAM = 9,   /* 0x06000000:98304 tilemaps — text/dialogue activity */
+    RK_COUNT = 10,
     RK_ACTION = 8 /* action probe occupies last two slots */
 };
 
@@ -520,6 +521,7 @@ static const struct { uint32_t addr, size; } REWARD_PEEKS[RK_COUNT] = {
     {0x02000010, 4}, {0x02000090, 16}, {0x02000524, 8},
     {0x0201327A, 8}, {0x0201328C, 8}, {0x02013279, 4},
     {0x02013294, 136}, {0x0201331C, 122}, {0x02000400, 8192},
+    {0x06000000, 0x18000},
 };
 
 static int16_t rd16(const AosPeekResult *r, int off) {
@@ -684,7 +686,6 @@ static void run_traverse(AosMgbaSession *session, int frames,
 static double compute_bonus(AosLabDb *db, const AosRunResult *res,
                             int nreward, int scene_is_new, double motion,
                             char *tags, size_t tags_size) {
-    (void)scene_is_new;
     if (!res->peeks || res->peek_count < 2 * RK_COUNT) return 0.0;
     double bonus = 0.0;
     size_t tl = 0;
@@ -787,11 +788,48 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         memcmp(b[RK_SOUL].data, a[RK_SOUL].data, b[RK_SOUL].size)) {
         bonus += 0.5; TAG("soul_gained");
     }
-    /* entity-table churn: enemies moving, AI ticking, hits landing.
-     * High churn = the world is alive around the player; near-zero
-     * churn in gameplay mode = genuinely stuck, nothing to fight */
+    /* tilemap activity on the game image itself: dialogue text
+     * advancing, HUD refreshes, tile swaps. Sampled byte diff keeps
+     * it cheap; only counts when the scene itself did not change —
+     * new_scene already covers full-screen transitions */
+    if (!scene_is_new && b[RK_VRAM].data && a[RK_VRAM].data &&
+        b[RK_VRAM].size == a[RK_VRAM].size && b[RK_VRAM].size > 0x1000) {
+        long td = 0;
+        for (uint32_t i = 0; i + 1 < b[RK_VRAM].size; i += 97) {
+            uint16_t v0, v1;
+            memcpy(&v0, b[RK_VRAM].data + i, 2);
+            memcpy(&v1, a[RK_VRAM].data + i, 2);
+            if (v0 != v1) ++td;
+        }
+        if (td > 25) { bonus += 0.25; TAG("tile_change"); }
+    }
+    /* entity-table analysis (pure WRAM, no image needed): the 8 KiB
+     * region holds entity slots. A slot that was non-empty before and
+     * all-zero after means an enemy died or despawned — kills, boss
+     * deaths, room clears all surface here. Reverse = spawns. */
     if (b[RK_ENT].data && a[RK_ENT].data &&
-        b[RK_ENT].size == a[RK_ENT].size) {
+        b[RK_ENT].size == a[RK_ENT].size && b[RK_ENT].size >= 8192) {
+        int emptied = 0, filled = 0;
+        for (int s = 0; s + 256 <= (int)b[RK_ENT].size; s += 256) {
+            int nb = 0, na = 0;
+            for (int j = 0; j < 256; j += 16) {
+                if (b[RK_ENT].data[s + j] || b[RK_ENT].data[s + j + 1] ||
+                    b[RK_ENT].data[s + j + 2] || b[RK_ENT].data[s + j + 3])
+                    ++nb;
+                if (a[RK_ENT].data[s + j] || a[RK_ENT].data[s + j + 1] ||
+                    a[RK_ENT].data[s + j + 2] || a[RK_ENT].data[s + j + 3])
+                    ++na;
+            }
+            if (nb > 0 && na == 0) ++emptied;
+            else if (nb == 0 && na > 0) ++filled;
+        }
+        if (emptied > 0) {
+            bonus += emptied > 2 ? 0.6 : 0.3 * emptied;
+            if (bonus > 2.5) bonus = 2.5;
+            TAG("enemy_down");
+        }
+        if (filled > emptied) { bonus -= 0.1; TAG("enemy_spawn"); }
+        /* raw churn stays as the "world is alive" signal */
         long diff = 0;
         for (uint32_t i = 0; i < b[RK_ENT].size; ++i)
             if (b[RK_ENT].data[i] != a[RK_ENT].data[i]) ++diff;
@@ -1747,16 +1785,6 @@ int main(int argc, char **argv) {
                 ++peek_count;
             }
 
-            /* OCR brick: post-run snapshot of the text-BG tilemaps.
-             * IO regs (DISPCNT+BGCNT) at 0x04000000, VRAM window at
-             * 0x06000000 — the vision module hashes each enabled BG's
-             * 32x32 tile grid into the metrics JSON. */
-            if (peek_count < 2 * RK_COUNT + 3) {
-                peeks[peek_count].frame = -1;
-                peeks[peek_count].address = 0x06000000;
-                peeks[peek_count].size = 0x18000;
-                ++peek_count;
-            }
 
             AosRunSpec spec;
             memset(&spec, 0, sizeof spec);
@@ -1921,12 +1949,13 @@ int main(int argc, char **argv) {
                     }
                 }
                 /* tilemap OCR signature from the post-run VRAM peek
-                 * plus the session's video-register snapshot */
+                 * (the after-side reward region) plus the session's
+                 * video-register snapshot */
                 {
-                    int vram_i = -1;
-                    for (int pi = 0; pi < res.peek_count; ++pi)
-                        if (res.peeks[pi].address == 0x06000000)
-                            vram_i = pi;
+                    int vram_i = RK_COUNT + RK_VRAM;
+                    if (vram_i >= res.peek_count ||
+                        res.peeks[vram_i].address != 0x06000000)
+                        vram_i = -1;
                     if (vram_i >= 0 && res.peeks[vram_i].data) {
                         char tm[256];
                         aos_vision_tilemap(res.video_regs,
@@ -1985,26 +2014,13 @@ int main(int argc, char **argv) {
             /* exploration bonus on top of the action probe */
             int trial_died = 0, trial_exit_dmg = 0;
             {
-                int scene_new = 0;
-                for (int si = 0; si < seen_count; ++si)
-                    if (seen_scenes[si] == scene_hash) { scene_new = 0; break; }
-                /* scene_hash was already registered above when new */
+                /* scene_is_new = this trial registered the hash */
+                int scene_new = (seen_count > 0 &&
+                                 seen_scenes[seen_count - 1] == scene_hash);
                 char btags[256];
-                double bonus = compute_bonus(db, &res, RK_COUNT, 0,
+                double bonus = compute_bonus(db, &res, RK_COUNT, scene_new,
                                              trial_motion, btags,
                                              sizeof btags);
-                /* novelty tag handled via seen set: recompute flag */
-                {
-                    /* if it was just added this trial it is 'new' */
-                    scene_new = (seen_count > 0 &&
-                                 seen_scenes[seen_count - 1] == scene_hash);
-                    if (scene_new) {
-                        bonus += 0.4;
-                        size_t tl = strlen(btags);
-                        snprintf(btags + tl, sizeof btags - tl,
-                                 "%snew_scene", tl ? "," : "");
-                    }
-                }
                 reward += bonus;
                 trial_died = strstr(btags, "death") != NULL;
                 trial_exit_dmg = strstr(btags, "exit_gameplay") &&

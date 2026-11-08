@@ -12,11 +12,14 @@ Last updated: **2026-11-07**.
   (column * 8 + 6, row * 8 + 3 in pixels) — there is no slide or
   tween when the selection changes, matching the runtime's direct
   placement.
-- sub_08048B64 advances the animation handle (sub_0803E6BC), sets
-  +0x59 bit 8 and clears the +0x24 counter each update. The runtime's
-  7-frame wiggle ((cursor_tick >> 1) & 7 with the (>> 4) & 1 flip)
-  approximates the native hand cycle; the exact per-frame timing of
-  the cursor's animation sequence is not yet decoded.
+- sub_08048018 adds the +-4px horizontal wiggle to the anchor's X:
+  t = frame_counter >> 1, v = t & 7, offset = v - 3 while bit 3 of t
+  is clear and 3 - v while set — algebraically identical to the
+  runtime's ((cursor_tick >> 1) & 7) - 3 / 3 - (...) flip on
+  (cursor_tick >> 4) & 1, verified term by term.
+- The remaining approximation is the frame-cycle timing: the runtime
+  walks the pointing-strip records at cursor_tick / 4 while the
+  native frame selector has not been pinned down yet.
 
 ## Patch 0834 - Death-state velocity bounce ported (sub_0801B03C)
 

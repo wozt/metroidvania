@@ -92,7 +92,8 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | enemy_down | entity slots emptied inside a stable scene (kills; scene transitions are despawns, not kills) | +0.3 each, +0.6 if >2 |
 | enemy_spawn | more entity slots filled than emptied (stable scenes only) | −0.1 |
 | tile_change | VRAM tilemap diff (text/HUD) when scene unchanged | +0.25 |
-| lab.progress | rooms / max level / distance (motion integral) | campaign metric |
+| lab.progress | rooms / max level / distance / weighted score | campaign metric |
+| lab.progress_score | weighted advancement events (see branch mgmt) | consolidation trigger |
 
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
@@ -104,8 +105,14 @@ explore pool and the per-action warmup floor.
 
 ## Branch management
 
-- **Frontier consolidation**: when `lab.motion_total` grows ~10%
-  since the last consolidation, `aos_labdb_consolidate` keeps only
+- **Weighted progress score** (`lab.progress_score`): advancement
+  only — new_room/new_area +10, new_area_song +4, level_up +5,
+  exp_big +4, exp_gain/item/soul +1, enemy_down/healed +0.5;
+  damage/death/room_revisit/no_progress subtract. Free-roam motion,
+  tile churn and item vacuuming score zero — wandering is not
+  progress. Scouts add +10 per genuinely new room.
+- **Frontier consolidation**: when `lab.progress_score` grows
+  ~10% +5 since the last consolidation, `aos_labdb_consolidate` keeps only
   the promising branch — ancestors of the Elo-best state (via
   `parent_id`), states whose trials scored >0.5, and the newest 80
   checkpoints — drops every other state and orphaned trial, caps the

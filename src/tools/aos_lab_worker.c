@@ -700,6 +700,20 @@ static void run_traverse(AosMgbaSession *session, int frames,
 }
 
 /* Returns bonus reward; appends human-readable tags to `tags`. */
+/* exact-token match inside the comma-separated bonus tag list —
+ * plain strstr would let "new_area" match "new_area_song" */
+static int btag_has(const char *tags, const char *t) {
+    size_t n = strlen(t);
+    const char *p = tags;
+    while ((p = strstr(p, t))) {
+        int lb = (p == tags) || p[-1] == ',';
+        int rb = p[n] == ',' || p[n] == 0;
+        if (lb && rb) return 1;
+        ++p;
+    }
+    return 0;
+}
+
 static double compute_bonus(AosLabDb *db, const AosRunResult *res,
                             int nreward, int scene_is_new, double motion,
                             char *tags, size_t tags_size) {
@@ -1260,6 +1274,15 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 if (!room_seen(db, area, room)) {
                     room_mark(db, area, room);
                     ++scout_rooms;
+                    /* scouts feed the same weighted progress score —
+                     * a genuinely new room is real advancement even
+                     * though no trial produced it */
+                    char *ps = aos_labdb_meta_get(db, "lab.progress_score");
+                    double cur = ps ? atof(ps) : 0;
+                    free(ps);
+                    char nb[32];
+                    snprintf(nb, sizeof nb, "%.1f", cur + 10);
+                    aos_labdb_meta_set(db, "lab.progress_score", nb);
                 }
             }
         }
@@ -2131,6 +2154,44 @@ int main(int argc, char **argv) {
                     metrics[ml - 1] = 0;
                     strncat(metrics, extra, sizeof metrics - ml - 1);
                 }
+                /* campaign progress score: weighted ADVANCEMENT only.
+                 * New rooms/areas/objectives/kills count; free-roam
+                 * motion, tile churn and item vacuuming do not — raw
+                 * distance confused wandering with progress. This
+                 * score, not lab.motion_total, drives consolidation. */
+                {
+                    double pts = 0;
+                    if (btag_has(btags, "new_room")) pts += 10;
+                    if (btag_has(btags, "new_area")) pts += 10;
+                    if (btag_has(btags, "new_area_song")) pts += 4;
+                    if (btag_has(btags, "new_scene")) pts += 1;
+                    if (btag_has(btags, "level_up")) pts += 5;
+                    if (btag_has(btags, "exp_big")) pts += 4;
+                    else if (btag_has(btags, "exp_gain")) pts += 1;
+                    if (btag_has(btags, "item_found")) pts += 1;
+                    if (btag_has(btags, "soul_gained")) pts += 1;
+                    if (btag_has(btags, "gold_gain")) pts += 0.5;
+                    if (btag_has(btags, "enemy_down")) pts += 0.5;
+                    if (btag_has(btags, "healed")) pts += 0.5;
+                    if (btag_has(btags, "enter_gameplay")) pts += 0.5;
+                    if (btag_has(btags, "damage")) pts -= 1;
+                    if (btag_has(btags, "death")) pts -= 20;
+                    if (btag_has(btags, "gameover_screen")) pts -= 10;
+                    if (btag_has(btags, "exit_gameplay")) pts -= 3;
+                    if (btag_has(btags, "room_revisit")) pts -= 0.3;
+                    if (btag_has(btags, "no_progress")) pts -= 0.5;
+                    if (btag_has(btags, "mp_empty")) pts -= 0.2;
+                    if (btag_has(btags, "enemy_spawn")) pts -= 0.2;
+                    if (pts != 0) {
+                        char pk[64], pv[64];
+                        snprintf(pk, sizeof pk, "lab.progress_score");
+                        char *pv0 = aos_labdb_meta_get(db, pk);
+                        double cur = pv0 ? atof(pv0) : 0;
+                        free(pv0);
+                        snprintf(pv, sizeof pv, "%.1f", cur + pts);
+                        aos_labdb_meta_set(db, pk, pv);
+                    }
+                }
             }
 
             /* distance travelled: screen-motion integral per trial —
@@ -2267,12 +2328,15 @@ int main(int argc, char **argv) {
                     aos_labdb_meta_set(db, "lab.maxlevel", b);
                 }
                 free(ml);
-                char prog[80], old[64] = "";
+                char prog[96], old[64] = "";
                 char *ml2 = aos_labdb_meta_get(db, "lab.maxlevel");
                 char *md = aos_labdb_meta_get(db, "lab.motion_total");
-                snprintf(prog, sizeof prog, "rooms=%d level=%d dist=%d",
+                char *ps = aos_labdb_meta_get(db, "lab.progress_score");
+                snprintf(prog, sizeof prog,
+                         "rooms=%d level=%d dist=%d score=%.0f",
                          room_count(db), ml2 ? atoi(ml2) : 0,
-                         md ? atoi(md) : 0);
+                         md ? atoi(md) : 0, ps ? atof(ps) : 0);
+                free(ps);
                 free(md);
                 free(ml2);
                 char *op = aos_labdb_meta_get(db, "lab.progress");
@@ -2280,24 +2344,25 @@ int main(int argc, char **argv) {
                 if (strcmp(old, prog))
                     aos_labdb_meta_set(db, "lab.progress", prog);
                 free(op);
-                /* frontier consolidation: when travelled distance has
-                 * grown ~10% since the last consolidation, the fleet
-                 * found a promising branch — purge everything else and
-                 * point every worker at the Elo champion via
+                /* frontier consolidation: when the weighted progress
+                 * score (real advancement — rooms, areas, objectives,
+                 * kills — not free-roam motion) grows meaningfully, the
+                 * fleet found a promising branch — purge everything
+                 * else and point every worker at the Elo champion via
                  * lab.reset_state */
                 {
-                    char *md3 = aos_labdb_meta_get(db, "lab.motion_total");
-                    long dist_now = md3 ? atol(md3) : 0;
+                    char *md3 = aos_labdb_meta_get(db, "lab.progress_score");
+                    double score_now = md3 ? atof(md3) : 0;
                     free(md3);
-                    char *cd = aos_labdb_meta_get(db, "lab.consol_dist");
-                    long dist_ref = cd ? atol(cd) : -1;
+                    char *cd = aos_labdb_meta_get(db, "lab.consol_score");
+                    double score_ref = cd ? atof(cd) : -1;
                     free(cd);
-                    if (dist_ref < 0) {
+                    if (score_ref < 0) {
                         char nb[32];
-                        snprintf(nb, sizeof nb, "%ld", dist_now);
-                        aos_labdb_meta_set(db, "lab.consol_dist", nb);
-                    } else if (dist_now > dist_ref + dist_ref / 10 &&
-                               dist_now > 0) {
+                        snprintf(nb, sizeof nb, "%.1f", score_now);
+                        aos_labdb_meta_set(db, "lab.consol_score", nb);
+                    } else if (score_now > score_ref + score_ref / 10 + 5 &&
+                               score_now > 0) {
                         int cn = aos_labdb_consolidate(db);
                         double cbv = 0.0;
                         int64_t cb = aos_labdb_elo_best(db, &cbv);
@@ -2307,10 +2372,10 @@ int main(int argc, char **argv) {
                             aos_labdb_meta_set(db, "lab.reset_state", nb);
                         }
                         char nb[32];
-                        snprintf(nb, sizeof nb, "%ld", dist_now);
-                        aos_labdb_meta_set(db, "lab.consol_dist", nb);
-                        printf("worker %d frontier consolidation: %d rows, reset->%lld\n",
-                               worker_id, cn, (long long)cb);
+                        snprintf(nb, sizeof nb, "%.1f", score_now);
+                        aos_labdb_meta_set(db, "lab.consol_score", nb);
+                        printf("worker %d frontier consolidation: %d rows, reset->%lld (score %.1f)\n",
+                               worker_id, cn, (long long)cb, score_now);
                     }
                 }
             }

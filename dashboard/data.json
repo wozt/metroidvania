@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:56:51+00:00",
+ "generated_at": "2026-11-08T01:00:08+00:00",
  "git": {
-  "commit": "674eb278",
+  "commit": "9391b50f",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "9391b50f",
+   "date": "2026-11-08",
+   "subject": "lab: frontier consolidation — purge to the best branch, fleet follows",
+   "scope": "project"
+  },
+  {
    "commit": "674eb278",
    "date": "2026-11-08",
    "subject": "lab: enemy_down only counts inside stable scenes",
@@ -20789,12 +20795,6 @@
    "commit": "fb271d40",
    "date": "2026-11-07",
    "subject": "Document full cursor placement coverage on pause pages",
-   "scope": "project"
-  },
-  {
-   "commit": "0e660e74",
-   "date": "2026-11-07",
-   "subject": "Animate the pause selection hand",
    "scope": "project"
   }
  ],

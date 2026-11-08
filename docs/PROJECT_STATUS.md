@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0833 - Corpse sparkle uses the native animation 13
+
+- sub_0801B03C's emitter calls sub_08045CEC(x, y, 0xD, 8): resource
+  0x081C15F4, anim table 0x0820ED60, animation index 0xD (sequence
+  13), callback sub_08045C9C (the drift bounce), entity slots
+  0x49-0xCF. arg3's low nibble is OR'd into +0x5A bits 3-6 (the OBJ
+  palette-row selector), while the colours come from the tileset's
+  palette bank resolved by sub_08039614 — constant per
+  (table, tileset) pair, so sequence 13 shares blood's bank 4.
+- The death sparkle spawned AOS_EFFECT_SPARKLE (still frame 0x36,
+  sub_08045B44 type 0) — wrong art. It now uses the new
+  AOS_EFFECT_DEATH_SPARKLE kind: Effect/death_sparkle exports
+  sequence 13 (identical frames to blood, same content hash), bank 4.
+  Aria object export: 946 sequences, 2954 frames; golden re-recorded.
+- Still approximate: the emitter entity's own +0x48/+0x4C bounce
+  (sub_08045C9C's +-0x200 gravity flips) — our drift flag models the
+  visible drift only.
+
 ## Patch 0832 - Death and game-over audio ported; reload branch decoded
 
 - sub_0800C8C8 case 0 plays SONG_MUTE when the death sub-state

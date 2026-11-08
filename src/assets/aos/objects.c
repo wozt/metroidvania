@@ -489,6 +489,11 @@ static const EffectSpec effects[] = {
     /* sub_08045BC8/sub_08045164: the soul-absorbed sparkle pinned above
      * Soma, animation sequence 12, palette nibble 6 (OBJ row 9). */
     {"soul_held", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {12}, -1},
+    /* sub_0801B03C's corpse sparkle: sub_08045CEC(x, y, 0xD, 8) plays
+     * animation 13 of 0x0820ED60; arg3's nibble 8 selects the OBJ palette
+     * row while the colours come from the tileset's palette bank (4, the
+     * same sequence-13 bank as blood). */
+    {"death_sparkle", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
 };
 
 /* 0x0852513C, selected by sub_08045B44 type 4: its four type-1 records are

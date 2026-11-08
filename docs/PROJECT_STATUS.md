@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0852 - Bestiary soul text mapping resolved
+
+- sub_08047330's description bases decode to exactly the runtime's
+  soul_description_id bases (0x1E3/0x21B/0x233) for categories 0-2,
+  plus a fourth category at 0x256 - and enemies.tsv confirms soul_type
+  3 occurs in drop data, so the helper needs that base when the window
+  is ported.
+- The detail window alternates enemy name (sub_0804728C) and soul
+  description (sub_08047330) on the soul-view flag; the frame is
+  sub_08040748(0,0,0x22,2) into BG 0x0600E000.
+
 ## Patch 0851 - Bestiary soul text path decoded
 
 - sub_0804D1DC's tail renders the soul name/description through

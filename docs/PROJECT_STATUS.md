@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0831 - Obtain/reward window decoded (not ported: no trigger)
+
+- The post-combat obtain window is a game-mode state machine, not a
+  simple popup: the script/game-mode record drives phases (+ 0x5),
+  calls sub_08067310 to initialise it, then runs sub_08067488 each
+  frame; it plays song 0xEF and advances on the confirm button.
+- sub_08066B70 walks up to 0xB entries from a caller-supplied list
+  (clamped against byte + 0x16) through table 0x085269FC (4-byte
+  kind/id records), resolving each through sub_08044E94 to the
+  per-kind stats/name tables (0x08505D3C weapons, 0x085063B0 armor,
+  the item table otherwise) and queuing icon entities.
+- sub_08066EA4 is the render pass: per entry it calls the decoded
+  icon helpers sub_08044F24/sub_08044F50/sub_08044EDC and prints the
+  localized name; sub_08067000 applies the grant to the inventory
+  record (+ 0x38 item counts, + 0x58 weapon/armor counts) before the
+  window update.
+- Nothing in the runtime creates scripted multi-item rewards yet, so
+  the window is documented here rather than ported as dead code; the
+  icon helpers it reuses are already understood from the menu work.
+
 ## Patch 0830 - New-soul sparkle storm ported (sub_08045350/sub_080451F4)
 
 - A fresh soul collection now starts combat->soul_storm = 48 with the

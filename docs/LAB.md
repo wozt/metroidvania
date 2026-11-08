@@ -163,9 +163,12 @@ explore pool and the per-action warmup floor.
   forces a counter-attack segment — real reactive combat from WRAM,
   no image analysis needed. Reward peeks merge across segments so
   `compute_bonus` sees the whole run.
-- **Entity activity**: a 9th reward peek diffs the 8 KiB entity
-  table (0x02000400) — `entity_active` (+0.1) when enemies/AI are
-  churning, `entity_still` (−0.05) when gameplay mode shows a dead
+- **Entity activity**: a 9th reward peek reads the full entityData
+  table (0x02000400, 224 entities × 132 B per cvaos ewram.h). An
+  entity counts as alive while its updateFunc (offset 0) points into
+  code space — emptied/filled transitions inside stable scenes are
+  `enemy_down`/`enemy_spawn` (kills vs despawns, gated on
+  !scene_is_new), byte churn is `entity_active`/`entity_still`.
   world.
 - **Depth bias**: half of play-checkpoint waypoint picks take the
   deepest `scout_play_NNN` suffix available — trials push the

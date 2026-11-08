@@ -515,7 +515,7 @@ enum {
     RK_LVL  = 5,   /* 0x02013279:4  level + hp head */
     RK_ITEM = 6,   /* 0x02013294:136 inventories */
     RK_SOUL = 7,   /* 0x0201331C:122 soul inventories */
-    RK_ENT  = 8,   /* 0x02000400:8192 entity table — enemy AI, HP, AI ticks */
+    RK_ENT  = 8,   /* 0x02000400:29568 entityData[0xE0] — 224 ents ×132B */
     RK_VRAM = 9,   /* 0x06000000:98304 tilemaps — text/dialogue activity */
     RK_COUNT = 10,
     RK_ACTION = 8 /* action probe occupies last two slots */
@@ -524,7 +524,7 @@ enum {
 static const struct { uint32_t addr, size; } REWARD_PEEKS[RK_COUNT] = {
     {0x02000010, 4}, {0x02000090, 16}, {0x02000524, 8},
     {0x0201327A, 8}, {0x0201328C, 8}, {0x02013279, 4},
-    {0x02013294, 136}, {0x0201331C, 122}, {0x02000400, 8192},
+    {0x02013294, 136}, {0x0201331C, 122}, {0x02000400, 29568},
     {0x06000000, 0x18000},
 };
 
@@ -838,25 +838,25 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         }
         if (td > 25) { bonus += 0.25; TAG("tile_change"); }
     }
-    /* entity-table analysis (pure WRAM, no image needed): the 8 KiB
-     * region holds entity slots. A slot that was non-empty before and
-     * all-zero after means an enemy died or despawned — kills, boss
-     * deaths, room clears all surface here. Reverse = spawns. */
+    /* entity-table analysis (pure WRAM): entityData[0xE0] at
+     * 0x02000400, 224 entities of 132 bytes each (cvaos ewram.h).
+     * An entity is alive while its updateFunc (offset 0) points into
+     * ITCM/ROM code (0x08000000-0x0E000000); death/despawn clears it.
+     * During scene transitions the whole table is torn down, so slot
+     * churn there is a despawn, not a kill — gated on !scene_is_new. */
     if (b[RK_ENT].data && a[RK_ENT].data &&
-        b[RK_ENT].size == a[RK_ENT].size && b[RK_ENT].size >= 8192) {
+        b[RK_ENT].size == a[RK_ENT].size && b[RK_ENT].size >= 132 * 8) {
         int emptied = 0, filled = 0;
-        for (int s = 0; s + 256 <= (int)b[RK_ENT].size; s += 256) {
-            int nb = 0, na = 0;
-            for (int j = 0; j < 256; j += 16) {
-                if (b[RK_ENT].data[s + j] || b[RK_ENT].data[s + j + 1] ||
-                    b[RK_ENT].data[s + j + 2] || b[RK_ENT].data[s + j + 3])
-                    ++nb;
-                if (a[RK_ENT].data[s + j] || a[RK_ENT].data[s + j + 1] ||
-                    a[RK_ENT].data[s + j + 2] || a[RK_ENT].data[s + j + 3])
-                    ++na;
-            }
-            if (nb > 0 && na == 0) ++emptied;
-            else if (nb == 0 && na > 0) ++filled;
+        int nent = (int)(b[RK_ENT].size / 132);
+        if (nent > 224) nent = 224;
+        for (int s = 0; s < nent; ++s) {
+            uint32_t fb, fa;
+            memcpy(&fb, b[RK_ENT].data + s * 132, 4);
+            memcpy(&fa, a[RK_ENT].data + s * 132, 4);
+            int ab = fb >= 0x08000000 && fb < 0x0E000000;
+            int aa2 = fa >= 0x08000000 && fa < 0x0E000000;
+            if (ab && !aa2) ++emptied;
+            else if (!ab && aa2) ++filled;
         }
         /* during a scene/room transition the whole entity table is
          * torn down and rebuilt — emptied/filled slots there are
@@ -873,8 +873,8 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         long diff = 0;
         for (uint32_t i = 0; i < b[RK_ENT].size; ++i)
             if (b[RK_ENT].data[i] != a[RK_ENT].data[i]) ++diff;
-        if (diff > 400) { bonus += 0.1; TAG("entity_active"); }
-        else if (diff < 30) { bonus -= 0.05; TAG("entity_still"); }
+        if (diff > 1600) { bonus += 0.1; TAG("entity_active"); }
+        else if (diff < 120) { bonus -= 0.05; TAG("entity_still"); }
     }
     /* movement without damage: screen motion is the reliable signal
      * (WRAM entity position proved layout-dependent) */

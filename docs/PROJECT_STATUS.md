@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0843 - Obtain-window reward lists decoded
+
+- The obtain/reward window's data path is now fully mapped: the
+  script record byte `+0x3D0` indexes table `0x08526C6C`, whose
+  entries point to count-prefixed byte-index lists; each index
+  resolves through `0x085269FC`'s 4-byte records (kind byte: 2 = item
+  `0x08505B3C` stride 16, 3 = weapon `0x08505D3C` stride 28,
+  4 = armor `0x085063B0` stride 20, first u16 = name text index).
+- ROM dump of the 24 lists: indices 0-2 are large rewards of 18, 31
+  and 38 mixed item/equipment entries (story or boss-rush tier
+  rewards); indices 3 and up alternate single `item:4`/`item:1`
+  lists with empty ones.
+- Boss deaths confirmed to spawn only the guaranteed soul through
+  `sub_080D7308` (already ported), so the window stays deferred: it
+  is driven by room scripts, which the runtime does not execute.
+
 ## Patch 0842 - Drop-context flags identified as boss-rush state
 
 - `sub_080683BC`'s two remaining gates are both boss-rush flags, set

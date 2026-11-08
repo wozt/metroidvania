@@ -53,10 +53,46 @@ Last updated: **2026-11-07**.
   state 6 under the global 0x8E & 0x40, else hit callbacks
   sub_080AE334 / sub_080AD748 and state 0. The parent's
   +0x4 = sub_080AE390 links the children.
-- Child update sub_080ADC2C (~220 asm lines) and the
-  emerge/dive pair sub_080AD9FC (~210) / sub_080ADB94
-  (~90) are still to decode; the port is Bone-Pillar-scale
-  (linked segments), not a quick family.
+- Child update sub_080ADC2C decoded (~4 states): header copies
+  the parent's +0x5A palette bits (& 0x78); a live child with
+  a live non-dying parent runs the hit-stun gate (parent
+  +0x2D or sub_0806D4C0 -> sub_08021278 + sub_080429D0, the
+  child collision variant; else sub_08021278(1)). State 0
+  initialises lazily (skipped when the parent +0x1C record is
+  set -> state 3): graphics 0x081E4184 + frames 0x08237C44
+  under the parent's +0x2C palette byte, facing bit copied,
+  animation 1 (2 for segment index 4), +0x5C = 0x11, state 4
+  under the global flag, hit callbacks sub_080AE334 /
+  sub_080AE3CC (variant) + sub_080AD748, boxes 0x1010F8F8 via
+  sub_080428F0 / sub_08042884, then state 1. State 1 runs the
+  emerge pair sub_080ADB94(e, parent+0x1F, parent step, 1) +
+  sub_080AD9FC; facing sets sl = +/-0x8000 and, with the
+  parent +0x1C set, state 2 with timer 0x38, +0x54 = sl,
+  +0x48 = (index << 15) - 0x6000 and +0x4C = -0x30000, vy
+  clamped when passing the +0x13110 target's +0x40. State 2
+  integrates position, +0x4C += 0x2000, +0x54 angle by
+  facing (+/-0x100 subpixel), sub_0806D5C0 particles every
+  +0xD & 7 == 0, timer to 0 -> state 3. State 3 deletes when
+  the +0x58 low bits & 0x101F are clear after sub_0803E6BC,
+  else the +0x22 sine phase (sub_080009E4 * 3 << 13) feeds
+  the affine sub_0803E058 with sl +/-0x8000 - the same
+  pattern closes state 4 (inert affine-only).
+- Emerge/dive decoded: sub_080ADB94 launches each child
+  horizontally (vx +/-0x8000 by +0x1F facing, ax -/+0x300),
+  holds until vx crosses 0, waits 0x10 ticks and relaunches;
+  sub_080AD9FC settles the child on the floor
+  (sub_08001D94 height query at room pos + 0xA, +0x46 +=
+  result + 2, wall probes sub_0800207C / sub_08002058 at
+  x -/+0x18, y - 8 by facing, parent +0x1D = 4 when buried);
+  sub_080ADB0C is the create-time floor snap (<= 3 passes at
+  y - 8 + 0xA, skipped under the global 0x8E & 0x40).
+- Still open for the port: sub_08001D94 height query,
+  sub_08068A70 (state-4 distance), sub_0803E058 affine arg
+  order, sub_0806D5C0 particle kind, sub_080429D0 child
+  collision, the parent +0x1C attack record semantics, the
+  hit callbacks sub_080AE334 / sub_080AE3CC / sub_080AD748,
+  and resources for ids 62/71 (enemies.tsv rows exist; the
+  ENTITY/PROBES rows are not yet in objects.c).
 - Golem family recon: EnemyGolemUpdate sub_0807E35C is a
   four-state dispatcher whose state 0 sub_0807E8EC is a
   42-case sub-state machine (~3 KB asm) - boss-scale, not

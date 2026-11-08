@@ -1342,6 +1342,22 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
         !place_text_id(graphics, 0x3B2, true, 0, 120, 96, 3,
                        &next_tile))
         return false;
+    /* sub_0804D2C8 button hints: context-B window (0,0xF,0x29,1),
+     * pixel cursor (0x60,0xF) = cell (16,0xF), glyphs 0x84/0x85 then a
+     * manual +9 px bump (native +0x115B6/+0x115B8) before 0x86/0x87. */
+    if (!cells_begin_b(graphics, 0, 0xF, 0x29, 1))
+        return false;
+    aos_menu_cells_cursor_b(&graphics->cells, 16, 0xF);
+    if (!cells_print_glyph_b(graphics, 0x84) ||
+        !cells_print_glyph_b(graphics, 0x85))
+        return false;
+    graphics->cells.b_sx = (uint16_t)(graphics->cells.b_sx + 9);
+    graphics->cells.b_px = (uint16_t)(graphics->cells.b_px + 9);
+    if (!cells_print_glyph_b(graphics, 0x86) ||
+        !cells_print_glyph_b(graphics, 0x87))
+        return false;
+    if (!cells_commit_b(graphics, 0, 0, 3, &next_tile))
+        return false;
     composite(graphics, rgba);
     /* sub_0804C668/sub_0804C770: column 2 or 0x10 on the slot's bit 0,
      * row 5 + slot/2 where slot = cursor - top on the ten-entry page. */

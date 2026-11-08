@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0857 - Bestiary button-hint glyphs ported
+
+- The four controller glyphs 0x84-0x87 now render through the
+  context-B glyph path: window (0,0xF,0x29,1), cursor cell
+  (16,0xF) = pixel (96,120), manual +9 px bump between the two
+  pairs, committed via cells_commit_b.
+- Remaining on the list page: the +0xC intro animation and
+  weakness labels.
+
 ## Patch 0856 - Bestiary list footer ported
 
 - sub_0804D2C8 is a +0xC intro state machine (row strips, then

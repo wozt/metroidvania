@@ -297,6 +297,10 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
     }
 }
 
+static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
+                          unsigned x, unsigned y, unsigned width,
+                          unsigned palette, unsigned *next_tile);
+
 static void reset_bg0(AosPauseGraphics *graphics) {
     ++graphics->cursor_tick;
     memcpy(graphics->bg0_chars, graphics->bg0_base_chars,
@@ -351,6 +355,14 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                               : values->status & 2 ? 3
                               : values->status & 4 ? 1 : 0;
     put_tiles(graphics, 12, 9, (uint16_t)(0x330A + status_variant * 0x10), 4);
+
+    /* sub_08047C4C's tail: sub_0804728C(0x362 + selected) prints the
+     * selected entry's description into the bottom message window. The
+     * row is estimated on the same band as the other pages' messages. */
+    unsigned next_tile = 0;
+    if (!place_text_id(graphics, (uint16_t)(0x362 + selected), true,
+                       24, 132, 200, 3, &next_tile))
+        return false;
 
     composite(graphics, rgba);
     /* sub_08047818's hub placement: sub_08048AD8(1, selected + 0xC). */

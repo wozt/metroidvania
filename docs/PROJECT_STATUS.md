@@ -2,6 +2,77 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0864 - Giant Worm and Poison Worm ported (ids 62 / 71)
+
+- EnemyGiantWormCreate / EnemyPoisonWormCreate share
+  sub_080AD7F0(e, variant) and both updates alias
+  sub_080AE0E0; the port keeps the variant split
+  (0 = Giant Worm, 1 = Poison Worm): palette bank =
+  variant through the PROBES rows (graphics 0x081E4184,
+  palette 0x0820B724, frames 0x08237C44), animation 3
+  vs 0, and the contact element word — 0 for the Giant
+  Worm (sub_080AE334) vs 0x40 poison for the Poison Worm
+  (sub_080AE3CC), now carried by contact_elements into
+  the ported sub_08021654 path.
+- The create emits the four linked segments on the first
+  update (the Headhunter pattern, not inside the create):
+  role AOS_ROLE_WORM_SEGMENT with worm_index 1-4,
+  worm_phase = index << 12, x chained 0xA0000 per segment
+  along the facing, floor-snapped; aria_runtime reconnects
+  .parent through .spawner and .follow through the native
+  + 0x18 chain (segment 1 -> parent, 2-4 -> previous).
+- worm_update ports sub_080AE0E0: the hit-flash stun gate
+  (sub_0806AD24 approximation), the state-1 decision box
+  (sub_0806CFFC: x - 0xA0, y - 0x3C, 0x140 x 0x78, RNG & 1
+  or the target side), the state-2 emerge (sub_080ADB94
+  hop steps + sub_080AD9FC settle with the wall probes
+  sub_08002058/0207C and the + 0x1D wall-wait of 4), the
+  state-3 death lunge (+ 0x1C -> worm_lunge, gravity
+  0x2000, affine turn 0x100, dust every 8th tick, the
+  + 0x0D countdown to delete), the state 4/5 timers and
+  the state-6 affine idle; the epilogue runs collide,
+  the sub_080AE008 terrain angle and step_anim.
+- worm_segment_update ports sub_080ADC2C: lazy init
+  (animation 1, 2 for segment 4), the emerge/follow
+  (sub_080ADB94 with the parent's dir and the follow
+  target's timer), the parent-lunge transition to state 2
+  (vx = index << 15 - 0x6000 flipped toward Soma, vy =
+  -0x30000, timer 0x38), the charge physics and the
+  affine angle to the follow target plus the sl half-turn
+  (the Poison Worm's + 0x22 sine wobble advances the
+  phase; its scale is not modelled).
+- Damage: the segment's hurt interception in collide()
+  ports sub_080AD748 — the hit is forwarded to the parent
+  (hit flash 8, HP + 0x34 reduced, the segment keeps its
+  own HP); a lethal blow plays song 0x70 and puts the
+  parent in the state-3 lunge, which reports the kill
+  once through the parent's own update.
+- Renderer: AOS_ROLE_WORM_SEGMENT and the two worm ids
+  join the affine-rotation list (e->angle in 1/65536
+  turns).
+- Tests: worm_tests covers both creates, the four-child
+  emission (indices, phases, 0xA0000 chaining, floor
+  snap), the emerge loop back to state 1, the segment
+  init animations, the forwarded hit (parent HP down,
+  segment HP kept, parent flash 8), the lethal path
+  (song 0x70, state 3, killed report, deletion) and the
+  + 0x1D wall-wait direction toggle.
+- Registries: enemy_names[62]/[71], objects.c PROBES
+  rows, both exported (31 frame records each), the
+  monster-aspects rows (sprite/animation/sound/loot/soul
+  all ported; yellow souls 10 and 19 are the shared flag
+  routine 0x08032205) and the annotations rows are in
+  this commit; the zombie aspects note now credits the
+  Poison Worm's element-0x40 contact poison.
+- Divergences kept honest: the affine secondary scale,
+  the + 0x5A palette merge, the + 0x5C parameter,
+  sub_080683BC's reward walk, the in-create spawn order,
+  the sub_0806D5C0 dust kind (AOS_EFFECT_DUST stands in),
+  the 0x1010F8F8 collision boxes (16x16 own boxes stand
+  in), the generic sleep/activity helpers and the
+  detailed sub_08021278 homing registration are not
+  ported; no emulator comparison yet.
+
 ## Patch 0863 - Worm family decode (GiantWorm 62 / PoisonWorm 71)
 
 - EnemyGiantWormCreate (0x080AE360) and EnemyPoisonWormCreate

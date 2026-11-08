@@ -339,6 +339,11 @@ static const EntitySpec entities[] = {
      * 0x0823AE10 through func_0806E0D0. */
     PROBES("minotaur", 0x081E41A4, 0x0820B7B0, 0, 0x0823AE10, 0x085286F8),
     PROBES("red_minotaur", 0x081E41A4, 0x0820B7B0, 1, 0x0823AE10, 0x085286F8),
+    /* EnemyGiantWormCreate / EnemyPoisonWormCreate share
+     * sub_080AD7F0: graphics 0x081E4184, palette 0x0820B724 with the
+     * variant as bank (sub_08068264), frames 0x08237C44. */
+    PROBES("giant_worm", 0x081E4184, 0x0820B724, 0, 0x08237C44, 0x085286F8),
+    PROBES("poison_worm", 0x081E4184, 0x0820B724, 1, 0x08237C44, 0x085286F8),
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

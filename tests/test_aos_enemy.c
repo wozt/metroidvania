@@ -3311,6 +3311,130 @@ static void minotaur_tests(void) {
     assert(r.state == 0 && (r.mino_flags & 1));
 }
 
+static void worm_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t ticks[] = {4, 4};
+    AosAnimDef defs[4];
+    for (int i = 0; i < 4; ++i) defs[i] = (AosAnimDef){2, ticks};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    const AosEnemyStats stats = {200, 25, 12, 0x08C1, 0, 60};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(159), NULL);
+
+    /* sub_080AD7F0: animation 3 (Giant Worm) or 0 (Poison Worm) looping,
+     * variant in + 0x21, feet snapped on the floor, state 0. */
+    AosEnemy w;
+    assert(aos_enemy_create(&w, AOS_ENEMY_GIANT_WORM, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(w.state == 0 && w.anim.id == 3 && w.variant == 0 && (w.y >> 16) <= 160);
+    AosEnemy p;
+    assert(aos_enemy_create(&p, AOS_ENEMY_POISON_WORM, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(p.anim.id == 0 && p.variant == 1);
+
+    /* The first update emits the four linked segments: index 1-4 in
+     * + 0x1E, index << 12 in + 0x22, each 0xA0000 further along the
+     * facing from the previous one, snapped on the floor. */
+    AosHitReport hit = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                        0, 0, always_zero);
+    assert(hit.child_count == 4);
+    AosEnemy segs[AOS_ENEMY_MAX_CHILDREN];
+    memcpy(segs, hit.children, sizeof(segs));
+    int dir = w.mirrored ? -1 : 1;
+    int32_t px = w.x;
+    for (int i = 0; i < 4; ++i) {
+        AosEnemy *s = &segs[i];
+        assert(s->role == AOS_ROLE_WORM_SEGMENT && s->id == w.id && s->variant == 0 &&
+               s->worm_index == (uint8_t)(i + 1) && s->worm_phase == (uint16_t)((i + 1) << 12) &&
+               s->x == px + dir * 0xA0000 && (s->y >> 16) <= 160);
+        px = s->x;
+    }
+    /* The same update ran the state-0 decision: state 2, a hop
+     * direction picked (the player is far: RandomNumberGenerator & 1). */
+    assert(w.state == 2 && w.step == 0);
+
+    /* The emerge machine (sub_080ADB94): launch, decelerate to 0,
+     * wait 0x10 ticks, relaunch; sub_080AD9FC returns it to state 1. */
+    int guard = 0;
+    while (w.state != 1 && guard++ < 200)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(w.state == 1);
+    aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(w.state == 2);
+
+    /* A segment's lazy init (child state 0): animation 1 — 2 for
+     * segment 4 — then state 1 under the follow/settle path. */
+    AosEnemy seg = segs[0];
+    seg.parent = &w;
+    seg.follow = &w;
+    soma.x = AOS_FIXED(900);
+    aos_enemy_update(&seg, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(seg.state == 1 && seg.anim.id == 1);
+    AosEnemy tail = segs[3];
+    tail.parent = &w;
+    tail.follow = &segs[2];
+    aos_enemy_update(&tail, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(tail.state == 1 && tail.anim.id == 2);
+
+    /* sub_080AD748: a weapon hit on a segment is forwarded to the
+     * parent — its HP drops, the segment keeps its own. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    int16_t parent_hp = w.hp;
+    soma.x = seg.x;
+    soma.y = seg.y + AOS_FIXED(10);
+    hit = aos_enemy_update(&seg, &soma, &layer, &kind, &weapon, &blade, 40, 4, 0, 0,
+                           always_zero);
+    assert(hit.enemy_hit && w.hp < parent_hp && seg.hp == seg.stats.hp && w.hit_flash == 8);
+
+    /* A lethal forwarded blow on a fresh segment (the first one's
+     * combat cooldown is still running): song 0x70, the parent enters
+     * the state-3 death lunge. */
+    AosEnemy seg2 = segs[1];
+    seg2.parent = &w;
+    seg2.follow = &w;
+    aos_enemy_update(&seg2, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     always_zero);
+    w.hp = 1;
+    w.state = 1;
+    w.hit_flash = 0;
+    soma.x = seg2.x;
+    soma.y = seg2.y + AOS_FIXED(10);
+    hit = aos_enemy_update(&seg2, &soma, &layer, &kind, &weapon, &blade, 9999, 4,
+                           0, 0, always_zero);
+    assert(w.state == 3 && w.hp <= 0 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);
+    hit = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(hit.killed && w.worm_lunge);
+    int frames = 0;
+    while (!w.removed && frames < 0x50)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero),
+        ++frames;
+    assert(w.removed);
+
+    /* The parent's wall-wait (+ 0x1D): a probe ahead sets it to 4 and
+     * the next decision toggles the hop direction. */
+    AosEnemy w2;
+    assert(aos_enemy_create(&w2, AOS_ENEMY_GIANT_WORM, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    w2.state = 1;
+    w2.worm_dir = 0;
+    w2.worm_wait = 4;
+    aos_enemy_update(&w2, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(w2.state == 2 && w2.worm_dir == 1 && w2.worm_wait == 3);
+}
+
 static void valkyrie_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t hover[] = {4, 4}, strike[] = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
@@ -5464,6 +5588,7 @@ int main(void) {
     valkyrie_tests();
     curly_tests();
     minotaur_tests();
+    worm_tests();
     medusa_tests();
     headhunter_death_tests();
     puts("aos_enemy: ok");

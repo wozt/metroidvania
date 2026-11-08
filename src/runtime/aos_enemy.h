@@ -163,6 +163,8 @@ enum {
     AOS_ENEMY_LUBICANT = 0x63,
     AOS_ENEMY_MINOTAUR = 0x15,
     AOS_ENEMY_RED_MINOTAUR = 0x58,
+    AOS_ENEMY_GIANT_WORM = 0x3E,
+    AOS_ENEMY_POISON_WORM = 0x47,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -191,7 +193,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DRAGON_SPARK = 43, AOS_ROLE_DRAGON_PIECE = 44,
        AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46,
        AOS_ROLE_PILLAR_PIECE = 47, AOS_ROLE_PILLAR_BREATH = 48, AOS_ROLE_PILLAR_FIREBALL = 49,
-       AOS_ROLE_PILLAR_SMOKE = 50, AOS_ROLE_HEADHUNTER_HEAD = 51 };
+       AOS_ROLE_PILLAR_SMOKE = 50, AOS_ROLE_HEADHUNTER_HEAD = 51,
+       AOS_ROLE_WORM_SEGMENT = 52 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -338,6 +341,15 @@ typedef struct AosEnemy {
      * + 0x15 the palette bank (0 brown, 1 red; the aggro gate reads it). */
     uint32_t mino_flags;
     uint8_t mino_bank;
+    /* Giant/Poison Worm (sub_080AD7F0 create, sub_080AE0E0 parent,
+     * sub_080ADC2C segment): + 0x1C the lunge flag children read,
+     * + 0x1D the wall-wait countdown, + 0x1E the segment index (1..4,
+     * 0 on the parent), + 0x1F the hop direction, + 0x22 the sine phase.
+     * `variant` is + 0x21, `angle` is + 0x54, `ax` is + 0x50,
+     * `parent` is + 0x14 and `follow` is + 0x18 (the segment ahead). */
+    uint8_t worm_wait, worm_dir, worm_index, worm_lunge;
+    uint16_t worm_phase;
+    struct AosEnemy *follow;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

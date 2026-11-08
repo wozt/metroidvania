@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 80 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 82 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1025 | 2548 |
+| Castlevania: Aria of Sorrow | 1045 | 2528 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1533,6 +1533,16 @@ Known divergences: Rewritten from the native routines, replacing the earlier hom
 Next action: Compare the drift, the charge, the death and its soul against an emulator.
 Evidence: in game: `aria area_01_room_008 (--spawn 260 224 --hp 9999): the Giant Ghost drifts down over Soma`.
 
+[+] **`aos.enemies.giant_worm` — Giant Worm.** The segmented worm is ported from its traced routines: the shared create sub_080AD7F0 (variant 0: random facing, floor snap, four linked segments spaced 0xA0000 with + 0x1E index and + 0x22 index << 12, graphics 0x081E4184, palette 0x0820B724 bank 0, frames 0x08237C44, animation 3, contact elements 0), the parent seven-state machine sub_080AE0E0 (the sub_0806CFFC decision box, the sub_080ADB94 hop and sub_080AD9FC settle, the state-3 death lunge, the state 4/5 delete timers and the state-6 affine idle), the segment five-state machine sub_080ADC2C and the segment-to-parent damage sub_080AD748 (hit flash 8, HP + 0x34, song 0x70, the state-3 lunge). Unit-tested in worm_tests; not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080429D0`, `aos:asm:asm/code/code_08060B98.s:sub_08068A70`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGiantWormCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGiantWormUpdate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyPoisonWormCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyPoisonWormUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD748`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD7F0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD9FC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080ADB0C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080ADB94`, `aos:asm:asm/code/code_080A0A8C.s:sub_080ADC2C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE008`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE0E0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE334`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE3CC`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code_08001194.c:sub_08001D94`, `aos:c:src/code_08001194.c:sub_08002058`, `aos:c:src/code_08001194.c:sub_0800207C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.audio.play_song`.  
+Known divergences: The affine transform is approximated by the renderer rotation on e->angle (the secondary sine scale of the segments is not modelled); the + 0x5A palette merge, the + 0x5C parameter and the sub_080683BC reward walk are not ported; the four segments are emitted on the first update (the Headhunter pattern) instead of inside the create; the sub_0806D5C0 dust is approximated by AOS_EFFECT_DUST and the native 0x1010F8F8 collision boxes by 16x16 own boxes; the sleep/activity-window helpers of the generic controller and the sub_08021278 homing registration detail are not applied.  
+Next action: Compare a room fight against an emulator; port the remaining affine detail and the sub_0806DFF8 in-create spawn order.
+Evidence: in game: `aria area_07_room_006 (--spawn 136 136): Giant Worm records are placed in area_07 rooms 006/031/047; in-game verification pending`.
+
 [+] **`aos.enemies.gorgon` — Gorgon.** Grounded patrol, wall turns, attack trigger and wind-up, the native 30..70 even-frame 21-cloud breath stream, cloud frame 25-to-26 transition, alternating collision, 40-frame cloud life, six-piece specialized death, combat and global inert state are connected; Catoblepas shares this path. Sound 0x67 is requested at + 0x0D 0x1E and 0x32 of the breath step (sub_08089560) and 0x71 at death (sub_080896D8); both unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080809C0.s:EnemyGorgonCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGorgonUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_080890E8`, `aos:asm:asm/code/code_080809C0.s:sub_08089560`, `aos:asm:asm/code/code_080809C0.s:sub_080896D8`, `aos:asm:asm/code/code_080809C0.s:sub_0808975C`, `aos:asm:asm/code/code_080809C0.s:sub_0808982C`, `aos:asm:asm/code/code_080809C0.s:sub_0808990C`, `aos:asm:asm/code/code_080809C0.s:sub_080899FC`, `aos:asm:asm/code/code_080809C0.s:sub_08089A50`.  
@@ -1682,6 +1692,16 @@ Dependencies: `aos.enemies.zombie`.
 Known divergences: Rewritten from the native routines, replacing the earlier polar approximation. The parts are made by its first update (native: at creation). The knockback of a blow pushes away from Soma, whose position stands in for the weapon entity. The tip segment's affine angle (sub_0803E238) is drawn with the convention of sub_0803E058. The palette bits, the tracking list sub_08021924 and the global pause 0x4BE (taken as 0) are not modelled. Its yellow soul sets the 0x13260 bit 0x1000000, read only by the breakable walls Object08Update and Object09Update, which are not ported.  
 Next action: Port the breakable walls Object08 and Object09 and their yellow soul sparkle; compare the eye against an emulator.
 Evidence: in game: `aria area_00_room_018 (--spawn 520 176): the Peeping Eye opens, rises toward Soma with its pupil on him and sways its tail`.
+
+[+] **`aos.enemies.poison_worm` — Poison Worm.** Shares the Giant Worm port with variant 1: palette bank 1, animation 0, the segments' + 0x22 sine wobble and contact elements 0x40 (poison through the ported sub_08021654 path); its damage callbacks sub_080AE3CC forward like sub_080AE334. Unit-tested in worm_tests; not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080429D0`, `aos:asm:asm/code/code_08060B98.s:sub_08068A70`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGiantWormCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGiantWormUpdate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyPoisonWormCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyPoisonWormUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD748`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD7F0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AD9FC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080ADB0C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080ADB94`, `aos:asm:asm/code/code_080A0A8C.s:sub_080ADC2C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE008`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE0E0`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE334`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE3CC`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code_08001194.c:sub_08001D94`, `aos:c:src/code_08001194.c:sub_08002058`, `aos:c:src/code_08001194.c:sub_0800207C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.audio.play_song`.  
+Known divergences: The affine transform is approximated by the renderer rotation on e->angle (the secondary sine scale of the segments is not modelled); the + 0x5A palette merge, the + 0x5C parameter and the sub_080683BC reward walk are not ported; the four segments are emitted on the first update (the Headhunter pattern) instead of inside the create; the sub_0806D5C0 dust is approximated by AOS_EFFECT_DUST and the native 0x1010F8F8 collision boxes by 16x16 own boxes; the sleep/activity-window helpers of the generic controller and the sub_08021278 homing registration detail are not applied.  
+Next action: Compare a room fight against an emulator; port the remaining affine detail and the sub_0806DFF8 in-create spawn order.
+Evidence: in game: `aria area_07_room_012 (--spawn 816 128): Poison Worm records are placed in area_07 rooms 012/020 and area_10_room_003; in-game verification pending`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40. Its swoop plays 0x8B (sub_080CA0D4) and its death 0x72 (sub_080CA308), unit-tested.
 

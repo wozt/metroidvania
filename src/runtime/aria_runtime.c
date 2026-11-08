@@ -155,6 +155,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [63] = "needles",
                                                      [73] = "cagnazzo",
                                                      [74] = "ripper",
+                                                     [62] = "giant_worm",
+                                                     [71] = "poison_worm",
                                                      [82] = "dead_crusader",
                                                      [87] = "gargoyle",
                                                      [88] = "red_minotaur",
@@ -2669,9 +2671,22 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_SKELETON_HEAD ||
                  e->enemy.role == AOS_ROLE_SKELETON_HELD ||
                  e->enemy.role == AOS_ROLE_SKELETON_BONE ||
+                 e->enemy.role == AOS_ROLE_WORM_SEGMENT ||
                  e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
+            /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
+             * segments 2-4 the previous segment (the children are
+             * appended consecutively, so i - 1 is it). */
+            if (e->enemy.role == AOS_ROLE_WORM_SEGMENT && e->spawner >= 0) {
+                if (e->enemy.worm_index <= 1 || i == 0)
+                    e->enemy.follow = e->enemy.parent;
+                else if (room->entities[i - 1].enemy.role == AOS_ROLE_WORM_SEGMENT &&
+                         room->entities[i - 1].id == e->id)
+                    e->enemy.follow = &room->entities[i - 1].enemy;
+                else
+                    e->enemy.follow = e->enemy.parent;
+            }
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
@@ -2809,6 +2824,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_PEEPING_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_BUER_FIRE ||
+                                       hit.children[c].role == AOS_ROLE_WORM_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_WHITE_DRAGON_PART
                                    ? (int)i
                                    : -1,
@@ -4088,8 +4104,10 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         double degrees = 0;
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
+            e->enemy.role == AOS_ROLE_WORM_SEGMENT ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
-            ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS) &&
+            ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS ||
+              e->enemy.id == AOS_ENEMY_GIANT_WORM || e->enemy.id == AOS_ENEMY_POISON_WORM) &&
              e->enemy.role == AOS_ROLE_ENEMY))
             degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* The Peeping Eye's tip segment: its own affine angle (sub_0803E238,

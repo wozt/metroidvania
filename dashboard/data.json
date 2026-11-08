@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T19:00:41+00:00",
+ "generated_at": "2026-11-08T19:15:25+00:00",
  "git": {
-  "commit": "eb8214c8",
+  "commit": "0e4a6cfb",
   "branch": "main",
   "dirty": true
  },
@@ -14093,7 +14093,7 @@
     "sub_08021F84",
     "sub_0804B314"
    ],
-   "limitations": "The equipment preview uses a copied AosStats plus aos_stats_refresh rather than sub_0804ACD4's native scratch records and icon entities. Armor and accessories still have no record-specific behaviour such as MP regeneration. The resistance word is applied to damage in both directions: enemy hits run aos_enemy_damage's weakness (double, or +25% for element 1) and resist (half) multipliers, and elemental hits on Soma quarter the damage when the attack elements intersect stats->resist. Effective INT and LCK remain display-only. Record-specific effects audited via the equipment slot offsets (weapon +0x13268, armor +0x1326C, accessory +0x1326D): every accessory check is ported - 0x27/0x28 drop rates, 0x29 MP regen every 16 ticks, 0x2A Sherman Ring walking XP, 0x2B and 0x2C full MP (aos_stats_mp_regen). The only gameplay armor check is index 0x17 in func_08021710 (a shared status fragment), which runs the status cure func_08021E50 - now ported as aos_stats_cure_status (mask bits 0-2 zero the +0x13272 timers and clear the +0x13270 status bits, unit-tested) - plus a func_08042A7C popup; the trigger and popup are not wired. Weapon-class checks remain with the unported weapon entities. sub_0804ACD4 sums the weapon record (0x08505D3C, 59 x 28 bytes) and the armor and accessory records (0x085063B0, 45 x 20 bytes): ATK, DEF, the signed STR, CON, INT, LCK and, for armor and accessory only, the ORed resistances; sub_0804AD9C adds the base stats and sub_08021FA4 / sub_08021C44 give currentATK = STR + equipment ATK and currentDEF = CON / 2 + equipment DEF, at least 0. The object export writes both tables as metadata/equipment.tsv. Portable saves (schema v4) keep all three slots. The runtime derives ATK and DEF at load, after level ups and after equipment-menu changes; combat reads the refreshed values immediately unless --atk or --def overrides them. The menu's weapon choice also reloads the exported weapon record and available entity art. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "The equipment preview uses a copied AosStats plus aos_stats_refresh rather than sub_0804ACD4's native scratch records and icon entities. Armor and accessories still have no record-specific behaviour such as MP regeneration. The resistance word is applied to damage in both directions: enemy hits run aos_enemy_damage's weakness (double, or +25% for element 1) and resist (half) multipliers, and elemental hits on Soma quarter the damage when the attack elements intersect stats->resist. Effective INT and LCK remain display-only. Record-specific effects audited via the equipment slot offsets (weapon +0x13268, armor +0x1326C, accessory +0x1326D): every accessory check is ported - 0x27/0x28 drop rates, 0x29 MP regen every 16 ticks, 0x2A Sherman Ring walking XP, 0x2B and 0x2C full MP (aos_stats_mp_regen). The only gameplay armor check is index 0x17 in sub_08021654 (the shared player-damage resolver sub_08021654/sub_08021710): equippedArmor == 0x17 (Blocking Mail) plus (RandomNumberGenerator() & 0xF) < 4 evades the whole hit - song 0x13B and the sub_08042A7C(0, 0) popup, which is not drawn - ported in aos_soma_take_elemental_hit after the 0x2000 guard check and before the HP deduction, unit-tested with a seeded RNG. func_08021E50 is ported as aos_stats_cure_status; its sub_08021654 caller is the death path (currentHP <= 0 cures all three statuses), which has no observable effect here because statuses are not persisted and death exits to the frontend. Weapon-class checks remain with the unported weapon entities. sub_0804ACD4 sums the weapon record (0x08505D3C, 59 x 28 bytes) and the armor and accessory records (0x085063B0, 45 x 20 bytes): ATK, DEF, the signed STR, CON, INT, LCK and, for armor and accessory only, the ORed resistances; sub_0804AD9C adds the base stats and sub_08021FA4 / sub_08021C44 give currentATK = STR + equipment ATK and currentDEF = CON / 2 + equipment DEF, at least 0. The object export writes both tables as metadata/equipment.tsv. Portable saves (schema v4) keep all three slots. The runtime derives ATK and DEF at load, after level ups and after equipment-menu changes; combat reads the refreshed values immediately unless --atk or --def overrides them. The menu's weapon choice also reloads the exported weapon record and available entity art. Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Apply resistances and record-specific accessory effects, then complete the remaining weapon classes and native equipment graphics.",
    "evidence": {
     "unit_tests": [
@@ -20390,6 +20390,12 @@
  },
  "timeline": [
   {
+   "commit": "0e4a6cfb",
+   "date": "2026-11-08",
+   "subject": "Port func_08021E50 as aos_stats_cure_status",
+   "scope": "project"
+  },
+  {
    "commit": "eb8214c8",
    "date": "2026-11-08",
    "subject": "Audit equipment record-specific effects",
@@ -20861,12 +20867,6 @@
    "commit": "f5e6180f",
    "date": "2026-11-08",
    "subject": "lab: weighted progress score drives consolidation, not raw distance",
-   "scope": "project"
-  },
-  {
-   "commit": "9391b50f",
-   "date": "2026-11-08",
-   "subject": "lab: frontier consolidation — purge to the best branch, fleet follows",
    "scope": "project"
   }
  ],

@@ -98,3 +98,20 @@ int aos_player_damage(int attack, int defence) {
     int damage = (attack * 4 - defence * 2) >> 1;
     return damage > 0 ? damage : 1;
 }
+
+/* RandomNumberGenerator (func_08000A90): r = (r >> 8) * 0x3243F6AD +
+ * 0x1B0CB175 over the state word. The seed the game starts from is not
+ * traced; aos_random_seed sets it. */
+static uint32_t random_state;
+
+uint32_t aos_random(void) {
+    return random_state = (random_state >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+}
+
+void aos_random_seed(uint32_t seed) {
+    random_state = seed;
+}
+
+uint32_t aos_random_get(void) {
+    return random_state;
+}

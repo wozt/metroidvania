@@ -67,5 +67,9 @@ int aos_enemy_damage(int power, int defence, uint16_t weak, uint16_t resist,
                      uint16_t attack_elements);
 /* sub_08021654, normal mode: (attack * 4 - DEF * 2) / 2, at least 1. */
 int aos_player_damage(int attack, int defence);
+/* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. */
+uint32_t aos_random(void);
+void aos_random_seed(uint32_t seed);
+uint32_t aos_random_get(void);
 
 #endif /* AOS_COMBAT_H */

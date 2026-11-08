@@ -4,6 +4,7 @@
 #include "aos_soma.h"
 
 #include "aos_audio.h"
+#include "aos_enemy.h"
 #include "aos_soul.h"
 
 const AosBox aos_soma_stand_box = {-6, -32, 12, 28};
@@ -1004,6 +1005,13 @@ int aos_soma_take_elemental_hit(AosSoma *soma, int attack, int defence, int32_t 
     if (damage <= 0) damage = 1;
     if (stats && (stats->flags & 0x2000u)) {
         /* An evaded hit (0x13B); sub_08042A7C's "guard" text is not drawn. */
+        aos_audio_play_song(0x13B);
+        return 0;
+    }
+    if (stats && stats->armor == 0x17 && (aos_random() & 0xF) < 4) {
+        /* Blocking Mail: a quarter of hits are evaded outright
+         * (sub_08021654's armor 0x17 check, song 0x13B and the
+         * sub_08042A7C(0, 0) popup, which is not drawn). */
         aos_audio_play_song(0x13B);
         return 0;
     }

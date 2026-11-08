@@ -835,6 +835,27 @@ static void status_tests(void) {
     stats.flags = 0x2000;
     int hp = soma.hp;
     assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0) == 0 && soma.hp == hp);
+    /* Blocking Mail (armor 0x17): (RandomNumberGenerator() & 0xF) < 4
+     * evades the whole hit with song 0x13B, like the guard above. */
+    stats.flags = 0;
+    stats.armor = 0x17;
+    aos_random_seed(0x12345678);
+    int blocked = 0, landed = 0;
+    for (int k = 0; k < 400 && soma.hp > 0; ++k) {
+        int before = soma.hp;
+        if (aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0) == 0) {
+            assert(soma.hp == before);
+            ++blocked;
+        } else {
+            ++landed;
+        }
+    }
+    assert(blocked > 0 && landed > 0);
+    /* Any other armor never blocks. */
+    stats.armor = 0x16;
+    hp = soma.hp;
+    for (int k = 0; k < 8; ++k)
+        assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0) == 16);
 }
 
 int main(void) {

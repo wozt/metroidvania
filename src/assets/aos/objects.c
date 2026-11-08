@@ -337,8 +337,8 @@ static const EntitySpec entities[] = {
      * share func_080B0AD4, which loads graphics 0x081E41A4, palette
      * 0x0820B7B0 (two banks: bank 0 brown, bank 1 red) and frames
      * 0x0823AE10 through func_0806E0D0. */
-    ENTITY("minotaur", 0x081E41A4, 0x0820B7B0, 0, 0x0823AE10),
-    ENTITY("red_minotaur", 0x081E41A4, 0x0820B7B0, 1, 0x0823AE10),
+    PROBES("minotaur", 0x081E41A4, 0x0820B7B0, 0, 0x0823AE10, 0x085286F8),
+    PROBES("red_minotaur", 0x081E41A4, 0x0820B7B0, 1, 0x0823AE10, 0x085286F8),
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

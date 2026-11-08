@@ -2,6 +2,54 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0862 - Minotaur and Red Minotaur ported (ids 0x15 / 0x58)
+
+- EnemyMinotaurCreate / EnemyRedMinotaurCreate (sub_080B0AD4)
+  ported: animation 1 looping, + 0x18 = 3, + 0x15 palette bank
+  (0 brown / 1 red), feet snapped to the floor (sub_0806AF98),
+  state 0 (state 4 under the global 0x8E & 0x40). The two
+  sub_0806DFF8 helpers, the param0 channel claim
+  sub_08013CF0(0x10) and the hit callbacks sub_080B0CCC /
+  sub_080AFF98 are not ported.
+- sub_080B0BE8 ported as minotaur_update: the sleep flag
+  (sub_0806E4F8), the hit flash countdown (sub_0806AE54), the
+  hit-stop gate sub_0806D4C0 skipped per the 0x4BE convention,
+  the five-state switch, the collision pass except while dying
+  and the shared animation step; state 4 returns after
+  sub_0803F17C alone.
+- State handlers ported: idle/aggro sub_080B0814 (close
+  0xC8 x 0x78 or damaged rolls mask 1, far 0x118 x 0x78 rolls
+  mask 0x3F through the new minotaur_aggro port of
+  sub_080AFE08), chase sub_080B0898 (animations 2/3/4, walker
+  probes 0x085286F8 mode 0xD, PlaySong 0x86 at animation 4
+  frame 3 tick 0), attack sub_080B095C (wind-up animation 7,
+  charge animation 5 decelerating 0x34000 - timer * 0x1400
+  mode 0xC, animation 6 at tick 0x18, the bit-1 path's
+  animation 4 and bit-0 set, song 0x86 again).
+- minotaur_aggro verified instruction-level: brown (+ 0x15 =
+  0) always passes; red rolls RandomNumberGenerator2 & mask
+  (aos_random while + 0x4CC bit 6 is clear), needs + 0x18 bit
+  1, the centred 0xA0 x 0x78 player box or the wall probe
+  0x50 pixels ahead - sub_08002058 / sub_0800207C are the
+  horizontal wall pushes already mapped to aos_wall_push_left
+  / aos_wall_push_right, selected by the + 0x58 facing bit
+  which is our mirrored.
+- The two sub_080458E4 charge-dust entities are approximated
+  by two drift-dust reports; state 3 uses the shared
+  generic_death (the sub_08079294 pattern).
+- Wiring: enemy_names[21] = "minotaur", [88] =
+  "red_minotaur"; objects.c ENTITY rows became PROBES rows
+  with table 0x085286F8; enemy_frames.tsv gained the two
+  probe lines (golden fixture regenerated); stats, drops
+  (common 0x0047, rare 0x0004 / 0x0005) and souls are
+  data-driven: Minotaur drops yellow soul 23 (stat routine
+  0x0803226D, already ported), Red Minotaur drops red soul
+  48 whose cast is not ported yet.
+- minotaur_tests covers create flags/bank, idle-to-chase,
+  the chase walk, the red-only charge entry (RNG & 1 == 0,
+  player outside 0xA0, no wall ahead), the two dust reports
+  and the return to idle. 49/113 enemies now have AI.
+
 ## Patch 0861 - Aria enemy port program: family map + Minotaur art
 
 - Inventoried the 113-record enemy table (0x080E9644, 36-byte

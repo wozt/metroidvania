@@ -3234,6 +3234,83 @@ static void curly_tests(void) {
     assert(d.defeated && aos_audio_requested(AOS_AUDIO_START_SONG, 0x1C3) == 1);
 }
 
+static void minotaur_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t one[] = {2};
+    const AosAnimDef defs[8] = {{1, one}, {1, one}, {1, one}, {1, one},
+                                {1, one}, {1, one}, {1, one}, {1, one}};
+    const AosAnimSet anims = {defs, 8};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    kind.probes = (AosProbes){3, -50, -1, 8, {-15, -31, -47}};
+    for (int a = 0; a < 8; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -56, 32, 56};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {200, 25, 12, 0x08C1, 0, 60};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
+
+    /* sub_080B0AD4: animation 1 looping, + 0x18 = 3, feet on the floor,
+     * state 0; the red one's palette bank 1 sits in + 0x15. */
+    AosEnemy m;
+    assert(aos_enemy_create(&m, AOS_ENEMY_MINOTAUR, 100, 140, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(m.state == 0 && m.anim.id == 1 && m.mino_flags == 3 && m.mino_bank == 0 &&
+           (m.y >> 16) <= 160);
+    AosEnemy r;
+    assert(aos_enemy_create(&r, AOS_ENEMY_RED_MINOTAUR, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(r.mino_bank == 1);
+
+    /* sub_080B0814: the brown gate always passes; the player in the
+     * centred 0xC8 x 0x78 box (dx 80 inside, outside the chase stop box
+     * 0x64) sends it to the chase (state 1). */
+    soma.x = AOS_FIXED(180);
+    soma.y = AOS_FIXED(m.y >> 16);
+    aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(m.state == 1 && m.step == 0);
+    /* Chase step 0 plays animation 2 once, then animation 3 loops and the
+     * probe walker carries it toward the player. */
+    int frames = 0;
+    while (m.step < 2 && frames < 20)
+        aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero),
+        ++frames;
+    assert(m.step == 2 && m.anim.id == 3);
+    int32_t before = m.x;
+    for (int i = 0; i < 30; ++i)
+        aos_enemy_update(&m, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(m.x != before);
+
+    /* The red gate (sub_080AFE08): RNG & 1 == 0, flags bit 1 set, the
+     * player outside the centred 0xA0 box and no wall ahead -> attack
+     * (state 2), clearing bit 1 for the wind-up. */
+    soma.x = AOS_FIXED(190);    /* dx 90: inside 0xC8, outside 0xA0 */
+    soma.y = AOS_FIXED(r.y >> 16);
+    aos_enemy_update(&r, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(r.state == 2);
+    /* Case 0 of the attack: bit 1 cleared, animation 7 once, step 1. */
+    aos_enemy_update(&r, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(!(r.mino_flags & 2) && r.anim.id == 7 && r.step == 1);
+    /* Wind-up ends (animation 7), then the 8-tick delay starts the charge
+     * (animation 5, step 3) with the two dust effects of sub_080458E4 in
+     * the same update's report. */
+    AosHitReport hit = {0};
+    for (int i = 0; i < 20 && r.step < 3; ++i)
+        hit = aos_enemy_update(&r, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+    assert(r.step == 3 && hit.effect_count == 2);
+
+    /* The charge decelerates from 3.25 by 1.25 a tick and ends back in
+     * the idle state. */
+    int guard = 0;
+    while (r.state == 2 && guard++ < 200)
+        aos_enemy_update(&r, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+    assert(r.state == 0 && (r.mino_flags & 1));
+}
+
 static void valkyrie_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t hover[] = {4, 4}, strike[] = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
@@ -5183,7 +5260,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x15, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x16, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -5386,6 +5463,7 @@ int main(void) {
     flea_tests();
     valkyrie_tests();
     curly_tests();
+    minotaur_tests();
     medusa_tests();
     headhunter_death_tests();
     puts("aos_enemy: ok");

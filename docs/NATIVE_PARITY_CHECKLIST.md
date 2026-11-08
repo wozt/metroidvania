@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 78 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 80 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1012 | 2561 |
+| Castlevania: Aria of Sorrow | 1025 | 2548 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1644,6 +1644,16 @@ Known divergences: The palette bank of parameter 1 beyond bank 0 are not ported;
 Next action: Trace sub_08046100 to draw the trigger; compare against an emulator.
 Evidence: in game: `aria area_03_room_016 (--spawn 160 191 --hp 9999): the closed chest sits on the floor (frame 20), opens as Soma walks up and knocks him back (frames 80 and 200); area_11_room_005 (--spawn 112 352 --repeat 2, A + B): the jump attack strikes the hidden trigger, flames burst (frame 30), the Mimic drops to the floor (frame 60) and opens (frame 90)`.
 
+[+] **`aos.enemies.minotaur` — Minotaur.** The create's animation 1 loop, + 0x18 = 3, palette bank in + 0x15, floor snap (sub_0806AF98) and states 0/4 are ported. The five-state update sub_080B0BE8 runs the sleep flag, the hit flash and the idle aggro gate (sub_080B0814 + sub_080AFE08: the brown bank always passes, the close 0xC8 x 0x78 box or damage rolls mask 1, the far 0x118 x 0x78 box rolls mask 0x3F), the chase (sub_080B0898: animations 2/3/4, the probe walker 0x085286F8 mode 0xD at 0x8000, PlaySong 0x86 at animation 4 frame 3 tick 0) and the attack (sub_080B095C: wind-up animation 7, the charge decelerating 0x34000 - timer * 0x1400 mode 0xC, animation 6 at tick 0x18, the bit-1 path's animation 4 and bit-0 set, song 0x86 again). Unit-tested in minotaur_tests; not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_080458E4`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFE08`, `aos:asm:asm/code/code_080A0A8C.s:sub_080B0814`, `aos:asm:asm/code/code_080A0A8C.s:sub_080B0898`, `aos:asm:asm/code/code_080A0A8C.s:sub_080B095C`, `aos:asm:asm/code/code_080B0AD4.s:EnemyMinotaurCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyMinotaurUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0AD4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0BE8`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_08001194.c:sub_08002058`, `aos:c:src/code_08001194.c:sub_0800207C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.audio.play_song`, `aos.enemies.zombie`.  
+Known divergences: The two sub_0806DFF8 helpers, the param0 channel claim sub_08013CF0(0x10), the hit callbacks sub_080B0CCC / sub_080AFF98, the sub_080458E4 charge-dust entities (approximated by two drift-dust reports), the palette bits of + 0x5A, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE (taken as 0) are not ported.  
+Next action: Port the charge-dust entities sub_080458E4, the hit callbacks and the param0 channel claim; compare a room fight against an emulator.
+Evidence: in game: `aria area_02_room_007 (--spawn 304 191): eight Minotaur records are placed across the area_02/area_03 rooms; in-game verification pending`.
+
 [+] **`aos.enemies.needles` — Needles and its pieces.** The looping animation with its random pauses, the optional bobbing (parameter 0), the (-8, -8, 16, 16) boxes packed in 0x1010F8F8, the contact damage, the shattering into the five pieces of 0x08528B44 and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its shattering plays 0x70 (sub_080CB894 step 0), unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080C0A1C.s:EnemyNeedlesCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyNeedlesUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB5E0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB6BC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB7C8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB894`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB8FC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CB930`.  
@@ -1682,6 +1692,16 @@ Dependencies: `aos.enemies.blue_crow`.
 Known divergences: As the blue crow: sounds 0x72 and 0x8B, the palette bits, the tracking list of sub_08021924 and sub_080683BC are not ported.  
 Next action: Follow the blue crow's open items.
 Evidence: in game: `aria area_05_room_002 (--spawn 200 200 --hp 9999): the red crow hovers (frame 60), swoops onto Soma (frame 160) and hovers off (frames 200 and 240)`.
+
+[+] **`aos.enemies.red_minotaur` — Red Minotaur.** Shares EnemyMinotaurUpdate (sub_080B0BE8) with the brown Minotaur; its palette bank 1 in + 0x15 makes sub_080AFE08 roll RandomNumberGenerator2 & mask (aos_random while + 0x4CC bit 6 is clear), so it attacks (state 2) only when the roll fails, + 0x18 bit 1 is set, the player is outside the centred 0xA0 x 0x78 box and the wall probe 0x50 pixels ahead by the + 0x58 facing bit (sub_08002058 / sub_0800207C = aos_wall_push_left / aos_wall_push_right) is clear; a passed roll walks (state 1). Unit-tested in minotaur_tests; not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_080458E4`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AFE08`, `aos:asm:asm/code/code_080A0A8C.s:sub_080B0814`, `aos:asm:asm/code/code_080A0A8C.s:sub_080B0898`, `aos:asm:asm/code/code_080A0A8C.s:sub_080B095C`, `aos:asm:asm/code/code_080B0AD4.s:EnemyMinotaurUpdate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyRedMinotaurCreate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0AD4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B0BE8`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_08001194.c:sub_08002058`, `aos:c:src/code_08001194.c:sub_0800207C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.audio.play_song`, `aos.enemies.minotaur`.  
+Known divergences: As the Minotaur, plus its red soul 48 cast (skill routine 0x080269BD) is not ported, so the dropped soul cannot be used in combat yet.  
+Next action: Port red soul 48's cast and the Minotaur family's shared open items; compare a room fight against an emulator.
+Evidence: in game: `aria area_08_room_007 (--spawn 224 112): five Red Minotaur records are placed across the area_08/area_09 rooms; in-game verification pending`.
 
 [+] **`aos.enemies.ripper` — Ripper.** The exact six-way random jump table, close-player reversal, carried drop, landing delay, attack animation, accelerating linked blade and its falling collision state are ported. Ripper uses its native animation-2 50-frame falling death, frame boxes, combat and global inert state. The native Ripper sound requests are ported: 0x72 at death (sub_080C2A18), 0x89 at the linked blade flight (sub_080C2B74), and 0x13A on Soma contact (sub_080C2DC4), with deterministic audio request tests. Not listened to or emulator-compared.
 

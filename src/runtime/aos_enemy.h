@@ -161,6 +161,8 @@ enum {
     AOS_ENEMY_MIMIC = 0x60,
     AOS_ENEMY_ERINYS = 0x62,
     AOS_ENEMY_LUBICANT = 0x63,
+    AOS_ENEMY_MINOTAUR = 0x15,
+    AOS_ENEMY_RED_MINOTAUR = 0x58,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -331,6 +333,11 @@ typedef struct AosEnemy {
     uint16_t nem_flags;
     int16_t nem_spin, nem_wait;
     AosNemesisHelper nem_helper;
+    /* Minotaur/RedMinotaur (sub_080B0BE8): + 0x18 flags (bit 0 set at
+     * create and after a charge, bit 1 the wind-up attack still owed),
+     * + 0x15 the palette bank (0 brown, 1 red; the aggro gate reads it). */
+    uint32_t mino_flags;
+    uint8_t mino_bank;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:17:08+00:00",
+ "generated_at": "2026-11-08T00:19:26+00:00",
  "git": {
-  "commit": "5f05c412",
+  "commit": "f6097f86",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "f6097f86",
+   "date": "2026-11-08",
+   "subject": "lab: rewind — corrective retry on negative trials via save states",
+   "scope": "project"
+  },
+  {
    "commit": "5f05c412",
    "date": "2026-11-08",
    "subject": "lab: combat/magic combo curriculum + distance-travelled metric",
@@ -20789,12 +20795,6 @@
    "commit": "48a58574",
    "date": "2026-11-07",
    "subject": "Hide the opening dialogue window during the return pan",
-   "scope": "project"
-  },
-  {
-   "commit": "71209332",
-   "date": "2026-11-07",
-   "subject": "Play the mode-4 return pan after the opening script ends",
    "scope": "project"
   }
  ],

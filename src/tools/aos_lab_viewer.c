@@ -726,9 +726,10 @@ static void refresh_workers(Viewer *v) {
         gtk_widget_set_sensitive(wc->pause_button, phase_id != 0);
         /* speed slider: meta wins unless the user is mid-drag */
         int speed_val = speed ? atoi(speed) : 0;
-        double cur = gtk_range_get_value(GTK_RANGE(wc->speed_scale));
-        if (fabs(cur - speed_val) >= 0.5)
-            gtk_range_set_value(GTK_RANGE(wc->speed_scale), speed_val);
+        if (gtk_spin_button_get_value_as_int(
+                GTK_SPIN_BUTTON(wc->speed_scale)) != speed_val)
+            gtk_spin_button_set_value(
+                GTK_SPIN_BUTTON(wc->speed_scale), speed_val);
         char speed_txt[16];
         snprintf(speed_txt, sizeof speed_txt, "%s",
                  speed_val > 0 ? "" : "Auto");
@@ -840,10 +841,10 @@ static void on_play_all_clicked(GtkButton *button, gpointer user_data) {
     for (int i = 0; i < 8; ++i) play_worker(v, i);
 }
 
-static void on_speed_changed(GtkRange *range, gpointer user_data) {
+static void on_speed_changed(GtkSpinButton *spin, gpointer user_data) {
     Viewer *v = user_data;
-    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(range), "wid"));
-    int speed = (int)gtk_range_get_value(range);
+    int id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(spin), "wid"));
+    int speed = gtk_spin_button_get_value_as_int(spin);
     char key[64], val[8];
     snprintf(key, sizeof key, "worker.%d.speed", id);
     snprintf(val, sizeof val, "%d", speed);
@@ -874,17 +875,17 @@ static void on_all_stop_clicked(GtkButton *button, gpointer user_data) {
                        "Sent stop to every worker slot");
 }
 
-static void on_all_speed_changed(GtkRange *range, gpointer user_data) {
+static void on_all_speed_changed(GtkSpinButton *spin, gpointer user_data) {
     Viewer *v = user_data;
-    int speed = (int)gtk_range_get_value(range);
+    int speed = gtk_spin_button_get_value_as_int(spin);
     char val[8];
     snprintf(val, sizeof val, "%d", speed);
     for (int i = 0; i < 8; ++i) {
         char key[64];
         snprintf(key, sizeof key, "worker.%d.speed", i);
         aos_labdb_meta_set(v->db, key, val);
-        gtk_range_set_value(GTK_RANGE(v->workers[i].speed_scale),
-                            speed);
+        gtk_spin_button_set_value(
+            GTK_SPIN_BUTTON(v->workers[i].speed_scale), speed);
     }
 }
 
@@ -1219,16 +1220,14 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
 
     GtkWidget *gsp = gtk_label_new("Global speed:");
     gtk_box_append(GTK_BOX(fleet), gsp);
-    v->all_speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
-                                                  0, 16, 1);
-    gtk_scale_set_draw_value(GTK_SCALE(v->all_speed_scale), FALSE);
-    gtk_widget_set_hexpand(v->all_speed_scale, TRUE);
-    gtk_widget_set_size_request(v->all_speed_scale, 220, 30);
+    v->all_speed_scale = gtk_spin_button_new_with_range(0, 16, 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(v->all_speed_scale), 0);
+    gtk_widget_set_size_request(v->all_speed_scale, 64, -1);
     gtk_widget_set_valign(v->all_speed_scale, GTK_ALIGN_CENTER);
     gtk_widget_set_tooltip_text(
         v->all_speed_scale,
         "Speed cap applied to ALL workers: Auto = unthrottled, "
-        "1-16 = N*60 fps. Overwrites each card's slider.");
+        "1-16 = N*60 fps. Overwrites each card's speed.");
     g_signal_connect(v->all_speed_scale, "value-changed",
                      G_CALLBACK(on_all_speed_changed), v);
     gtk_box_append(GTK_BOX(fleet), v->all_speed_scale);
@@ -1358,11 +1357,9 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
         gtk_widget_set_size_request(wc->speed_label, 42, -1);
         gtk_label_set_xalign(GTK_LABEL(wc->speed_label), 0.0);
         gtk_box_append(GTK_BOX(sbox), wc->speed_label);
-        wc->speed_scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
-                                                 0, 16, 1);
-        gtk_scale_set_draw_value(GTK_SCALE(wc->speed_scale), FALSE);
-        gtk_widget_set_hexpand(wc->speed_scale, TRUE);
-        gtk_widget_set_size_request(wc->speed_scale, 140, 30);
+        wc->speed_scale = gtk_spin_button_new_with_range(0, 16, 1);
+        gtk_spin_button_set_value(GTK_SPIN_BUTTON(wc->speed_scale), 0);
+        gtk_widget_set_size_request(wc->speed_scale, 64, -1);
         gtk_widget_set_valign(wc->speed_scale, GTK_ALIGN_CENTER);
         gtk_widget_set_tooltip_text(
             wc->speed_scale,

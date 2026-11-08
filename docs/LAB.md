@@ -111,6 +111,10 @@ of running four identical bandits.
   hops skip those states. The exact `(action, params)` combo is also
   counted in `lab.lethal.*` — `best_params` subtracts a full point per
   proven kill so killer combos sink below neutral rivals.
+- **Branch convergence**: there is no per-worker branch separation —
+  60% of waypoint picks jump straight to the fleet's best-valued
+  state and smart hops trigger at a +0.10 EMA margin (up to 24 hops),
+  so a discovered passage pulls the whole fleet forward together.
 - **Rewind**: any trial scoring < −0.10 earns one corrective retry —
   the branch state is reloaded and an evasive input (attack tap then
   an alternating direction hold) replays the same frame budget. The

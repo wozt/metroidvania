@@ -1459,8 +1459,8 @@ int main(int argc, char **argv) {
                 double bv = 0.0;
                 int64_t bs = aos_labdb_best_state(db, &bv);
                 if (bs > 0 && state_dead(db, bs)) bs = -1;
-                if (bs > 0 && bs != state_id && branch_hops < 8 &&
-                    (branch_request || bv > reward_ema + 0.35)) {
+                if (bs > 0 && bs != state_id && branch_hops < 24 &&
+                    (branch_request || bv > reward_ema + 0.10)) {
                     size_t nsz = 0;
                     uint8_t *nb = aos_labdb_state_blob(db, bs, &nsz);
                     if (nb) {
@@ -1605,9 +1605,20 @@ int main(int argc, char **argv) {
             size_t load_size = blob_size;
             uint8_t *alt_blob = NULL;
             if (scount > 1 && (rand() % 100) < 25) {
-                /* prefer validated gameplay checkpoints (scout_play_*)
-                 * — they are the proven frontier of the campaign */
+                /* frontier-first: most waypoint picks jump straight to
+                 * the fleet's best-valued state so a discovered passage
+                 * pulls every worker forward; the rest stay random for
+                 * coverage. No branch separation — the whole fleet
+                 * exploits the frontier together. */
                 int pick_i = -1, play_n = 0;
+                double bv2 = 0.0;
+                int64_t bs2 = aos_labdb_best_state(db, &bv2);
+                if (bs2 > 0 && !state_dead(db, bs2) &&
+                    (rand() % 100) < 60) {
+                    for (int si = 0; si < scount; ++si)
+                        if (srows[si].id == bs2) { pick_i = si; break; }
+                }
+                if (pick_i < 0) {
                 for (int si = 0; si < scount; ++si)
                     if (srows[si].name &&
                         strstr(srows[si].name, "play")) ++play_n;
@@ -1623,6 +1634,7 @@ int main(int argc, char **argv) {
                 for (int tr = 0; tr < 8 && state_dead(db, srows[pick_i].id);
                      ++tr)
                     pick_i = rand() % scount;
+                }
                 AosStateRow *pick = &srows[pick_i];
                 size_t asz = 0;
                 alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
@@ -2003,7 +2015,7 @@ int main(int argc, char **argv) {
                 double bv = 0.0;
                 int64_t bs = aos_labdb_best_state(db, &bv);
                 if (bs > 0 && state_dead(db, bs)) bs = -1;
-                if (bs > 0 && bs != state_id && branch_hops < 8) {
+                if (bs > 0 && bs != state_id && branch_hops < 24) {
                     size_t nsz = 0;
                     uint8_t *nb = aos_labdb_state_blob(db, bs, &nsz);
                     if (nb) {

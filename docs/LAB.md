@@ -111,6 +111,11 @@ of running four identical bandits.
   hops skip those states. The exact `(action, params)` combo is also
   counted in `lab.lethal.*` — `best_params` subtracts a full point per
   proven kill so killer combos sink below neutral rivals.
+- **Rewind**: any trial scoring < −0.10 earns one corrective retry —
+  the branch state is reloaded and an evasive input (attack tap then
+  an alternating direction hold) replays the same frame budget. The
+  retry logs as its own trial (`action_id −99`, `rewind:evasive`) so
+  failures stay on record while recovered runs still bank reward.
 - **Failure memory**: `weights.reward_sum` keeps every tried combo's
   score; the bandit ranks params by *mean reward* (not just success
   rate) and the purge only deletes combos tried ≤2 times with zero

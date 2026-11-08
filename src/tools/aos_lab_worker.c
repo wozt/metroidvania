@@ -1379,31 +1379,54 @@ int main(int argc, char **argv) {
                 ((double)rand() / RAND_MAX) < explore) {
                 action = &chosen[rand() % chosen_count];
             } else {
-                /* pick randomly among the actions tied at the best
-                 * observed average reward (success rate + exploration
-                 * bonuses) */
+                /* aggregate each action's weights into one mean reward
+                 * and one attempt count — taking a single row let one
+                 * lucky params combo speak for the whole action */
                 int wcount = 0;
                 AosWeightRow *w = aos_labdb_weights(db, 8192, &wcount);
                 double best_rate = -1.0;
                 int rates[64];
+                long attempts[64];
                 for (int ci = 0; ci < chosen_count && ci < 64; ++ci) {
-                    double rate = -1;
+                    double rsum = 0.0;
+                    long att = 0;
                     for (int wi = 0; wi < wcount; ++wi)
                         if (w[wi].action_id == chosen[ci].id &&
-                            w[wi].attempts > 0)
-                            rate = w[wi].reward_sum / w[wi].attempts;
-                    rates[ci] = rate > best_rate ? (int)(rate * 1000000) : -1;
-                    if (rate > best_rate) best_rate = rate;
+                            w[wi].attempts > 0) {
+                            rsum += w[wi].reward_sum;
+                            att += w[wi].attempts;
+                        }
+                    rates[ci] = att > 0 ? (int)(rsum / att * 1000000) : -1;
+                    attempts[ci] = att;
+                    if (att > 0 && (double)rsum / att > best_rate)
+                        best_rate = (double)rsum / att;
                 }
-                int ties[64], nt = 0;
+                /* warmup floor: an action with almost no attempts has
+                 * not been fairly tested — sample it before letting
+                 * the incumbent run away with the budget */
+                int cold[64], nc = 0;
                 for (int ci = 0; ci < chosen_count && ci < 64; ++ci)
-                    if (best_rate >= 0 &&
-                        rates[ci] == (int)(best_rate * 1000000))
-                        ties[nt++] = ci;
-                if (nt > 0)
+                    if (attempts[ci] < 40) cold[nc++] = ci;
+                int ties[64], nt = 0;
+                if (nc > 0) {
+                    long min_att = attempts[cold[0]];
+                    for (int k = 1; k < nc; ++k)
+                        if (attempts[cold[k]] < min_att)
+                            min_att = attempts[cold[k]];
+                    for (int k = 0; k < nc; ++k)
+                        if (attempts[cold[k]] == min_att)
+                            ties[nt++] = cold[k];
                     action = &chosen[ties[rand() % nt]];
-                else
-                    action = &chosen[rand() % chosen_count];
+                } else {
+                    for (int ci = 0; ci < chosen_count && ci < 64; ++ci)
+                        if (best_rate >= 0 &&
+                            rates[ci] == (int)(best_rate * 1000000))
+                            ties[nt++] = ci;
+                    if (nt > 0)
+                        action = &chosen[ties[rand() % nt]];
+                    else
+                        action = &chosen[rand() % chosen_count];
+                }
                 aos_labdb_free_weight_rows(w, wcount);
             }
             /* cooperative control through the meta table: the GTK
@@ -1816,6 +1839,77 @@ int main(int argc, char **argv) {
                 frames, outcome, reward, metrics, duration_ms);
             ++trials_done;
             total_frames += frames;
+            /* REWIND — emulator-style undo through save states: a
+             * net-negative trial earns one corrective retry from the
+             * same branch state. The evasive input (attack tap, then a
+             * direction hold alternating sides) either recovers the
+             * run or confirms the branch is genuinely bad; the retry
+             * is logged as its own trial (action -99) so the failure
+             * stays on record while any recovery still counts. */
+            if (reward < -0.10) {
+                size_t rsz = 0;
+                uint8_t *rblob =
+                    aos_labdb_state_blob(db, used_state_id, &rsz);
+                if (rblob &&
+                    aos_mgba_load_state_blob(session, rblob, rsz)) {
+                    int dir = (rand() & 1) ? 16 : 32;
+                    AosKeyEvent rev[4] = {
+                        {12, 1}, {20, 0},
+                        {30, (uint32_t)dir},
+                        {frames > 20 ? frames - 10 : frames, 0},
+                    };
+                    AosPeekRequest rpeeks[2 * RK_COUNT];
+                    for (int side = 0; side < 2; ++side)
+                        for (int r = 0; r < RK_COUNT; ++r) {
+                            rpeeks[side * RK_COUNT + r].frame =
+                                side ? frames - 1 : 0;
+                            rpeeks[side * RK_COUNT + r].address =
+                                REWARD_PEEKS[r].addr;
+                            rpeeks[side * RK_COUNT + r].size =
+                                REWARD_PEEKS[r].size;
+                        }
+                    AosRunSpec rspec;
+                    memset(&rspec, 0, sizeof rspec);
+                    rspec.frames = frames;
+                    rspec.keys = rev;
+                    rspec.key_count = 4;
+                    rspec.peeks = rpeeks;
+                    rspec.peek_count = 2 * RK_COUNT;
+                    rspec.fps_cap = spec.fps_cap;
+                    if (fb_ok) rspec.fb_mirror = fb.pixels;
+                    AosRunResult rres;
+                    aos_mgba_run(session, &rspec, &rres);
+                    double rmotion = 0.0, rmdir = 0.0;
+                    if (rres.fb_first) {
+                        const uint32_t *fb2 =
+                            aos_mgba_framebuffer(session);
+                        rmotion = aos_vision_motion(
+                            rres.fb_first, fb2,
+                            AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT, &rmdir);
+                    }
+                    char rtags[256];
+                    double rbonus = compute_bonus(
+                        db, &rres, RK_COUNT, 0, rmotion,
+                        rtags, sizeof rtags);
+                    char rout[32];
+                    if (rbonus > 0.3) snprintf(rout, sizeof rout, "success");
+                    else if (rbonus > 0.0)
+                        snprintf(rout, sizeof rout, "partial");
+                    else snprintf(rout, sizeof rout, "fail");
+                    char rmetrics[384];
+                    snprintf(rmetrics, sizeof rmetrics,
+                             "{\"rewind\":1,\"tags\":\"%s\",\"mdir\":%.2f}",
+                             rtags, rmdir);
+                    aos_labdb_add_trial(db, run_id, used_state_id, -99,
+                                        "rewind:evasive", "rewind",
+                                        frames, rout, rbonus,
+                                        rmetrics, 0);
+                    aos_mgba_free_result(&rres);
+                    printf("worker %d rewind r=%.2f -> %.2f (%s)\n",
+                           worker_id, reward, rbonus, rout);
+                }
+                free(rblob);
+            }
             /* campaign progress metric: deepest room count + max
              * level seen by the whole fleet */
             {

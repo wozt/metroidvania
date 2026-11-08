@@ -165,6 +165,7 @@ enum {
     AOS_ENEMY_RED_MINOTAUR = 0x58,
     AOS_ENEMY_GIANT_WORM = 0x3E,
     AOS_ENEMY_POISON_WORM = 0x47,
+    AOS_ENEMY_BIPHRON = 0x4E,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -194,7 +195,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46,
        AOS_ROLE_PILLAR_PIECE = 47, AOS_ROLE_PILLAR_BREATH = 48, AOS_ROLE_PILLAR_FIREBALL = 49,
        AOS_ROLE_PILLAR_SMOKE = 50, AOS_ROLE_HEADHUNTER_HEAD = 51,
-       AOS_ROLE_WORM_SEGMENT = 52 };
+       AOS_ROLE_WORM_SEGMENT = 52, AOS_ROLE_BIPHRON_SHOT = 53 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot

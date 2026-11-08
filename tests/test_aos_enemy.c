@@ -3435,6 +3435,126 @@ static void worm_tests(void) {
     assert(w2.state == 2 && w2.worm_dir == 1 && w2.worm_wait == 3);
 }
 
+static void biphron_tests(void) {
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    static const uint8_t t2[] = {4, 4}, t3[] = {3, 3, 3, 3, 3, 3},
+                         t8[] = {3, 3, 3, 3, 3, 3, 3, 3};
+    const AosAnimDef defs[5] = {{2, t2}, {6, t3}, {2, t2}, {8, t8}, {2, t2}};
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    kind.anims = &anims;
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    const AosEnemyStats stats = {60, 25, 12, 0x08C1, 0, 30};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(159), NULL);
+
+    /* EnemyBiphronCreate / sub_0809A3D8: animation 0 looping, feet
+     * snapped on the floor, state 0, contact elements 0. */
+    AosEnemy b;
+    assert(aos_enemy_create(&b, AOS_ENEMY_BIPHRON, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(b.state == 0 && b.anim.id == 0 && b.contact_elements == 0 &&
+           (b.y >> 16) <= 160);
+
+    /* The 0x8E & 0x40 create path selects the affine-only state 3. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy inert;
+    assert(aos_enemy_create(&inert, AOS_ENEMY_BIPHRON, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(inert.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+    aos_enemy_update(&inert, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     always_zero);
+    assert(inert.state == 3);
+
+    /* State 0 (sub_08099CF0): facing, vx +-0x4000, vy +0x10000,
+     * angle 0x2800, then the sub_08069A00 hover walker; the timer
+     * only counts on the floor bit, and past 0x3B the player box +
+     * RNG gate (always_zero passes) enters the attack. */
+    int guard = 0;
+    while (b.state == 0 && guard++ < 400) {
+        soma.x = b.x;
+        soma.y = b.y;
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    }
+    assert(b.state == 1);
+    /* State 1 step 0 plays the attack animation. */
+    soma.x = b.x;
+    soma.y = b.y;
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     always_zero);
+    assert(b.anim.id == 1);
+
+    /* State 1 (sub_08099ED8): at anim frame 4 the sub_08099FD0
+     * projectile is emitted (role BIPHRON_SHOT, elements-2 contact)
+     * and song 0x78 requested; the ended animation returns to
+     * state 0 with animation 0 looping. */
+    AosEnemy shot = {0 };
+    bool saw_shot = false, saw_78 = false;
+    guard = 0;
+    while (b.state == 1 && guard++ < 200) {
+        AosHitReport r = aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                                          10, 4, 0, 0, always_zero);
+        for (int i = 0; i < r.child_count; ++i)
+            if (r.children[i].role == AOS_ROLE_BIPHRON_SHOT &&
+                !saw_shot) {
+                saw_shot = true;
+                shot = r.children[i];
+            }
+        if (aos_audio_requested(AOS_AUDIO_START_SONG, 0x78)) saw_78 = true;
+    }
+    assert(saw_shot && saw_78 && b.state == 0 && b.anim.id == 0);
+    assert(shot.id == AOS_ENEMY_BIPHRON && shot.contact_elements == 2 &&
+           shot.vy == -0x10000);
+
+    /* The projectile (sub_0809A29C): rises, trails song 0x77, dies on
+     * the 0xFF timer. */
+    aos_audio_clear();
+    shot.parent = NULL;
+    int32_t shot_y = shot.y;
+    guard = 0;
+    while (!shot.removed && guard++ < 300)
+        aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                         always_zero);
+    assert(shot.removed && shot.y < shot_y &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x77) > 0);
+
+    /* A lethal blow (sub_08099F50): killed + defeated, animation 3,
+     * state 2 — the death burst sparks at frame 1, song 0x6E in the
+     * 0x50-tick burst, then removal. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_BIPHRON, 100, 140, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = d.x;
+    soma.y = d.y + AOS_FIXED(10);
+    AosHitReport hit = aos_enemy_update(&d, &soma, &layer, &kind, &weapon, &blade,
+                                        9999, 4, 0, 0, always_zero);
+    assert(hit.killed && d.state == 2 && d.anim.id == 3 && d.defeated);
+    bool saw_spark = false, saw_6e = false;
+    aos_audio_clear();
+    guard = 0;
+    while (!d.removed && guard++ < 300) {
+        AosHitReport r = aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                                          10, 4, 0, 0, always_zero);
+        for (int i = 0; i < r.effect_count; ++i)
+            if (r.effects[i].kind == AOS_EFFECT_SPARK) saw_spark = true;
+        if (aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E)) saw_6e = true;
+    }
+    assert(d.removed && saw_spark && saw_6e);
+}
+
 static void valkyrie_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     static const uint8_t hover[] = {4, 4}, strike[] = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
@@ -5589,6 +5709,7 @@ int main(void) {
     curly_tests();
     minotaur_tests();
     worm_tests();
+    biphron_tests();
     medusa_tests();
     headhunter_death_tests();
     puts("aos_enemy: ok");

@@ -1,6 +1,44 @@
 # Project status
 
-Last updated: **2026-11-07**.
+Last updated: **2026-11-08**.
+
+## Patch 0866 - Biphron ported (id 78)
+
+- EnemyBiphronCreate (0x08099C5C) / EnemyBiphronUpdate
+  (0x0809A450) ported in src/runtime/aos_enemy.c behind
+  AOS_ENEMY_BIPHRON (0x4E) and the enemy_names[78] =
+  "biphron" kind row (objects.c PROBES: graphics
+  0x081CC05C, palette 0x0820AC04, frames 0x08223FF8,
+  art exported through --aria-export-objects).
+- State 0 sub_08099CF0: face_player facing, vx +-0x4000,
+  vy +0x10000, angle 0x2800; walk_collide is the
+  sub_08069A00 port (bounce 0x10000, head -0x200000,
+  max 0x80000, half-width 8) and only its floor bit feeds
+  the + 0xD timer; past 0x3B the centred 0xB4 x 0xC8 box
+  plus RNG & 0x7F <= 0x2F enters state 1.
+- State 1 sub_08099ED8: animation 1 one-shot, the
+  sub_08099FD0 projectile emitted at anim frame 4 with
+  song 0x78 (role AOS_ROLE_BIPHRON_SHOT = 53, elements-2
+  contact, vy -0x10000, anim 4), cycle_done returns to
+  state 0.
+- State 2 sub_08099DB8: entered by the lethal-blow hook
+  (sub_08099F50: animation 3); sparks at frame 1, the
+  0x50-tick burst with song 0x6E every 16th tick,
+  removal at 0.
+- The projectile update (sub_0809A29C approximation):
+  rises and drifts (the sub_08042848 preset 0x0E14F2FB
+  is not decoded — documented divergence), wall/ceiling
+  probes and a 0xFF timer delete it, collide() applies
+  the elements-2 contact, spark trail + song 0x77 every
+  4th tick.
+- Divergences documented in annotations.tsv and
+  aos_monster_aspects.tsv: spark/sprite-piece/trail
+  approximations, palette merges and blink skipped,
+  awake-gate approximated, shot lifetime a timer.
+- biphron_tests covers create/flag path, patrol and
+  aggro gate, the attack shot + song 0x78, the
+  projectile flight/trail/song 0x77/removal, and the
+  lethal death burst + song 0x6E + removal.
 
 ## Patch 0865 - Biphron decode (id 78, next port candidate)
 

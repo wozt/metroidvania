@@ -344,6 +344,11 @@ static const EntitySpec entities[] = {
      * variant as bank (sub_08068264), frames 0x08237C44. */
     PROBES("giant_worm", 0x081E4184, 0x0820B724, 0, 0x08237C44, 0x085286F8),
     PROBES("poison_worm", 0x081E4184, 0x0820B724, 1, 0x08237C44, 0x085286F8),
+    /* EnemyBiphronCreate / sub_0809A3D8: graphics 0x081CC05C, palette
+     * 0x0820AC04, frames 0x08223FF8. Its sub_08069A00 hover walker
+     * reads the entity box record, not a probe table; the shared
+     * 0x085286F8 descriptor stands in for the floor snap. */
+    PROBES("biphron", 0x081CC05C, 0x0820AC04, 0, 0x08223FF8, 0x085286F8),
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

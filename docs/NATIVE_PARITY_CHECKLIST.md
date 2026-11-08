@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 82 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 83 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1045 | 2528 |
+| Castlevania: Aria of Sorrow | 1064 | 2509 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1386,6 +1386,15 @@ Dependencies: `aos.enemies.skull_archer`.
 Known divergences: Sounds 0x6B and the 0x66 beam loop, the palette bits and sub_080683BC are not ported; the beam only has the attack box of sub_08042884 (slot + 0, read as the attacker's box by sub_08041864; + 0x72 bit 2 marks a box given by value) and no hurtbox; the affine slot is drawn as a vertical scale about the sprite's centre (double-size placement not modelled); the RandomNumberGenerator draw for + 0x1E, which nothing reads, is kept.  
 Next action: Compare against an emulator.
 Evidence: in game: `aria area_08_room_003 (--spawn 480 191 --hp 9999): it patrols (frames 30 to 200); from --spawn 560 191 it closes in and fires its beam at Soma, who takes 130 damage (frames 120 to 200, the beam thinning at the end); with --atk 999 --repeat 2 and right + B a blow shatters it into its seven bones flung away from Soma (frames 70 to 100)`.
+
+[+] **`aos.enemies.biphron` — Biphron.** EnemyBiphronCreate (graphics 0x081CC05C, palette 0x0820AC04, frames 0x08223FF8, animation 0 looping, state 3 under gEwramData + 0x8E & 0x40) and EnemyBiphronUpdate are ported: state 0 sub_08099CF0 faces the aim target, patrols at +-0x4000 with vy +0x10000 and angle 0x2800, the sub_08069A00 walker feeds the hover timer only on its floor bit, and past 0x3B ticks the centred 0xB4 x 0xC8 player box plus RandomNumberGenerator & 0x7F <= 0x2F enters the attack; state 1 sub_08099ED8 plays animation 1 and fires the sub_08099FD0 projectile (elements-2 contact through sub_0809A310, vy -0x10000) at anim frame 4 with song 0x78, returning to state 0; state 2 sub_08099DB8 is the death burst entered by the sub_08099F50 hurt callback (animation 3, sparks at frame 1, sprite pieces and song 0x6E through the 0x50-tick burst); state 3 is affine-only. Unit-tested in biphron_tests; not emulator-compared.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08042B8C`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_080698A8`, `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_08060B98.s:sub_0806B7D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806CC20`, `aos:asm:asm/code/code_08060B98.s:sub_0806CF2C`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D260`, `aos:asm:asm/code/code_08060B98.s:sub_0806D288`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806D644`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_08090914.s:EnemyBiphronCreate`, `aos:asm:asm/code/code_08090914.s:EnemyBiphronUpdate`, `aos:asm:asm/code/code_08090914.s:sub_08099CF0`, `aos:asm:asm/code/code_08090914.s:sub_08099DB8`, `aos:asm:asm/code/code_08090914.s:sub_08099ED8`, `aos:asm:asm/code/code_08090914.s:sub_08099F50`, `aos:asm:asm/code/code_08090914.s:sub_08099FD0`, `aos:asm:asm/code/code_08090914.s:sub_0809A0DC`, `aos:asm:asm/code/code_08090914.s:sub_0809A29C`, `aos:asm:asm/code/code_08090914.s:sub_0809A310`, `aos:asm:asm/code/code_08090914.s:sub_0809A340`, `aos:asm:asm/code/code_08090914.s:sub_0809A3D8`, `aos:asm:asm/code/code_08090914.s:sub_0809A424`, `aos:c:src/code/code_080211F0.c:sub_08021530`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_08001194.c:sub_08001C1C`, `aos:c:src/code_08001194.c:sub_08001D94`, `aos:c:src/code_08001194.c:sub_08002058`, `aos:c:src/code_08001194.c:sub_0800207C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The sub_08069A00 hover walker is walk_collide with the Biphron arguments (bounce 0x10000, head -0x200000, max 0x80000, half-width 8); the sub_08042848 physics preset 0x0E14F2FB of the projectile is approximated by a forward drift; the sub_0806D644 sparks, the sub_0809A340 sprite pieces and the sub_0809A0DC trail are approximated by AOS_EFFECT_SPARK; the + 0x5A palette merges, the death blink and the sub_0806CC20 awake-gate details use the usual activity handling; the shot lifetime is a 0xFF timer instead of the native probe/window delete.  
+Next action: Compare a room fight against an emulator; decode the sub_08042848 preset and port the sprite-piece children.
+Evidence: in game: `aria rooms placing enemy 78 — in-game verification pending`.
 
 [+] **`aos.enemies.blue_crow` — Blue crow enemy.** Perching, the homing flight behind the player, the hit stun of sub_0806AD24 (8 frames frozen while alive), state 3 under gEwramData + 0x8E bit 0x40 and the falling death are ported: two feathers (sprite frame 8, sub_080C9ED4), blood splashes of sub_0806E664 (sub_0806B5DC type 1: animation 13 of 0x0820ED60, OBJ row 8 = bank 4 of 0x082099FC) at death and every 16 frames, and flames every 6 frames over 8 x 8 pixels. Its take-off plays 0x8B (sub_080C9AF4) and its death 0x72 (sub_080C9D68), unit-tested.
 

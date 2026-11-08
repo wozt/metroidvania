@@ -122,6 +122,22 @@ static bool direct_update(AosEffect *e, const AosAnimSet *anims) {
     return aos_anim_step(&e->anim, anims) != 3;
 }
 
+/* sub_08045164 state 1: the entity sits at its parent's + 0x40/+ 0x44
+ * plus the + 0x50/+ 0x54 offset every frame and dies when its
+ * animation ends (sub_0803F17C == 3). */
+static bool pinned_update(AosEffect *e, const AosAnimSet *anims,
+                          const AosEffectWorld *world) {
+    if (!world) return false;
+    if (!e->started) {
+        if (!aos_anim_start(&e->anim, anims, 0, false)) return false;
+        e->anim.id = 0;
+        e->started = true;
+    }
+    e->x = world->player_x + e->ax;
+    e->y = world->player_y + e->ay;
+    return aos_anim_step(&e->anim, anims) != 3;
+}
+
 /* sub_08045E80: hidden through its delay, then moved and animated. */
 static bool burst_update(AosEffect *e, const AosAnimSet *anims) {
     if (!e->started) {
@@ -280,6 +296,7 @@ bool aos_effect_update(AosEffect *effect, const AosAnimSet *anims, const uint8_t
     if (effect->direct) return direct_update(effect, anims);
     if (effect->ballistic) return ballistic_update(effect, anims, world);
     if (effect->wisp) return wisp_update(effect, anims, world);
+    if (effect->pinned) return pinned_update(effect, anims, world);
     if (!effect->started) {
         /* State 0: the graphics set up, the animation played once. */
         aos_anim_start(&effect->anim, anims, 0, false);

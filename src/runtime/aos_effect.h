@@ -76,7 +76,8 @@ enum { AOS_EFFECT_FLAME = 0, AOS_EFFECT_BLOOD = 1, AOS_EFFECT_SMOKE = 2,
        AOS_EFFECT_OPENING_PROJECTILE = 20, AOS_EFFECT_HIT_ELEMENT_3 = 21,
        AOS_EFFECT_HIT_ELEMENT_5 = 22, AOS_EFFECT_CONTAINER_SPARK0 = 23,
        AOS_EFFECT_CONTAINER_SPARK1 = 24, AOS_EFFECT_CONTAINER_SPARK2 = 25,
-       AOS_EFFECT_CONTAINER_SPARK3 = 26, AOS_EFFECT_KINDS = 27 };
+       AOS_EFFECT_CONTAINER_SPARK3 = 26, AOS_EFFECT_SOUL_HELD = 27,
+       AOS_EFFECT_KINDS = 28 };
 
 typedef struct {
     uint8_t kind;           /* AOS_EFFECT_*: the art */
@@ -93,6 +94,7 @@ typedef struct {
     bool ballistic;         /* sub_0802DA98: acceleration, 8.0 clamps, margin 4 */
     bool wisp;              /* sub_08069134 (+ 0x18 = 0, + 0x19 = 3): random flips, a lifetime */
     bool debris;            /* sub_0804F8A0: a wall's debris, one bounce */
+    bool pinned;            /* sub_08045164: pinned to the player + ax/ay */
     bool rise;              /* sub_080503E0: a wall's rising dust */
     bool piece;             /* sub_0804F9B4: a piece of an object 0x09 wall */
     bool translucent;       /* + 0x59 bit 1 */
@@ -116,6 +118,7 @@ typedef struct {
     uint32_t (*random)(void);
     int32_t player_x;       /* the player's + 0x40 */
     int16_t player_top;     /* sub_0801CFB0: his y - 0x22 (- 0x16 crouching) */
+    int32_t player_y;       /* the player's + 0x44, for a pinned effect */
 } AosEffectWorld;
 
 /* sub_0806E524 / sub_0806B5DC / sub_08068F78 / sub_08045C9C /

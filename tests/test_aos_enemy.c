@@ -820,7 +820,7 @@ static void giant_ghost_tests(void) {
     assert(frames == 0x5A && wisps == 7);   /* timer 89, 81, ..., 41 */
     /* A wisp falls with gravity 0x2000 for 200 frames. */
     AosEffect w = hit.effects[0];
-    const AosEffectWorld world = {&layer, 0, 0, always_zero, 0, 0};
+    const AosEffectWorld world = {&layer, 0, 0, always_zero, 0, 0, 0};
     int life = 0;
     while (aos_effect_update(&w, &anims, NULL, &world) && life < 300) ++life;
     assert(life == 199);
@@ -4628,7 +4628,7 @@ static void doll_tests(void) {
     static const uint8_t spark_ticks[] = {3, 3};
     const AosAnimDef spark_def = {2, spark_ticks};
     const AosAnimSet spark_set = {&spark_def, 1};
-    const AosEffectWorld world = {&layer, 0, 0, always_zero, AOS_FIXED(77), 120};
+    const AosEffectWorld world = {&layer, 0, 0, always_zero, AOS_FIXED(77), 120, 0};
     AosEffect s = {.kind = AOS_EFFECT_SPARK, .follow = true};
     assert(aos_effect_update(&s, &spark_set, NULL, &world));
     frames = 0;

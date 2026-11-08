@@ -486,6 +486,9 @@ static const EffectSpec effects[] = {
     {"soul_container_follower1", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {18}, -1},
     {"soul_container_follower2", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {18}, -1},
     {"soul_container_follower3", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {18}, -1},
+    /* sub_08045BC8/sub_08045164: the soul-absorbed sparkle pinned above
+     * Soma, animation sequence 12, palette nibble 6 (OBJ row 9). */
+    {"soul_held", 0x081C15F4, 0x082099FC, 6, 0x0820ED60, 1, {12}, -1},
 };
 
 /* 0x0852513C, selected by sub_08045B44 type 4: its four type-1 records are

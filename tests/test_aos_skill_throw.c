@@ -153,7 +153,7 @@ static void landing_fragment_tests(void) {
     static const uint8_t ticks[] = {1};
     static const AosAnimDef def = {.count = 1, .durations = ticks};
     static const AosAnimSet set = {&def, 1};
-    const AosEffectWorld world = {NULL, 0, 0, NULL, 0, 0};
+    const AosEffectWorld world = {NULL, 0, 0, NULL, 0, 0, 0};
     AosEffect fragment = {.ballistic = true, .x = 100 << 16, .y = 100 << 16,
                           .vx = 0x10000, .vy = -0x10000, .ay = 0x2000};
     assert(aos_effect_update(&fragment, &set, NULL, &world));

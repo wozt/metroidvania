@@ -186,7 +186,7 @@ static void effect_tests(void) {
     static const uint8_t still_ticks[] = {1}, smoke_ticks[] = {4, 4};
     const AosAnimDef still_def = {1, still_ticks}, smoke_def = {2, smoke_ticks};
     const AosAnimSet still = {&still_def, 1}, smoke = {&smoke_def, 1};
-    const AosEffectWorld world = {&layer, 0, 0, scripted, AOS_FIXED(250), 0};
+    const AosEffectWorld world = {&layer, 0, 0, scripted, AOS_FIXED(250), 0, 0};
     /* Debris left of the player: thrown left (vx negated), up; it falls by
      * 0x3000 and bounces once 4 pixels over the floor. */
     const uint32_t throw_draws[] = {0x1000, 0x2000, 1};

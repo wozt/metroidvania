@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0828 - Held-soul sparkle ported (sub_08045BC8/sub_08045164)
+
+- New AOS_EFFECT_SOUL_HELD kind (Effect/soul_held, sequence 12 of
+  0x0820ED60 — the same frames burst_12 exports — palette bank 6,
+  re-exported through fusion_aos_export_objects) with a `pinned`
+  update: the effect sits at the player's +0x40/+0x44 plus its
+  +0x50/+0x54 offset ((0, -0x100000) = 16 px above Soma) every frame
+  and dies when its animation ends, matching sub_08045164 state 1.
+  AosEffectWorld gains player_y (the player's +0x44).
+- On every accepted soul collection the runtime now spawns the
+  sparkle; song 0xBF follows 0xBC for a repeated soul (the native
+  first-update request, collapsed into the same frame by our
+  immediate-replace mixer). For a new soul the native sparkle waits
+  for the sub_08045C34 icon's 64th frame — ours spawns immediately
+  since the icon entity is not ported yet.
+- Still open: the sub_08045C34/sub_08045654 new-soul icon and its
+  sub_08045350 sparkle storm (~48 pinned sparks around Soma), and
+  the song-0xBE request ordering.
+
 ## Patch 0827 - New/held soul feedback entities decoded
 
 - sub_08045654 (the new-soul icon's update) decoded: frame 0 calls

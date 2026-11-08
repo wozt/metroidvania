@@ -296,7 +296,8 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "soul_container_spark0",
                                                           "soul_container_spark1",
                                                           "soul_container_spark2",
-                                                          "soul_container_spark3"};
+                                                          "soul_container_spark3",
+                                                          "soul_held"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_KIND_PICKUP 4
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
@@ -2817,7 +2818,8 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     /* sub_0801CFB0 (its gEwramData + 0x13260 mode, y - 0x10, is not
      * modelled). */
     int16_t top = (int16_t)((soma->y >> 16) - ((soma->flags & AOS_FLAG_CROUCH) ? 0x16 : 0x22));
-    const AosEffectWorld world = {layer, cam_x, cam_y, aos_random, soma->x, top};
+    const AosEffectWorld world = {layer, cam_x, cam_y, aos_random, soma->x, top,
+                                  soma->y};
     size_t kept = 0;
     for (size_t i = 0; i < room->effect_count; ++i)
         if (aos_effect_update(&room->effects[i], combat->effects[room->effects[i].kind], blink,
@@ -2942,7 +2944,19 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     (unsigned)(pickup->type - AOS_PICKUP_SOUL),
                                     pickup->variant, (soma->y >> 16) > 0x70,
                                     fresh);
+            /* sub_08045BC8/sub_08045164: the soul-absorbed sparkle pinned
+             * at the player's position plus (0, -0x100000), animation 12,
+             * palette nibble 6. A repeated soul spawns it at once and its
+             * first update requests song 0xBF (played here right after
+             * 0xBC, which our immediate-replace mixer would otherwise
+             * drop); a new soul natively waits for the sub_08045C34 icon's
+             * 64th frame (not yet ported). */
+            if (room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SOUL_HELD, .pinned = true,
+                    .ax = 0, .ay = -0x100000};
             aos_audio_play_song(aos_pickup_collection_sound(pickup));
+            if (!fresh) aos_audio_play_song(0xBF);
         }
         if (soul) {
             AosSoulTrailSpark trail;

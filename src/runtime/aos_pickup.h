@@ -107,6 +107,17 @@ typedef struct {
     uint8_t soul_type;
 } AosSoulContainerSpark;
 
+/* A type-8 sub_08045B44 child emitted by a flying soul pickup on even
+ * timer values (sub_080446D4): position offsets of sub_0802D5EC(0x200000)
+ * on both axes, velocity -soul velocity / 4 and acceleration soul
+ * velocity / 64 on both axes. */
+typedef struct {
+    bool spawn;
+    int32_t x, y;
+    int32_t vx, vy, ax, ay;
+    uint8_t soul_type;
+} AosSoulTrailSpark;
+
 /* The pickup's collision box (sub_08042884 with 0x1010F8F8). */
 extern const AosBox aos_pickup_box;
 /* The hearts' box (0x0808FCFC). */
@@ -198,11 +209,11 @@ bool aos_pickup_special_boss_index(uint8_t enemy_id, uint16_t *persistent_index)
  * (sub_0802D408, step + 0x2A per frame up to 0x4000), speeds up by 0x1800
  * per frame up to 0x80000 and moves. */
 void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y);
-/* sub_080446D4 after its collision pass: on even timer values the trail
- * spark draws two offsets (sub_0802D5EC(0x200000) twice; the spark itself is
- * not created), then 200 frames count down, 64 frames blink and the soul is
- * removed. */
-void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random);
+/* sub_080446D4 after its collision pass: on even timer values a type-8
+ * trail spark is emitted through `spark` (NULL to skip it), then 200
+ * frames count down, 64 frames blink and the soul is removed. */
+void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random,
+                            AosSoulTrailSpark *spark);
 /* Cases 5-8 of sub_080441F8: a soul not yet held is new (and an ability
  * soul enables its ability, sub_08032ADC); it is added (sub_08032DBC counts
  * it) and the pickup removed. Returns whether it was new. */

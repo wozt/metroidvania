@@ -381,9 +381,9 @@ int main(void) {
     draws = 0;
     aos_pickup_soul_move(&soul, 200 << 16, 100 << 16);
     assert(soul.turn == 0x2A && soul.speed == 0x31800);
-    aos_pickup_soul_finish(&soul, counting_random);
+    aos_pickup_soul_finish(&soul, counting_random, NULL);
     assert(draws == 2 && soul.blink == 199);
-    aos_pickup_soul_finish(&soul, counting_random);
+    aos_pickup_soul_finish(&soul, counting_random, NULL);
     assert(draws == 2 && soul.blink == 198);
     for (int i = 0; i < 400; ++i) aos_pickup_soul_move(&soul, 200 << 16, 100 << 16);
     assert(soul.turn == 0x4000 && soul.speed == 0x80000);
@@ -399,10 +399,20 @@ int main(void) {
     assert(nearest < 16 * 16);
     /* 200 frames, then 64 blinking frames. */
     AosPickup timed = aos_pickup_create_soul(AOS_SOUL_RED, 0, 0, 0, 0, 0, counting_random);
-    for (int i = 0; i < 200; ++i) aos_pickup_soul_finish(&timed, counting_random);
+    for (int i = 0; i < 200; ++i) aos_pickup_soul_finish(&timed, counting_random, NULL);
     assert(timed.state == 1 && timed.blinking && timed.blink == 0x40 && !timed.removed);
-    for (int i = 0; i < 64; ++i) aos_pickup_soul_finish(&timed, counting_random);
+    for (int i = 0; i < 64; ++i) aos_pickup_soul_finish(&timed, counting_random, NULL);
     assert(timed.removed);
+    /* The even-timer trail spark (sub_08045B44 type 8): position offsets,
+     * velocity -soul / 4, acceleration soul / 64, soul-kind palette. */
+    AosPickup trail = aos_pickup_create_soul(AOS_SOUL_YELLOW, 2, 0, 0,
+                                             1 << 16, -(2 << 16), counting_random);
+    trail.vx = 0x40000; trail.vy = -0x20000;
+    AosSoulTrailSpark trail_spark;
+    aos_pickup_soul_finish(&trail, counting_random, &trail_spark);
+    assert(trail_spark.spawn && trail_spark.soul_type == AOS_SOUL_YELLOW &&
+           trail_spark.vx == -0x10000 && trail_spark.vy == 0x8000 &&
+           trail_spark.ax == 0x1000 && trail_spark.ay == -0x800);
 
     /* Cases 5-8 of sub_080441F8. */
     AosStats owner = {0};

@@ -2,6 +2,34 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0825 - Soul pickup trail spark (sub_08045B44 type 8)
+
+- sub_080446D4's trail fully decoded at _08044756: after the collision
+  pass, while `+0xD & 1` is clear, the native code calls
+  sub_0802D5EC(0x200000) twice and adds each result to the soul's
+  +0x40/+0x44 position (unsigned 0..32px offsets, no centering), then
+  sub_08045B44(x, y, soul.+0x48>>6, soul.+0x4C>>6, 8,
+  palette = soul.+0x5A bits 3-6). Table 0x085251A8 entry 8 points its
+  animation at 0x08525194 — frames {0x49,0x36,0x35,0x34} with ticks
+  {2,4,4,2} — and its nonzero +4 selects sub_080450C8 (the direct
+  sequence update), not sub_08045000.
+- The created entity then receives velocity +0x48/+0x4C =
+  -soul velocity / 4 and acceleration +0x50/+0x54 = soul velocity / 64
+  (both C-truncated divisions), and its +0x5C byte is copied from the
+  soul.
+- Ported: AosSoulTrailSpark + aos_pickup_soul_finish's out-parameter
+  emit the spark on the same even-timer cadence with the same
+  position/velocity/acceleration terms; aria_runtime pushes it as a
+  `direct` AosEffect of kind AOS_EFFECT_CONTAINER_SPARK0+soul_type,
+  reusing the exported {0x49,0x36,0x35,0x34} sparkle sequences and the
+  per-kind palette banks. Divergence: the anim set plays the type-4
+  {3,7,7,3} ticks, not the native type-8 {2,4,4,2} entry, and the
+  spark's own RNG draws (sub_080450C8 state 0's palette/flip rolls)
+  are not reproduced.
+- Still open: the sub_08045C34/sub_08045BC8 new/held-soul messages,
+  exact unk_422 description-path timing, the ability-soul palette
+  page detail.
+
 ## Patch 0824 - Gameplay obtained-soul notice (sub_0800E708 + sub_0800E540)
 
 - Full decode of the non-matching sub_0800E708.inc: on every accepted

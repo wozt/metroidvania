@@ -2941,7 +2941,15 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     pickup->variant, (soma->y >> 16) > 0x70);
             aos_audio_play_song(aos_pickup_collection_sound(pickup));
         }
-        if (soul) aos_pickup_soul_finish(pickup, aos_random);
+        if (soul) {
+            AosSoulTrailSpark trail;
+            aos_pickup_soul_finish(pickup, aos_random, &trail);
+            if (trail.spawn && room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = (uint8_t)(AOS_EFFECT_CONTAINER_SPARK0 + trail.soul_type),
+                    .direct = true, .x = trail.x, .y = trail.y, .vx = trail.vx,
+                    .vy = trail.vy, .ax = trail.ax, .ay = trail.ay};
+        }
         else if (pickup->small_heart) aos_pickup_small_heart_update(pickup, layer);
         else aos_pickup_update(pickup, layer);
         if (!pickup->removed)

@@ -385,12 +385,27 @@ void aos_pickup_soul_move(AosPickup *pickup, int32_t soma_x, int32_t soma_y) {
     pickup->y += pickup->vy;
 }
 
-void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random) {
+void aos_pickup_soul_finish(AosPickup *pickup, AosRandom random,
+                            AosSoulTrailSpark *spark) {
+    if (spark) *spark = (AosSoulTrailSpark){0};
     pickup->age++;
     if (!(pickup->blink & 1)) {
-        /* The spark's position offsets, sub_0802D5EC(0x200000) each. */
-        (void)random();
-        (void)random();
+        /* sub_08044756: a type-8 sub_08045B44 sparkle at the soul's position
+         * plus two sub_0802D5EC(0x200000) offsets; its velocity starts at
+         * -soul velocity / 4 and accelerates by soul velocity / 64. */
+        if (spark && random) {
+            spark->spawn = true;
+            spark->x = pickup->x + (int32_t)(random() % 0x200000u);
+            spark->y = pickup->y + (int32_t)(random() % 0x200000u);
+            spark->vx = -pickup->vx / 4;
+            spark->vy = -pickup->vy / 4;
+            spark->ax = pickup->vx / 64;
+            spark->ay = pickup->vy / 64;
+            spark->soul_type = (uint8_t)(pickup->type - AOS_PICKUP_SOUL);
+        } else {
+            (void)random();
+            (void)random();
+        }
     }
     if (pickup->state == 0) {
         if (--pickup->blink == 0) {

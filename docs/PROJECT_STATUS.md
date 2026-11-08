@@ -2,6 +2,28 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0840 - Level-up display ported (sub_080455BC / sub_08045454)
+
+- A level gained in combat now spawns the native display: entity slots
+  0x16-0x19, update EntityUpdateNothing, drawFunc sub_08045454, still
+  frame 0x48 of tileset 0x081C15F4 on OBJ row 6 (palette bank 2 through
+  sUnk_084F0DD8), PlaySong(0xBC) at creation.
+- New `src/runtime/aos_levelup.[ch]`: the +0xD counter state machine
+  (61 envelopes over 0x00-0x3C, freeze window [2, 0x3C]), the affine
+  envelope of sub_08045454's sub_0803E058 call — rotation
+  0x10000 - sine(frame * 0x400 + 0x4000) turns for frames <= 0xF then
+  one full turn, uniform scale 0x2000 / 0x10000 - sine(frame * 0x800)
+  / unit — about the entity anchor at (player.x, player.y - 0x20),
+  and sub_08045270's radial sparkle launches (storm art bank 2, the
+  -v/64 acceleration, y - 6 px) on odd counters <= 0x27.
+- unk_A074_0 is ported as the entity-update freeze: while the display
+  runs every room entity update is suspended (Soma and the
+  drawFunc-driven effects keep running, as natively). The display is
+  cleared on room transitions with the entityData.
+- `aria_objects` is version 69 (947 sequences, 2955 frames) exporting
+  Effect/level_up; test_aos_levelup covers the state machine,
+  envelope, freeze window and sparkle velocity.
+
 ## Patch 0839 - HUD notices cleared on room transitions (sub_0800EB04)
 
 - The native transition paths (the unk_42C |= 0x200 setters in

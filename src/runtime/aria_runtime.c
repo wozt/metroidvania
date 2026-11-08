@@ -56,6 +56,7 @@
 #include "aos_skill_spear.h"
 #include "aos_skill_throw.h"
 #include "aos_hud.h"
+#include "aos_levelup.h"
 #include "aos_game_over.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
@@ -302,7 +303,8 @@ static const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "sm
                                                           "soul_storm1",
                                                           "soul_storm2",
                                                           "soul_storm3",
-                                                          "death_sparkle"};
+                                                          "death_sparkle",
+                                                          "level_up"};
 #define ARIA_KIND_SPECIAL 2
 #define ARIA_KIND_PICKUP 4
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
@@ -723,6 +725,7 @@ typedef struct {
     void *soul_notice_ctx;
     uint8_t soul_storm;         /* sub_08045350's remaining spawn frames */
     uint8_t soul_storm_kind;    /* the new soul's kind, for the palette */
+    AosLevelUp levelup;         /* sub_080455BC's display entity */
 } AriaCombat;
 
 /* The homing list gEwramData + 0x13194 (sub_08021924, aged by
@@ -2573,7 +2576,11 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         aos_audio_play_song(deferred_sound);
     }
     int sound = 0;
-    for (size_t i = 0; i < room->entity_count; ++i) {
+    /* unk_A074_0: while the level-up display's counter sits in
+     * [2, 0x3C], the native entity update loop is suspended; the
+     * display and its sparkles are drawFunc-driven and keep running. */
+    const bool entities_frozen = aos_levelup_frozen(&combat->levelup);
+    for (size_t i = 0; !entities_frozen && i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         bool placed_pickup = e->kind == ARIA_KIND_PICKUP && e->id >= 1 && e->id <= 8;
         if (placed_pickup) {
@@ -2660,9 +2667,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
              * frames while its linked helper controls Soma. As with doors,
              * the forced value is consumed on the following frame. */
-            /* sub_080683BC: a defeated enemy grants its experience once;
-             * levels raise Soma's maximum HP (the level-up effect
-             * sub_080455BC and the equipment refresh are not ported). */
+            /* sub_080683BC: a defeated enemy grants its experience once.
+             * A level gained calls sub_080455BC(0): the level-up display
+             * entity (still frame 0x48, OBJ row 6) with PlaySong(0xBC);
+             * the equipment refresh is sub_08033CAC's tail. */
             /* Bone Pillar's skulls are enemies in their own right. */
             if (hit.killed &&
                 (e->enemy.role == AOS_ROLE_ENEMY ||
@@ -2673,6 +2681,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     combat->stats[e->id]->experience);
                 if (gained > 0) {
                     soma->max_hp = (int16_t)combat->progress->max_hp;
+                    /* sub_080455BC(0): the display entity; its creation
+                     * plays 0xBC on character index 0. */
+                    aos_levelup_start(&combat->levelup);
+                    aos_audio_play_song(0xBC);
                     /* sub_08033CAC ends with sub_0804AD9C. */
                     if (combat->equipment) {
                         aos_stats_refresh(combat->progress, combat->equipment);
@@ -2854,6 +2866,19 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 .vx = sx * 3, .vy = sy * 3,
                 .ax = -(sx * 20) / 16, .ay = -(sy * 20) / 16};
         }
+    }
+    /* sub_080455BC/sub_08045454: the level-up display ticks in the draw
+     * pass; each odd counter <= 0x27 bursts a sub_08045270 sparkle —
+     * storm art on OBJ row 6 (AOS_EFFECT_SOUL_STORM1), launched from
+     * the player's position 6 pixels up with the radial velocity and
+     * -v/64 acceleration of its creation. */
+    if (aos_levelup_tick(&combat->levelup) && room->effect_count < MAX_EFFECTS) {
+        int32_t v[4];
+        aos_levelup_sparkle_velocity((uint8_t)(aos_random() & 0xFFu), aos_sine, v);
+        room->effects[room->effect_count++] = (AosEffect){
+            .kind = AOS_EFFECT_SOUL_STORM1, .direct = true,
+            .x = soma->x, .y = soma->y - 0x60000,
+            .vx = v[0], .vy = v[1], .ax = v[2], .ay = v[3]};
     }
     size_t kept = 0;
     for (size_t i = 0; i < room->effect_count; ++i)
@@ -4309,6 +4334,40 @@ static void draw_effects(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             !e->removed && e->glow.started)
             draw_effect(renderer, objects, &e->glow, cam_x, cam_y);
     }
+}
+
+/* sub_080455BC's display: still frame 0x48 at the player's x and
+ * y - 0x20, drawn through the sub_0803E058 affine slot of
+ * sub_08045454 — rotation = 0x10000 - sine(frame * 0x400 + 0x4000)
+ * turns for frames <= 0xF (else one full turn), uniform scale
+ * 0x2000 for frames <= 7, 0x10000 - sine(frame * 0x800) for 8-15,
+ * unit after; scale and rotation about the entity anchor. */
+static void draw_levelup(SDL_Renderer *renderer, const AriaObjects *objects,
+                         const AriaCombat *combat, const AosSoma *soma,
+                         int cam_x, int cam_y) {
+    if (!combat->levelup.active) return;
+    const __typeof__(objects->effects[0]) *art = &objects->effects[AOS_EFFECT_LEVEL_UP];
+    if (!art->def.count || !art->frames[0].texture) return;
+    const AriaFrame *frame = &art->frames[0];
+    /* The entity anchor: player x, player y - 0x20 (drawFunc
+     * sub_08045454 writes the player record's + 0x42/+ 0x46 - 0x20). */
+    float ax = (float)((soma->x >> 16) - cam_x);
+    float ay = (float)(((soma->y >> 16) - 0x20) - cam_y);
+    float scale = (float)aos_levelup_scale(combat->levelup.env_frame, aos_sine) / 65536.0f;
+    if (scale <= 0.0f) return;
+    /* The unscaled top-left is anchor + frame offset; the affine scale
+     * grows it about the anchor, so the scaled offset is offset*scale. */
+    SDL_FRect rect = {ax + (float)frame->offset_x * scale,
+                      ay + (float)frame->offset_y * scale,
+                      (float)frame->w * scale, (float)frame->h * scale};
+    double degrees =
+        (double)aos_levelup_angle(combat->levelup.env_frame, aos_sine) * 360.0 / 65536.0;
+    /* The pivot is the entity anchor: (-offset * scale) from the
+     * scaled top-left, in rect-relative units like the enemy spins. */
+    SDL_FPoint pivot = {-(float)frame->offset_x * scale,
+                        -(float)frame->offset_y * scale};
+    SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, degrees,
+                             &pivot, SDL_FLIP_NONE);
 }
 
 /* sub_0804301C: skip blank entries, drawing every visible glyph five
@@ -6856,8 +6915,10 @@ int aria_runtime_main(int argc, char **argv) {
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
-                /* sub_0800EB04: transitions clear the HUD notice. */
+                /* sub_0800EB04: transitions clear the HUD notice; the
+                 * level-up entity dies with the room's entityData. */
                 aos_hud_clear_notice(&hud);
+                combat.levelup = (AosLevelUp){0};
                 clear_skills(&souls);
                 layer = room_layer(&room);
                 save_room = (AosSaveRoom){0};
@@ -6985,6 +7046,7 @@ int aria_runtime_main(int argc, char **argv) {
             };
             draw_pickup_art(renderer, &objects, 9, &soul, cam_x, cam_y);
         }
+        if (objects_ok) draw_levelup(renderer, &objects, &combat, &soma, cam_x, cam_y);
         for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);

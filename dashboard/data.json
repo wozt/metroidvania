@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T14:09:52+00:00",
+ "generated_at": "2026-11-08T14:48:02+00:00",
  "git": {
-  "commit": "d2ae7cf1",
+  "commit": "270dc97c",
   "branch": "main",
   "dirty": true
  },
@@ -14166,8 +14166,8 @@
     "sub_08033E6C",
     "sub_080683BC"
    ],
-   "limitations": "sub_080683BC is ported for its experience reward and drop decision, but the 0xA1 soul-chance flag and gEwramData + 0x4CC mode remain clear in the runtime. The level-up display sub_080455BC and the walking-experience accessory path of sub_0801B0D8 are not ported. Enemy rewards are connected only for reconstructed enemy entities. Bestiary and common/rare discovery words use a ROM-free portable representation rather than native SRAM. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables, sub_08033E10, sub_08033E38 and sub_08033E6C are ported. The experience part of sub_080683BC grants each enemy record's reward once, marks its bestiary bit, applies the bonus flag and cap, and levels up; its drop part preserves the native soul, item and fallback-pickup decision order. The runtime creates and collects the resulting soul, item, money or MP-heart entities, records common and rare discovery bits, and schema-v9 saves preserve all three discovery sets. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the level-up display, the walking-experience accessory path and the remaining drop-context flags, then compare reward sequences against an emulator.",
+   "limitations": "sub_080683BC is ported for its experience reward and drop decision, but the 0xA1 soul-chance flag and gEwramData + 0x4CC mode remain clear in the runtime. The level-up display sub_080455BC is ported (aos_levelup: still frame 0x48 on OBJ row 6, the sub_08045454 sine spin/scale envelope, the unk_A074_0 entity-update freeze, sub_08045270 sparkles and PlaySong(0xBC)); the walking-experience accessory path of sub_0801B0D8 is not ported. Enemy rewards are connected only for reconstructed enemy entities. Bestiary and common/rare discovery words use a ROM-free portable representation rather than native SRAM. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables, sub_08033E10, sub_08033E38 and sub_08033E6C are ported. The experience part of sub_080683BC grants each enemy record's reward once, marks its bestiary bit, applies the bonus flag and cap, and levels up; its drop part preserves the native soul, item and fallback-pickup decision order. The runtime creates and collects the resulting soul, item, money or MP-heart entities, records common and rare discovery bits, and schema-v9 saves preserve all three discovery sets. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the walking-experience accessory path and the remaining drop-context flags, then compare reward sequences against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_stats.c",
@@ -17989,7 +17989,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 800 traced door, enemy, skill and shared-effect sequences, 2,363 indexed frames, 1,499 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 1,500 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open",
+   "limitations": "The native C11 rebuild task exports 800 traced door, enemy, skill and shared-effect sequences, 2,363 indexed frames, 1,499 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 1,500 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -19850,6 +19850,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_levelup",
+    "files": [
+     "tests/test_aos_levelup.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_soul",
     "files": [
      "tests/test_aos_soul.c"
@@ -20376,12 +20383,18 @@
    }
   ],
   "summary": {
-   "passed": 133,
+   "passed": 134,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "270dc97c",
+   "date": "2026-11-08",
+   "subject": "Clear HUD notices on room transitions like sub_0800EB04",
+   "scope": "project"
+  },
   {
    "commit": "d2ae7cf1",
    "date": "2026-11-08",
@@ -20854,12 +20867,6 @@
    "commit": "227c00ca",
    "date": "2026-11-08",
    "subject": "Lab: RAM-backed SQLite, hard state cap, save throttling, viewer guards",
-   "scope": "project"
-  },
-  {
-   "commit": "25fa65d5",
-   "date": "2026-11-08",
-   "subject": "Lab: scout room registry, door pulses, longer traversal trials",
    "scope": "project"
   }
  ],

@@ -494,6 +494,10 @@ static const EffectSpec effects[] = {
      * row while the colours come from the tileset's palette bank (4, the
      * same sequence-13 bank as blood). */
     {"death_sparkle", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
+    /* sub_080455BC's level-up display: entity +0x65 = record byte 0
+     * (0x085251F0) = still frame 0x48; sub_0803B924's nibble 6 selects
+     * OBJ row 6, palette bank 2 through sUnk_084F0DD8. */
+    {"level_up", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x48},
 };
 
 /* 0x0852513C, selected by sub_08045B44 type 4: its four type-1 records are

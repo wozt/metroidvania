@@ -2,6 +2,7 @@
 #include "aos_pause_graphics.h"
 
 #include "aos_obj_rom.h"
+#include "aos_recent_items.h"
 #include "aos_rom_graphics.h"
 
 #include <stdio.h>
@@ -28,8 +29,8 @@ enum {
     AOS_CURSOR_PALETTE_UPPER = 0x0820C2C0 + 4 + 64,
     AOS_PAUSE_WIDTH = 240,
     AOS_PAUSE_HEIGHT = 160,
-    AOS_WEAPON_RECORDS = 0x08505D3C,
-    AOS_ARMOR_RECORDS = 0x085063B0,
+    AOS_WEAPON_TABLE = 0x08505D3C,
+    AOS_ARMOR_TABLE = 0x085063B0,
     AOS_EQUIPMENT_NAME_IDS = 0x08506734,
     AOS_EQUIPMENT_DESCRIPTION_IDS = 0x08506936,
     AOS_ROM_BASE = 0x08000000,
@@ -759,12 +760,35 @@ bool aos_pause_graphics_render_soul_set(
             return false;
     }
 
+    /* sub_080494F8 orders the list: the category's recent-soul cache
+     * (sub_08049E64, four ids per family) leads with its owned entries in
+     * acquisition order, then the remaining owned souls by index. */
     unsigned available[AOS_PAUSE_SOUL_RECORDS];
     unsigned available_count = 1;
     available[0] = 0;
-    for (unsigned soul = 1; soul < soul_counts[values->category]; ++soul)
-        if (values->counts[values->category][soul - 1])
-            available[available_count++] = soul;
+    const uint8_t *recent = values->recent_souls
+                                ? values->recent_souls->soul[values->category]
+                                : NULL;
+    if (recent)
+        for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot) {
+            unsigned soul = recent[slot];
+            if (soul == AOS_EQUIPMENT_NONE ||
+                soul >= soul_counts[values->category] ||
+                !values->counts[values->category][soul - 1])
+                continue;
+            bool duplicate = false;
+            for (unsigned index = 1; index < available_count; ++index)
+                if (available[index] == soul) duplicate = true;
+            if (!duplicate) available[available_count++] = soul;
+        }
+    for (unsigned soul = 1; soul < soul_counts[values->category]; ++soul) {
+        if (!values->counts[values->category][soul - 1]) continue;
+        bool listed = false;
+        if (recent)
+            for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+                if (recent[slot] == soul) listed = true;
+        if (!listed) available[available_count++] = soul;
+    }
     unsigned selected_soul = values->cursor[values->category];
     unsigned selected = 0;
     for (unsigned index = 0; index < available_count; ++index)
@@ -823,7 +847,7 @@ static bool equipment_text_ids(const AosPauseGraphics *graphics,
         return true;
     }
     if ((slot == 0 && item >= 59) || (slot != 0 && item >= 45)) return false;
-    uint32_t records = slot == 0 ? AOS_WEAPON_RECORDS : AOS_ARMOR_RECORDS;
+    uint32_t records = slot == 0 ? AOS_WEAPON_TABLE : AOS_ARMOR_TABLE;
     unsigned record_size = slot == 0 ? 28 : 20;
     uint16_t text_index;
     return rom_u16(graphics, records + item * record_size, &text_index) &&
@@ -844,7 +868,7 @@ static bool equipment_icon_id(const AosPauseGraphics *graphics,
         (slot == 0 && item >= 59) || (slot != 0 && item >= 45))
         return false;
     const FusionRom *rom = graphics->text.rom;
-    uint32_t records = slot == 0 ? AOS_WEAPON_RECORDS : AOS_ARMOR_RECORDS;
+    uint32_t records = slot == 0 ? AOS_WEAPON_TABLE : AOS_ARMOR_TABLE;
     unsigned stride = slot == 0 ? 28 : 20;
     size_t offset = (size_t)(records + item * stride + 2 - AOS_ROM_BASE);
     if (!rom || !rom->data || offset + 1 > rom->size) return false;

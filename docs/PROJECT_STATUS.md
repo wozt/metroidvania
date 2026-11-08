@@ -2,6 +2,36 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0823 - Soul Set recent-first ordering ported
+
+- sub_080441F8's collection tail fully decoded: item/weapon/armor cases
+  increment the +0x38/+0x58/+0x93 count bytes (refusal sound 0x13B past
+  eight), print the localized name through sub_0800EF98 and play
+  0xB5/0xB7; weapon and armor pickups also call sub_0804AE3C (the
+  equipment recent-four caches, already ported). Soul cases call
+  sub_0800E708 (obtained-soul window), sub_08049E64 and sound 0xBC.
+- sub_08049E64 decoded: on EVERY soul pickup it caches the 1-based soul
+  id into the colour family's four-entry recent list at
+  gEwramData+0x133DC/+0x133E0/+0x133E4 (duplicates skipped, a full list
+  loses only its last entry; ability souls have no list).
+- sub_080494F8 decoded: the Soul Set soul list leads with the category's
+  recent cache entries (owned, acquisition order) before the remaining
+  owned souls in index order — the same recent-four mechanic as
+  equipment. The previous annotation claiming souls had no recency
+  reordering was wrong and is corrected.
+- Ported: AosRecentSouls + aos_pickup_recent_soul_record/reset in
+  aos_recent_items, recorded on every soul pickup in aria_runtime,
+  carried through AosSoulMenu.recent_souls into
+  AosPauseSoulSetValues.recent_souls and applied in render_soul_set's
+  available-list construction. Session-scoped like the equipment
+  caches.
+- sub_08066B70/sub_08066EA4 identified as the scripted multi-item
+  obtain window (chest/boss reward lists via table 0x08526C6C with
+  icon entities at (0x1C,0x90)); regular pickups use the HUD name
+  notice instead, so it stays deferred until scripted obtain events
+  exist. The gameplay obtained-soul window sub_0800E708 remains the
+  known soul-pickup gap.
+
 ## Patch 0822 - Config page completed: buttons row, hint text, strips
 
 - sub_0804BF8C init decoded: three 24-tile description strips at

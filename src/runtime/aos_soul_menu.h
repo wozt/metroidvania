@@ -99,6 +99,8 @@ typedef struct {
     uint8_t sleep_stage;
     uint8_t sleep_timer;
     AosPickupRecent *recent_items;
+    /* sub_08049E64's recent-soul caches for the Soul Set ordering. */
+    AosRecentSouls *recent_souls;
     AosBestiaryMenu enemy;
     /* Colour cursors are native equipped values: 0 None, then index + 1.
      * The ability cursor is its zero-based index. */

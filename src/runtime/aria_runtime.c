@@ -705,6 +705,7 @@ typedef struct {
     const AosEquipmentTables *equipment;         /* NULL without metadata/equipment.tsv */
     const uint8_t *item_icons;                    /* item, weapon, armor -> icon id */
     AosPickupRecent *recent_items;                /* sub_0804AE3C's three caches */
+    AosRecentSouls *recent_souls;                 /* sub_08049E64's soul caches */
     AosHud *hud;                                 /* sub_0800EA98 enemy-name notice */
     const AosHudFont *hud_font;
     bool derive_atk, derive_def;                 /* false under --atk / --def */
@@ -2914,6 +2915,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             static const char *const colours[] = {"red", "blue", "yellow", "ability"};
             bool fresh = aos_pickup_collect_soul(pickup, combat->progress);
             aos_pickup_commit_collection(pickup, &aria_pickup_state);
+            /* sub_08049E64 caches the soul for the Soul Set ordering on
+             * every collection, new or repeated. */
+            if (combat->recent_souls)
+                aos_pickup_recent_soul_record(
+                    combat->recent_souls,
+                    (uint8_t)(pickup->type - AOS_PICKUP_SOUL), pickup->variant);
             printf("Collected %s %s soul %u (held %u, %u souls)\n", fresh ? "new" : "another",
                    colours[pickup->type - AOS_PICKUP_SOUL], pickup->variant,
                    aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
@@ -4419,6 +4426,7 @@ static bool draw_native_soul_set(SDL_Renderer *renderer, SDL_Texture *texture,
         .status = stats->status,
         .category = menu->category,
         .equipped = {stats->red_soul, stats->blue_soul, stats->yellow_soul},
+        .recent_souls = menu->recent_souls,
     };
     memcpy(values.stats, stats->current, sizeof values.stats);
     memcpy(values.cursor, menu->cursor, sizeof values.cursor);
@@ -5975,6 +5983,8 @@ int aria_runtime_main(int argc, char **argv) {
     AosWeaponEntity weapon_entity = {0};
     AosPickupRecent recent_items;
     aos_pickup_recent_reset(&recent_items);
+    AosRecentSouls recent_souls;
+    aos_pickup_recent_soul_reset(&recent_souls);
     AriaCombat combat = {
         .weapon = &weapon_entity,
         .weapon_frames = weapon_loaded ? &weapon_sprite.data : NULL,
@@ -5983,6 +5993,7 @@ int aria_runtime_main(int argc, char **argv) {
         .equipment = have_equipment ? &equipment : NULL,
         .item_icons = objects_ok ? &objects.item_icon[0][0] : NULL,
         .recent_items = &recent_items,
+        .recent_souls = &recent_souls,
         .hud = have_hud ? &hud : NULL,
         .hud_font = have_hud ? &hud_font : NULL,
         .derive_atk = !atk_override,
@@ -6018,6 +6029,7 @@ int aria_runtime_main(int argc, char **argv) {
     bool paused = false, step_once = false, chord_before = false;
     AosSoulMenu soul_menu = {0};
     soul_menu.recent_items = &recent_items;
+    soul_menu.recent_souls = &recent_souls;
     bool debug_moves[5] = {false};
     int debug_hp = soma.hp, debug_max_hp = soma.max_hp, debug_enemy = 0;
     int debug_area = room.area, debug_room = room.number;

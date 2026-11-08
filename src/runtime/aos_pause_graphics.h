@@ -11,6 +11,8 @@
 #include "aos_intro_resources.h"
 #include "aos_menu_cells.h"
 #include "aos_obj.h"
+
+struct AosRecentSouls;
 #include "fusion/assets/aos.h"
 
 typedef struct {
@@ -80,6 +82,9 @@ typedef struct {
     uint8_t cursor[AOS_PAUSE_SOUL_FAMILIES];
     uint8_t equipped[AOS_PAUSE_SOUL_FAMILIES];
     uint8_t counts[AOS_PAUSE_SOUL_FAMILIES][AOS_PAUSE_SOUL_RECORDS];
+    /* sub_08049E64's per-family recent soul lists; sub_080494F8 lists the
+     * four most recently acquired owned souls before the rest. */
+    const struct AosRecentSouls *recent_souls;
 } AosPauseSoulSetValues;
 
 enum {

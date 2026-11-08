@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_pause_graphics.h"
 
+#include "aos_recent_items.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -210,6 +212,12 @@ int main(int argc, char **argv) {
         if (argc >= 3) write_ppm(argv[2], rgba);
         static const unsigned soul_records[] = {55, 24, 35};
         memset(soul.counts, 1, sizeof soul.counts);
+        /* sub_080494F8's recent-first ordering: mix valid, duplicate,
+         * empty and out-of-range cache entries across the three lists. */
+        static const AosRecentSouls recent_souls = {
+            .soul = {{5, 5, 0xFF, 200}, {7, 0xFF, 0xFF, 0xFF},
+                     {3, 9, 0xFF, 0xFF}}};
+        soul.recent_souls = &recent_souls;
         for (unsigned category = 0; category < 3; ++category) {
             soul.category = (uint8_t)category;
             for (unsigned cursor = 0; cursor <= soul_records[category]; ++cursor) {

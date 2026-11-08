@@ -140,6 +140,27 @@ int main(void) {
            recent.item[0][3] == 9);
     assert(!aos_pickup_recent_record(&recent, AOS_PICKUP_ITEM, 1));
 
+    /* sub_08049E64: the same four-entry cache per soul family stores the
+     * 1-based soul id; ability souls (family 3) have no native list. */
+    AosRecentSouls soul_recent;
+    aos_pickup_recent_soul_reset(&soul_recent);
+    for (unsigned list = 0; list < AOS_PICKUP_RECENT_LISTS; ++list)
+        for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+            assert(soul_recent.soul[list][slot] == 0xFF);
+    assert(aos_pickup_recent_soul_record(&soul_recent, 0, 4));
+    assert(!aos_pickup_recent_soul_record(&soul_recent, 0, 4));
+    assert(aos_pickup_recent_soul_record(&soul_recent, 1, 9));
+    assert(aos_pickup_recent_soul_record(&soul_recent, 2, 20));
+    assert(soul_recent.soul[0][0] == 5 && soul_recent.soul[1][0] == 10 &&
+           soul_recent.soul[2][0] == 21);
+    for (uint8_t soul = 5; soul < 9; ++soul)
+        assert(aos_pickup_recent_soul_record(&soul_recent, 0, soul));
+    assert(aos_pickup_recent_soul_record(&soul_recent, 0, 30));
+    assert(soul_recent.soul[0][0] == 5 && soul_recent.soul[0][1] == 6 &&
+           soul_recent.soul[0][2] == 7 && soul_recent.soul[0][3] == 31);
+    assert(!aos_pickup_recent_soul_record(&soul_recent, 3, 0));
+    assert(!aos_pickup_recent_soul_record(NULL, 0, 0));
+
     AosStats exchange_stats = {0};
     exchange_stats.weapon = 2;
     exchange_stats.weapon_counts[1] = exchange_stats.weapon_counts[2] = 1;

@@ -72,3 +72,23 @@ bool aos_pickup_recent_exchange(AosPickupRecent *recent, const AosStats *stats,
     }
     return true;
 }
+
+void aos_pickup_recent_soul_reset(AosRecentSouls *recent) {
+    if (recent) memset(recent->soul, AOS_EQUIPMENT_NONE, sizeof recent->soul);
+}
+
+bool aos_pickup_recent_soul_record(AosRecentSouls *recent, uint8_t type,
+                                   uint8_t index) {
+    if (!recent || type >= AOS_PICKUP_RECENT_LISTS) return false;
+    uint8_t *list = recent->soul[type];
+    uint8_t id = (uint8_t)(index + 1);
+    for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+        if (list[slot] == id) return false;
+    for (unsigned slot = 0; slot < AOS_PICKUP_RECENT_ITEMS; ++slot)
+        if (list[slot] == AOS_EQUIPMENT_NONE) {
+            list[slot] = id;
+            return true;
+        }
+    list[AOS_PICKUP_RECENT_ITEMS - 1] = id;
+    return true;
+}

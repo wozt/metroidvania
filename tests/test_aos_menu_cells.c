@@ -254,6 +254,30 @@ static void test_window_a_and_tile(void) {
     assert(tile[0] == 0xA5);
 }
 
+static void test_window_b(void) {
+    /* sub_08040970: bounds x0/y0 (clamped 40/31), x1 = x+w-2,
+     * y1 = y+h-1; the pixel cursor is recomputed from the CURRENT
+     * b_col/b_row — the cell cursor itself is not reset. */
+    AosMenuCells cells;
+    uint32_t fb[FB_WORDS];
+    aos_menu_cells_init(&cells);
+    aos_menu_cells_set_fb(&cells, fb);
+    cells.b_col = 3;
+    cells.b_row = 2;
+    cells.b_sx = 5;
+    cells.b_px = 99;
+    cells.b_py = 99;
+    aos_menu_cells_window_b(&cells, 0, 0xC, 0xE, 1);
+    assert(cells.b_x0 == 0 && cells.b_y0 == 0xC);
+    assert(cells.b_x1 == 0xC && cells.b_y1 == 0xC);
+    assert(cells.b_sx == 0);
+    assert(cells.b_px == 18 && cells.b_py == 16);
+    /* Clamps: x0/x1 cap at 40, y0/y1 at 31. */
+    aos_menu_cells_window_b(&cells, 50, 40, 10, 10);
+    assert(cells.b_x0 == 0x28 && cells.b_x1 == 0x28);
+    assert(cells.b_y0 == 0x1F && cells.b_y1 == 0x1F);
+}
+
 int main(void) {
     test_large_basic();
     test_skip_and_width();
@@ -265,6 +289,7 @@ int main(void) {
     test_icon_walker();
     test_run_text();
     test_window_a_and_tile();
+    test_window_b();
     printf("aos_menu_cells tests passed\n");
     return 0;
 }

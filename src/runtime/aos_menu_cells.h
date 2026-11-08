@@ -130,6 +130,12 @@ void aos_menu_cells_icon_fill_rect(AosMenuCells *cells);
 void aos_menu_cells_window_a(AosMenuCells *cells, uint16_t col,
                              uint16_t row, uint16_t w, uint16_t h);
 
+/* sub_08040970: context-B window bounds (x0/y0 clamps 40/31,
+ * x1 = x+w-2, y1 = y+h-1), clears the sub-column offset and recomputes
+ * the pixel cursor from the current cell cursor. */
+void aos_menu_cells_window_b(AosMenuCells *cells, uint16_t x, uint16_t y,
+                             uint16_t w, uint16_t h);
+
 /* sub_0804066C: move the context-A cursor to (col, row) — clamped to
  * 40x20 — clearing the sub-column offset and recomputing the absolute
  * pixel position. */

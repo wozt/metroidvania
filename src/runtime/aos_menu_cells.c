@@ -406,6 +406,23 @@ void aos_menu_cells_icon_fill_rect(AosMenuCells *cells) {
     cells->b_py = (uint16_t)(cells->b_row * 8);
 }
 
+void aos_menu_cells_window_b(AosMenuCells *cells, uint16_t x, uint16_t y,
+                             uint16_t w, uint16_t h) {
+    /* sub_08040970: store the context-B window bounds — x0/y0 clamped
+     * to 40/31, x1 = x + w - 2, y1 = y + h - 1 — then clear the
+     * sub-column offset and recompute the absolute pixel position
+     * from the CURRENT cell cursor (b_col/b_row are not reset). */
+    cells->b_x0 = x > 0x28 ? 0x28 : x;
+    cells->b_y0 = y > 0x1F ? 0x1F : y;
+    cells->b_x1 = (uint16_t)(x + w - 2);
+    if (cells->b_x1 > 0x28) cells->b_x1 = 0x28;
+    cells->b_y1 = (uint16_t)(y + h - 1);
+    if (cells->b_y1 > 0x1F) cells->b_y1 = 0x1F;
+    cells->b_sx = 0;
+    cells->b_px = (uint16_t)(cells->b_col * 6);
+    cells->b_py = (uint16_t)(cells->b_row * 8);
+}
+
 void aos_menu_cells_window_a(AosMenuCells *cells, uint16_t col,
                              uint16_t row, uint16_t w, uint16_t h) {
     /* sub_08040748: store the window bounds, clamp to 40x20 cells,

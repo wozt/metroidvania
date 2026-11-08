@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0814 - Context-B window setter
+
+- `aos_menu_cells_window_b` ports sub_08040970: context-B bounds
+  (x0/y0 clamped 40/31, x1 = x+w-2, y1 = y+h-1), clears the
+  sub-column offset and recomputes b_px/b_py from the CURRENT
+  b_col/b_row — the native routine does not reset the cell cursor.
+- Item Use slot rects decode confirmed against it:
+  40970(x in {0,0x15}, y=0xC+(slot>>1), w=0xE, h=1) gives even-slot
+  windows x 0-12 and odd-slot x 21-33 (6px col units), one row tall.
+
 ## Patch 0813 - Item Use page decode (documentation tranche)
 
 - sub_0804B6C4/sub_0804B494 fully decoded and recorded in the

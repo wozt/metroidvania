@@ -16,9 +16,8 @@ Last updated: **2026-11-07**.
     + FlameDemon(104) — 4 enemies.
   - func_0808A224: GreatArmor(60) + FinalGuard(103) +
     ShadowKnight(105) — 3 enemies.
-  - func_080B0BE8: Minotaur(21) + RedMinotaur(88) — the update
-    is only func_0806E4F8(e,-16), the sleep/awake flag helper,
-    so their locomotion is the generic enemy controller.
+  - func_080B0BE8: Minotaur(21) + RedMinotaur(88) — a real
+    five-state machine (see below), not a stub.
   - func_080AE0E0: GiantWorm(62) + PoisonWorm(71).
   - func_08095320: CreakingSkull(33) + GiantSkeleton(92).
   - func_080B3DCC: FishHead(65), the Bone Pillar skull homing
@@ -35,9 +34,15 @@ Last updated: **2026-11-07**.
   src/assets/aos/objects.c; fusion_importer --aria-export-objects
   regenerated enemy_frames.tsv (252 new rows) and the sprite
   library. Runtime wiring (enemy_names, kind, update AI) is
-  still pending: the native think hook is only the sleep check,
-  so the generic enemy locomotion controller still needs to be
-  decoded before Minotaur can move 1:1.
+  still pending.
+- Minotaur update decoded (sub_080B0BE8, shared by ids 21/88):
+  sub_0806E4F8(e,-16) sleep flag; sub_0806D128(e,6) activity
+  window else sub_08021924 tracking; state != 3 runs
+  sub_0806AE54; sub_0806D4C0 hurt flash via sub_080421AC;
+  switch on e+0xA: 0 sub_080B0814, 1 sub_080B0898, 2 sub_080B095C,
+  3 sub_08079294 (dying), 4 sub_0803F17C (removed); then
+  sub_080421AC again and the shared post-step sub_0806DF20.
+  The state handlers and helpers still need porting.
 
 ## Patch 0860 - Equipment record-effect audit
 

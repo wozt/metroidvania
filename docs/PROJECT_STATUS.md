@@ -37,6 +37,26 @@ Last updated: **2026-11-07**.
   +0x1C-driven attack/hurt boxes of the shared epilogue
   (sub_08042848 / sub_080428B4 / sub_0806E314 pattern seen
   in the Golem too).
+- Worm create decoded (sub_080AD7F0(e, variant)): segmented
+  enemy - +0x59 |= 2, random facing bits into +0x58 low
+  five, +0x59 |= 0x10, sub_080ADB0C, +0x14 = self, then
+  FOUR children through sub_0806DFF8(e, sub_080ADC2C):
+  each takes random facing bits, +0x20 from the parent,
+  +0x59 |= 0x10, +0x22 = index << 12, +0x14 = parent,
+  +0x18 = parent + 0x59 block, +0x1E = index, x = parent
+  +0x40 +/- 0xA0000 by facing, the enemy id byte +0x36 and
+  stats via sub_0806B04C. Parent then loads graphics
+  0x081E4184, palette 0x0820B724 bank = variant
+  (sub_08068264), frames 0x08237C44 (sub_0803B924),
+  animation 3 loop for variant 0 else animation 0,
+  sub_0803E058 affine init, +0x21 = variant, +0x5C = 0x11,
+  state 6 under the global 0x8E & 0x40, else hit callbacks
+  sub_080AE334 / sub_080AD748 and state 0. The parent's
+  +0x4 = sub_080AE390 links the children.
+- Child update sub_080ADC2C (~220 asm lines) and the
+  emerge/dive pair sub_080AD9FC (~210) / sub_080ADB94
+  (~90) are still to decode; the port is Bone-Pillar-scale
+  (linked segments), not a quick family.
 - Golem family recon: EnemyGolemUpdate sub_0807E35C is a
   four-state dispatcher whose state 0 sub_0807E8EC is a
   42-case sub-state machine (~3 KB asm) - boss-scale, not

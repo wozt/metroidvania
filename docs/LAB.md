@@ -111,6 +111,16 @@ of running four identical bandits.
   hops skip those states. The exact `(action, params)` combo is also
   counted in `lab.lethal.*` — `best_params` subtracts a full point per
   proven kill so killer combos sink below neutral rivals.
+- **Adaptive traversal** (`kind=traverse`): the run plays as
+  ~60-frame segments holding a direction; a frozen segment (screen
+  motion < 0.3%) climbs a reaction ladder — jump, then attack, then
+  UP for doors — encoding the real room-crossing rules instead of a
+  fixed key schedule. Reward peeks merge across segments so
+  `compute_bonus` sees the whole run.
+- **Entity activity**: a 9th reward peek diffs the 8 KiB entity
+  table (0x02000400) — `entity_active` (+0.1) when enemies/AI are
+  churning, `entity_still` (−0.05) when gameplay mode shows a dead
+  world.
 - **Branch convergence**: there is no per-worker branch separation —
   60% of waypoint picks jump straight to the fleet's best-valued
   state and smart hops trigger at a +0.10 EMA margin (up to 24 hops),

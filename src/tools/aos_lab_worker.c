@@ -453,14 +453,15 @@ enum {
     RK_LVL  = 5,   /* 0x02013279:4  level + hp head */
     RK_ITEM = 6,   /* 0x02013294:136 inventories */
     RK_SOUL = 7,   /* 0x0201331C:122 soul inventories */
-    RK_COUNT = 8,
+    RK_ENT  = 8,   /* 0x02000400:8192 entity table — enemy AI, HP, AI ticks */
+    RK_COUNT = 9,
     RK_ACTION = 8 /* action probe occupies last two slots */
 };
 
 static const struct { uint32_t addr, size; } REWARD_PEEKS[RK_COUNT] = {
     {0x02000010, 4}, {0x02000090, 16}, {0x02000524, 8},
     {0x0201327A, 8}, {0x0201328C, 8}, {0x02013279, 4},
-    {0x02013294, 136}, {0x0201331C, 122},
+    {0x02013294, 136}, {0x0201331C, 122}, {0x02000400, 8192},
 };
 
 static int16_t rd16(const AosPeekResult *r, int off) {
@@ -515,6 +516,110 @@ static int room_count(AosLabDb *db) {
     if (list) for (char *p = list; *p; ++p) if (*p == ',') ++n;
     free(list);
     return list ? n + 1 : 0;
+}
+
+/* ---- adaptive traversal --------------------------------------------
+ * kind="traverse" actions play the run as ~60-frame segments instead
+ * of one fixed key schedule: hold the direction, and whenever a
+ * segment shows almost no screen motion the next segment reacts —
+ * jump first, then attack, then UP (doors), then back to cruising.
+ * This encodes the actual room-crossing rules: keep walking, hop
+ * obstacles, swing through enemies, open doors. Reward peeks are
+ * collected on every segment so the merged result feeds compute_bonus
+ * exactly like a normal trial. */
+static void run_traverse(AosMgbaSession *session, int frames,
+                         uint32_t dir_mask, double fps_cap,
+                         uint32_t *fb_pix, AosRunResult *out) {
+    memset(out, 0, sizeof *out);
+    if (dir_mask == 0) dir_mask = 16;
+    const int SEG = 60;
+    AosRunResult *first = NULL, *last = NULL;
+    int nseg = 0, stuck = 0;
+    for (int off = 0; off < frames; off += SEG) {
+        int f = frames - off < SEG ? frames - off : SEG;
+        /* reaction ladder: 0 cruise, 1 jump, 2 attack, 3 door-up */
+        AosKeyEvent keys[6];
+        int kn = 0;
+        uint32_t b = 2, a = 1, up = 64;
+        if (stuck == 1) {           /* hop the obstacle */
+            keys[kn++] = (AosKeyEvent){0, dir_mask | b};
+            keys[kn++] = (AosKeyEvent){18 < f ? 18 : f, dir_mask};
+            keys[kn++] = (AosKeyEvent){f, 0};
+        } else if (stuck == 2) {    /* swing through whatever blocks */
+            keys[kn++] = (AosKeyEvent){0, dir_mask | a};
+            keys[kn++] = (AosKeyEvent){16 < f ? 16 : f, dir_mask};
+            keys[kn++] = (AosKeyEvent){f, 0};
+        } else if (stuck == 3) {    /* maybe a door: push UP then resume */
+            keys[kn++] = (AosKeyEvent){0, up};
+            keys[kn++] = (AosKeyEvent){40 < f ? 40 : f, 0};
+            keys[kn++] = (AosKeyEvent){45, dir_mask};
+            keys[kn++] = (AosKeyEvent){f, 0};
+        } else {
+            keys[kn++] = (AosKeyEvent){0, dir_mask};
+            keys[kn++] = (AosKeyEvent){f, 0};
+        }
+        AosPeekRequest pk[2 * RK_COUNT];
+        for (int side = 0; side < 2; ++side)
+            for (int r = 0; r < RK_COUNT; ++r) {
+                pk[side * RK_COUNT + r].frame = side ? f - 1 : 0;
+                pk[side * RK_COUNT + r].address = REWARD_PEEKS[r].addr;
+                pk[side * RK_COUNT + r].size = REWARD_PEEKS[r].size;
+            }
+        AosRunSpec spec;
+        memset(&spec, 0, sizeof spec);
+        spec.frames = f;
+        spec.keys = keys;
+        spec.key_count = kn;
+        spec.peeks = pk;
+        spec.peek_count = 2 * RK_COUNT;
+        spec.fps_cap = fps_cap;
+        spec.fb_mirror = fb_pix;
+        AosRunResult *r = calloc(1, sizeof *r);
+        aos_mgba_run(session, &spec, r);
+        ++nseg;
+        /* per-segment motion = did the screen actually move while we
+         * held the direction; a frozen segment means wall, enemy or
+         * a gap ahead -> climb the reaction ladder next segment */
+        double m = 0.0, md = 0.0;
+        if (r->fb_first) {
+            const uint32_t *fb = aos_mgba_framebuffer(session);
+            m = aos_vision_motion(r->fb_first, fb,
+                                  AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT, &md);
+        }
+        if (m < 0.003) {
+            if (stuck < 3) ++stuck;
+        } else {
+            stuck = 0;
+        }
+        if (!first) first = r; else { aos_mgba_free_result(last); last = r; }
+    }
+    if (!first) return;
+    if (!last) last = first;
+    /* merge: before-peeks from the first segment, after-peeks from the
+     * last; fb_first likewise so the trial sees the whole-run motion */
+    out->peeks = calloc(2 * RK_COUNT, sizeof(AosPeekResult));
+    if (out->peeks && first->peeks && last->peeks &&
+        first->peek_count >= 2 * RK_COUNT &&
+        last->peek_count >= 2 * RK_COUNT) {
+        for (int i = 0; i < RK_COUNT; ++i) {
+            out->peeks[i] = first->peeks[i];
+            /* ownership of the peek data moves to `out` — NULL the
+             * source pointers so free_result does not double-free */
+            first->peeks[i].data = NULL;
+            first->peeks[i].size = 0;
+        }
+        for (int i = 0; i < RK_COUNT; ++i) {
+            out->peeks[RK_COUNT + i] = last->peeks[RK_COUNT + i];
+            last->peeks[RK_COUNT + i].data = NULL;
+            last->peeks[RK_COUNT + i].size = 0;
+        }
+        out->peek_count = 2 * RK_COUNT;
+    }
+    out->fb_first = first->fb_first;
+    first->fb_first = NULL;
+    if (last != first) aos_mgba_free_result(last);
+    aos_mgba_free_result(first);
+    (void)nseg;
 }
 
 /* Returns bonus reward; appends human-readable tags to `tags`. */
@@ -612,6 +717,17 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         b[RK_SOUL].size == a[RK_SOUL].size &&
         memcmp(b[RK_SOUL].data, a[RK_SOUL].data, b[RK_SOUL].size)) {
         bonus += 0.5; TAG("soul_gained");
+    }
+    /* entity-table churn: enemies moving, AI ticking, hits landing.
+     * High churn = the world is alive around the player; near-zero
+     * churn in gameplay mode = genuinely stuck, nothing to fight */
+    if (b[RK_ENT].data && a[RK_ENT].data &&
+        b[RK_ENT].size == a[RK_ENT].size) {
+        long diff = 0;
+        for (uint32_t i = 0; i < b[RK_ENT].size; ++i)
+            if (b[RK_ENT].data[i] != a[RK_ENT].data[i]) ++diff;
+        if (diff > 400) { bonus += 0.1; TAG("entity_active"); }
+        else if (diff < 30) { bonus -= 0.05; TAG("entity_still"); }
     }
     /* movement without damage: screen motion is the reliable signal
      * (WRAM entity position proved layout-dependent) */
@@ -1651,7 +1767,15 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "state reload failed\n");
             }
             AosRunResult res;
-            aos_mgba_run(session, &spec, &res);
+            if (action->kind && !strcmp(action->kind, "traverse")) {
+                /* adaptive room-crossing: segmented direction hold with
+                 * jump/attack/door reactions on detected stalls */
+                uint32_t dirmask = base.mask & (16 | 32 | 64 | 128);
+                run_traverse(session, frames, dirmask, spec.fps_cap,
+                             fb_ok ? fb.pixels : NULL, &res);
+            } else {
+                aos_mgba_run(session, &spec, &res);
+            }
             free(alt_blob);
             gettimeofday(&t1, NULL);
             int duration_ms = (int)((t1.tv_sec - t0.tv_sec) * 1000 +

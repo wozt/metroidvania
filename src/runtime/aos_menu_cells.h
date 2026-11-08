@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Aria's software cell renderer state (gEwramData +0x11598..+0x115C6 and
- * the staging buffer at 0x03001A18). The native glyph blitters draw into
- * a fixed scratch strip which the masked merge routines then composite
- * into the window cell buffer; this module ports the state and the two
- * primitive blitters. No SDL, no ROM access. */
+/* Aria's software cell renderer: the gEwramData +0x11598..+0x115C6 state,
+ * the staging strip at 0x03001A18, the masked merge routines that
+ * composite glyphs into the window cell buffer, the two text cursor
+ * contexts and the icon/window walker. No SDL, no ROM access: callers
+ * supply the framebuffer, the per-character advance table and the glyph
+ * metric records. */
 #ifndef AOS_MENU_CELLS_H
 #define AOS_MENU_CELLS_H
 
@@ -11,45 +12,114 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* The staging strip: sub_0803FEA4 writes 12 words (large font, 12 pixel
- * rows) and sub_080402DC 8 words (small font, 8 pixel rows) at
- * 0x03001A18. Each word packs one pixel row of an 8-pixel cell: eight
- * 4bpp nibbles, bit 7 of the glyph byte is the leftmost pixel. */
+/* The destination cell buffer (+0x11598 points at it): each cell row
+ * spans 0x400 bytes = 256 words = 32 cells of 8 words (8 pixel rows of
+ * one 8x8 cell, one 32-bit word per pixel row, eight 4bpp nibbles). */
 enum {
+    AOS_MENU_CELLS_ROW_WORDS = 256,
+    AOS_MENU_CELLS_COLS = 32,
     AOS_MENU_CELLS_LARGE_ROWS = 12,
     AOS_MENU_CELLS_SMALL_ROWS = 8,
     AOS_MENU_CELLS_PIXELS = 8,
 };
 
 typedef struct {
-    /* +0x115C4: attribute OR-ed into every set pixel nibble (low nibble
-     * lands on each pixel; higher bits bleed into following nibbles,
-     * exactly like the ARM shift). */
+    /* +0x11598: destination cell buffer (row pitch 256 words). */
+    uint32_t *fb;
+    /* +0x115C4: attribute OR-ed into every set pixel nibble. */
     uint16_t attr;
-    /* +0x115C6: ink byte replicated into every pixel nibble before the
-     * glyph bits are applied ((ink * 17) & 0xFF per byte). */
+    /* +0x115C6: ink byte replicated into every pixel nibble. */
     uint16_t ink;
-    /* 0x03001A18: the staging strip the blitters write. */
+    /* Context A cursor (large font, 12px lines): +0x115A0..+0x115B0. */
+    uint16_t a_col;       /* +0x115A0 text column */
+    uint16_t a_row;       /* +0x115A2 text row */
+    uint16_t a_x;         /* +0x115A4 pixels accumulated in the 6px slot */
+    uint16_t a_px;        /* +0x115A6 absolute pixel x */
+    uint16_t a_y;         /* +0x115A8 absolute pixel y (row * 12) */
+    uint16_t a_col_home;  /* +0x115AA column reset on wrap */
+    uint16_t a_row_stop;  /* +0x115AC row clamp on wrap */
+    uint16_t a_col_max;   /* +0x115AE column limit */
+    uint16_t a_row_max;   /* +0x115B0 row limit for init clamp */
+    /* Context B cursor (small font / icon walker): +0x115B2..+0x115C2. */
+    uint16_t b_col;       /* +0x115B2 column */
+    uint16_t b_row;       /* +0x115B4 cell row */
+    uint16_t b_sx;        /* +0x115B6 sub-column pixel offset */
+    uint16_t b_px;        /* +0x115B8 absolute pixel x */
+    uint16_t b_py;        /* +0x115BA absolute pixel y (row * 8) */
+    uint16_t b_x0;        /* +0x115BC window left column */
+    uint16_t b_y0;        /* +0x115BE window top row */
+    uint16_t b_x1;        /* +0x115C0 window right column limit */
+    uint16_t b_y1;        /* +0x115C2 window bottom row limit */
+    /* 0x03001A18: glyph staging strip written by the blitters. */
     uint32_t scratch[AOS_MENU_CELLS_LARGE_ROWS];
 } AosMenuCells;
 
 void aos_menu_cells_init(AosMenuCells *cells);
+void aos_menu_cells_set_fb(AosMenuCells *cells, uint32_t *fb); /* sub_080412DC */
 void aos_menu_cells_set_attr(AosMenuCells *cells, uint16_t attr); /* sub_080412F0 */
 void aos_menu_cells_set_ink(AosMenuCells *cells, uint16_t ink);   /* sub_08041304 */
 
-/* sub_0803FEA4: blit one large-font glyph into scratch[0..11].
- * `metrics` is the 14-byte record at 0x0850A136 + (ch - 0x20) * 14;
- * bytes 0..11 are the pixel-row bitmasks consumed MSB first.
- * `skip` leading bits are discarded (left bearing), then `width`
- * pixel slots are emitted. */
+/* Primitive glyph blitters into scratch[]: sub_0803FEA4 (large, 12
+ * rows) and sub_080402DC (small, 8 rows). `metrics` is the glyph record
+ * (14 bytes large / 10 bytes small); bytes 0..rows-1 are the pixel-row
+ * bitmasks consumed MSB first. `skip` leading bits are discarded (left
+ * bearing), then `width` pixel slots are emitted. */
 void aos_menu_cells_blit_large(AosMenuCells *cells, uint16_t ch,
                                uint16_t skip, uint16_t width,
                                const uint8_t *metrics);
-
-/* sub_080402DC: same for the small font — 8 rows, metrics record of 10
- * bytes at 0x08509876 + (ch - 0x20) * 10, bytes 0..7 are the rows. */
 void aos_menu_cells_blit_small(AosMenuCells *cells, uint16_t ch,
                                uint16_t skip, uint16_t width,
                                const uint8_t *metrics);
+
+/* Masked merges of scratch[] into the cell buffer.
+ * Large font uses the context-A pixel coordinates (+0x115A6/+0x115A8)
+ * and spills vertically into the next cell row (+0x400 bytes). */
+void aos_menu_cells_merge_large_single(AosMenuCells *cells,
+                                        uint16_t width);
+void aos_menu_cells_merge_large_dual(AosMenuCells *cells,
+                                     uint16_t width);
+/* Small font uses the context-B coordinates (+0x115B8/+0x115B4, the
+ * row already in cell units) and never spills vertically. */
+void aos_menu_cells_merge_small_single(AosMenuCells *cells,
+                                       uint16_t width);
+void aos_menu_cells_merge_small_dual(AosMenuCells *cells,
+                                     uint16_t width);
+
+/* Cell clears used by the icon walker: sub_080404A0 blanks `width`
+ * nibbles of one cell, sub_08040508 splits across two cells. */
+void aos_menu_cells_clear_single(AosMenuCells *cells, uint16_t width);
+void aos_menu_cells_clear_dual(AosMenuCells *cells, uint16_t width);
+
+/* Text printers. `char_info` is the 4-byte per-character record
+ * (byte 0 = left bearing, byte 1 = advance width — tables 0x080E2B4C
+ * for context A and 0x080E2EC0 for context B); `glyph` is the metric
+ * record for the blitter. Return -1 while printing continues, or the
+ * character code itself for ch < 0x20 (end of run / command). */
+int aos_menu_cells_print_a(AosMenuCells *cells, uint16_t ch,
+                           const uint8_t *char_info, const uint8_t *glyph);
+int aos_menu_cells_print_b(AosMenuCells *cells, uint16_t ch,
+                           const uint8_t *char_info, const uint8_t *glyph);
+
+/* String runners mirroring sub_08041318 / sub_08041338: bytes are read
+ * from script[2 + offset + i] until the printer stops returning -1.
+ * `char_tbl`/`glyph_tbl` are the ROM metric tables with the given
+ * record strides (4 and 14 for context A, 4 and 10 for context B).
+ * Returns the number of bytes consumed before the stop. */
+int aos_menu_cells_run_a(AosMenuCells *cells, const uint8_t *script,
+                         uint16_t offset, const uint8_t *char_tbl,
+                         unsigned char_stride, const uint8_t *glyph_tbl,
+                         unsigned glyph_stride);
+int aos_menu_cells_run_b(AosMenuCells *cells, const uint8_t *script,
+                         uint16_t offset, const uint8_t *char_tbl,
+                         unsigned char_stride, const uint8_t *glyph_tbl,
+                         unsigned glyph_stride);
+
+/* Icon/window walker: sub_080411AC positions the context-B cursor at
+ * (col, row) and steps once; sub_08041204 fills the configured window
+ * rectangle (+0x115BC..+0x115C2) then restores the cursor origin. */
+void aos_menu_cells_icon_begin(AosMenuCells *cells, uint16_t col,
+                               uint16_t row);
+void aos_menu_cells_icon_step(AosMenuCells *cells);
+void aos_menu_cells_icon_fill_rect(AosMenuCells *cells);
 
 #endif /* AOS_MENU_CELLS_H */

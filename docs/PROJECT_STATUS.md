@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0808 - Menu cell engine slice 2: merges, clears, cursors, walkers
+
+- `aos_menu_cells` now covers the whole cell-compositing half of the
+  native text/window engine: masked merges (sub_0803FF64 single-cell
+  and sub_08040048 dual-cell large font with vertical spill into the
+  next cell row; sub_0804039C dual-cell and the inlined single-cell
+  merge for the small font), the icon-slot clears (sub_080404A0/
+  sub_08040508), the context-A printer advance/wrap rules
+  (sub_08040AB8: 6px columns, 12px rows, proportional widths) and
+  context-B equivalents (sub_08040C60), the string runners
+  (sub_08041318/338) and the icon/window walker
+  (sub_080410BC/411AC/41204).
+- Tests cover spill geometry, dual-cell nibble splits, cursor wrap
+  sequences, clears and the window fill walk — all hand-computed.
+- Still unported: wiring the ROM metric tables (0x080E2B4C/0x080E2EC0
+  char records, 0x0850A136/0x08509876 glyph records), the
+  sub_08041434 language dispatch and the sub_080472B0 commit that
+  turns cells into BG0 tiles.
+
 ## Patch 0807 - Menu cell engine slice 1: cell state and glyph blitters
 
 - New `src/runtime/aos_menu_cells.[ch]`: the native software cell

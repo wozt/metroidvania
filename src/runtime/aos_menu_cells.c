@@ -7,6 +7,10 @@ void aos_menu_cells_init(AosMenuCells *cells) {
     if (cells) memset(cells, 0, sizeof *cells);
 }
 
+void aos_menu_cells_set_fb(AosMenuCells *cells, uint32_t *fb) {
+    if (cells) cells->fb = fb;
+}
+
 void aos_menu_cells_set_attr(AosMenuCells *cells, uint16_t attr) {
     if (cells) cells->attr = attr;
 }
@@ -65,4 +69,297 @@ void aos_menu_cells_blit_small(AosMenuCells *cells, uint16_t ch,
     (void)ch;
     if (cells && metrics)
         blit_rows(cells, metrics, AOS_MENU_CELLS_SMALL_ROWS, skip, width);
+}
+
+/* Nibble mask for pixel slots [first, last): the ARM LSL by px * 4
+ * yields 0 for shifts >= 32, so out-of-cell slots contribute nothing. */
+static uint32_t nibble_mask(unsigned first, unsigned last) {
+    uint32_t mask = 0;
+    for (unsigned px = first; px < last; ++px) {
+        unsigned shift = px * 4;
+        if (shift < 32) mask |= 0xFu << shift;
+    }
+    return mask;
+}
+
+/* Context-A destination: fb + (a_px >> 3) * 8 words + (a_y >> 3) * 256
+ * words — pixel x gives the cell column, pixel y the cell row. The
+ * large-font merges may spill one cell row down (+256 words) when the
+ * glyph crosses the 8px cell boundary vertically. */
+static uint32_t *cell_a_base(const AosMenuCells *cells) {
+    return cells->fb + (cells->a_px >> 3) * 8 +
+           (cells->a_y >> 3) * AOS_MENU_CELLS_ROW_WORDS;
+}
+
+void aos_menu_cells_merge_large_single(AosMenuCells *cells,
+                                       uint16_t width) {
+    /* sub_0803FF64: one horizontal cell, up to two vertical cell rows. */
+    if (!cells->fb) return;
+    unsigned xs = cells->a_px & 7;
+    uint32_t mask = nibble_mask(xs, xs + width);
+    uint32_t keep = ~mask;
+    unsigned ys = cells->a_y & 7;
+    int ry = (int)ys;
+    uint32_t *dst = cell_a_base(cells);
+    unsigned spill_at = 8 - ys;
+    for (unsigned row = 0; row < AOS_MENU_CELLS_LARGE_ROWS; ++row) {
+        if (row == spill_at) {
+            dst += AOS_MENU_CELLS_ROW_WORDS;
+            ry -= 8;
+        }
+        uint32_t *wp = dst + (row + ry);
+        *wp = (*wp & keep) | ((cells->scratch[row] << (xs * 4)) & mask);
+    }
+}
+
+/* Arithmetic right shift like the ARM ASR: shift >= 32 yields the
+ * sign extension (0 or all-ones), never undefined behaviour. */
+static uint32_t asr32(uint32_t value, unsigned shift) {
+    int32_t v = (int32_t)value;
+    if (shift >= 32) return v < 0 ? UINT32_MAX : 0;
+    return (uint32_t)(v >> shift);
+}
+
+void aos_menu_cells_merge_large_dual(AosMenuCells *cells,
+                                     uint16_t width) {
+    /* sub_08040048: the glyph spills into the next cell on the right
+     * (+8 words) and, vertically, into the next cell row (+256 words). */
+    if (!cells->fb) return;
+    unsigned xs = cells->a_px & 7;
+    uint32_t mask_a = nibble_mask(xs, 8);
+    uint32_t mask_b = nibble_mask(0, xs + width - 8);
+    uint32_t keep_a = ~mask_a, keep_b = ~mask_b;
+    unsigned sh_a = xs * 4, sh_b = (8 - xs) * 4;
+    unsigned ys = cells->a_y & 7;
+    int ry = (int)ys;
+    uint32_t *dst = cell_a_base(cells);
+    unsigned spill_at = 8 - ys;
+    for (unsigned row = 0; row < AOS_MENU_CELLS_LARGE_ROWS; ++row) {
+        if (row == spill_at) {
+            dst += AOS_MENU_CELLS_ROW_WORDS;
+            ry -= 8;
+        }
+        uint32_t *wa = dst + (row + ry);
+        uint32_t *wb = wa + 8;
+        *wa = (*wa & keep_a) |
+              ((cells->scratch[row] << sh_a) & mask_a);
+        *wb = (*wb & keep_b) |
+              (asr32(cells->scratch[row], sh_b) & mask_b);
+    }
+}
+
+/* Context-B destination: fb + (b_px >> 3) * 8 words + b_row * 256
+ * words — b_row is already a cell row (+0x115B4), and the small font
+ * is exactly one cell tall so there is no vertical spill. */
+static uint32_t *cell_b_base(const AosMenuCells *cells) {
+    return cells->fb + (cells->b_px >> 3) * 8 +
+           cells->b_row * AOS_MENU_CELLS_ROW_WORDS;
+}
+
+void aos_menu_cells_merge_small_single(AosMenuCells *cells,
+                                       uint16_t width) {
+    /* The single-cell small-font merge inlined in sub_08040C60. */
+    if (!cells->fb) return;
+    unsigned xs = cells->b_px & 7;
+    uint32_t mask = nibble_mask(xs, xs + width);
+    uint32_t keep = ~mask;
+    uint32_t *wp = cell_b_base(cells);
+    for (unsigned row = 0; row < AOS_MENU_CELLS_SMALL_ROWS; ++row)
+        wp[row] = (wp[row] & keep) |
+                  ((cells->scratch[row] << (xs * 4)) & mask);
+}
+
+void aos_menu_cells_merge_small_dual(AosMenuCells *cells,
+                                     uint16_t width) {
+    /* sub_0804039C: two horizontal cells, one cell row. */
+    if (!cells->fb) return;
+    unsigned xs = cells->b_px & 7;
+    uint32_t mask_a = nibble_mask(xs, 8);
+    uint32_t mask_b = nibble_mask(0, xs + width - 8);
+    uint32_t keep_a = ~mask_a, keep_b = ~mask_b;
+    unsigned sh_a = xs * 4, sh_b = (8 - xs) * 4;
+    uint32_t *wp = cell_b_base(cells);
+    for (unsigned row = 0; row < AOS_MENU_CELLS_SMALL_ROWS; ++row) {
+        wp[row] = (wp[row] & keep_a) |
+                  ((cells->scratch[row] << sh_a) & mask_a);
+        wp[row + 8] = (wp[row + 8] & keep_b) |
+                      (asr32(cells->scratch[row], sh_b) & mask_b);
+    }
+}
+
+void aos_menu_cells_clear_single(AosMenuCells *cells, uint16_t width) {
+    /* sub_080404A0: blank `width` nibbles of the current B cell. */
+    if (!cells->fb) return;
+    unsigned xs = cells->b_px & 7;
+    uint32_t mask = nibble_mask(xs, xs + width);
+    uint32_t *wp = cell_b_base(cells);
+    for (unsigned row = 0; row < AOS_MENU_CELLS_SMALL_ROWS; ++row)
+        wp[row] &= ~mask;
+}
+
+void aos_menu_cells_clear_dual(AosMenuCells *cells, uint16_t width) {
+    /* sub_08040508: blank across the current B cell and the next one. */
+    if (!cells->fb) return;
+    unsigned xs = cells->b_px & 7;
+    uint32_t mask_a = nibble_mask(xs, 8);
+    uint32_t mask_b = nibble_mask(0, xs + width - 8);
+    uint32_t *wp = cell_b_base(cells);
+    for (unsigned row = 0; row < AOS_MENU_CELLS_SMALL_ROWS; ++row) {
+        wp[row] &= ~mask_a;
+        wp[row + 8] &= ~mask_b;
+    }
+}
+
+int aos_menu_cells_print_a(AosMenuCells *cells, uint16_t ch,
+                           const uint8_t *char_info, const uint8_t *glyph) {
+    /* sub_08040AB8: blit + merge + advance the context-A cursor. */
+    if ((ch & 0xE0) == 0) return ch;
+    uint16_t skip = char_info[0], width = char_info[1];
+    aos_menu_cells_blit_large(cells, ch, skip, width, glyph);
+    if ((cells->a_px & 7) + width <= 7)
+        aos_menu_cells_merge_large_single(cells, width);
+    else
+        aos_menu_cells_merge_large_dual(cells, width);
+    cells->a_x = (uint16_t)(cells->a_x + width);
+    if (cells->a_x > 5) {
+        cells->a_col += 1;
+        if (cells->a_col > cells->a_col_max) {
+            cells->a_col = cells->a_col_home;
+            cells->a_row += 1;
+            if (cells->a_row > cells->a_row_stop)
+                cells->a_row = cells->a_row_stop;
+        }
+        cells->a_y = (uint16_t)(cells->a_row * 12);
+        cells->a_x = 0;
+        cells->a_px = (uint16_t)(cells->a_col * 6);
+    } else {
+        cells->a_px = (uint16_t)(cells->a_px + width);
+    }
+    return -1;
+}
+
+int aos_menu_cells_print_b(AosMenuCells *cells, uint16_t ch,
+                           const uint8_t *char_info, const uint8_t *glyph) {
+    /* sub_08040C60: same flow on the context-B cursor; the single-cell
+     * merge is inlined natively and exposed here as a function. */
+    if ((ch & 0xE0) == 0) return ch;
+    uint16_t skip = char_info[0], width = char_info[1];
+    aos_menu_cells_blit_small(cells, ch, skip, width, glyph);
+    if ((cells->b_px & 7) + width <= 7)
+        aos_menu_cells_merge_small_single(cells, width);
+    else
+        aos_menu_cells_merge_small_dual(cells, width);
+    cells->b_sx = (uint16_t)(cells->b_sx + width);
+    if (cells->b_sx > 5) {
+        cells->b_col += 1;
+        if (cells->b_col > cells->b_x1) {
+            cells->b_col = cells->b_x0;
+            cells->b_row += 1;
+            if (cells->b_row > cells->b_y1)
+                cells->b_row = cells->b_y0;
+            cells->b_py = (uint16_t)(cells->b_row * 8);
+            cells->b_sx = 0;
+            cells->b_px = (uint16_t)(cells->b_col * 6);
+        } else {
+            cells->b_px = (uint16_t)(cells->b_px + width);
+        }
+    } else {
+        cells->b_px = (uint16_t)(cells->b_px + width);
+    }
+    return -1;
+}
+
+static int run_text(AosMenuCells *cells, const uint8_t *script,
+                    uint16_t offset, const uint8_t *char_tbl,
+                    unsigned char_stride, const uint8_t *glyph_tbl,
+                    unsigned glyph_stride, bool large) {
+    /* sub_08041318 / sub_08041338: script bytes start at +2. */
+    const uint8_t *p = script + 2 + offset;
+    int i = 0;
+    for (;;) {
+        uint16_t ch = p[i];
+        int ret;
+        if (ch & 0xE0) {
+            const uint8_t *ci = char_tbl + (unsigned)(ch - 0x20) * char_stride;
+            const uint8_t *gl = glyph_tbl + (unsigned)(ch - 0x20) * glyph_stride;
+            ret = large ? aos_menu_cells_print_a(cells, ch, ci, gl)
+                        : aos_menu_cells_print_b(cells, ch, ci, gl);
+        } else {
+            ret = large ? aos_menu_cells_print_a(cells, ch, NULL, NULL)
+                        : aos_menu_cells_print_b(cells, ch, NULL, NULL);
+        }
+        if (ret != -1) return i;
+        ++i;
+    }
+}
+
+int aos_menu_cells_run_a(AosMenuCells *cells, const uint8_t *script,
+                         uint16_t offset, const uint8_t *char_tbl,
+                         unsigned char_stride, const uint8_t *glyph_tbl,
+                         unsigned glyph_stride) {
+    return run_text(cells, script, offset, char_tbl, char_stride,
+                    glyph_tbl, glyph_stride, true);
+}
+
+int aos_menu_cells_run_b(AosMenuCells *cells, const uint8_t *script,
+                         uint16_t offset, const uint8_t *char_tbl,
+                         unsigned char_stride, const uint8_t *glyph_tbl,
+                         unsigned glyph_stride) {
+    return run_text(cells, script, offset, char_tbl, char_stride,
+                    glyph_tbl, glyph_stride, false);
+}
+
+void aos_menu_cells_icon_begin(AosMenuCells *cells, uint16_t col,
+                               uint16_t row) {
+    /* sub_080411AC: position the B cursor and take one step. */
+    cells->b_col = col;
+    cells->b_row = row;
+    cells->b_sx = 0;
+    cells->b_px = (uint16_t)(col * 6);
+    cells->b_py = (uint16_t)(row * 8);
+    aos_menu_cells_icon_step(cells);
+}
+
+void aos_menu_cells_icon_step(AosMenuCells *cells) {
+    /* sub_080410BC: clear the 6px icon slot at the cursor, then advance
+     * one column (wrapping inside the configured window). */
+    if (!cells->fb) return;
+    if ((cells->b_px & 7) + 6 <= 7)
+        aos_menu_cells_clear_single(cells, 6);
+    else
+        aos_menu_cells_clear_dual(cells, 6);
+    uint16_t old = cells->b_sx;
+    cells->b_sx = (uint16_t)(old + 6);
+    if (cells->b_sx > 5) {
+        cells->b_sx = old;
+        cells->b_col += 1;
+        if (cells->b_col > cells->b_x1) {
+            cells->b_col = cells->b_x0;
+            cells->b_row += 1;
+            if (cells->b_row > cells->b_y1)
+                cells->b_row = cells->b_y0;
+            cells->b_py = (uint16_t)(cells->b_row * 8);
+            cells->b_sx = 0;
+            cells->b_px = (uint16_t)(cells->b_col * 6);
+        } else {
+            cells->b_px = (uint16_t)(cells->b_px + 6);
+        }
+    }
+}
+
+void aos_menu_cells_icon_fill_rect(AosMenuCells *cells) {
+    /* sub_08041204: walk every cell of the window rectangle, then
+     * restore the cursor to the window origin. The column loop runs
+     * through b_x1 + 1 inclusive, exactly like the native code. */
+    if (!cells->fb) return;
+    for (uint16_t row = cells->b_y0; row <= cells->b_y1; ++row) {
+        uint16_t last = (uint16_t)(cells->b_x1 + 1);
+        for (uint16_t col = cells->b_x0; col <= last; ++col)
+            aos_menu_cells_icon_begin(cells, col, row);
+    }
+    cells->b_col = cells->b_x0;
+    cells->b_row = cells->b_y0;
+    cells->b_sx = 0;
+    cells->b_px = (uint16_t)(cells->b_col * 6);
+    cells->b_py = (uint16_t)(cells->b_row * 8);
 }

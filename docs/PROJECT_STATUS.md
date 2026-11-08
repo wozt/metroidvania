@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0838 - The 0x131B8 & 0x400 lock identified: Chaos's soul strip
+
+- sub_08031F3C's remaining gate flag is set by sub_08022184, called
+  from EnemyChaosUpdate's state-0 routine sub_080A20D0 (the final
+  boss's scripted sequence, which locks player input through
+  SetPlayerInput). The routine ORs 0x700 into the player flag word —
+  bits 0x100, 0x200 and 0x400 — then clears soul effects through
+  sub_080235C8, sub_0802DFF0 and sub_080321C4: Chaos devouring the
+  equipped souls locks their effect entities out until the next
+  player reset (sub_0801487C zeroes the word).
+- Bit 0x400 is the one sub_08031F3C tests, so yellow-soul passives
+  stop applying while Chaos holds the strip; bits 0x100/0x200 gate
+  other systems and remain individually unidentified.
+- With this, every flag in the yellow-soul creation gate is decoded:
+  the name easter egg (patch 0837) and the Chaos lock.
+
 ## Patch 0837 - Character-name easter eggs decoded (JULIUS / NOSOUL / NOUSE)
 
 - The file-load name check (sub_080083C8, mirrored in code_08005894)

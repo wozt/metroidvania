@@ -144,6 +144,9 @@ static GtkWidget *scrolled_page(GListStore **store_out,
     GtkWidget *scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    /* give the page a real minimum so the internal scrollbar gizmos
+     * never measure against a zero allocation (min size -2 warnings) */
+    gtk_widget_set_size_request(scroll, 420, 200);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), column_view);
     *store_out = store;
     return scroll;
@@ -1462,6 +1465,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                                    GTK_POLICY_AUTOMATIC);
     gtk_scrolled_window_set_min_content_height(
         GTK_SCROLLED_WINDOW(log_scroll), 140);
+    gtk_widget_set_size_request(log_scroll, 400, 140);
     v->log_view = gtk_text_view_new();
     gtk_text_view_set_editable(GTK_TEXT_VIEW(v->log_view), FALSE);
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(v->log_view), FALSE);

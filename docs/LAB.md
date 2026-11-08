@@ -111,6 +111,10 @@ of running four identical bandits.
   hops skip those states. The exact `(action, params)` combo is also
   counted in `lab.lethal.*` — `best_params` subtracts a full point per
   proven kill so killer combos sink below neutral rivals.
+- **Mode-tagged states**: scout and auto saves now record
+  `mode=N` in the state note; waypoint picks prefer `mode=4`
+  (gameplay) states so trials stop wasting runs inside menus and
+  cutscenes.
 - **Mode byte fix**: `compute_bonus` now reads only the low byte of
   the gameMode peek — the upper bytes are frame counters that made
   every trial look like a mode change and masked enter/exit_gameplay.

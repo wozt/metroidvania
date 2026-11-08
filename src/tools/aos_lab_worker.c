@@ -1241,9 +1241,9 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 char nm[96], note[160];
                 snprintf(nm, sizeof nm, "scout_play_%03d", chunk);
                 snprintf(note, sizeof note,
-                         "responsive pulse motion=%.4f scene=%016llx",
+                         "responsive pulse motion=%.4f scene=%016llx mode=%d",
                          motion,
-                         (unsigned long long)feat.scene_hash);
+                         (unsigned long long)feat.scene_hash, mode);
                 aos_labdb_add_state(db, nm, note, 0, blob, ns);
                 free(blob);
             }
@@ -1824,6 +1824,21 @@ int main(int argc, char **argv) {
                      ++tr)
                     pick_i = rand() % scount;
                 }
+                /* prefer states captured in gameplay mode — a trial
+                 * starting inside a menu or cutscene is a wasted run.
+                 * Notes carry "mode=N" since the scout/auto saves began
+                 * recording it; unmarked legacy states stay eligible */
+                if (pick_i >= 0 && srows[pick_i].note &&
+                    strstr(srows[pick_i].note, "mode=") &&
+                    !strstr(srows[pick_i].note, "mode=4")) {
+                    for (int si = 0; si < scount; ++si) {
+                        if (si == pick_i || !srows[si].note ||
+                            !strstr(srows[si].note, "mode=4") ||
+                            state_dead(db, srows[si].id)) continue;
+                        pick_i = si;
+                        break;
+                    }
+                }
                 AosStateRow *pick = &srows[pick_i];
                 size_t asz = 0;
                 alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
@@ -1951,10 +1966,14 @@ int main(int argc, char **argv) {
                                  worker_id,
                                  (unsigned long long)(scene_hash & 0xFFFFFFFF));
                         char note[128];
+                        int amode = -1;
+                        if (res.peek_count > RK_COUNT + RK_MODE &&
+                            res.peeks[RK_COUNT + RK_MODE].data)
+                            amode = res.peeks[RK_COUNT + RK_MODE].data[0];
                         snprintf(note, sizeof note,
-                                 "auto scene=%016llx trial=%lld",
+                                 "auto scene=%016llx trial=%lld mode=%d",
                                  (unsigned long long)scene_hash,
-                                 (long long)t);
+                                 (long long)t, amode);
                         int64_t nid = aos_labdb_add_state(
                             db, nm, note, state_id, blob, (int)ns);
                         (void)nid;

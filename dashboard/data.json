@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:33:55+00:00",
+ "generated_at": "2026-11-08T00:35:27+00:00",
  "git": {
-  "commit": "c22e7f34",
+  "commit": "59293331",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "59293331",
+   "date": "2026-11-08",
+   "subject": "lab: read gameMode low byte only — counters poisoned mode detection",
+   "scope": "project"
+  },
+  {
    "commit": "c22e7f34",
    "date": "2026-11-08",
    "subject": "lab: sane level reads, traverse min budget, quieter mode_change",
@@ -20789,12 +20795,6 @@
    "commit": "7b821d32",
    "date": "2026-11-07",
    "subject": "Decode the Object20 skeleton brain and projectile spawner",
-   "scope": "project"
-  },
-  {
-   "commit": "0838e65a",
-   "date": "2026-11-07",
-   "subject": "Port the Object20 post-scene proximity conversations",
    "scope": "project"
   }
  ],

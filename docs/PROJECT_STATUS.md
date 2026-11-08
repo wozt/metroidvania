@@ -43,15 +43,46 @@ Last updated: **2026-11-07**.
   0xFFE60000 or 0x1A00000 by facing) + PlaySong 0x78;
   when + 0x59 bit 0 set -> anim 0 loop and back to state 0.
 - State 3: sub_0803F17C affine only (the 0x8E & 0x40 path).
-- Remaining for the port: sub_08069A00 probe semantics,
-  sub_0806D644 / sub_0809A340 spawn identities (entity
-  kinds 8-range?), sub_0806CF2C, sub_0806D260 param
-  meaning, sub_0806CC20 sleep gate (already the shared
-  dispatcher prologue), sub_08099FD0 burst helper, and
-  the sub_0809A424 / sub_08099F50 callback bodies beyond
-  their sub_08021654 record shape; then the usual
-  objects.c PROBES row, enemy_names[78], kind dispatch,
-  tests and registries.
+- Helpers resolved: sub_0809A340 is a visual-only
+  EntityCreateInRange(0x49, 0xCF) piece reusing the
+  Biphron graphics 0x081CC05C / frames 0x08223FF8 (vy =
+  -0x10000, palette byte from + 0x2C, anim 4) — the
+  periodic attack sparkle, not a damaging entity;
+  sub_0806D644 is the paired spark of the same
+  0x49/0xCF kind (graphics 0x081C15F4, frames
+  0x0820ED60 bank 7, callback sub_08068F78) fired at
+  anim frame 1; sub_08099FD0 is the death burst — a
+  damaging 0x49/0xCF corpse piece (callback sub_0809A29C,
+  hurt sub_0809A310, + 0x58 bit 0x20, floor snap, enemy
+  id copied) that needs a child-entity role; sub_0809A424
+  is the contact callback building the sub_08021654
+  record with elements 0 (same shape as the worm's
+  sub_080AE334); sub_0806CF2C is the facing-vs-target
+  check (+ 0x13168, or the + 0x13118 decoy under
+  + 0x4CC & 0x40, comparing the + 0x42 pixel words) —
+  our face_player/target_x equivalents; sub_0806D260
+  counts the max byte + 4 of the + 0x68 table (the
+  create's > 1 branch picks sub_080427B8 vs sub_0804277C
+  — for a partless Biphron the plain sub_0804277C path
+  applies); sub_0806CC20 is the shared awake gate every
+  dispatcher runs first (enemy record + 0x20 halfword,
+  sub_0806E4F8(-0x10) sleep, + 0x3E bit 1 defeated,
+  two sub_08068AD4 window probes, sub_08021924,
+  sub_0806AD24) — our outside_margins + hit_flash +
+  defeated equivalents; sub_08069A00 is a generic
+  four-direction probe walker returning a hit bitmask
+  (wall probes sub_0800207C right / sub_08002058 left
+  already ported as aos_wall_push_*, floor via
+  sub_08001D94 = aos_floor_depth) — the state-0 hover
+  uses its & 4 result after 0x3B ticks.
+- Remaining for the port: the sub_08069A00 walker port
+  (or a documented approximation on the existing wall /
+  floor helpers), the AOS_EFFECT_* mapping for the two
+  0x49/0xCF spark kinds, the corpse-piece child role for
+  sub_08099FD0, then objects.c PROBES (graphics
+  0x081CC05C, palette 0x0820AC04, frames 0x08223FF8),
+  enemy_names[78] = "biphron", kind dispatch, tests and
+  registries.
 - Family scan: the remaining 62 unported ids were
   measured by update size — the smallest dispatchers are
   Biphron (78, ~700B total), EvilButcher (25, ~700B),

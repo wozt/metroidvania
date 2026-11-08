@@ -1444,6 +1444,26 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
         put_tiles(graphics, 0x18, 1, 0xCC0, 3);
         put_tiles(graphics, 0x18, 2, 0xCD0, 3);
     }
+    /* sub_0804D1DC tail: the shared bottom context-A window alternates
+     * content — enemy description (0x080EA628 entry + 0x71 = 0x2CE+enemy,
+     * window 0,0,0x22,2) in normal view, soul description
+     * (sub_08047330, window 0,0,0x1E,2, "---" 0x34F without a soul) in
+     * soul view, but only while the soul is owned (r5 gate demotes to
+     * the enemy text). Cell home pixel (56,120), palette 3, like the
+     * soul-set description window. */
+    if (values->soul_view && owned) {
+        if (!place_text_id(graphics,
+                           values->soul_index
+                               ? soul_description_id(values->soul_type,
+                                                     values->soul_index)
+                               : 0x34F,
+                           false, 56, 120, 174, 3, &next_tile))
+            return false;
+    } else if (!place_text_id(graphics,
+                              found ? (uint16_t)(0x2CE + enemy) : 0x34E,
+                              false, 56, 120, 198, 3, &next_tile)) {
+        return false;
+    }
     composite(graphics, rgba);
     return true;
 }

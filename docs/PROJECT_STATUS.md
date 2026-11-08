@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0854 - Bestiary bottom description window ported
+
+- sub_0804D1DC's tail decoded end to end: the shared bottom
+  context-A window alternates enemy description (0x080EA628 entry
+  +0x71 = 0x2CE+enemy, window 0,0,0x22,2) and soul description
+  (sub_08047330 bases 0x1E3/0x21B/0x233/0x256, window 0,0,0x1E,2,
+  0x34F "---" without a soul) at the (56,120) cell home. Soul view
+  shows the soul text only while the soul is owned (r5 gate demotes
+  to the enemy text).
+- Verified against ROM text: 0x2CE = "A bloodsucking bat that lurks
+  in the castle.", 0x1E3 = "Contains the power of chaos.",
+  0x34E = "????????", 0x34F = "---".
+- render_enemy_detail now draws the window content; the native page
+  draws no sub_080472B0 frame, so frame/home placement awaits an
+  emulator check.
+
 ## Patch 0853 - Soul description helper covers category 3
 
 - soul_description_id now carries the verified fourth base 0x256:

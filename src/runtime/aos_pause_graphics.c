@@ -1070,12 +1070,14 @@ bool aos_pause_graphics_render_item_use(
         }
     }
     /* The selected item's description (text 0x15C+item via table
-     * 0x08506936) prints into the bottom message window; its exact
-     * cursor placement is approximated on the description bars. */
+     * 0x08506936) prints through sub_0804728C into the context-A
+     * window sub_08040748(0,0,0x20,2): 32 cols * 6px = 192 px wide,
+     * home cell maps onto the description strips at tilemap (5,16) =
+     * pixel (40,128) — same anchor as the Equip page. */
     if (values->selected < AOS_PAUSE_ITEM_USE_RECORDS &&
         values->counts[values->selected] &&
         !place_text_id(graphics, (uint16_t)(0x15C + values->selected),
-                       false, 40, 130, 192, 3, &next_tile))
+                       false, 40, 128, 192, 3, &next_tile))
         return false;
     composite(graphics, rgba);
     /* sub_08048804 anchors the icon entity at pixel (0x1C, 0x94); its

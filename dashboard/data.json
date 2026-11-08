@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T10:40:39+00:00",
+ "generated_at": "2026-11-08T10:42:02+00:00",
  "git": {
-  "commit": "f37e52b7",
+  "commit": "3b3a058b",
   "branch": "main",
   "dirty": true
  },
@@ -20362,6 +20362,12 @@
  },
  "timeline": [
   {
+   "commit": "3b3a058b",
+   "date": "2026-11-08",
+   "subject": "Fix Ability page geometry against sub_0804BA18 decode",
+   "scope": "project"
+  },
+  {
    "commit": "f37e52b7",
    "date": "2026-11-08",
    "subject": "Document VRAM cell framebuffer and Item Use strip decode",
@@ -20833,12 +20839,6 @@
    "commit": "7574e7cd",
    "date": "2026-11-07",
    "subject": "Update SPECIAL object annotation for the variant export",
-   "scope": "project"
-  },
-  {
-   "commit": "44033058",
-   "date": "2026-11-07",
-   "subject": "Export and draw param0-driven SPECIAL object variants",
    "scope": "project"
   }
  ],

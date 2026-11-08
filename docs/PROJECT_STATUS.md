@@ -17,6 +17,17 @@ Last updated: **2026-11-07**.
   small-font path already reads the identical ROM tables
   (0x080E2EC0 metrics / 0x08509876 glyphs, strides 4/10) that
   sub_08041338 uses, so glyphs and advances match.
+- Item Use description anchor corrected: the context-A window
+  sub_08040748(0,0,0x20,2) maps its home cell onto the description
+  strips at tilemap (5,16) = pixel (40,128), so the text moved from
+  y=130 to y=128, matching the Equip page which was already right.
+  Equip strips/window verified identical (sub_0804A95C:
+  46DD4(5,0x10+i,0x3200+i*0x20,0x18), 40748(0,0,0x20,2)).
+- The 48B0C/48AD8/48BC4 helpers decoded: cursor-hand frame entity
+  (frame tables 0x08256EF8/0x0827B1F0, variant per page), a position
+  tracker writing x*8+6/y*8+3, and the popup visibility flag at
+  gEwramData+0xF08 — all OBJ-layer, already approximated by
+  draw_cursor/draw_icon.
 
 ## Patch 0818 - Cell framebuffer is VRAM; Item Use strips confirmed
 

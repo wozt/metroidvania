@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0817 - Equip icons and composite-order fix
+
+- `render_equip` draws the three equipped icons (weapon slot 0,
+  armor slots 1-2) through the decoded `sub_080488FC` path at
+  native anchors, plus the description popup icon via
+  `sub_0804A00C`'s (0x1C,0x94) anchor.
+- `equipment_icon_id` reads record byte +0x2 from the weapon
+  (0x08505D3C, stride 28) / armor (0x085063B0, stride 20) tables.
+- Fixed `render_item_use` compositing order so the icon entity and
+  the cursor hand actually reach the framebuffer.
+
 ## Patch 0816 - Item icon entity layer decoded and rendered
 
 - Full icon-path decode: `sub_0804090C` is actually the context-B
@@ -34,10 +45,20 @@ Last updated: **2026-11-07**.
   anchor (0x1C,0x94) + frame offset (-8,-16) = top-left (20,132).
   `AosPauseItemUseValues` gained the per-item icon ids fed from
   item_use.tsv through `draw_native_item_use`.
+- Equip page extended: `sub_0804A0B4` decoded — the three equipped
+  icons spawn via `sub_080488FC` at anchor (0x70,0x32+16*slot),
+  kind 3 weapon / kind 4 armor, icon id = record byte +0x2. The
+  description popup's icon (`sub_0804A00C` -> same (0x1C,0x94)
+  anchor) draws the selected list item or the slot's equipped
+  record. `render_equip` now draws all four through `draw_icon`
+  (grid top-lefts (104,34+16*slot), popup (20,132)).
+- Bug fixed: `render_item_use` called `composite` AFTER `draw_icon`
+  and `draw_cursor`, erasing both — every other page composites
+  first. The Item Use cursor hand had never actually reached the
+  framebuffer.
 - Remaining gaps on this page: the description popup window's exact
   placement, the cursor hand animation phase, and grid icons on other
-  pages (equip's three `sub_080488FC` slots, soul/enemy detail icons)
-  which use the same decoded path.
+  pages (soul/enemy detail via the same decoded path).
 
 ## Patch 0815 - Context-B helpers and icon-glyph decode
 

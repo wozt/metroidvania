@@ -770,6 +770,25 @@ static bool equipment_text_ids(const AosPauseGraphics *graphics,
                    description);
 }
 
+/* The icon id a weapon/armor record shows: byte +0x2 of its stats
+ * record (sub_08044E94 kind 3/4 -> the record itself, sub_0801232C
+ * reads +0x2). Slot 0 is the weapon table, slots 1-2 armor. */
+static bool equipment_icon_id(const AosPauseGraphics *graphics,
+                              unsigned slot, unsigned item,
+                              unsigned *icon) {
+    if (slot >= AOS_PAUSE_EQUIP_SLOTS || !icon ||
+        item == AOS_PAUSE_EQUIP_NONE ||
+        (slot == 0 && item >= 59) || (slot != 0 && item >= 45))
+        return false;
+    const FusionRom *rom = graphics->text.rom;
+    uint32_t records = slot == 0 ? AOS_WEAPON_RECORDS : AOS_ARMOR_RECORDS;
+    unsigned stride = slot == 0 ? 28 : 20;
+    size_t offset = (size_t)(records + item * stride + 2 - AOS_ROM_BASE);
+    if (!rom || !rom->data || offset + 1 > rom->size) return false;
+    *icon = rom->data[offset];
+    return true;
+}
+
 static void put_comparison(AosPauseGraphics *graphics, int y,
                            int16_t current, int16_t preview) {
     unsigned kind = preview == current ? 0 : preview > current ? 1 : 2;
@@ -857,6 +876,27 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         return false;
 
     composite_on_backdrop(graphics, rgba);
+    /* sub_0804A00C draws the description popup's icon entity at the
+     * same (0x1C,0x94) anchor: the selected list item while the list
+     * is open, otherwise the slot's equipped record. */
+    {
+        unsigned icon_item = values->selecting ? values->selected_item
+                                               : values->equipped[values->slot];
+        unsigned icon;
+        if (equipment_icon_id(graphics, values->slot, icon_item, &icon))
+            draw_icon(graphics, rgba, icon, 20, 132);
+    }
+    /* sub_0804A0B4 spawns the three equipped icons through
+     * sub_080488FC at anchor (0x70, 0x32+16*slot); the frame's
+     * (-8,-16) offset puts each 16x16 icon's top-left at
+     * (104, 34+16*slot). Slot 0 is the weapon (kind 3), slots 1-2
+     * armor (kind 4); AOS_PAUSE_EQUIP_NONE hides the entity. */
+    for (unsigned slot = 0; slot < AOS_PAUSE_EQUIP_SLOTS; ++slot) {
+        unsigned icon;
+        if (equipment_icon_id(graphics, slot, values->equipped[slot],
+                              &icon))
+            draw_icon(graphics, rgba, icon, 104, 34 + 16 * (int)slot);
+    }
     /* sub_0804AAF0 holds the hand at cell (2, 5 + 2*slot) on the equipped
      * rows; sub_0804AFD4 moves it to the flat item slot
      * ((entry&1) ? 0x10 : 2, 0xB + entry/2) while the list is open. */
@@ -1033,6 +1073,7 @@ bool aos_pause_graphics_render_item_use(
         !place_text_id(graphics, (uint16_t)(0x15C + values->selected),
                        false, 40, 130, 192, 3, &next_tile))
         return false;
+    composite(graphics, rgba);
     /* sub_08048804 anchors the icon entity at pixel (0x1C, 0x94); its
      * frame's (-8, -16) piece offset puts the 16x16 icon's top-left at
      * (20, 132). */
@@ -1051,7 +1092,6 @@ bool aos_pause_graphics_render_item_use(
                                 0xB + slot / 2, 2);
                 break;
             }
-    composite(graphics, rgba);
     return true;
 }
 

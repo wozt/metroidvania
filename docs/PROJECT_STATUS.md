@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0821 - Enemy detail rare-drop x corrected
+
+- sub_0804CFE8 forces the rare-drop name to x=128 through the
+  sub_0804090C pixel cursor (0x80,9); the renderer used the
+  window-derived 126. The enemy name at window (0x15,8) keeps 126
+  (0x15 * 6px col units) — only the 4090C-forced position differs.
+- Enemy list names verified: no 4090C calls in sub_0804D2C8, so odd
+  slots take the window-home cursor at 0x15*6 = 126 px as rendered.
+
 ## Patch 0820 - Soul Set window frame and description decode
 
 - sub_08048D84 decoded: sub_080472B0(7,0xF,0x3200,0x1E,2) fills the

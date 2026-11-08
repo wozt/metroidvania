@@ -1260,13 +1260,13 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
     element_grid(graphics, values->weak, 0x15, 6);
     /* sub_0804CFE8: common drop at window (0,9), rare at (0x15,9)
      * -> pixel rows 72; sub_0804090C(0x80,9) is the context-B pixel
-     * cursor setter for the right column, not an icon. */
+     * cursor setter forcing the rare name to x=128, not an icon. */
     uint16_t drop_id = 0;
     if (!drop_text_id(values, enemy, values->common_item, 0, &drop_id) ||
         !place_text_id(graphics, drop_id, true, 0, 72, 110, 3, &next_tile))
         return false;
     if (!drop_text_id(values, enemy, values->rare_item, 1, &drop_id) ||
-        !place_text_id(graphics, drop_id, true, 126, 72, 110, 3,
+        !place_text_id(graphics, drop_id, true, 128, 72, 110, 3,
                        &next_tile))
         return false;
     /* sub_0804D0D0: dash fill then the 0x1310 underline and the enemy

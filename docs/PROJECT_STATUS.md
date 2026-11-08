@@ -24,8 +24,14 @@ Last updated: **2026-11-07**.
   animation finished.
 - Porting these needs a pinned-to-parent effect kind (the existing
   `follow` flag implements sub_080C9198's different behaviour) and
-  the animation-0xC / table-0x08525138 sequences exported; tracked
-  as the next soul-feedback step.
+  the animation sequences exported. The held sparkle's
+  sub_0803F2C8 index 0xC selects sequence 12 of the same
+  0x0820ED60 table that Effect/burst_12 already exports as {12}, so
+  its frames are available today; its palette nibble is the constant
+  6 from the sub_080441F8 call site (not the soul kind's), song 0xBF
+  fires on the first update, and the new-soul storm additionally
+  needs table 0x08525138's lifetime byte and the sub_080451F4 update
+  terms. Tracked as the next soul-feedback step.
 
 ## Patch 0826 - Soul notice description only for new souls + pickup-message decode
 

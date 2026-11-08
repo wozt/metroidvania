@@ -2,6 +2,51 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0867 - Bomber Armor ported (id 58)
+
+- EnemyBomberArmorCreate (0x080B2DB8) / EnemyBomberArmorUpdate
+  (0x080B3040) ported in src/runtime/aos_enemy.c behind
+  AOS_ENEMY_BOMBER_ARMOR (0x3A) and the enemy_names[58] =
+  "bomber_armor" kind row (objects.c ENTITY: graphics
+  0x081E41BC, palette 0x0820B83C bank 0, frames
+  0x0823EC00, art exported through --aria-export-objects).
+- The armor shares the Rock Armor's walk (sub_080B2978,
+  probes 0x0852872C) and death (sub_080B2CD8); only the
+  throw (sub_080B2A80) and the bomb are its own.
+- Throw sub_080B2A80: animation 1 once; frame 7 plays
+  song 0x88 and emits the bomb (role AOS_ROLE_BOMBER_BOMB
+  = 54, a linked child copying facing, position, hit
+  points and contact power); when the animation ends the
+  player still ahead within 99 pixels (sub_0806BBC4 /
+  sub_0806D044) backs off one backward step at the
+  negated walk speed, else substep 3 resets to the walk.
+- Bomb sub_080B243C: animation 3, contact elements 2,
+  own boxes, contact + 1/4; 58 pixels up, vy -2.5 under
+  gravity 0.125 through the probe walker 0x08528738 mode
+  2 at -2.0 - distance / 64 negated by the facing; a fuse
+  spark (role AOS_ROLE_BOMBER_SPARK = 55, sub_080B2FC4,
+  animation 4 once) every fourth frame 8 pixels above;
+  walls halve and reverse the speed, the floor starts the
+  16-frame fuse, then the sub_08045A98 list 0 burst (the
+  shared burst source wired through
+  aos_enemy_set_burst_source) and state 3 plays song 0x76
+  and deletes it; beyond margin 3 it is deleted.
+- A struck bomb loses its hit points (sub_080B2F5C) but
+  keeps flying — no death state; the armor's lethal blow
+  reuses the Rock Armor death path (face_player +
+  state 2).
+- Divergences documented: the bomb's + 0x72 bit 1, the
+  + 0x46 hurtbox nudge and + 0x59 translucent bit, the
+  sub_0806B04C / sub_0806B1FC box refresh and the global
+  pause 0x4BE are not ported.
+- bomber_armor_tests covers create (the Rock Armor's
+  minus the one pixel down), the shared walk and the
+  throw (two bombs + song 0x88), the bomb's first-update
+  kinematics and boxes, the fuse sparks, the arc to the
+  floor, the fuse countdown, the burst + song 0x76
+  removal, the struck-bomb hp loss, the spark lifecycle
+  and the lethal death.
+
 ## Patch 0866 - Biphron ported (id 78)
 
 - EnemyBiphronCreate (0x08099C5C) / EnemyBiphronUpdate

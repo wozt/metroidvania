@@ -151,6 +151,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [55] = "gremlin",
                                                      [56] = "harpy",
                                                      [57] = "medusa_head",
+                                                     [58] = "bomber_armor",
                                                      [59] = "lightning_doll",
                                                      [63] = "needles",
                                                      [73] = "cagnazzo",
@@ -6106,6 +6107,7 @@ int aria_runtime_main(int argc, char **argv) {
     static AosThrowRecord skill_throws[AOS_THROW_RECORDS];
     bool have_skill_throws = load_skill_throws(DEFAULT_SKILL_THROWS, skill_throws);
     if (!load_bursts(DEFAULT_BURSTS)) fprintf(stderr, "No Aria burst list: %s\n", DEFAULT_BURSTS);
+    aos_enemy_set_burst_source(burst_list, burst_size);
     AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
     soma.moves = (uint32_t)moves;
     if (rom_path) {

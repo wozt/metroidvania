@@ -2578,6 +2578,177 @@ static void rock_armor_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 8);
 }
 
+static void bomber_armor_tests(void) {
+    aos_audio_clear();
+    /* Same floor as the Rock Armor: cell row 20 (top 160) from cell 4 to
+     * 49, walls at cells 3 and 50. */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 4; x < 50; ++x) cells[20 * W + x] = 0x03;
+    for (int y = 0; y < 21; ++y) cells[y * W + 3] = cells[y * W + 50] = 0x03;
+    /* Animations 0 (walk), 1 (throw), 2 (death) share the Rock Armor's
+     * exported durations; 3 the bomb, 4-6 the fuse spark. */
+    static const uint8_t walk[10] = {25, 5, 5, 5, 4, 22, 4, 5, 4, 4};
+    static const uint8_t throw_ticks[33] = {2, 4, 3, 7, 9, 3, 2, 2, 2, 1, 1, 1, 2, 8, 31, 5, 6,
+                                            3, 3, 3, 8, 8, 8, 8, 8, 8, 8, 8, 6, 9, 9, 7, 8};
+    static const uint8_t death[11] = {8, 6, 6, 6, 8, 6, 6, 4, 4, 4, 11};
+    static const uint8_t loop[4] = {4, 4, 4, 4};
+    static const uint8_t one[1] = {1};
+    const AosAnimDef defs[7] = {{10, walk},   {33, throw_ticks}, {11, death},
+                                {4, loop},    {1, one},         {1, one},
+                                {1, one}};
+    const AosAnimSet anims = {defs, 7};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 33; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-13, -48, 24, 48};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    const AosEnemyStats stats = {200, 35, 25, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(400), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create is the Rock Armor's minus the one pixel down: same floor
+     * snap, state 0, walk animation. */
+    AosEnemy a, rock;
+    assert(aos_enemy_create(&a, AOS_ENEMY_BOMBER_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(aos_enemy_create(&rock, AOS_ENEMY_ROCK_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    assert(a.state == 0 && rock.state == 0 && a.y + 0x10000 == rock.y);
+
+    /* The shared walk: the player 60 pixels ahead at the start of frame 9
+     * throws; the animation's frame 7 lasts two updates and each throws a
+     * bomb (sound 0x88). */
+    a.mirrored = true;
+    rock.mirrored = true;
+    soma.x = a.x + AOS_FIXED(60);
+    soma.y = a.y;
+    int frames = 0;
+    while (a.state == 0 && frames < 200) {
+        aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
+        ++frames;
+    }
+    assert(a.state == 1 && a.anim.frame == 9);
+    aos_audio_clear();
+    AosEnemy bomb = {0};
+    int bombs = 0;
+    while (a.state == 1 && frames < 600) {
+        AosHitReport r = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          never_zero);
+        for (int c = 0; c < r.child_count; ++c)
+            if (r.children[c].role == AOS_ROLE_BOMBER_BOMB) {
+                bomb = r.children[c];
+                ++bombs;
+            }
+        ++frames;
+        if (a.step == 0 && a.anim.id == 1 && bombs) break;
+    }
+    assert(bombs == 2 && aos_audio_requested(AOS_AUDIO_START_SONG, 0x88) == 2 &&
+           bomb.mirrored && bomb.hp == a.hp && bomb.stats.contact == stats.contact);
+
+    /* The bomb's first update: animation 3, contact elements 2, the own
+     * boxes, 58 pixels up, vy -2.5 with gravity 0.125, the throw speed
+     * -2.0 - distance / 64 negated by the facing, contact + 1 / 4. */
+    int32_t bx = bomb.x, by = bomb.y;
+    int32_t dx = ((soma.x - bx) >> 16), dy = ((soma.y - by) >> 16);
+    uint32_t squares = (uint32_t)(dx * dx + dy * dy), root = 0;
+    while ((root + 1) * (root + 1) <= squares) ++root;
+    int32_t distance = (int16_t)root;
+    int32_t want_speed = -0x2000 - ((distance << 16) >> 6);
+    if (bomb.mirrored) want_speed = -want_speed;
+    (void)aos_enemy_update(&bomb, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(bomb.state == 1 && bomb.anim.id == 3 && bomb.contact_elements == 2 &&
+           bomb.own_boxes && bomb.own_hurt.w == 16 && bomb.own_attack.w == 48 &&
+           bomb.y == by - 0x3A0000 + 0x2000 - 0x28000 && bomb.spin == want_speed &&
+           bomb.vy == (int32_t)0xFFFDA000 && bomb.ay == 0x2000 &&
+           bomb.stats.contact == stats.contact + (stats.contact >> 2));
+    /* A fuse spark every fourth frame (timer 0, 4, 8: two more after the
+     * first update's), 8 pixels above its position before the move. */
+    int sparks = 0;
+    for (int i = 0; i < 8; ++i) {
+        int32_t pre_y = bomb.y;
+        AosHitReport r = aos_enemy_update(&bomb, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        for (int c = 0; c < r.child_count; ++c)
+            if (r.children[c].role == AOS_ROLE_BOMBER_SPARK &&
+                r.children[c].y == pre_y - 0x80000)
+                ++sparks;
+    }
+    assert(sparks == 2);
+    /* It arcs onto the floor, counts the fuse down, then bursts (list 0)
+     * and deletes itself with sound 0x76. */
+    frames = 0;
+    while (bomb.state == 1 && frames < 200) {
+        aos_enemy_update(&bomb, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(bomb.state == 2 && bomb.timer == 0x10);
+    aos_audio_clear();
+    frames = 0;
+    while (!bomb.removed && bomb.state != 0 && frames < 100) {
+        (void)aos_enemy_update(&bomb, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+        ++frames;
+    }
+    assert(bomb.removed && aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) == 1);
+
+    /* A bomb struck by the weapon loses its hit points but keeps flying
+     * (sub_080B2F5C zeroes + 0xC; there is no death state). */
+    AosEnemy struck = bomb;
+    struck.removed = false;
+    struck.state = 1;
+    struck.hp = 60;
+    struck.x = soma.x;
+    struck.y = soma.y - AOS_FIXED(16);
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 40, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    AosHitReport hit = aos_enemy_update(&struck, &soma, &layer, &kind, &weapon, &blade, 10, 4,
+                                        0, 0, always_zero);
+    assert(hit.enemy_hit && struck.hp == 0 && !struck.removed && struck.state == 1);
+
+    /* The fuse spark: animation 4 once, gone when it ends. */
+    AosEnemy spark = {0};
+    spark.id = AOS_ENEMY_BOMBER_ARMOR;
+    spark.role = AOS_ROLE_BOMBER_SPARK;
+    spark.static_frame = -1;
+    spark.x = AOS_FIXED(300);
+    spark.y = AOS_FIXED(100);
+    frames = 0;
+    while (!spark.removed && frames < 100) {
+        aos_enemy_update(&spark, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(spark.removed && spark.anim.id == 4);
+
+    /* A lethal blow on the armor: it faces the player and dies like the
+     * Rock Armor (animation 2, sound 0x6F). */
+    assert(aos_enemy_create(&a, AOS_ENEMY_BOMBER_ARMOR, 200, 150, 0, 0, &soma, &layer, &kind,
+                            &stats));
+    a.mirrored = false;
+    soma.x = a.x + AOS_FIXED(4);
+    soma.y = a.y;
+    aos_audio_clear();
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, &weapon, &blade, 999, 4, 0, 0,
+                           always_zero);
+    assert(hit.killed && a.state == 2 && a.mirrored);
+    frames = 0;
+    while (!a.removed && frames < 200) {
+        aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(a.removed &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6F) == 1);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -5691,6 +5862,7 @@ int main(void) {
     soldier_tests();
     armor_tests();
     rock_armor_tests();
+    bomber_armor_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

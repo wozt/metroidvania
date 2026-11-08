@@ -167,6 +167,10 @@ static const EntitySpec entities[] = {
            9, 10, 11),
     ENTITY("ghost", 0x081CBFFC, 0x0820A8D4, 0, 0x0821EE0C),
     ENTITY("rock_armor", 0x081E41BC, 0x0820B83C, 1, 0x0823FFD8),
+    /* Bomber Armor shares the Rock Armor's tiles and palette bank 0 but
+     * has its own frame set (0x0823EC00: walk 0, throw 1, death 2, bomb 3,
+     * fuse spark 4-6). */
+    ENTITY("bomber_armor", 0x081E41BC, 0x0820B83C, 0, 0x0823EC00),
     ENTITY("giant_ghost", 0x081CBFA4, 0x0820A698, 0, 0x08219140),
     /* The Winged Skeleton and its death pieces (frames 0x24-0x2A of
      * sub_0807540C). */

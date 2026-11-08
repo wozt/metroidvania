@@ -166,6 +166,7 @@ enum {
     AOS_ENEMY_GIANT_WORM = 0x3E,
     AOS_ENEMY_POISON_WORM = 0x47,
     AOS_ENEMY_BIPHRON = 0x4E,
+    AOS_ENEMY_BOMBER_ARMOR = 0x3A,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -195,7 +196,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_GIANT_GHOST_PART = 45, AOS_ROLE_GIANT_GHOST_TRAIL = 46,
        AOS_ROLE_PILLAR_PIECE = 47, AOS_ROLE_PILLAR_BREATH = 48, AOS_ROLE_PILLAR_FIREBALL = 49,
        AOS_ROLE_PILLAR_SMOKE = 50, AOS_ROLE_HEADHUNTER_HEAD = 51,
-       AOS_ROLE_WORM_SEGMENT = 52, AOS_ROLE_BIPHRON_SHOT = 53 };
+       AOS_ROLE_WORM_SEGMENT = 52, AOS_ROLE_BIPHRON_SHOT = 53,
+       AOS_ROLE_BOMBER_BOMB = 54, AOS_ROLE_BOMBER_SPARK = 55 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -355,7 +357,7 @@ typedef struct AosEnemy {
     AosAnimState anim;
 } AosEnemy;
 
-#define AOS_ENEMY_MAX_EFFECTS 8  /* Buer finale: eight simultaneous flames */
+#define AOS_ENEMY_MAX_EFFECTS 32  /* a bomb's sub_08045A98 burst: 18 pieces */
 
 /* What one collision pass did. */
 typedef struct {
@@ -396,6 +398,9 @@ uint16_t aos_arctan2(int16_t x, int16_t y);
  * through the table 0x085254D8) and cleared by sub_0804CC14; its meaning is
  * not traced. Cleared by default. */
 void aos_enemy_set_flag_8e_40(bool set);
+/* metadata/bursts.tsv list 0, installed by the host once loaded: the
+ * sub_08045A98 burst a Bomber Armor bomb sets off (NULL: none). */
+void aos_enemy_set_burst_source(const AosEffect *list, size_t count);
 /* A red soul skill's attack this frame: its world rectangle (inclusive),
  * the power of sub_08021530(5) and the elements of its record (+ 0xC);
  * `struck` and `target` are set when an enemy took it (the skill's hit

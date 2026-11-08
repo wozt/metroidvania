@@ -12,6 +12,14 @@ Last updated: **2026-11-07**.
   (0x08505D3C, stride 28) / armor (0x085063B0, stride 20) tables.
 - Fixed `render_item_use` compositing order so the icon entity and
   the cursor hand actually reach the framebuffer.
+- Further decode (not yet ported): the enemy-detail drop popup in
+  code_08060B98 resolves drop entries through table 0x085269FC
+  (4-byte records: byte0 = kind, byte1 = id; kind 3 -> weapon
+  0x08505D3C stride 28, kind 4 -> armor 0x085063B0 stride 20, else
+  -> item 0x08505B3C stride 16) and spawns the icon via
+  sub_08048804 at anchor (0x1C,0x90) — top-left (20,128). Soul Set
+  has no sub_08048804 call sites: its soul-type icons are the BG0
+  tile strips already ported (0xD3FD family).
 
 ## Patch 0816 - Item icon entity layer decoded and rendered
 

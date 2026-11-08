@@ -98,10 +98,26 @@ Last updated: **2026-11-07**.
   cosine via sub_080009E4); sub_080429D0 copies the child's
   +0x74..+0x76 record bytes into a stack struct — the
   tracked-collision registration for linked segments.
-- Still open for the port: sub_08001D94 height query
-  (floor-snap tile read), the sub_080429D0 record layout,
-  the parent +0x1C attack record semantics, the hit
-  callbacks sub_080AE334 / sub_080AE3CC / sub_080AD748, and
+- Hit callbacks resolved: sub_080AE334 (Giant Worm segment)
+  and sub_080AE3CC (Poison Worm segment) both build the
+  standard damage struct (+0x3C type byte, position +0x40/
+  +0x44) and call sub_08021654 — the shared Soma damage
+  resolver already ported (Blocking Mail path included).
+  sub_080AD748 is the segment->parent damage handler:
+  damage via sub_08021530 / sub_0806B7D8, parent +0x2D = 8
+  hit-stun, parent HP +0x34 reduced; at HP <= 0 it runs
+  sub_080683BC palette flash, PlaySong 0x70, merges the
+  parent palette byte (+0x2C & 0xF << 3 | +0x5A & -0x79),
+  sets parent state 3, +0xD = 0x40 and vx = -0x8000 —
+  hitting any segment wounds the whole worm. The
+  sub_080AE390 cleanup walks the +0x20-indexed entity
+  chain (stride 0xE4, 5 entries) calling sub_0803AC40.
+  EnemyGiantWormCreate/Update and EnemyPoisonWormCreate/
+  Update confirmed as thin variant wrappers (0 / 1).
+- Still open for the port: the parent +0x1C attack/dive
+  record semantics (which parent state writes it — the
+  children switch to their attack branch when it is set),
+  the sub_080429D0 +0x74..+0x76 record layout, and
   resources for ids 62/71 (enemies.tsv rows exist; the
   ENTITY/PROBES rows are not yet in objects.c). The port
   additionally needs runtime support that may not exist

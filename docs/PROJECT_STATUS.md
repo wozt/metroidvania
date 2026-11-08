@@ -86,13 +86,27 @@ Last updated: **2026-11-07**.
   x -/+0x18, y - 8 by facing, parent +0x1D = 4 when buried);
   sub_080ADB0C is the create-time floor snap (<= 3 passes at
   y - 8 + 0xA, skipped under the global 0x8E & 0x40).
-- Still open for the port: sub_08001D94 height query,
-  sub_08068A70 (state-4 distance), sub_0803E058 affine arg
-  order, sub_0806D5C0 particle kind, sub_080429D0 child
-  collision, the parent +0x1C attack record semantics, the
-  hit callbacks sub_080AE334 / sub_080AE3CC / sub_080AD748,
-  and resources for ids 62/71 (enemies.tsv rows exist; the
-  ENTITY/PROBES rows are not yet in objects.c).
+- Helper semantics resolved: sub_08068A70(e, target) is
+  ArcTan2 over the +0x42/+0x46 box-centre deltas (angle to
+  target); sub_0806D5C0(x, y, rx, ry) spawns effect entity
+  0x49/0xCF via EntityCreateInRange at x + RNG % rx - rx/2,
+  y + RNG % ry - ry/2 with a random facing bit (the shared
+  dust/particle helper); sub_08021278 registers the entity
+  in the tracked list at 0x13170 indexed by 0x131B4 with a
+  flag byte at 0x131AC; sub_0803E058 is the affine/OAM slot
+  allocator over the 0x03001458 table (<= 0x1F slots, sine /
+  cosine via sub_080009E4); sub_080429D0 copies the child's
+  +0x74..+0x76 record bytes into a stack struct — the
+  tracked-collision registration for linked segments.
+- Still open for the port: sub_08001D94 height query
+  (floor-snap tile read), the sub_080429D0 record layout,
+  the parent +0x1C attack record semantics, the hit
+  callbacks sub_080AE334 / sub_080AE3CC / sub_080AD748, and
+  resources for ids 62/71 (enemies.tsv rows exist; the
+  ENTITY/PROBES rows are not yet in objects.c). The port
+  additionally needs runtime support that may not exist
+  yet: linked child entities (Bone-Pillar precedent), the
+  affine slot table, and the tracked-entity list.
 - Golem family recon: EnemyGolemUpdate sub_0807E35C is a
   four-state dispatcher whose state 0 sub_0807E8EC is a
   42-case sub-state machine (~3 KB asm) - boss-scale, not

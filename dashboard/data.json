@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T01:04:31+00:00",
+ "generated_at": "2026-11-08T01:06:17+00:00",
  "git": {
-  "commit": "6c942792",
+  "commit": "8d193ede",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "8d193ede",
+   "date": "2026-11-08",
+   "subject": "lab: room tags on states + risk-aware waypoint picks",
+   "scope": "project"
+  },
+  {
    "commit": "6c942792",
    "date": "2026-11-08",
    "subject": "lab: room transition graph and per-room risk memory",
@@ -20789,12 +20795,6 @@
    "commit": "1e04f23c",
    "date": "2026-11-07",
    "subject": "Document the pause-menu icon list decode",
-   "scope": "project"
-  },
-  {
-   "commit": "143fbedc",
-   "date": "2026-11-07",
-   "subject": "Duck menu music and gate opening room-music entry",
    "scope": "project"
   }
  ],

@@ -997,6 +997,62 @@ static void state_dead_mark(AosLabDb *db, int64_t id) {
     free(v);
 }
 
+/* Frontier pick: parse lab.graph ("A:R>B:S,...") once, compute each
+ * room's depth = longest transition chain ending there, then return
+ * the index of the non-lethal state sitting in the deepest room.
+ * Waypoint picks use it to push trials along discovered passages
+ * toward unmapped exits instead of re-farming early rooms. */
+static int frontier_pick(AosLabDb *db, AosStateRow *rows, int n) {
+    char *g = aos_labdb_meta_get(db, "lab.graph");
+    if (!g || !*g) { free(g); return -1; }
+    int ea[512], er[512], da[512], dr[512], ne = 0;
+    for (char *tok = strtok(g, ","); tok && ne < 512;
+         tok = strtok(NULL, ",")) {
+        if (sscanf(tok, "%d:%d>%d:%d", &ea[ne], &er[ne],
+                   &da[ne], &dr[ne]) == 4) ++ne;
+    }
+    free(g);
+    if (!ne) return -1;
+    /* unique room keys (area*256+room) and edge endpoint indices */
+    int keys[1024], nk = 0, esi[512], edi[512];
+    int depth[1024];
+    memset(depth, 0, sizeof depth);
+    for (int i = 0; i < ne; ++i) {
+        int kk[2] = {ea[i] * 256 + er[i], da[i] * 256 + dr[i]};
+        for (int k = 0; k < 2; ++k) {
+            int f = 0;
+            for (int j = 0; j < nk; ++j)
+                if (keys[j] == kk[k]) { f = 1; break; }
+            if (!f && nk < 1024) keys[nk++] = kk[k];
+        }
+    }
+    for (int i = 0; i < ne; ++i) {
+        esi[i] = edi[i] = -1;
+        for (int j = 0; j < nk; ++j) {
+            if (keys[j] == ea[i] * 256 + er[i]) esi[i] = j;
+            if (keys[j] == da[i] * 256 + dr[i]) edi[i] = j;
+        }
+    }
+    /* depth = longest chain of transitions ending at the room */
+    for (int it = 0; it < ne; ++it)
+        for (int i = 0; i < ne; ++i)
+            if (esi[i] >= 0 && edi[i] >= 0 &&
+                depth[edi[i]] < depth[esi[i]] + 1)
+                depth[edi[i]] = depth[esi[i]] + 1;
+    int best = -1, bestd = -1;
+    for (int i = 0; i < n; ++i) {
+        if (state_dead(db, rows[i].id) || !rows[i].note) continue;
+        const char *rp = strstr(rows[i].note, "room=");
+        int ra, rr;
+        if (!rp || sscanf(rp, "room=%d:%d", &ra, &rr) != 2) continue;
+        int k = ra * 256 + rr, d = 0;
+        for (int j = 0; j < nk; ++j)
+            if (keys[j] == k) { d = depth[j]; break; }
+        if (d > bestd) { bestd = d; best = i; }
+    }
+    return best;
+}
+
 /* Convert a hold-style action's template params into a key script
  * "frame:mask,frame:mask" using the low ends of its ranges. */
 static char *hold_to_script(const char *params, int *out_end) {
@@ -2011,6 +2067,14 @@ int main(int argc, char **argv) {
                     }
                     break;
                 }
+                /* frontier-depth pick: ~40% of waypoint restarts jump
+                 * to a state in the graph-deepest room — a systematic
+                 * push toward unmapped exits along discovered
+                 * passages instead of re-farming early rooms */
+                if ((rand() % 100) < 40) {
+                    int fi = frontier_pick(db, srows, scount);
+                    if (fi >= 0) pick_i = fi;
+                }
                 AosStateRow *pick = &srows[pick_i];
                 size_t asz = 0;
                 alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
@@ -2250,6 +2314,21 @@ int main(int argc, char **argv) {
                         char nb[16];
                         snprintf(nb, sizeof nb, "%d", n + 1);
                         aos_labdb_meta_set(db, ek, nb);
+                        /* adjacency list for pathfinding: one meta
+                         * value "A:R>B:S,A:R>B:S,..." — deduped */
+                        char em[32];
+                        snprintf(em, sizeof em, "%d:%d>%d:%d",
+                                 ba, br, aa2, ar);
+                        char *gv = aos_labdb_meta_get(db, "lab.graph");
+                        if (!gv || !strstr(gv, em)) {
+                            size_t gl = gv ? strlen(gv) : 0;
+                            char *ng = malloc(gl + strlen(em) + 2);
+                            snprintf(ng, gl + strlen(em) + 2, "%s%s%s",
+                                     gv ? gv : "", gl ? "," : "", em);
+                            aos_labdb_meta_set(db, "lab.graph", ng);
+                            free(ng);
+                        }
+                        free(gv);
                     }
                     /* risk accumulates in the room the run STARTED in —
                      * that is where the damage happened */

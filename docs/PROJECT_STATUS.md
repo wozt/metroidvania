@@ -2,6 +2,31 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0827 - New/held soul feedback entities decoded
+
+- sub_08045654 (the new-soul icon's update) decoded: frame 0 calls
+  sub_0800C5A8(0) and sets gEwramData+0xA074 bit 1; every frame it sets
+  +0x59 bit 4 and, while +0xD <= 0x2F, calls sub_08045350 with the
+  soul-kind palette nibble; +0xD counts to +0x19 = 0x40 (64 frames).
+- sub_08045350 decoded: each call spawns a type-0x49 entity (update
+  sub_080451F4, EntityUpdateNothing draw, slots 0x49-0xCF) at the
+  player's +0x40/+0x44 plus a random-direction offset — RandomNumberGenerator
+  & 0xFF << 8 feeds sub_080009E4 sine/cosine lookups scaled by 3 << 4
+  (48 subpixels per unit) on both axes, velocity +0x48/+0x4C = offset
+  >> 4 and acceleration +0x50/+0x54 = -(offset * 5) >> 4 — with
+  lifetime byte from table 0x08525138 and palette from
+  sub_0803B924(0x0820ED60, kind nibble).
+- sub_08045164 (the held-soul sparkle update) decoded: first update
+  plays song 0xBF and selects animation index +0x14 (= 0xC) through
+  sub_0803F2C8; state 1 pins the entity at its parent's +0x40/+0x44
+  plus the fixed +0x50/+0x54 offset ((0, -0x100000) = 16 px above
+  Soma) every frame; it despawns when sub_0803F17C reports the
+  animation finished.
+- Porting these needs a pinned-to-parent effect kind (the existing
+  `follow` flag implements sub_080C9198's different behaviour) and
+  the animation-0xC / table-0x08525138 sequences exported; tracked
+  as the next soul-feedback step.
+
 ## Patch 0826 - Soul notice description only for new souls + pickup-message decode
 
 - sub_080441F8's soul cases fully decoded around the collection tail:

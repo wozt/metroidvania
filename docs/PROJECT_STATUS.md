@@ -2,6 +2,66 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0865 - Biphron decode (id 78, next port candidate)
+
+- EnemyBiphronCreate (0x08099C5C) / EnemyBiphronUpdate
+  (0x0809A450): a four-state dispatcher on e+0xA behind the
+  shared sub_0806CC20 sleep gate — state 0 sub_08099CF0
+  (hover/wait), state 1 sub_08099DB8 (attack sequence),
+  state 2 sub_08099ED8 (death), state 3 affine-only; the
+  epilogue runs sub_0806DF20 + sub_0806E314 for states
+  != 3.
+- Create: sub_0809A3D8 loads graphics 0x081CC05C, palette
+  0x0820AC04 (bank via sub_08068264) and frames 0x08223FF8
+  (sub_0803B924); sub_0803F2C8(e,0,0,1) + sub_0803F17C +
+  sub_0806B04C; global 0x8E & 0x40 -> state 3, else the
+  sub_0806D260 param picks sub_080427B8 vs sub_0804277C
+  with callbacks sub_0809A424 (contact, builds the
+  sub_08021654 record like the worm pair) and sub_08099F50
+  (hurt, same + 0x2D = 8 flash pattern); sub_0806B1FC +
+  sub_0806AF98 floor snap, state 0.
+- State 0 (sub_08099CF0, ~200B): + 0xB substeps — facing
+  bit into + 0x58 bit 6 from sub_0806CF2C & 1, vx =
+  mirrored ? +0x10000 : -0x40000 (0xFFFFC000), vy =
+  +0x80000, + 0x54 = 0x2800; then the sub_08069A00 probe
+  walker (r2 = 0xFFE00000 floor, r3 = 0x80000 ceiling?,
+  arg 8, mask & 4); every frame past 0x3B ticks the
+  centred player box (+ 0x42 - 0x5A, + 0x46 - 0x64,
+  0xB4 x 0xC8 via sub_0806CFFC) plus RandomNumberGenerator
+  & 0x7F <= 0x2F -> state 1, substep 0.
+- State 1 (sub_08099DB8, ~290B): + 0xB substeps — substep
+  0 at anim + 0x6E == 1 fires two sub_0806D644 paired
+  spawns around x (RNG & 0x7FFFF offsets, -0x18000/+0x18000
+  base) — likely the twin claw helpers; substep 1 waits
+  + 0x6E == 6 -> substep 2, timer 0x50; substep 2 every
+  0x10 ticks (timer > 0x2F, !(timer & 0xF)) spawns
+  sub_0809A340 at a random +-0x80000 offset and PlaySong
+  0x6E, the + 0x59 bit-5 blink via sub_0806D518; at 0 ->
+  + 0x59 |= 8 (attack-done flag for the state-2 path).
+- State 2 (sub_08099ED8, ~120B): + 0xB substeps — anim 1
+  once, at + 0x6E == 4 a sub_08099FD0 burst (vy arg
+  0xFFE60000 or 0x1A00000 by facing) + PlaySong 0x78;
+  when + 0x59 bit 0 set -> anim 0 loop and back to state 0.
+- State 3: sub_0803F17C affine only (the 0x8E & 0x40 path).
+- Remaining for the port: sub_08069A00 probe semantics,
+  sub_0806D644 / sub_0809A340 spawn identities (entity
+  kinds 8-range?), sub_0806CF2C, sub_0806D260 param
+  meaning, sub_0806CC20 sleep gate (already the shared
+  dispatcher prologue), sub_08099FD0 burst helper, and
+  the sub_0809A424 / sub_08099F50 callback bodies beyond
+  their sub_08021654 record shape; then the usual
+  objects.c PROBES row, enemy_names[78], kind dispatch,
+  tests and registries.
+- Family scan: the remaining 62 unported ids were
+  measured by update size — the smallest dispatchers are
+  Biphron (78, ~700B total), EvilButcher (25, ~700B),
+  Mandragora (79, ~700B), BomberArmor (58, ~800B),
+  DiscArmor (52), KillerMantle (85), AluraUne (77),
+  Dryad (70), Tsuchinoko (35), Ukoback (76, ~1.4KB);
+  skulls (33/92) state handlers are ~2KB each and the
+  Golem/Devil/armor families share the sub_08068AD4
+  boss template — all larger than this family.
+
 ## Patch 0864 - Giant Worm and Poison Worm ported (ids 62 / 71)
 
 - EnemyGiantWormCreate / EnemyPoisonWormCreate share

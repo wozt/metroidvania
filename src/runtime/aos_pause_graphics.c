@@ -325,6 +325,15 @@ static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
                              uint16_t col, uint16_t row, uint16_t w,
                              uint16_t h, unsigned palette,
                              unsigned *next_tile);
+static bool cells_begin(AosPauseGraphics *graphics, bool small,
+                        uint16_t col, uint16_t row, uint16_t w,
+                        uint16_t h);
+static bool cells_print_id(AosPauseGraphics *graphics, uint16_t id,
+                           bool small, uint16_t cur_col, uint16_t cur_row);
+static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
+                         unsigned tile_y, uint16_t col, uint16_t row,
+                         uint16_t w, uint16_t h, unsigned palette,
+                         unsigned *next_tile);
 
 static void reset_bg0(AosPauseGraphics *graphics) {
     ++graphics->cursor_tick;
@@ -484,27 +493,28 @@ static uint16_t soul_description_id(unsigned category, unsigned soul) {
  * to sub_08040748 (6px columns, 12px rows). Only cells containing
  * glyph pixels consume tiles from `next_tile` (cap 0x200 like
  * place_text); empty cells keep the existing map entry. */
-static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
-                             bool small, unsigned tile_x, unsigned tile_y,
-                             uint16_t col, uint16_t row, uint16_t w,
-                             uint16_t h, unsigned palette,
-                             unsigned *next_tile) {
-    if (!graphics || !next_tile || tile_x >= 32 || tile_y >= 32)
-        return false;
+static bool cells_begin(AosPauseGraphics *graphics, bool small,
+                        uint16_t col, uint16_t row, uint16_t w,
+                        uint16_t h) {
+    if (!graphics) return false;
+    bool ready = small ? (graphics->cells_char_b && graphics->cells_glyph_b)
+                       : (graphics->cells_char_a && graphics->cells_glyph_a);
+    if (!ready) return false;
+    memset(graphics->cells_fb, 0, sizeof graphics->cells_fb);
+    aos_menu_cells_set_attr(&graphics->cells, 1);
+    aos_menu_cells_set_ink(&graphics->cells, 0);
+    aos_menu_cells_window_a(&graphics->cells, col, row, w, h);
+    return true;
+}
+
+static bool cells_print_id(AosPauseGraphics *graphics, uint16_t id,
+                           bool small, uint16_t cur_col, uint16_t cur_row) {
     const uint8_t *entry = NULL;
     size_t entry_size = 0;
     if (!aos_intro_resources_entry(&graphics->text, graphics->language,
                                    id, &entry, &entry_size))
         return false;
-    bool ready = small ? (graphics->cells_char_b && graphics->cells_glyph_b)
-                       : (graphics->cells_char_a && graphics->cells_glyph_a);
-    if (!ready) return false;
-
-    memset(graphics->cells_fb, 0, sizeof graphics->cells_fb);
-    aos_menu_cells_set_attr(&graphics->cells, 1);
-    aos_menu_cells_set_ink(&graphics->cells, 0);
-    aos_menu_cells_window_a(&graphics->cells, col, row, w, h);
-    aos_menu_cells_cursor_a(&graphics->cells, col, row);
+    aos_menu_cells_cursor_a(&graphics->cells, cur_col, cur_row);
     if (small)
         aos_menu_cells_run_b(&graphics->cells, entry, 0,
                              graphics->cells_char_b, 4,
@@ -513,7 +523,15 @@ static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
         aos_menu_cells_run_a(&graphics->cells, entry, 0,
                              graphics->cells_char_a, 4,
                              graphics->cells_glyph_a, 14);
+    return true;
+}
 
+static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
+                         unsigned tile_y, uint16_t col, uint16_t row,
+                         uint16_t w, uint16_t h, unsigned palette,
+                         unsigned *next_tile) {
+    if (!graphics || !next_tile || tile_x >= 32 || tile_y >= 32)
+        return false;
     /* The window covers canvas pixels [col*6, (col+w-1)*6) x
      * [row*12, (row+h-1)*12); cells are the 8px framebuffer grid. */
     unsigned px_x0 = col * 6, px_x1 = (unsigned)(col + w - 1) * 6 + 6;
@@ -555,6 +573,17 @@ static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
                 (uint16_t)(tile | palette << 12);
         }
     return true;
+}
+
+static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
+                             bool small, unsigned tile_x, unsigned tile_y,
+                             uint16_t col, uint16_t row, uint16_t w,
+                             uint16_t h, unsigned palette,
+                             unsigned *next_tile) {
+    return cells_begin(graphics, small, col, row, w, h) &&
+           cells_print_id(graphics, id, small, col, row) &&
+           cells_commit(graphics, tile_x, tile_y, col, row, w, h,
+                        palette, next_tile);
 }
 
 static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
@@ -1182,28 +1211,25 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
     if (!valid_output(graphics, rgba, rgba_size)) return false;
     reset_bg0(graphics);
     unsigned next_tile = 0;
+    /* sub_0804BD38/sub_0804BE0C run on the same pause text layer as the
+     * hub: sub_0804728C prints the question/refusal through
+     * sub_08046BC8, then sub_0804066C(4,1) + sub_08041434(0x34B) and
+     * sub_0804066C(0xC,1) + sub_08041434(0x34D) print Yes/No through
+     * sub_08041318 — all context A inside the shared
+     * sub_08040748(0,0,0x1a,3) window on the cell canvas at tile
+     * (0,15). The selection arrow stays OBJ and unrendered. */
+    if (!cells_begin(graphics, false, 0, 0, 26, 3))
+        return false;
     if (!can_sleep) {
-        /* sub_0804BD38's refusal: text 0x361 "Cannot save until you have
-         * saved once in a save room." */
-        if (!place_text_id(graphics, 0x361, false, 24, 64, 192, 3,
-                           &next_tile))
+        if (!cells_print_id(graphics, 0x361, false, 0, 0) ||
+            !cells_commit(graphics, 0, 15, 0, 0, 26, 3, 3, &next_tile))
             return false;
     } else {
-        /* sub_0804BD38/sub_0804BE0C: text 0x36A "Pause the game?" then the
-         * Yes/No labels. Native cursor cells (4,1) and (0xC,1) of
-         * sub_0804066C map to pixel (24,128) and (72,128) on the pause
-         * background's bottom text band; the question sits one 12-pixel
-         * row above. The selection arrow is OBJ and stays unrendered. */
-        if (!place_text_id(graphics, 0x36A, true, 24, 116, 192, 3,
-                           &next_tile) ||
-            !place_text_id(graphics, 0x34B, true, 24, 128, 96, 3,
-                           &next_tile) ||
-            !place_text_id(graphics, 0x34D, true, 72, 128, 96, 3,
-                           &next_tile))
+        if (!cells_print_id(graphics, 0x36A, false, 0, 0) ||
+            !cells_print_id(graphics, 0x34B, false, 4, 1) ||
+            !cells_print_id(graphics, 0x34D, false, 0xC, 1) ||
+            !cells_commit(graphics, 0, 15, 0, 0, 26, 3, 3, &next_tile))
             return false;
-        /* sub_0804BE0C's only placement: sub_08048AD8(1, 0x10), the hand
-         * held at the left of the Yes/No row while the text cursor marks
-         * the selection. */
     }
     composite(graphics, rgba);
     if (can_sleep) draw_cursor(graphics, rgba, 1, 16, 2);

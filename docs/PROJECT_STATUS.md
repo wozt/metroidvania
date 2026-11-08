@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0812 - Sleep page on the cell engine
+
+- `aos_pause_graphics_render_sleep` now renders through the native
+  cell engine: sub_0804BD38/sub_0804BE0C decoded — the question or
+  refusal goes through sub_0804728C (context A at the window home),
+  then sub_0804066C(4,1)+sub_08041434(0x34B)="Yes" and
+  sub_0804066C(0xC,1)+sub_08041434(0x34D)="No" via sub_08041318, all
+  inside the shared sub_08040748(0,0,26,3) window.
+- place_text_cells split into cells_begin/cells_print_id/cells_commit
+  so several texts accumulate in one framebuffer before commit, the
+  way the native page does.
+- Verified entry bytes: 0x34B "Yes", 0x34D " No" (native leading
+  space), 0x36A "Pause the game?", 0x361 cannot-save message — all
+  ASCII through the same ch-0x20 tables.
+- Still absent on the page: message-window frame and selection arrow
+  (OBJ layer), and no emulator comparison.
+
 ## Patch 0811 - Menu cell engine slice 5: native window geometry and 46BC8 semantics
 
 - Window geometry corrected from the call site: the hub caller runs

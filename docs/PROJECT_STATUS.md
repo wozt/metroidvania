@@ -2,6 +2,46 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0824 - Gameplay obtained-soul notice (sub_0800E708 + sub_0800E540)
+
+- Full decode of the non-matching sub_0800E708.inc: on every accepted
+  soul collection (sub_080441F8 cases 5-8, arg2 = r8 = 1) the native
+  code prints the soul NAME through sub_08041434 as
+  `0-based index + {0xE3, 0x11B, 0x133, 0x156}` per kind (red, blue,
+  yellow, ability), then text 0x35E (four spaces — the literal native
+  second entry, not an "acquired" string), builds the HUD tile window
+  at gEwramData+0x133F4 with the 0xE2xx border/fill tiles DMA'd to
+  VRAM 0x0600E000, loads the soul-kind palette through
+  sub_0803C918(0x0820C428, page 1/2/3/6), and — because arg2 != 0 —
+  calls sub_0800E540 for the description window.
+- sub_0800E540 (C decomp) decoded: description text =
+  `{0x1E4, 0x21C, 0x234, 0x257} + (1-based soul id - 1)` per kind,
+  printed through sub_08046BC8 inside window (7,2,0x1E,2); it also
+  stores unk_420 = name text id, unk_422 = 2 (name-only path stores
+  0xF0), unk_423 = 0 and toggles unk_424. sub_0800EFD4 counts unk_422
+  down per HUD tick and sub_0800EB04 clears at zero; the "2" units on
+  the description path are unresolved, so the port uses the shared
+  0xF0-frame lifetime.
+- Verified against the real ROM text table (a dump-tool bug truncating
+  ids to uint8_t briefly suggested the opening's 0xE3/0x35E/0x1E4 were
+  wrong — they were correct all along): 0xE3 "Winged Skeleton",
+  0x11B "Flying Armor", 0x133 "Undine", 0x132 "Death", 0x156
+  "Grave Keeper", 0x1E4 "Throws spears.", 0x21C "Falling speed
+  slows down...", 0x234 "Walk on water surfaces.", 0x257 "Backdash by
+  pressing...". Our Soul Set name/description formulas were already
+  equivalent to the native bases.
+- Ported: AriaSoulNoticeCtx + aria_gameplay_soul_notice lazily decode
+  name/acquired/description entries through the existing opening text
+  pipeline and rebuild the shared AosSoulNotice composition on every
+  soul pickup (all kinds including ability souls), with the upper
+  banner row when Soma's pixel y passes the native 0x70 threshold.
+  AriaCombat carries the callback; the notice draws over the HUD
+  texture and ticks down with the HUD.
+- Still open: the soul pickup sprite/trail (sub_08032B14, palette
+  cycle 6, sub_08045B44 spark), the sub_08045C34/sub_08045BC8
+  new/held-soul messages, exact unk_422 description-path timing, and
+  the ability-soul palette page detail.
+
 ## Patch 0823 - Soul Set recent-first ordering ported
 
 - sub_080441F8's collection tail fully decoded: item/weapon/armor cases

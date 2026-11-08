@@ -709,6 +709,12 @@ typedef struct {
     AosHud *hud;                                 /* sub_0800EA98 enemy-name notice */
     const AosHudFont *hud_font;
     bool derive_atk, derive_def;                 /* false under --atk / --def */
+    /* sub_0800E708 on every soul collection (sub_080441F8 tail): the
+     * obtained-soul banner plus sub_0800E540's description when the
+     * pickup is accepted. */
+    void (*soul_notice)(void *ctx, unsigned category, unsigned soul_index,
+                        bool player_low);
+    void *soul_notice_ctx;
 } AriaCombat;
 
 /* The homing list gEwramData + 0x13194 (sub_08021924, aged by
@@ -2926,6 +2932,13 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                    aos_souls_total(combat->progress, pickup->type - AOS_PICKUP_SOUL,
                                    pickup->variant),
                    combat->progress->souls_collected);
+            /* sub_0800E708(r6=soul index, r5=kind, r8=1): the obtained-soul
+             * banner with sub_0800E540's description; the banner row picks
+             * the upper layout when Soma's pixel y passes 0x70. */
+            if (combat->soul_notice)
+                combat->soul_notice(combat->soul_notice_ctx,
+                                    (unsigned)(pickup->type - AOS_PICKUP_SOUL),
+                                    pickup->variant, (soma->y >> 16) > 0x70);
             aos_audio_play_song(aos_pickup_collection_sound(pickup));
         }
         if (soul) aos_pickup_soul_finish(pickup, aos_random);
@@ -5116,6 +5129,79 @@ static size_t flatten_opening_text(const AosOpeningEvent *text, uint8_t *out,
     return count;
 }
 
+/* State for the gameplay obtained-soul notice (sub_0800E708 +
+ * sub_0800E540). The text resources are initialised lazily on the first
+ * collected soul so runs without a ROM keep working. */
+typedef struct {
+    AosSoulNotice *notice;
+    AosIntroTextTiles *tiles;
+    AosIntroResources *resources;
+    AosIntroFont *font;
+    const FusionRom *rom;
+    bool *notice_ready;
+    bool *text_ready;
+    int *timer;
+} AriaSoulNoticeCtx;
+
+static void aria_gameplay_soul_notice(void *opaque, unsigned category,
+                                      unsigned soul_index, bool player_low) {
+    AriaSoulNoticeCtx *ctx = opaque;
+    /* sub_0800E708's per-kind bases: names 0xE3/0x11B/0x133/0x156 and
+     * sub_0800E540's descriptions 0x1E4/0x21C/0x234/0x257, both indexed
+     * by the 0-based soul index carried in the pickup variant. */
+    static const uint16_t name_bases[] = {0xE3, 0x11B, 0x133, 0x156};
+    static const uint16_t desc_bases[] = {0x1E4, 0x21C, 0x234, 0x257};
+    if (!ctx || category > 3 || !ctx->rom || !ctx->rom->data) return;
+    if (!*ctx->text_ready) {
+        char error[128];
+        *ctx->text_ready =
+            aos_intro_resources_init(ctx->resources, ctx->rom, error,
+                                     sizeof error) &&
+            aos_intro_font_init(ctx->font, ctx->rom, error, sizeof error);
+        if (!*ctx->text_ready) return;
+    }
+    if (!*ctx->notice_ready) {
+        char error[128];
+        *ctx->notice_ready =
+            aos_soul_notice_init(ctx->notice, ctx->rom, error, sizeof error);
+        if (!*ctx->notice_ready) return;
+    }
+    AosOpeningEvent name, acquired, description;
+    uint8_t name_glyphs[256], acquired_glyphs[256];
+    if (!decode_opening_soul_entry(ctx->resources,
+                                   (uint16_t)(name_bases[category] + soul_index),
+                                   &name) ||
+        !decode_opening_soul_entry(ctx->resources, 0x35E, &acquired) ||
+        !decode_opening_soul_entry(ctx->resources,
+                                   (uint16_t)(desc_bases[category] + soul_index),
+                                   &description))
+        return;
+    aos_intro_text_tiles_clear(ctx->tiles);
+    size_t name_count = flatten_opening_text(&name, name_glyphs,
+                                             sizeof name_glyphs);
+    size_t acquired_count = flatten_opening_text(&acquired, acquired_glyphs,
+                                                 sizeof acquired_glyphs);
+    unsigned name_width = aos_intro_font_measure_small(ctx->font, name_glyphs,
+                                                       name_count);
+    bool ready =
+        aos_intro_font_render_small_span(ctx->font, ctx->tiles, 0, 0, 240, 15,
+                                         name_glyphs, name_count) &&
+        aos_intro_font_render_small_span(
+            ctx->font, ctx->tiles, name_width, 0, 240 - name_width, 15,
+            acquired_glyphs, acquired_count);
+    for (unsigned line = 0; ready && line < AOS_OPENING_LINES; ++line)
+        ready = aos_intro_font_render_span(
+            ctx->font, ctx->tiles, 42, 24 + line * 12, 180, 15,
+            description.glyphs[line], description.glyph_counts[line]);
+    if (!ready) return;
+    aos_soul_notice_build(ctx->notice, ctx->tiles, (name_width + 7) / 8,
+                          player_low);
+    /* sub_0800EFD4 counts unk_422 down each HUD tick; the native value is
+     * 0xF0 for the name banner (the description path stores 2, whose units
+     * are unresolved, so the shared banner lifetime is used). */
+    *ctx->timer = 0xF0;
+}
+
 static void draw_opening_soul_notice(SDL_Renderer *renderer,
                                      const AosSoulNotice *notice,
                                      uint32_t frame) {
@@ -5584,8 +5670,23 @@ int aria_runtime_main(int argc, char **argv) {
     AosOpeningActors opening_actors = {0};
     AosWindowFrame opening_window = {0};
     AosSoulNotice opening_soul_notice = {0};
+    AosSoulNotice gameplay_soul_notice = {0};
     static AosIntroTextTiles opening_tiles;
     static AosIntroTextTiles opening_soul_tiles;
+    static AosIntroTextTiles gameplay_soul_tiles;
+    bool gameplay_soul_notice_ready = false;
+    bool gameplay_soul_text_ready = false;
+    int gameplay_soul_notice_timer = 0;
+    AriaSoulNoticeCtx soul_notice_ctx = {
+        .notice = &gameplay_soul_notice,
+        .tiles = &gameplay_soul_tiles,
+        .resources = &opening_resources,
+        .font = &opening_font,
+        .rom = &opening_rom,
+        .notice_ready = &gameplay_soul_notice_ready,
+        .text_ready = &gameplay_soul_text_ready,
+        .timer = &gameplay_soul_notice_timer,
+    };
     bool opening_text_ready = false;
     bool opening_window_ready = false;
     bool opening_epilogue = false;
@@ -5998,6 +6099,8 @@ int aria_runtime_main(int argc, char **argv) {
         .hud_font = have_hud ? &hud_font : NULL,
         .derive_atk = !atk_override,
         .derive_def = !def_override,
+        .soul_notice = aria_gameplay_soul_notice,
+        .soul_notice_ctx = &soul_notice_ctx,
     };
     if (objects.money_loaded) combat.money = objects.money;
     for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
@@ -6525,6 +6628,9 @@ int aria_runtime_main(int argc, char **argv) {
                                (int16_t)progress.max_mp);
                 aos_hud_tick(&hud);
             }
+            /* sub_0800EFD4's default case: unk_422 counts down once per
+             * HUD tick and sub_0800EB04 clears the banner at zero. */
+            if (gameplay_soul_notice_timer > 0) --gameplay_soul_notice_timer;
             const __typeof__(objects.skills[0]) *bat = &objects.skills[SKILL_ART_BAT],
                                                 *archer = &objects.skills[SKILL_ART_ARCHER];
             souls.bat = objects_ok && bat->loaded ? &bat->set : NULL;
@@ -7358,6 +7464,11 @@ int aria_runtime_main(int argc, char **argv) {
             SDL_FRect whole = {0, 0, 240, 160};
             SDL_RenderTexture(renderer, hud_texture, NULL, &whole);
         }
+        /* sub_0800E708's banner rides the HUD BG0 like the opening notice. */
+        if (!opening.active && gameplay_soul_notice_timer > 0 &&
+            gameplay_soul_notice_ready)
+            draw_opening_soul_notice(renderer, &gameplay_soul_notice,
+                                     (uint32_t)step);
         /* sub_0800C8C8's fades: BG at its own weight (the room and the HUD
          * scaled so that the black veil below completes it), everything at
          * the OBJ weight. */

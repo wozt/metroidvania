@@ -546,8 +546,16 @@ char *aos_labdb_meta_get(AosLabDb *db, const char *key) {
 int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
                     int *out_states) {
     static const char *sqls[] = {
-        /* barren trials: hard fails that scored nothing */
-        "DELETE FROM trials WHERE outcome='fail' AND reward<=0",
+        /* barren trials: anything that scored zero or negative. The
+         * outcome column is unreliable (rewind retries and partial
+         * runs never say 'fail') — reward is the honest signal. The
+         * failure memory that matters lives in weights.reward_sum and
+         * lab.lethal.*, not in these rows */
+        "DELETE FROM trials WHERE reward<=0",
+        /* keep a small window of recent losses for context, newest
+         * 4000 rows overall is plenty of learning history */
+        "DELETE FROM trials WHERE id NOT IN ("
+        " SELECT id FROM trials ORDER BY id DESC LIMIT 4000)",
         /* action/param combos barely tried with nothing learned —
          * rows with real attempt counts or nonzero reward stay: a
          * negative reward_sum IS the failure memory that stops the
@@ -603,10 +611,6 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
         /* trials pointing at deleted states are dead weight too */
         "DELETE FROM trials WHERE state_id IS NOT NULL"
         " AND state_id NOT IN (SELECT id FROM states)",
-        /* bound the trial log itself: newest 8000 rows is plenty of
-         * learning history for the weight tables */
-        "DELETE FROM trials WHERE id NOT IN ("
-        " SELECT id FROM trials ORDER BY id DESC LIMIT 8000)",
     };
     int counts[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     for (int i = 0; i < 10; ++i) {
@@ -618,10 +622,10 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
             counts[i] = sqlite3_changes(db->handle);
         sqlite3_finalize(st);
     }
-    if (out_trials) *out_trials = counts[0];
-    if (out_weights) *out_weights = counts[1];
-    if (out_states) *out_states = counts[2] + counts[3] + counts[4] +
-                                   counts[5] + counts[6] + counts[7];
+    if (out_trials) *out_trials = counts[0] + counts[1] + counts[9];
+    if (out_weights) *out_weights = counts[2];
+    if (out_states) *out_states = counts[3] + counts[4] + counts[5] +
+                                   counts[6] + counts[7];
     return counts[0] + counts[1] + counts[2] + counts[3] + counts[4] +
            counts[5] + counts[6] + counts[7] + counts[8] + counts[9];
 }

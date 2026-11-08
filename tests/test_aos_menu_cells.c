@@ -221,6 +221,36 @@ static void test_run_text(void) {
     assert(cells.a_px == 8 || cells.a_col == 1);
 }
 
+static void test_window_a_and_tile(void) {
+    /* sub_08040748: hub call is window_a(0, 0, 26, 3) -> cols 0-24,
+     * rows 0-2; cursor pixel position follows the current col/row. */
+    AosMenuCells cells;
+    uint32_t fb[FB_WORDS];
+    aos_menu_cells_init(&cells);
+    aos_menu_cells_set_fb(&cells, fb);
+    memset(fb, 0, sizeof fb);
+    cells.a_col = 2;
+    cells.a_row = 1;
+    aos_menu_cells_window_a(&cells, 0, 0, 26, 3);
+    assert(cells.a_col_home == 0 && cells.a_row_stop == 0);
+    assert(cells.a_col_max == 24 && cells.a_row_max == 2);
+    assert(cells.a_x == 0 && cells.a_px == 12 && cells.a_y == 12);
+    /* cell_tile copies the 32-byte cell verbatim: word i lands at
+     * bytes 4i..4i+3 little-endian, low nibble = leftmost pixel. */
+    fb[0] = 0x01234567u;
+    fb[1] = 0x89ABCDEFu;
+    uint8_t tile[32];
+    assert(aos_menu_cells_cell_tile(&cells, 0, 0, tile));
+    assert(tile[0] == 0x67 && tile[1] == 0x45 && tile[3] == 0x01);
+    assert(tile[4] == 0xEF && tile[7] == 0x89);
+    assert(aos_menu_cells_cell_tile(&cells, 1, 0, tile));
+    assert(tile[0] == 0 && tile[31] == 0);
+    /* cell (0,1) starts at word 256. */
+    fb[256] = 0xA5A5A5A5u;
+    assert(aos_menu_cells_cell_tile(&cells, 0, 1, tile));
+    assert(tile[0] == 0xA5);
+}
+
 int main(void) {
     test_large_basic();
     test_skip_and_width();
@@ -231,6 +261,7 @@ int main(void) {
     test_print_a_cursor();
     test_icon_walker();
     test_run_text();
+    test_window_a_and_tile();
     printf("aos_menu_cells tests passed\n");
     return 0;
 }

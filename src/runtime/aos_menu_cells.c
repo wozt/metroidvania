@@ -226,7 +226,7 @@ int aos_menu_cells_print_a(AosMenuCells *cells, uint16_t ch,
         if (cells->a_col > cells->a_col_max) {
             cells->a_col = cells->a_col_home;
             cells->a_row += 1;
-            if (cells->a_row > cells->a_row_stop)
+            if (cells->a_row > cells->a_row_max)
                 cells->a_row = cells->a_row_stop;
         }
         cells->a_y = (uint16_t)(cells->a_row * 12);
@@ -362,4 +362,30 @@ void aos_menu_cells_icon_fill_rect(AosMenuCells *cells) {
     cells->b_sx = 0;
     cells->b_px = (uint16_t)(cells->b_col * 6);
     cells->b_py = (uint16_t)(cells->b_row * 8);
+}
+
+void aos_menu_cells_window_a(AosMenuCells *cells, uint16_t col,
+                             uint16_t row, uint16_t w, uint16_t h) {
+    /* sub_08040748: store the window bounds, clamp to 40x20 cells,
+     * then reset cursor A to the home position. */
+    cells->a_col_home = col;
+    cells->a_row_stop = row;
+    cells->a_col_max = (uint16_t)(col + w - 2);
+    cells->a_row_max = (uint16_t)(row + h - 1);
+    if (cells->a_col_home > 0x28) cells->a_col_home = 0x28;
+    if (cells->a_row_stop > 0x14) cells->a_row_stop = 0x14;
+    if (cells->a_col_max > 0x28) cells->a_col_max = 0x28;
+    if (cells->a_row_max > 0x14) cells->a_row_max = 0x14;
+    cells->a_x = 0;
+    cells->a_px = (uint16_t)(cells->a_col * 6);
+    cells->a_y = (uint16_t)(cells->a_row * 12);
+}
+
+bool aos_menu_cells_cell_tile(const AosMenuCells *cells, uint16_t col,
+                              uint16_t row, uint8_t out[32]) {
+    if (!cells->fb || !out) return false;
+    const uint32_t *src =
+        cells->fb + (size_t)row * AOS_MENU_CELLS_ROW_WORDS + col * 8;
+    memcpy(out, src, 32);
+    return true;
 }

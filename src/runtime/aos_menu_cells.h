@@ -122,4 +122,20 @@ void aos_menu_cells_icon_begin(AosMenuCells *cells, uint16_t col,
 void aos_menu_cells_icon_step(AosMenuCells *cells);
 void aos_menu_cells_icon_fill_rect(AosMenuCells *cells);
 
+/* sub_08040748: configure the context-A window. `col`/`row` are the
+ * home (top-left) text coordinates, `w`/`h` the extents in 6px columns
+ * and 12px rows; the native code derives col_max = col + w - 2 and
+ * row_max = row + h - 1, clamps all four bounds to 40x20, resets the
+ * cursor and recomputes the absolute pixel position. */
+void aos_menu_cells_window_a(AosMenuCells *cells, uint16_t col,
+                             uint16_t row, uint16_t w, uint16_t h);
+
+/* Cell commit: each 8x8 cell of the framebuffer is already a native
+ * 32-byte 4bpp tile (8 rows of one 32-bit word, low nibble = leftmost
+ * pixel). `aos_menu_cells_cell_tile` copies one cell out verbatim;
+ * callers walk the window rectangle and write the tiles plus the
+ * tilemap entries themselves (the role of sub_080472B0). */
+bool aos_menu_cells_cell_tile(const AosMenuCells *cells, uint16_t col,
+                              uint16_t row, uint8_t out[32]);
+
 #endif /* AOS_MENU_CELLS_H */

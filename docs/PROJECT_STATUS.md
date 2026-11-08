@@ -2,6 +2,27 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0809 - Menu cell engine slice 3: window init and tile commit path
+
+- `aos_menu_cells_window_a` ports sub_08040748 (context-A window
+  bounds, 40x20 clamps, cursor recompute) and `aos_menu_cells_cell_tile`
+  exposes the key commit fact: each 8x8 framebuffer cell is already a
+  native 32-byte 4bpp tile, so the sub_080472B0 commit is a verbatim
+  copy into tile data plus tilemap entries.
+- Decode notes added to the annotation: sub_080472B0 writes the BG
+  tilemap rectangle at 0x0600E000 (tile id = base + row*32 + col),
+  sub_08040FE0/40F84/40E90 implement the context-A 6px window fill
+  through the same cell-clear machinery, and sub_08046BC8 is the
+  high-level text entry (cursor save, sub_08041434 dispatch, command
+  bytes via jump table).
+- Fixed a port bug found while wiring: the context-A row wrap compares
+  against +0x115B0 (row max) and resets to +0x115AC (row home), not
+  the other way around.
+- Still unported: ROM metric tables (0x080E2B4C/0x080E2EC0 char
+  records, 0x0850A136/0x08509876 glyph records), sub_08041434
+  language dispatch, sub_08046BC8 command handling and the per-page
+  renderer integration.
+
 ## Patch 0808 - Menu cell engine slice 2: merges, clears, cursors, walkers
 
 - `aos_menu_cells` now covers the whole cell-compositing half of the

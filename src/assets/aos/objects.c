@@ -333,6 +333,12 @@ static const EntitySpec entities[] = {
     STATIC("wall_15", 0x0825E07C, 0x08209D6C, 3, 0x082669A8, 1, 1),
     STATIC("wall_16", 0x0825E07C, 0x08209D6C, 3, 0x082669A8, 1, 0),
     STATIC("wall_17", 0x0825EADC, 0x08209C88, 6, 0x0820F314, 1, 6),
+    /* EnemyMinotaurCreate/EnemyRedMinotaurCreate (0x080B0D2C/0x080B0D44)
+     * share func_080B0AD4, which loads graphics 0x081E41A4, palette
+     * 0x0820B7B0 (two banks: bank 0 brown, bank 1 red) and frames
+     * 0x0823AE10 through func_0806E0D0. */
+    ENTITY("minotaur", 0x081E41A4, 0x0820B7B0, 0, 0x0823AE10),
+    ENTITY("red_minotaur", 0x081E41A4, 0x0820B7B0, 1, 0x0823AE10),
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

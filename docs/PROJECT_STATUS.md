@@ -2,6 +2,43 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0861 - Aria enemy port program: family map + Minotaur art
+
+- Inventoried the 113-record enemy table (0x080E9644, 36-byte
+  records): 47 enemies ported, 67 remaining. Every record's
+  create/update pointers were extracted; stats for all 113 are
+  already in enemies.tsv (sub_0806B04C field layout).
+- Found that many unported enemies share one native controller:
+  porting the shared update once covers a whole family.
+  - func_0807E35C: Golem(53) + WoodenGolem(34) + FleshGolem(80)
+    + IronGolem(101) — 4 enemies, one 132-byte update.
+  - func_0808F964: Devil(48) + ArcDemon(72) + DemonLord(102)
+    + FlameDemon(104) — 4 enemies.
+  - func_0808A224: GreatArmor(60) + FinalGuard(103) +
+    ShadowKnight(105) — 3 enemies.
+  - func_080B0BE8: Minotaur(21) + RedMinotaur(88) — the update
+    is only func_0806E4F8(e,-16), the sleep/awake flag helper,
+    so their locomotion is the generic enemy controller.
+  - func_080AE0E0: GiantWorm(62) + PoisonWorm(71).
+  - func_08095320: CreakingSkull(33) + GiantSkeleton(92).
+  - func_080B3DCC: FishHead(65), the Bone Pillar skull homing
+    helper already referenced by aos_enemy_update.
+- Resource extraction method proven: EnemyXxxCreate stubs BL a
+  shared create whose literal pool holds graphics/palette/frames
+  (func_0806E0D0 -> func_0803B800 loader). Palette descriptors
+  carry a bank count; variants share art and differ by bank.
+- Minotaur family exported: creates 0x080B0D2C/0x080B0D44 ->
+  func_080B0AD4 loads graphics 0x081E41A4, palette 0x0820B7B0
+  (2 banks: bank 0 brown = Minotaur, bank 1 red = RedMinotaur,
+  verified by decoding the BGR555 rows) and frames 0x0823AE10
+  (25 records, 10 animations). ENTITY rows added to
+  src/assets/aos/objects.c; fusion_importer --aria-export-objects
+  regenerated enemy_frames.tsv (252 new rows) and the sprite
+  library. Runtime wiring (enemy_names, kind, update AI) is
+  still pending: the native think hook is only the sleep check,
+  so the generic enemy locomotion controller still needs to be
+  decoded before Minotaur can move 1:1.
+
 ## Patch 0860 - Equipment record-effect audit
 
 - Enumerated every native reader of the equipment slots

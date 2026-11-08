@@ -78,6 +78,7 @@ static const AosGameModeHandler handlers[AOS_MODE_COUNT] = {
 
 void aos_game_lifecycle_init(AosGameLifecycle *state, bool direct_gameplay) {
     *state = (AosGameLifecycle){0};
+    state->game_over.song = -1;
     state->reset.language = 1;
     state->main_menu.language = 1;
     aos_title_screen_init(&state->title, NULL, NULL, NULL);
@@ -100,6 +101,6 @@ void aos_game_lifecycle_update(AosGameLifecycle *state) {
 }
 
 void aos_game_lifecycle_start_game_over(AosGameLifecycle *state) {
-    state->game_over = (AosGameOver){0};
+    state->game_over = (AosGameOver){.song = -1};
     aos_game_mode_set(&state->game_mode, AOS_MODE_GAME_OVER);
 }

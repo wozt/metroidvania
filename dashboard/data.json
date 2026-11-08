@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T11:48:08+00:00",
+ "generated_at": "2026-11-08T11:55:03+00:00",
  "git": {
-  "commit": "43bd6840",
+  "commit": "a226cc33",
   "branch": "main",
   "dirty": true
  },
@@ -8737,8 +8737,8 @@
     "sub_0803D408",
     "sub_0803D06C"
    ],
-   "limitations": "The palette-fade processor that applies sub_0803D18C / sub_0803CDF0 each frame is not decompiled: fades are modelled as their traced step (sub_0803E8BC) added once per frame until the target. The runtime shows the BG and OBJ fades with a colour modulation and a black veil, and the frontend the game-over fades with a veil (exact for one shared weight). The 0x42C & 0x200000 restart branch of sub_0800C8C8, the music (MUS_15, the mute) is not ported. sub_0801B03C is decoded: a drifting sparkle entity (callback sub_08045C9C = our drift flag) bounces its +0x48/+0x4C integrators with +-0x200 gravity flips and, while flag +0x58 bit 0x20 is clear, emits an animation-0xD effect every four frames (+0xD counter & 3) at the entity position plus two sub_0802D5EC(0x80000) rolls with y offset -0x100000; both death branches set player +0x1E=4 first. The runtime now emits AOS_EFFECT_SPARKLE drift effects on the same four-frame cadence and 8x8/-16px box during soma.state 16; the sparkle kind mapping to native animation 0xD and the emitter entity's own bounce are approximations. The runtime hands over to the frontend process (--frontend, --game-over) rather than switching mode in one process, and no save is touched (the native game over returns to the Konami logo). Death art verified: anim 0x33 maps to Soma/animation_051 (5 frames) in the exported runtime index, sound 0x197 plays on die(), state 16 drifts to a halt and the runtime spawns the documented sparkle every four frames; the sparkle entity's animation-0xD mapping remains approximate pending art audit. The post-game-over path (GAME_OVER -> KONAMI_LOGO -> TITLE -> file select) matches the native mode chain, so continuing reloads a save through the frontend file select. Soma's death (sub_0801AF20) enters the in-game death sub-state: sub_0800C8C8 fades BG to black over 0x40 frames and OBJ over 0x80 and enters GAME_OVER once the OBJ fade has ended. GameModeGameOverUpdate shows BG1 in 256 colours (tiles 0x080E5C08 and 0x080E5C10, palette 0x080E6A3C, map 0x080E9584; the background renderer now supports 8-bpp tiles), fades it in from black over 0x20 frames, waits 0x80 frames, creates the language's GAME OVER sprite at (0x80, 0xE) and blends it in over 0x20 frames (BLDALPHA from EVA 0 / EVB 16 to 16 / 0), waits for any new press, fades to white over 0x20 frames and returns to the Konami logo. The runtime runs the death fade (Soma died at frame 284 in room 0/3 and the game over followed at frame 412) and relaunches the frontend with --game-over, which shows the native painting and sprite from the ROM and continues through the boot modes. An offscreen render of the screen showed the native painting with 'Game Over'. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Compare the death sparkle animation and the unmodelled 0x42C & 0x200000 restart flag, then the save-room reload on continue.",
+   "limitations": "The palette-fade processor that applies sub_0803D18C / sub_0803CDF0 each frame is not decompiled: fades are modelled as their traced step (sub_0803E8BC) added once per frame until the target. The runtime shows the BG and OBJ fades with a colour modulation and a black veil, and the frontend the game-over fades with a veil (exact for one shared weight). The 0x42C & 0x200000 restart branch of sub_0800C8C8, the death fade now plays SONG_MUTE at sub_0800C8C8 case 0 and GameModeGameOverUpdate requests MUS_15 at stage 0 and SONG_MUTE at the stage-3 press through the lifecycle song drain. sub_0801B03C is decoded: a drifting sparkle entity (callback sub_08045C9C = our drift flag) bounces its +0x48/+0x4C integrators with +-0x200 gravity flips and, while flag +0x58 bit 0x20 is clear, emits an animation-0xD effect every four frames (+0xD counter & 3) at the entity position plus two sub_0802D5EC(0x80000) rolls with y offset -0x100000; both death branches set player +0x1E=4 first. The runtime now emits AOS_EFFECT_SPARKLE drift effects on the same four-frame cadence and 8x8/-16px box during soma.state 16; the sparkle kind mapping to native animation 0xD and the emitter entity's own bounce are approximations. The runtime hands over to the frontend process (--frontend, --game-over) rather than switching mode in one process, and no save is touched (the native game over returns to the Konami logo). Death art verified: anim 0x33 maps to Soma/animation_051 (5 frames) in the exported runtime index, sound 0x197 plays on die(), state 16 drifts to a halt and the runtime spawns the documented sparkle every four frames; the sparkle entity's animation-0xD mapping remains approximate pending art audit. The post-game-over path (GAME_OVER -> KONAMI_LOGO -> TITLE -> file select) matches the native mode chain, so continuing reloads a save through the frontend file select. sub_0800C8C8 case 1 decodes a second branch: when unk_42C & 0x200000 is set the death reloads instead of game-over (unk_A074_1 = 0, unk_42C gets 0x800000, room transition sub_08011F44(0x085236A4) then sub_08011AD0, brightness decrease, GAME_MODE_IN_GAME); the flag is never set in the decompiled sources, so the branch is documented but unported. Soma's death (sub_0801AF20) enters the in-game death sub-state: sub_0800C8C8 fades BG to black over 0x40 frames and OBJ over 0x80 and enters GAME_OVER once the OBJ fade has ended. GameModeGameOverUpdate shows BG1 in 256 colours (tiles 0x080E5C08 and 0x080E5C10, palette 0x080E6A3C, map 0x080E9584; the background renderer now supports 8-bpp tiles), fades it in from black over 0x20 frames, waits 0x80 frames, creates the language's GAME OVER sprite at (0x80, 0xE) and blends it in over 0x20 frames (BLDALPHA from EVA 0 / EVB 16 to 16 / 0), waits for any new press, fades to white over 0x20 frames and returns to the Konami logo. The runtime runs the death fade (Soma died at frame 284 in room 0/3 and the game over followed at frame 412) and relaunches the frontend with --game-over, which shows the native painting and sprite from the ROM and continues through the boot modes. An offscreen render of the screen showed the native painting with 'Game Over'. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Compare the death sparkle animation and the emitter entity bounce, then identify where unk_42C bit 0x200000 is set (non-matching code or save data) to port the save-room reload.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_soma.c",
@@ -20383,6 +20383,12 @@
  },
  "timeline": [
   {
+   "commit": "a226cc33",
+   "date": "2026-11-08",
+   "subject": "Document the decoded obtain/reward window (patch 0831)",
+   "scope": "project"
+  },
+  {
    "commit": "43bd6840",
    "date": "2026-11-08",
    "subject": "Port the new-soul sparkle storm (sub_08045350/sub_080451F4)",
@@ -20854,12 +20860,6 @@
    "commit": "f64d7fe6",
    "date": "2026-11-07",
    "subject": "Lab: autonomous scout mode for early-game checkpoints",
-   "scope": "project"
-  },
-  {
-   "commit": "7cfdee5d",
-   "date": "2026-11-07",
-   "subject": "Lab: bandit action selection, guaranteed inputs, auto-checkpoints, real probes",
    "scope": "project"
   }
  ],

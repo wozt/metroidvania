@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0832 - Death and game-over audio ported; reload branch decoded
+
+- sub_0800C8C8 case 0 plays SONG_MUTE when the death sub-state
+  begins; the runtime now requests 0x1010 at the announced_death
+  point in aria_runtime.
+- GameModeGameOverUpdate's PlaySong calls are ported through a new
+  AosGameOver.song request drained by the frontend like the title's:
+  MUS_15 (song 15) at stage 0 and SONG_MUTE (0x1010) on the stage-3
+  press. Lifecycle init keeps song = -1 so no spurious request.
+- sub_0800C8C8 case 1's second branch is decoded: with unk_42C &
+  0x200000 set, the death reloads (unk_A074_1 = 0, unk_42C |=
+  0x800000, sub_08011F44 room transition on 0x085236A4,
+  sub_08011AD0, brightness decrease) and returns GAME_MODE_IN_GAME
+  instead of GAME_OVER. The flag is never set in the decompiled
+  sources — likely non-matching code or save data — so the branch
+  stays documented, not ported.
+
 ## Patch 0831 - Obtain/reward window decoded (not ported: no trigger)
 
 - The post-combat obtain window is a game-mode state machine, not a

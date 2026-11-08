@@ -27,7 +27,7 @@ void aos_fade_tick(AosPaletteFade *fade) {
 }
 
 void aos_death_start(AosGameOver *death) {
-    *death = (AosGameOver){0};
+    *death = (AosGameOver){.song = -1};
     aos_fade_start(&death->bg, 0, 0, 0, 0x10000, 0, 0x40);
     aos_fade_start(&death->obj, 0, 0, 0, 0x10000, 0, 0x80);
     death->eva = 0;
@@ -46,7 +46,8 @@ int32_t aos_game_over_update(AosGameOver *game_over, const AosInput *input) {
     switch (game_over->stage) {
     case 0:
         /* The BG1 256-colour screen (0x080E5C08, 0x080E5C10, palette
-         * 0x080E6A3C, map 0x080E9584) and MUS_15 (not played). */
+         * 0x080E6A3C, map 0x080E9584) and PlaySong(MUS_15). */
+        game_over->song = 15;
         aos_fade_start(&game_over->bg, 0, 0, 0, 0, 0x10000, 0x20);
         game_over->obj = (AosPaletteFade){0, 0, 0, 0x10000, 0x10000, 0, false};
         game_over->eva = 0;
@@ -82,6 +83,7 @@ int32_t aos_game_over_update(AosGameOver *game_over, const AosInput *input) {
             aos_fade_start(&game_over->obj, 0x1F, 0x1F, 0x1F, 0x10000, 0, 0x20);
             game_over->stage = 4;
             game_over->timer = 0;
+            game_over->song = 0x1010;           /* PlaySong(SONG_MUTE) */
         }
         break;
     case 4:

@@ -845,6 +845,11 @@ int aria_title_preview_main(int argc, char **argv) {
             aos_audio_play_song((uint16_t)lifecycle.title.song);
             lifecycle.title.song = -1;
         }
+        /* GameModeGameOverUpdate's PlaySong requests (MUS_15, SONG_MUTE). */
+        if (lifecycle.game_over.song >= 0) {
+            aos_audio_play_song((uint16_t)lifecycle.game_over.song);
+            lifecycle.game_over.song = -1;
+        }
         /* GameModeKonamiLogoUpdate's PlaySong(SE_428) after the code. */
         if (lifecycle.startup_logo.konami_code_sound_requested) {
             aos_audio_play_song(428);

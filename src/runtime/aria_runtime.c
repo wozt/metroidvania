@@ -6806,10 +6806,11 @@ int aria_runtime_main(int argc, char **argv) {
             if (has_active_save) active_save.play_frames++;
             if (soma.state == 16 && !announced_death) {
                 /* sub_0801AF20 enters the death sub-state (unk_64 = 2):
-                 * sub_0800C8C8 fades BG and OBJ to black (MUS mute is not
-                 * played). */
+                 * sub_0800C8C8 fades BG and OBJ to black and its case 0
+                 * plays SONG_MUTE. */
                 printf("Soma died (frame %ld)\n", step);
                 announced_death = true;
+                aos_audio_play_song(0x1010);
                 aos_death_start(&death);
             }
             if (announced_death && aos_death_update(&death)) {

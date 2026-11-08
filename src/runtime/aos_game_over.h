@@ -35,6 +35,7 @@ typedef struct {
     uint8_t eva, evb;       /* BLDALPHA: OBJ and BG1 weights (0-16) */
     bool sprite_shown;      /* the language's GAME OVER sprite exists */
     AosPaletteFade bg, obj;
+    int song;               /* PlaySong this frame, -1 for none */
 } AosGameOver;
 
 /* sub_0800C8C8 case 0 after sub_0801AF20 (Soma's death): music muted, BG

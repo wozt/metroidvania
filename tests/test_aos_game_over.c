@@ -29,11 +29,13 @@ int main(void) {
     assert(frames == 0x80 && death.bg.weight == 0 && death.obj.weight == 0);
 
     /* GameModeGameOverUpdate. */
-    AosGameOver over = {0};
+    AosGameOver over = {.song = -1};
     AosInput idle = {0}, press = {0};
     press.new_input = 1;
     assert(aos_game_over_update(&over, &idle) == AOS_MODE_SAME && over.stage == 1 &&
-           over.eva == 0 && over.evb == 16 && over.bg.weight == 0x800);
+           over.eva == 0 && over.evb == 16 && over.bg.weight == 0x800 &&
+           over.song == 15);                        /* PlaySong(MUS_15) */
+    over.song = -1;
     frames = 1;
     while (over.stage == 1) {
         aos_game_over_update(&over, &idle);
@@ -56,7 +58,8 @@ int main(void) {
     for (int i = 0; i < 50; ++i) assert(aos_game_over_update(&over, &idle) == AOS_MODE_SAME);
     assert(over.stage == 3);
     aos_game_over_update(&over, &press);
-    assert(over.stage == 4 && over.bg.r == 0x1F && over.obj.active);
+    assert(over.stage == 4 && over.bg.r == 0x1F && over.obj.active &&
+           over.song == 0x1010);                    /* PlaySong(SONG_MUTE) */
     int32_t mode = AOS_MODE_SAME;
     frames = 0;
     while (mode == AOS_MODE_SAME && frames < 100) {

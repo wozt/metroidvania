@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0851 - Bestiary soul text path decoded
+
+- sub_0804D1DC's tail renders the soul name/description through
+  sub_08047330 into the window at VRAM 0x0600E000, picking per-category
+  base text ids 0xF2/0x87/0x8D plus the soul index. Those bases differ
+  from the soul-set page's, so the id mapping needs verification before
+  the cell-engine port.
+
 ## Patch 0850 - Bestiary enemy portraits rendered
 
 - The detail page now draws the enemy sprite: sub_0804CA18 spawns a real

@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0839 - HUD notices cleared on room transitions (sub_0800EB04)
+
+- The native transition paths (the unk_42C |= 0x200 setters in
+  code_08050A3C) call sub_0800EB04 to drop the enemy/item notice, so
+  a notice never crosses a room change; Object1CCreate clears it too.
+- take_exit now calls the new aos_hud_clear_notice after a successful
+  room swap — previously a notice could linger into the next room.
+  The pause menu and the opening cutscene already cover the HUD, so
+  no menu-side hiding was needed.
+
 ## Patch 0838 - The 0x131B8 & 0x400 lock identified: Chaos's soul strip
 
 - sub_08031F3C's remaining gate flag is set by sub_08022184, called

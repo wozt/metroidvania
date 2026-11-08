@@ -150,6 +150,14 @@ void aos_hud_tick(AosHud *hud) {
     hud->revision++;
 }
 
+void aos_hud_clear_notice(AosHud *hud) {
+    if (!hud || !hud->notice_active) return;
+    clear_notice_map(hud);
+    hud->notice_active = false;
+    hud->notice_timer = 0;
+    hud->revision++;
+}
+
 /* One step of a shown value toward its target. */
 static bool chase(int16_t *shown, int16_t target) {
     if (*shown == target) return false;

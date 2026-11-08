@@ -64,6 +64,10 @@ bool aos_hud_show_enemy(AosHud *hud, const AosHudFont *font, const char *name);
 bool aos_hud_show_item(AosHud *hud, const AosHudFont *font, const char *name);
 /* sub_0800EFD4: expire the current enemy/item notice after 0xF0 frames. */
 void aos_hud_tick(AosHud *hud);
+/* sub_0800EB04: drop the notice at once — the native transition and
+ * scripted-clear paths call it so a notice never crosses a room
+ * change or a cutscene takeover. */
+void aos_hud_clear_notice(AosHud *hud);
 /* The BGR555 colour of screen pixel (x, y), false when transparent; tiles
  * holds 0x2000 bytes for tiles 0x200-0x2FF. Palette holds the initial rows
  * 13-14 followed by the row-14 item- and enemy-notice palettes. */

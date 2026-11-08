@@ -85,6 +85,9 @@ int main(void) {
     palette[64 + 0xF * 2] = 0x1F;
     assert(aos_hud_pixel(&hud, tiles, palette, 2 * 8, 19 * 8 - AOS_HUD_SCROLL_Y,
                          &color) && color == 0x001F);
+    /* sub_0800EB04: a scripted clear drops the notice before its timer. */
+    aos_hud_clear_notice(&hud);
+    assert(!hud.notice_active && !hud.notice_timer && at(0, 19) == 0);
     puts("Aria HUD tests passed");
     return 0;
 }

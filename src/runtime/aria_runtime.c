@@ -6856,6 +6856,8 @@ int aria_runtime_main(int argc, char **argv) {
             if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
                                  soma.y >> 16)) {
                 if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
+                /* sub_0800EB04: transitions clear the HUD notice. */
+                aos_hud_clear_notice(&hud);
                 clear_skills(&souls);
                 layer = room_layer(&room);
                 save_room = (AosSaveRoom){0};

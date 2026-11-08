@@ -2749,6 +2749,109 @@ static void bomber_armor_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x6F) == 1);
 }
 
+static void sky_fish_tests(void) {
+    /* Floor for the create's sub_0806AF98 snap (the dash repositions the
+     * fish anyway). */
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    /* anim_0 the swim (4 frames), anim_1 the death (11 frames); the
+     * durations are the exported ones. */
+    static const uint8_t swim[4] = {9, 10, 11, 12};
+    static const uint8_t death[11] = {1, 2, 3, 3, 4, 5, 6, 7, 8, 9, 12};
+    const AosAnimDef defs[2] = {{4, swim}, {11, death}};
+    const AosAnimSet anims = {defs, 2};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 2; ++a)
+        for (int f = 0; f < 11; ++f)
+            kind.modes[a][f] = 1;
+    for (int f = 0; f < 4; ++f) {
+        kind.hurt[0][f] = kind.attack[0][f] = (AosBox){-12, -4, 24, 8};
+    }
+    for (int n = 0; n < 8; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    const AosEnemyStats stats = {3, 0, 0, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create: state 0, hidden, the + 0x18 collision gate set, the
+     * + 0x1A countdown in [0x40, 0x7F] and the + 0x19 entry side. */
+    aos_random_seed(0x2468);
+    AosEnemy a;
+    assert(aos_enemy_create(&a, AOS_ENEMY_SKY_FISH, 200, 150, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(a.state == 0 && a.step == 0 && a.hidden && a.sf_gate == 1 &&
+           a.sf_timer >= 0x40 && a.sf_timer <= 0x7F);
+
+    /* Step 0 holds it hidden at the entry side with a random height in
+     * [32, 64) while + 0x1A counts down; then it shows itself and dashes
+     * at 26 px/frame toward its facing. */
+    int frames = 0;
+    while (a.step == 0 && frames < 200) {
+        (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+        ++frames;
+    }
+    assert(a.step == 1 && !a.hidden);
+    int32_t entry_x = a.sf_variant ? 0x1000000 : (int32_t)0xFFF00000;
+    assert(a.x == entry_x || a.x == entry_x + (int32_t)0x1A0000 * (a.mirrored ? 1 : -1));
+    assert(a.y >= 0x200000 && a.y < 0x200000 + 0x200000);
+    assert(a.vx == (a.mirrored ? 0x1A0000 : (int32_t)0xFFE60000));
+
+    /* Step 1: it crosses at 26 px/frame, a splash drift every frame, and
+     * despawns beyond the margin of entry 6 — it never collides. */
+    frames = 0;
+    int splashes = 0;
+    while (!a.removed && frames < 60) {
+        AosHitReport r = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                          0, 0, always_zero);
+        splashes += r.effect_count;
+        ++frames;
+    }
+    assert(a.removed && splashes > 0 && !a.hidden);
+
+    /* The flag path (0x8E & 0x40) is state 2: animation only. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&a, AOS_ENEMY_SKY_FISH, 200, 150, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(a.state == 2 && a.step == 1 && a.sf_gate == 1);
+    int32_t x0 = a.x;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(a.x == x0 && !a.removed);
+
+    /* State 1 (the lethal hurt callback's destination): it hangs with
+     * ay 0x4000 under the 4.0 limit, sinks, blinks on the timer pattern,
+     * bursts a bubble every eighth tick and is deleted at timer 0. */
+    assert(aos_enemy_create(&a, AOS_ENEMY_SKY_FISH, 200, 150, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    a.state = 1;
+    a.step = 0;
+    a.timer = 0x40;
+    a.hidden = false;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(a.step == 1 && a.vx == 0 && a.vy == 0x4000 && a.ay == 0x4000);
+    frames = 0;
+    int blinks = 0, bubbles = 0;
+    bool was_hidden = false;
+    while (!a.removed && frames < 100) {
+        AosHitReport r = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                          0, 0, always_zero);
+        bubbles += r.effect_count;
+        if (a.hidden) {
+            if (!was_hidden) ++blinks;
+            was_hidden = true;
+        } else {
+            was_hidden = false;
+        }
+        ++frames;
+    }
+    assert(a.removed && blinks > 0 && bubbles > 0 && a.y > 0x200000);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -5863,6 +5966,7 @@ int main(void) {
     armor_tests();
     rock_armor_tests();
     bomber_armor_tests();
+    sky_fish_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

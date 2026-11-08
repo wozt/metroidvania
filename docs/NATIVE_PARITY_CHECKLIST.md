@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 84 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 85 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1071 | 2502 |
+| Castlevania: Aria of Sorrow | 1081 | 2492 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1809,6 +1809,15 @@ Dependencies: `aos.enemies.lubicant`.
 Known divergences: As the Lubicant.  
 Next action: Compare the controller timing and requested sounds against an emulator capture.
 Evidence: in game: `aria area_08_room_013 (--spawn 100 176 --hp 9999): Skull Millione drops from above (frame 40), dives onto Soma (frame 100) and rises again (frame 160)`.
+
+[+] **`aos.enemies.sky_fish` — Sky Fish.** EnemySkyFishUpdate is ported from its traced routines: the create (sub_080A7C80) loads tiles 0x081CC0BC, palette 0x0820B000 bank 0 and frames 0x0822976C through sub_080A8194, arms the sub_0803F0E4 table 0x08528404 and, unless the global 0x8E & 0x40 sends it to state 2, installs the contact sub_080A81E0 and hurt sub_080A7FB8 callbacks, snaps to the floor and waits hidden with + 0x18 = 1, + 0x1A = 0x40 + (r & 0x3F) and + 0x19 = r & 1. State 0 (sub_080A7D58) plants it at -16 or 256 px and a random height in [32, 64), faces the player and counts + 0x1A down; then it shows itself and dashes across at 26 px/frame toward its facing, spawning the splash entity every frame until the margin of entry 6 deletes it. Because + 0x18 stays 1 the live fish never collides — it is invulnerable ambient decoration, as natively. State 1 (sub_080A7F08, reached only by the lethal hurt callback) hangs with ay 0x4000 under the 4.0 sub_0806D3D8 limit, blinks on the sub_0806D518 timer pattern, bursts a bubble every eighth timer tick and is deleted when the timer reaches 0; unit-tested in sky_fish_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_08060B98.s:sub_0806CF2C`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkyFishCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemySkyFishUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A7D58`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A7F08`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A7FB8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A8040`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A80F8`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A8194`, `aos:asm:asm/code/code_080A0A8C.s:sub_080A81E0`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_080211F0.c:sub_08021924`, `aos:c:src/code/code_08039340.c:sub_0803F0E4`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: the sub_080A8040 splash and sub_080A80F8 bubble entities on the shared tiles 0x081CC0BC are approximated by AOS_EFFECT_DUST drifts; the sub_08068AD4 proximity check only feeds the unported sub_08021924 activity list; the + 0x5C subtype counter passed to the spawners, the + 0x5A palette bits and the global pause gEwramData + 0x4BE are not ported; the death animation table 0x0852840C is approximated by animation 1; no emulator comparison.  
+Next action: Compare the dash height, speed and splash spacing against an emulator.
+Evidence: in game: `aria area_07_room_012 (--spawn 160 48): the Sky Fish waits hidden, then crosses the top of the screen and despawns at the far margin.`.
 
 [+] **`aos.enemies.tiny_devil` — Tiny Devil.** Palette bank 1, randomized 100..599-frame rest, 31-frame approach, animation-4 orb creation, animation-5/6 charge transition, aimed launch, native 10x10 projectile box, 60-frame projectile lifetime, contact combat, global inert state and 50-frame falling death are connected. Its death plays 0x72 (sub_080C580C step 0) and its orb's launch 0x89 (sub_080C5A44), unit-tested.
 

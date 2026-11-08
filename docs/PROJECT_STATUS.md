@@ -2,6 +2,55 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0868 - Sky Fish ported (id 81)
+
+- EnemySkyFishCreate (0x080A7C80) / EnemySkyFishUpdate
+  (0x080A7BD0) ported in src/runtime/aos_enemy.c behind
+  AOS_ENEMY_SKY_FISH (0x51) and the enemy_names[81] =
+  "sky_fish" kind row (objects.c ENTITY: graphics
+  0x081CC0BC, palette 0x0820B000 bank 0, frames
+  0x0822976C, art exported through --aria-export-objects).
+- The fish is ambient decoration: its + 0x18 collision
+  gate is set at create and never cleared, so the live
+  fish never runs the collision pass — invulnerable and
+  harmless, exactly as natively.
+- Create: the sub_0803F0E4 table 0x08528404 arms the
+  animations, the sub_0806AF98 floor snap runs, then
+  state 0 hidden with + 0x1A = 0x40 + (r & 0x3F) and
+  + 0x19 = r & 1; the global 0x8E & 0x40 path is state 2
+  (animation only).
+- State 0 sub_080A7D58: step 0 plants it at -16 or 256 px
+  by + 0x19, a random height in [32, 64), faces the
+  player (sub_0806CF2C) and counts + 0x1A down; at 1 it
+  shows itself and dashes at 26 px/frame toward its
+  facing. Step 1 integrates, spawns the sub_080A8040
+  splash entity every frame at a random offset and
+  despawns beyond the margin of entry 6 (sub_0806D128).
+  The native step-2 transition sits behind the pause
+  flag 0x4BE (always clear during updates) and is dead
+  code; documented.
+- State 1 sub_080A7F08 (reached only by the lethal hurt
+  callback sub_080A7FB8): hangs with ay 0x4000 under the
+  sub_0806D3D8 limit 4.0, blinks on the sub_0806D518
+  timer pattern (+ 0x58 bit 5), bursts the sub_080A80F8
+  bubble every eighth timer tick and is deleted when the
+  timer reaches 0.
+- Divergences documented: the splash and bubble entities
+  on the shared tiles are approximated by AOS_EFFECT_DUST
+  drifts, the sub_08068AD4 proximity check only feeds the
+  unported sub_08021924 activity list, the + 0x5C subtype
+  counter, the palette bits and the 0x4BE pause checks
+  are not ported, the death table 0x0852840C is
+  approximated by animation 1, no emulator comparison.
+- sky_fish_tests covers create (hidden, gate, countdown,
+  entry side), the step-0 wait and entry, the 26 px/frame
+  dash with per-frame splash effects and the margin
+  despawn, the flag-path state 2 and the state-1 hover
+  (sink, blink, bubbles, timer deletion).
+- The monster drops its blue soul 21 (record soul_type 1,
+  soul_index 21; routine 0x0802F1A5 unported — soul
+  column partial).
+
 ## Patch 0867 - Bomber Armor ported (id 58)
 
 - EnemyBomberArmorCreate (0x080B2DB8) / EnemyBomberArmorUpdate

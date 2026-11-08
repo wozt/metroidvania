@@ -593,6 +593,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MINOTAUR && id != AOS_ENEMY_RED_MINOTAUR &&
         id != AOS_ENEMY_GIANT_WORM && id != AOS_ENEMY_POISON_WORM &&
         id != AOS_ENEMY_BIPHRON && id != AOS_ENEMY_BOMBER_ARMOR &&
+        id != AOS_ENEMY_SKY_FISH &&
         id != AOS_BOSS_HEADHUNTER)
         return false;
     const AosAnimSet *anims = kind->anims;
@@ -920,6 +921,34 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         snap_to_floor(enemy, layer);
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_SKY_FISH) {
+        /* EnemySkyFishCreate (sub_080A7C80): sub_080A8194 loads tiles
+         * 0x081CC0BC, palette 0x0820B000 bank 0 and frames 0x0822976C;
+         * the sub_0803F0E4 animation table 0x08528404 is the kind's, then
+         * sub_0803F17C/sub_0806B04C. Under the global 0x8E & 0x40 it is
+         * state 2; otherwise the contact callback sub_080A81E0 and the
+         * hurt callback sub_080A7FB8, the box refresh sub_0806B1FC, the
+         * sub_0806AF98 floor snap, state 0, + 0x18 = 1 (no collisions),
+         * + 0x1A = 0x40 + (r & 0x3F), + 0x58 |= 0x20 (hidden) and
+         * + 0x19 = r & 1 (the entry side). The RNG call order of + 0x1A
+         * and + 0x19 and the variant palette bits are approximations. */
+        play_loop(enemy, anims, 0, false);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 2;
+            enemy->step = 1;
+            enemy->sf_gate = 1;
+            enemy->vx = enemy->mirrored ? 0x1A0000 : (int32_t)0xFFE60000;
+            return true;
+        }
+        snap_to_floor(enemy, layer);
+        enemy->state = 0;
+        enemy->sf_gate = 1;
+        enemy->sf_timer = (int16_t)(0x40 + (aos_random() & 0x3F));
+        enemy->sf_variant = (uint8_t)(aos_random() & 1);
+        enemy->hidden = true;
         return true;
     }
     if (id == AOS_ENEMY_AXE_ARMOR) {
@@ -1723,6 +1752,16 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0;
+                } else if (enemy->id == AOS_ENEMY_SKY_FISH &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080A7FB8: at the lethal blow the palette merge
+                     * is skipped, the death animation of table 0x0852840C
+                     * plays (approximated by animation 1), + 0x0D = 0x40,
+                     * state 1, step 0. */
+                    play_loop(enemy, kind->anims, 1, false);
+                    enemy->timer = 0x40;
+                    enemy->state = 1;
+                    enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_0807D88C: its update finishes the death. */
@@ -13035,6 +13074,94 @@ static AosHitReport bomber_update(AosEnemy *a, AosSoma *soma, const AosCollision
     return report;
 }
 
+/* Sky Fish state 0 (sub_080A7D58): the entry waits out + 0x1A while hidden,
+ * then crosses the top of the screen. Step 0 plants it on the entry side
+ * (+ 0x19: -16 or 256 px), a random height in [32, 64), faces the player
+ * (sub_0806CF2C) and counts + 0x1A down; at 1 it shows itself and dashes
+ * at 26 px/frame toward its facing. Step 1 integrates, spawns the splash
+ * entity sub_080A8040 at a random offset every frame and despawns beyond
+ * the margin of entry 6 (sub_0806D128). The native step-2 transition sits
+ * behind the pause flag 0x4BE (always clear during updates), so the fish
+ * keeps step 1; its + 0x18 gate stays 1 and it never collides. */
+static void sky_fish_dash(AosEnemy *a, const AosSoma *soma, const AosEnemyKind *kind,
+                          int cam_x, int cam_y, uint32_t (*random)(void),
+                          AosHitReport *report) {
+    if (a->step == 0) {
+        a->x = a->sf_variant ? 0x1000000 : (int32_t)0xFFF00000;
+        a->y = 0x200000 + (int32_t)(random() & 0x1FFFFF);
+        soldier_face(a, soma);
+        if (a->sf_timer-- > 1) return;
+        a->step = 1;
+        a->hidden = false;
+        a->vx = a->mirrored ? 0x1A0000 : (int32_t)0xFFE60000;
+        return;
+    }
+    int32_t tx = a->x + (int32_t)(random() & 0xFFFFF) - 0x80000;
+    int32_t ty = a->y + (int32_t)(random() & 0xFFFFF) - 0x80000;
+    a->x += a->vx;
+    a->y += a->vy;
+    /* sub_080A8040's splash entity on the shared tiles is approximated by
+     * a dust drift at the native random offset. */
+    spawn_drift(AOS_EFFECT_DUST, tx, ty, report);
+    if (outside_margins(kind, 6, (a->x >> 16) - cam_x, (a->y >> 16) - cam_y))
+        a->removed = true;
+}
+
+/* Sky Fish state 1 (sub_080A7F08, reached only by the lethal hurt
+ * callback): it hangs with ay 0x4000 under the sub_0806D3D8 limit 4.0,
+ * blinks on sub_0806D518's timer pattern (+ 0x58 bit 5) and bursts a bubble
+ * entity sub_080A80F8 every eighth timer tick at a small random offset;
+ * the timer reaching 0 sets + 0x59 bit 3 and it is deleted. */
+static void sky_fish_hover(AosEnemy *a, const AosEnemyKind *kind,
+                           uint32_t (*random)(void), AosHitReport *report) {
+    if (a->step == 0) {
+        a->step = 1;
+        a->vx = a->vy = a->ax = 0;
+        a->ay = 0x4000;
+    }
+    accel_move(a, 0x40000);
+    a->hidden = a->timer <= 0x28 && (kind->blink[a->timer] & 1);
+    if ((a->timer & 7) == 0) {
+        int32_t bx = a->x + (int32_t)(random() & 0x7FFFF) - 0x40000;
+        int32_t by = a->y + (int32_t)(random() & 0xFFFFF) - 0x80000;
+        spawn_drift(AOS_EFFECT_DUST, bx, by, report);
+    }
+    if (--a->timer == 0) a->removed = true;
+}
+
+/* EnemySkyFishUpdate (0x080A7BD0): the sub_08068AD4 proximity check only
+ * feeds the activity list of sub_08021924 (not ported); sub_0806AD24
+ * stuns it while flashing. States 0/1 then step the animation in the
+ * common tail, refresh the boxes on a frame change (automatic here) and
+ * collide only outside state 1 with the + 0x18 gate clear — which the
+ * create never clears, so a live Sky Fish is invulnerable decoration.
+ * State 2 (the 0x8E & 0x40 flag path) only steps its animation. */
+static AosHitReport sky_fish_update(AosEnemy *enemy, AosSoma *soma,
+                                    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+                                    const AosWeaponFrames *weapon_frames, int soma_atk,
+                                    int soma_def, int cam_x, int cam_y,
+                                    uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    if (enemy->hp > 0 && enemy->hit_flash) {
+        enemy->hit_flash--;
+    } else if (enemy->state == 2) {
+        step_anim(enemy, kind->anims);
+        aos_combat_tick(&enemy->combat);
+        return report;
+    } else {
+        if (enemy->state == 0)
+            sky_fish_dash(enemy, soma, kind, cam_x, cam_y, random, &spawned);
+        else if (enemy->state == 1)
+            sky_fish_hover(enemy, kind, random, &spawned);
+        step_anim(enemy, kind->anims);
+    }
+    if (enemy->state != 1 && enemy->sf_gate == 0)
+        report = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&enemy->combat);
+    take_effects(&report, &spawned);
+    return report;
+}
+
 static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                                  const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -13398,6 +13525,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->id == AOS_ENEMY_BOMBER_ARMOR && enemy->role == AOS_ROLE_ENEMY)
         return bomber_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                              soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_SKY_FISH && enemy->role == AOS_ROLE_ENEMY)
+        return sky_fish_update(enemy, soma, kind, weapon, weapon_frames,
+                               soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ROCK_ARMOR && enemy->role == AOS_ROLE_ENEMY)
         return rock_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                  soma_def, cam_x, cam_y, random);

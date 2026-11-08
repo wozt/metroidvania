@@ -171,6 +171,9 @@ static const EntitySpec entities[] = {
      * has its own frame set (0x0823EC00: walk 0, throw 1, death 2, bomb 3,
      * fuse spark 4-6). */
     ENTITY("bomber_armor", 0x081E41BC, 0x0820B83C, 0, 0x0823EC00),
+    /* Sky Fish (sub_080A8194): tiles 0x081CC0BC, palette 0x0820B000 bank 0,
+     * frame table 0x0822976C shared with its splash effect entities. */
+    ENTITY("sky_fish", 0x081CC0BC, 0x0820B000, 0, 0x0822976C),
     ENTITY("giant_ghost", 0x081CBFA4, 0x0820A698, 0, 0x08219140),
     /* The Winged Skeleton and its death pieces (frames 0x24-0x2A of
      * sub_0807540C). */

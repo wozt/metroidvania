@@ -167,6 +167,7 @@ enum {
     AOS_ENEMY_POISON_WORM = 0x47,
     AOS_ENEMY_BIPHRON = 0x4E,
     AOS_ENEMY_BOMBER_ARMOR = 0x3A,
+    AOS_ENEMY_SKY_FISH = 0x51,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -353,6 +354,13 @@ typedef struct AosEnemy {
     uint8_t worm_wait, worm_dir, worm_index, worm_lunge;
     uint16_t worm_phase;
     struct AosEnemy *follow;
+    /* Sky Fish (sub_080A7C80 create, sub_080A7D58 dash, sub_080A7F08
+     * hover/death): + 0x18 s8 the collision gate (0 collides), + 0x19 the
+     * entry side (0 left, 1 right), + 0x1A the entry countdown (0x40 +
+     * (r & 0x3F)). */
+    int8_t sf_gate;
+    uint8_t sf_variant;
+    int16_t sf_timer;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

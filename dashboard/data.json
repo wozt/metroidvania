@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T23:33:13+00:00",
+ "generated_at": "2026-11-08T23:49:19+00:00",
  "git": {
-  "commit": "98ffd18c",
+  "commit": "c705dffb",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 229,
+   "total": 230,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 55,
-    "functional": 163,
+    "functional": 164,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 163,
-   "functional_or_better_percent": 71.2,
-   "with_passing_tests": 215,
+   "functional_or_better": 164,
+   "functional_or_better_percent": 71.3,
+   "with_passing_tests": 216,
    "with_passing_tests_percent": 93.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -250,6 +250,7 @@
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
+    "aos.enemies.sky_fish",
     "aos.enemies.tiny_devil",
     "aos.enemies.valkyrie",
     "aos.enemies.white_dragon",
@@ -463,20 +464,20 @@
    "areas": [
     "aos"
    ],
-   "total": 84,
+   "total": 85,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 56,
+    "functional": 57,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 56,
-   "functional_or_better_percent": 66.7,
-   "with_passing_tests": 84,
+   "functional_or_better": 57,
+   "functional_or_better_percent": 67.1,
+   "with_passing_tests": 85,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -529,6 +530,7 @@
     "aos.enemies.skeleton_knight",
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
+    "aos.enemies.sky_fish",
     "aos.enemies.tiny_devil",
     "aos.enemies.valkyrie",
     "aos.enemies.white_dragon",
@@ -12605,6 +12607,95 @@
    }
   },
   {
+   "id": "aos.enemies.sky_fish",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Sky Fish",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemySkyFishCreate",
+    "EnemySkyFishUpdate",
+    "sub_080A7D58",
+    "sub_080A7F08",
+    "sub_080A7FB8",
+    "sub_080A8040",
+    "sub_080A80F8",
+    "sub_080A8194",
+    "sub_080A81E0",
+    "sub_0806D3AC",
+    "sub_0806D3D8",
+    "sub_0806D128",
+    "sub_0806D518",
+    "sub_0806CF2C",
+    "sub_0806AD24",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0803F0E4",
+    "sub_0803F17C",
+    "sub_0803F2C8",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_080421AC",
+    "sub_08021654"
+   ],
+   "limitations": "the sub_080A8040 splash and sub_080A80F8 bubble entities on the shared tiles 0x081CC0BC are approximated by AOS_EFFECT_DUST drifts; the sub_08068AD4 proximity check only feeds the unported sub_08021924 activity list; the + 0x5C subtype counter passed to the spawners, the + 0x5A palette bits and the global pause gEwramData + 0x4BE are not ported; the death animation table 0x0852840C is approximated by animation 1; no emulator comparison. EnemySkyFishUpdate is ported from its traced routines: the create (sub_080A7C80) loads tiles 0x081CC0BC, palette 0x0820B000 bank 0 and frames 0x0822976C through sub_080A8194, arms the sub_0803F0E4 table 0x08528404 and, unless the global 0x8E & 0x40 sends it to state 2, installs the contact sub_080A81E0 and hurt sub_080A7FB8 callbacks, snaps to the floor and waits hidden with + 0x18 = 1, + 0x1A = 0x40 + (r & 0x3F) and + 0x19 = r & 1. State 0 (sub_080A7D58) plants it at -16 or 256 px and a random height in [32, 64), faces the player and counts + 0x1A down; then it shows itself and dashes across at 26 px/frame toward its facing, spawning the splash entity every frame until the margin of entry 6 deletes it. Because + 0x18 stays 1 the live fish never collides — it is invulnerable ambient decoration, as natively. State 1 (sub_080A7F08, reached only by the lethal hurt callback) hangs with ay 0x4000 under the 4.0 sub_0806D3D8 limit, blinks on the sub_0806D518 timer pattern, bursts a bubble every eighth timer tick and is deleted when the timer reaches 0; unit-tested in sky_fish_tests.",
+   "next_action": "Compare the dash height, speed and splash spacing against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_07_room_012 (--spawn 160 48): the Sky Fish waits hidden, then crosses the top of the screen and despawns at the far margin."
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-08"
+   }
+  },
+  {
    "id": "aos.enemies.tiny_devil",
    "area": "aos",
    "category": "enemies",
@@ -20962,6 +21053,12 @@
  },
  "timeline": [
   {
+   "commit": "c705dffb",
+   "date": "2026-11-09",
+   "subject": "Port Bomber Armor enemy (Aria id 58) with bomb, fuse spark and burst",
+   "scope": "project"
+  },
+  {
    "commit": "98ffd18c",
    "date": "2026-11-09",
    "subject": "Port Biphron enemy (Aria id 78) with attack projectile",
@@ -21434,12 +21531,6 @@
    "date": "2026-11-08",
    "subject": "Render hub info line through the native menu cell engine",
    "scope": "project"
-  },
-  {
-   "commit": "209c6cbf",
-   "date": "2026-11-08",
-   "subject": "Port Aria menu cell window init and expose tile commit path",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -21500,9 +21591,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1071,
-    "routines_attached_to_features": 1071,
-    "unassigned_routines": 2502,
+    "routines_cited_by_features": 1081,
+    "routines_attached_to_features": 1081,
+    "unassigned_routines": 2492,
     "call_edges": 14228
    }
   },
@@ -23744,12 +23835,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 53,
-      "functional_or_better": 53,
-      "functional_or_better_percent": 51,
+      "implemented": 54,
+      "functional_or_better": 54,
+      "functional_or_better_percent": 52,
       "by_status": {
-       "functional": 53,
-       "not_started": 49
+       "functional": 54,
+       "not_started": 48
       }
      },
      "bosses": {
@@ -25418,13 +25509,28 @@
      {
       "id": 81,
       "name": "Sky Fish",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Sky Fish",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_07_room_012 (--spawn 160 48): the Sky Fish waits hidden, then crosses the top of the screen and despawns at the far margin."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.sky_fish",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "blue:21",
+       "notes": "Soul: drops (soul_rarity 1 through the generic roll, no common or rare item in the record) and is collected, but its blue soul 21 (routine 0x0802F1A5) has no ported update yet. Animations: ported from EnemySkyFishCreate (0x080A7C80) / EnemySkyFishUpdate (0x080A7BD0) and the sub_080A7D58 / sub_080A7F08 state handlers — animation 0 looping swim across the top of the screen, animation 1 the death hover; unit-tested in sky_fish_tests. Sounds: no PlaySong in its traced routines; the contact hit resolver is the shared one. Divergences: the fish is ambient decoration — its + 0x18 collision gate is never cleared so it never collides (invulnerable and harmless, as natively); the sub_080A8040 splash and sub_080A80F8 bubble entities on the shared tiles are approximated by AOS_EFFECT_DUST drifts, the sub_08068AD4 proximity check only feeds the unported sub_08021924 activity list, the sub_0806D518 blink uses the shared kind->blink table, the + 0x5C subtype counter and the 0x4BE pause checks are not ported, the death animation table 0x0852840C is approximated by animation 1, and there is no emulator comparison."
       }
      },
      {
@@ -25972,17 +26078,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 53,
+      "ported": 54,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 53,
+      "ported": 54,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 53,
+      "ported": 54,
       "partial": 0,
       "missing": 0
      },
@@ -25993,11 +26099,11 @@
      },
      "soul": {
       "ported": 51,
-      "partial": 2,
+      "partial": 3,
       "missing": 0
      },
      "complete": 51,
-     "monsters": 53
+     "monsters": 54
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -31072,7 +31178,7 @@
        "id": "06:15",
        "name": "Sky Fish",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_rarity 1 through the generic roll, no common or rare item in the record) and is collected, but its blue soul 21 (routine 0x0802F1A5) has no ported update yet. Animations: ported from EnemySkyFishCreate (0x080A7C80) / EnemySkyFishUpdate (0x080A7BD0) and the sub_080A7D58 / sub_080A7F08 state handlers — animation 0 looping swim across the top of the screen, animation 1 the death hover; unit-tested in sky_fish_tests. Sounds: no PlaySong in its traced routines; the contact hit resolver is the shared one. Divergences: the fish is ambient decoration — its + 0x18 collision gate is never cleared so it never collides (invulnerable and harmless, as natively); the sub_080A8040 splash and sub_080A80F8 bubble entities on the shared tiles are approximated by AOS_EFFECT_DUST drifts, the sub_08068AD4 proximity check only feeds the unported sub_08021924 activity list, the sub_0806D518 blink uses the shared kind->blink table, the + 0x5C subtype counter and the 0x4BE pause checks are not ported, the death animation table 0x0852840C is approximated by animation 1, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

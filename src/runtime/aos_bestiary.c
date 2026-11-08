@@ -75,6 +75,7 @@ unsigned aos_bestiary_update(AosBestiaryMenu *menu, const AosStats *stats,
         if (new_input & AOS_KEY_B) {
             menu->detail = false;
             menu->soul_view = false;
+            menu->intro = 0; /* list re-init replays the +0xC intro */
             return AOS_BESTIARY_BACK;
         }
         if (repeated_input & (AOS_KEY_RIGHT | AOS_KEY_R))

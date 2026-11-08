@@ -108,6 +108,9 @@ typedef struct {
     uint8_t soul_index;            /* +0x18, index + 1; 0 = no soul */
     uint8_t soul_owned;            /* SoulInventory_GetSoulTotal != 0 */
     uint8_t soul_view;             /* menu soul-view toggle */
+    /* sub_0804D2C8's +0xC intro phase on the list view: 0 draws only
+     * the row strips, 1 adds names/numbers, 2+ adds the footer. */
+    uint8_t intro_phase;
 } AosPauseEnemyValues;
 
 enum {

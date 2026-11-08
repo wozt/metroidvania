@@ -569,6 +569,10 @@ static unsigned update_enemy(AosSoulMenu *menu, const AosStats *stats,
         menu->open = false;
         return AOS_SOUL_MENU_CLOSED;
     }
+    /* sub_0804D2C8: +0xC advances one intro phase per frame on the
+     * list view until the steady-state footer phase. */
+    if (!menu->enemy.detail && menu->enemy.intro < 2)
+        ++menu->enemy.intro;
     bool was_detail = menu->enemy.detail;
     unsigned event = aos_bestiary_update(&menu->enemy, stats, new_input, repeated_input);
     if (event == AOS_BESTIARY_MOVED) return AOS_SOUL_MENU_MOVED;

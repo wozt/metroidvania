@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0858 - Bestiary +0xC intro phases ported
+
+- sub_0804D2C8's phase counter now drives the list render:
+  phase 0 draws only the row strips, phase 1 adds names and
+  numbers, phase 2 adds the footer (page numbers, labels,
+  button hints). AosBestiaryMenu.intro ticks once per frame in
+  update_enemy and resets on list re-entry.
+- Remaining on the list page: weakness labels and emulator
+  validation of the exact phase boundaries.
+
 ## Patch 0857 - Bestiary button-hint glyphs ported
 
 - The four controller glyphs 0x84-0x87 now render through the

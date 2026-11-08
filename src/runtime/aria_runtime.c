@@ -4884,6 +4884,7 @@ static bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
         .top = menu->enemy.top,
         .cursor = menu->enemy.cursor,
         .detail = menu->enemy.detail,
+        .intro_phase = menu->enemy.intro,
     };
     memcpy(values.defeated, stats->defeated, sizeof values.defeated);
     memcpy(values.dropped, stats->dropped, sizeof values.dropped);

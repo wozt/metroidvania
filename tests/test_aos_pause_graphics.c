@@ -354,11 +354,26 @@ int main(int argc, char **argv) {
                 assert(icon_pixel);
             }
         }
-        /* sub_0804D2C8 list: strips, names gated by defeated bits, big
-         * enemy numbers. Enemies 0 and 11 defeated on page 0/10. */
+        /* sub_0804D2C8 intro phases: +0xC 0 draws only the row
+         * strips, 1 adds names/numbers, 2 adds the footer. Enemies 0
+         * and 11 defeated on page 0/10. */
         {
-            AosPauseEnemyValues enemy = {.top = 0, .cursor = 0};
+            AosPauseEnemyValues enemy = {.top = 0, .cursor = 0,
+                                         .intro_phase = 2};
             enemy.defeated[0] = 1u | (1u << 11); /* enemies 0 and 11 */
+            /* Phase 0: strips present, names and footer absent. */
+            AosPauseEnemyValues intro0 = enemy;
+            intro0.intro_phase = 0;
+            assert(aos_pause_graphics_render_enemy(&graphics, &intro0,
+                                                   rgba, 240 * 160 * 4));
+            assert(graphics.bg0_map[5 * 32 + 25] == 0xF335);
+            assert(graphics.bg0_map[0x11 * 32 + 0xE] != 0x139B);
+            /* Phase 1: names/numbers present, footer still absent. */
+            AosPauseEnemyValues intro1 = enemy;
+            intro1.intro_phase = 1;
+            assert(aos_pause_graphics_render_enemy(&graphics, &intro1,
+                                                   rgba, 240 * 160 * 4));
+            assert(graphics.bg0_map[0x11 * 32 + 0xE] != 0x139B);
             assert(aos_pause_graphics_render_enemy(&graphics, &enemy,
                                                    rgba, 240 * 160 * 4));
             /* Slot strips at columns 6/0x14 rows 5+2*(slot/2); the big

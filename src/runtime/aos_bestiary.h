@@ -27,6 +27,9 @@ typedef struct {
     uint8_t top;
     bool detail;
     bool soul_view;
+    /* sub_0804D2C8's +0xC intro phase: 0 strips, 1 names/numbers,
+     * 2 footer (steady state). */
+    uint8_t intro;
 } AosBestiaryMenu;
 
 void aos_bestiary_init(AosBestiaryMenu *menu);

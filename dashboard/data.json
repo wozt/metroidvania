@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T10:16:17+00:00",
+ "generated_at": "2026-11-08T10:21:30+00:00",
  "git": {
-  "commit": "e8c8a3a8",
+  "commit": "8d1bb669",
   "branch": "main",
   "dirty": true
  },
@@ -13533,7 +13533,7 @@
     "sub_08040FE0",
     "sub_08041338"
    ],
-   "limitations": "The page now draws its native BG0 layout: the four slot-row strip pairs at columns 2/0x11 rows 11-14, the three description bars at column 5 rows 16-18, localized names (text 0x5B+item) through the context-B cursor, 0x3300 quantity digits ending at columns 0xD/0x1C and the 0x330D dash pairs of sub_08047098 for empty slots. Item icons remain OBJ sprites, the description popup's exact window placement is approximated on the bars, the eight-slot scroll window is source-adapted rather than the native update's exact paging, and the page is not emulator-compared. The page uses a diagnostic SDL text list instead of native tilemaps, item icons, localized descriptions, cursor OAM and transitions. Poison, curse and stone can be cleared in AosStats, but their gameplay infliction and timers are not connected. The rotten-food immunity flag at unk_13260 bit 0x100000 and its full sound sequence are absent. Item names are identified in English only. Key items are visible and refused but their progression consumers are not reconstructed. The C11 Aria object exporter writes all 32 ROM item records to metadata/item_use.tsv with icon, effect kind and amount. Item Use draws the native BG0 grid and lists only owned records and names all 25 consumables plus seven key items. A applies fixed HP healing, native-divisor proportional MP recovery, poison or curse mask clearing, or rotten-food damage floored at one HP; it refuses full meters, absent statuses and key items without decrementing inventory. Successful use decrements the schema-v7 inventory, updates runtime HP or MP immediately and requests the native menu sound. Source-derived, golden-tested and unit-tested, not emulator-compared Item-icon call order decoded from sub_0804B494: per slot sub_08040970(x, 0xC+slot/2, 0xE, 1) sets the cell rect, sub_08041204 walks it through sub_080411AC/sub_080410BC, sub_0804090C((slot&1)*0x80, row) stamps the icon descriptor {icon/6 row, slot, icon%6 col} into gEwramData+0x115B2, names go through sub_08041434/sub_08041338 and quantities through sub_08046EF4. Decode update: sub_0804B6C4 sets window sub_08040748(0,0,0x20,2) (32 six-pixel cols x 2 twelve-pixel rows) after clearing with sub_08040FE0 and writing BG0 strips via sub_08046DD4; sub_0804B494 then walks up to 8 visible slots of the 32-entry inventory at +0x38 — per slot sub_08040970(x in {0,0x15}, y=0xC+(slot>>1), w=0xE, h=1) + sub_08041204 clears the icon cells, sub_0804090C stamps the icon descriptor (icon id = first halfword of the 16-byte record at 0x08505B3C+item*16, flag 0x80 on odd slots), the name prints through sub_08041434->sub_08041338 (context B small font, name id via halfword table 0x08506734+icon*2) and the quantity through sub_08046EF4 right-aligned digits; empty slots get sub_08047098 dash pairs and text 0x34F when the page is empty. The icon pixels themselves come from the 6-column icon sheet described by the descriptor — still unported.",
+   "limitations": "The page now draws its native BG0 layout: the four slot-row strip pairs at columns 2/0x11 rows 11-14, the three description bars at column 5 rows 16-18, localized names (text 0x5B+item) through the context-B cursor, 0x3300 quantity digits ending at columns 0xD/0x1C and the 0x330D dash pairs of sub_08047098 for empty slots. Item icons remain OBJ sprites, the description popup's exact window placement is approximated on the bars, the eight-slot scroll window is source-adapted rather than the native update's exact paging, and the page is not emulator-compared. The page uses a diagnostic SDL text list instead of native tilemaps, item icons, localized descriptions, cursor OAM and transitions. Poison, curse and stone can be cleared in AosStats, but their gameplay infliction and timers are not connected. The rotten-food immunity flag at unk_13260 bit 0x100000 and its full sound sequence are absent. Item names are identified in English only. Key items are visible and refused but their progression consumers are not reconstructed. The C11 Aria object exporter writes all 32 ROM item records to metadata/item_use.tsv with icon, effect kind and amount. Item Use draws the native BG0 grid and lists only owned records and names all 25 consumables plus seven key items. A applies fixed HP healing, native-divisor proportional MP recovery, poison or curse mask clearing, or rotten-food damage floored at one HP; it refuses full meters, absent statuses and key items without decrementing inventory. Successful use decrements the schema-v7 inventory, updates runtime HP or MP immediately and requests the native menu sound. Source-derived, golden-tested and unit-tested, not emulator-compared Item-icon call order decoded from sub_0804B494: per slot sub_08040970(x, 0xC+slot/2, 0xE, 1) sets the cell rect, sub_08041204 walks it through sub_080411AC/sub_080410BC, sub_0804090C((slot&1)*0x80, row) stamps the icon descriptor {icon/6 row, slot, icon%6 col} into gEwramData+0x115B2, names go through sub_08041434/sub_08041338 and quantities through sub_08046EF4. Decode update: sub_0804B6C4 sets window sub_08040748(0,0,0x20,2) (32 six-pixel cols x 2 twelve-pixel rows) after clearing with sub_08040FE0 and writing BG0 strips via sub_08046DD4; sub_0804B494 then walks up to 8 visible slots of the 32-entry inventory at +0x38 — per slot sub_08040970(x in {0,0x15}, y=0xC+(slot>>1), w=0xE, h=1) + sub_08041204 clears the icon cells, sub_0804090C stamps the icon descriptor (icon id = first halfword of the 16-byte record at 0x08505B3C+item*16, flag 0x80 on odd slots), the name prints through sub_08041434->sub_08041338 (context B small font, name id via halfword table 0x08506734+icon*2) and the quantity through sub_08046EF4 right-aligned digits; empty slots get sub_08047098 dash pairs and text 0x34F when the page is empty. The icon pixels themselves come from the 6-column icon sheet described by the descriptor — still unported. Decode update: sub_08040898 is the context-B cursor setter (clamp 40/31, same units as window_b) and sub_08040BDC/sub_08040E10 are the positioned context-A/B print helpers. Context-B chars 0x80-0x8D carry real glyph bitmaps in table 0x08509876 (button-prompt shapes; 0x88+ are empty) and render through the already-ported print_b path; item icons proper remain a separate descriptor/sprite layer — confirmed by probing the ROM: the sub_08041434 dispatch table 0x08506B38 entries point directly at ASCII script data (item 0 name_id 0x5B resolves to \"Potion\"), so name scripts embed no icon glyphs and the 4090C descriptor must feed the OAM/sprite path, not the cell engine.",
    "next_action": "Connect poison, curse and stone infliction and timers, then render native icons and localized descriptions and reconstruct key-item progression consumers.",
    "evidence": {
     "unit_tests": [
@@ -20362,6 +20362,24 @@
  },
  "timeline": [
   {
+   "commit": "8d1bb669",
+   "date": "2026-11-08",
+   "subject": "Port context-B cursor and positioned print helpers",
+   "scope": "project"
+  },
+  {
+   "commit": "b48f39e3",
+   "date": "2026-11-08",
+   "subject": "Decode context-B cursor, positioned printers and icon glyphs",
+   "scope": "project"
+  },
+  {
+   "commit": "40012c0a",
+   "date": "2026-11-08",
+   "subject": "Port the context-B window setter sub_08040970",
+   "scope": "project"
+  },
+  {
    "commit": "e8c8a3a8",
    "date": "2026-11-08",
    "subject": "Decode the Item Use page window and slot pipeline n sub_0804B6C4 sets sub_08040748(0,0,0x20,2) and sub_0804B494 walks up to 8 inventory slots: sub_08040970 icon rects, sub_0804090C icon descriptors from 16-byte records at 0x08505B3C, context-B names via sub_08041434->sub_08041338 (id table 0x08506734), quantities via sub_08046EF4, dash pairs via sub_08047098, empty text 0x34F.",
@@ -20821,24 +20839,6 @@
    "commit": "c7539b88",
    "date": "2026-11-07",
    "subject": "Note Object1C as the only direct window-calling object",
-   "scope": "project"
-  },
-  {
-   "commit": "915cadc5",
-   "date": "2026-11-07",
-   "subject": "Correct Object20 scope: cutscene people, not ambient NPCs",
-   "scope": "project"
-  },
-  {
-   "commit": "65f3d06f",
-   "date": "2026-11-07",
-   "subject": "Decode Object20 spawn path and entity param fields",
-   "scope": "project"
-  },
-  {
-   "commit": "5579c984",
-   "date": "2026-11-07",
-   "subject": "Note the engine-side object dispatch indirection",
    "scope": "project"
   }
  ],

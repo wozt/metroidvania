@@ -1312,6 +1312,14 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
                            found ? 15 : 14, &next_tile))
             return false;
     }
+    /* sub_0804C668 header/footer strips drawn at page enter:
+     * 0xF3D0 x14 title strip at (0xB,3), 0xF3E0 x4 and the three
+     * single tiles 0x13E4/0x13E8/0xF3EA along row 0xF. */
+    put_tiles(graphics, 0xB, 3, 0xF3D0, 0xE);
+    put_tiles(graphics, 0x11, 0xF, 0xF3E0, 4);
+    put_tiles(graphics, 0x15, 0xF, 0x13E4, 1);
+    put_tiles(graphics, 0x19, 0xF, 0x13E8, 1);
+    put_tiles(graphics, 0x1B, 0xF, 0xF3EA, 1);
     composite(graphics, rgba);
     /* sub_0804C668/sub_0804C770: column 2 or 0x10 on the slot's bit 0,
      * row 5 + slot/2 where slot = cursor - top on the ten-entry page. */
@@ -1371,6 +1379,10 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
     unsigned enemy = values->cursor;
     reset_bg0(graphics);
     clear_bg0_tiles(graphics, 0x380, 0x80);
+    /* sub_0804C968 header strips: 0x1320 x10 at (0x12,8) and
+     * 0x1330 x10 at (0x12,9). */
+    put_tiles(graphics, 0x12, 8, 0x1320, 0xA);
+    put_tiles(graphics, 0x12, 9, 0x1330, 0xA);
     unsigned next_tile = 0;
     /* sub_0804CDF4 header numbers. */
     put_dashes(graphics, 6, 1, 1);

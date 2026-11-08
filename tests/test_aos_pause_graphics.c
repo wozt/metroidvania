@@ -366,6 +366,13 @@ int main(int argc, char **argv) {
              * cells past the number reach (col 25). */
             assert(graphics.bg0_map[5 * 32 + 25] == 0xF335);
             assert(graphics.bg0_map[13 * 32 + 25] == 0xF3B5);
+            /* sub_0804C668 header/footer strips. */
+            assert(graphics.bg0_map[3 * 32 + 0xB] == 0xF3D0);
+            assert(graphics.bg0_map[3 * 32 + 0x18] == 0xF3DD);
+            assert(graphics.bg0_map[0xF * 32 + 0x11] == 0xF3E0);
+            assert(graphics.bg0_map[0xF * 32 + 0x15] == 0x13E4);
+            assert(graphics.bg0_map[0xF * 32 + 0x19] == 0x13E8);
+            assert(graphics.bg0_map[0xF * 32 + 0x1B] == 0xF3EA);
             enemy.top = 10;
             enemy.cursor = 10;
             assert(aos_pause_graphics_render_enemy(&graphics, &enemy,
@@ -390,6 +397,10 @@ int main(int argc, char **argv) {
             detail.soul_owned = 1;
             assert(aos_pause_graphics_render_enemy_detail(
                 &graphics, &detail, rgba, 240 * 160 * 4));
+            /* sub_0804C968 header strips rows 8-9. */
+            assert(graphics.bg0_map[8 * 32 + 0x12] == 0x1320);
+            assert(graphics.bg0_map[8 * 32 + 0x1B] == 0x1329);
+            assert(graphics.bg0_map[9 * 32 + 0x12] == 0x1330);
             /* Enemy number "002" right-aligned ending col 8 row 1;
              * digits are palette-1 entries 0x1300|digit. */
             assert(graphics.bg0_map[1 * 32 + 8] == (0x1300 | 2));

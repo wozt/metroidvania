@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0855 - Bestiary header/footer strips ported
+
+- sub_0804C668 list-enter draws: 0xF3D0 x14 title strip at (0xB,3),
+  0xF3E0 x4 plus singles 0x13E4/0x13E8/0xF3EA on row 0xF.
+- sub_0804C968 detail-enter draws: 0x1320 x10 and 0x1330 x10 strips
+  at (0x12,8)/(0x12,9).
+- Both rendered through put_tiles on BG0; tile ids asserted in
+  test_aos_pause_graphics.
+
 ## Patch 0854 - Bestiary bottom description window ported
 
 - sub_0804D1DC's tail decoded end to end: the shared bottom

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T12:11:43+00:00",
+ "generated_at": "2026-11-08T12:37:46+00:00",
  "git": {
-  "commit": "a9ac3e65",
+  "commit": "ad12b4f2",
   "branch": "main",
   "dirty": true
  },
@@ -20383,6 +20383,24 @@
  },
  "timeline": [
   {
+   "commit": "ad12b4f2",
+   "date": "2026-11-08",
+   "subject": "Verify pause cursor wiggle matches sub_08048018 exactly",
+   "scope": "project"
+  },
+  {
+   "commit": "775285a4",
+   "date": "2026-11-08",
+   "subject": "Decode pause cursor entity mechanics (dedicated slot, instant position)",
+   "scope": "project"
+  },
+  {
+   "commit": "fd690176",
+   "date": "2026-11-08",
+   "subject": "Port the death-state velocity bounce (sub_0801B03C)",
+   "scope": "project"
+  },
+  {
    "commit": "a9ac3e65",
    "date": "2026-11-08",
    "subject": "Use the native animation 13 for the corpse sparkle",
@@ -20842,24 +20860,6 @@
    "commit": "7d3688d3",
    "date": "2026-11-08",
    "subject": "Lab: worker liveness detection, stuck self-exit and DB purge",
-   "scope": "project"
-  },
-  {
-   "commit": "7fc43552",
-   "date": "2026-11-07",
-   "subject": "Lab: VRAM tilemap signature per trial — first OCR brick",
-   "scope": "project"
-  },
-  {
-   "commit": "22af35ae",
-   "date": "2026-11-07",
-   "subject": "Lab: waypoint restarts + glitchless route reference",
-   "scope": "project"
-  },
-  {
-   "commit": "25f02b89",
-   "date": "2026-11-07",
-   "subject": "Lab: WRAM reward layer with exploration bonuses and global room registry",
    "scope": "project"
   }
  ],

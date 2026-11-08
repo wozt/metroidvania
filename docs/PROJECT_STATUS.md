@@ -17,9 +17,13 @@ Last updated: **2026-11-07**.
   is clear and 3 - v while set — algebraically identical to the
   runtime's ((cursor_tick >> 1) & 7) - 3 / 3 - (...) flip on
   (cursor_tick >> 4) & 1, verified term by term.
-- The remaining approximation is the frame-cycle timing: the runtime
-  walks the pointing-strip records at cursor_tick / 4 while the
-  native frame selector has not been pinned down yet.
+- The pointing-strip frames come from the descriptor's real animation:
+  sub_0803F2C8 plays animation 0 of 0x08256EF8, a 29-step sequence of
+  pose groups (records 2-8, 15-20, 9-14, 21-26 separated by record 2)
+  with four-tick steps. draw_cursor now walks anim_frame/anim_duration
+  instead of cycling seven records. The phase is driven by the shared
+  cursor_tick rather than the entity's own anim player, so the sequence
+  position is not reset on page open like the native entity's is.
 
 ## Patch 0834 - Death-state velocity bounce ported (sub_0801B03C)
 

@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0849 - Bestiary portraits are real enemy entities
+
+- The record word-0 pointers resolve to the enemies' own create
+  functions (rec0 -> EnemyBatCreate, rec1 -> EnemyZombieCreate): the
+  detail page spawns a real enemy entity in a passive menu context,
+  stores the enemy id at entity+0x36, and each create fn binds its
+  sprite/animation resources via sub_0806E0D0.
+- The ROM defines 113 Enemy*Create functions; the runtime ports ~46
+  enemies so far, so the portrait can be rolled out incrementally
+  starting with the implemented ones.
+
 ## Patch 0848 - Bestiary portrait record format decoded
 
 - The 36-byte enemy records at 0x080E9644 are now mapped: word 0 is a

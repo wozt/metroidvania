@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:29:20+00:00",
+ "generated_at": "2026-11-08T00:33:55+00:00",
  "git": {
-  "commit": "e6db7546",
+  "commit": "c22e7f34",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "c22e7f34",
+   "date": "2026-11-08",
+   "subject": "lab: sane level reads, traverse min budget, quieter mode_change",
+   "scope": "project"
+  },
+  {
    "commit": "e6db7546",
    "date": "2026-11-08",
    "subject": "lab: branch strength as Elo rating instead of absolute score",
@@ -20789,12 +20795,6 @@
    "commit": "0838e65a",
    "date": "2026-11-07",
    "subject": "Port the Object20 post-scene proximity conversations",
-   "scope": "project"
-  },
-  {
-   "commit": "a78f1356",
-   "date": "2026-11-07",
-   "subject": "Decode the Object20 proximity conversations",
    "scope": "project"
   }
  ],

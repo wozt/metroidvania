@@ -111,6 +111,9 @@ of running four identical bandits.
   hops skip those states. The exact `(action, params)` combo is also
   counted in `lab.lethal.*` — `best_params` subtracts a full point per
   proven kill so killer combos sink below neutral rivals.
+- **Mode byte fix**: `compute_bonus` now reads only the low byte of
+  the gameMode peek — the upper bytes are frame counters that made
+  every trial look like a mode change and masked enter/exit_gameplay.
 - **Adaptive traversal** (`kind=traverse`): the run plays as
   ~60-frame segments holding a direction; a frozen segment (screen
   motion < 0.3%) climbs a reaction ladder — jump, then attack, then

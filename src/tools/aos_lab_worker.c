@@ -700,7 +700,11 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
      * always a game over or menu in trial context (no action presses
      * START) — penalize it, entering gameplay is progress. */
     {
-        int mb = rd32(&b[RK_MODE], 0), ma = rd32(&a[RK_MODE], 0);
+        /* only the low byte is the mode — the upper bytes are frame
+         * counters that always differ, which is why rd32 produced a
+         * mode_change on nearly every trial and enter/exit never fired */
+        int mb = b[RK_MODE].data ? b[RK_MODE].data[0] : -1;
+        int ma = a[RK_MODE].data ? a[RK_MODE].data[0] : -1;
         if (mb == 4 && ma != 4) { bonus -= 0.6; TAG("exit_gameplay"); }
         else if (mb != 4 && ma == 4) { bonus += 0.3; TAG("enter_gameplay"); }
         else if (mb != ma) { TAG("mode_change"); }

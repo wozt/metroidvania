@@ -2,6 +2,28 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0829 - New-soul feedback fully decoded (invisible icon + sparkle storm)
+
+- The sub_08045C34 entity (slots 0x16-0x19) never sets drawFunc —
+  EntityCreateInRange zeroes the record — so the "new soul icon" is
+  invisible logic only; the visible feedback is entirely the
+  sparkle storm and the closing held sparkle.
+- sub_080451F4 (storm sparkle update) decoded: +0xD counts to
+  +0x19 = 0x14 (21 frames of motion), position += velocity,
+  velocity += acceleration each frame; with +0x1A set (45350 sets
+  it) every eighth frame decrements +0xB and reloads +0x65 from
+  table 0x08525138 — cycling sparkle frames {0x49,0x36,0x35,0x34}
+  downward; +0x59 bit 8 despawns past the counter.
+- sub_08045350's spawn terms: position = player + (sin,cos of a
+  random byte-angle) * 48 subpixels, velocity +0x48/+0x4C =
+  offset >> 4, acceleration +0x50/+0x54 = -(offset * 5) >> 4,
+  palette = the soul kind's nibble (the icon entity's +0x5A),
+  +0x19 = 0x14, +0xB = 3.
+- Port recipe: a 48-frame spawn state after a new-soul collection,
+  four direct-effect kinds (one per soul-kind palette bank) with
+  frames {0x49,0x36,0x35,0x34} at 8 ticks each and the drift
+  physics above; song 0xBE at icon creation.
+
 ## Patch 0828 - Held-soul sparkle ported (sub_08045BC8/sub_08045164)
 
 - New AOS_EFFECT_SOUL_HELD kind (Effect/soul_held, sequence 12 of

@@ -7,10 +7,12 @@ Last updated: **2026-11-07**.
 - EnemyBiphronCreate (0x08099C5C) / EnemyBiphronUpdate
   (0x0809A450): a four-state dispatcher on e+0xA behind the
   shared sub_0806CC20 sleep gate — state 0 sub_08099CF0
-  (hover/wait), state 1 sub_08099DB8 (attack sequence),
-  state 2 sub_08099ED8 (death), state 3 affine-only; the
-  epilogue runs sub_0806DF20 + sub_0806E314 for states
-  != 3.
+  (hover/wait), state 1 sub_08099ED8 (attack: fires the
+  damaging projectile, returns to state 0), state 2
+  sub_08099DB8 (death/explosion sequence entered by the
+  hurt callback), state 3 sub_0803F17C affine-only (the
+  pre-killed 0x8E & 0x40 create path); states 0-2 end with
+  sub_0806DF20 + sub_0806E314, state 3 returns early.
 - Create: sub_0809A3D8 loads graphics 0x081CC05C, palette
   0x0820AC04 (bank via sub_08068264) and frames 0x08223FF8
   (sub_0803B924); sub_0803F2C8(e,0,0,1) + sub_0803F17C +
@@ -21,28 +23,40 @@ Last updated: **2026-11-07**.
   (hurt, same + 0x2D = 8 flash pattern); sub_0806B1FC +
   sub_0806AF98 floor snap, state 0.
 - State 0 (sub_08099CF0, ~200B): + 0xB substeps — facing
-  bit into + 0x58 bit 6 from sub_0806CF2C & 1, vx =
-  mirrored ? +0x10000 : -0x40000 (0xFFFFC000), vy =
-  +0x80000, + 0x54 = 0x2800; then the sub_08069A00 probe
-  walker (r2 = 0xFFE00000 floor, r3 = 0x80000 ceiling?,
-  arg 8, mask & 4); every frame past 0x3B ticks the
+  bit into + 0x58 bit 6 from sub_0806CF2C & 1 (bit 0 of
+  + 0x58 cleared), vx = facing ? +0x4000 : -0x4000
+  (0xFFFFC000), vy = +0x10000, + 0x54 = 0x2800; then the
+  sub_08069A00 probe walker (args 0x10000, 0xFFE00000,
+  0x80000, stack 8; result mask & 4 SET is required for
+  the hover timer + 0xD to advance — once past 0x3B the
   centred player box (+ 0x42 - 0x5A, + 0x46 - 0x64,
   0xB4 x 0xC8 via sub_0806CFFC) plus RandomNumberGenerator
   & 0x7F <= 0x2F -> state 1, substep 0.
-- State 1 (sub_08099DB8, ~290B): + 0xB substeps — substep
-  0 at anim + 0x6E == 1 fires two sub_0806D644 paired
+- State 1 attack (sub_08099ED8, ~120B): + 0xB substeps —
+  substep 0 plays anim via sub_0803F2C8(e,1,0,0); substep 1
+  waits anim + 0x6E == 4 then fires ONE damaging projectile
+  through sub_08099FD0(e, dx, 0) — dx = -0x1A0000 facing /
+  +0x1A0000 otherwise — plus PlaySong 0x78; when + 0x59 bit 0
+  (anim ended) -> sub_0803F2C8(e,0,0,1), state 0, substep 0.
+- State 2 death (sub_08099DB8, ~290B): + 0xB substeps —
+  substep 0 at anim + 0x6E == 1 fires two sub_0806D644 spark
   spawns around x (RNG & 0x7FFFF offsets, -0x18000/+0x18000
-  base) — likely the twin claw helpers; substep 1 waits
-  + 0x6E == 6 -> substep 2, timer 0x50; substep 2 every
-  0x10 ticks (timer > 0x2F, !(timer & 0xF)) spawns
-  sub_0809A340 at a random +-0x80000 offset and PlaySong
-  0x6E, the + 0x59 bit-5 blink via sub_0806D518; at 0 ->
-  + 0x59 |= 8 (attack-done flag for the state-2 path).
-- State 2 (sub_08099ED8, ~120B): + 0xB substeps — anim 1
-  once, at + 0x6E == 4 a sub_08099FD0 burst (vy arg
-  0xFFE60000 or 0x1A00000 by facing) + PlaySong 0x78;
-  when + 0x59 bit 0 set -> anim 0 loop and back to state 0.
-- State 3: sub_0803F17C affine only (the 0x8E & 0x40 path).
+  base); substep 1 waits + 0x6E == 6 -> substep 2, timer
+  0x50; substep 2 every 0x10 ticks (timer > 0x2F,
+  !(timer & 0xF)) spawns a visual-only sub_0809A340 sprite
+  piece at a random +-0x80000 offset and PlaySong 0x6E, the
+  + 0x59 bit-5 blink via sub_0806D518; at 0 -> + 0x59 |= 8.
+- Projectile (sub_08099FD0 spawn, update sub_0809A29C, hurt
+  sub_0809A310): a kind-0x49/0xCF entity reusing Biphron
+  graphics 0x081CC05C / frames 0x08223FF8, vy = -0x10000,
+  palette byte copied, + 0x58 bit 0x20, floor snap, enemy id
+  copied; update probes via sub_0806D288(0x80000, -0x200000)
+  — bit 4 with unchanged x-pixel deletes, else out-of-window
+  sub_0806D128(1) deletes; collide() runs each frame so the
+  sub_0809A310 contact record (elements = 2) damages Soma;
+  timer & 3 == 0 every 4 frames -> trail spawn sub_0809A0DC
+  (visual 0x49/0xCF piece, frames 0x08528124, facing copied)
+  + PlaySong 0x77.
 - Helpers resolved: sub_0809A340 is a visual-only
   EntityCreateInRange(0x49, 0xCF) piece reusing the
   Biphron graphics 0x081CC05C / frames 0x08223FF8 (vy =
@@ -77,9 +91,13 @@ Last updated: **2026-11-07**.
   uses its & 4 result after 0x3B ticks.
 - Remaining for the port: the sub_08069A00 walker port
   (or a documented approximation on the existing wall /
-  floor helpers), the AOS_EFFECT_* mapping for the two
-  0x49/0xCF spark kinds, the corpse-piece child role for
-  sub_08099FD0, then objects.c PROBES (graphics
+  floor helpers), the AOS_EFFECT_* mapping for the spark
+  and sprite-piece 0x49/0xCF kinds (sub_0806D644,
+  sub_0809A340, trail sub_0809A0DC), a damaging child
+  role for the projectile (sub_08099FD0 spawn,
+  sub_0809A29C update, sub_0809A310 contact with
+  elements = 2 — emitted via report.children like the
+  worm segments), then objects.c PROBES (graphics
   0x081CC05C, palette 0x0820AC04, frames 0x08223FF8),
   enemy_names[78] = "biphron", kind dispatch, tests and
   registries.

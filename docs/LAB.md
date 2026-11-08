@@ -108,7 +108,10 @@ trials that actually moved (movement tags), so idle animation in
 busy rooms does not fake distance.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
 override) so the fleet covers both exploit and explore regimes instead
-of running four identical bandits. `explore-input` (−4, random key
+of running four identical bandits. Pure argmax let one lucky action
+  starve the curriculum, so exploitation now picks randomly among all
+  actions within 10% of the best mean reward. `explore-input` (−4,
+  random key
 mashing) is excluded from exploitation — it wins reward averages by
 luck and starves real actions; it only competes inside the random
 explore pool and the per-action warmup floor.

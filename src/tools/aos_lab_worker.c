@@ -1777,9 +1777,12 @@ int main(int argc, char **argv) {
                             ties[nt++] = cold[k];
                     action = &chosen[ties[rand() % nt]];
                 } else {
+                    /* near-ties: any action within 10% of the best mean
+                     * reward competes — pure argmax let one lucky
+                     * action starve the whole curriculum */
                     for (int ci = 0; ci < chosen_count && ci < 64; ++ci)
                         if (chosen[ci].id != -4 && best_rate >= 0 &&
-                            rates[ci] == (int)(best_rate * 1000000))
+                            rates[ci] >= (int)(best_rate * 900000))
                             ties[nt++] = ci;
                     if (nt > 0)
                         action = &chosen[ties[rand() % nt]];

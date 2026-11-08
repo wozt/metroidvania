@@ -2192,6 +2192,50 @@ int main(int argc, char **argv) {
                         aos_labdb_meta_set(db, pk, pv);
                     }
                 }
+                /* room graph + per-room risk memory: the area peek
+                 * (0x02000090) carries area=data[14], room=data[15].
+                 * A change between run start and end is a real
+                 * transition edge — the fleet's map. Damage/death in
+                 * a room accumulates lab.risk.A.R so dangerous rooms
+                 * are known before pathfinding routes through them. */
+                if (res.peek_count > RK_COUNT + RK_AREA &&
+                    res.peeks[RK_AREA].data &&
+                    res.peeks[RK_COUNT + RK_AREA].data &&
+                    res.peeks[RK_AREA].size >= 16 &&
+                    res.peeks[RK_COUNT + RK_AREA].size >= 16) {
+                    const uint8_t *ab = res.peeks[RK_AREA].data;
+                    const uint8_t *aa = res.peeks[RK_COUNT + RK_AREA].data;
+                    int ba = ab[14], br = ab[15], aa2 = aa[14], ar = aa[15];
+                    if ((ba || br) && (aa2 || ar) &&
+                        (ba != aa2 || br != ar)) {
+                        char ek[80];
+                        snprintf(ek, sizeof ek, "lab.edge.%d.%d>%d.%d",
+                                 ba, br, aa2, ar);
+                        char *ev = aos_labdb_meta_get(db, ek);
+                        int n = ev ? atoi(ev) : 0;
+                        free(ev);
+                        char nb[16];
+                        snprintf(nb, sizeof nb, "%d", n + 1);
+                        aos_labdb_meta_set(db, ek, nb);
+                    }
+                    /* risk accumulates in the room the run STARTED in —
+                     * that is where the damage happened */
+                    if ((ba || br) &&
+                        (btag_has(btags, "damage") ||
+                         btag_has(btags, "death") ||
+                         btag_has(btags, "no_progress"))) {
+                        char rk[80];
+                        snprintf(rk, sizeof rk, "lab.risk.%d.%d", ba, br);
+                        char *rv = aos_labdb_meta_get(db, rk);
+                        double cur = rv ? atof(rv) : 0;
+                        free(rv);
+                        double w = btag_has(btags, "death") ? 5.0 :
+                                   btag_has(btags, "damage") ? 1.0 : 0.3;
+                        char nb[32];
+                        snprintf(nb, sizeof nb, "%.1f", cur + w);
+                        aos_labdb_meta_set(db, rk, nb);
+                    }
+                }
             }
 
             /* distance travelled: screen-motion integral per trial —

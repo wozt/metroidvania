@@ -2,6 +2,28 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0818 - Cell framebuffer is VRAM; Item Use strips confirmed
+
+- `sub_080412DC` stores the cell-drawing base at gEwramData+0x11598;
+  its callers pass **VRAM addresses**, not EWRAM scratch: the pause
+  menu uses 0x06004000 (sub_0805AE64, sub_08065484, sub_08067934),
+  the Item Use page uses 0x06008000 (sub_08047520 region), Object1C
+  uses 0x06005000. The literal 0x03001A18 seen inside the blitters is
+  only the unset fallback. Glyph blits therefore write tile PIXEL DATA
+  directly into a dedicated 32x32-tile VRAM sheet; there is no
+  separate fb-to-VRAM copy pass.
+- The tilemap side is static: pages pre-place strip entries with
+  sub_08046DD4/46E04 that point into the text tile region, and
+  sub_08046EF4/47098 write digit/dash tiles directly. Our
+  cells_commit nibble-merge approximates this pipeline and produces
+  the same visual result.
+- sub_0804B6C4 strip coordinates fully decoded: description bars at
+  tilemap (x=5, y=16..18) width 24 with tile ids 0x3200/0x3220/0x3240;
+  slot strips at (x=2 and x=0x11, y=11..14) width 10 with ids
+  0xCE00/0x3390 stepping 0x20 — matching our render_item_use layout.
+- Context-A metrics confirmed in sub_08040E90: col unit 6 px
+  (+0x115A6 = col*6), row unit 12 px (+0x115A8 = row*12).
+
 ## Patch 0817 - Equip icons and composite-order fix
 
 - `render_equip` draws the three equipped icons (weapon slot 0,
@@ -84,10 +106,10 @@ Last updated: **2026-11-07**.
   placement.
 - Decode: context-B chars 0x80-0x8D are real glyph bitmaps in
   0x08509876 (button prompts; 0x88+ empty) and already render through
-  print_b. Item icons remain the separate 4090C descriptor layer
-  (icon/6 row, icon%6 col of a 6-column sheet, variant at +0x115B4) —
-  its pixel source is still unidentified, likely the OBJ/sprite path
-  rather than the cell engine.
+  print_b. Correction: sub_0804090C is the context-B PIXEL cursor
+  setter (x px clamped 0xF0, y row clamped 0x1F), not an icon
+  descriptor; item/equip icons are the sub_08048804/488FC sprite
+  entities decoded in patch 0816/0817.
 
 ## Patch 0814 - Context-B window setter
 
@@ -103,15 +125,13 @@ Last updated: **2026-11-07**.
 
 - sub_0804B6C4/sub_0804B494 fully decoded and recorded in the
   aos.menus.item_use annotation: window sub_08040748(0,0,0x20,2),
-  BG0 strips via sub_08046DD4, the 8-slot inventory walk with
-  sub_08040970 icon-cell rects, sub_0804090C icon descriptors
-  (16-byte records at 0x08505B3C, 0x80 flag on odd slots), context-B
-  names via sub_08041434->sub_08041338 (id table 0x08506734),
-  quantities via sub_08046EF4, dash pairs via sub_08047098 and the
-  empty-page text 0x34F.
-- The remaining port blocker is confirmed to be the icon sheet
-  itself: the descriptor names a 6-column icon grid whose pixels are
-  not yet extracted — same OBJ-layer gap as the other pages.
+  BG0 strips via sub_08046DD4 (exact coords in patch 0818), the
+  8-slot inventory walk with sub_08040970 context-B rects,
+  sub_0804090C pixel cursor placement, context-B names via
+  sub_08041434->sub_08041338 (id table 0x08506734), quantities via
+  sub_08046EF4, dash pairs via sub_08047098 and the empty-page text
+  0x34F. List rows carry no per-slot icon sprites; the only icon is
+  the description-popup entity spawned by sub_08048804 at (0x1C,0x94).
 
 ## Patch 0812 - Sleep page on the cell engine
 

@@ -81,7 +81,10 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | new_scene | unseen visual hash | +0.4 |
 | clean_move | screen motion, no damage | +0.2 |
 | damage | HP loss fraction | −0.3 → −1.0 |
-| death | HP → 0 | −1.0 + branch ban |
+| death | HP reads 0 at end of run | −1.0 + branch ban |
+| exit_gameplay | leaves mode 4 (game over / menu) | −0.6 |
+| enter_gameplay | enters mode 4 | +0.3 |
+| gameover_screen | lands on a hash in lab.deathscenes | −0.8 |
 
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`
@@ -97,9 +100,15 @@ of running four identical bandits.
   `aos_labdb_best_state` (state whose trials reached max reward) and
   hops when clearly behind; a 400-trial barren streak also hops
   (max 8 hops) before declaring stuck.
-- **Lethal branches**: any trial ending in `death` marks
-  `lab.dead.<state_id>`; waypoint picks and smart hops skip those
-  states — game overs literally make the fleet forget the branch.
+- **Lethal branches**: a trial ending in `death`, or leaving
+  gameplay mode with damage (game overs reload the save so HP alone
+  misses them), marks `lab.dead.<state_id>`; waypoint picks and smart
+  hops skip those states.
+- **Death-scene registry**: `lab.deathscenes` keeps hashes of screens
+  seen at lethal outcomes; landing on a known game-over screen costs
+  −0.8 (`gameover_screen`). This is the visual half of death
+  detection — the OCR glyph decoder will upgrade it to real text
+  recognition.
 - **Auto-purge** (every 200 trials + manual/CLI): zero-reward fail
   trials, hopeless weight combos, capped scene states, dedup of
   same-named checkpoints, top-300 states by value

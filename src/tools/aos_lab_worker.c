@@ -468,9 +468,14 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
      * [RK_COUNT,2*RK_COUNT); nreward arg kept for clarity */
     const AosPeekResult *b = res->peeks, *a = res->peeks + RK_COUNT;
     (void)nreward;
-    /* mode / area / room / song */
-    if (rd32(&b[RK_MODE], 0) != rd32(&a[RK_MODE], 0)) {
-        bonus += 0.5; TAG("mode_change");
+    /* mode / area / room / song. Leaving gameplay mode is almost
+     * always a game over or menu in trial context (no action presses
+     * START) — penalize it, entering gameplay is progress. */
+    {
+        int mb = rd32(&b[RK_MODE], 0), ma = rd32(&a[RK_MODE], 0);
+        if (mb == 4 && ma != 4) { bonus -= 0.6; TAG("exit_gameplay"); }
+        else if (mb != 4 && ma == 4) { bonus += 0.3; TAG("enter_gameplay"); }
+        else if (mb != ma) { bonus += 0.2; TAG("mode_change"); }
     }
     /* area=+0xE room=+0xF inside the 0x90 block; song=+0x0 u16 */
     if (b[RK_AREA].data && a[RK_AREA].data &&
@@ -498,7 +503,7 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
     int mp_b = rd16(&b[RK_VIT], 2), mp_a = rd16(&a[RK_VIT], 2);
     int maxhp = rd16(&a[RK_VIT], 4);
     if (maxhp <= 0) maxhp = 1;
-    if (hp_a <= 0 && hp_b > 0) { bonus -= 1.0; TAG("death"); }
+    if (hp_a <= 0) { bonus -= 1.0; TAG("death"); }
     else if (hp_a < hp_b) {
         double frac = (double)(hp_b - hp_a) / maxhp;
         bonus -= 0.3 + 0.7 * frac; TAG("damage");
@@ -542,6 +547,43 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
 }
 
 
+
+
+/* Death-scene registry: hashes of screens seen right after a lethal
+ * outcome, kept in meta lab.deathscenes. Any later trial or scout that
+ * lands on one of these hashes is standing on the game-over screen —
+ * penalized as gameover_screen. This is the visual (OCR-free) half of
+ * death detection; the memory half is the exit_gameplay/death tags. */
+static int death_scene_known(AosLabDb *db, uint64_t hash) {
+    char key[32];
+    snprintf(key, sizeof key, "%016llx",
+             (unsigned long long)hash);
+    char *list = aos_labdb_meta_get(db, "lab.deathscenes");
+    int found = list && strstr(list, key) != NULL;
+    free(list);
+    return found;
+}
+
+static void death_scene_mark(AosLabDb *db, uint64_t hash) {
+    char key[32];
+    snprintf(key, sizeof key, "%016llx",
+             (unsigned long long)hash);
+    if (death_scene_known(db, hash)) return;
+    char *list = aos_labdb_meta_get(db, "lab.deathscenes");
+    size_t need = (list ? strlen(list) : 0) + strlen(key) + 2;
+    char *nl = malloc(need);
+    snprintf(nl, need, "%s%s%s", list ? list : "", list ? "," : "", key);
+    /* cap the registry at 64 hashes */
+    int commas = 0;
+    for (char *q = nl; *q; ++q) if (*q == ',') ++commas;
+    if (commas > 64) {
+        char *first = strchr(nl, ',');
+        if (first) memmove(nl, first + 1, strlen(first));
+    }
+    aos_labdb_meta_set(db, "lab.deathscenes", nl);
+    free(nl);
+    free(list);
+}
 
 /* Fleet culling: every call ranks this worker's mean reward against
  * every other worker's (worker.N.rsum/rn metas). A worker that is
@@ -1593,7 +1635,7 @@ int main(int argc, char **argv) {
             }
 
             /* exploration bonus on top of the action probe */
-            int trial_died = 0;
+            int trial_died = 0, trial_exit_dmg = 0;
             {
                 int scene_new = 0;
                 for (int si = 0; si < seen_count; ++si)
@@ -1617,6 +1659,8 @@ int main(int argc, char **argv) {
                 }
                 reward += bonus;
                 trial_died = strstr(btags, "death") != NULL;
+                trial_exit_dmg = strstr(btags, "exit_gameplay") &&
+                                 strstr(btags, "damage");
                 if (reward > 4.0) reward = 4.0;
                 if (reward < -1.5) reward = -1.5;
                 /* merge tags into metrics before the closing brace */
@@ -1634,7 +1678,20 @@ int main(int argc, char **argv) {
             /* game-over rule: a lethal branch is forgotten — mark the
              * starting state so waypoint restarts and smart hops skip
              * it from now on */
-            if (trial_died) state_dead_mark(db, used_state_id);
+            /* visual death detection: the scene hash at end of run —
+             * mark lethal screens for next time and penalize landing
+             * on a known game-over screen */
+            if (scene_hash) {
+                if (trial_died) death_scene_mark(db, scene_hash);
+                else if (death_scene_known(db, scene_hash)) {
+                    reward -= 0.8;
+                    if (reward < -1.5) reward = -1.5;
+                }
+            }
+            /* lethal branch = death, or leaving gameplay with damage —
+             * game overs reload the save so HP alone misses them */
+            if (trial_died || trial_exit_dmg)
+                state_dead_mark(db, used_state_id);
             /* refined success rule: a probe-fail that still scored
              * exploration reward is a partial, not a dead spin */
             if (!strcmp(outcome, "fail") && reward > 0.0)

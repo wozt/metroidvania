@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T01:18:10+00:00",
+ "generated_at": "2026-11-08T01:20:27+00:00",
  "git": {
-  "commit": "8ee215c3",
+  "commit": "696de9f6",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "696de9f6",
+   "date": "2026-11-08",
+   "subject": "lab: near-tie action selection — stop single-action starvation",
+   "scope": "project"
+  },
+  {
    "commit": "8ee215c3",
    "date": "2026-11-08",
    "subject": "lab: honest Elo, honest distance, wall-clock purge, lean trial log",
@@ -20789,12 +20795,6 @@
    "commit": "ef6e08b9",
    "date": "2026-11-07",
    "subject": "Map the menu icon window-grid walker",
-   "scope": "project"
-  },
-  {
-   "commit": "328e1837",
-   "date": "2026-11-07",
-   "subject": "Refine the menu icon attribute-writer decode",
    "scope": "project"
   }
  ],

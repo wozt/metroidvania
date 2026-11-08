@@ -1049,6 +1049,16 @@ static int frontier_pick(AosLabDb *db, AosStateRow *rows, int n) {
         const char *rp = strstr(rows[i].note, "room=");
         int ra, rr;
         if (!rp || sscanf(rp, "room=%d:%d", &ra, &rr) != 2) continue;
+        /* don't push the frontier into a known deathtrap — depth is
+         * worthless if every attempt there feeds lab.risk */
+        {
+            char rk[80];
+            snprintf(rk, sizeof rk, "lab.risk.%d.%d", ra, rr);
+            char *rv = aos_labdb_meta_get(db, rk);
+            double risk = rv ? atof(rv) : 0;
+            free(rv);
+            if (risk > 3.0) continue;
+        }
         int k = ra * 256 + rr, d = 0;
         for (int j = 0; j < nk; ++j)
             if (keys[j] == k) { d = depth[j]; break; }
@@ -2050,29 +2060,48 @@ int main(int argc, char **argv) {
                     }
                 }
                 /* risk-aware pick: states tagged room=A:R whose room
-                 * accumulated heavy damage/death penalties get passed
-                 * over — the fleet knows which rooms hurt before it
-                 * commits branches there */
-                for (int tr = 0; tr < 4 && pick_i >= 0 &&
-                     srows[pick_i].note; ++tr) {
-                    int ra = -1, rr = -1;
-                    const char *rp = srows[pick_i].note
-                        ? strstr(srows[pick_i].note, "room=") : NULL;
-                    if (rp && sscanf(rp, "room=%d:%d", &ra, &rr) == 2 &&
-                        ra >= 0) {
-                        char rk[80];
-                        snprintf(rk, sizeof rk, "lab.risk.%d.%d", ra, rr);
-                        char *rv = aos_labdb_meta_get(db, rk);
-                        double risk = rv ? atof(rv) : 0;
-                        free(rv);
-                        if (risk > 3.0) {
-                            int alt = rand() % scount;
-                            if (alt != pick_i && !state_dead(db, srows[alt].id))
-                                pick_i = alt;
-                            continue;
+                 * accumulated heavy damage/death penalties are
+                 * filtered OUT of the candidate pool — random re-rolls
+                 * just landed back in the same deathtrap when it held
+                 * most of the states. Untagged states stay eligible. */
+                {
+                    int lowrisk[512], nl = 0;
+                    for (int si = 0; si < scount && si < 512; ++si) {
+                        if (state_dead(db, srows[si].id)) continue;
+                        int bad = 0;
+                        if (srows[si].note) {
+                            const char *rp = strstr(srows[si].note, "room=");
+                            int ra, rr;
+                            if (rp && sscanf(rp, "room=%d:%d", &ra, &rr) == 2) {
+                                char rk[80];
+                                snprintf(rk, sizeof rk, "lab.risk.%d.%d",
+                                         ra, rr);
+                                char *rv = aos_labdb_meta_get(db, rk);
+                                double risk = rv ? atof(rv) : 0;
+                                free(rv);
+                                if (risk > 3.0) bad = 1;
+                            }
                         }
+                        if (!bad) lowrisk[nl++] = si;
                     }
-                    break;
+                    if (nl > 0 && pick_i >= 0) {
+                        int cur_bad = 0;
+                        if (srows[pick_i].note) {
+                            const char *rp = strstr(srows[pick_i].note, "room=");
+                            int ra, rr;
+                            if (rp && sscanf(rp, "room=%d:%d", &ra, &rr) == 2) {
+                                char rk[80];
+                                snprintf(rk, sizeof rk, "lab.risk.%d.%d",
+                                         ra, rr);
+                                char *rv = aos_labdb_meta_get(db, rk);
+                                double risk = rv ? atof(rv) : 0;
+                                free(rv);
+                                if (risk > 3.0) cur_bad = 1;
+                            }
+                        }
+                        if (cur_bad)
+                            pick_i = lowrisk[rand() % nl];
+                    }
                 }
                 /* frontier-depth pick: ~40% of waypoint restarts jump
                  * to a state in the graph-deepest room — a systematic

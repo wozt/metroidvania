@@ -122,11 +122,13 @@ of running four identical bandits.
   the gameMode peek — the upper bytes are frame counters that made
   every trial look like a mode change and masked enter/exit_gameplay.
 - **Adaptive traversal** (`kind=traverse`): the run plays as
-  ~60-frame segments holding a direction; a frozen segment (screen
-  motion < 0.3%) climbs a reaction ladder — jump, then attack, then
-  UP for doors — encoding the real room-crossing rules instead of a
-  fixed key schedule. Reward peeks merge across segments so
-  `compute_bonus` sees the whole run.
+  ~60-frame segments holding a direction with a 720-frame minimum
+  budget (~12 s — a real room crossing with fights); a frozen
+  segment (screen motion < 0.3%) climbs a reaction ladder — jump,
+  then attack, then UP for doors — and every 4th cruise segment also
+  holds UP since Aria doors open on UP and smooth walks never stall.
+  Reward peeks merge across segments so `compute_bonus` sees the
+  whole run.
 - **Entity activity**: a 9th reward peek diffs the 8 KiB entity
   table (0x02000400) — `entity_active` (+0.1) when enemies/AI are
   churning, `entity_still` (−0.05) when gameplay mode shows a dead

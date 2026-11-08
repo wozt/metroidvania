@@ -615,7 +615,11 @@ static void run_traverse(AosMgbaSession *session, int frames,
             keys[kn++] = (AosKeyEvent){45, dir_mask};
             keys[kn++] = (AosKeyEvent){f, 0};
         } else {
-            keys[kn++] = (AosKeyEvent){0, dir_mask};
+            /* every 4th cruise segment also holds UP — doorways in
+             * Aria open on UP and walking through never stalls, so
+             * the reaction ladder would never reach the door rule */
+            uint32_t cm = (nseg % 4 == 3) ? dir_mask | 64 : dir_mask;
+            keys[kn++] = (AosKeyEvent){0, cm};
             keys[kn++] = (AosKeyEvent){f, 0};
         }
         AosPeekRequest pk[2 * RK_COUNT];
@@ -1726,10 +1730,11 @@ int main(int argc, char **argv) {
             EvalProbe probe;
             int has_probe = eval_parse(action->eval, &probe);
             int frames = frames_override > 0 ? frames_override : 120;
-            /* traversal needs several reaction segments — give it at
-             * least 4 segments (240f) so jump/attack/door actually fire */
+            /* traversal needs a real room-crossing budget — a full
+             * room with fights takes 10-20s; 720f (~12s) lets the
+             * reaction ladder actually reach doors and clears */
             if (action->kind && !strcmp(action->kind, "traverse") &&
-                frames < 240) frames = 240;
+                frames < 720) frames = 720;
             /* completion rule: ~15% of trials run 3x longer — short
              * probes cannot reach doors, so occasionally give the
              * agent a real traversal budget */

@@ -840,12 +840,17 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
             if (nb > 0 && na == 0) ++emptied;
             else if (nb == 0 && na > 0) ++filled;
         }
-        if (emptied > 0) {
+        /* during a scene/room transition the whole entity table is
+         * torn down and rebuilt — emptied/filled slots there are
+         * despawns, not kills. Only trust them inside stable scenes */
+        if (!scene_is_new && emptied > 0) {
             bonus += emptied > 2 ? 0.6 : 0.3 * emptied;
             if (bonus > 2.5) bonus = 2.5;
             TAG("enemy_down");
         }
-        if (filled > emptied) { bonus -= 0.1; TAG("enemy_spawn"); }
+        if (!scene_is_new && filled > emptied) {
+            bonus -= 0.1; TAG("enemy_spawn");
+        }
         /* raw churn stays as the "world is alive" signal */
         long diff = 0;
         for (uint32_t i = 0; i < b[RK_ENT].size; ++i)

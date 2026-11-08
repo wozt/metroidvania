@@ -89,8 +89,8 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | mp_empty | MP fully drained | −0.1 |
 | no_progress | no motion, no reward, no penalty | −0.1 |
 | exp_big | XP jump > 64 (kills / boss) | +0.4 extra |
-| enemy_down | entity slots emptied (kills/despawns) | +0.3 each, +0.6 if >2 |
-| enemy_spawn | more entity slots filled than emptied | −0.1 |
+| enemy_down | entity slots emptied inside a stable scene (kills; scene transitions are despawns, not kills) | +0.3 each, +0.6 if >2 |
+| enemy_spawn | more entity slots filled than emptied (stable scenes only) | −0.1 |
 | tile_change | VRAM tilemap diff (text/HUD) when scene unchanged | +0.25 |
 | lab.progress | rooms / max level / distance (motion integral) | campaign metric |
 

@@ -406,6 +406,50 @@ void aos_menu_cells_icon_fill_rect(AosMenuCells *cells) {
     cells->b_py = (uint16_t)(cells->b_row * 8);
 }
 
+void aos_menu_cells_cursor_b(AosMenuCells *cells, uint16_t col,
+                             uint16_t row) {
+    /* sub_08040898: context-B cursor — col in 6px units clamped to
+     * 40, row in 8px cell units clamped to 31; clears the sub-column
+     * offset and recomputes the absolute pixel position. */
+    cells->b_col = col > 0x28 ? 0x28 : col;
+    cells->b_row = row > 0x1F ? 0x1F : row;
+    cells->b_sx = 0;
+    cells->b_px = (uint16_t)(cells->b_col * 6);
+    cells->b_py = (uint16_t)(cells->b_row * 8);
+}
+
+int aos_menu_cells_print_at_a(AosMenuCells *cells, uint16_t ch,
+                              const uint8_t *char_info,
+                              const uint8_t *glyph, uint16_t col,
+                              uint16_t row) {
+    /* sub_08040BDC: clamp the target to the context-A window max,
+     * place the cursor there and print one glyph. */
+    if (col > cells->a_col_max) col = cells->a_col_max;
+    if (row > cells->a_row_max) row = cells->a_row_max;
+    cells->a_col = col;
+    cells->a_row = row;
+    cells->a_x = 0;
+    cells->a_px = (uint16_t)(col * 6);
+    cells->a_y = (uint16_t)(row * 12);
+    return aos_menu_cells_print_a(cells, ch, char_info, glyph);
+}
+
+int aos_menu_cells_print_at_b(AosMenuCells *cells, uint16_t ch,
+                              const uint8_t *char_info,
+                              const uint8_t *glyph, uint16_t col,
+                              uint16_t row) {
+    /* sub_08040E10: same flow on the context-B cursor, clamped to
+     * the window x1/y1 bounds. */
+    if (col > cells->b_x1) col = cells->b_x1;
+    if (row > cells->b_y1) row = cells->b_y1;
+    cells->b_col = col;
+    cells->b_row = row;
+    cells->b_sx = 0;
+    cells->b_px = (uint16_t)(col * 6);
+    cells->b_py = (uint16_t)(row * 8);
+    return aos_menu_cells_print_b(cells, ch, char_info, glyph);
+}
+
 void aos_menu_cells_window_b(AosMenuCells *cells, uint16_t x, uint16_t y,
                              uint16_t w, uint16_t h) {
     /* sub_08040970: store the context-B window bounds — x0/y0 clamped

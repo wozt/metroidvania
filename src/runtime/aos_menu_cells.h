@@ -130,6 +130,22 @@ void aos_menu_cells_icon_fill_rect(AosMenuCells *cells);
 void aos_menu_cells_window_a(AosMenuCells *cells, uint16_t col,
                              uint16_t row, uint16_t w, uint16_t h);
 
+/* sub_08040898: context-B cursor — col in 6px units (clamp 40),
+ * row in 8px cell units (clamp 31). */
+void aos_menu_cells_cursor_b(AosMenuCells *cells, uint16_t col,
+                             uint16_t row);
+
+/* sub_08040BDC / sub_08040E10: place the context-A/B cursor at
+ * (col, row) clamped to the window bounds, then print one glyph. */
+int aos_menu_cells_print_at_a(AosMenuCells *cells, uint16_t ch,
+                              const uint8_t *char_info,
+                              const uint8_t *glyph, uint16_t col,
+                              uint16_t row);
+int aos_menu_cells_print_at_b(AosMenuCells *cells, uint16_t ch,
+                              const uint8_t *char_info,
+                              const uint8_t *glyph, uint16_t col,
+                              uint16_t row);
+
 /* sub_08040970: context-B window bounds (x0/y0 clamps 40/31,
  * x1 = x+w-2, y1 = y+h-1), clears the sub-column offset and recomputes
  * the pixel cursor from the current cell cursor. */

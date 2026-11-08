@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0815 - Context-B helpers and icon-glyph decode
+
+- `aos_menu_cells_cursor_b` ports sub_08040898 (B cursor, 6px cols /
+  8px rows, clamps 40/31); `aos_menu_cells_print_at_a`/`_b` port
+  sub_08040BDC/sub_08040E10 (positioned prints clamped to window
+  bounds) — the helpers the native pages use for arbitrary text
+  placement.
+- Decode: context-B chars 0x80-0x8D are real glyph bitmaps in
+  0x08509876 (button prompts; 0x88+ empty) and already render through
+  print_b. Item icons remain the separate 4090C descriptor layer
+  (icon/6 row, icon%6 col of a 6-column sheet, variant at +0x115B4) —
+  its pixel source is still unidentified, likely the OBJ/sprite path
+  rather than the cell engine.
+
 ## Patch 0814 - Context-B window setter
 
 - `aos_menu_cells_window_b` ports sub_08040970: context-B bounds

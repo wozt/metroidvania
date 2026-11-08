@@ -278,6 +278,32 @@ static void test_window_b(void) {
     assert(cells.b_y0 == 0x1F && cells.b_y1 == 0x1F);
 }
 
+static void test_print_at(void) {
+    /* sub_08040E10/40BDC: positioned print clamps to the window and
+     * advances the cursor like a normal print. */
+    AosMenuCells cells;
+    uint32_t fb[FB_WORDS];
+    static uint8_t char_tbl[0x60 * 4];
+    static uint8_t glyph_tbl[0x60 * 10];
+    aos_menu_cells_init(&cells);
+    aos_menu_cells_set_fb(&cells, fb);
+    memset(fb, 0, sizeof fb);
+    aos_menu_cells_set_ink(&cells, 0x11);
+    aos_menu_cells_set_attr(&cells, 0x5);
+    aos_menu_cells_window_b(&cells, 0, 0, 0x20, 4);
+    char_tbl[0x21 * 4 + 1] = 4;
+    glyph_tbl[0x21 * 10] = 0xF0;
+    /* col 0x30 clamps to b_x1 = 0+0x20-2 = 0x1E; row 9 clamps to 3. */
+    int ret = aos_menu_cells_print_at_b(&cells, 'A', char_tbl + 0x21 * 4,
+                                        glyph_tbl + 0x21 * 10, 0x30, 9);
+    assert(ret == -1);
+    assert(cells.b_col == 0x1E && cells.b_row == 3);
+    assert(cells.b_px == 0x1E * 6 + 4);
+    /* Pixel x 180 -> cell column 22, row 3; width 4 at sub-x 4 fills
+     * nibbles 4-7 of that cell exactly (fb[3*256 + 22*8]). */
+    assert(fb[3 * 256 + 22 * 8] != 0);
+}
+
 int main(void) {
     test_large_basic();
     test_skip_and_width();
@@ -290,6 +316,7 @@ int main(void) {
     test_run_text();
     test_window_a_and_tile();
     test_window_b();
+    test_print_at();
     printf("aos_menu_cells tests passed\n");
     return 0;
 }

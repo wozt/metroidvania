@@ -1324,8 +1324,9 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 char nm[96], note[160];
                 snprintf(nm, sizeof nm, "scout_c%03d_m%d", chunk, mode);
                 snprintf(note, sizeof note,
-                         "scene=%016llx mode=%d chunk=%d",
-                         (unsigned long long)feat.scene_hash, mode, chunk);
+                         "scene=%016llx mode=%d chunk=%d room=%d:%d",
+                         (unsigned long long)feat.scene_hash, mode, chunk,
+                         scout_area, scout_room);
                 aos_labdb_add_state(db, nm, note, 0, blob, ns);
                 free(blob);
             }
@@ -1346,9 +1347,10 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
                 char nm[96], note[160];
                 snprintf(nm, sizeof nm, "scout_play_%03d", chunk);
                 snprintf(note, sizeof note,
-                         "responsive pulse motion=%.4f scene=%016llx mode=%d",
+                         "responsive pulse motion=%.4f scene=%016llx mode=%d room=%d:%d",
                          motion,
-                         (unsigned long long)feat.scene_hash, mode);
+                         (unsigned long long)feat.scene_hash, mode,
+                         scout_area, scout_room);
                 aos_labdb_add_state(db, nm, note, 0, blob, ns);
                 free(blob);
             }
@@ -1984,6 +1986,31 @@ int main(int argc, char **argv) {
                         break;
                     }
                 }
+                /* risk-aware pick: states tagged room=A:R whose room
+                 * accumulated heavy damage/death penalties get passed
+                 * over — the fleet knows which rooms hurt before it
+                 * commits branches there */
+                for (int tr = 0; tr < 4 && pick_i >= 0 &&
+                     srows[pick_i].note; ++tr) {
+                    int ra = -1, rr = -1;
+                    const char *rp = srows[pick_i].note
+                        ? strstr(srows[pick_i].note, "room=") : NULL;
+                    if (rp && sscanf(rp, "room=%d:%d", &ra, &rr) == 2 &&
+                        ra >= 0) {
+                        char rk[80];
+                        snprintf(rk, sizeof rk, "lab.risk.%d.%d", ra, rr);
+                        char *rv = aos_labdb_meta_get(db, rk);
+                        double risk = rv ? atof(rv) : 0;
+                        free(rv);
+                        if (risk > 3.0) {
+                            int alt = rand() % scount;
+                            if (alt != pick_i && !state_dead(db, srows[alt].id))
+                                pick_i = alt;
+                            continue;
+                        }
+                    }
+                    break;
+                }
                 AosStateRow *pick = &srows[pick_i];
                 size_t asz = 0;
                 alt_blob = aos_labdb_state_blob(db, pick->id, &asz);
@@ -2111,15 +2138,21 @@ int main(int argc, char **argv) {
                         snprintf(nm, sizeof nm, "auto_w%d_%08llx",
                                  worker_id,
                                  (unsigned long long)(scene_hash & 0xFFFFFFFF));
-                        char note[128];
-                        int amode = -1;
+                        char note[160];
+                        int amode = -1, a_area = -1, a_room = -1;
                         if (res.peek_count > RK_COUNT + RK_MODE &&
                             res.peeks[RK_COUNT + RK_MODE].data)
                             amode = res.peeks[RK_COUNT + RK_MODE].data[0];
+                        if (res.peek_count > RK_COUNT + RK_AREA &&
+                            res.peeks[RK_COUNT + RK_AREA].data &&
+                            res.peeks[RK_COUNT + RK_AREA].size >= 16) {
+                            a_area = res.peeks[RK_COUNT + RK_AREA].data[14];
+                            a_room = res.peeks[RK_COUNT + RK_AREA].data[15];
+                        }
                         snprintf(note, sizeof note,
-                                 "auto scene=%016llx trial=%lld mode=%d",
+                                 "auto scene=%016llx trial=%lld mode=%d room=%d:%d",
                                  (unsigned long long)scene_hash,
-                                 (long long)t, amode);
+                                 (long long)t, amode, a_area, a_room);
                         int64_t nid = aos_labdb_add_state(
                             db, nm, note, state_id, blob, (int)ns);
                         (void)nid;

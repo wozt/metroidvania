@@ -2,6 +2,33 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0811 - Menu cell engine slice 5: native window geometry and 46BC8 semantics
+
+- Window geometry corrected from the call site: the hub caller runs
+  sub_08040748(0,0,0x1a,3) + sub_08040FE0 before sub_08047C4C, so the
+  description window is cols 0-25 (6px units) x rows 0-2 (12px units)
+  with the cursor at the window home — no longer an estimate.
+- sub_08046BC8 fully decoded: it saves the context-A cursor on entry,
+  dispatches the text id through sub_08041434 (table 0x08506B38,
+  per-language id offsets 0x3C4/0x788 — our resource layer already
+  selects the language bank), and interprets control bytes 6-18 via a
+  jump table. Byte 6 repositions with sub_0804066C to (entry column,
+  entry row + newline count); byte 10 ends the run; bytes 11-18 are
+  icon commands (sub_08046B58 cases and glyph pairs 0x88-0x8D).
+- run_text now mirrors that: newline = absolute reposition to the
+  entry column/row + count (clamped 40x20), and the cursor is restored
+  to the saved position on exit, exactly like _08046D50.
+- sub_08046DD4/sub_08046E04/sub_08046E5C decoded as tilemap writers
+  (consecutive halfwords at 0x0600E000 + row*64 + col*2), not text
+  printers — the hub entry strips are pre-rendered tiles, which our
+  baked labels already cover.
+- sub_080472B0 decoded: writes a tilemap rectangle of
+  (w_6pxcols*3/4) x (h_12pxrows*3/2) cells with consecutive tile ids —
+  the fb cells are already tile data, matching our cell_tile commit.
+- Render check: the hub description now draws as a single line at the
+  top of the bottom band (canvas tile (0,15) = screen y 120), matching
+  the decoded window instead of the previous guessed offset.
+
 ## Patch 0810 - Menu cell engine slice 4: first renderer integration
 
 - `aos_pause_graphics` now hosts the cell engine: a 32x32-cell

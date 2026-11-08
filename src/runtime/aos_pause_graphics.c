@@ -383,13 +383,15 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
 
     /* sub_08047C4C's tail: sub_0804728C(0x362 + selected) prints the
      * selected entry's description into the bottom message window
-     * through the native cell engine (sub_08040748 window + context-A
-     * cursor, attr 1 / ink 0 as set by sub_08047520). The cell canvas
-     * origin is tile (0,15) = pixel (0,120); the text lands at canvas
-     * (24,12) = screen (24,132) via window column 4, row 1. */
+     * through the native cell engine. The native caller runs
+     * sub_08040748(0,0,0x1a,3) + sub_08040FE0 then sub_0804728C, so
+     * the text window is cols 0-25 (6px units) x rows 0-2 (12px
+     * units) and the cursor starts at the window home; sub_08046BC8
+     * restores it on exit. The cell canvas origin is tile (0,15) =
+     * pixel (0,120), so window pixels map to screen y 120-156. */
     unsigned next_tile = 0;
     if (!place_text_cells(graphics, (uint16_t)(0x362 + selected), false,
-                          0, 15, 4, 1, 36, 2, 3, &next_tile))
+                          0, 15, 0, 0, 26, 3, 3, &next_tile))
         return false;
 
     composite(graphics, rgba);

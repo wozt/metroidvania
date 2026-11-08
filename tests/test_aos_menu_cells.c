@@ -214,11 +214,14 @@ static void test_run_text(void) {
     cells.a_row_stop = 5;
     cells.a_col_max = 50;
     cells.a_row_max = 9;
-    /* 'A' prints, 'B' prints, 0x01 (< 0x20) stops the run. */
+    /* 'A' prints, 'B' prints, 0x01 (< 0x20) stops the run; sub_08046BC8
+     * restores the entry cursor on exit, so a_col/a_row/a_px are back
+     * at their pre-run values (all zero after init). */
     int used = aos_menu_cells_run_a(&cells, script, 0, char_tbl, 4,
                                     glyph_tbl, 14);
     assert(used == 2);
-    assert(cells.a_px == 8 || cells.a_col == 1);
+    assert(cells.a_col == 0 && cells.a_row == 0 && cells.a_px == 0);
+    assert(fb[0] != 0);
 }
 
 static void test_window_a_and_tile(void) {

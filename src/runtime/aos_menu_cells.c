@@ -273,8 +273,17 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
                     uint16_t offset, const uint8_t *char_tbl,
                     unsigned char_stride, const uint8_t *glyph_tbl,
                     unsigned glyph_stride, bool large) {
-    /* sub_08041318 / sub_08041338: script bytes start at +2. */
+    /* sub_08041318 / sub_08041338 feed bytes to the printer; the
+     * control-byte dispatch of sub_08046BC8 treats byte 6 as a
+     * newline: it repositions the cursor with sub_0804066C to
+     * (column at entry, row at entry + newline count), clamped to
+     * 40x20 — not a relative wrap reset. Other control bytes end
+     * the run (10 = terminator, 11..18 = icon commands handled by
+     * the caller's jump table, not ported here). */
     const uint8_t *p = script + 2 + offset;
+    uint16_t base_col = large ? cells->a_col : cells->b_col;
+    uint16_t base_row = large ? cells->a_row : cells->b_row;
+    uint16_t lines = 0;
     int i = 0;
     for (;;) {
         uint16_t ch = p[i];
@@ -285,24 +294,23 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
             ret = large ? aos_menu_cells_print_a(cells, ch, ci, gl)
                         : aos_menu_cells_print_b(cells, ch, ci, gl);
         } else if (ch == 6) {
-            /* Newline: same reset the column-wrap performs — home
-             * column, next row (clamped), sub-column cleared. */
+            /* _08046C7C: sl += 1; sub_0804066C(base_col, base_row + sl). */
+            ++lines;
+            uint16_t col = base_col, row = (uint16_t)(base_row + lines);
+            if (col > 0x28) col = 0x28;
+            if (row > 0x14) row = 0x14;
             if (large) {
-                cells->a_col = cells->a_col_home;
-                cells->a_row += 1;
-                if (cells->a_row > cells->a_row_max)
-                    cells->a_row = cells->a_row_stop;
-                cells->a_y = (uint16_t)(cells->a_row * 12);
+                cells->a_col = col;
+                cells->a_row = row;
                 cells->a_x = 0;
-                cells->a_px = (uint16_t)(cells->a_col * 6);
+                cells->a_px = (uint16_t)(col * 6);
+                cells->a_y = (uint16_t)(row * 12);
             } else {
-                cells->b_col = cells->b_x0;
-                cells->b_row += 1;
-                if (cells->b_row > cells->b_y1)
-                    cells->b_row = cells->b_y0;
-                cells->b_py = (uint16_t)(cells->b_row * 8);
+                cells->b_col = col;
+                cells->b_row = row;
                 cells->b_sx = 0;
-                cells->b_px = (uint16_t)(cells->b_col * 6);
+                cells->b_px = (uint16_t)(col * 6);
+                cells->b_py = (uint16_t)(row * 8);
             }
             ++i;
             continue;
@@ -310,7 +318,19 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
             ret = large ? aos_menu_cells_print_a(cells, ch, NULL, NULL)
                         : aos_menu_cells_print_b(cells, ch, NULL, NULL);
         }
-        if (ret != -1) return i;
+        if (ret != -1) {
+            /* _08046D50: sub_08046BC8 restores the saved cursor on exit. */
+            if (large) {
+                uint16_t col = base_col > 0x28 ? 0x28 : base_col;
+                uint16_t row = base_row > 0x14 ? 0x14 : base_row;
+                cells->a_col = col;
+                cells->a_row = row;
+                cells->a_x = 0;
+                cells->a_px = (uint16_t)(col * 6);
+                cells->a_y = (uint16_t)(row * 12);
+            }
+            return i;
+        }
         ++i;
     }
 }

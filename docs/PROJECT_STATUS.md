@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0860 - Equipment record-effect audit
+
+- Enumerated every native reader of the equipment slots
+  (weapon +0x13268, armor +0x1326C, accessory +0x1326D).
+- All accessory effects are already ported: 0x27/0x28 drop
+  rates, 0x29 MP regen x4, 0x2A Sherman Ring, 0x2B/0x2C full
+  MP via aos_stats_mp_regen.
+- The single gameplay armor check is index 0x17 in
+  func_08021710 (status cure func_08021E50 + popup) - identified
+  as the remaining record-specific effect, unported.
+
 ## Patch 0859 - Bestiary detail name centering + weakness audit
 
 - func_0804D0D0's enemy name is centered at pixel 176: native

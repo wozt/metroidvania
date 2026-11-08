@@ -1450,13 +1450,26 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
                        &next_tile))
         return false;
     /* sub_0804D0D0: dash fill then the 0x1310 underline and the enemy
-     * name through the context-B window at cell (0x15,8). */
+     * name through the context-B window at cell (0x15,8). The native
+     * x is 0xB0 - width/2 (func_0804CD80 measures the small-font
+     * pixel width), centering the name at pixel 176 on row 64. */
     put_dashes(graphics, 2, 0xC, 0x14);
     put_tiles(graphics, 2, 0xC, 0x1310, 0xC);
     bool found = enemy_defeated(values, enemy);
-    if (!place_text_id(graphics,
-                       found ? (uint16_t)(0x25D + enemy) : 0x34E,
-                       true, 126, 64, 110, 3, &next_tile))
+    AosNativeText name_text;
+    if (!read_text(graphics, found ? (uint16_t)(0x25D + enemy) : 0x34E,
+                   &name_text) ||
+        !name_text.line_count)
+        return false;
+    unsigned name_width =
+        name_text.glyph_counts[0]
+            ? aos_intro_font_measure_small(&graphics->font,
+                                           name_text.glyphs[0],
+                                           name_text.glyph_counts[0])
+            : 0;
+    unsigned name_x = name_width > 0xB0 ? 0 : 0xB0 - name_width / 2;
+    if (!place_text(graphics, &name_text, true, name_x, 64, 110, 3,
+                    &next_tile))
         return false;
     /* Soul-type icon tile on the underline, only in soul view while
      * the soul exists and is owned (r6 gate in sub_0804D0D0). */

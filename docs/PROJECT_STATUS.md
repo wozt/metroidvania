@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0859 - Bestiary detail name centering + weakness audit
+
+- func_0804D0D0's enemy name is centered at pixel 176: native
+  x = 0xB0 - width/2 where func_0804CD80 sums the small-font
+  glyph widths. Ported via aos_intro_font_measure_small.
+- Weakness/resistance audit resolved: func_0804CDF4 issues no
+  text-window calls, so the section is icon grids and numbers
+  only - no text labels exist natively.
+- Soul-type icon tile math verified: 0x1300 | (row*16 - 0x3000
+  + col) yields 0xD3FD/0xD3FC/0xD3FB/0xD3A8, matching the port.
+
 ## Patch 0858 - Bestiary +0xC intro phases ported
 
 - sub_0804D2C8's phase counter now drives the list render:

@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0848 - Bestiary portrait record format decoded
+
+- The 36-byte enemy records at 0x080E9644 are now mapped: word 0 is a
+  per-enemy thumb init function invoked on the placed sprite entity,
+  word 1 is stored at entity+0x00 as its update/draw routine, the
+  halfword at +0x0C becomes entity+0x34 (sprite/animation ref), byte
+  +0x18 gates the highlight path in sub_0804CA9C, and the halfwords at
+  +0x1E/+0x20 are the portrait X/Y offsets added to entity+0x42/+0x46.
+- sub_0804CA9C is the per-frame detail-page update (it also toggles
+  gUnk_03002CB0 blending). Porting still needs each enemy's init fn
+  decoded to learn which sprite resources it binds.
+
 ## Patch 0847 - Bestiary portrait path decoded
 
 - The enemy detail page's missing portrait is now traced:

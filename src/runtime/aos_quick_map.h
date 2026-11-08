@@ -58,5 +58,8 @@ void aos_quick_map_unpack_explored(AosQuickMap *map, const uint8_t *in);
 enum { AOS_QUICK_MAP_SECRET_COUNT = 13 };
 int aos_quick_map_secret_index(int x, int y);
 bool aos_quick_map_secret_discovered(const AosQuickMap *map, int x, int y);
+/* sub_08012154 + sub_08012048: a broken wall marks its secret-room bit. */
+void aos_quick_map_secret_mark(AosQuickMap *map, int map_x, int map_y,
+                               int room_x, int room_y, unsigned direction);
 
 #endif /* AOS_QUICK_MAP_H */

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0846 - Secret-room map marks moved to the wall break
+
+- Opening the quick map no longer marks secret-room cells — that was
+  a divergence. The native trigger is the wall break itself:
+  Object08Update / Object09Update call sub_08012154 (room pixel
+  position -> castle cell through the room's map origin, transformed
+  by the entity record's byte-9 direction: 2 mirrors Y and steps X,
+  1 mirrors Y, 4 steps Y) then sub_08012048 sets the table bit.
+- Ported as `aos_quick_map_secret_mark`, fed by `report.broke` in the
+  wall update; the mark waits on the entity until the main loop,
+  which owns the quick map and the room descriptor.
+- Wall `param0` is `(direction << 8) | entry_index` natively; all
+  extracted walls currently use direction 0, but the transform is
+  ported for completeness.
+- Unit tests cover all four direction cases plus a non-table cell.
+
 ## Patch 0845 - Soma grab states: entry chain decoded
 
 - States 8 (sub_08019EF8, grab/curse), 14 (sub_08019A94) and 17

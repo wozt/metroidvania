@@ -86,6 +86,23 @@ int main(int argc, char **argv) {
     assert(aos_quick_map_secret_discovered(&secrets, 24, 10));
     assert(!aos_quick_map_secret_discovered(&secrets, 47, 20));
 
+    /* sub_08012154 + sub_08012048: a wall break marks the secret bit.
+     * Direction 0: cell = map origin + room pixel >> 8. */
+    AosQuickMap marked = {0};
+    aos_quick_map_secret_mark(&marked, 20, 8, 4 * 256, 2 * 256, 0);
+    assert(marked.secret_rooms == (uint16_t)(1u << 1));
+    /* Direction 1 mirrors the cell Y, reaching the negative entries. */
+    aos_quick_map_secret_mark(&marked, 25, 7, 2 * 256, 2 * 256, 1);
+    assert(marked.secret_rooms == (uint16_t)((1u << 1) | (1u << 0)));
+    /* Direction 2 mirrors Y and steps X. */
+    aos_quick_map_secret_mark(&marked, 13, 20, 2 * 256, 2 * 256, 2);
+    assert(marked.secret_rooms ==
+           (uint16_t)((1u << 1) | (1u << 0) | (1u << 8)));
+    /* Direction 4 steps Y; a non-table cell marks nothing. */
+    aos_quick_map_secret_mark(&marked, 0, 0, 0, 0, 4);
+    assert(marked.secret_rooms ==
+           (uint16_t)((1u << 1) | (1u << 0) | (1u << 8)));
+
     if (argc >= 2) {
         FusionRom local = {0};
         assert(fusion_rom_open(FUSION_ASSET_GAME_ARIA, argv[1], &local,

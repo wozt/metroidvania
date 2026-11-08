@@ -319,6 +319,7 @@ typedef struct {
     AosWall wall;           /* objects 0x08 and 0x09 */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
+    bool secret_mark;       /* a broken wall's pending secret-room mark */
 } AriaEntity;
 
 typedef struct {
@@ -415,6 +416,7 @@ static bool load_room(const char *path, AriaRoom *room) {
                 e->kind < 0 || e->kind > 255 || e->id < 0 || e->id > 255)
                 goto failure;
             e->spawned = false;
+            e->secret_mark = false;
             if (e->kind == ARIA_KIND_SPECIAL && e->id == AOS_OBJECT_SAVE_POINT)
                 room->room_flags |= AOS_ROOM_FLAG_SAVE;
             room->entity_count++;
@@ -2632,6 +2634,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 printf("Wall %zu: %s (sound 0x%X)\n", i, report.broke ? "broken" : "struck",
                        report.sound);
             }
+            /* Object08Update / Object09Update mark the broken wall's
+             * secret-room cell; the quick map lives in the caller. */
+            if (report.broke) e->secret_mark = true;
             continue;
         }
         bool enemy = e->kind == ARIA_KIND_ENEMY && e->id < ENEMY_KINDS && combat->kinds[e->id];
@@ -7018,6 +7023,26 @@ int aria_runtime_main(int argc, char **argv) {
             }
             homing_room = &room;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
+            if (have_quick_map)
+                for (size_t wi = 0; wi < room.entity_count; ++wi) {
+                    AriaEntity *wall_e = &room.entities[wi];
+                    if (!wall_e->secret_mark) continue;
+                    wall_e->secret_mark = false;
+                    /* Object08Update / Object09Update: the broken wall's
+                     * room position marks its secret-room cell
+                     * (sub_08012154 + sub_08012048); record byte 9 is
+                     * the direction. */
+                    FusionAosRoomDescriptor wall_room;
+                    char wall_error[160];
+                    if (fusion_aos_read_room_descriptor(
+                            &opening_rom, &quick_map.directory,
+                            (size_t)room.area, (size_t)room.number, &wall_room,
+                            wall_error, sizeof wall_error))
+                        aos_quick_map_secret_mark(
+                            &quick_map, wall_room.map_x, wall_room.map_y,
+                            wall_e->x >> 16, wall_e->y >> 16,
+                            (unsigned)((wall_e->param0 >> 8) & 0xFF));
+                }
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
             /* sub_0802F8CC: each touch of the ghost's body throws a spirit

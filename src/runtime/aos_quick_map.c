@@ -100,9 +100,6 @@ bool aos_quick_map_visit(AosQuickMap *map, const FusionRom *rom,
     map->current_x = (uint8_t)x;
     map->current_y = (uint8_t)y;
     map->has_current = true;
-    /* Entering the cell marks its secret-room bit like sub_080120AC. */
-    int secret = aos_quick_map_secret_index(x, y);
-    if (secret >= 0) map->secret_rooms |= (uint16_t)(1u << secret);
     if (error && error_size) error[0] = '\0';
     return true;
 }
@@ -126,6 +123,28 @@ bool aos_quick_map_secret_discovered(const AosQuickMap *map, int x, int y) {
     if (!map) return false;
     int index = aos_quick_map_secret_index(x, y);
     return index >= 0 && (map->secret_rooms & (1u << index)) != 0;
+}
+
+/* sub_08012154 + sub_08012048, run by Object08Update / Object09Update when
+ * a wall breaks: the wall's room pixel position maps to a castle cell
+ * through the room's map origin, transformed by the record's direction
+ * byte (+0x14, entity record byte 9): 2 mirrors Y and steps X, 1 mirrors
+ * Y, 4 steps Y. A matching sUnk_081183B0 entry sets its event bit. */
+void aos_quick_map_secret_mark(AosQuickMap *map, int map_x, int map_y,
+                               int room_x, int room_y, unsigned direction) {
+    if (!map) return;
+    int cell_x = map_x + (room_x >> 8);
+    int cell_y = map_y + (room_y >> 8);
+    if (direction == 2) {
+        ++cell_x;
+        cell_y = -cell_y;
+    } else if (direction == 1) {
+        cell_y = -cell_y;
+    } else if (direction == 4) {
+        ++cell_y;
+    }
+    int secret = aos_quick_map_secret_index(cell_x, cell_y);
+    if (secret >= 0) map->secret_rooms |= (uint16_t)(1u << secret);
 }
 
 static uint16_t *cell_word(AosQuickMap *map, int block, int x, int y) {

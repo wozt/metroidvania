@@ -89,6 +89,7 @@ clamped to [-1.5, 4.0]. Bonus tags:
 | mp_empty | MP fully drained | −0.1 |
 | no_progress | no motion, no reward, no penalty | −0.1 |
 | exp_big | XP jump > 64 (kills / boss) | +0.4 extra |
+| lab.progress | rooms / max level / distance (motion integral) | campaign metric |
 
 The bandit ranks actions by `reward_sum/attempts`, not binary success.
 Explore rate is spread per slot (10–25% by worker id, `AOS_LAB_EXPLORE`

@@ -1299,10 +1299,12 @@ int main(int argc, char **argv) {
                 }
         }
     }
-    static AosActionRow builtin_actions[4];
-    if (chosen_count == 0) {
-        /* built-in curriculum from the verified WRAM map so a fresh
-         * database still learns something meaningful */
+    /* built-in curriculum is ALWAYS appended (not only on an empty
+     * DB): DB-defined combos like attack-retreat or spells join the
+     * bandit alongside the primitives so a fresh database still learns
+     * movement basics while scripted combos are tested too */
+    {
+        static AosActionRow builtin_actions[4];
         memset(builtin_actions, 0, sizeof builtin_actions);
         struct { const char *n, *k, *pa, *ev; } defs[] = {
             {"walk-right", "hold", "key=right,hold=80-140,at=5-20,jitter=8",
@@ -1314,7 +1316,7 @@ int main(int argc, char **argv) {
             {"explore-input", "hold", "",
              "probe=0x02000000:4,expect=changed"},
         };
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4 && chosen_count < 64; ++i) {
             builtin_actions[i].id = -(i + 1);
             builtin_actions[i].name = strdup(defs[i].n);
             builtin_actions[i].kind = strdup(defs[i].k);
@@ -1322,7 +1324,8 @@ int main(int argc, char **argv) {
             builtin_actions[i].eval = strdup(defs[i].ev);
             chosen[chosen_count++] = builtin_actions[i];
         }
-        fprintf(stderr, "no actions in db - using built-in curriculum\n");
+        if (!action_count && acount == 0)
+            fprintf(stderr, "no actions in db - using built-in curriculum\n");
     }
 
     char phase_key[64], status_key[64], run_key[64], ctrl_key[64],
@@ -1769,6 +1772,20 @@ int main(int argc, char **argv) {
                 }
             }
 
+            /* distance travelled: screen-motion integral per trial —
+             * the WRAM entity position proved layout-dependent, so
+             * accumulated pixel-motion is the honest proxy for how far
+             * the campaign has actually pushed forward */
+            {
+                char mk[64], nb[32];
+                snprintf(mk, sizeof mk, "lab.motion_total");
+                char *mv = aos_labdb_meta_get(db, mk);
+                long tot = mv ? atol(mv) : 0;
+                free(mv);
+                snprintf(nb, sizeof nb, "%ld",
+                         tot + (long)(trial_motion * 100000.0));
+                aos_labdb_meta_set(db, mk, nb);
+            }
             /* game-over rule: a lethal branch is forgotten — mark the
              * starting state so waypoint restarts and smart hops skip
              * it from now on */
@@ -1813,10 +1830,13 @@ int main(int argc, char **argv) {
                     aos_labdb_meta_set(db, "lab.maxlevel", b);
                 }
                 free(ml);
-                char prog[64], old[64] = "";
+                char prog[80], old[64] = "";
                 char *ml2 = aos_labdb_meta_get(db, "lab.maxlevel");
-                snprintf(prog, sizeof prog, "rooms=%d level=%d",
-                         room_count(db), ml2 ? atoi(ml2) : 0);
+                char *md = aos_labdb_meta_get(db, "lab.motion_total");
+                snprintf(prog, sizeof prog, "rooms=%d level=%d dist=%d",
+                         room_count(db), ml2 ? atoi(ml2) : 0,
+                         md ? atoi(md) : 0);
+                free(md);
                 free(ml2);
                 char *op = aos_labdb_meta_get(db, "lab.progress");
                 if (op) snprintf(old, sizeof old, "%s", op);

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T12:37:46+00:00",
+ "generated_at": "2026-11-08T12:41:00+00:00",
  "git": {
-  "commit": "ad12b4f2",
+  "commit": "46b35380",
   "branch": "main",
   "dirty": true
  },
@@ -20383,6 +20383,12 @@
  },
  "timeline": [
   {
+   "commit": "46b35380",
+   "date": "2026-11-08",
+   "subject": "Play the cursor's real animation sequence in pause menus",
+   "scope": "project"
+  },
+  {
    "commit": "ad12b4f2",
    "date": "2026-11-08",
    "subject": "Verify pause cursor wiggle matches sub_08048018 exactly",
@@ -20854,12 +20860,6 @@
    "commit": "e103e0ff",
    "date": "2026-11-08",
    "subject": "Lab: motion-based responsiveness — first validated gameplay state",
-   "scope": "project"
-  },
-  {
-   "commit": "7d3688d3",
-   "date": "2026-11-08",
-   "subject": "Lab: worker liveness detection, stuck self-exit and DB purge",
    "scope": "project"
   }
  ],

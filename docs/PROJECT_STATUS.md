@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0836 - Held-soul sound deferred one frame (native ordering)
+
+- The song table puts 0xBC, 0xBE and 0xBF on player 2, so same-frame
+  replacement is native behaviour and 0xBE losing to 0xBC is correct.
+- The held-soul sparkle's 0xBF is different: sub_08045164 requests it
+  on the entity's first update, one frame after the collection's 0xBC.
+  Emitting it in the same frame dropped 0xBC entirely. aria_runtime
+  now defers it through deferred_sound, fired at the next
+  update_entities pass — the same point in the frame order where the
+  native entity update runs.
+
 ## Patch 0835 - Pause cursor entity mechanics decoded
 
 - The pause-menu hand is a dedicated entity at gEwramData + 0xEB0,
@@ -109,8 +120,12 @@ Last updated: **2026-11-07**.
   table 0x08525138's fourth frame is reached, so the export holds
   exactly the visible sequence, one variant per soul-kind palette
   bank (3/2/4/6 like the container sparks).
-- Song 0xBE's same-frame request loses to the collection's 0xBC
-  under our immediate-replace mixer; documented, not queued.
+- Songs 0xBC/0xBE/0xBF all sit on player 2 in the song table, so
+  same-frame replacement is native behaviour: 0xBE loses to 0xBC in
+  the original too. 0xBF is deferred one frame (deferred_sound in
+  aria_runtime, fired at the next update_entities pass) because the
+  native sparkle requests it on its first update — emitting it with
+  0xBC would drop the collection sound, which the original plays.
 - The Aria object golden is re-recorded for the four added
   Effect/soul_storm sequences (945 sequences, 2949 frames).
 
@@ -146,14 +161,14 @@ Last updated: **2026-11-07**.
   and dies when its animation ends, matching sub_08045164 state 1.
   AosEffectWorld gains player_y (the player's +0x44).
 - On every accepted soul collection the runtime now spawns the
-  sparkle; song 0xBF follows 0xBC for a repeated soul (the native
-  first-update request, collapsed into the same frame by our
-  immediate-replace mixer). For a new soul the native sparkle waits
+  sparkle; song 0xBF follows 0xBC for a repeated soul, now deferred
+  to the next frame's entity pass like the native first update.
+  For a new soul the native sparkle waits
   for the sub_08045C34 icon's 64th frame — ours spawns immediately
   since the icon entity is not ported yet.
 - Still open: the sub_08045C34/sub_08045654 new-soul icon and its
   sub_08045350 sparkle storm (~48 pinned sparks around Soma), and
-  the song-0xBE request ordering.
+  done — 0xBE shares player 2 with 0xBC natively.
 
 ## Patch 0827 - New/held soul feedback entities decoded
 
@@ -214,8 +229,8 @@ Last updated: **2026-11-07**.
   icon entity (needs its draw placement — the create leaves +0x40/+0x44
   unset) and the sub_08045BC8/sub_08045164 held-soul sparkle (anim
   index 0xC of 0x0820ED60, pinned above the player, song 0xBF), plus
-  the song-0xBE request whose same-frame ordering against 0xBC is
-  unverified (our play_song replaces immediately).
+  0xBF is now deferred one frame (see patch 0836); 0xBE shares
+  player 2 with 0xBC so its same-frame loss is native.
 
 ## Patch 0825 - Soul pickup trail spark (sub_08045B44 type 8)
 

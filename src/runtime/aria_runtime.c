@@ -2522,6 +2522,13 @@ static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 /* The durable words touched by the common pickup collection tail. */
 static AosPickupCollectionState aria_pickup_state;
 
+/* A sound the next frame's entity pass must request: the native sparkle
+ * entity plays 0xBF on its first update, one frame after the collection
+ * that played 0xBC — same player, so emitting both in one frame would
+ * drop the collection sound. */
+static uint16_t deferred_sound;
+static bool deferred_sound_pending;
+
 static const char *pickup_notice_name(uint8_t type, uint16_t variant) {
     if (type == AOS_PICKUP_ITEM)
         return variant < AOS_ITEM_RECORDS ? aos_item_name((uint8_t)variant) : NULL;
@@ -2561,6 +2568,10 @@ static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
  * as the Ghost's, whose children retain their producer slot. */
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
+    if (deferred_sound_pending) {
+        deferred_sound_pending = false;
+        aos_audio_play_song(deferred_sound);
+    }
     int sound = 0;
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
@@ -2970,8 +2981,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     fresh);
             /* sub_08045C34/sub_08045654: a new soul starts the 48-frame
              * sparkle storm (sub_08045350) around Soma; the entity itself
-             * is invisible (no drawFunc). Song 0xBE's same-frame request
-             * loses to 0xBC under our immediate-replace mixer. */
+             * is invisible (no drawFunc). Song 0xBE shares player 2 with
+             * 0xBC in the song table, so the same-frame collection sound
+             * replaces it natively too. */
             if (fresh) {
                 combat->soul_storm = 48;
                 combat->soul_storm_kind =
@@ -2980,16 +2992,19 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* sub_08045BC8/sub_08045164: the soul-absorbed sparkle pinned
              * at the player's position plus (0, -0x100000), animation 12,
              * palette nibble 6. A repeated soul spawns it at once and its
-             * first update requests song 0xBF (played here right after
-             * 0xBC, which our immediate-replace mixer would otherwise
-             * drop); a new soul natively waits for the sub_08045C34 icon's
-             * 64th frame (not yet ported). */
+             * first update — next frame's entity pass — requests song
+             * 0xBF (deferred so it does not replace the collection's
+             * 0xBC on the same player); a new soul natively waits for the
+             * sub_08045C34 icon's 64th frame (not yet ported). */
             if (room->effect_count < MAX_EFFECTS)
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SOUL_HELD, .pinned = true,
                     .ax = 0, .ay = -0x100000};
             aos_audio_play_song(aos_pickup_collection_sound(pickup));
-            if (!fresh) aos_audio_play_song(0xBF);
+            if (!fresh) {
+                deferred_sound = 0xBF;
+                deferred_sound_pending = true;
+            }
         }
         if (soul) {
             AosSoulTrailSpark trail;

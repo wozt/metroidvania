@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T14:48:02+00:00",
+ "generated_at": "2026-11-08T14:56:51+00:00",
  "git": {
-  "commit": "270dc97c",
+  "commit": "0ca4df5f",
   "branch": "main",
   "dirty": true
  },
@@ -14166,8 +14166,8 @@
     "sub_08033E6C",
     "sub_080683BC"
    ],
-   "limitations": "sub_080683BC is ported for its experience reward and drop decision, but the 0xA1 soul-chance flag and gEwramData + 0x4CC mode remain clear in the runtime. The level-up display sub_080455BC is ported (aos_levelup: still frame 0x48 on OBJ row 6, the sub_08045454 sine spin/scale envelope, the unk_A074_0 entity-update freeze, sub_08045270 sparkles and PlaySong(0xBC)); the walking-experience accessory path of sub_0801B0D8 is not ported. Enemy rewards are connected only for reconstructed enemy entities. Bestiary and common/rare discovery words use a ROM-free portable representation rather than native SRAM. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables, sub_08033E10, sub_08033E38 and sub_08033E6C are ported. The experience part of sub_080683BC grants each enemy record's reward once, marks its bestiary bit, applies the bonus flag and cap, and levels up; its drop part preserves the native soul, item and fallback-pickup decision order. The runtime creates and collects the resulting soul, item, money or MP-heart entities, records common and rare discovery bits, and schema-v9 saves preserve all three discovery sets. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Port the walking-experience accessory path and the remaining drop-context flags, then compare reward sequences against an emulator.",
+   "limitations": "sub_080683BC is ported for its experience reward and drop decision, but the 0xA1 soul-chance flag and gEwramData + 0x4CC mode remain clear in the runtime. The level-up display sub_080455BC is ported (aos_levelup: still frame 0x48 on OBJ row 6, the sub_08045454 sine spin/scale envelope, the unk_A074_0 entity-update freeze, sub_08045270 sparkles and PlaySong(0xBC)); the Sherman Ring walking-experience path of sub_0801B0D8 (_0801CCE2) is ported: accessory 0x2A, LEFT or RIGHT held, ticks&7==0 before +0x22 advances, AIRBORNE and WALL clear, unk_42C bit 0 and 0xA074 bit 1 clear grant one point into +0x1328C capped at 0x05F5E0FF, then the level loop and sub_080455BC(0). Enemy rewards are connected only for reconstructed enemy entities. Bestiary and common/rare discovery words use a ROM-free portable representation rather than native SRAM. sub_08033DA4 starting stats for Soma and Julius, sub_08033DFC's x(x + 1)(3x + 8) thresholds, sub_08033CAC's level loop to 99 with its four gain tables, sub_08033E10, sub_08033E38 and sub_08033E6C are ported. The experience part of sub_080683BC grants each enemy record's reward once, marks its bestiary bit, applies the bonus flag and cap, and levels up; its drop part preserves the native soul, item and fallback-pickup decision order. The runtime creates and collects the resulting soul, item, money or MP-heart entities, records common and rare discovery bits, and schema-v9 saves preserve all three discovery sets. Source-derived and unit-tested, not emulator-compared.",
+   "next_action": "Port the remaining drop-context flags, then compare reward sequences against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_stats.c",
@@ -20390,6 +20390,12 @@
  },
  "timeline": [
   {
+   "commit": "0ca4df5f",
+   "date": "2026-11-08",
+   "subject": "Port the native level-up display of sub_080455BC",
+   "scope": "project"
+  },
+  {
    "commit": "270dc97c",
    "date": "2026-11-08",
    "subject": "Clear HUD notices on room transitions like sub_0800EB04",
@@ -20861,12 +20867,6 @@
    "commit": "0b574354",
    "date": "2026-11-08",
    "subject": "Lab: lethal-branch ban, macro synthesis, lifecycle crash fix, LAB.md",
-   "scope": "project"
-  },
-  {
-   "commit": "227c00ca",
-   "date": "2026-11-08",
-   "subject": "Lab: RAM-backed SQLite, hard state cap, save throttling, viewer guards",
    "scope": "project"
   }
  ],

@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0841 - Sherman Ring walking experience (_0801CCE2)
+
+- The tail of `sub_0801B0D8` grants one experience point every eighth
+  tick (`+0x22 & 7 == 0`, read before the counter advances) while LEFT
+  or RIGHT is held, when the equipped accessory is 0x2A — the armor
+  table's Sherman Ring ("Increases experience points when you walk
+  wearing this ring"), with `+0x10 & 0x40002` clear (not airborne, not
+  wall-pushed), `unk_42C` bit 0 clear (no door carry) and `unk_A074`
+  bit 1 set (gameplay active; pause, menus and transitions never reach
+  the update).
+- The point lands directly in `+0x1328C` capped at `0x05F5E0FF`, then
+  `sub_08033CAC`'s level loop; a gained level runs the same
+  `sub_080455BC(0)` display, `PlaySong(0xBC)` and equipment refresh as
+  an enemy reward.
+- Ported in the main loop right after `aos_soma_update`, with the
+  door-held scan moved ahead of it. `aos_button_config_remap` only
+  touches A/B/R/L, so the d-pad mask passes through unchanged.
+
 ## Patch 0840 - Level-up display ported (sub_080455BC / sub_08045454)
 
 - A level gained in combat now spawns the native display: entity slots

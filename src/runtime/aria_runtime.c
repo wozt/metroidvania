@@ -6733,6 +6733,41 @@ int aria_runtime_main(int argc, char **argv) {
             soma.abilities = progress.flags;
             soma.guardian_alive = guardian.core.active;
             aos_soma_update(&soma, &layer, player_held, player_new);
+            /* A door walking Soma through owns the shared bits 0 and 8
+             * (unk_42C & 1 and the 0xA074 bit 1 the native check reads). */
+            bool door_held = false;
+            for (size_t k = 0; k < room.entity_count && !door_held; ++k)
+                door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
+                            room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
+                            room.entities[k].spawned && room.entities[k].door.holding;
+            /* _0801CCE2, the tail of sub_0801B0D8 before +0x22 advances: the
+             * Sherman Ring (accessory 0x2A) grants one experience every
+             * eighth tick while LEFT or RIGHT is held, on the ground, not
+             * wall-pushed and not door-held (unk_42C bit 0 and the 0xA074
+             * bit 1 are clear natively; the pause/menu and transition paths
+             * never reach this update). The point goes straight into
+             * +0x1328C capped at 0x05F5E0FF, then sub_08033CAC's level loop;
+             * a gained level calls sub_080455BC(0) like an enemy reward. */
+            if (progress.accessory == 0x2A && !door_held &&
+                !(soma.flags & (AOS_FLAG_AIRBORNE | AOS_FLAG_WALL)) &&
+                (player_held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) &&
+                ((uint16_t)(soma.ticks - 1) & 7) == 0) {
+                if (++progress.experience > AOS_STATS_MAX_EXPERIENCE)
+                    progress.experience = AOS_STATS_MAX_EXPERIENCE;
+                int32_t gained = aos_stats_level_up(&progress);
+                if (gained > 0) {
+                    soma.max_hp = (int16_t)progress.max_hp;
+                    aos_levelup_start(&combat.levelup);
+                    aos_audio_play_song(0xBC);
+                    if (combat.equipment) {
+                        aos_stats_refresh(&progress, combat.equipment);
+                        if (combat.derive_atk) combat.player->atk = progress.atk;
+                        if (combat.derive_def) combat.player->def = progress.def;
+                    }
+                    printf("Level up: level %u, max HP %u\n", progress.level,
+                           progress.max_hp);
+                }
+            }
             /* sub_08021FA4 and sub_08021C44 at the end of Soma's update,
              * then the yellow soul entity (slot 0x11). */
             aos_stats_frame_reset(&progress);
@@ -6741,12 +6776,6 @@ int aria_runtime_main(int argc, char **argv) {
              * MP regeneration, then sub_08021C44. */
             aos_stats_status_update(&progress, player_new, (uint16_t)(soma.ticks - 1));
             aos_stats_derive(&progress);
-            /* A door walking Soma through owns the shared bits 0 and 8. */
-            bool door_held = false;
-            for (size_t k = 0; k < room.entity_count && !door_held; ++k)
-                door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
-                            room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
-                            room.entities[k].spawned && room.entities[k].door.holding;
             aria_pickup_state.global_flags &= ~0x101u;
             if (door_held) aria_pickup_state.global_flags |= 0x101u;
             if (have_yellow_souls) {

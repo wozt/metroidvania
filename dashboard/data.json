@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T10:30:53+00:00",
+ "generated_at": "2026-11-08T10:33:53+00:00",
  "git": {
-  "commit": "49dfbfee",
+  "commit": "82dafc31",
   "branch": "main",
   "dirty": true
  },
@@ -13298,7 +13298,7 @@
     "sub_0804D2C8",
     "sub_0804D73C"
    ],
-   "limitations": "The SDL page uses diagnostic text instead of native tilemaps, icons, localized descriptions, cursor OAM, animated enemy previews and transitions. The list view draws its native BG0 layout through sub_0804D2C8 (strips 0xF320+slot*0x10, defeated-gated names 0x25D+enemy or 0x34E, separator dashes and sub_08046FFC numbers) and the detail view draws sub_0804CDF4's BG0 content: header numbers, common/rare drop names gated by the 0x133B0/0x133C0 bitsets, the 0x1310 name underline, element-icon grids from the 0x0852551C table for the +0x1A/+0x1C masks, soul bars, owned markers and the 0x399/0x3A9/0xCC0/0xCD0 soul icon strips. Header/footer strips, page numbers, button hints, the enemy portrait, drop/soul OBJ icons (sub_0804090C), the soul name/description message window, weakness labels and transitions remain open; not emulator-compared. Soul detail is limited to ownership, type and index. The source controller exposes 0x70 entries, so catalog record 0x70 Chaos is not shown. Audit notes: display records are 36 bytes at 0x080E9644 (name id at +8, second id at +0xA, stats at +0xC/+0x10, soul type/index at +0x17/+0x18, drop masks at +0x1A/+0x1C); names reuse table 0x08506734 gated by the defeated bitfield at gEwramData+0x133A0/0x133B0 (sub_0804D73C); drop icons resolve through table 0x0852551C (sub_0804D768); numbers use the two-row digit path sub_08046FFC. Enemy opens the source-sized 112-record list as two-column pages. Undefeated names and details stay hidden; known records expose identified English names, boss classification, HP, experience, attack, defence, weakness, resistance, named common and rare drops with their discovery flags, and soul ownership. Runtime defeat and item-drop bits persist through schema-v9 portable saves. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "The SDL page uses diagnostic text instead of native tilemaps, icons, localized descriptions, cursor OAM, animated enemy previews and transitions. The list view draws its native BG0 layout through sub_0804D2C8 (strips 0xF320+slot*0x10, defeated-gated names 0x25D+enemy or 0x34E, separator dashes and sub_08046FFC numbers) and the detail view draws sub_0804CDF4's BG0 content: header numbers, common/rare drop names gated by the 0x133B0/0x133C0 bitsets, the 0x1310 name underline, element-icon grids from the 0x0852551C table for the +0x1A/+0x1C masks, soul bars, owned markers and the 0x399/0x3A9/0xCC0/0xCD0 soul icon strips. Header/footer strips, page numbers, button hints, the enemy portrait, the soul name/description message window and weakness labels remain open; the drop rows are pure context-B text (sub_0804CFE8 decoded — sub_0804090C is the pixel cursor setter, no sprite layer); not emulator-compared. Soul detail is limited to ownership, type and index. The source controller exposes 0x70 entries, so catalog record 0x70 Chaos is not shown. Audit notes: display records are 36 bytes at 0x080E9644 (name id at +8, second id at +0xA, stats at +0xC/+0x10, soul type/index at +0x17/+0x18, drop masks at +0x1A/+0x1C); names reuse table 0x08506734 gated by the defeated bitfield at gEwramData+0x133A0/0x133B0 (sub_0804D73C); drop icons resolve through table 0x0852551C (sub_0804D768); numbers use the two-row digit path sub_08046FFC. Enemy opens the source-sized 112-record list as two-column pages. Undefeated names and details stay hidden; known records expose identified English names, boss classification, HP, experience, attack, defence, weakness, resistance, named common and rare drops with their discovery flags, and soul ownership. Runtime defeat and item-drop bits persist through schema-v9 portable saves. Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Port the list draw, then the detail page (sub_0804CDF4 family: sub_0804CFE8 names, sub_0804D0D0 stats, sub_0804D1DC soul block, sub_0804D768 drop icons, sub_08046FFC numbers, portrait via sub_0806E028) and the intro state machine sub_0804C968, then compare against an emulator capture.",
    "evidence": {
     "unit_tests": [
@@ -20362,6 +20362,18 @@
  },
  "timeline": [
   {
+   "commit": "82dafc31",
+   "date": "2026-11-08",
+   "subject": "Document enemy-detail drop icon decode and Soul Set icon status",
+   "scope": "project"
+  },
+  {
+   "commit": "4c3b8040",
+   "date": "2026-11-08",
+   "subject": "Render Equip page icons; fix Item Use composite order",
+   "scope": "project"
+  },
+  {
    "commit": "49dfbfee",
    "date": "2026-11-08",
    "subject": "Decode and render the item icon entity layer on Item Use",
@@ -20827,18 +20839,6 @@
    "commit": "5b3afcff",
    "date": "2026-11-07",
    "subject": "Correct SPECIAL object ids against the ROM create table",
-   "scope": "project"
-  },
-  {
-   "commit": "63b1b1ad",
-   "date": "2026-11-07",
-   "subject": "Export and draw the nine frequent Aria SPECIAL objects",
-   "scope": "project"
-  },
-  {
-   "commit": "b664e690",
-   "date": "2026-11-07",
-   "subject": "Decode SPECIAL object sprite resources per create",
    "scope": "project"
   }
  ],

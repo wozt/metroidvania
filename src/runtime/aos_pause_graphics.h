@@ -196,9 +196,9 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
  * drop names (0x34F/0xA/0x5A+item gated by the drop bitsets), the
  * name with its 0x1310 underline, the soul-type icon when the soul
  * view is active and owned, the three soul-bar strips and the owned
- * markers. The portrait, drop/soul icons (sub_0804090C sprites), the
- * soul name/description message window and the intro state machine
- * remain unported. */
+ * markers. The portrait, the soul name/description message window,
+ * weakness labels and transitions remain unported; the drop rows are
+ * pure context-B text (sub_0804090C is the pixel cursor setter). */
 bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
                                             const AosPauseEnemyValues *values,
                                             uint8_t *rgba, size_t rgba_size);

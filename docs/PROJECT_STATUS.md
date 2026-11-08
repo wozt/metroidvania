@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0837 - Character-name easter eggs decoded (JULIUS / NOSOUL / NOUSE)
+
+- The file-load name check (sub_080083C8, mirrored in code_08005894)
+  compares the save's 8-byte character name at gEwramData + 0x94
+  against three font-encoded names (charset 0x02-0x22 = A-Z):
+  - "JULIUS" (0x080E0DCC) sets currentCharacter = 1 — the Julius
+    mode unlock, not ported per project constraints.
+  - "NOSOUL" (0x080E0DDC) sets unk_60.unk_33C[2] |= 0x200000.
+  - "NOUSE" (0x080E0DD4) sets unk_60.unk_33C[2] |= 0x100000.
+- The NOSOUL bit is the gEwramData + 0x344 & 0x200000 test inside
+  sub_08031F3C: with it set, only yellow souls of index at most 2
+  (the basic stat records) spawn their effect entity — the "no soul"
+  challenge flag.
+- sub_08013404 (new-game init) saves and restores both flag bits
+  around the unk_33C wipe, so the restriction is save-scoped.
+- NOUSE's 0x100000 reader is not in the decompiled code (probably an
+  unmatched soul-use routine); the naming screen itself is not ported,
+  so none of this is reachable in the runtime yet.
+
 ## Patch 0836 - Held-soul sound deferred one frame (native ordering)
 
 - The song table puts 0xBC, 0xBE and 0xBF on player 2, so same-frame

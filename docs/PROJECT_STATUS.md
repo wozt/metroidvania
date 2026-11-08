@@ -114,10 +114,13 @@ Last updated: **2026-11-07**.
   chain (stride 0xE4, 5 entries) calling sub_0803AC40.
   EnemyGiantWormCreate/Update and EnemyPoisonWormCreate/
   Update confirmed as thin variant wrappers (0 / 1).
-- Still open for the port: the parent +0x1C attack/dive
-  record semantics (which parent state writes it — the
-  children switch to their attack branch when it is set),
-  the sub_080429D0 +0x74..+0x76 record layout, and
+- Parent +0x1C resolved: it is a byte flag, not a record —
+  the state-3 handler (_080AE21C, the lunge: position +=
+  velocity, +0x4C += 0x2000 gravity) sets it, and every
+  linked child reads parent +0x1C to switch from the
+  emerge branch to its own attack motion (child state 2).
+- Still open for the port: the sub_080429D0 +0x74..+0x76
+  record layout (tracked-collision registration) and
   resources for ids 62/71 (enemies.tsv rows exist; the
   ENTITY/PROBES rows are not yet in objects.c). The port
   additionally needs runtime support that may not exist

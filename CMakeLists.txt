@@ -138,7 +138,7 @@ add_executable(aos_lab_worker src/tools/aos_lab_worker.c
     $<TARGET_OBJECTS:aos_mgba_session> $<TARGET_OBJECTS:aos_lab_db>
     $<TARGET_OBJECTS:aos_lab_vision>)
 target_include_directories(aos_lab_worker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/tools)
-target_link_libraries(aos_lab_worker PRIVATE ${MGBA_LIBRARY} ${SQLITE3_LIBRARY} pthread)
+target_link_libraries(aos_lab_worker PRIVATE ${MGBA_LIBRARY} ${SQLITE3_LIBRARY} pthread m)
 fusion_enable_warnings(aos_lab_worker)
 
 add_executable(fusion_checklist src/tools/fusion_checklist.c)

@@ -649,3 +649,21 @@ int64_t aos_labdb_best_state(AosLabDb *db, double *out_value) {
     if (out_value) *out_value = val;
     return id;
 }
+
+/* Fleet champion by Elo rating: workers maintain lab.beststate as
+ * "id:elo" whenever a match updates the leader. Falls back to the
+ * raw-reward best_state on a fresh database. */
+int64_t aos_labdb_elo_best(AosLabDb *db, double *out_value) {
+    char *v = aos_labdb_meta_get(db, "lab.beststate");
+    if (v) {
+        long long id = -1;
+        double elo = 0.0;
+        if (sscanf(v, "%lld:%lf", &id, &elo) >= 1 && id > 0) {
+            if (out_value) *out_value = elo;
+            free(v);
+            return (int64_t)id;
+        }
+    }
+    free(v);
+    return aos_labdb_best_state(db, out_value);
+}

@@ -121,10 +121,13 @@ of running four identical bandits.
   table (0x02000400) — `entity_active` (+0.1) when enemies/AI are
   churning, `entity_still` (−0.05) when gameplay mode shows a dead
   world.
-- **Branch convergence**: there is no per-worker branch separation —
-  60% of waypoint picks jump straight to the fleet's best-valued
-  state and smart hops trigger at a +0.10 EMA margin (up to 24 hops),
-  so a discovered passage pulls the whole fleet forward together.
+- **Branch Elo**: branch strength is a *relative* rating, not an
+  absolute score. Every trial is a match between its branch and the
+  previous trial's branch (K=32, start 1500); winners gain, losers
+  drop. `lab.beststate="id:elo"` tracks the champion and
+  `aos_labdb_elo_best` feeds smart hops and waypoint picks — a
+  consistently good branch beats a one-off lucky reward, and the
+  whole fleet converges on the Elo leader.
 - **Rewind**: any trial scoring < −0.10 earns one corrective retry —
   the branch state is reloaded and an evasive input (attack tap then
   an alternating direction hold) replays the same frame budget. The

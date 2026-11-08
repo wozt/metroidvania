@@ -27,6 +27,7 @@
 #include "aos_lab_db.h"
 #include "aos_lab_vision.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -294,6 +295,63 @@ static void lethal_mark(AosLabDb *db, int64_t action_id,
     snprintf(b, sizeof b, "%d", (v ? atoi(v) : 0) + 1);
     aos_labdb_meta_set(db, k, b);
     free(v);
+}
+
+/* ---- branch Elo -----------------------------------------------------
+ * Branch strength is a relative rating, not an absolute score: every
+ * trial is a match between its branch and the previous trial's
+ * branch. Winner gains, loser drops (K=32, start 1500). The fleet
+ * champion lives in meta lab.beststate="id:elo" — smart hops and
+ * waypoint picks follow the Elo leader, so a consistently good
+ * branch beats a one-off lucky reward. */
+static double elo_get(AosLabDb *db, int64_t id) {
+    char k[64];
+    snprintf(k, sizeof k, "lab.elo.%lld", (long long)id);
+    char *v = aos_labdb_meta_get(db, k);
+    double r = v ? atof(v) : 1500.0;
+    free(v);
+    return r;
+}
+
+static void elo_set(AosLabDb *db, int64_t id, double rating) {
+    char k[64], b[32];
+    snprintf(k, sizeof k, "lab.elo.%lld", (long long)id);
+    snprintf(b, sizeof b, "%.1f", rating);
+    aos_labdb_meta_set(db, k, b);
+}
+
+static void elo_match(AosLabDb *db, int64_t cur, double rcur) {
+    char *lm = aos_labdb_meta_get(db, "lab.lastmatch");
+    long long oid = -1;
+    double orw = 0.0;
+    if (lm) sscanf(lm, "%lld:%lf", &oid, &orw);
+    free(lm);
+    if (oid > 0 && oid != cur) {
+        double ra = elo_get(db, cur), rb = elo_get(db, oid);
+        double ea = 1.0 / (1.0 + pow(10.0, (rb - ra) / 400.0));
+        double sa = rcur > orw ? 1.0 : (rcur < orw ? 0.0 : 0.5);
+        ra += 32.0 * (sa - ea);
+        rb += 32.0 * ((1.0 - sa) - (1.0 - ea));
+        elo_set(db, cur, ra);
+        elo_set(db, oid, rb);
+        /* fleet champion: only the two players' ratings moved, so the
+         * leader can only change if one of them overtook it */
+        char *bv = aos_labdb_meta_get(db, "lab.beststate");
+        long long bid = -1;
+        double be = 0.0;
+        if (bv) sscanf(bv, "%lld:%lf", &bid, &be);
+        free(bv);
+        int64_t win = ra >= rb ? cur : oid;
+        double we = ra >= rb ? ra : rb;
+        if (we > be || bid < 0) {
+            char nb[64];
+            snprintf(nb, sizeof nb, "%lld:%.1f", (long long)win, we);
+            aos_labdb_meta_set(db, "lab.beststate", nb);
+        }
+    }
+    char mb[64];
+    snprintf(mb, sizeof mb, "%lld:%.4f", (long long)cur, rcur);
+    aos_labdb_meta_set(db, "lab.lastmatch", mb);
 }
 
 static bool best_params(AosLabDb *db, int64_t action_id,
@@ -1573,10 +1631,10 @@ int main(int argc, char **argv) {
              * reward is clearly below it */
             if (branch_request || (trials_done && trials_done % 60 == 0)) {
                 double bv = 0.0;
-                int64_t bs = aos_labdb_best_state(db, &bv);
+                int64_t bs = aos_labdb_elo_best(db, &bv);
                 if (bs > 0 && state_dead(db, bs)) bs = -1;
-                if (bs > 0 && bs != state_id && branch_hops < 24 &&
-                    (branch_request || bv > reward_ema + 0.10)) {
+                if (bs > 0 && bs != state_id && branch_hops < 1000 &&
+                    (branch_request || 1)) {
                     size_t nsz = 0;
                     uint8_t *nb = aos_labdb_state_blob(db, bs, &nsz);
                     if (nb) {
@@ -1728,7 +1786,7 @@ int main(int argc, char **argv) {
                  * exploits the frontier together. */
                 int pick_i = -1, play_n = 0;
                 double bv2 = 0.0;
-                int64_t bs2 = aos_labdb_best_state(db, &bv2);
+                int64_t bs2 = aos_labdb_elo_best(db, &bv2);
                 if (bs2 > 0 && !state_dead(db, bs2) &&
                     (rand() % 100) < 60) {
                     for (int si = 0; si < scount; ++si)
@@ -1970,6 +2028,10 @@ int main(int argc, char **argv) {
              * exploration reward is a partial, not a dead spin */
             if (!strcmp(outcome, "fail") && reward > 0.0)
                 snprintf(outcome, sizeof outcome, "partial");
+            /* branch Elo: this trial's reward is a match result
+             * against the previous trial's branch — relative rating,
+             * not absolute score */
+            elo_match(db, used_state_id, reward);
             int64_t trial_id = aos_labdb_add_trial(
                 db, run_id, used_state_id, action->id, drawn, keys_label,
                 frames, outcome, reward, metrics, duration_ms);
@@ -2137,7 +2199,7 @@ int main(int argc, char **argv) {
                 /* barren streak: hop to the best branch once before
                  * giving up — a fresh frontier beats spinning wheels */
                 double bv = 0.0;
-                int64_t bs = aos_labdb_best_state(db, &bv);
+                int64_t bs = aos_labdb_elo_best(db, &bv);
                 if (bs > 0 && state_dead(db, bs)) bs = -1;
                 if (bs > 0 && bs != state_id && branch_hops < 24) {
                     size_t nsz = 0;

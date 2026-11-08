@@ -1130,11 +1130,33 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
     int prev_mode = -1;   /* gameMode at end of previous chunk */
     int scout_area = -1, scout_room = -1, scout_rooms = 0;
     int scene_saves = 0;
+    int64_t scout_reset = -1;
     for (int chunk = 0; chunk < max_chunks && !stop; ++chunk) {
         char *ctl = aos_labdb_meta_get(db, ctrl_key);
         if (ctl && !strcmp(ctl, "stop")) stop = 1;
         free(ctl);
         if (stop) break;
+        /* frontier reset: relocate scouting to the promoted branch so
+         * the whole fleet maps ahead from the same deep checkpoint */
+        {
+            char *rs = aos_labdb_meta_get(db, "lab.reset_state");
+            if (rs) {
+                int64_t rid = atoll(rs);
+                free(rs);
+                if (rid > 0 && rid != scout_reset) {
+                    scout_reset = rid;
+                    size_t nsz = 0;
+                    uint8_t *nb = aos_labdb_state_blob(db, rid, &nsz);
+                    if (nb) {
+                        if (aos_mgba_load_state_blob(session, nb, nsz)) {
+                            in_game = 1;
+                            prev_mode = 4;
+                        }
+                        free(nb);
+                    }
+                }
+            }
+        }
 
         /* phase 1: 520 frames advancing text/menus.
          * START only navigates title/menu phases — once free gameplay
@@ -1609,6 +1631,7 @@ int main(int argc, char **argv) {
      * demand via the viewer's "best" control */
     double reward_ema = 0.0;
     int branch_hops = 0, branch_request = 0;
+    int64_t reset_seen = -1;
     struct timeval t0, t1;
 
     /* bandit over actions: weights table gives each (action,params)
@@ -1701,6 +1724,28 @@ int main(int argc, char **argv) {
                 }
                 if (control && !strcmp(control, "stop")) stop_requested = 1;
                 free(control);
+            }
+            /* frontier reset: another worker consolidated progress and
+             * promoted a branch — relocate this worker's base state so
+             * the whole fleet continues from the promising path */
+            {
+                char *rs = aos_labdb_meta_get(db, "lab.reset_state");
+                if (rs) {
+                    int64_t rid = atoll(rs);
+                    free(rs);
+                    if (rid > 0 && rid != reset_seen) {
+                        reset_seen = rid;
+                        size_t nsz = 0;
+                        uint8_t *nb = aos_labdb_state_blob(db, rid, &nsz);
+                        if (nb) {
+                            free(state_blob);
+                            state_blob = nb;
+                            blob_size = nsz;
+                            state_id = rid;
+                            aos_labdb_meta_set(db, phase_key, "reset");
+                        }
+                    }
+                }
             }
             if (stop_requested) break;
             /* smart restart: every 60 trials, or on demand, hop to the
@@ -2235,6 +2280,39 @@ int main(int argc, char **argv) {
                 if (strcmp(old, prog))
                     aos_labdb_meta_set(db, "lab.progress", prog);
                 free(op);
+                /* frontier consolidation: when travelled distance has
+                 * grown ~10% since the last consolidation, the fleet
+                 * found a promising branch — purge everything else and
+                 * point every worker at the Elo champion via
+                 * lab.reset_state */
+                {
+                    char *md3 = aos_labdb_meta_get(db, "lab.motion_total");
+                    long dist_now = md3 ? atol(md3) : 0;
+                    free(md3);
+                    char *cd = aos_labdb_meta_get(db, "lab.consol_dist");
+                    long dist_ref = cd ? atol(cd) : -1;
+                    free(cd);
+                    if (dist_ref < 0) {
+                        char nb[32];
+                        snprintf(nb, sizeof nb, "%ld", dist_now);
+                        aos_labdb_meta_set(db, "lab.consol_dist", nb);
+                    } else if (dist_now > dist_ref + dist_ref / 10 &&
+                               dist_now > 0) {
+                        int cn = aos_labdb_consolidate(db);
+                        double cbv = 0.0;
+                        int64_t cb = aos_labdb_elo_best(db, &cbv);
+                        if (cb > 0) {
+                            char nb[32];
+                            snprintf(nb, sizeof nb, "%lld", (long long)cb);
+                            aos_labdb_meta_set(db, "lab.reset_state", nb);
+                        }
+                        char nb[32];
+                        snprintf(nb, sizeof nb, "%ld", dist_now);
+                        aos_labdb_meta_set(db, "lab.consol_dist", nb);
+                        printf("worker %d frontier consolidation: %d rows, reset->%lld\n",
+                               worker_id, cn, (long long)cb);
+                    }
+                }
             }
             /* long-sequence construction: every 250 trials fuse the
              * two best actions into a reusable macro action */

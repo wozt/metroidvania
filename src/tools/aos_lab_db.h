@@ -116,6 +116,12 @@ char *aos_labdb_meta_get(AosLabDb *db, const char *key);
 int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
                     int *out_states);
 
+/* Frontier consolidation: when campaign distance jumps, keep only the
+ * promising branch — ancestors of the Elo-best state, states whose
+ * trials scored >0.5 and the newest checkpoints — then drop every
+ * other state and orphaned trials. Returns rows removed, -1 on error. */
+int aos_labdb_consolidate(AosLabDb *db);
+
 #ifdef __cplusplus
 }
 #endif

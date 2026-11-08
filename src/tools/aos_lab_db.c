@@ -630,6 +630,78 @@ int aos_labdb_purge(AosLabDb *db, int *out_trials, int *out_weights,
            counts[5] + counts[6] + counts[7] + counts[8] + counts[9];
 }
 
+/* Frontier consolidation: keep only the promising branch. The keep-set
+ * is the ancestor chain of the Elo-best state (via parent_id), every
+ * state whose trials scored >0.5, and the newest 80 checkpoints. All
+ * other states and their trials are dropped; the trial log is capped
+ * at the newest 2500 rows. Weights and meta (Elo, lethal memory,
+ * progress) survive — they are the fleet's learned knowledge. */
+int aos_labdb_consolidate(AosLabDb *db) {
+    if (!db || !db->handle) return -1;
+    sqlite3_exec(db->handle,
+        "CREATE TEMP TABLE IF NOT EXISTS keep_states("
+        " id INTEGER PRIMARY KEY)", NULL, NULL, NULL);
+    sqlite3_exec(db->handle, "DELETE FROM temp.keep_states",
+                 NULL, NULL, NULL);
+    sqlite3_exec(db->handle,
+        "INSERT OR IGNORE INTO temp.keep_states"
+        " SELECT DISTINCT state_id FROM trials"
+        " WHERE reward > 0.5 AND state_id IS NOT NULL",
+        NULL, NULL, NULL);
+    sqlite3_exec(db->handle,
+        "INSERT OR IGNORE INTO temp.keep_states"
+        " SELECT id FROM states ORDER BY id DESC LIMIT 80",
+        NULL, NULL, NULL);
+    /* ancestors of the Elo champion: walk parent_id in C */
+    double bv = 0.0;
+    int64_t best = aos_labdb_elo_best(db, &bv);
+    if (best > 0) {
+        sqlite3_stmt *kp = NULL;
+        if (sqlite3_prepare_v2(db->handle,
+                "INSERT OR IGNORE INTO temp.keep_states VALUES(?)",
+                -1, &kp, NULL) == SQLITE_OK) {
+            int64_t cur = best;
+            for (int depth = 0; depth < 64 && cur > 0; ++depth) {
+                sqlite3_reset(kp);
+                sqlite3_bind_int64(kp, 1, cur);
+                sqlite3_step(kp);
+                sqlite3_stmt *pp = NULL;
+                int64_t parent = -1;
+                if (sqlite3_prepare_v2(db->handle,
+                        "SELECT parent_id FROM states WHERE id=?",
+                        -1, &pp, NULL) == SQLITE_OK) {
+                    sqlite3_bind_int64(pp, 1, cur);
+                    if (sqlite3_step(pp) == SQLITE_ROW)
+                        parent = sqlite3_column_int64(pp, 0);
+                    sqlite3_finalize(pp);
+                }
+                if (parent <= 0 || parent == cur) break;
+                cur = parent;
+            }
+            sqlite3_finalize(kp);
+        }
+    }
+    int total = 0, ch;
+    ch = sqlite3_exec(db->handle,
+        "DELETE FROM states WHERE id NOT IN"
+        " (SELECT id FROM temp.keep_states)", NULL, NULL, NULL);
+    if (ch != SQLITE_OK) return -1;
+    total += sqlite3_changes(db->handle);
+    sqlite3_exec(db->handle,
+        "DELETE FROM trials WHERE state_id IS NOT NULL"
+        " AND state_id NOT IN (SELECT id FROM states)",
+        NULL, NULL, NULL);
+    total += sqlite3_changes(db->handle);
+    sqlite3_exec(db->handle,
+        "DELETE FROM trials WHERE id NOT IN"
+        " (SELECT id FROM trials ORDER BY id DESC LIMIT 2500)",
+        NULL, NULL, NULL);
+    total += sqlite3_changes(db->handle);
+    sqlite3_exec(db->handle, "DROP TABLE temp.keep_states",
+                 NULL, NULL, NULL);
+    return total;
+}
+
 /* Best branch by observed value: the state whose trials produced the
  * highest reward, tie-broken by the most recent trial. Used by workers
  * for smart restarts — jump to whatever checkpoint proved most

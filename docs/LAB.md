@@ -104,6 +104,14 @@ explore pool and the per-action warmup floor.
 
 ## Branch management
 
+- **Frontier consolidation**: when `lab.motion_total` grows ~10%
+  since the last consolidation, `aos_labdb_consolidate` keeps only
+  the promising branch — ancestors of the Elo-best state (via
+  `parent_id`), states whose trials scored >0.5, and the newest 80
+  checkpoints — drops every other state and orphaned trial, caps the
+  log at 2500 rows, then publishes `lab.reset_state=<best id>`.
+  Every worker (scouts included) polls that key and relocates to the
+  promoted branch, so the whole fleet continues from the frontier.
 - **Waypoint restarts**: ~25% of trials reload a random stored state
   (60% preference for `scout_play_*` when present).
 - **Smart restart**: every 60 trials (and on demand via the Best

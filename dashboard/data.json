@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:52:51+00:00",
+ "generated_at": "2026-11-08T00:56:51+00:00",
  "git": {
-  "commit": "feed7c0e",
+  "commit": "674eb278",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "674eb278",
+   "date": "2026-11-08",
+   "subject": "lab: enemy_down only counts inside stable scenes",
+   "scope": "project"
+  },
+  {
    "commit": "feed7c0e",
    "date": "2026-11-08",
    "subject": "docs: note explore-input exclusion from bandit exploitation",
@@ -20789,12 +20795,6 @@
    "commit": "0e660e74",
    "date": "2026-11-07",
    "subject": "Animate the pause selection hand",
-   "scope": "project"
-  },
-  {
-   "commit": "e76d5c35",
-   "date": "2026-11-07",
-   "subject": "Place the native selection hand on every pause page",
    "scope": "project"
   }
  ],

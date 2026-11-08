@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0845 - Soma grab states: entry chain decoded
+
+- States 8 (sub_08019EF8, grab/curse), 14 (sub_08019A94) and 17
+  (_0801CCA8) remain unported, but their entry conditions are now
+  fully traced in the decompilation:
+  - A pending hit's type (+0x131D4, from the attack record's +6)
+    of 3 routes react_to_hit to state 14: the drag sequence with
+    animations 0x11/0x49/0x4A and sound 0x196.
+  - Type-3 hits are written only by Object06Update — object type 6,
+    a scripted room object that locks player input on create — and
+    its helper sub_08050510.
+  - State 17 is set by sub_0801D028, the grab-release helper enemy
+    routines call; state 8 through the grab path sub_080168F0.
+- No ported room spawns object type 6, so the states stay unreachable
+  exactly as in native rooms without the grab object.
+
 ## Patch 0844 - NOSOUL name flag wired into soul gates
 
 - The name-entry unlocks were already captured (`name_unlock_flags`

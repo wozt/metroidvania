@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0813 - Item Use page decode (documentation tranche)
+
+- sub_0804B6C4/sub_0804B494 fully decoded and recorded in the
+  aos.menus.item_use annotation: window sub_08040748(0,0,0x20,2),
+  BG0 strips via sub_08046DD4, the 8-slot inventory walk with
+  sub_08040970 icon-cell rects, sub_0804090C icon descriptors
+  (16-byte records at 0x08505B3C, 0x80 flag on odd slots), context-B
+  names via sub_08041434->sub_08041338 (id table 0x08506734),
+  quantities via sub_08046EF4, dash pairs via sub_08047098 and the
+  empty-page text 0x34F.
+- The remaining port blocker is confirmed to be the icon sheet
+  itself: the descriptor names a 6-column icon grid whose pixels are
+  not yet extracted — same OBJ-layer gap as the other pages.
+
 ## Patch 0812 - Sleep page on the cell engine
 
 - `aos_pause_graphics_render_sleep` now renders through the native

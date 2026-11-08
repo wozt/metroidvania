@@ -205,10 +205,8 @@ aos:asm:asm/code/code_08040A38.s:sub_08046E04	sub_08046E04	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_08046E28	sub_08046E28	unclassified				asm_function	0x08046E28	asm/code/code_08040A38.s	11291	2	0
 aos:asm:asm/code/code_08040A38.s:sub_08046E30	sub_08046E30	unclassified				asm_function	0x08046E30	asm/code/code_08040A38.s	11298	0	0
 aos:asm:asm/code/code_08040A38.s:sub_08046E34	sub_08046E34	unclassified				asm_function	0x08046E34	asm/code/code_08040A38.s	11303	0	3
-aos:asm:asm/code/code_08040A38.s:sub_08046EF4	sub_08046EF4	unclassified		technical	exclusive_callees	asm_function	0x08046EF4	asm/code/code_08040A38.s	11404	4	2
 aos:asm:asm/code/code_08040A38.s:sub_08046F74	sub_08046F74	unclassified		technical	exclusive_callees	asm_function	0x08046F74	asm/code/code_08040A38.s	11473	1	2
 aos:asm:asm/code/code_08040A38.s:sub_08046FFC	sub_08046FFC	unclassified		technical	exclusive_callees	asm_function	0x08046FFC	asm/code/code_08040A38.s	11546	10	2
-aos:asm:asm/code/code_08040A38.s:sub_08047098	sub_08047098	unclassified				asm_function	0x08047098	asm/code/code_08040A38.s	11631	5	0
 aos:asm:asm/code/code_08040A38.s:sub_080470C4	sub_080470C4	unclassified		technical	exclusive_callees	asm_function	0x080470C4	asm/code/code_08040A38.s	11656	1	2
 aos:asm:asm/code/code_08040A38.s:sub_08047128	sub_08047128	unclassified				asm_function	0x08047128	asm/code/code_08040A38.s	11708	9	0
 aos:asm:asm/code/code_08040A38.s:sub_08047154	sub_08047154	unclassified				asm_function	0x08047154	asm/code/code_08040A38.s	11733	4	0

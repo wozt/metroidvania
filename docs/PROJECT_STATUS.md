@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0834 - Death-state velocity bounce ported (sub_0801B03C)
+
+- sub_0801B03C runs on Soma's own record during state 16 (the caller
+  sets player +0x1E = 4): each axis' acceleration field is rewritten
+  every frame to oppose its velocity sign at 0x200, then the
+  velocity integrates it — a decay to a +-0x200 oscillation, so the
+  corpse keeps drifting slowly instead of halting. The previous
+  approach_zero model stopped both axes dead.
+- death_state now writes friction/gravity_mod = +-0x200 by velocity
+  sign and integrates directly (no sign-change clamp); vy decays at
+  0x200/frame (~192 frames of drift) where the old model used
+  gravity_mod 0x2000 (~12 frames).
+- The +-0x200 terminal values are asserted in test_aos_soma; the
+  every-four-frames sparkle emission stays in the runtime caller.
+
 ## Patch 0833 - Corpse sparkle uses the native animation 13
 
 - sub_0801B03C's emitter calls sub_08045CEC(x, y, 0xD, 8): resource

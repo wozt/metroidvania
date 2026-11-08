@@ -634,9 +634,12 @@ static void hit_tests(void) {
     frame(&soma, 0, 0);
     assert(soma.state == 16 && soma.anim.id == AOS_SOMA_ANIM_DEATH && soma.combat.hurt_off &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x197) == 1);     /* sub_0801AF20 */
-    assert(soma.vx == -0x10000 + 0x200 && soma.vy == -0x18000 + 0x2000);
+    /* sub_0801B03C's bounce: accel 0x200 opposes the velocity sign on both
+     * axes, so the corpse drifts in a +-0x200 oscillation, never halting. */
+    assert(soma.vx == -0x10000 + 0x200 && soma.vy == -0x18000 + 0x200);
     for (int i = 0; i < 200; ++i) frame(&soma, AOS_KEY_JUMP | AOS_KEY_RIGHT, AOS_KEY_JUMP);
-    assert(soma.state == 16 && soma.vx == 0 && soma.vy == 0);
+    assert(soma.state == 16 && (soma.vx == 0 || soma.vx == -0x200) &&
+           (soma.vy == 0 || soma.vy == -0x200));
     memset(cells, 0, sizeof(cells));
 }
 

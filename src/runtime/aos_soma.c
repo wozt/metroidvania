@@ -1066,20 +1066,15 @@ static void die(AosSoma *soma) {
     soma->state = 16;
 }
 
-/* Velocity plus acceleration, stopping on a sign change. */
-static void approach_zero(int32_t *v, int32_t *a) {
-    int32_t old = *v, updated = old + *a;
-    *v = updated;
-    if ((old < 0 && updated > 0) || (old >= 0 && updated < 0) || (old == 0 && updated > 0))
-        *v = *a = 0;
-}
-
-/* Case 16 (sub_0801B03C): drift to a halt; particles every 4 frames are
- * not ported. */
+/* Case 16 (sub_0801B03C): the velocity bounce — each axis' acceleration
+ * opposes its velocity sign at 0x200, so the velocity decays to a
+ * +-0x200 oscillation instead of stopping; the corpse keeps drifting
+ * slowly. The sparkle emission every four frames lives in the caller. */
 static void death_state(AosSoma *soma) {
-    soma->friction = soma->vx < 0 ? 0x200 : (int32_t)0xFFFFFE00;
-    approach_zero(&soma->vx, &soma->friction);
-    approach_zero(&soma->vy, &soma->gravity_mod);
+    soma->friction = soma->vx < 0 ? 0x200 : (int32_t)-0x200;
+    soma->vx += soma->friction;
+    soma->gravity_mod = soma->vy < 0 ? 0x200 : (int32_t)-0x200;
+    soma->vy += soma->gravity_mod;
 }
 
 /* sub_0801B0D8 (_0801B3C2 .. _0801B9C8): the reaction to a pending hit.

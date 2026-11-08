@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T00:27:44+00:00",
+ "generated_at": "2026-11-08T00:29:20+00:00",
  "git": {
-  "commit": "5703cb9d",
+  "commit": "e6db7546",
   "branch": "main",
   "dirty": true
  },
@@ -20318,6 +20318,12 @@
  },
  "timeline": [
   {
+   "commit": "e6db7546",
+   "date": "2026-11-08",
+   "subject": "lab: branch strength as Elo rating instead of absolute score",
+   "scope": "project"
+  },
+  {
    "commit": "5703cb9d",
    "date": "2026-11-08",
    "subject": "lab: adaptive traversal actions + entity-activity reward probe",
@@ -20789,12 +20795,6 @@
    "commit": "a78f1356",
    "date": "2026-11-07",
    "subject": "Decode the Object20 proximity conversations",
-   "scope": "project"
-  },
-  {
-   "commit": "c401d218",
-   "date": "2026-11-07",
-   "subject": "Document the Object20 projectile controller audit",
    "scope": "project"
   }
  ],

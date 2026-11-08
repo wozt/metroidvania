@@ -703,7 +703,7 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
         int mb = rd32(&b[RK_MODE], 0), ma = rd32(&a[RK_MODE], 0);
         if (mb == 4 && ma != 4) { bonus -= 0.6; TAG("exit_gameplay"); }
         else if (mb != 4 && ma == 4) { bonus += 0.3; TAG("enter_gameplay"); }
-        else if (mb != ma) { bonus += 0.2; TAG("mode_change"); }
+        else if (mb != ma) { TAG("mode_change"); }
     }
     /* area=+0xE room=+0xF inside the 0x90 block; song=+0x0 u16 */
     if (b[RK_AREA].data && a[RK_AREA].data &&
@@ -763,7 +763,14 @@ static double compute_bonus(AosLabDb *db, const AosRunResult *res,
     }
     if (b[RK_LVL].data && a[RK_LVL].data &&
         b[RK_LVL].data[0] != a[RK_LVL].data[0]) {
-        bonus += 1.0; TAG("level_up");
+        /* plausible level-up only: both readings in range and a
+         * small increment — the raw byte is noisy, real level-ups
+         * are +1 */
+        int lb = b[RK_LVL].data[0], la = a[RK_LVL].data[0];
+        if (lb >= 1 && lb <= 99 && la >= 1 && la <= 99 &&
+            la > lb && la - lb <= 3) {
+            bonus += 1.0; TAG("level_up");
+        }
     }
     /* items / souls inventories: any byte diff counts */
     if (b[RK_ITEM].data && a[RK_ITEM].data &&
@@ -1677,6 +1684,10 @@ int main(int argc, char **argv) {
             EvalProbe probe;
             int has_probe = eval_parse(action->eval, &probe);
             int frames = frames_override > 0 ? frames_override : 120;
+            /* traversal needs several reaction segments — give it at
+             * least 4 segments (240f) so jump/attack/door actually fire */
+            if (action->kind && !strcmp(action->kind, "traverse") &&
+                frames < 240) frames = 240;
             /* completion rule: ~15% of trials run 3x longer — short
              * probes cannot reach doors, so occasionally give the
              * agent a real traversal budget */
@@ -2114,6 +2125,7 @@ int main(int argc, char **argv) {
                 int lvl = (res.peek_count > RK_COUNT + RK_LVL &&
                            res.peeks[RK_COUNT + RK_LVL].data)
                               ? res.peeks[RK_COUNT + RK_LVL].data[0] : 0;
+                if (lvl < 1 || lvl > 99) lvl = 0;
                 char *ml = aos_labdb_meta_get(db, "lab.maxlevel");
                 int cur = ml ? atoi(ml) : 0;
                 if (lvl > cur) {

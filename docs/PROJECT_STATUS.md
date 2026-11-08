@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-07**.
 
+## Patch 0847 - Bestiary portrait path decoded
+
+- The enemy detail page's missing portrait is now traced:
+  sub_0804CA18 indexes a 36-byte record table at 0x080E9644 by the
+  enemy id and calls sub_0806E028, a DMA loader (channel-3 regs
+  0x040000D4, staging buffers 0x143F4/0x14BF4) that uploads each
+  enemy's menu sprite; sub_0803AAEC/sub_08042828/sub_0806DFF8 then
+  place the sprite entity on the page.
+- Porting it needs the record fields decoded and the menu sprite
+  resources exported — recorded as the next action on
+  aos.menus.enemy.
+
 ## Patch 0846 - Secret-room map marks moved to the wall break
 
 - Opening the quick map no longer marks secret-room cells — that was

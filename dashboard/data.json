@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:28:52+00:00",
+ "generated_at": "2026-11-09T14:31:50+00:00",
  "git": {
-  "commit": "4ab8a547",
+  "commit": "04eedb83",
   "branch": "main",
   "dirty": true
  },
@@ -9665,6 +9665,7 @@
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/gorgon.c",
+    "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11081,6 +11082,7 @@
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/gorgon.c",
+    "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11227,6 +11229,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -13004,6 +13007,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19731,6 +19735,7 @@
     "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/killer_fish.c",
     "src/runtime/aos_enemies/winged_skeleton.c",
+    "src/runtime/aos_enemies/harpy.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22185,6 +22190,12 @@
  },
  "timeline": [
   {
+   "commit": "04eedb83",
+   "date": "2026-11-09",
+   "subject": "Compile Winged Skeleton family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "4ab8a547",
    "date": "2026-11-09",
    "subject": "Compile Killer Fish family as an independent enemy unit",
@@ -22656,12 +22667,6 @@
    "commit": "16e534ee",
    "date": "2026-11-08",
    "subject": "Document the bestiary soul text path",
-   "scope": "project"
-  },
-  {
-   "commit": "41f93f70",
-   "date": "2026-11-08",
-   "subject": "Render bestiary enemy portraits on the detail page",
    "scope": "project"
   }
  ],

@@ -1,9 +1,27 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Harpy (enemy 0x38) and Siren (0x0F, the same code) with their volleys.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define copy_collision_result aos_enemy_copy_collision_result
+#define face_player aos_enemy_face_player
+#define falling_fragment aos_enemy_falling_fragment
+#define generic_death aos_enemy_generic_death
+#define integrate aos_enemy_integrate
+#define make_static_child aos_enemy_make_static_child
+#define move_toward aos_enemy_move_toward
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define step_anim aos_enemy_step_anim
+#define stop aos_enemy_stop
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
+#define toward_facing aos_enemy_toward_facing
 
 /* sub_08075EDC: the five Harpy feathers (frames 12 down to 8), and
  * sub_08076054: the Siren's three notes (frames 14, 13, 14). */
@@ -36,7 +54,7 @@ static void harpy_shot(AosEnemy *owner, int variant, AosHitReport *report) {
     report->children[report->child_count++] = child;
 }
 
-static AosHitReport harpy_shot_update(AosEnemy *shot, AosSoma *soma,
+AosHitReport aos_enemy_harpy_shot_update(AosEnemy *shot, AosSoma *soma,
                                       const AosEnemyKind *kind,
                                       const AosWeaponEntity *weapon,
                                       const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -77,16 +95,15 @@ void aos_enemy_falling_fragment(AosEnemy *owner, int frame,
     child.combat.attack_off = child.combat.hurt_off = true;
     report->children[report->child_count++] = child;
 }
-#define falling_fragment aos_enemy_falling_fragment
 
-static void falling_fragment_update(AosEnemy *piece, int cam_x, int cam_y) {
+void aos_enemy_falling_fragment_update(AosEnemy *piece, int cam_x, int cam_y) {
     integrate(piece);
     int sx = (piece->x >> 16) - cam_x, sy = (piece->y >> 16) - cam_y;
     piece->hidden = piece->timer < 12 && (piece->timer & 1);
     if (--piece->timer == 0 || sx < -32 || sx > 272 || sy > 192) piece->removed = true;
 }
 
-static AosHitReport harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_harpy_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
                                  int soma_def, int cam_x, int cam_y,

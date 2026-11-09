@@ -2771,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/harpy.c"
 #include "aos_enemies/tiny_devil.c"
 #include "aos_enemies/ripper.c"
 #include "aos_enemies/merman.c"
@@ -3128,14 +3127,14 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return early_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_HARPY_SHOT || enemy->role == AOS_ROLE_SIREN_SHOT)
-        return harpy_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_harpy_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                  cam_x, cam_y);
     if (enemy->role == AOS_ROLE_GORGON_BREATH)
         return aos_enemy_gorgon_breath_update(
             enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
             cam_x, cam_y);
     if (enemy->role == AOS_ROLE_GORGON_DEBRIS) {
-        falling_fragment_update(enemy, cam_x, cam_y);
+        aos_enemy_falling_fragment_update(enemy, cam_x, cam_y);
         return report;
     }
     if (enemy->role == AOS_ROLE_TINY_DEVIL_ORB)
@@ -3157,7 +3156,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                    cam_x, cam_y);
     if ((enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return harpy_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_harpy_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if ((enemy->id == AOS_ENEMY_GORGON || enemy->id == AOS_ENEMY_CATOBLEPAS) &&
         enemy->role == AOS_ROLE_ENEMY)

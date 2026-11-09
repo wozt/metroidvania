@@ -158,6 +158,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      The other 28 included families remain. Continue with
      `zombie_soldier.c`; keep one family per commit and repeat the union
      proof.
+   - *(Continued in patch 0916.)* `harpy.c` is independent with its
+     three updates exported; the Gorgon debris producer stays here and
+     the Gorgon/Catoblepas rows list the file. The union proof is
+     identical for all 488 symbols. The other 27 included families
+     remain. Continue with `tiny_devil.c`; keep one family per commit
+     and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

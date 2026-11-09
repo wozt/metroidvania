@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0916 - Harpy/Siren family becomes a real translation unit
+
+- `aos_enemies/harpy.c` now compiles independently with its volley
+  shot, Gorgon debris fragment and Harpy/Siren updates exported
+  through `aos_enemy_internal.h`. The Gorgon/Catoblepas rows also list
+  the file since they share its debris producer.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0915 - Winged Skeleton family becomes a real translation unit
 
 - `aos_enemies/winged_skeleton.c` now compiles independently with its

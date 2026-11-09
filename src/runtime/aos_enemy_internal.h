@@ -319,5 +319,16 @@ AosHitReport aos_enemy_winged_bone_update(
     int cam_x, int cam_y);
 void aos_enemy_winged_piece_update(AosEnemy *enemy,
                                    const AosEnemyKind *kind);
+AosHitReport aos_enemy_harpy_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
+AosHitReport aos_enemy_harpy_shot_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y);
+void aos_enemy_falling_fragment_update(AosEnemy *enemy,
+                                       int cam_x, int cam_y);
 
 #endif

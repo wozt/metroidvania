@@ -3919,6 +3919,183 @@ static void tsuchinoko_tests(void) {
     assert(e.state == 3 && e.anim.id == 0);
 }
 
+static void kicker_skeleton_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    /* A thick floor like a real room: the + 0x10 floor probe must find
+     * solid below the standing origin (160 - 16 = 144). */
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-6: 0 idle, 1-2 the fidget, 3 the wind-up and landing,
+     * 4 the hop (short so AOS_ANIM_ENDED comes quickly), 5 the slide,
+     * 6 the fall (six frames so + 0x6E == 5 is reached). */
+    static const uint8_t three[3] = {4, 4, 4};
+    static const uint8_t six[6] = {4, 4, 4, 4, 4, 4};
+    static const uint8_t two[2] = {4, 4};
+    AosAnimDef defs[7];
+    defs[0] = (AosAnimDef){3, three};
+    defs[1] = (AosAnimDef){3, three};
+    defs[2] = (AosAnimDef){3, three};
+    defs[3] = (AosAnimDef){6, six};
+    defs[4] = (AosAnimDef){2, two};
+    defs[5] = (AosAnimDef){2, two};
+    defs[6] = (AosAnimDef){6, six};
+    const AosAnimSet anims = {defs, 7};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 7; ++a)
+        for (int f = 0; f < 6; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* The 0x08528908 probe table: 2 wall probes, ceiling -10, floor 16,
+     * half width 6, wall rows 6 and -10. */
+    kind.probes = (AosProbes){2, -10, 16, 6, {6, -10}};
+    /* enemies.tsv id 83: hp 200, field_e 30, contact 40, defence 2,
+     * weak 0x20, resist 0x10, experience 80. */
+    const AosEnemyStats stats = {200, 40, 2, 0x20, 0x10, 80};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create (sub_080C0324): state 0, animation 0 looping, the floor
+     * snap; the flag path (0x8E & 0x40) is state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_KICKER_SKELETON, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && e.hp == stats.hp);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_KICKER_SKELETON, 200, 150, 0,
+                            0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 3 && flagged.anim.id == 0);
+    /* State 3: animation only — the animation still advances. */
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(!flagged.removed);
+
+    /* The wake: Soma in the centred 0xC8 x 0x50 box moves it to state 1;
+     * substep 0 faces, plays animation 3 and lands on substep 2 in the
+     * same call. */
+    soma.x = e.x + AOS_FIXED(60);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.state == 1 && e.step == 0);
+    /* Substep 0 faces, plays animation 3 and lands on substep 2 in the
+     * same call (the native case-0 fall-through). */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 2 && e.anim.id == 3);
+
+    /* Animation 3 ends (6 frames x 4 ticks): substep 2 -> the hop, anim 4,
+     * speed 0x8000, vy -0x30000, ay 0x1000, substep 3. */
+    int frames = 0;
+    while (!(e.step == 3 && e.anim.id == 4) && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 3 && e.anim.id == 4 && e.kicker_speed == 0x8000 &&
+           e.vy == (int32_t)0xFFFD0000 && e.ay == 0x1000 && frames < 100);
+
+    /* Rising under ay 0x1000: when vy reaches -0x18000 the apex switch
+     * plays animation 6 and substep 4. */
+    frames = 0;
+    while (e.step != 4 && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 4 && e.anim.id == 6 && frames < 100);
+
+    /* Walk frame 5 of animation 6: the slam — animation 5, speed 0x28000,
+     * vy +0x30000, + 0x14 bit 0, sound 0x87, substep 5. */
+    frames = 0;
+    while (e.step != 5 && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 5 && e.anim.id == 5 && e.kicker_speed == 0x28000 &&
+           e.vy == 0x30000 && (e.kicker_flags & 1) && frames < 100 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x87) >= 1);
+
+    /* The slide lands (probe bit 8): animation 3, + 0x14 bit 1 cleared,
+     * sound 0x127, substep 6. */
+    frames = 0;
+    while (e.step != 6 && frames < 60) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 6 && e.anim.id == 3 &&
+           !(e.kicker_flags & 2) &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x127) >= 1);
+
+    /* The skid decays 31/32 a frame until 0x7FFF, then idles: state 0,
+     * animation 0 looping, substep 0. */
+    frames = 0;
+    while (e.state != 0 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && frames < 200);
+
+    /* The strike contact: while + 0x14 & 1 the power is + 0x3C * 5 / 4 —
+     * contact 40 deals 50. */
+    AosEnemy striker;
+    memset(&striker, 0, sizeof striker);
+    striker.id = AOS_ENEMY_KICKER_SKELETON;
+    striker.role = AOS_ROLE_ENEMY;
+    striker.static_frame = -1;
+    striker.stats = stats;
+    striker.hp = stats.hp;
+    striker.hp_home = stats.hp;
+    striker.kicker_flags = 1;
+    striker.combat.type = AOS_TYPE_ENEMY;
+    striker.x = soma.x;
+    striker.y = soma.y;
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    AosHitReport contact = aos_enemy_update(&striker, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+    assert(contact.soma_hit &&
+           contact.soma_damage == aos_player_damage(50, 4));
+
+    /* The lethal blow (sub_080C0478): only a kill reacts — + 0x20 the
+     * side away from the attacker, state 2. The next update runs
+     * sub_080C0250: song 0x6B and seven debris pieces, then the entity
+     * deletes itself. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_KICKER_SKELETON, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(150);
+    e.hp = 1;
+    soma.x = e.x + AOS_FIXED(10);
+    soma.y = e.y + AOS_FIXED(10);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 2 && e.away == -1 && e.defeated);
+    AosHitReport death = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+    assert(e.removed && death.child_count == 7 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    for (int i = 0; i < death.child_count; ++i)
+        assert(death.children[i].role == AOS_ROLE_DEBRIS);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -7039,6 +7216,7 @@ int main(void) {
     killer_mantle_tests();
     dryad_tests();
     tsuchinoko_tests();
+    kicker_skeleton_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

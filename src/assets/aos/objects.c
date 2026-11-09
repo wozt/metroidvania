@@ -388,6 +388,11 @@ static const EntitySpec entities[] = {
      * uses sub_08069A00 collision probes instead). */
     {"tsuchinoko", 0x081CC0B4, 0x0820AFDC, 0, 0x0822952C, 0,
      0, 0, 0, {0}},
+    /* EnemyKickerSkeletonCreate (sub_080C0324): tiles 0x08259214,
+     * palette 0x0825C320, frames 0x0825DA58; its attack walks the
+     * 0x08528908 probe table (sub_0806CAF8 mode 0). */
+    {"kicker_skeleton", 0x08259214, 0x0825C320, 0, 0x0825DA58,
+     0x08528908, 0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

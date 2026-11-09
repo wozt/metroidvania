@@ -2,6 +2,39 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0876 - Kicker Skeleton ported (id 83)
+
+- EnemyKickerSkeletonCreate (0x080C0324) /
+  EnemyKickerSkeletonUpdate (0x080C03D0) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_KICKER_SKELETON
+  (0x53), with the sub_080BFFF0 eight-case attack machine,
+  the sub_080BFF7C contact and sub_080C0478 hurt
+  callbacks, and the sub_080C0250 death.
+- Resources: tiles 0x08259214, palette 0x0825C320, frames
+  0x0825DA58, probe table 0x08528908; sounds 0x87 at the
+  slam, 0x127 at the landing skid and 0x6B at the death.
+- The attack hops (animation 4, vy -0x30000 under ay
+  0x1000), switches to the slam at vy >= -0x18000
+  (animation 6), fires the frame-5 strike (animation 5,
+  speed 0x28000, + 0x14 bit 0, contact + 0x3C * 5 / 4 as
+  type 3), skids on animation 3 with sub_08045CEC gore
+  and decays 31/32 a frame to idle; the death flings
+  seven sub_0806C5AC debris pieces along + 0x20 and
+  deletes the entity the same frame.
+- Ability soul 4 (index 3) drops and is collected: it
+  enables the dive kick (sub_08017D90, AOS_MOVE_DIVE_KICK)
+  already ported in the movement suite.
+- Divergences: the two sub_080458E4 strike zones are
+  approximated by the exported frame attack boxes, the
+  skid gore is AOS_EFFECT_BLOOD, the sub_08021248 type-3
+  script slot, the + 0x5A palette merge, the box preset,
+  the pause and the draw approximations are not ported.
+  No emulator comparison.
+- Unit-tested in kicker_skeleton_tests: create and flag
+  state, wake, the full hop/slam/skid chain, the x5/4
+  strike contact, the lethal blow and the seven-piece
+  death.
+
 ## Patch 0872 - Killer Mantle ported (id 85)
 
 - EnemyKillerMantleCreate (0x080BB70C) /

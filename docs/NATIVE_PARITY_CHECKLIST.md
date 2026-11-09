@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 90 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 91 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1150 | 2423 |
+| Castlevania: Aria of Sorrow | 1157 | 2416 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1632,6 +1632,15 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: Exact randomized acceleration rounding, native entity-slot ordering, helper OAM flags, sounds 0x72, palette callbacks and rewards are not modelled.  
 Next action: Refine acceleration and helper OAM flags when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_04_room_001 (--spawn 400 703 --hp 9999, no buttons): Imp's helper is visible above Soma and forces him into attack animation 14 by frame 350; native-stat contact deals 60 damage`.
+
+[+] **`aos.enemies.kicker_skeleton` — Kicker Skeleton.** EnemyKickerSkeletonCreate (0x080C0324) loads tiles 0x08259214, palette 0x0825C320 and frames 0x0825DA58, copies the stats, plays animation 0 looping and enters state 3 under the global 0x8E & 0x40, else the contact sub_080BFF7C and hurt sub_080C0478 callbacks, the box refresh, the sub_0806AF98 floor snap and state 0. State 0 idles with a 1/64 fidget and wakes on the player in the centred 0xC8 x 0x50 box or on damage; state 1 runs the sub_080BFFF0 eight-case machine — face and animation 3, the animation-4 hop (speed 0x8000, vy -0x30000, ay 0x1000), the apex switch to animation 6, the frame-5 slam (animation 5, speed 0x28000, vy +0x30000, + 0x14 bit 0, song 0x87), the landing skid (animation 3, song 0x127) and the 31/32-per-frame decay to idle with sub_08045CEC gore; state 2 is the sub_080C0250 death — song 0x6B and seven sub_0806C5AC debris pieces flung along + 0x20, the entity deleting itself the same frame; state 3 animates only. The hurt sub_080C0478 reacts only to a lethal blow: + 0x20 the side away from the attacker, state 2. Unit-tested in kicker_skeleton_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806C5AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E218`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080B0AD4.s:EnemyKickerSkeletonCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyKickerSkeletonUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFF7C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFFF0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080C0250`, `aos:asm:asm/code/code_080B0AD4.s:sub_080C0478`, `aos:c:src/code/code_080211F0.c:sub_08021248`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The two sub_080458E4 strike zones (0x30, 0xC, 0x11) and (0x30, 6, 0x10) are approximated by the exported frame attack boxes while the + 0x14 & 1 contact deals + 0x3C * 5 / 4 as type 3 (the sub_08021248 script slot is not ported); the skid gore is AOS_EFFECT_BLOOD; the + 0x5A palette merge, the sub_080428F0 box preset, the sub_0806D4C0 pause and the sub_0803E654 draw approximations are not ported; no emulator comparison.  
+Next action: Compare the hop cadence, the slam contact and the skid against an emulator; the strike zones and the type-3 script slot remain approximations.
+Evidence: in game: `aria area_05_room_005 (--spawn 503 431 --hp 9999): the Kicker Skeleton wakes, hops, slams and dies`.
 
 [+] **`aos.enemies.killer_doll` — Killer Doll.** The close-range wake-up and rise, random bounded flight legs, pauses, aimed charge, timed landing and takeoff, inert animation under gEwramData + 0x8E bit 0x40, and death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported at its constructor-table ID 0x1F. Its death callback sub_080C81AC plays 0x6E and the shared piece update plays 0x153 at each floor bounce (sub_080C82F4); both unit-tested. sub_080C88B4's step-0 path is not reached by the code read.
 

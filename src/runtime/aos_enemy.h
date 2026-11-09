@@ -173,6 +173,7 @@ enum {
     AOS_ENEMY_KILLER_MANTLE = 0x55,
     AOS_ENEMY_DRYAD = 0x46,
     AOS_ENEMY_TSUCHINOKO = 0x23,
+    AOS_ENEMY_KICKER_SKELETON = 0x53,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -251,6 +252,10 @@ typedef struct AosEnemy {
     int32_t spin;           /* +0x18: signed angular speed, including Buer */
     int32_t mantle_speed;   /* + 0x14 of the Killer Mantle: the speed of its
                              * rocking walk and of its dash attack */
+    uint16_t kicker_flags;  /* + 0x14 of the Kicker Skeleton: bit 0 the
+                             * strike's contact, bit 1 cleared on landing */
+    int32_t kicker_speed;   /* + 0x18 of the Kicker Skeleton: the speed of
+                             * its hop, slide and skid */
     int8_t volley_count;    /* + 0x14 of a shooter: volleys fired, 0..4 */
     uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
     int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */

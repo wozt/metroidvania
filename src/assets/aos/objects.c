@@ -368,6 +368,13 @@ static const EntitySpec entities[] = {
     {"evil_butcher", 0x082052D0, 0x0820C27C, 0, 0x08256720, 0x085288FC,
      0, 0, 3, {6, 8, 9}},
     ENTITY("evil_butcher_bank1", 0x082052D0, 0x0820C27C, 1, 0x08256720),
+    /* EnemyKillerMantleCreate / the afterimage and orbit children
+     * (sub_080BB054 / sub_080BB0F0): graphics 0x081F421C, palette
+     * 0x0820BD04, frames 0x0824AE0C, the walker probes 0x085288B4
+     * (sub_0806CAF8 mode 0). Still frame 0x12 is the orbit blade's
+     * + 0x65 direct frame. */
+    {"killer_mantle", 0x081F421C, 0x0820BD04, 0, 0x0824AE0C, 0x085288B4,
+     0, 0, 1, {0x12}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

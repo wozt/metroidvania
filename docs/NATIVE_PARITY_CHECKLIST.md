@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 87 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 88 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1108 | 2465 |
+| Castlevania: Aria of Sorrow | 1121 | 2452 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1642,6 +1642,15 @@ Dependencies: `aos.enemies.merman`.
 Known divergences: The fry and the bubbles are created by the first update rather than at creation. The box walker sub_0806A224 keeps only the flags the fry reads (walls, ceiling, floor, the top-left water corner). The fry's parent check uses the parent pointer instead of + 0x37. The global pause gEwramData + 0x4BE, and the death palette bits are not ported.  
 Next action: Compare the swim, the attack and the fry frenzy against an emulator.
 Evidence: in game: `aria area_00_room_016 (--spawn 340 184 --hp 9999): the Killer Fish swims, attacks Soma in the water and blows bubbles`.
+
+[+] **`aos.enemies.killer_mantle` — Killer Mantle.** EnemyKillerMantleCreate (0x080BB70C) loads graphics 0x081F421C, palette 0x0820BD04 and frames 0x0824AE0C, plays animation 0 looping and, unless the global 0x8E & 0x40 sends it to state 4, installs the contact sub_0806E1E8 and hurt sub_080BB7E4 callbacks, sets + 0x72 bit 1 and links the sub_080BB0F0 orbit child. State 0 waits for the player in the 0xDC x 0xA0 box of sub_0806E29C; state 1 (sub_080BB2D4) rocks on the floor with the sub_0806CAF8 walker (0x085288B4, mode 0): a phase counter drives a sinusoidal acceleration and a speed pulsing with sine(3*phase), turning around every 0x30 ticks or dashing when Soma attacks within 0x4F pixels with matching facings; state 2 (sub_080BB518) is the dash — animation 3 windup, then animation 4 with a hop (vy about -1.7 under ay 0x1000), speed 0x48000 + random, song 0x89, contact live only during the dash, the afterimage child sub_080BB054 at its end, then animation 5 back to the patrol; state 3 (sub_080BB664) is the death — animation 6, song 0x6D and a sub_08045CEC gore drift every fourth tick; state 4 only steps the animation. The orbit child spins frame 0x12 around the parent once the first attack sets + 0x1A bit 0; unit-tested in killer_mantle_tests.
+
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BBC4`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806CC20`, `aos:asm:asm/code/code_08060B98.s:sub_0806CDB8`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1E8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_08060B98.s:sub_0806E350`, `aos:asm:asm/code/code_08060B98.s:sub_0806E3B0`, `aos:asm:asm/code/code_080B0AD4.s:EnemyKillerMantleCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyKillerMantleUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB054`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB0F0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB2D4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB518`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB664`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB7E4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB8B0`, `aos:c:src/code/code_080211F0.c:sub_080212C8`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code/code_08039340.c:sub_0803E6BC`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The orbit child's + 0x1C scale is tracked but not drawn (only its angle reaches the renderer); the + 0x58 low-5 fade, the + 0x59 / + 0x5A / + 0x5C bookkeeping, the sub_080428F0 / sub_08042884 box presets (the exported frame boxes stand in), the sub_0806E3B0 target-facing read approximated by Soma's facing_left, the sub_0806BBC4 direction approximated by the decoy-aware target side, the + 0x4BE pause, the sub_080BB8B0 / sub_080BB924 helpers and the sub_0803E654 draw (approximated by the RNG bit 15) are not fully ported; the orbit child is emitted by the first on-screen update instead of the create.  
+Next action: Compare the rocking patrol, the dash timing and the orbit blade against an emulator; port red soul 53 (0x0802B9A9).
+Evidence: in game: `aria area_08_room_003 (--spawn 280 159 --hp 9999): a Killer Mantle patrols and dashes at Soma`.
 
 [+] **`aos.enemies.lightning_doll` — Lightning Doll.** The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported. Its spark loop 0x75 is held (sub_08013D60) when the charge starts and again every 16 frames of the spark countdown above 0x20, and released (sub_08013E18) when the attack ends, while it flashes from a blow and at death; sub_080C8FBC then plays 0x6E, and each floor bounce of piece 1 plays 0x153 (sub_080C9284); all unit-tested. sub_080C997C's step-0 path (0x6E as well) is not reached by the code read.
 

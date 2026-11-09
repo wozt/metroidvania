@@ -2,6 +2,72 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0872 - Killer Mantle ported (id 85)
+
+- EnemyKillerMantleCreate (0x080BB70C) /
+  EnemyKillerMantleUpdate (0x080BB824) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_KILLER_MANTLE
+  (0x55), the enemy_names[85] = "killer_mantle" kind row
+  (objects.c: graphics 0x081F421C, palette 0x0820BD04,
+  frames 0x0824AE0C, probes 0x085288B4; still frame
+  0x12) and roles AOS_ROLE_MANTLE_ORBIT / _GHOST (59-60),
+  both parent-linked through the runtime spawner lists.
+- Create: animation 0 looping, + 0x5C = 0x13, the global
+  0x8E & 0x40 path is state 4; otherwise element-1
+  contact (sub_0806E1E8), hurt sub_080BB7E4 (lethal only:
+  state 3), + 0x72 bit 1 set and the linked orbit child —
+  emitted by the first on-screen update since a create
+  cannot return children.
+- State 0 waits for the player in the 0xDC x 0xA0 box of
+  sub_0806E29C; states 0-3 then run the collision pass
+  and the animation step, state 4 animation only.
+- State 1 sub_080BB2D4 rocks on the floor with the
+  sub_0806CAF8 walker (mode 0): + 0x18 counts the phase,
+  + 0x54 = sine(phase << 0xB) / 0x30 and the speed is
+  + 0x14 (0x100-0x1FF seeded) times sine(phase * 0x300)
+  >> 8, negated by + 0xC; while Soma attacks within
+  0x4F px and both facings match, phase = 0x30 and + 0xD
+  = 1; past phase 0x2F the 0xA0 x 0x46 box starts the
+  attack or the walk turns around (animation 2/7, fresh
+  speed with a toward-player bonus).
+- State 2 sub_080BB518: animation 3 windup sets + 0x1A
+  bit 0 (the orbit blade's go); animation 4 hops with
+  vy = sub_0802D5EC(0x2000) - 0x1A000 under ay 0x1000,
+  speed 0x48000 + ((r & 0x1F) << 8), + 0x72 bit 1
+  cleared (contact live for the dash) and song 0x89;
+  its end emits the sub_080BB054 afterimage, restores
+  + 0x72, clears + 0x1A bit 1 and plays animation 5;
+  animation 5's end returns to the patrol.
+- State 3 sub_080BB664: animation 6, song 0x6D, a
+  sub_08045CEC gore drift (kind 0x16, preset 8, unit
+  direction at a random angle, ax/ay = v / 0x18, vflip)
+  every fourth tick; animation end deletes.
+- The orbit child sub_080BB0F0 keeps still frame 0x12
+  hidden until the parent's + 0x1A bit 0, then orbits 8
+  px to the facing side: + 0x1C scale grows 0x1000/frame
+  (tracked, not drawn) while + 0x1A spins 0x300/frame —
+  mapped to `angle` for the renderer — shrinking 0x2000
+  and spinning 0x200 in the pulse state; the parent's
+  state 3 or hit flash ends/freezes it.
+- The afterimage sub_080BB054 plays animation 8 once,
+  following the parent 12 px to its back and 4 px down,
+  deleting at the animation end.
+- killer_mantle_tests covers create, the orbit-child
+  emission and activation, the patrol-to-attack
+  transition, the dash kinematics and song, the ghost
+  lifecycle, the orbit spin, the lethal death with gore
+  and the flag-path state 4.
+- Divergences: the orbit scale is not drawn, the + 0x58
+  fade and + 0x59 / + 0x5A / + 0x5C bookkeeping, the box
+  presets, the sub_0806E3B0 / sub_0806BBC4 reads
+  (approximated by facing_left and target_x), the + 0x4BE
+  pause, the sub_080BB8B0 / sub_080BB924 helpers and the
+  sub_0803E654 draw (RNG bit 15) are not fully ported;
+  no emulator comparison.
+- The monster drops rare item 0x000D (soul_rarity 13)
+  through the generic roll; its red soul 53 (routine
+  0x0802B9A9) has no ported update yet.
+
 ## Patch 0871 - Evil Butcher ported (id 25)
 
 - EnemyEvilButcherCreate (0x080BFE1C) /

@@ -161,6 +161,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [71] = "poison_worm",
                                                      [78] = "biphron",
                                                      [81] = "sky_fish",
+                                                     [85] = "killer_mantle",
                                                      [27] = "ectoplasm",
                                                      [82] = "dead_crusader",
                                                      [87] = "gargoyle",
@@ -2678,7 +2679,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_SKELETON_HELD ||
                  e->enemy.role == AOS_ROLE_SKELETON_BONE ||
                  e->enemy.role == AOS_ROLE_WORM_SEGMENT ||
-                 e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART) &&
+                 e->enemy.role == AOS_ROLE_WHITE_DRAGON_PART ||
+                 e->enemy.role == AOS_ROLE_MANTLE_ORBIT ||
+                 e->enemy.role == AOS_ROLE_MANTLE_GHOST) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
@@ -2831,7 +2834,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_BUER_FIRE ||
                                        hit.children[c].role == AOS_ROLE_WORM_SEGMENT ||
-                                       hit.children[c].role == AOS_ROLE_WHITE_DRAGON_PART
+                                       hit.children[c].role == AOS_ROLE_WHITE_DRAGON_PART ||
+                                       hit.children[c].role == AOS_ROLE_MANTLE_ORBIT ||
+                                       hit.children[c].role == AOS_ROLE_MANTLE_GHOST
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -4113,6 +4118,7 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.role == AOS_ROLE_WORM_SEGMENT ||
             e->enemy.role == AOS_ROLE_BUTCHER_CLEAVER ||
             e->enemy.role == AOS_ROLE_BUTCHER_GORE ||
+            e->enemy.role == AOS_ROLE_MANTLE_ORBIT ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
             ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS ||
               e->enemy.id == AOS_ENEMY_GIANT_WORM || e->enemy.id == AOS_ENEMY_POISON_WORM) &&

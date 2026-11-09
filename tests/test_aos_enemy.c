@@ -3215,6 +3215,215 @@ static void butcher_tests(void) {
     assert(e.state == 3 && e.anim.id == 0);
 }
 
+static void killer_mantle_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    /* Animations 0-8, two 4-tick frames each. */
+    static const uint8_t two[2] = {4, 4};
+    AosAnimDef defs[9];
+    for (int a = 0; a < 9; ++a) defs[a] = (AosAnimDef){2, two};
+    const AosAnimSet anims = {defs, 9};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 9; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* The 0x085288B4 probe descriptor: 1 wall probe, ceiling -8, floor 8,
+     * half width 4, wall y 0. */
+    kind.probes.count = 1;
+    kind.probes.ceiling = -8;
+    kind.probes.floor = 8;
+    kind.probes.half_width = 4;
+    kind.probes.wall_y[0] = 0;
+    const AosEnemyStats stats = {96, 18, 4, 12, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create: state 0, animation 0 looping, element-1 contact, the
+     * + 0x72 attack bit set. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_KILLER_MANTLE, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 &&
+           e.contact_elements == 1 && e.combat.attack_off);
+
+    /* The first update emits the linked orbit child (the create's
+     * sub_0806DFF8) and the player far away keeps it waiting. */
+    soma.x = AOS_FIXED(900);
+    soma.y = AOS_FIXED(40);
+    AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                                      10, 4, 0, 0, always_zero);
+    assert(r.child_count == 1 &&
+           r.children[0].role == AOS_ROLE_MANTLE_ORBIT);
+    AosEnemy orbit = r.children[0];
+    orbit.parent = &e;
+    int frames = 0;
+    while (e.state == 0 && frames < 200) {
+        soma.x = e.x;
+        soma.y = e.y;
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 1 && frames < 200);
+
+    /* The orbit child initializes on its first update (state 0 -> 1),
+     * still hidden while the parent's + 0x1A bit 0 is clear. */
+    (void)aos_enemy_update(&orbit, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(orbit.state == 1 && orbit.hidden && orbit.static_frame == 0x12 &&
+           !orbit.removed);
+
+    /* Patrolling with the player glued in the 0xA0 x 0x46 box: the phase
+     * counter passes 0x2F and the attack starts (state 2). */
+    frames = 0;
+    while (e.state == 1 && frames < 400) {
+        soma.x = e.x;
+        soma.y = e.y;
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 2 && e.step == 0 && frames < 400);
+
+    /* Attack step 0: face the player, animation 3, + 0x1A bit 0 set —
+     * which the orbit child picks up on its next update. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && e.anim.id == 3 && (e.producer_timer & 1));
+    (void)aos_enemy_update(&orbit, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    /* States 0-1-2 fall through: scale and angle start growing, the blade
+     * unhides 8 px to the facing side of the parent. */
+    assert(orbit.state == 2 && !orbit.hidden && orbit.static_frame == 0x12 &&
+           orbit.walk_timer == 0x1000 && orbit.producer_timer == 0xD300 &&
+           orbit.angle == 0xD300);
+    assert((orbit.x >> 16) == (e.x >> 16) + (e.mirrored ? -8 : 8) &&
+           (orbit.y >> 16) == (e.y >> 16));
+
+    /* Animation 3 ends: step 1 -> animation 4, the hop (vy -0x1B000 with
+     * a zero RNG), ay 0x1000, speed 0x48000, attack contact live, song
+     * 0x89. */
+    frames = 0;
+    while (!(e.anim.id == 4) && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 2 && e.anim.id == 4 && e.vy == (int32_t)0xFFFE5000 &&
+           e.ay == 0x1000 && e.mantle_speed == 0x48000 &&
+           !e.combat.attack_off &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) >= 1);
+
+    /* Animation 4 ends: the afterimage child is emitted, the attack bit
+     * closes, + 0x1A bit 1 clears, animation 5 plays. */
+    aos_audio_clear();
+    frames = 0;
+    AosHitReport mid = {0};
+    while (e.step != 3 && frames < 200) {
+        mid = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 3 && e.anim.id == 5 && e.combat.attack_off &&
+           !(e.producer_timer & 2));
+    int ghost_i = -1;
+    for (int i = 0; i < mid.child_count; ++i)
+        if (mid.children[i].role == AOS_ROLE_MANTLE_GHOST) ghost_i = i;
+    assert(ghost_i >= 0);
+    AosEnemy ghost = mid.children[ghost_i];
+    ghost.parent = &e;
+
+    /* The ghost's first update: animation 8, following 12 px to the back
+     * (negated by the facing) and 4 px down. */
+    (void)aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(ghost.state == 1 && ghost.anim.id == 8 && !ghost.removed);
+    assert((ghost.x >> 16) == (e.x >> 16) + (e.mirrored ? 0xC : -0xC) &&
+           (ghost.y >> 16) == (e.y >> 16) + 4);
+
+    /* Animation 5 ends: back to the patrol, state 1 step 0. */
+    frames = 0;
+    while (e.state == 2 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 1 && e.step == 0 && frames < 200);
+
+    /* The orbit blade keeps spinning while the parent's bit 0 holds:
+     * + 0x1A advances 0x300 a frame, the angle follows. */
+    uint16_t a0 = orbit.producer_timer;
+    (void)aos_enemy_update(&orbit, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(orbit.producer_timer == (uint16_t)(a0 + 0x300) &&
+           orbit.angle == orbit.producer_timer && orbit.state == 2);
+
+    /* The ghost deletes when animation 8 ends. */
+    frames = 0;
+    while (!ghost.removed && frames < 100) {
+        (void)aos_enemy_update(&ghost, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(ghost.removed && frames < 100);
+
+    /* The parent's lethal blow: state 3, then animation 6, song 0x6D and
+     * a gore drift every fourth tick until the animation deletes it —
+     * which also ends the orbit child in state 4. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = e.x;
+    soma.y = e.y;
+    e.hp = stats.hp;
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 3 && e.step == 0);
+    aos_audio_clear();
+    /* The parent's hit flash freezes the blade for a few frames; once it
+     * clears, the parent's state 3 ends it in state 4 and it deletes. */
+    frames = 0;
+    while (!orbit.removed && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        (void)aos_enemy_update(&orbit, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(orbit.state == 4 && orbit.removed && frames < 100);
+    frames = 0;
+    bool gore = false;
+    while (!e.removed && frames < 200) {
+        AosHitReport d = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        for (int i = 0; i < d.effect_count; ++i)
+            if (d.effects[i].kind == AOS_EFFECT_HIT_ELEMENT_5 &&
+                d.effects[i].drift)
+                gore = true;
+        ++frames;
+    }
+    assert(e.removed && frames < 200 && gore &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6D) >= 1);
+
+    /* The flag path (0x8E & 0x40) is state 4: animation only. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_KILLER_MANTLE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(e.state == 4 && e.anim.id == 0);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -6332,6 +6541,7 @@ int main(void) {
     sky_fish_tests();
     ectoplasm_tests();
     butcher_tests();
+    killer_mantle_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

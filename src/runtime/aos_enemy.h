@@ -170,6 +170,7 @@ enum {
     AOS_ENEMY_SKY_FISH = 0x51,
     AOS_ENEMY_ECTOPLASM = 0x1B,
     AOS_ENEMY_EVIL_BUTCHER = 0x19,
+    AOS_ENEMY_KILLER_MANTLE = 0x55,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -202,7 +203,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WORM_SEGMENT = 52, AOS_ROLE_BIPHRON_SHOT = 53,
        AOS_ROLE_BOMBER_BOMB = 54, AOS_ROLE_BOMBER_SPARK = 55,
        AOS_ROLE_BUTCHER_CLEAVER = 56, AOS_ROLE_BUTCHER_GORE = 57,
-       AOS_ROLE_BUTCHER_PARTICLE = 58 };
+       AOS_ROLE_BUTCHER_PARTICLE = 58,
+       AOS_ROLE_MANTLE_ORBIT = 59, AOS_ROLE_MANTLE_GHOST = 60 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -243,6 +245,8 @@ typedef struct AosEnemy {
     uint8_t ground;         /* + 0x3F: floor cell byte under the walker */
     uint32_t angle;         /* +0x14: affine angle of a child or Buer */
     int32_t spin;           /* +0x18: signed angular speed, including Buer */
+    int32_t mantle_speed;   /* + 0x14 of the Killer Mantle: the speed of its
+                             * rocking walk and of its dash attack */
     int8_t volley_count;    /* + 0x14 of a shooter: volleys fired, 0..4 */
     uint8_t volley, shot;   /* current volley list and entry (+ 0x1C) */
     int8_t away;            /* + 0x20 at death: +1 / -1, away from the attacker */

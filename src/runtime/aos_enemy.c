@@ -2359,7 +2359,8 @@ bool aos_enemy_at_room_edge(const AosEnemy *e, const AosCollision *layer) {
 /* sub_0806B120(e, margin): an entity beyond `margin` columns of either
  * room edge is put back on that column boundary (whole pixel); true when
  * it was. */
-static bool clamp_to_room(AosEnemy *e, const AosCollision *layer, int margin) {
+bool aos_enemy_clamp_to_room(AosEnemy *e, const AosCollision *layer,
+                             int margin) {
     int32_t column = (e->x >> 16) >> 3;
     int width = room_columns(layer);
     if (column < margin) {
@@ -2372,6 +2373,7 @@ static bool clamp_to_room(AosEnemy *e, const AosCollision *layer, int margin) {
     }
     return false;
 }
+#define clamp_to_room aos_enemy_clamp_to_room
 
 int aos_enemy_ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *layer,
                           const AosProbes *p, int32_t speed, int mode);
@@ -2738,7 +2740,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/skeleton_knight.c"
 #include "aos_enemies/killer_doll.c"
 #include "aos_enemies/lightning_doll.c"
 #include "aos_enemies/beam_skeleton.c"
@@ -3338,8 +3339,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return crusader_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_SKELETON_KNIGHT)
-        return knight_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                             cam_x, cam_y, random);
+        return aos_enemy_skeleton_knight_update(
+            enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+            soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA)
         return aos_enemy_curly_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

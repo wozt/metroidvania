@@ -108,8 +108,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - *(Continued in patch 0901.)* `mimic.c` is independent with its hidden
      trigger. Its union proof remains identical for all 488 functions.
    - *(Continued in patch 0902.)* `fleaman.c` is independent. Its union proof
-     remains identical for all 488 functions. The other 41 included families
-     remain.
+     remains identical for all 488 functions.
+   - *(Continued in patch 0903.)* `skeleton_knight.c` is independent. All 488
+     function sizes match; normalized instructions differ only in GCC's inert
+     `knight_turn` stack padding (from `0x18` to `0x20`). The other 40
+     included families remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0903 - Skeleton Knight becomes a real translation unit
+
+- `aos_enemies/skeleton_knight.c` now compiles independently. Its wait,
+  advance, retreat and three-stage attack handlers remain family-local; the
+  room-edge clamp joins the prefixed internal framework API.
+- All 488 `-O0` function sizes match. Normalized instructions also match
+  except for GCC increasing `knight_turn`'s inert stack padding from `0x18`
+  to `0x20` after the split. No behavior or feature status changed.
+
 ## Patch 0902 - Fleaman becomes a real translation unit
 
 - `aos_enemies/fleaman.c` now compiles independently. Its four jump modes,

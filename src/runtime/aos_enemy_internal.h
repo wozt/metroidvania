@@ -71,6 +71,8 @@ bool aos_enemy_death_flames(AosEnemy *enemy, const AosEnemyKind *kind,
                             int period, uint32_t w, uint32_t h,
                             uint32_t (*random)(void),
                             AosHitReport *report);
+bool aos_enemy_clamp_to_room(AosEnemy *enemy, const AosCollision *layer,
+                             int margin);
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -142,5 +144,10 @@ AosHitReport aos_enemy_fleaman_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_skeleton_knight_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

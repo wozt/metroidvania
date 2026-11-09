@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Dead Crusader (enemy 0x52).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define clamp_to_room aos_enemy_clamp_to_room
+#define collide aos_enemy_collide
+#define generic_death aos_enemy_generic_death
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_near aos_enemy_player_near
+#define soldier_face aos_enemy_soldier_face
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define walk_collide aos_enemy_walk_collide
 
 /* The dead crusader's guard: Soma's + 0x10 flags & 0x360 (sub_080212C8:
  * attacking) while it stands on the floor raise its shield (animation 7
@@ -175,7 +189,7 @@ static void crusader_attack(AosEnemy *k, const AosSoma *soma, const AosAnimSet *
  * steps its animation; then the animation step and the collision pass.
  * The hit stun of sub_0806D4C0 needs the global pause 0x4BE (taken as 0)
  * and the tracking list of sub_08021924 is not ported. */
-static AosHitReport crusader_update(AosEnemy *k, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_crusader_update(AosEnemy *k, AosSoma *soma, const AosCollision *layer,
                                     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                     const AosWeaponFrames *weapon_frames, int soma_atk,
                                     int soma_def, int cam_x, int cam_y,

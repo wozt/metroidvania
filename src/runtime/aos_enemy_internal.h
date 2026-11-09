@@ -194,5 +194,10 @@ AosHitReport aos_enemy_skull_update(
 void aos_enemy_fin_update(AosEnemy *enemy, const AosEnemyKind *kind,
                           int cam_x, int cam_y,
                           uint32_t (*random)(void));
+AosHitReport aos_enemy_crusader_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

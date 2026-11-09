@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0908 - Dead Crusader becomes a real translation unit
+
+- `aos_enemies/dead_crusader.c` now compiles independently with its update
+  entry point exported through `aos_enemy_internal.h`; the guard, walk,
+  attack and turn helpers stay family-local.
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions differ only in GCC's inert `crusader_turn` stack padding
+  (from `0x18` to `0x20`). No behavior or feature status changed.
+
 ## Patch 0907 - Skull Millione family becomes a real translation unit
 
 - `aos_enemies/skull_millione.c` now compiles independently with the shared

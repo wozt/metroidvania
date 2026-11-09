@@ -125,9 +125,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - *(Continued in patch 0907.)* `skull_millione.c` is independent with its
      shared Skull Millione, Cagnazzo and Lubicant body update plus the fin
      child update; `move_toward` joins the internal API. Its union proof is
-     identical for all 488 symbols. The other 36 included families remain.
-     Continue with `dead_crusader.c`, then `gargoyle.c`; keep one family per
-     commit and repeat the union proof.
+     identical for all 488 symbols.
+   - *(Continued in patch 0908.)* `dead_crusader.c` is independent with its
+     update entry point exported; only GCC's inert `crusader_turn` stack
+     padding differs. The other 35 included families remain. Continue with
+     `gargoyle.c`; keep one family per commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

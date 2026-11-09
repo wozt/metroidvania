@@ -2746,7 +2746,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
 
-#include "aos_enemies/dead_crusader.c"
+
 #include "aos_enemies/gargoyle.c"
 #include "aos_enemies/axe_armor.c"
 #include "aos_enemies/rock_armor.c"
@@ -3343,7 +3343,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                              weapon_frames, soma_atk, soma_def,
                                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_DEAD_CRUSADER)
-        return crusader_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_crusader_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_SKELETON_KNIGHT)
         return aos_enemy_skeleton_knight_update(

@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0921 - Buer family becomes a real translation unit
+
+- `aos_enemies/buer.c` now compiles independently with its body, fire
+  and burst updates exported through `aos_enemy_internal.h`;
+  `player_dx` and `buer_player_in_window` join the internal API for the
+  remaining families (Nemesis, Evil Butcher).
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions are identical except one GCC stack-padding difference
+  in `buer_player_in_window` (0x28 vs 0x30). Only the exports changed
+  linkage. No behavior or feature status changed.
+
 ## Patch 0920 - Peeping Eye family becomes a real translation unit
 
 - `aos_enemies/peeping_eye.c` now compiles independently with its body

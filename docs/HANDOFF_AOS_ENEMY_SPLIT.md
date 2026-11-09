@@ -183,6 +183,13 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      proof is identical for all 488 symbols. The other 23 included
      families remain. Continue with `buer.c`; keep one family per
      commit and repeat the union proof.
+   - *(Continued in patch 0921.)* `buer.c` is independent with its
+     three updates and the shared window probe exported; `player_dx`
+     joins the internal API. The union proof is identical for all 488
+     symbols except one GCC stack-padding artifact in
+     `buer_player_in_window`. The other 22 included families remain.
+     Continue with `white_dragon.c`; keep one family per commit and
+     repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

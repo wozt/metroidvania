@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:45:18+00:00",
+ "generated_at": "2026-11-09T14:49:37+00:00",
  "git": {
-  "commit": "34bfcef7",
+  "commit": "4ca7b3f0",
   "branch": "main",
   "dirty": true
  },
@@ -9502,6 +9502,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/buer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -10506,6 +10507,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemies/evil_butcher.c",
+    "src/runtime/aos_enemies/buer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -19745,6 +19747,7 @@
     "src/runtime/aos_enemies/ripper.c",
     "src/runtime/aos_enemies/merman.c",
     "src/runtime/aos_enemies/peeping_eye.c",
+    "src/runtime/aos_enemies/buer.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22199,6 +22202,12 @@
  },
  "timeline": [
   {
+   "commit": "4ca7b3f0",
+   "date": "2026-11-09",
+   "subject": "Compile Peeping Eye family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "34bfcef7",
    "date": "2026-11-09",
    "subject": "Compile Merman family as an independent enemy unit",
@@ -22670,12 +22679,6 @@
    "commit": "410eae50",
    "date": "2026-11-08",
    "subject": "Port bestiary list footer (page numbers and labels)",
-   "scope": "project"
-  },
-  {
-   "commit": "3f0d236f",
-   "date": "2026-11-08",
-   "subject": "Port bestiary header/footer tile strips",
    "scope": "project"
   }
  ],

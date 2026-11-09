@@ -375,5 +375,17 @@ void aos_enemy_peeping_part_update(AosEnemy *enemy,
                                    AosHitReport *report);
 void aos_enemy_peeping_struck(AosEnemy *enemy, const AosSoma *soma);
 extern bool aos_enemy_flag_8e_40;
+int16_t aos_enemy_player_dx(const AosEnemy *enemy, const AosSoma *soma);
+AosHitReport aos_enemy_buer_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_buer_fire_update(AosEnemy *enemy);
+void aos_enemy_buer_burst_update(AosEnemy *enemy,
+                                 const AosEnemyKind *kind);
+bool aos_enemy_buer_player_in_window(const AosEnemy *enemy,
+                                     const AosSoma *soma, uint16_t width,
+                                     uint16_t height);
 
 #endif

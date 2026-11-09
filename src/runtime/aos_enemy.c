@@ -2197,7 +2197,7 @@ void aos_enemy_stop(AosEnemy *e);
 #define stop aos_enemy_stop
 
 /* sub_0806BD64: (s16)(integer x - the target's integer x). */
-static int16_t player_dx(const AosEnemy *enemy, const AosSoma *soma) {
+int16_t aos_enemy_player_dx(const AosEnemy *enemy, const AosSoma *soma) {
     return (int16_t)((enemy->x >> 16) - (target_x(soma) >> 16));
 }
 
@@ -2750,6 +2750,8 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define bubble_walk aos_enemy_bubble_walk
 #define cell_kind aos_enemy_cell_kind
 #define projectile_collide aos_enemy_projectile_collide
+#define buer_player_in_window aos_enemy_buer_player_in_window
+#define player_dx aos_enemy_player_dx
 #define player_in_range aos_enemy_player_in_range
 #define swim_walk aos_enemy_swim_walk
 #define target_in_water aos_enemy_target_in_water
@@ -2771,7 +2773,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/buer.c"
 #include "aos_enemies/white_dragon.c"
 #include "aos_enemies/bone_pillar.c"
 #include "aos_enemies/giant_ghost.c"
@@ -3032,15 +3033,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return dragon_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                              cam_y, random);
     if (enemy->role == AOS_ROLE_BUER_PROJECTILE) {
-        buer_burst_update(enemy, kind);
+        aos_enemy_buer_burst_update(enemy, kind);
         return report;
     }
     if (enemy->role == AOS_ROLE_BUER_FIRE) {
-        buer_fire_update(enemy);
+        aos_enemy_buer_fire_update(enemy);
         return report;
     }
     if (enemy->id == AOS_ENEMY_BUER && enemy->role == AOS_ROLE_ENEMY)
-        return buer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_buer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT)
         return pillar_skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,

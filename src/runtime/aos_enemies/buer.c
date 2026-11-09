@@ -1,13 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Buer (enemy 0x0A), its fire and burst.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define buer_player_in_window aos_enemy_buer_player_in_window
+#define collide aos_enemy_collide
+#define ground_walk aos_enemy_ground_walk
+#define play_loop aos_enemy_play_loop
+#define player_dx aos_enemy_player_dx
+#define spawn_flame_at aos_enemy_spawn_flame_at
+#define take_effects aos_enemy_take_effects
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_0806E29C(e, w, h): the target inside the w x h box centred on the
  * entity (unsigned 16-bit whole-pixel compares, inclusive). */
-static bool buer_player_in_window(const AosEnemy *e, const AosSoma *soma,
+bool aos_enemy_buer_player_in_window(const AosEnemy *e, const AosSoma *soma,
                                   uint16_t width, uint16_t height) {
     uint16_t dx = (uint16_t)((target_x(soma) >> 16) - ((e->x >> 16) - (int)(width / 2)));
     uint16_t dy = (uint16_t)((target_y(soma) >> 16) - ((e->y >> 16) - (int)(height / 2)));
@@ -292,7 +304,7 @@ static void buer_die(AosEnemy *b, const AosSoma *soma, const AosCollision *layer
  * deleted with its fire once it leaves the room (sub_080CC55C), then the
  * collision pass. The fire (sub_080CBA30) is made by the first update
  * (native: at creation). */
-static AosHitReport buer_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_buer_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                                 int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -358,7 +370,7 @@ static AosHitReport buer_update(AosEnemy *b, AosSoma *soma, const AosCollision *
 
 /* sub_080CC3C8: the fire shows the second frame where its body keeps it,
  * with the body's fire facing; gone with it. */
-static void buer_fire_update(AosEnemy *fire) {
+void aos_enemy_buer_fire_update(AosEnemy *fire) {
     const AosEnemy *b = fire->parent;
     if (!b || b->removed || b->buer_fire_gone) {
         fire->removed = true;
@@ -371,7 +383,7 @@ static void buer_fire_update(AosEnemy *fire) {
 }
 
 /* sub_080CC178: a fire burst plays its animation once in place. */
-static void buer_burst_update(AosEnemy *shot, const AosEnemyKind *kind) {
+void aos_enemy_buer_burst_update(AosEnemy *shot, const AosEnemyKind *kind) {
     if (shot->state == 0) {
         if (!kind->anims || shot->variant >= kind->anims->count) {
             shot->removed = true;

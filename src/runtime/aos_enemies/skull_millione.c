@@ -1,9 +1,29 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Skull Millione (enemy 0x5B), Cagnazzo (0x49) and Lubicant (0x63, the same code) with their fins.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define generic_death aos_enemy_generic_death
+#define move_toward aos_enemy_move_toward
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_in_centred aos_enemy_player_in_centred
+#define random_centred aos_enemy_random_centred
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* The records at 0x0852883C (20 bytes) of Skull Millione, Cagnazzo and
  * Lubicant: flags (+ 5: bit 0 a fin, bit 1 the hover attack), the lead on
@@ -224,7 +244,7 @@ static AosEnemy skull_fin(const AosEnemy *owner) {
  * +0x1200). Once the owner dies (state 3) it is flung off (vx (r & 63) -
  * 32 / 16, vy -3.5 + ((r & 15) - 8) / 16, + 0x54 0x2000 up to 8.0),
  * turning by 0xB00 (mirrored -0xB00), and deleted beyond margin entry 4. */
-static void fin_update(AosEnemy *f, const AosEnemyKind *kind, int cam_x, int cam_y,
+void aos_enemy_fin_update(AosEnemy *f, const AosEnemyKind *kind, int cam_x, int cam_y,
                        uint32_t (*random)(void)) {
     const AosEnemy *o = f->parent;
     if (f->state <= 1 && o && o->state == 3) f->state = 2;
@@ -277,7 +297,7 @@ static void fin_update(AosEnemy *f, const AosEnemyKind *kind, int cam_x, int cam
  * and two animation steps (sub_0806DF20, then sub_0803F17C). The tracking
  * list of sub_08021924 and the routine sub_08021654 of its draw callback
  * sub_080B76E4 are not ported. */
-static AosHitReport skull_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_skull_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                                  int cam_x, int cam_y, uint32_t (*random)(void)) {

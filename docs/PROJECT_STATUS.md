@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0907 - Skull Millione family becomes a real translation unit
+
+- `aos_enemies/skull_millione.c` now compiles independently with the shared
+  Skull Millione, Cagnazzo and Lubicant body update plus the fin child
+  update exported through `aos_enemy_internal.h`. `move_toward` joins the
+  prefixed internal API for the remaining families.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the three exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0906 - Beam Skeleton becomes a real translation unit
 
 - `aos_enemies/beam_skeleton.c` now compiles independently with its body,

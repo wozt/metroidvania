@@ -216,13 +216,14 @@ int32_t aos_enemy_pixel_delta(int32_t to, int32_t from) {
 /* sub_080694B8: velocity toward (tx, ty) at `speed`; true once the target
  * is within `speed`. The gEwramData + 0xA094 offsets it adds to the entity
  * are also added to the targets of the crow, so they cancel out. */
-static bool move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+bool aos_enemy_move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
     uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
     e->vx = aos_fixed_mul(aos_sine(angle + 0x4000u), speed);
     e->vy = aos_fixed_mul(aos_sine(angle), speed);
     return (int32_t)(aos_isqrt((uint32_t)(dx * dx + dy * dy)) << 16) <= speed;
 }
+#define move_toward aos_enemy_move_toward
 
 /* sub_080695B4: the same polar solution, written to acceleration instead
  * of velocity. */
@@ -2744,7 +2745,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/skull_millione.c"
+
 #include "aos_enemies/dead_crusader.c"
 #include "aos_enemies/gargoyle.c"
 #include "aos_enemies/axe_armor.c"
@@ -3195,12 +3196,12 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
             enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
             soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_FIN) {
-        fin_update(enemy, kind, cam_x, cam_y, random);
+        aos_enemy_fin_update(enemy, kind, cam_x, cam_y, random);
         return report;
     }
     if ((enemy->id == AOS_ENEMY_SKULL_MILLIONE || enemy->id == AOS_ENEMY_CAGNAZZO ||
          enemy->id == AOS_ENEMY_LUBICANT) && enemy->role == AOS_ROLE_ENEMY)
-        return skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->id == AOS_ENEMY_MIMIC)
         return aos_enemy_mimic_update(enemy, soma, layer, kind, weapon,

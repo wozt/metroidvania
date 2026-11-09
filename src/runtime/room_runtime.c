@@ -97,6 +97,7 @@ typedef struct {
     int event, spriteset;
     RoomSprite sprites[MAX_ROOM_SPRITES]; int sprite_count;
     char spriteset_names[MAX_SPRITESET_ENTRIES][64]; int spriteset_count;
+    int spriteset_slots[MAX_SPRITESET_ENTRIES];     /* each entry's graphics slot */
 } RoomSpriteVariant;
 /* One native collision type and transition behavior per 16-pixel block. */
 typedef struct { int width, height, resolution, room; char world[16], area[40];
@@ -417,6 +418,7 @@ static bool parse_native_room(const char *path, Room *room) {
                 room->sprite_variants[index].spriteset_count >= MAX_SPRITESET_ENTRIES)
                 goto failure;
             RoomSpriteVariant *variant = &room->sprite_variants[index];
+            variant->spriteset_slots[variant->spriteset_count] = gfx_slot;
             snprintf(variant->spriteset_names[variant->spriteset_count++],
                      sizeof variant->spriteset_names[0], "%s", name);
             continue;
@@ -517,6 +519,7 @@ static bool parse_native_room(const char *path, Room *room) {
                 index < 0 || index > 255 || gfx_slot < 0 || gfx_slot > 7)
                 goto failure;
             variant->spriteset = index;
+            variant->spriteset_slots[variant->spriteset_count] = gfx_slot;
             variant->spriteset_count++;
             continue;
         }
@@ -4392,6 +4395,25 @@ static void runtime_apply_overlay(Room *room) {
                                       sizeof message);
     if (result == MZM_OVERLAY_REJECTED || (result == MZM_OVERLAY_APPLIED && changed))
         fprintf(stderr, "%s\n", message);
+    /* The editor's sprites join every variant of the room's sprites, with
+     * the variant's graphics slot for their name (else slot 0) and no room
+     * slot (UCHAR_MAX, as for sprites the room does not list). */
+    MzmProjectSprite placed[MAX_ROOM_SPRITES];
+    int count = mzm_room_project_sprites(path, room->area, room->room, room->width, room->height,
+                                         placed, MAX_ROOM_SPRITES, message, sizeof message);
+    if (count != 0) fprintf(stderr, "%s\n", message);
+    for (int v = 0; v < ROOM_SPRITE_VARIANTS && count > 0; ++v) {
+        RoomSpriteVariant *variant = &room->sprite_variants[v];
+        if (v > 0 && !variant->event) continue;
+        for (int k = 0; k < count && variant->sprite_count < MAX_ROOM_SPRITES; ++k) {
+            RoomSprite sprite = {placed[k].y, placed[k].x, 0, 0xFF, {0}};
+            snprintf(sprite.name, sizeof sprite.name, "%s", placed[k].name);
+            for (int e = 0; e < variant->spriteset_count; ++e)
+                if (!strcmp(variant->spriteset_names[e], placed[k].name))
+                    sprite.gfx_slot = variant->spriteset_slots[e];
+            variant->sprites[variant->sprite_count++] = sprite;
+        }
+    }
 }
 
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,

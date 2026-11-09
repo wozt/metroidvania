@@ -16,7 +16,8 @@
  * CLIPDATA_TYPE_SOLID, one_way PASS_THROUGH_BOTTOM, hazard an air block of
  * CLIP_BEHAVIOR_LAVA, slope_up RIGHT_STEEP_FLOOR_SLOPE (rising to the
  * right), slope_down LEFT_STEEP_FLOOR_SLOPE, water an air block of
- * CLIP_BEHAVIOR_WATER, air CLIPDATA_TYPE_AIR. Doors, objects and events stay
+ * CLIP_BEHAVIOR_WATER, air CLIPDATA_TYPE_AIR. Its entities referencing a
+ * native sprite (PSPRITE_*) join the room's sprites. Doors and events stay
  * native. No SDL. */
 #ifndef MZM_ROOM_OVERLAY_H
 #define MZM_ROOM_OVERLAY_H
@@ -74,5 +75,20 @@ MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, in
                                           int width_px, int height_px, const MzmClipTable *table,
                                           MzmCollisionSetter set, void *context, int *changed,
                                           char *message, size_t message_size);
+
+/* A project entity whose native reference is a Zero Mission sprite: its
+ * block and its sprite name (PSPRITE_ removed). */
+typedef struct {
+    int x, y;
+    char name[64];
+} MzmProjectSprite;
+
+/* The document's entities that are sprites (references "unassigned" are
+ * skipped): their count, or -1 when the document is ignored (another room,
+ * other dimensions, an entity outside, a reference that is not a sprite,
+ * more than `max`). 0 without a document. */
+int mzm_room_project_sprites(const char *path, const char *area, int room, int width_px,
+                             int height_px, MzmProjectSprite *sprites, int max, char *message,
+                             size_t message_size);
 
 #endif

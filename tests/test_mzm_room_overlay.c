@@ -101,8 +101,36 @@ static void collision_tests(void) {
     assert(mzm_room_collision_apply(path, "Brinstar", 33, 64, 48, &no_lava, record, &set,
                                     &changed, message, sizeof message) == MZM_OVERLAY_REJECTED &&
            set.count == 0);
+    FILE *f;
+    /* The entities referencing native sprites, at their block; unassigned
+     * ones skipped; any entity outside or not a sprite: all ignored. */
+    f = fopen(path, "w");
+    fprintf(f, "{\"schema\":\"metroidvania.project-room-data\",\"version\":4,%s,"
+               "\"next_id\":4,\"entities\":[{\"id\":1,\"kind\":\"ENEMY\",\"x\":32,\"y\":16,"
+               "\"label\":\"a\",\"native_type\":\"PSPRITE_ZOOMER_YELLOW\"},{\"id\":2,"
+               "\"kind\":\"ENEMY\",\"x\":0,\"y\":0,\"label\":\"b\",\"native_type\":"
+               "\"unassigned\"}],\"collision\":{\"resolution_px\":16,\"cells\":[]}}", room);
+    fclose(f);
+    MzmProjectSprite sprites[4];
+    assert(mzm_room_project_sprites(path, "Brinstar", 33, 64, 48, sprites, 4, message,
+                                    sizeof message) == 1 &&
+           sprites[0].x == 2 && sprites[0].y == 1 && !strcmp(sprites[0].name, "ZOOMER_YELLOW") &&
+           strstr(message, "1 unassigned"));
+    assert(mzm_room_project_sprites(path, "Brinstar", 34, 64, 48, sprites, 4, message,
+                                    sizeof message) == -1);
+    f = fopen(path, "w");
+    fprintf(f, "{\"schema\":\"metroidvania.project-room-data\",\"version\":4,%s,"
+               "\"next_id\":2,\"entities\":[{\"id\":1,\"kind\":\"ITEM\",\"x\":32,\"y\":16,"
+               "\"label\":\"a\",\"native_type\":\"ITEM_MISSILE_TANK\"}],"
+               "\"collision\":{\"resolution_px\":16,\"cells\":[]}}", room);
+    fclose(f);
+    assert(mzm_room_project_sprites(path, "Brinstar", 33, 64, 48, sprites, 4, message,
+                                    sizeof message) == -1 && strstr(message, "not a Zero Mission sprite"));
+    remove(path);
+    assert(mzm_room_project_sprites(path, "Brinstar", 33, 64, 48, sprites, 4, message,
+                                    sizeof message) == 0);
     /* A version-1 document (entities only) holds no collision. */
-    FILE *f = fopen(path, "w");
+    f = fopen(path, "w");
     fputs("{\"schema\":\"metroidvania.project-room-entities\",\"version\":1,\"entities\":[]}", f);
     fclose(f);
     assert(mzm_room_collision_apply(path, "Brinstar", 33, 64, 48, &table, record, &set, &changed,

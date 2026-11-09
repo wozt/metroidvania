@@ -3931,6 +3931,15 @@ numbers and hit-feedback comparisons.
   choreography, control-2 callbacks and the controller's later proximity
   conversations still need reconstruction.
 
+## Patch 0738 - The editor's placed sprites in the Zero Mission runtime
+
+- The room's project document now also adds its entities that reference a
+  native sprite (`PSPRITE_*`) to the room's sprites, at their block, with
+  the spriteset's graphics slot for that sprite; unassigned entities are
+  skipped and a document with an entity that does not fit is ignored.
+- Checked on a capture (a Zoomer and a Skree placed in Brinstar's save
+  room) and ROM-free tests.
+
 ## Patch 0737 - The editor's collision in the Zero Mission runtime
 
 - `fusion_room_runtime` now plays the collision painted in the editor: the

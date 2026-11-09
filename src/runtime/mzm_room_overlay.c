@@ -111,7 +111,7 @@ bool mzm_room_document_path(char *out, size_t size, const char *directory, const
 }
 
 static bool integer_member(const FusionJson *object, const char *key, int64_t *value) {
-    const FusionJson *member = fusion_json_member(object, key);
+    const FusionJson *member = object ? fusion_json_member(object, key) : NULL;
     if (!member || member->kind != FUSION_JSON_NUMBER || !member->integral) return false;
     *value = member->integer;
     return true;
@@ -122,47 +122,65 @@ static bool string_member(const FusionJson *object, const char *key, const char 
     return member && member->kind == FUSION_JSON_STRING && !strcmp(member->string, value);
 }
 
-MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, int room,
-                                          int width_px, int height_px, const MzmClipTable *table,
-                                          MzmCollisionSetter set, void *context, int *changed,
-                                          char *message, size_t message_size) {
-    if (changed) *changed = 0;
-    if (message && message_size) message[0] = '\0';
+/* The room's project document: NONE without one (or for a version-1
+ * document), REJECTED with *reason when it does not describe this room. */
+static MzmOverlayResult load_document(const char *path, const char *area, int room, int width_px,
+                                      int height_px, FusionJson *doc, char *message,
+                                      size_t message_size) {
     FILE *f = fopen(path, "rb");
     if (!f) return MZM_OVERLAY_NONE;
     enum { LIMIT = 4000000 };
     char *text = malloc(LIMIT + 1);
     size_t size = text ? fread(text, 1, LIMIT + 1, f) : 0;
     fclose(f);
-    FusionJson doc = {0};
     char error[128] = "";
-    if (!text || size > LIMIT || !fusion_json_parse(text, size, &doc, error, sizeof error)) {
-        snprintf(message, message_size, "editor collision %s ignored: %s", path,
+    if (!text || size > LIMIT || !fusion_json_parse(text, size, doc, error, sizeof error)) {
+        snprintf(message, message_size, "editor document %s ignored: %s", path,
                  !text ? "out of memory" : size > LIMIT ? "too large" : error);
         free(text);
         return MZM_OVERLAY_REJECTED;
     }
     free(text);
-    /* Version 1 documents (project-room-entities) hold no collision. */
-    if (string_member(&doc, "schema", "metroidvania.project-room-entities")) {
-        fusion_json_free(&doc);
+    /* Version 1 documents (project-room-entities) predate the room data. */
+    if (string_member(doc, "schema", "metroidvania.project-room-entities")) {
+        fusion_json_free(doc);
         return MZM_OVERLAY_NONE;
     }
-    int64_t version = 0, doc_room = -1, width = 0, height = 0, resolution = 0;
+    int64_t version = 0, doc_room = -1, width = 0, height = 0;
+    const char *reason = NULL;
+    if (!string_member(doc, "schema", "metroidvania.project-room-data") ||
+        !integer_member(doc, "version", &version) || version < 2 || version > 4)
+        reason = "not a project room document of versions 2 to 4";
+    else if (!string_member(doc, "world", "mzm") || !string_member(doc, "area", area) ||
+             !integer_member(doc, "room", &doc_room) || doc_room != room)
+        reason = "it names another room";
+    else if (!integer_member(doc, "width_px", &width) || width != width_px ||
+             !integer_member(doc, "height_px", &height) || height != height_px)
+        reason = "its dimensions differ from the room's";
+    if (reason) {
+        snprintf(message, message_size, "editor document %s ignored: %s", path, reason);
+        fusion_json_free(doc);
+        return MZM_OVERLAY_REJECTED;
+    }
+    return MZM_OVERLAY_APPLIED;
+}
+
+MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, int room,
+                                          int width_px, int height_px, const MzmClipTable *table,
+                                          MzmCollisionSetter set, void *context, int *changed,
+                                          char *message, size_t message_size) {
+    if (changed) *changed = 0;
+    if (message && message_size) message[0] = '\0';
+    FusionJson doc = {0};
+    MzmOverlayResult loaded = load_document(path, area, room, width_px, height_px, &doc, message,
+                                            message_size);
+    if (loaded != MZM_OVERLAY_APPLIED) return loaded;
+    int64_t resolution = 0;
     const FusionJson *collision = fusion_json_member(&doc, "collision");
     const FusionJson *cells = collision ? fusion_json_member(collision, "cells") : NULL;
     const char *reason = NULL;
-    if (!string_member(&doc, "schema", "metroidvania.project-room-data") ||
-        !integer_member(&doc, "version", &version) || version < 2 || version > 4)
-        reason = "not a project room document of versions 2 to 4";
-    else if (!string_member(&doc, "world", "mzm") || !string_member(&doc, "area", area) ||
-             !integer_member(&doc, "room", &doc_room) || doc_room != room)
-        reason = "it names another room";
-    else if (!integer_member(&doc, "width_px", &width) || width != width_px ||
-             !integer_member(&doc, "height_px", &height) || height != height_px)
-        reason = "its dimensions differ from the room's";
-    else if (!integer_member(collision, "resolution_px", &resolution) || resolution != 16 ||
-             !cells || cells->kind != FUSION_JSON_ARRAY)
+    if (!integer_member(collision, "resolution_px", &resolution) || resolution != 16 ||
+        !cells || cells->kind != FUSION_JSON_ARRAY)
         reason = "its collision is not a 16-pixel cell list";
     int columns = width_px / 16, rows = height_px / 16;
     for (size_t k = 0; !reason && k < cells->count; ++k) {
@@ -211,4 +229,50 @@ MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, in
              counts[5], counts[6]);
     fusion_json_free(&doc);
     return MZM_OVERLAY_APPLIED;
+}
+
+int mzm_room_project_sprites(const char *path, const char *area, int room, int width_px,
+                             int height_px, MzmProjectSprite *sprites, int max, char *message,
+                             size_t message_size) {
+    if (message && message_size) message[0] = '\0';
+    FusionJson doc = {0};
+    MzmOverlayResult loaded = load_document(path, area, room, width_px, height_px, &doc, message,
+                                            message_size);
+    if (loaded == MZM_OVERLAY_NONE) return 0;
+    if (loaded == MZM_OVERLAY_REJECTED) return -1;
+    const FusionJson *entities = fusion_json_member(&doc, "entities");
+    const char *reason = NULL;
+    int count = 0, unassigned = 0;
+    if (!entities || entities->kind != FUSION_JSON_ARRAY) reason = "it has no entity list";
+    for (size_t k = 0; !reason && entities && k < entities->count; ++k) {
+        const FusionJson *entity = &entities->items[k];
+        const FusionJson *type = fusion_json_member(entity, "native_type");
+        int64_t x = -1, y = -1;
+        if (!type || type->kind != FUSION_JSON_STRING || !integer_member(entity, "x", &x) ||
+            !integer_member(entity, "y", &y)) {
+            reason = "an entity lacks its position or native reference";
+        } else if (!strcmp(type->string, "unassigned")) {
+            ++unassigned;
+        } else if (strncmp(type->string, "PSPRITE_", 8) || strlen(type->string + 8) >= 64 ||
+                   !type->string[8]) {
+            reason = "an entity's native reference is not a Zero Mission sprite";
+        } else if (x < 0 || y < 0 || x >= width_px || y >= height_px) {
+            reason = "an entity lies outside the room";
+        } else if (count < max) {
+            sprites[count].x = (int)(x / 16);
+            sprites[count].y = (int)(y / 16);
+            snprintf(sprites[count].name, sizeof sprites[count].name, "%s", type->string + 8);
+            ++count;
+        } else {
+            reason = "it has more entities than the room's sprite slots";
+        }
+    }
+    fusion_json_free(&doc);
+    if (reason) {
+        snprintf(message, message_size, "editor entities %s ignored: %s", path, reason);
+        return -1;
+    }
+    snprintf(message, message_size, "editor entities %s: %d sprites (%d unassigned skipped)", path,
+             count, unassigned);
+    return count;
 }

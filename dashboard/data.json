@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:01:03+00:00",
+ "generated_at": "2026-11-09T15:03:19+00:00",
  "git": {
-  "commit": "db1e0d6b",
+  "commit": "3b584de7",
   "branch": "main",
   "dirty": true
  },
@@ -10906,6 +10906,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/giant_ghost.c",
     "src/runtime/aos_enemies/white_dragon.c",
     "src/runtime/aria_runtime.c",
@@ -19752,6 +19753,7 @@
     "src/runtime/aos_enemies/buer.c",
     "src/runtime/aos_enemies/white_dragon.c",
     "src/runtime/aos_enemies/bone_pillar.c",
+    "src/runtime/aos_enemies/giant_ghost.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22206,6 +22208,12 @@
  },
  "timeline": [
   {
+   "commit": "3b584de7",
+   "date": "2026-11-09",
+   "subject": "Compile Bone Pillar family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "db1e0d6b",
    "date": "2026-11-09",
    "subject": "Compile White Dragon family as an independent enemy unit",
@@ -22677,12 +22685,6 @@
    "commit": "fa4a6855",
    "date": "2026-11-08",
    "subject": "Center bestiary detail name, close weakness-label audit",
-   "scope": "project"
-  },
-  {
-   "commit": "6645d695",
-   "date": "2026-11-08",
-   "subject": "Port bestiary +0xC intro phases",
    "scope": "project"
   }
  ],

@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0924 - Giant Ghost family becomes a real translation unit
+
+- `aos_enemies/giant_ghost.c` now compiles independently with its body
+  and part updates exported through `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0923 - Bone Pillar family becomes a real translation unit
 
 - `aos_enemies/bone_pillar.c` now compiles independently with its

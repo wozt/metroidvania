@@ -202,6 +202,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      is identical for all 488 symbols. The other 20 included families
      remain. Continue with `giant_ghost.c`; keep one family per commit
      and repeat the union proof.
+   - *(Continued in patch 0924.)* `giant_ghost.c` is independent with
+     its two updates exported. The union proof is identical for all
+     488 symbols. The other 19 included families remain. Continue with
+     `minotaur.c`; keep one family per commit and repeat the union
+     proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

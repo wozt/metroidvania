@@ -1,9 +1,27 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Giant Ghost (enemy 0x13) and its parts.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <math.h>
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define copy_collision_result aos_enemy_copy_collision_result
+#define move_toward aos_enemy_move_toward
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_near aos_enemy_player_near
+#define soldier_face aos_enemy_soldier_face
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x(x) aos_enemy_target_x(x)
+#define target_y(x) aos_enemy_target_y(x)
+#define trunc16 aos_enemy_trunc16
 
 /* sub_0807E228(e, x, y, vx, vy, frame): a ghost wisp (sub_08069134 with
  * + 0x18 = 0, + 0x19 = 3: the common still frame 0x40 or 0x41 on OBJ row 6,
@@ -234,7 +252,7 @@ static void giant_struck(AosEnemy *g, const AosEnemyKind *kind, uint32_t (*rando
  * (the global 0x8E & 0x40) only animates; then the animation step and the
  * collision pass. Its three parts (EnemyGiantGhostCreate's children) are
  * made by its first update. */
-static AosHitReport giant_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_giant_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
                                  int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -321,7 +339,7 @@ static AosHitReport giant_update(AosEnemy *g, AosSoma *soma, const AosEnemyKind 
  * pixels out (1 pixel behind); under the global 0x8E & 0x40 they look at a
  * point sweeping 60 pixels diagonally. All share the body's visibility and
  * facing and go when it dies. */
-static void giant_part_update(AosEnemy *p, const AosSoma *soma, const AosEnemyKind *kind,
+void aos_enemy_giant_part_update(AosEnemy *p, const AosSoma *soma, const AosEnemyKind *kind,
                               uint32_t (*random)(void), AosHitReport *report) {
     const AosEnemy *g = p->parent;
     if (p->state == 0 && (!g || g->removed || g->id != AOS_ENEMY_GIANT_GHOST)) {

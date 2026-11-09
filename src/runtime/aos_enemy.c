@@ -2773,7 +2773,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/giant_ghost.c"
 #include "aos_enemies/minotaur.c"
 #include "aos_enemies/worm.c"
 #include "aos_enemies/biphron.c"
@@ -2981,7 +2980,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_skeleton_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_GIANT_GHOST_PART) {
-        giant_part_update(enemy, soma, kind, random, &report);
+        aos_enemy_giant_part_update(enemy, soma, kind, random, &report);
         return report;
     }
     if (enemy->role == AOS_ROLE_GIANT_GHOST_TRAIL) {
@@ -2992,7 +2991,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->id == AOS_ENEMY_GIANT_GHOST && enemy->role == AOS_ROLE_ENEMY)
-        return giant_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_giant_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->role == AOS_ROLE_WHITE_DRAGON_PART) {
         aos_enemy_dragon_segment_update(enemy, kind, random, &report);

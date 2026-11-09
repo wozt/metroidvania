@@ -24,13 +24,13 @@
 #include <stdint.h>
 
 #include "aos_anim.h"
-#include "aos_math.h"
+#include "aos/math/aos_math.h"
 #include "aos_collision.h"
 #include "aos_damage_popup.h"
 #include "aos_combat.h"
 #include "aos_effect.h"
 #include "aos_soma.h"
-#include "aos_weapon.h"
+#include "aos/weapons/aos_weapon.h"
 
 /* Stats of the enemy record copied by sub_0806B04C (from enemies.tsv). */
 typedef struct {

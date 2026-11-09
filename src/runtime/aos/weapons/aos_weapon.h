@@ -28,10 +28,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos_anim.h"
-#include "aos_collision.h"
-#include "aos_effect.h"
-#include "aos_soma.h"
+#include "../../aos_anim.h"
+#include "../../aos_collision.h"
+#include "../../aos_effect.h"
+#include "../../aos_soma.h"
 
 typedef struct {
     int8_t x, y;

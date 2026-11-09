@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0946 - Weapon and math modules move to aos/{weapons,math}
+
+- `aos_weapon.c/h` moved to `src/runtime/aos/weapons/` and
+  `aos_math.c/h` to `src/runtime/aos/math/`; includes were rewritten
+  (`aos/math/`, `aos/weapons/`, `../../` inside the moved files) and
+  CMake plus the registries were updated. No code or behavior
+  changed.
+
 ## Patch 0945 - Soul modules move to aos/{red,blue}_souls and aos/souls
 
 - The 23 red-soul and 3 blue-soul pairs moved to

@@ -2,7 +2,7 @@
 /* Aria of Sorrow weapon entity; comments name the cvaos routine. */
 #include "aos_weapon.h"
 
-#include "aos_audio.h"
+#include "../../aos_audio.h"
 
 static void delete_weapon(AosWeaponEntity *weapon, AosSoma *soma) {
     weapon->active = false;

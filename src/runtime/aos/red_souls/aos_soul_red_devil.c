@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_devil.h"
 
-#include "../../aos_math.h"
+#include "../../aos/math/aos_math.h"
 
 AosDevilFire aos_devil_fire_create(int index, int32_t x, int32_t y, bool facing_left) {
     int32_t angle = index * 0x1800 - 0x1800;

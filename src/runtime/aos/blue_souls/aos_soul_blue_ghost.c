@@ -2,7 +2,7 @@
 #include "aos_soul_blue_ghost.h"
 
 #include "../../aos_audio.h"
-#include "../../aos_math.h"
+#include "../../aos/math/aos_math.h"
 
 bool aos_ghost_guardian_update(AosGhostGuardian *ghost, AosGuardian *guardian, AosStats *stats,
                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],

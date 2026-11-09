@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_spear.h"
 
-#include "../../aos_math.h"
+#include "../../aos/math/aos_math.h"
 
 enum { AOS_SPEAR_LIMIT = 0x80000 };
 

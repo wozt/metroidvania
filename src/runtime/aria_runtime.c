@@ -62,7 +62,7 @@
 #include "aos_game_over.h"
 #include "aos_save_room.h"
 #include "aos_soma.h"
-#include "aos_weapon.h"
+#include "aos/weapons/aos_weapon.h"
 #include "aos_window_frame.h"
 #include "debug_menu.h"
 #include "gba_input.h"

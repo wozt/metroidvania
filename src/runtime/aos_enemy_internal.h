@@ -57,6 +57,12 @@ void aos_enemy_snap_to_floor(AosEnemy *enemy, const AosCollision *layer);
 int32_t aos_enemy_toward_facing(const AosEnemy *enemy, int32_t speed);
 void aos_enemy_copy_collision_result(AosHitReport *report,
                                      const AosHitReport *hit);
+int32_t aos_enemy_random_centred(uint32_t (*random)(void), uint32_t n);
+int aos_enemy_ground_walk(AosEnemy *enemy, const AosSoma *soma,
+                          const AosCollision *layer, const AosProbes *probes,
+                          int32_t speed, int mode);
+bool aos_enemy_player_in_centred(const AosEnemy *enemy,
+                                 const AosSoma *soma, int w, int h);
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -105,6 +111,11 @@ AosHitReport aos_enemy_gorgon_breath_update(
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y);
 AosHitReport aos_enemy_gorgon_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_dead_warrior_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,

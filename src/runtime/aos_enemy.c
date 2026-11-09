@@ -63,9 +63,10 @@ AosEffect *aos_enemy_spawn_drift(uint8_t kind, int32_t x, int32_t y,
 #define spawn_drift aos_enemy_spawn_drift
 
 /* sub_0802D5EC(n): (random & (n - 1)) - n / 2. */
-static int32_t random_centred(uint32_t (*random)(void), uint32_t n) {
+int32_t aos_enemy_random_centred(uint32_t (*random)(void), uint32_t n) {
     return (int32_t)(random() & (n - 1)) - (int32_t)(n >> 1);
 }
+#define random_centred aos_enemy_random_centred
 
 /* A unit vector at a random angle: (sin(a + 0x4000), sin(a)) times 1.0
  * (sub_0803E86C). */
@@ -2368,13 +2369,15 @@ static bool clamp_to_room(AosEnemy *e, const AosCollision *layer, int margin) {
     return false;
 }
 
-static int ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *layer,
-                       const AosProbes *p, int32_t speed, int mode);
+int aos_enemy_ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *layer,
+                          const AosProbes *p, int32_t speed, int mode);
+#define ground_walk aos_enemy_ground_walk
 
 /* sub_0806E29C(e, w, h): the player in the w x h box centred on it. */
-static bool player_in_centred(const AosEnemy *e, const AosSoma *soma, int w, int h) {
+bool aos_enemy_player_in_centred(const AosEnemy *e, const AosSoma *soma, int w, int h) {
     return player_in(soma, (int16_t)((e->x >> 16) - w / 2), (int16_t)((e->y >> 16) - h / 2), w, h);
 }
+#define player_in_centred aos_enemy_player_in_centred
 
 /* sub_080698A8(e, floor_vy, head, limit): sub_08069770 with its own limit,
  * moving each axis only when its speed or acceleration is set; the ceiling
@@ -2491,8 +2494,8 @@ static int probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes *p
  * slowed on slopes (bit 3); the step is undone on a wall (keeping the
  * vertical move on a floor), on a slope with bit 4, and without a floor
  * with bit 2. Returns the probe walker's flags. */
-static int ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *layer,
-                       const AosProbes *p, int32_t speed, int mode) {
+int aos_enemy_ground_walk(AosEnemy *e, const AosSoma *soma, const AosCollision *layer,
+                          const AosProbes *p, int32_t speed, int mode) {
     int32_t x0 = e->x, y0 = e->y;
     if ((mode & 1) && e->anim.frame == 0 && e->anim.tick == 0) face_player(e, soma);
     e->vx = (!(mode & 2) && !e->mirrored) ? -speed : speed;
@@ -2730,7 +2733,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/dead_warrior.c"
 #include "aos_enemies/mimic.c"
 #include "aos_enemies/fleaman.c"
 #include "aos_enemies/skeleton_knight.c"
@@ -3323,8 +3325,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return valkyrie_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_DEAD_WARRIOR)
-        return warrior_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
-                              soma_def, cam_x, cam_y, random);
+        return aos_enemy_dead_warrior_update(enemy, soma, layer, kind, weapon,
+                                             weapon_frames, soma_atk, soma_def,
+                                             cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_DEAD_CRUSADER)
         return crusader_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);

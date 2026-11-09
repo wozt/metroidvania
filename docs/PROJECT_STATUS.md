@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0942 - Valkyrie/Erinys family becomes a real translation unit
+
+- `aos_enemies/valkyrie.c` now compiles independently with its update
+  exported through `aos_enemy_internal.h`; `head_toward` joins the
+  internal API.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0941 - Zombie Soldier family becomes a real translation unit
 
 - `aos_enemies/zombie_soldier.c` now compiles independently with its

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T16:07:28+00:00",
+ "generated_at": "2026-11-09T16:09:27+00:00",
  "git": {
-  "commit": "5ee04435",
+  "commit": "b76a0feb",
   "branch": "main",
   "dirty": true
  },
@@ -10440,6 +10440,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/valkyrie.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -13691,6 +13692,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/valkyrie.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19783,6 +19785,7 @@
     "src/runtime/aos_enemies/nemesis.c",
     "src/runtime/aos_enemies/crow.c",
     "src/runtime/aos_enemies/zombie_soldier.c",
+    "src/runtime/aos_enemies/valkyrie.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22237,6 +22240,12 @@
  },
  "timeline": [
   {
+   "commit": "b76a0feb",
+   "date": "2026-11-09",
+   "subject": "Compile Zombie Soldier family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "5ee04435",
    "date": "2026-11-09",
    "subject": "Compile Crow family as an independent enemy unit",
@@ -22708,12 +22717,6 @@
    "commit": "da7026ab",
    "date": "2026-11-08",
    "subject": "Correct Biphron state map and document the projectile",
-   "scope": "project"
-  },
-  {
-   "commit": "ef0d2173",
-   "date": "2026-11-08",
-   "subject": "Document Biphron helper decode: effects, callbacks, gates",
    "scope": "project"
   }
  ],

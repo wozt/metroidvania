@@ -1,9 +1,24 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Valkyrie (enemy 0x29) and Erinys (0x62, the same code).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define accel_move aos_enemy_accel_move
+#define collide aos_enemy_collide
+#define generic_death aos_enemy_generic_death
+#define head_toward aos_enemy_head_toward
+#define play aos_enemy_play
+#define player_in_range aos_enemy_player_in_range
+#define play_loop aos_enemy_play_loop
+#define soldier_face aos_enemy_soldier_face
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_0806E7A8: step 0 faces the player and waits until he is within 120
  * pixels or it is hurt; step 1 heads at 2.0 for the point 64 pixels in
@@ -130,7 +145,7 @@ static void valkyrie_recoil(AosEnemy *v, const AosSoma *soma) {
  * 0 hovers, 1 attacks, 2 dies (9/10 of vx, falling, the generic death), 3
  * recoils, 4 only steps its animation; then the animation step and the
  * collision pass. */
-static AosHitReport valkyrie_update(AosEnemy *v, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_valkyrie_update(AosEnemy *v, AosSoma *soma, const AosEnemyKind *kind,
                                     const AosWeaponEntity *weapon,
                                     const AosWeaponFrames *weapon_frames, int soma_atk,
                                     int soma_def, int cam_x, int cam_y,

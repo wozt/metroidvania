@@ -2302,7 +2302,7 @@ bool aos_enemy_player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t 
 /* sub_080696B0(e, tx, ty, speed): v = delta * speed / distance (whole
  * pixels), then the move; true once the distance is within `speed`. A
  * zero distance (a division by zero natively) leaves it still. */
-static bool head_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+bool aos_enemy_head_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
     int32_t distance = (int32_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
     e->vx = distance ? dx * speed / distance : 0;
@@ -2759,7 +2759,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
-#include "aos_enemies/valkyrie.c"
 
 
 
@@ -3329,7 +3328,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                               cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return valkyrie_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_valkyrie_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_DEAD_WARRIOR)
         return aos_enemy_dead_warrior_update(enemy, soma, layer, kind, weapon,

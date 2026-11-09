@@ -313,6 +313,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      (`bat.c` is included early at the top of `aos_enemy.c`; convert
      it last). Continue with `valkyrie.c`; keep one family per
      commit and repeat the union proof.
+   - *(Continued in patch 0942.)* `valkyrie.c` is independent with
+     its update exported (it covers Valkyrie and Erinys); the
+     `head_toward` helper joined the internal API. The union proof
+     is identical for all 488 symbols. One included family remains:
+     `bat.c`, included early at the top of `aos_enemy.c`; convert it
+     last with the same proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

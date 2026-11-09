@@ -549,6 +549,8 @@ AosHitReport aos_enemy_chronomage_update(
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
 bool aos_enemy_on_slope(const AosCollision *layer, int32_t x, int32_t y);
+bool aos_enemy_head_toward(AosEnemy *enemy, int32_t tx, int32_t ty,
+                           int32_t speed);
 uint16_t aos_enemy_angle_to_target(const AosEnemy *enemy,
                                    const AosSoma *soma);
 bool aos_enemy_turn_angle(uint32_t *angle, uint16_t step, uint16_t target);
@@ -613,6 +615,11 @@ void aos_enemy_grenade_particles(const AosEnemy *grenade,
 AosHitReport aos_enemy_soldier_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_valkyrie_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
 

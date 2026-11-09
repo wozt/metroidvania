@@ -1,13 +1,33 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Lightning Doll (enemy 0x3B) and its burning pieces.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <stdlib.h>
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define frame_boxes aos_enemy_frame_boxes
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_dy aos_enemy_player_dy
+#define player_in_centred aos_enemy_player_in_centred
+#define player_within aos_enemy_player_within
+#define room_columns aos_enemy_room_columns
+#define spawn_flame_at aos_enemy_spawn_flame_at
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
+#define killer_doll_pieces aos_enemy_killer_doll_pieces
+#define lightning_doll_pieces aos_enemy_lightning_doll_pieces
 
 /* sub_080C9A24: five pieces of sub_080C9284 (+ 0x1D the index), set up on
  * their first update. */
-static void doll_shatter(AosEnemy *e, AosHitReport *report) {
+void aos_enemy_doll_shatter(AosEnemy *e, AosHitReport *report) {
     for (int i = 0; i < 5 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
         AosEnemy p = {0};
         p.id = e->id;
@@ -37,9 +57,11 @@ static void doll_shatter(AosEnemy *e, AosHitReport *report) {
  * (y - 32) and walls (x +/- 8, y - 16, vx = 0). It blinks on odd timers
  * up to 0x3F and stops, hidden, when its timer runs out or it falls below
  * screen row 0xC8; it is deleted once its glow has played a cycle. */
-static void doll_piece_update(AosEnemy *p, const AosSoma *soma, const AosCollision *layer,
-                              const AosEnemyKind *kind, int cam_y, uint32_t (*random)(void),
-                              AosHitReport *report) {
+void aos_enemy_doll_piece_update(AosEnemy *p, const AosSoma *soma,
+                                 const AosCollision *layer,
+                                 const AosEnemyKind *kind, int cam_y,
+                                 uint32_t (*random)(void),
+                                 AosHitReport *report) {
     const int8_t *r = p->id == AOS_ENEMY_KILLER_DOLL ? killer_doll_pieces[p->variant]
                                                       : lightning_doll_pieces[p->variant];
     switch (p->state) {
@@ -332,10 +354,11 @@ static void doll_cycle(AosEnemy *d, const AosAnimSet *anims) {
  * callback sub_080C99E4, during animations 3 and 4, holds a spark (common
  * animation 16, row 6: sub_080C9108 / sub_080C9198) on the player. The
  * tracking list of sub_08021924 and the sound loop 0x75 are not ported. */
-static AosHitReport doll_update(AosEnemy *d, AosSoma *soma, const AosCollision *layer,
-                                const AosEnemyKind *kind, const AosWeaponEntity *weapon,
-                                const AosWeaponFrames *weapon_frames, int soma_atk,
-                                int soma_def, uint32_t (*random)(void)) {
+AosHitReport aos_enemy_lightning_doll_update(
+    AosEnemy *d, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (d->state == 2) {
         doll_cycle(d, kind->anims);

@@ -77,6 +77,9 @@ int16_t aos_enemy_player_dy(const AosEnemy *enemy, const AosSoma *soma);
 bool aos_enemy_player_within(const AosEnemy *enemy, const AosSoma *soma,
                              uint32_t range);
 int aos_enemy_room_columns(const AosCollision *layer);
+void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
+                           AosBox *hurt, AosBox *attack, bool *hurt_on,
+                           bool *attack_on);
 extern const int8_t aos_enemy_killer_doll_pieces[5][6];
 extern const int8_t aos_enemy_lightning_doll_pieces[5][6];
 
@@ -156,6 +159,16 @@ AosHitReport aos_enemy_skeleton_knight_update(
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
 AosHitReport aos_enemy_killer_doll_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void));
+void aos_enemy_doll_shatter(AosEnemy *enemy, AosHitReport *report);
+void aos_enemy_doll_piece_update(
+    AosEnemy *enemy, const AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, int cam_y, uint32_t (*random)(void),
+    AosHitReport *report);
+AosHitReport aos_enemy_lightning_doll_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,

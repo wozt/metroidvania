@@ -1435,8 +1435,9 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
 
 
 /* sub_0806B1FC: the boxes of the current animation frame. */
-static void frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind, AosBox *hurt,
-                        AosBox *attack, bool *hurt_on, bool *attack_on) {
+void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
+                           AosBox *hurt, AosBox *attack, bool *hurt_on,
+                           bool *attack_on) {
     unsigned a = enemy->anim.id, f = enemy->anim.frame;
     *hurt_on = *attack_on = false;
     if (enemy->own_boxes) {
@@ -1450,9 +1451,9 @@ static void frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind, AosBox 
     *attack = kind->attack[a][f];
     *hurt_on = *attack_on = true;
 }
+#define frame_boxes aos_enemy_frame_boxes
 
 static void beam_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
-static void doll_shatter(AosEnemy *e, AosHitReport *report);
 
 static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 static void nemesis_struck(AosEnemy *n);
@@ -1818,7 +1819,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 0xFF;
                     enemy->step = 1;
                     enemy->hidden = true;
-                    doll_shatter(enemy, &report);
+                    aos_enemy_doll_shatter(enemy, &report);
                     if (!enemy->spawned_count) enemy->removed = true;
                 } else if (enemy->id == AOS_ENEMY_BEAM_SKELETON) {
                     /* sub_080CB4F0 (sound 0x6B) -> sub_080CB144: hidden,
@@ -2744,9 +2745,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#define killer_doll_pieces aos_enemy_killer_doll_pieces
-#define lightning_doll_pieces aos_enemy_lightning_doll_pieces
-#include "aos_enemies/lightning_doll.c"
 #include "aos_enemies/beam_skeleton.c"
 #include "aos_enemies/skull_millione.c"
 #include "aos_enemies/dead_crusader.c"
@@ -3168,7 +3166,8 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                               weapon_frames, soma_atk,
                                               soma_def, random);
     if (enemy->role == AOS_ROLE_DOLL_PIECE) {
-        doll_piece_update(enemy, soma, layer, kind, cam_y, random, &report);
+        aos_enemy_doll_piece_update(enemy, soma, layer, kind, cam_y,
+                                    random, &report);
         return report;
     }
     if (enemy->role == AOS_ROLE_NEMESIS_HELPER) {
@@ -3187,8 +3186,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return nemesis_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_LIGHTNING_DOLL && enemy->role == AOS_ROLE_ENEMY)
-        return doll_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                           random);
+        return aos_enemy_lightning_doll_update(
+            enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+            soma_def, random);
     if (enemy->role == AOS_ROLE_BEAM || enemy->role == AOS_ROLE_BEAM_FLASH)
         return beam_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     if (enemy->id == AOS_ENEMY_BEAM_SKELETON && enemy->role == AOS_ROLE_ENEMY)

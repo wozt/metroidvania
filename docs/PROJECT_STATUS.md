@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0905 - Lightning Doll becomes a real translation unit
+
+- `aos_enemies/lightning_doll.c` now compiles independently with its body,
+  shatter producer and burning-piece update exported. It consumes the
+  read-only piece tables shared by Killer Doll through the internal API.
+- After normalizing GCC's renumbered function-local static symbols, the object
+  union preserves all 488 `-O0` function sizes and instructions. No behavior
+  or feature status changed.
+
 ## Patch 0904 - Killer Doll becomes a real translation unit
 
 - `aos_enemies/killer_doll.c` now compiles independently. Its bounded flight,

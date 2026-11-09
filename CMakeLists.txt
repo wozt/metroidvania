@@ -229,7 +229,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_obj.c src/runtime/aos_anim.c
+               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_math.c src/runtime/aos_obj.c src/runtime/aos_anim.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
@@ -1032,7 +1032,7 @@ if(BUILD_TESTING)
     add_test(NAME metroidvania_split COMMAND fusion_metroidvania_split_tests)
 
     add_executable(fusion_aos_title_screen_tests tests/test_aos_title_screen.c
-                   src/runtime/aos_title_screen.c src/runtime/aos_obj.c src/runtime/aos_anim.c)
+                   src/runtime/aos_title_screen.c src/runtime/aos_math.c src/runtime/aos_obj.c src/runtime/aos_anim.c)
     target_include_directories(fusion_aos_title_screen_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_title_screen_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_title_screen_tests)
@@ -1041,7 +1041,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_game_mode.c
                    src/runtime/aos_main_menu.c
-                   src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_obj.c src/runtime/aos_anim.c
+                   src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_math.c src/runtime/aos_obj.c src/runtime/aos_anim.c
                    src/runtime/aos_input.c src/runtime/aos_intro_cutscene.c
                    src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)

@@ -18,7 +18,8 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    `aos_enemy.c` now holds only the shared framework, in this order:
    - the soul-attack, decoy and burst state, particles, flames, math
      helpers, `play`/`step_anim`, targeting;
-   - the bat and zombie constructors and the big `enemy_create`;
+   - the bat (included from `aos_enemies/bat.c`), the zombie's prototypes
+     and the big `enemy_create`;
    - the collision pass (`frame_boxes`, `collide`) and `generic_death`;
    - the common movement helpers that used to be scattered between
      monsters (walker collision, aiming, `integrate`/`stop`, projectile and
@@ -96,10 +97,10 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      `AOS_ENEMY_SOURCES` would avoid repeating the list.
    - Verify with the comparison above, then with `fusion_aos_enemy_tests`
      and the full cycle.
-2. **Move the bat and zombie** out of the framework region into
-   `aos_enemies/bat.c` and `zombie.c`. They are interleaved with framework
-   code (`bat_sees` .. `bat_swoop`, `zombie_vanish`, `zombie_create`,
-   `bat_die`). Point the bat's annotation row at the new file.
+2. *(Done in patch 0886.)* The bat is in `aos_enemies/bat.c`, included
+   before `enemy_create`. The zombie's `zombie_vanish` and `zombie_create`
+   are in `zombie.c`, with prototypes left in `aos_enemy.c` for
+   `enemy_create`.
 3. **Souls.**
    - Rename the soul modules so their nature is visible, for example
      `aos_skill_merman.c` to `aos_soul_red_merman.c` and
@@ -113,10 +114,9 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - Several soul tests link `aos_enemy.c` only for the math. Check each
      test target in `CMakeLists.txt` and drop `aos_enemy.c` where it now
      links with `aos_math.c` alone.
-4. **Duplicate math.** `src/runtime/aos_title_screen.c` has its own copies
-   of the sine, ArcTan2 and `fixed_mul`. Replace them with `aos_math`
-   after checking they are identical. `isqrt` and `fixed_mul` could move to
-   `aos_math` too.
+4. *(Done in patch 0886 for the sine and ArcTan2.)* `aos_title_screen.c`
+   now uses `aos_math`. `isqrt` and `fixed_mul` could still move to
+   `aos_math`: `aos_title_screen.c` also has its own `fixed_mul`.
 5. **Header comment.** The first comment of `aos_enemy.h` is one long
    sentence listing every monster. Replace it with a short description of
    the framework and leave the per-monster details in the family files.

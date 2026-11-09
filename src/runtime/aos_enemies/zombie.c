@@ -5,6 +5,43 @@
  * framework: it is not a separate translation unit and uses that
  * file's static helpers. */
 
+/* The removal of a zombie: state 1 with a one-frame death (HP 0). */
+static void zombie_vanish(AosEnemy *zombie) {
+    zombie->state = 1;
+    zombie->timer = 1;
+    zombie->hp = 0;
+}
+
+/* EnemyZombieCreate (the facing of sub_0806CF2C; sub_0807B404 graphics). */
+static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollision *layer,
+                          const AosAnimSet *anims) {
+    if (zombie->param1) {
+        /* A spawner: hidden, no boxes, state 3. */
+        zombie->state = 3;
+        zombie->hidden = true;
+        zombie->combat.attack_off = zombie->combat.hurt_off = true;
+        snap_to_floor(zombie, layer);
+        return;
+    }
+    play_loop(zombie, anims, 0, false);
+    step_anim(zombie, anims);
+    if (flag_8e_40) {
+        /* State 2 (sub_0807B034) without the collision block, the floor
+         * snap or the facing. */
+        play_loop(zombie, anims, 0, false);
+        zombie->state = 2;
+        return;
+    }
+    int32_t y0 = zombie->y;
+    snap_to_floor(zombie, layer);
+    zombie->state = 0;
+    zombie->mirrored = (zombie->x >> 16) < (target_x(soma) >> 16);
+    if (on_slope(layer, zombie->x >> 16, zombie->y >> 16)) zombie_vanish(zombie);
+    if (zombie->y <= y0 - 0x80000) zombie_vanish(zombie);
+}
+
+/* Constructor and update must agree on validity of ROM-local Buer probes. */
+
 /* A child of the zombie showing one of its sprite frames, mirrored like it. */
 static AosEnemy zombie_child(const AosEnemy *z, uint8_t role, int16_t frame, int32_t x,
                              int32_t y) {

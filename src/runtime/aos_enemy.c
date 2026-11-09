@@ -332,110 +332,7 @@ static bool player_in(const AosSoma *soma, int32_t x, int32_t y, int w, int h) {
     return (uint16_t)((target_x(soma) >> 16) - x) <= w && (uint16_t)((target_y(soma) >> 16) - y) <= h;
 }
 
-/* sub_080AD700: the player in a w x h box centred on X, below the bat. */
-static bool bat_sees(const AosEnemy *bat, const AosSoma *soma, int w, int h) {
-    return player_in(soma, (bat->x >> 16) - w / 2, bat->y >> 16, w, h);
-}
-
-/* sub_080AD364: hanging. */
-static void bat_hang(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims,
-                     uint32_t (*random)(void)) {
-    face_player(bat, soma);
-    switch (bat->step) {
-    case 0:
-        if (bat->anim.id != 0) play(bat, anims, 0);
-        bat->state = 1;
-        bat->substep = bat->step = 0;
-        /* fallthrough */
-    case 1:
-        if (bat_sees(bat, soma, 0xE0, 0xA0)) {
-            if (bat_sees(bat, soma, 0xC0, 0x70)) {
-                bat->state = 2;
-                bat->substep = bat->step = 0;
-            } else if (bat->anim.id != 1) {
-                play(bat, anims, 1);
-            }
-        } else if (!(random() & 0x7F)) {
-            bat->step = 2;
-            bat->substep = 0;
-        } else if (bat->anim.id != 0) {
-            play(bat, anims, 0);
-        }
-        break;
-    case 2:
-        if (bat->substep == 0) {
-            if (bat->anim.id != 1) play(bat, anims, 1);
-            bat->substep = 1;
-        }
-        /* + 0x59 bit 0: the animation looped. */
-        if (bat->cycle_done) {
-            bat->cycle_done = false;
-            bat->step = 1;
-            bat->substep = 0;
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-/* sub_080AD44C: swoop. */
-static void bat_swoop(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims, int cam_x) {
-    switch (bat->step) {
-    case 0:
-        if (bat->substep == 0) {
-            if (bat->anim.id != 2) play(bat, anims, 2);
-            bat->vx = 0x8000;
-            bat->vy = 0x2000;
-            face_player(bat, soma);
-            bat->vx = -toward_facing(bat, bat->vx);
-            bat->timer = 0x20;
-            bat->substep = 1;
-        }
-        if (--bat->timer == 0xFF) {
-            bat->step = 1;
-            bat->substep = 0;
-        }
-        break;
-    case 1:
-        if (bat->substep == 0) {
-            bat->vy = 0x6000;
-            bat->vx = toward_facing(bat, 0x6000);
-            bat->substep = 1;
-        }
-        step_anim(bat, anims);
-        if (player_dy(bat, soma) >= -0x27 && player_dy(bat, soma) <= 0x27) {
-            bat->step = 2;
-            bat->substep = 0;
-        }
-        break;
-    case 2:
-        if (bat->substep == 0) {
-            bat->vx = toward_facing(bat, 0xC000);
-            bat->vy = 0x200;
-            bat->ax = toward_facing(bat, 0x50);
-            bat->ay = 0x25;
-            bat->phase = 0;
-            bat->substep = 1;
-        }
-        bat->y += aos_sine(bat->phase) / 4;
-        bat->phase = (uint16_t)(bat->phase + 0x200);
-        {
-            /* Leaving the screen: the bounds are read from + 0x4A, the
-             * integer part of vx (+ 0x59 |= 8 deletes the entity). */
-            int screen_x = (bat->x >> 16) - cam_x;
-            int vx_pixels = (int16_t)(bat->vx >> 16);
-            if (screen_x < vx_pixels - 0x28 || screen_x > vx_pixels + 0xF0) bat->removed = true;
-        }
-        break;
-    default:
-        break;
-    }
-    bat->x += bat->vx;
-    bat->y += bat->vy;
-    bat->vx += bat->ax;
-    bat->vy += bat->ay;
-}
+#include "aos_enemies/bat.c"
 
 /* sub_0806AF98: the entity's feet onto the floor below or above it. */
 static void snap_to_floor(AosEnemy *enemy, const AosCollision *layer) {
@@ -456,42 +353,10 @@ static bool on_slope(const AosCollision *layer, int32_t x, int32_t y) {
     return aos_collision_cell(layer, x, y) & 0xC0;
 }
 
-/* The removal of a zombie: state 1 with a one-frame death (HP 0). */
-static void zombie_vanish(AosEnemy *zombie) {
-    zombie->state = 1;
-    zombie->timer = 1;
-    zombie->hp = 0;
-}
-
-/* EnemyZombieCreate (the facing of sub_0806CF2C; sub_0807B404 graphics). */
+/* The zombie's constructors, in aos_enemies/zombie.c. */
+static void zombie_vanish(AosEnemy *zombie);
 static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollision *layer,
-                          const AosAnimSet *anims) {
-    if (zombie->param1) {
-        /* A spawner: hidden, no boxes, state 3. */
-        zombie->state = 3;
-        zombie->hidden = true;
-        zombie->combat.attack_off = zombie->combat.hurt_off = true;
-        snap_to_floor(zombie, layer);
-        return;
-    }
-    play_loop(zombie, anims, 0, false);
-    step_anim(zombie, anims);
-    if (flag_8e_40) {
-        /* State 2 (sub_0807B034) without the collision block, the floor
-         * snap or the facing. */
-        play_loop(zombie, anims, 0, false);
-        zombie->state = 2;
-        return;
-    }
-    int32_t y0 = zombie->y;
-    snap_to_floor(zombie, layer);
-    zombie->state = 0;
-    zombie->mirrored = (zombie->x >> 16) < (target_x(soma) >> 16);
-    if (on_slope(layer, zombie->x >> 16, zombie->y >> 16)) zombie_vanish(zombie);
-    if (zombie->y <= y0 - 0x80000) zombie_vanish(zombie);
-}
-
-/* Constructor and update must agree on validity of ROM-local Buer probes. */
+                          const AosAnimSet *anims);
 
 static bool is_early_enemy(uint8_t id) {
     return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_GHOST ||
@@ -1573,24 +1438,6 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
     return true;
 }
 
-/* sub_080AD5B8: the bat plays sound 0x72, falls, blinks with a flame every
- * 15 frames (sub_0806BE74 over 8 x 6 pixels) and is deleted. The palette
- * bits of + 0x5A are not ported; sub_080683BC is the caller's reward. */
-static void bat_die(AosEnemy *bat, const AosEnemyKind *kind, uint32_t (*random)(void),
-                    AosHitReport *report) {
-    if (bat->step == 0) {
-        aos_audio_play_song(0x72);
-        aos_anim_start(&bat->anim, kind->anims, 2, true);
-        bat->anim.id = 2;
-        bat->anim.frame = 2;
-        bat->vy = 0x8000;
-        bat->vflip = true;
-        bat->timer = 0x40;
-        bat->step = 1;
-    }
-    bat->y += bat->vy;
-    death_flames(bat, kind, 15, 0x80000, 0x60000, random, report);
-}
 
 /* sub_0806B1FC: the boxes of the current animation frame. */
 static void frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind, AosBox *hurt,

@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0886 - Bat and zombie out of the enemy framework
+
+- The bat's code (`bat_sees`, `bat_hang`, `bat_swoop`, `bat_die`) is now in
+  `src/runtime/aos_enemies/bat.c`, and the zombie's constructors in
+  `zombie.c`; `aos_enemy.c` (3,374 lines) keeps only the shared framework.
+  The compiled code is unchanged (all 488 functions identical).
+- `aos_title_screen.c` drops its copies of the ROM sine and the BIOS
+  ArcTan2 for `aos_math`; its tests pass.
+
 ## Patch 0885 - Aria enemies split into one file per monster
 
 - `src/runtime/aos_enemy.c` (16,586 lines) is now the shared enemy

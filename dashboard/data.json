@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T12:20:13+00:00",
+ "generated_at": "2026-11-09T12:23:38+00:00",
  "git": {
-  "commit": "d2a9e842",
+  "commit": "e9f52c3d",
   "branch": "main",
   "dirty": true
  },
@@ -8979,6 +8979,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemies/bat.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -22074,6 +22075,12 @@
  },
  "timeline": [
   {
+   "commit": "e9f52c3d",
+   "date": "2026-11-09",
+   "subject": "Split the Aria enemies into one file per monster family",
+   "scope": "project"
+  },
+  {
    "commit": "d2a9e842",
    "date": "2026-11-09",
    "subject": "Play the editor's room transitions in the Aria runtime",
@@ -22545,12 +22552,6 @@
    "commit": "c53ceb49",
    "date": "2026-11-08",
    "subject": "Show the soul description only for newly held souls",
-   "scope": "project"
-  },
-  {
-   "commit": "08594357",
-   "date": "2026-11-08",
-   "subject": "Port the soul pickup trail spark (sub_08045B44 type 8)",
    "scope": "project"
   }
  ],

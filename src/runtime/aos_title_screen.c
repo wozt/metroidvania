@@ -8,6 +8,7 @@
 
 #include "aos_game_mode.h"
 #include "aos_input.h"
+#include "aos_math.h"
 
 enum {
     DCNT_MODE_1 = 1, DCNT_BG0 = 1 << 8, DCNT_BG1 = 1 << 9, DCNT_BG2 = 1 << 10,
@@ -43,25 +44,6 @@ uint8_t aos_title_affine_index(const AosTitleGraphics *graphics, const AosTitleA
     int32_t ty = (affine->y + affine->pc * sx + affine->pd * sy) >> 8;
     if (tx < 0 || ty < 0 || tx >= AOS_TITLE_LAYER_SIZE || ty >= AOS_TITLE_LAYER_SIZE) return 0;
     return graphics->affine[(size_t)ty * AOS_TITLE_LAYER_SIZE + (size_t)tx];
-}
-
-/* sub_080009E4: the ROM sine (as aos_sine of aos_math.c). */
-static int32_t title_sine(uint32_t angle) {
-    static uint16_t table[0x400];
-    if (!table[1])
-        for (int i = 0; i < 0x400; ++i)
-            table[i] = (uint16_t)floor(sin(i * 3.14159265358979323846 / 2048.0) * 65536.0);
-    uint32_t a = (angle + (0x80 >> 4)) & 0xFFFF;
-    int32_t sign = 1;
-    if (a & 0x8000) {
-        a -= 0x8000;
-        sign = -1;
-    }
-    if (a & 0x4000) {
-        if (a & 0xFFFFBFF0u) return sign * (int32_t)table[(0x800F - a) >> 4];
-        return sign * 0x10000;
-    }
-    return sign * (int32_t)table[a >> 4];
 }
 
 static uint16_t row_color(const uint8_t *resource, unsigned row, unsigned index) {
@@ -179,14 +161,14 @@ static void set_affine(AosTitleScreen *t, int32_t scale) {
 /* The wobble of stages 6-8: sine(phase) / 4096 - (progress - 0x118). */
 static void wobble(AosTitleScreen *t) {
     t->phase = (uint16_t)(t->phase + 0x40);
-    set_affine(t, round_shift(title_sine(t->phase & 0x7FFF), 12) - (t->progress - 0x118));
+    set_affine(t, round_shift(aos_sine(t->phase & 0x7FFF), 12) - (t->progress - 0x118));
 }
 
 /* TitleScreen_sub_08002F44: BG1HOFS of the 120 first lines. */
 static void set_wave(AosTitleScreen *t, int32_t amplitude) {
     int32_t angle = (int32_t)(t->frame << 10);
     for (int line = 0; line < AOS_TITLE_WAVE_LINES; ++line) {
-        int32_t v = amplitude * (title_sine((uint32_t)angle) >> 8);
+        int32_t v = amplitude * (aos_sine((uint32_t)angle) >> 8);
         int16_t off = (int16_t)(v < 0 ? -(-v >> 16) : v >> 16);
         t->wave[line] = (line & 1) ? (int16_t)-off : off;
         angle += 0x1000;
@@ -262,35 +244,6 @@ static int32_t random_centered(AosTitleScreen *t, int32_t n) {
     return (int32_t)(title_random(t) & (uint32_t)(n - 1)) - n / 2;
 }
 
-/* ArcTan2 (BIOS call 0x0A), as aos_arctan2 of aos_math.c. */
-static int32_t arctan(int32_t i) {
-    int32_t a = -((i * i) >> 14);
-    int32_t b = ((0xA9 * a) >> 14) + 0x390;
-    b = ((b * a) >> 14) + 0x91C;
-    b = ((b * a) >> 14) + 0xFB6;
-    b = ((b * a) >> 14) + 0x16AA;
-    b = ((b * a) >> 14) + 0x2081;
-    b = ((b * a) >> 14) + 0x3651;
-    b = ((b * a) >> 14) + 0xA2F9;
-    return (int16_t)((i * b) >> 16);
-}
-
-static uint16_t title_arctan2(int16_t x16, int16_t y16) {
-    int32_t x = x16, y = y16, r;
-    if (!y) return x >= 0 ? 0 : 0x8000;
-    if (!x) return y >= 0 ? 0x4000 : 0xC000;
-    if (y >= 0) {
-        if (x >= 0 && x >= y) r = arctan(y * 0x4000 / x);
-        else if (x < 0 && -x >= y) r = arctan(y * 0x4000 / x) + 0x8000;
-        else r = 0x4000 - arctan(x * 0x4000 / y);
-    } else {
-        if (x <= 0 && -x > -y) r = arctan(y * 0x4000 / x) + 0x8000;
-        else if (x > 0 && x >= -y) r = arctan(y * 0x4000 / x) + 0x10000;
-        else r = 0xC000 - arctan(x * 0x4000 / y);
-    }
-    return (uint16_t)r;
-}
-
 /* The animations of a sheet as aos_anim sees them. */
 static const AosObjSheet *sheet_of(const AosTitleScreen *t, unsigned sheet) {
     return t->graphics ? &t->graphics->sheets[sheet] : NULL;
@@ -352,10 +305,10 @@ static void create_objects(AosTitleScreen *t) {
         b->hidden = true;
         b->ax = (int32_t)((title_random(t) & 0xFF) * 0x10) + 0x400;
         b->ay = (int32_t)((title_random(t) & 0xFF) * 0x10) + 0x400;
-        uint16_t a = title_arctan2((int16_t)((int16_t)(b->x >> 16) - 0x78),
+        uint16_t a = aos_arctan2((int16_t)((int16_t)(b->x >> 16) - 0x78),
                                    (int16_t)((int16_t)(b->y >> 16) - 0x60));
-        b->vx = title_sine(a + 0x4000u);
-        b->vy = title_sine(a);
+        b->vx = aos_sine(a + 0x4000u);
+        b->vy = aos_sine(a);
         b->x += b->vx * 32;
         b->y += b->vy * 32;
         b->vx = round_shift(-b->vx, 4);
@@ -405,8 +358,8 @@ static void objects_update(AosTitleScreen *t) {
             if (w->radius <= 0xFFF) w->radius = 0;
         }
         w->scale = w->radius / 160 + 0x10000;
-        w->x = (title_sine(angle + 0x4000u) >> 8) * (w->radius >> 8) + 0x7A0000;
-        w->y = (title_sine(angle) >> 8) * (w->radius >> 8) + 0x1A0000;
+        w->x = (aos_sine(angle + 0x4000u) >> 8) * (w->radius >> 8) + 0x7A0000;
+        w->y = (aos_sine(angle) >> 8) * (w->radius >> 8) + 0x1A0000;
         anim_step(t, AOS_TITLE_SHEET_BATS, &w->anim, &w->record);
     }
     for (int i = 0; i < AOS_TITLE_BATS; ++i) {
@@ -420,8 +373,8 @@ static void objects_update(AosTitleScreen *t) {
         if (b->semi && (t->e13_flags & 4)) b->semi = false;
         b->phase_x = (uint16_t)(b->phase_x + b->speed_x);
         b->phase_y = (uint16_t)(b->phase_y + b->speed_y);
-        b->x += round_shift(b->ax * title_sine(b->phase_x + 0x4000u), 12);
-        int32_t y = b->y + round_shift(b->ay * title_sine(b->phase_y), 12);
+        b->x += round_shift(b->ax * aos_sine(b->phase_x + 0x4000u), 12);
+        int32_t y = b->y + round_shift(b->ay * aos_sine(b->phase_y), 12);
         b->x += b->vx;
         b->y = y + b->vy;
         anim_step(t, AOS_TITLE_SHEET_BATS, &b->anim, &b->record);
@@ -436,7 +389,7 @@ static void objects_update(AosTitleScreen *t) {
         }
         k->scale = k->size << 12;
         if (k->kind == 0) {
-            int32_t v = 16 - (title_sine((uint32_t)k->timer) >> 12);
+            int32_t v = 16 - (aos_sine((uint32_t)k->timer) >> 12);
             t->bldalpha = (uint16_t)((v << 8) | (16 - v));
         }
         k->angle = (uint16_t)(k->angle + k->spin);
@@ -472,7 +425,7 @@ static int16_t toward_zero_8(int32_t v) {
 
 /* sub_0803E058(angle, sx, sy, 0, 0, slot). */
 static void sprite_affine(AosTitleSprite *sprite, uint16_t angle, int32_t sx, int32_t sy) {
-    int32_t sine = title_sine(angle), cosine = title_sine(angle + 0x4000u);
+    int32_t sine = aos_sine(angle), cosine = aos_sine(angle + 0x4000u);
     int32_t rx = sx > 0x400 ? reciprocal(sx) : 0x7FFFFF;
     int32_t ry = sy > 0x400 ? reciprocal(sy) : 0x7FFFFF;
     sprite->affine = true;

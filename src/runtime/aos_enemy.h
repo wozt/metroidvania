@@ -2,9 +2,9 @@
 /* Aria of Sorrow enemies.
  *
  * Layout: aos_enemy.c holds the shared framework (creation, the collision
- * pass, the bat and zombie constructors, the common movement helpers and
- * the update dispatch) and includes one file per monster family from
- * aos_enemies/; the whole is still one translation unit. The ROM sine and
+ * pass, the common movement helpers and the update dispatch) and includes
+ * one file per monster family from aos_enemies/; the whole is still one
+ * translation unit. The ROM sine and
  * the BIOS ArcTan2 are in aos_math.
  *
  * Shared parts of the enemy framework (cvaos code_08060B98): the activity

@@ -305,9 +305,10 @@ void aos_enemy_face_player(AosEnemy *enemy, const AosSoma *soma) {
 #define face_player aos_enemy_face_player
 
 /* sub_0806E120 */
-static int32_t toward_facing(const AosEnemy *enemy, int32_t speed) {
+int32_t aos_enemy_toward_facing(const AosEnemy *enemy, int32_t speed) {
     return enemy->mirrored ? speed : -speed;
 }
+#define toward_facing aos_enemy_toward_facing
 
 /* sub_0806BDEC */
 static int16_t player_dy(const AosEnemy *enemy, const AosSoma *soma) {
@@ -322,7 +323,7 @@ static bool player_in(const AosSoma *soma, int32_t x, int32_t y, int w, int h) {
 #include "aos_enemies/bat.c"
 
 /* sub_0806AF98: the entity's feet onto the floor below or above it. */
-static void snap_to_floor(AosEnemy *enemy, const AosCollision *layer) {
+void aos_enemy_snap_to_floor(AosEnemy *enemy, const AosCollision *layer) {
     int32_t x = enemy->x >> 16;
     int y = enemy->y >> 16;
     if (aos_floor_depth(layer, x, y, 0, false) < 0) {
@@ -334,6 +335,7 @@ static void snap_to_floor(AosEnemy *enemy, const AosCollision *layer) {
     y += aos_floor_depth(layer, x, y, 0, false);
     enemy->y = (int32_t)((uint32_t)y << 16) | (enemy->y & 0xFFFF);
 }
+#define snap_to_floor aos_enemy_snap_to_floor
 
 /* sub_0806D104: a slope byte at the position. */
 static bool on_slope(const AosCollision *layer, int32_t x, int32_t y) {
@@ -2183,8 +2185,10 @@ static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range
     return (uint32_t)(dx < 0 ? -dx : dx) <= range && (uint32_t)(dy < 0 ? -dy : dy) <= range;
 }
 
-static void integrate(AosEnemy *e);
-static void stop(AosEnemy *e);
+void aos_enemy_integrate(AosEnemy *e);
+void aos_enemy_stop(AosEnemy *e);
+#define integrate aos_enemy_integrate
+#define stop aos_enemy_stop
 
 /* sub_0806BD64: (s16)(integer x - the target's integer x). */
 static int16_t player_dx(const AosEnemy *enemy, const AosSoma *soma) {
@@ -2215,14 +2219,14 @@ static bool turn_angle(uint32_t *angle, uint16_t step, uint16_t target) {
     return true;
 }
 
-static void integrate(AosEnemy *e) {
+void aos_enemy_integrate(AosEnemy *e) {
     e->x += e->vx;
     e->y += e->vy;
     e->vx += e->ax;
     e->vy += e->ay;
 }
 
-static void stop(AosEnemy *e) {
+void aos_enemy_stop(AosEnemy *e) {
     e->vx = e->vy = e->ax = e->ay = 0;
 }
 
@@ -2527,7 +2531,8 @@ static bool player_ahead_within(const AosEnemy *e, const AosSoma *soma, int rang
     return (int16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) <= range;
 }
 
-static void copy_collision_result(AosHitReport *report, const AosHitReport *hit) {
+void aos_enemy_copy_collision_result(AosHitReport *report,
+                                     const AosHitReport *hit) {
     report->soma_hit = hit->soma_hit;
     report->soma_damage = hit->soma_damage;
     report->enemy_hit = hit->enemy_hit;
@@ -2536,6 +2541,7 @@ static void copy_collision_result(AosHitReport *report, const AosHitReport *hit)
     report->damage_popup = hit->damage_popup;
     report->killed = hit->killed;
 }
+#define copy_collision_result aos_enemy_copy_collision_result
 
 /* sub_0806D0B8(x, y): 2 (3 with bit 3) in a solid cell, else 0 above a
  * cell with bits 0-1 (a floor) and 1 in the air. */
@@ -2741,7 +2747,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/killer_fish.c"
 #include "aos_enemies/winged_skeleton.c"
 #include "aos_enemies/harpy.c"
-#include "aos_enemies/gorgon.c"
 #include "aos_enemies/tiny_devil.c"
 #include "aos_enemies/ripper.c"
 #include "aos_enemies/merman.c"
@@ -3101,8 +3106,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return harpy_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                  cam_x, cam_y);
     if (enemy->role == AOS_ROLE_GORGON_BREATH)
-        return gorgon_breath_update(enemy, soma, kind, weapon, weapon_frames, soma_atk,
-                                    soma_def, cam_x, cam_y);
+        return aos_enemy_gorgon_breath_update(
+            enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+            cam_x, cam_y);
     if (enemy->role == AOS_ROLE_GORGON_DEBRIS) {
         falling_fragment_update(enemy, cam_x, cam_y);
         return report;
@@ -3130,8 +3136,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                             cam_y, random);
     if ((enemy->id == AOS_ENEMY_GORGON || enemy->id == AOS_ENEMY_CATOBLEPAS) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return gorgon_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                             cam_x, cam_y, random);
+        return aos_enemy_gorgon_update(enemy, soma, layer, kind, weapon,
+                                       weapon_frames, soma_atk, soma_def,
+                                       cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_TINY_DEVIL || enemy->id == AOS_ENEMY_IMP) &&
         enemy->role == AOS_ROLE_ENEMY)
         return devil_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,

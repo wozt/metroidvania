@@ -5,8 +5,8 @@
  * framework: it is not a separate translation unit and uses that
  * file's static helpers. */
 
-static void make_static_child(AosEnemy *child, const AosEnemy *owner, uint8_t role,
-                              int frame) {
+void aos_enemy_make_static_child(AosEnemy *child, const AosEnemy *owner,
+                                 uint8_t role, int frame) {
     *child = (AosEnemy){.id = owner->id,
                         .x = owner->x,
                         .y = owner->y,
@@ -16,6 +16,7 @@ static void make_static_child(AosEnemy *child, const AosEnemy *owner, uint8_t ro
                         .stats = owner->stats};
     child->combat.type = AOS_TYPE_ENEMY;
 }
+#define make_static_child aos_enemy_make_static_child
 
 /* Skeleton's thrown bone, sub_080C3BD8. The native attack frame 2
  * creates a projectile with its own OAM frame, sound, 8x8 hurt box and a

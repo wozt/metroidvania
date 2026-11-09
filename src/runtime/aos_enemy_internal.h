@@ -46,6 +46,17 @@ int32_t aos_enemy_slope_speed(const AosEnemy *enemy,
 bool aos_enemy_blocked_ahead(const AosCollision *layer, int32_t x, int32_t y);
 bool aos_enemy_at_room_edge(const AosEnemy *enemy,
                             const AosCollision *layer);
+void aos_enemy_make_static_child(AosEnemy *child, const AosEnemy *owner,
+                                 uint8_t role, int frame);
+void aos_enemy_integrate(AosEnemy *enemy);
+void aos_enemy_stop(AosEnemy *enemy);
+void aos_enemy_falling_fragment(AosEnemy *owner, int frame,
+                                AosHitReport *report,
+                                uint32_t (*random)(void));
+void aos_enemy_snap_to_floor(AosEnemy *enemy, const AosCollision *layer);
+int32_t aos_enemy_toward_facing(const AosEnemy *enemy, int32_t speed);
+void aos_enemy_copy_collision_result(AosHitReport *report,
+                                     const AosHitReport *hit);
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -89,5 +100,14 @@ AosHitReport aos_enemy_needles_update(
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_gorgon_breath_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y);
+AosHitReport aos_enemy_gorgon_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

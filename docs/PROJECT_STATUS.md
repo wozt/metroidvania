@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0899 - Gorgon and Catoblepas become a real translation unit
+
+- The shared Gorgon/Catoblepas family now compiles independently, including
+  its breath child. Existing cross-family construction, fragments, movement
+  and collision-result helpers join the prefixed internal API.
+- The object union preserves all 488 `-O0` function sizes and normalized
+  instructions. No behavior or feature status changed.
+
 ## Patch 0898 - Needles becomes a real translation unit
 
 - `aos_enemies/needles.c` now compiles independently. It exports only the

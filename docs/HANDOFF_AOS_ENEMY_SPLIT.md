@@ -100,7 +100,10 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      proof remains identical for all 488 functions.
    - *(Continued in patch 0898.)* `needles.c` is independent with body and
      fragment entry points. Its union proof remains identical for all 488
-     functions. The other 45 included families remain.
+     functions.
+   - *(Continued in patch 0899.)* the Gorgon/Catoblepas family and breath are
+     independent. Its union proof remains identical for all 488 functions.
+     The other 44 included families remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

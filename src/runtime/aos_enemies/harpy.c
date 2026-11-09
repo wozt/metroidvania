@@ -64,8 +64,9 @@ static AosHitReport harpy_shot_update(AosEnemy *shot, AosSoma *soma,
     return report;
 }
 
-static void falling_fragment(AosEnemy *owner, int frame, AosHitReport *report,
-                             uint32_t (*random)(void)) {
+void aos_enemy_falling_fragment(AosEnemy *owner, int frame,
+                                AosHitReport *report,
+                                uint32_t (*random)(void)) {
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
     AosEnemy child;
     make_static_child(&child, owner, AOS_ROLE_GORGON_DEBRIS, frame);
@@ -76,6 +77,7 @@ static void falling_fragment(AosEnemy *owner, int frame, AosHitReport *report,
     child.combat.attack_off = child.combat.hurt_off = true;
     report->children[report->child_count++] = child;
 }
+#define falling_fragment aos_enemy_falling_fragment
 
 static void falling_fragment_update(AosEnemy *piece, int cam_x, int cam_y) {
     integrate(piece);

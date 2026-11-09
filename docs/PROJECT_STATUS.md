@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0912 - Skull Archer family becomes a real translation unit
+
+- `aos_enemies/skull_archer.c` now compiles independently with its body,
+  arrow and generic debris-piece updates exported through
+  `aos_enemy_internal.h`; `make_debris` joins the internal API for the
+  still-included Waiter Skeleton family.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0911 - Rock Armor family becomes a real translation unit
 
 - `aos_enemies/rock_armor.c` now compiles independently with its body,

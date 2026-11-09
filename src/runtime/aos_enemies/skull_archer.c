@@ -1,9 +1,29 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Skull Archer (enemy 0x05) and its arrows.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define pixel_delta aos_enemy_pixel_delta
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_ahead_within aos_enemy_player_ahead_within
+#define player_in aos_enemy_player_in
+#define random_centred aos_enemy_random_centred
+#define spawn_drift aos_enemy_spawn_drift
+#define spawn_flame_at aos_enemy_spawn_flame_at
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_080AF8D0 / sub_080AFA9C: the next volley, in the order 0, 0, 1, 1, 2
  * (+ 0x14 counts 0..4); it plays animation 2 + volley once. */
@@ -103,7 +123,7 @@ static void archer_patrol(AosEnemy *a, const AosSoma *soma, const AosCollision *
  * with a flame of sub_0806D5C0 within 4 x 4 pixels of (x + 8 * vx,
  * y - 22). Deleted beyond screen margin 4. The global pause 0x4BE is not
  * ported. */
-static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
                                  int soma_def, int cam_x, int cam_y,
@@ -137,7 +157,7 @@ static AosHitReport arrow_update(AosEnemy *arrow, AosSoma *soma, const AosEnemyK
 }
 
 /* A debris piece (sub_0806C5AC) of its parent's kind, playing `anim`. */
-static AosEnemy make_debris(const AosEnemy *parent, const AosAnimSet *anims, unsigned anim) {
+AosEnemy aos_enemy_make_debris(const AosEnemy *parent, const AosAnimSet *anims, unsigned anim) {
     AosEnemy d = {0};
     d.id = parent->id;
     d.role = AOS_ROLE_DEBRIS;
@@ -160,7 +180,7 @@ static AosEnemy make_debris(const AosEnemy *parent, const AosAnimSet *anims, uns
  * made only when the puff is created; its + 0x0F = 1 is not modelled). It
  * also vanishes when it leaves the screen widened by 32 pixels. It never
  * collides. */
-static void debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemyKind *kind,
+void aos_enemy_debris_update(AosEnemy *d, const AosCollision *layer, const AosEnemyKind *kind,
                           int cam_x, int cam_y, uint32_t (*random)(void), AosHitReport *report) {
     d->vx = d->vx * 79 / 80 + d->ax;
     if (d->ax >= 0 ? d->vx > 0x80000 : d->vx < -0x80000) d->vx = d->ax >= 0 ? 0x80000 : -0x80000;
@@ -202,7 +222,7 @@ static void archer_shatter(const AosEnemy *a, const AosEnemyKind *kind, uint32_t
                            AosHitReport *report) {
     aos_audio_play_song(0x6B);
     for (unsigned anim = 5; anim <= 11 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++anim) {
-        AosEnemy d = make_debris(a, kind->anims, anim);
+        AosEnemy d = aos_enemy_make_debris(a, kind->anims, anim);
         d.vx = (int32_t)(((random() & 0xF) << 13) + 0x8000) * a->away;
         d.vy = (int32_t)((random() & 0x1F) << 12) + (int32_t)0xFFFC8000;
         d.ay = 0x2000;
@@ -214,7 +234,7 @@ static void archer_shatter(const AosEnemy *a, const AosEnemyKind *kind, uint32_t
 /* EnemySkullArcherUpdate: inside the activity window, the state, then the
  * collision pass before the animation step; state 3 shatters it into its
  * pieces (sound 0x6B) and deletes it at once. */
-static AosHitReport archer_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_archer_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,
                                   int soma_def, int cam_x, int cam_y,

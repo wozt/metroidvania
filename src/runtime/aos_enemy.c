@@ -2743,6 +2743,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define rock_armor_walk aos_enemy_rock_armor_walk
 #define rock_armor_die aos_enemy_rock_armor_die
 #define rock_probes aos_enemy_rock_probes
+#define make_debris aos_enemy_make_debris
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
 #include "aos_enemies/headhunter.c"
@@ -2756,7 +2757,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/skull_archer.c"
+
 #include "aos_enemies/skeleton.c"
 #include "aos_enemies/killer_fish.c"
 #include "aos_enemies/winged_skeleton.c"
@@ -3254,15 +3255,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                         weapon_frames, soma_atk, soma_def,
                                         cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_DEBRIS) {
-        debris_update(enemy, layer, kind, cam_x, cam_y, random, &report);
+        aos_enemy_debris_update(enemy, layer, kind, cam_x, cam_y, random, &report);
         if (!enemy->removed) step_anim(enemy, anims);
         return report;
     }
     if (enemy->role == AOS_ROLE_ARROW)
-        return arrow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_arrow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->id == AOS_ENEMY_SKULL_ARCHER)
-        return archer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_archer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_AXE)
         return aos_enemy_axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,

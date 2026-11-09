@@ -357,6 +357,11 @@ typedef struct {
     AosPickup pickups[MAX_PICKUPS];
     size_t pickup_count;
     AosPickupIconSlots pickup_icons;
+    /* The map editor's transitions (aos_room_overlay): new doors, and the
+     * spawn points of the native entries they redirect. */
+    AosProjectDoor project_doors[MAX_TRANSITIONS];
+    size_t project_door_count;
+    struct { bool set; int x, y; } arrivals[MAX_TRANSITIONS];
 } AriaRoom;
 
 static void free_room(AriaRoom *room) {
@@ -582,6 +587,35 @@ static void apply_room_overlay(AriaRoom *room) {
                                  room->height_cells, room->cells, &changed, message,
                                  sizeof message) != AOS_OVERLAY_NONE)
         fprintf(stderr, "%s\n", message);
+    /* The editor's transitions: a redirected native entry takes the target
+     * and the spawn point, a new door joins the room's project doors. */
+    AosProjectDoor doors[MAX_TRANSITIONS];
+    int door_count = aos_room_project_doors(path, aria_overlay_directory, room->area, room->number,
+                                            room->width_cells, room->height_cells,
+                                            (int)room->transition_count, doors, MAX_TRANSITIONS,
+                                            message, sizeof message);
+    if (door_count != 0) fprintf(stderr, "%s\n", message);
+    for (int k = 0; k < door_count; ++k) {
+        const AosProjectDoor *d = &doors[k];
+        if (d->target_area > 255 || d->target_room > 255) {
+            fprintf(stderr, "editor door %d ignored: room %d/%d is beyond the native ids\n",
+                    d->id, d->target_area, d->target_room);
+            continue;
+        }
+        if (d->native_index >= 0) {
+            AosTransition *t = &room->transitions[d->native_index];
+            t->area = (uint8_t)d->target_area;
+            t->room = (uint8_t)d->target_room;
+            room->arrivals[d->native_index].set = true;
+            room->arrivals[d->native_index].x = d->spawn_x;
+            room->arrivals[d->native_index].y = d->spawn_y;
+        } else {
+            room->project_doors[room->project_door_count++] = *d;
+        }
+        printf("Editor door %d (%s) -> %d/%d at (%d, %d)\n", d->id,
+               d->native_index >= 0 ? "native entry" : "new door", d->target_area,
+               d->target_room, d->spawn_x, d->spawn_y);
+    }
     /* The editor's entities join the room's records, after the native ones
      * (no persistent index; the runtime plays the kinds it has ported). */
     AosProjectEntity placed[MAX_ENTITIES];
@@ -725,25 +759,63 @@ static SDL_Texture *load_background(SDL_Renderer *renderer, const char *folder) 
 
 /* sub_08011A44 .. sub_08010350: leaves the room when Soma is outside it or
  * on an exit cell; returns false when the exit or its target is missing. */
-static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
-                      AosSoma *soma, int cam_x, int cam_y) {
+/* The editor's new door Soma's body touches (his column at x, the 32
+ * pixels above his feet at y), or NULL. */
+static const AosProjectDoor *project_door_touched(const AriaRoom *room, int32_t x, int32_t y) {
+    for (size_t k = 0; k < room->project_door_count; ++k) {
+        const AosProjectDoor *d = &room->project_doors[k];
+        if (x >= d->x && x < d->x + d->width && y >= d->y && y - 32 < d->y + d->height) return d;
+    }
+    return NULL;
+}
+
+/* Leaves the room through its native entry, or through the editor's door
+ * `forced`; an editor spawn point places Soma's feet there (kept inside the
+ * target). 1 when the room changed, 0 when an editor door's target cannot be
+ * loaded (the room stays), -1 when a native exit fails. */
+static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
+                     AosSoma *soma, int cam_x, int cam_y, const AosProjectDoor *forced) {
     int32_t x = soma->x >> 16, y = soma->y >> 16;
-    const AosTransition *exit = aos_room_find_exit(room->transitions, room->transition_count,
-                                                   room->width_screens, room->height_screens,
-                                                   x, y);
-    if (!exit) {
+    const AosTransition *exit = forced ? NULL
+        : aos_room_find_exit(room->transitions, room->transition_count, room->width_screens,
+                             room->height_screens, x, y);
+    if (!forced && !exit) {
         fprintf(stderr, "No transition for %d/%d at %d,%d\n", room->area, room->number, x, y);
-        return false;
+        return -1;
+    }
+    int target_area = forced ? forced->target_area : exit->area;
+    int target_room = forced ? forced->target_room : exit->room;
+    bool spawn = forced != NULL;
+    int spawn_x = forced ? forced->spawn_x : 0, spawn_y = forced ? forced->spawn_y : 0;
+    if (exit && room->arrivals[exit - room->transitions].set) {
+        spawn = true;
+        spawn_x = room->arrivals[exit - room->transitions].x;
+        spawn_y = room->arrivals[exit - room->transitions].y;
     }
     char folder[512];
-    room_folder(folder, sizeof folder, exit->area, exit->room);
+    room_folder(folder, sizeof folder, target_area, target_room);
     AriaRoom target = {0};
-    if (!load_room_folder(folder, &target)) return false;
+    if (!load_room_folder(folder, &target)) {
+        if (!forced) return -1;
+        fprintf(stderr, "Editor door %d leads to %d/%d, which is not exported\n", forced->id,
+                target_area, target_room);
+        return 0;
+    }
     SDL_Texture *texture = load_background(renderer, folder);
-    if (!texture) { free_room(&target); return false; }
+    if (!texture) { free_room(&target); return forced ? 0 : -1; }
     aos_room_exit_velocity(soma, x - cam_x, y - cam_y);
     int32_t ax, ay;
-    aos_room_arrival(exit, target.width_screens, target.height_screens, x, y, &ax, &ay);
+    if (spawn) {
+        /* Soma's y is the pixel above his feet. */
+        int max_x = target.width_cells * 8 - 1, max_y = target.height_cells * 8 - 1;
+        ax = spawn_x > max_x ? max_x : spawn_x;
+        ay = spawn_y - 1 > max_y ? max_y : spawn_y - 1 < 0 ? 0 : spawn_y - 1;
+        if (ax != spawn_x || ay != spawn_y - 1)
+            fprintf(stderr, "Editor spawn point outside %d/%d, kept inside\n", target_area,
+                    target_room);
+    } else {
+        aos_room_arrival(exit, target.width_screens, target.height_screens, x, y, &ax, &ay);
+    }
     soma->x = (int32_t)((uint32_t)ax << 16) | (soma->x & 0xFFFF);
     soma->y = (int32_t)((uint32_t)ay << 16) | (soma->y & 0xFFFF);
     printf("Room %d/%d -> %d/%d, arrival %d,%d\n", room->area, room->number, target.area,
@@ -752,7 +824,7 @@ static bool take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **back
     *room = target;
     SDL_DestroyTexture(*background);
     *background = texture;
-    return true;
+    return 1;
 }
 
 /* The player's combat stats: ATK and DEF come from aos_stats_refresh
@@ -5792,6 +5864,7 @@ int aria_runtime_main(int argc, char **argv) {
      * the explicit --moves diagnostic override this zero mask below. */
     unsigned long moves = 0;
     int spawn_x = -1, spawn_y = -1;
+    bool project_door_latch = false;   /* inside an editor door since arriving */
     bool check = false, show_hitboxes = false, debug_at_start = false;
     bool hp_override = false, moves_override = false, spawn_override = false;
     bool atk_override = false, def_override = false, weapon_override = false;
@@ -7178,9 +7251,22 @@ int aria_runtime_main(int argc, char **argv) {
                     .y = soma.y + (int32_t)(aos_random() % 0x80000u) - 0x100000,
                 };
             }
-            if (aos_room_outside(&layer, room.width_screens, room.height_screens, soma.x >> 16,
-                                 soma.y >> 16)) {
-                if (!take_exit(renderer, &room, &background, &soma, cam_x, cam_y)) goto cleanup;
+            /* The editor's doors take Soma once he steps in, then wait for
+             * him to step out of every door (no bounce on arrival). */
+            const AosProjectDoor *project_door =
+                project_door_touched(&room, soma.x >> 16, soma.y >> 16);
+            if (!project_door) project_door_latch = false;
+            if (project_door_latch) project_door = NULL;
+            bool leaving = aos_room_outside(&layer, room.width_screens, room.height_screens,
+                                            soma.x >> 16, soma.y >> 16);
+            int exited = leaving || project_door
+                ? take_exit(renderer, &room, &background, &soma, cam_x, cam_y,
+                            leaving ? NULL : project_door)
+                : 0;
+            if (exited < 0) goto cleanup;
+            if (project_door && !exited) project_door_latch = true;
+            if (exited > 0) {
+                project_door_latch = true;
                 /* sub_0800EB04: transitions clear the HUD notice; the
                  * level-up entity dies with the room's entityData. */
                 aos_hud_clear_notice(&hud);

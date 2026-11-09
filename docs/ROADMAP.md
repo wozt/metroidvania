@@ -126,8 +126,8 @@ Clipdata values of the same type and behavior) and its sprite entities when
 they fit the room, and ignores them otherwise; removing an override restores
 the native room. Its transitions between Zero Mission rooms are played too
 (redirected native doors and new doors). Aria's runtime applies the project
-collision (without water or hazard cells) and entities. Door types,
-cross-world transitions, events and Aria's tile and door overlays are not
+collision (without water or hazard cells), entities and transitions. Door
+types, cross-world transitions, events and Aria's tile overlays are not
 applied yet.
 
 Exit criterion: edits for both games apply reproducibly above native resources

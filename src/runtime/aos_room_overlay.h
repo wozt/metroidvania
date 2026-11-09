@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The map editor's project collision and entities in the Aria of Sorrow
- * runtime. The
+/* The map editor's project collision, entities and transitions in the Aria
+ * of Sorrow runtime. The
  * room's project document (overrides/aria/entities/area_<AA>_room_<NNN>.json
  * of the extracted assets, schema metroidvania.project-room-data) carries
  * sparse 8-pixel collision cells of seven types; each replaces the room's
@@ -12,7 +12,9 @@
  * has no water or damage cell yet, so a document with water or hazard cells
  * is ignored, as is one of another room or other dimensions or with a cell
  * outside the room. Its entities with an Aria native reference join the
- * room's entity records (see AosProjectEntity). Removing the document
+ * room's entity records (see AosProjectEntity), its transitions to Aria
+ * rooms redirect screen-edge entries or add doors (see AosProjectDoor).
+ * Removing the document
  * restores the native room. No SDL. */
 #ifndef AOS_ROOM_OVERLAY_H
 #define AOS_ROOM_OVERLAY_H
@@ -61,5 +63,32 @@ typedef struct {
 int aos_room_project_entities(const char *path, int area, int room, int width_cells,
                               int height_cells, AosProjectEntity *entities, int max,
                               char *message, size_t message_size);
+
+/* A project transition within Aria, from its source door (pixels). A door
+ * adopted from a native screen-edge transition (native_source variant
+ * transition-<edge>, native_type its T entry) redirects that entry:
+ * native_index is the entry's index; any other door (native_index -1) is
+ * a transition over its rectangle. */
+typedef struct {
+    int id, native_index;
+    int x, y, width, height;
+    int facing;              /* 0 left, 1 right, 2 up, 3 down */
+    int target_area, target_room;
+    /* Soma's feet in the target room: the transition's spawn point or,
+     * without one (0, 0), beside the saved target door as in Zero Mission
+     * (one block past its inner edge at its bottom, centred under an up
+     * door three blocks down, or one block over a down door). */
+    int spawn_x, spawn_y;
+} AosProjectDoor;
+
+/* The document's transitions to Aria rooms (those to Zero Mission are
+ * skipped); `directory` holds the target rooms' documents. Their count, -1
+ * when the document is ignored (another room, other dimensions, a door
+ * outside the room or off the 8-pixel grid, a native entry index out of
+ * `native_count`, a transition without an arrival, more than `max`), 0
+ * without a document. */
+int aos_room_project_doors(const char *path, const char *directory, int area, int room,
+                           int width_cells, int height_cells, int native_count,
+                           AosProjectDoor *doors, int max, char *message, size_t message_size);
 
 #endif

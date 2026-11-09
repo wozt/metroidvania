@@ -168,3 +168,147 @@ int aos_room_project_entities(const char *path, int area, int room, int width_ce
              path, count, unassigned);
     return count;
 }
+
+static const char *text_member(const FusionJson *object, const char *key) {
+    const FusionJson *member = object ? fusion_json_member(object, key) : NULL;
+    return member && member->kind == FUSION_JSON_STRING ? member->string : "";
+}
+
+static const FusionJson *door_by_id(const FusionJson *doors, int64_t id) {
+    for (size_t k = 0; doors && doors->kind == FUSION_JSON_ARRAY && k < doors->count; ++k) {
+        int64_t value = 0;
+        if (project_room_integer(&doors->items[k], "id", &value) && value == id)
+            return &doors->items[k];
+    }
+    return NULL;
+}
+
+static bool door_rectangle(const FusionJson *door, int64_t r[4], int *facing) {
+    static const char *const facings[] = {"left", "right", "up", "down"};
+    if (!project_room_integer(door, "x", &r[0]) || !project_room_integer(door, "y", &r[1]) ||
+        !project_room_integer(door, "width", &r[2]) ||
+        !project_room_integer(door, "height", &r[3]) || r[2] <= 0 || r[3] <= 0)
+        return false;
+    *facing = -1;
+    for (int k = 0; k < 4; ++k)
+        if (!strcmp(text_member(door, "facing"), facings[k])) *facing = k;
+    return *facing >= 0;
+}
+
+static void arrival_beside(const int64_t r[4], int facing, int *x, int *y) {
+    switch (facing) {
+    case 0: *x = (int)(r[0] + r[2] + 16); *y = (int)(r[1] + r[3]); break;
+    case 1: *x = (int)(r[0] - 16); *y = (int)(r[1] + r[3]); break;
+    case 2: *x = (int)(r[0] + r[2] / 2); *y = (int)(r[1] + r[3] + 48); break;
+    default: *x = (int)(r[0] + r[2] / 2); *y = (int)(r[1] - 16); break;
+    }
+    if (*x < 0) *x = 0;
+    if (*y < 0) *y = 0;
+}
+
+int aos_room_project_doors(const char *path, const char *directory, int area, int room,
+                           int width_cells, int height_cells, int native_count,
+                           AosProjectDoor *doors, int max, char *message, size_t message_size) {
+    if (message && message_size) message[0] = '\0';
+    char area_text[8];
+    snprintf(area_text, sizeof area_text, "%d", area);
+    FusionJson doc = {0};
+    ProjectDocumentResult loaded =
+        project_room_document_load(path, "aria", area_text, room, width_cells * 8,
+                                   height_cells * 8, &doc, message, message_size);
+    if (loaded == PROJECT_DOCUMENT_NONE) return 0;
+    if (loaded == PROJECT_DOCUMENT_REJECTED) return -1;
+    const FusionJson *list = fusion_json_member(&doc, "doors");
+    const FusionJson *transitions = fusion_json_member(&doc, "transitions");
+    const char *reason = NULL;
+    int count = 0, other_world = 0;
+    if (!list || list->kind != FUSION_JSON_ARRAY || !transitions ||
+        transitions->kind != FUSION_JSON_ARRAY)
+        reason = "it has no door or transition list";
+    for (size_t k = 0; !reason && k < transitions->count; ++k) {
+        const FusionJson *transition = &transitions->items[k];
+        int64_t source_id = 0, target_room = -1, target_door = 0, spawn_x = 0, spawn_y = 0, r[4];
+        const FusionJson *source = NULL;
+        int facing;
+        if (!project_room_integer(transition, "source_door_id", &source_id) ||
+            !(source = door_by_id(list, source_id)) || !door_rectangle(source, r, &facing)) {
+            reason = "a transition's source door is missing or malformed";
+            break;
+        }
+        if (strcmp(text_member(transition, "target_world"), "aria")) {
+            ++other_world;
+            continue;
+        }
+        const char *target_area_text = text_member(transition, "target_area");
+        char *end = NULL;
+        long target_area = strtol(target_area_text, &end, 10);
+        if (!target_area_text[0] || *end || target_area < 0 || target_area > 99 ||
+            !project_room_integer(transition, "target_room", &target_room) || target_room < 0 ||
+            target_room > 999 || !project_room_integer(transition, "target_door_id", &target_door) ||
+            !project_room_integer(transition, "spawn_x", &spawn_x) ||
+            !project_room_integer(transition, "spawn_y", &spawn_y)) {
+            reason = "a transition's target is malformed";
+            break;
+        }
+        if (r[0] < 0 || r[1] < 0 || r[0] + r[2] > width_cells * 8 ||
+            r[1] + r[3] > height_cells * 8 || r[0] % 8 || r[1] % 8 || r[2] % 8 || r[3] % 8) {
+            reason = "a door is not an 8-pixel rectangle inside the room";
+            break;
+        }
+        if (count >= max) {
+            reason = "it has more transitions than the room's door slots";
+            break;
+        }
+        AosProjectDoor *door = &doors[count];
+        *door = (AosProjectDoor){.id = (int)source_id, .native_index = -1, .x = (int)r[0],
+                                 .y = (int)r[1], .width = (int)r[2], .height = (int)r[3],
+                                 .facing = facing, .target_area = (int)target_area,
+                                 .target_room = (int)target_room, .spawn_x = (int)spawn_x,
+                                 .spawn_y = (int)spawn_y};
+        const FusionJson *native = fusion_json_member(source, "native_source");
+        if (native && !strncmp(text_member(native, "variant"), "transition-", 11)) {
+            long index = strtol(text_member(native, "native_type"), &end, 10);
+            if (!text_member(native, "native_type")[0] || *end || index < 0 ||
+                index >= native_count) {
+                reason = "an adopted transition is not one of the room's entries";
+                break;
+            }
+            door->native_index = (int)index;
+        }
+        if (!spawn_x && !spawn_y) {
+            char target_path[1024], ignored[256], target_text[8];
+            FusionJson target = {0};
+            const FusionJson *arrival = NULL;
+            int64_t tr[4];
+            int target_facing;
+            snprintf(target_text, sizeof target_text, "%ld", target_area);
+            if (target_door && directory &&
+                aos_room_document_path(target_path, sizeof target_path, directory,
+                                       (int)target_area, (int)target_room) &&
+                project_room_document_load(target_path, "aria", target_text, (int)target_room,
+                                           -1, -1, &target, ignored, sizeof ignored) ==
+                    PROJECT_DOCUMENT_LOADED) {
+                arrival = door_by_id(fusion_json_member(&target, "doors"), target_door);
+                if (arrival && door_rectangle(arrival, tr, &target_facing))
+                    arrival_beside(tr, target_facing, &door->spawn_x, &door->spawn_y);
+                else
+                    arrival = NULL;
+                fusion_json_free(&target);
+            }
+            if (!arrival) {
+                reason = "a transition has neither a spawn point nor a saved target door";
+                break;
+            }
+        }
+        ++count;
+    }
+    fusion_json_free(&doc);
+    if (reason) {
+        snprintf(message, message_size, "editor doors %s ignored: %s", path, reason);
+        return -1;
+    }
+    snprintf(message, message_size,
+             "editor doors %s: %d transitions (%d to another world skipped)", path, count,
+             other_world);
+    return count;
+}

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0884 - The editor's transitions in the Aria runtime
+
+- `fusion_aria_runtime` now plays the room document's transitions to Aria
+  rooms. A door adopted from a native screen-edge transition redirects
+  that entry to the transition's room; any other project door takes Soma
+  when his body touches its rectangle, and waits for him to step out
+  before firing again. Soma arrives with his feet at the spawn point or,
+  without one, beside the saved target door. Transitions to Zero Mission
+  are skipped; a door off the 8-pixel grid, an entry the room lacks or a
+  transition with no arrival has the document's doors ignored.
+- Checked on captures in area 0 room 1: a new door leads to room 2 at its
+  spawn point; the right-edge entry redirected to room 5 arrives at its
+  spawn point, and leads to room 2 again without overlays. ROM-free tests
+  cover the mapping, the target-door arrival and the rejections.
+- Limitations: door types have no effect, and Aria's tiles stay native.
+
 ## Patch 0883 - The editor's entities in the Aria runtime
 
 - `fusion_aria_runtime` now adds the room document's entities that have an

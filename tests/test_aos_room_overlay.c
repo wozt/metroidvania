@@ -4,6 +4,8 @@
 #include "aos_room_overlay.h"
 
 #include <assert.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -70,7 +72,88 @@ static void entity_tests(void) {
     remove(path);
 }
 
+static void write_doors(const char *path, const char *room_fields, const char *doors,
+                        const char *transitions) {
+    FILE *f = fopen(path, "w");
+    assert(f);
+    fprintf(f, "{\"schema\":\"metroidvania.project-room-data\",\"version\":4,%s,"
+               "\"next_id\":1,\"entities\":[],\"collision\":{\"resolution_px\":8,\"cells\":[]},"
+               "\"next_door_id\":9,\"doors\":[%s],\"next_transition_id\":9,"
+               "\"transitions\":[%s],\"next_event_id\":1,\"events\":[]}",
+            room_fields, doors, transitions);
+    fclose(f);
+}
+
+static void door_tests(void) {
+    const char *directory = "test-aos-room-doors";
+    char path[256], target[256], message[640];
+    mkdir(directory, 0755);
+    snprintf(path, sizeof path, "%s/entities", directory);
+    mkdir(path, 0755);
+    assert(aos_room_document_path(path, sizeof path, directory, 0, 1));
+    assert(aos_room_document_path(target, sizeof target, directory, 0, 5));
+    remove(path);
+    remove(target);
+    AosProjectDoor d[4];
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 1, d, 4, message,
+                                  sizeof message) == 0);
+    const char *room = "\"world\":\"aria\",\"area\":\"0\",\"room\":1,"
+                       "\"width_px\":256,\"height_px\":256";
+    /* A new door with a spawn point; a door to Zero Mission skipped. */
+    write_doors(path, room,
+                "{\"id\":1,\"x\":200,\"y\":144,\"width\":16,\"height\":32,\"label\":\"a\","
+                "\"door_type\":\"normal\",\"facing\":\"right\"},"
+                "{\"id\":2,\"x\":0,\"y\":0,\"width\":8,\"height\":8,\"label\":\"b\","
+                "\"door_type\":\"portal\",\"facing\":\"left\"}",
+                "{\"id\":1,\"source_door_id\":1,\"target_world\":\"aria\",\"target_area\":\"0\","
+                "\"target_room\":5,\"target_door_id\":0,\"spawn_x\":40,\"spawn_y\":176},"
+                "{\"id\":2,\"source_door_id\":2,\"target_world\":\"mzm\",\"target_area\":\"Kraid\","
+                "\"target_room\":3,\"target_door_id\":0,\"spawn_x\":8,\"spawn_y\":8}");
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 1, d, 4, message,
+                                  sizeof message) == 1 &&
+           strstr(message, "1 to another world skipped"));
+    assert(d[0].id == 1 && d[0].native_index == -1 && d[0].x == 200 && d[0].y == 144 &&
+           d[0].width == 16 && d[0].height == 32 && d[0].facing == 1 && d[0].target_area == 0 &&
+           d[0].target_room == 5 && d[0].spawn_x == 40 && d[0].spawn_y == 176);
+    /* An adopted screen-edge entry, arriving beside the saved target door. */
+    const char *adopted =
+        "{\"id\":3,\"x\":240,\"y\":120,\"width\":16,\"height\":16,\"label\":\"n\","
+        "\"door_type\":\"normal\",\"facing\":\"right\",\"native_source\":{\"index\":0,"
+        "\"variant\":\"transition-right-edge\",\"native_type\":\"0\"}}";
+    const char *to_target =
+        "{\"id\":1,\"source_door_id\":3,\"target_world\":\"aria\",\"target_area\":\"0\","
+        "\"target_room\":5,\"target_door_id\":4,\"spawn_x\":0,\"spawn_y\":0}";
+    write_doors(path, room, adopted, to_target);
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 1, d, 4, message,
+                                  sizeof message) == -1 && strstr(message, "neither a spawn"));
+    write_doors(target, "\"world\":\"aria\",\"area\":\"0\",\"room\":5,\"width_px\":512,"
+                        "\"height_px\":256",
+                "{\"id\":4,\"x\":0,\"y\":160,\"width\":16,\"height\":32,\"label\":\"t\","
+                "\"door_type\":\"normal\",\"facing\":\"left\"}", "");
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 1, d, 4, message,
+                                  sizeof message) == 1 &&
+           d[0].native_index == 0 && d[0].spawn_x == 32 && d[0].spawn_y == 192);
+    /* An entry the room does not have, a door off the grid, too many. */
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 0, d, 4, message,
+                                  sizeof message) == -1 && strstr(message, "entries"));
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 1, d, 0, message,
+                                  sizeof message) == -1 && strstr(message, "door slots"));
+    write_doors(path, room,
+                "{\"id\":1,\"x\":4,\"y\":0,\"width\":16,\"height\":16,\"label\":\"a\","
+                "\"door_type\":\"normal\",\"facing\":\"left\"}",
+                "{\"id\":1,\"source_door_id\":1,\"target_world\":\"aria\",\"target_area\":\"0\","
+                "\"target_room\":5,\"target_door_id\":0,\"spawn_x\":40,\"spawn_y\":40}");
+    assert(aos_room_project_doors(path, directory, 0, 1, 32, 32, 1, d, 4, message,
+                                  sizeof message) == -1 && strstr(message, "8-pixel rectangle"));
+    remove(path);
+    remove(target);
+    snprintf(path, sizeof path, "%s/entities", directory);
+    rmdir(path);
+    rmdir(directory);
+}
+
 int main(void) {
+    door_tests();
     entity_tests();
     char path[256], message[512];
     assert(aos_room_document_path(path, sizeof path, ".", 3, 17) &&

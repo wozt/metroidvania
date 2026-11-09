@@ -305,5 +305,19 @@ void aos_enemy_bubble_update(AosEnemy *enemy,
                              const AosCollision *layer);
 void aos_enemy_bubble_pop_update(AosEnemy *enemy);
 void aos_enemy_fish_struck(AosEnemy *enemy, const AosEnemyKind *kind);
+int aos_enemy_projectile_collide(AosEnemy *e, const AosCollision *layer,
+                                 int32_t floor_vy, int32_t head);
+AosHitReport aos_enemy_winged_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_winged_bone_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y);
+void aos_enemy_winged_piece_update(AosEnemy *enemy,
+                                   const AosEnemyKind *kind);
 
 #endif

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:23:48+00:00",
+ "generated_at": "2026-11-09T14:28:52+00:00",
  "git": {
-  "commit": "d65dab12",
+  "commit": "4ab8a547",
   "branch": "main",
   "dirty": true
  },
@@ -19730,6 +19730,7 @@
     "src/runtime/aos_enemies/skull_archer.c",
     "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/killer_fish.c",
+    "src/runtime/aos_enemies/winged_skeleton.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22184,6 +22185,12 @@
  },
  "timeline": [
   {
+   "commit": "4ab8a547",
+   "date": "2026-11-09",
+   "subject": "Compile Killer Fish family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "d65dab12",
    "date": "2026-11-09",
    "subject": "Compile Skeleton family as an independent enemy unit",
@@ -22655,12 +22662,6 @@
    "commit": "41f93f70",
    "date": "2026-11-08",
    "subject": "Render bestiary enemy portraits on the detail page",
-   "scope": "project"
-  },
-  {
-   "commit": "66f1f8ab",
-   "date": "2026-11-08",
-   "subject": "Identify bestiary portraits as real enemy entities",
    "scope": "project"
   }
  ],

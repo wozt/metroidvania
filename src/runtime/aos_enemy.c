@@ -2240,7 +2240,7 @@ void aos_enemy_stop(AosEnemy *e) {
  * X (walls on either side, by the sign of vx), then Y (the ceiling at
  * y + head and the floor, which sets vy to floor_vy). Returns 1 / 2 for a
  * wall on the right / left, 8 for a ceiling, 4 for the floor. */
-static int projectile_collide(AosEnemy *e, const AosCollision *layer, int32_t floor_vy,
+int aos_enemy_projectile_collide(AosEnemy *e, const AosCollision *layer, int32_t floor_vy,
                               int32_t head) {
     int result = 0;
     /* sub_0806D430(e, 8.0) */
@@ -2749,6 +2749,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define box_walk aos_enemy_box_walk
 #define bubble_walk aos_enemy_bubble_walk
 #define cell_kind aos_enemy_cell_kind
+#define projectile_collide aos_enemy_projectile_collide
 #define player_in_range aos_enemy_player_in_range
 #define swim_walk aos_enemy_swim_walk
 #define target_in_water aos_enemy_target_in_water
@@ -2770,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/winged_skeleton.c"
 #include "aos_enemies/harpy.c"
 #include "aos_enemies/tiny_devil.c"
 #include "aos_enemies/ripper.c"
@@ -2973,15 +2973,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_WINGED_BONE)
-        return winged_bone_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_winged_bone_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y);
     if (enemy->role == AOS_ROLE_WINGED_PIECE) {
-        winged_piece_update(enemy, kind);
+        aos_enemy_winged_piece_update(enemy, kind);
         return report;
     }
     if (enemy->id == AOS_ENEMY_WINGED_SKELETON && enemy->role == AOS_ROLE_ENEMY &&
         enemy->state != 3)
-        return winged_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_winged_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_SKELETON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_skeleton_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,

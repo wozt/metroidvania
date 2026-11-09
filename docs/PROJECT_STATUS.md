@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0915 - Winged Skeleton family becomes a real translation unit
+
+- `aos_enemies/winged_skeleton.c` now compiles independently with its
+  body, bone and piece updates exported through
+  `aos_enemy_internal.h`; `projectile_collide` joins the internal API
+  for the remaining families.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0914 - Killer Fish family becomes a real translation unit
 
 - `aos_enemies/killer_fish.c` now compiles independently with its body,

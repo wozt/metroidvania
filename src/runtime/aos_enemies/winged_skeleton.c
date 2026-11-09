@@ -1,9 +1,26 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Winged Skeleton (enemy 0x14) and its bones.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <stdlib.h>
+
+#define cell_kind aos_enemy_cell_kind
+#define collide aos_enemy_collide
+#define generic_death aos_enemy_generic_death
+#define outside_margins aos_enemy_outside_margins
+#define pixel_delta aos_enemy_pixel_delta
+#define play_loop aos_enemy_play_loop
+#define player_dy aos_enemy_player_dy
+#define projectile_collide aos_enemy_projectile_collide
+#define skeleton_merge aos_enemy_skeleton_merge
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* The animation position + 0x6E (frame and tick) at its start. */
 static bool anim_at_start(const AosEnemy *e) { return e->anim.frame == 0 && e->anim.tick == 0; }
@@ -201,7 +218,7 @@ static void winged_shatter(const AosEnemy *e, uint32_t (*random)(void), AosHitRe
 
 /* sub_08075614: a piece keeps 7/8 of its vx (sub_0806D490), moves
  * (sub_0806D3D8, 8.0), blinks below 41 frames (sub_0806D518) and goes at 0. */
-static void winged_piece_update(AosEnemy *p, const AosEnemyKind *kind) {
+void aos_enemy_winged_piece_update(AosEnemy *p, const AosEnemyKind *kind) {
     p->vx = p->vx * 7 / 8;
     p->vy += p->ay;
     if (p->vy > 0x80000) p->vy = 0x80000;
@@ -216,7 +233,7 @@ static void winged_piece_update(AosEnemy *p, const AosEnemyKind *kind) {
  * (24, -28) (4 x 4); beyond the margins of entry 1 it is gone; meeting a
  * wall, ceiling or floor it rests 60 frames without collisions, blinking
  * from 40, then goes. */
-static AosHitReport winged_bone_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_winged_bone_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
                                        const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                        const AosWeaponFrames *weapon_frames, int soma_atk,
                                        int soma_def, int cam_x, int cam_y) {
@@ -257,7 +274,7 @@ static AosHitReport winged_bone_update(AosEnemy *b, AosSoma *soma, const AosColl
  * beyond the margins of entry 4 it vanishes (state 2); flashing from a
  * blow it only collides; state 2 shatters it at 0 HP and runs the generic
  * death with + 0x0D 1 (the producer's count drops with it). */
-static AosHitReport winged_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_winged_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,
                                   int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {

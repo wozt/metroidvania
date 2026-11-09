@@ -438,5 +438,14 @@ AosHitReport aos_enemy_worm_segment_update(
     uint32_t (*random)(void));
 void aos_enemy_worm_segment_hurt(AosEnemy *enemy, AosEnemy *parent,
                                  AosSoma *soma, AosHitReport *report);
+AosHitReport aos_enemy_biphron_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void));
+AosHitReport aos_enemy_biphron_shot_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def);
 
 #endif

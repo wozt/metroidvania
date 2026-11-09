@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:11:22+00:00",
+ "generated_at": "2026-11-09T15:13:07+00:00",
  "git": {
-  "commit": "fdca6a0c",
+  "commit": "24f6df9a",
   "branch": "main",
   "dirty": true
  },
@@ -19756,6 +19756,7 @@
     "src/runtime/aos_enemies/giant_ghost.c",
     "src/runtime/aos_enemies/minotaur.c",
     "src/runtime/aos_enemies/worm.c",
+    "src/runtime/aos_enemies/biphron.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22210,6 +22211,12 @@
  },
  "timeline": [
   {
+   "commit": "24f6df9a",
+   "date": "2026-11-09",
+   "subject": "Compile Worm family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "fdca6a0c",
    "date": "2026-11-09",
    "subject": "Compile Minotaur family as an independent enemy unit",
@@ -22681,12 +22688,6 @@
    "commit": "0e4a6cfb",
    "date": "2026-11-08",
    "subject": "Port func_08021E50 as aos_stats_cure_status",
-   "scope": "project"
-  },
-  {
-   "commit": "eb8214c8",
-   "date": "2026-11-08",
-   "subject": "Audit equipment record-specific effects",
    "scope": "project"
   }
  ],

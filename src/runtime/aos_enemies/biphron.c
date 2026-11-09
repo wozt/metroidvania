@@ -1,9 +1,20 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Biphron (enemy 0x4E) and its shot.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define player_near aos_enemy_player_near
+#define play_loop aos_enemy_play_loop
+#define skeleton_merge aos_enemy_skeleton_merge
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define walk_collide aos_enemy_walk_collide
 
 /* Biphron (EnemyBiphronCreate 0x08099C5C, EnemyBiphronUpdate
  * 0x0809A450 behind the sub_0806CC20 awake gate — approximated by
@@ -12,7 +23,7 @@
  * sub_08099ED8 plays the attack and fires the sub_08099FD0
  * projectile at anim frame 4 (song 0x78), state 2 sub_08099DB8
  * is the death burst (song 0x6E), state 3 affine only. */
-static AosHitReport biphron_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_biphron_update(AosEnemy *e, AosSoma *soma,
                                    const AosCollision *layer, const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -142,7 +153,7 @@ static AosHitReport biphron_update(AosEnemy *e, AosSoma *soma,
  * damages Soma through its elements-2 contact record
  * (sub_0809A310) and leaves a spark trail with song 0x77 every
  * 4th tick (sub_0809A0DC trail approximated). */
-static AosHitReport biphron_shot_update(AosEnemy *b, AosSoma *soma,
+AosHitReport aos_enemy_biphron_shot_update(AosEnemy *b, AosSoma *soma,
                                         const AosCollision *layer, const AosEnemyKind *kind,
                                         const AosWeaponEntity *weapon,
                                         const AosWeaponFrames *weapon_frames, int soma_atk,

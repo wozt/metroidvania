@@ -2771,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/biphron.c"
 #include "aos_enemies/bomber_armor.c"
 #include "aos_enemies/evil_butcher.c"
 #include "aos_enemies/killer_mantle.c"
@@ -2886,7 +2885,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_worm_update(enemy, soma, layer, kind, weapon, weapon_frames,
                            soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_BIPHRON_SHOT)
-        return biphron_shot_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_biphron_shot_update(enemy, soma, layer, kind, weapon, weapon_frames,
                                    soma_atk, soma_def);
     if (enemy->role == AOS_ROLE_DRYAD_SEED)
         return dryad_seed_update(enemy, soma, layer, kind, weapon, weapon_frames,
@@ -2939,7 +2938,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return dryad_update(enemy, soma, layer, kind, weapon, weapon_frames,
                             soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_BIPHRON && enemy->role == AOS_ROLE_ENEMY)
-        return biphron_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_biphron_update(enemy, soma, layer, kind, weapon, weapon_frames,
                               soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_HEADHUNTER_HEAD) {
         headhunter_head_update(enemy, kind, random);

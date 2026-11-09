@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0927 - Biphron family becomes a real translation unit
+
+- `aos_enemies/biphron.c` now compiles independently with its body and
+  shot updates exported through `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0926 - Worm family becomes a real translation unit
 
 - `aos_enemies/worm.c` now compiles independently with its body,

@@ -4529,6 +4529,194 @@ static void cockatrice_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) >= 1);
 }
 
+static void chronomage_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    /* A thick floor for the 0x08528824 probes. */
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-6: 0 idle, 1 the cast/death (40 ticks so the 0x28
+     * death timer and the animation end together), 2 the inert second
+     * pose, 3 the time-stop (60 ticks, still playing when the wisp
+     * spawns), 4/5 the chase left/right loops, 6 the wisp. */
+    static const uint8_t eight[8] = {6, 6, 6, 6, 6, 6, 6, 6};
+    static const uint8_t five[5] = {8, 8, 8, 8, 8};
+    static const uint8_t ten[10] = {6, 6, 6, 6, 6, 6, 6, 6, 6, 6};
+    static const uint8_t four[4] = {8, 8, 8, 8};
+    const AosAnimDef defs[7] = {{8, eight}, {5, five}, {3, five},
+                                {10, ten},   {8, eight}, {8, eight},
+                                {4, four}};
+    const AosAnimSet anims = {defs, 7};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 7; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-24, -48, 48, 48};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    kind.probes = (AosProbes){2, -10, 16, 6, {6, -10}};
+    /* enemies.tsv id 40: hp 80, field_e 100, contact 30, defence 0,
+     * experience 30, soul index 55. */
+    const AosEnemyStats stats = {80, 100, 30, 0, 0, 30};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create (sub_080B712C -> 0x0806E0D0 resources): state 0,
+     * animation 0 looping, hurt off until the chase; the 0x8E & 0x40
+     * flag path is the inert state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_CHRONOMAGE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 &&
+           e.combat.hurt_off && e.hp == stats.hp);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_CHRONOMAGE, 200, 150, 0,
+                            0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 4);
+    /* State 4 (sub_080B70B4): animation 0 for 0x80 ticks, then 1, then
+     * 2 held. */
+    int frames = 0;
+    while (flagged.step < 2 && frames < 200) {
+        (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(flagged.step == 2 && flagged.anim.id == 1);
+    frames = 0;
+    while (flagged.step < 3 && frames < 100) {
+        (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(flagged.step == 3 && flagged.anim.id == 2);
+
+    /* The dormant watch (sub_080B6D68): Soma beyond 0x6F px keeps it
+     * idle; within range it enters state 1. */
+    soma.x = e.x + AOS_FIXED(200);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                           0, always_zero);
+    assert(e.state == 0);
+    soma.x = e.x + AOS_FIXED(60);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                           0, always_zero);
+    assert(e.state == 1 && e.step == 0);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                           0, always_zero);
+    assert(e.step == 1 && e.anim.id == 1);
+
+    /* The time-stop sequence (sub_080B6DEC): animation 1 (40 ticks) ->
+     * animation 3 + timer 0x18 -> song 0xEC at 8 -> the + 0xD ramp ->
+     * the fade steps -> the wisp spawn once animation 3 ends -> the
+     * 0x30 timer -> state 2. */
+    frames = 0;
+    while (e.state == 1 && e.step < 3 && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 3 && e.anim.id == 3 && e.timer == 0x18);
+    frames = 0;
+    while (e.state == 1 && e.step == 3 && frames < 60) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xEC) == 1);
+    /* Steps 4-7 run to the wisp spawn (animation 3 still playing). */
+    AosHitReport spawned = {0};
+    frames = 0;
+    while (e.state == 1 && frames < 200) {
+        spawned = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                                   10, 4, 0, 0, always_zero);
+        if (spawned.child_count) break;
+        ++frames;
+    }
+    assert(spawned.child_count == 1 &&
+           spawned.children[0].role == AOS_ROLE_CHRONO_WISP &&
+           (spawned.children[0].y >> 16) == (e.y >> 16) - 0x20 &&
+           (spawned.children[0].cm_flags & 2));
+    AosEnemy wisp = spawned.children[0];
+    /* The wisp (sub_080B6C3C): state 0 -> 1 ramping + 0x18, state 2
+     * hold, state 3 decay and delete; the affine scale follows the
+     * ramp. */
+    (void)aos_enemy_update(&wisp, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(wisp.state == 1 && wisp.spin == 0);
+    (void)aos_enemy_update(&wisp, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(wisp.spin == 0x1000 && wisp.affine_sx > 0);
+    frames = 0;
+    while (!wisp.removed && frames < 120) {
+        (void)aos_enemy_update(&wisp, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(wisp.removed && frames < 120);
+    /* Back in state 1 step 7: the 0x30 timer returns to the chase. */
+    frames = 0;
+    while (e.state == 1 && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 2 && e.step == 0 && e.combat.hurt_off);
+
+    /* The chase (sub_080B6FB8): step 0 clears + 0x72 bit 2 and plays
+     * animation 1; step 2 picks 4 or 5 by the target side; step 3
+     * ramps + 0x18 by 0x2000 and walks the probes. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 1 && e.anim.id == 1 && !e.combat.hurt_off);
+    frames = 0;
+    while (e.step < 3 && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 3 && e.anim.id == 4);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    /* The + 0x18 ramp and the probe walk ran; the floor probes block
+     * the step here and fire the native -0x30000 hop on + 0x4C. */
+    assert(e.spin == 0x2000 && e.vy == (int32_t)0xFFFD0000);
+
+    /* The lethal blow (sub_080B72B8): state 3, animation 1, the
+     * sub_0806AEAC flames and the deletion at the animation's end. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_CHRONOMAGE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(150);
+    e.hp = 1;
+    e.combat.hurt_off = false;
+    soma.x = e.x + AOS_FIXED(10);
+    soma.y = e.y + AOS_FIXED(10);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 3 && e.step == 0 && e.defeated);
+    int death_ticks = 0, flame_ticks = 0;
+    while (!e.removed && death_ticks < 120) {
+        AosHitReport d = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        flame_ticks += d.effect_count;
+        ++death_ticks;
+    }
+    assert(e.removed && death_ticks < 120 && flame_ticks > 0);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -7652,6 +7840,7 @@ int main(void) {
     kicker_skeleton_tests();
     waiter_skeleton_tests();
     cockatrice_tests();
+    chronomage_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

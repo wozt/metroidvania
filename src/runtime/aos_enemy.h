@@ -176,6 +176,7 @@ enum {
     AOS_ENEMY_KICKER_SKELETON = 0x53,
     AOS_ENEMY_WAITER_SKELETON = 0x1E,
     AOS_ENEMY_COCKATRICE = 0x2E,
+    AOS_ENEMY_CHRONOMAGE = 0x28,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -213,7 +214,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DRYAD_SEED = 61, AOS_ROLE_TSUCHINOKO_SPIT = 62,
        AOS_ROLE_TSUCHINOKO_ROCK = 63,
        AOS_ROLE_WAITER_COMPANION = 64, AOS_ROLE_WAITER_TRAY = 65,
-       AOS_ROLE_COCKATRICE_SHADOW = 66, AOS_ROLE_COCKATRICE_ROCK = 67 };
+       AOS_ROLE_COCKATRICE_SHADOW = 66, AOS_ROLE_COCKATRICE_ROCK = 67,
+       AOS_ROLE_CHRONO_WISP = 68 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -408,6 +410,9 @@ typedef struct AosEnemy {
     uint32_t ck_flags;
     int16_t ck_phase;
     uint16_t ck_orbit;
+    /* Chronomage (sub_080B712C create, sub_080B6C3C wisp): + 0x59 bits
+     * 1 (linked flag), 3 (margin-out mark) and 4 (wisp palette group). */
+    uint8_t cm_flags;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

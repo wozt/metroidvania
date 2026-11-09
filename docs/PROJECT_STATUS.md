@@ -2,6 +2,47 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0880 - Chronomage ported (id 40)
+
+- EnemyChronomageCreate (0x080B712C) /
+  EnemyChronomageUpdate (0x080B71F8) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_CHRONOMAGE
+  (0x28), with the sub_080B6D68 idle, sub_080B6DEC
+  time-stop, sub_080B6FB8 chase, sub_080B70B4 inert
+  and sub_080B72B8 hurt handlers and the sub_080B6C3C
+  wisp child (role 68).
+- The enemy-table index was verified against the ROM:
+  table 0x080E9644 entry 40 holds create 0x080B712D;
+  the earlier "monster 28" catalog row is the bestiary
+  order, not the entity id (28 is Catoblepas).
+- Resources: tiles 0x081EC1EC, palette 0x0820BBB0,
+  frames 0x08245CA8, chase probes 0x08528824; song
+  0xEC at the time-stop countdown.
+- State 0 wakes within 0x6F px or on the target's
+  action mask; state 1 is the eight-step time-stop
+  (animations 1 and 3, the 0x18 timer, the + 0xD ramp,
+  the wisp spawn at y - 0x20 and the 0x30 return);
+  state 2 clears the hurt-off, picks animation 4/5 by
+  the target side, ramps + 0x18 by 0x2000 and walks
+  the probes with the -0x30000 hop; state 3 is the
+  death with the sub_0806AEAC flames; state 4 is the
+  inert sequence under 0x8E & 0x40.
+- Divergences: the gEwramData + 0x12FE4 time-scale
+  writes, the + 0x4BE pause reads, the sub_080212F4(6)
+  room-warp gate and the palette fades are not ported
+  (the damaged flag stands in for + 0x4BE, the attack
+  flags for the + 0x10 & 0x360 mask); the + 0x54 field,
+  palette nibbles, the sub_080428F0 / sub_08042884 box
+  presets (exported frame boxes stand in), the
+  sub_0803E654 sign draw (RNG bit 15), the wisp affine
+  scale (affine_sx/sy) and the room query are
+  approximated; no emulator comparison.
+- Unit-tested in chronomage_tests: create and flag
+  state, the idle wake, the full time-stop sequence
+  with song 0xEC and the wisp spawn, the wisp ramp and
+  delete, the chase ramp/probe hop, and the lethal
+  death with flames.
+
 ## Patch 0879 - Cockatrice ported (id 46)
 
 - EnemyCockatriceCreate (0x080BC158) /

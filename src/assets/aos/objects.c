@@ -407,6 +407,12 @@ static const EntitySpec entities[] = {
      * frame 1 (+ 0x65). */
     {"cockatrice", 0x081E41CC, 0x0820B8A4, 0, 0x08242994,
      0x085288C0, 0, 0, 1, {1}},
+    /* EnemyChronomageCreate (0x080B712C) and its sub_080B6C3C wisp
+     * child, which share the same resources: tiles 0x081EC1EC,
+     * palette 0x0820BBB0, frames 0x08245CA8; the state-2 chase probes
+     * 0x08528824 (sub_0806CAF8 mode 2). */
+    {"chronomage", 0x081EC1EC, 0x0820BBB0, 0, 0x08245CA8,
+     0x08528824, 0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

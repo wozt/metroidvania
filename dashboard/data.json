@@ -1,10 +1,10 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T11:10:06+00:00",
+ "generated_at": "2026-11-09T11:31:04+00:00",
  "git": {
-  "commit": "a35ec297",
-  "branch": "HEAD",
-  "dirty": false
+  "commit": "c2b75333",
+  "branch": "main",
+  "dirty": true
  },
  "areas": [
   {
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 238,
+   "total": 239,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 172,
+    "functional": 173,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 172,
-   "functional_or_better_percent": 72.3,
-   "with_passing_tests": 225,
-   "with_passing_tests_percent": 94.5,
+   "functional_or_better": 173,
+   "functional_or_better_percent": 72.4,
+   "with_passing_tests": 226,
+   "with_passing_tests_percent": 94.6,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -213,6 +213,7 @@
     "aos.enemies.buer",
     "aos.enemies.cagnazzo",
     "aos.enemies.catoblepas",
+    "aos.enemies.chronomage",
     "aos.enemies.cockatrice",
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
@@ -472,20 +473,20 @@
    "areas": [
     "aos"
    ],
-   "total": 93,
+   "total": 94,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 65,
+    "functional": 66,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 65,
-   "functional_or_better_percent": 69.9,
-   "with_passing_tests": 93,
+   "functional_or_better": 66,
+   "functional_or_better_percent": 70.2,
+   "with_passing_tests": 94,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -501,6 +502,7 @@
     "aos.enemies.buer",
     "aos.enemies.cagnazzo",
     "aos.enemies.catoblepas",
+    "aos.enemies.chronomage",
     "aos.enemies.cockatrice",
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
@@ -9667,6 +9669,101 @@
     ],
     "in_game_check": [
      "aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-09"
+   }
+  },
+  {
+   "id": "aos.enemies.chronomage",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Chronomage",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyChronomageCreate",
+    "EnemyChronomageUpdate",
+    "sub_080B6C3C",
+    "sub_080B6D68",
+    "sub_080B6DEC",
+    "sub_080B6FB8",
+    "sub_080B70B4",
+    "sub_080B72B8",
+    "sub_0806CAF8",
+    "sub_0806CD38",
+    "sub_0806AEAC",
+    "sub_0806AE54",
+    "sub_0806D128",
+    "sub_0806E218",
+    "sub_080683BC",
+    "sub_08021654",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803E058",
+    "sub_0803E654",
+    "sub_0803E6BC",
+    "sub_0806E1B8",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_080421AC",
+    "sub_080428F0",
+    "sub_08042884",
+    "sub_0804277C",
+    "PlaySong"
+   ],
+   "limitations": "The gEwramData + 0x12FE4 time-scale writes and + 0x4BE pause reads, the sub_080212F4(6) room-warp gate, the sub_08011F44 / sub_08011AD0 and sub_0803D18C palette fades, the sub_0800C5A8 call and the target entity + 0x10 & 0x360 action mask are not ported (the mask is approximated by the attack flags and the damaged flag stands in for + 0x4BE); the sub_0806CD38 target-x pick is inlined, the + 0x54 = 0x2000 field, the + 0x58 palette nibbles, the sub_0803E6BC palette restore and the sub_0803E058 affine fade bookkeeping are not ported (the wisp scale is approximated through affine_sx/sy), the sub_080428F0 / sub_08042884 box presets are replaced by the exported frame boxes, the sub_0803E654 sign draw is the RNG bit 15 and the sub_080421AC room query is skipped; no emulator comparison. EnemyChronomageCreate (0x080B712C) loads tiles 0x081EC1EC, palette 0x0820BBB0 and frames 0x08245CA8, sets + 0x5C = 0x13, plays animation 0 looping and enters state 4 under the global 0x8E & 0x40 else state 0 after the sub_0806E1B8 contact and sub_080B72B8 hurt callbacks, the 0x2008E0FC box preset, + 0x72 bit 2, the sub_0806AF98 floor snap, a one-pixel lift and + 0x59 bit 1. EnemyChronomageUpdate (0x080B71F8) skips the sub_0806AE54 hit flash only in state 3, dispatches the states, runs the sub_080421AC room query outside states 3-4 and steps the animation (state 4 steps it inside sub_080B70B4). State 0 (sub_080B6D68) compares the target x within 0x6F or the action mask for state 1, and + 0x4BE for state 2; state 1 (sub_080B6DEC) is the eight-step time-stop — animation 1 once (skipped on the action mask), animation 3 once with the 0x18 timer and song 0xEC at 8, the + 0xD ramp to 0x10 with the time-scale writes, the fade steps, then the sub_080B6C3C wisp spawned at (x, y - 0x20) with + 0x59 bit 1 once animation 3 ends, and the 0x30 return timer into state 2; state 2 (sub_080B6FB8) clears + 0x72 bit 2, plays animation 1, picks animation 4 or 5 looping by the target x (sub_0806CD38), ramps + 0x18 by 0x2000 to 0x2FFFF negated on animation 4, walks the 0x08528824 probes (mode 2) with the -0x30000 hop on the floor+wall result and runs the sub_0806D128(3) margin every tick; state 3 plays animation 1 once with the 0x28 timer and the sub_0806AEAC flames deleting on the animation end; state 4 (sub_080B70B4) is the inert animation 0 / 1 / 2 sequence. The wisp shares the resources, keeps the sub_0803E654 sign draw, ramps + 0x18 by 0x1000 to 0x10000, holds 0x20, decays by 0x2000 and deletes. The hurt sub_080B72B8 enters state 3 on a lethal blow. Unit-tested in chronomage_tests.",
+   "next_action": "Compare the time-stop sequence, the wisp and the chase cadence against an emulator; port the time-scale global, the room-warp gate and the palette fades.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_002 (--spawn 256 176 --hp 9999): Chronomage idles, freezes time, releases its wisp and chases"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -21886,6 +21983,12 @@
  },
  "timeline": [
   {
+   "commit": "c2b75333",
+   "date": "2026-11-09",
+   "subject": "Spawn the editor's placed sprites in the Zero Mission runtime",
+   "scope": "project"
+  },
+  {
    "commit": "a35ec297",
    "date": "2026-11-09",
    "subject": "Play the editor's project collision in the Zero Mission runtime",
@@ -22358,12 +22461,6 @@
    "date": "2026-11-08",
    "subject": "Draw the Soul Set description window frame",
    "scope": "project"
-  },
-  {
-   "commit": "7f2b003d",
-   "date": "2026-11-08",
-   "subject": "Anchor Item Use description at the native window origin",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -22424,9 +22521,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1182,
-    "routines_attached_to_features": 1182,
-    "unassigned_routines": 2391,
+    "routines_cited_by_features": 1190,
+    "routines_attached_to_features": 1190,
+    "unassigned_routines": 2383,
     "call_edges": 14228
    }
   },
@@ -24668,12 +24765,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 62,
-      "functional_or_better": 62,
-      "functional_or_better_percent": 60,
+      "implemented": 63,
+      "functional_or_better": 63,
+      "functional_or_better_percent": 61,
       "by_status": {
-       "functional": 62,
-       "not_started": 40
+       "functional": 63,
+       "not_started": 39
       }
      },
      "bosses": {
@@ -25691,13 +25788,28 @@
      {
       "id": 40,
       "name": "Chronomage",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Chronomage",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_002 (--spawn 256 176 --hp 9999): Chronomage idles, freezes time, releases its wisp and chases"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.chronomage",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "partial",
+       "soul_ref": "red:55",
+       "notes": "Soul: drops (soul_rarity 6, common item 0x0013 through the generic roll) and is collected, but its red soul 55 (catalog skill 05, routine missing) has no ported update yet. Animations: ported from EnemyChronomageCreate (0x080B712C) / EnemyChronomageUpdate (0x080B71F8) and the sub_080B6D68 idle, sub_080B6DEC time-stop, sub_080B6FB8 chase, sub_080B70B4 inert and sub_080B72B8 hurt handlers plus the sub_080B6C3C wisp child sharing the resources — animation 0 idle, 1 cast/death, 2 inert, 3 time-stop, 4/5 chase by target side, 6 wisp. Unit-tested in chronomage_tests. Sounds: PlaySong 0xEC at the time-stop countdown is requested and unit-tested, not listened to. Divergences: the gEwramData + 0x12FE4 time-scale writes, the + 0x4BE pause reads, the sub_080212F4(6) room-warp gate, the sub_08011F44 / sub_08011AD0 and sub_0803D18C palette fades, the sub_0800C5A8 call and the + 0x10 & 0x360 action mask are not ported (the attack flags approximate the mask and the damaged flag stands in for + 0x4BE); the + 0x54 field, the + 0x58 palette nibbles, the sub_0803E6BC palette restore, the sub_080428F0 / sub_08042884 box presets (exported frame boxes stand in), the sub_0803E654 sign draw (RNG bit 15), the wisp affine scale (affine_sx/sy approximation of the sub_0803E058 slot) and the sub_080421AC room query are not ported; no emulator comparison."
       }
      },
      {
@@ -27031,32 +27143,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 62,
+      "ported": 63,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 62,
+      "ported": 63,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 62,
+      "ported": 63,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 38,
+      "ported": 39,
       "partial": 0,
       "missing": 0
      },
      "soul": {
       "ported": 55,
-      "partial": 7,
+      "partial": 8,
       "missing": 0
      },
      "complete": 55,
-     "monsters": 62
+     "monsters": 63
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -31746,7 +31858,7 @@
        "id": "05:37",
        "name": "Chronomage",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_rarity 6, common item 0x0013 through the generic roll) and is collected, but its red soul 55 (catalog skill 05, routine missing) has no ported update yet. Animations: ported from EnemyChronomageCreate (0x080B712C) / EnemyChronomageUpdate (0x080B71F8) and the sub_080B6D68 idle, sub_080B6DEC time-stop, sub_080B6FB8 chase, sub_080B70B4 inert and sub_080B72B8 hurt handlers plus the sub_080B6C3C wisp child sharing the resources — animation 0 idle, 1 cast/death, 2 inert, 3 time-stop, 4/5 chase by target side, 6 wisp. Unit-tested in chronomage_tests. Sounds: PlaySong 0xEC at the time-stop countdown is requested and unit-tested, not listened to. Divergences: the gEwramData + 0x12FE4 time-scale writes, the + 0x4BE pause reads, the sub_080212F4(6) room-warp gate, the sub_08011F44 / sub_08011AD0 and sub_0803D18C palette fades, the sub_0800C5A8 call and the + 0x10 & 0x360 action mask are not ported (the attack flags approximate the mask and the damaged flag stands in for + 0x4BE); the + 0x54 field, the + 0x58 palette nibbles, the sub_0803E6BC palette restore, the sub_080428F0 / sub_08042884 box presets (exported frame boxes stand in), the sub_0803E654 sign draw (RNG bit 15), the wisp affine scale (affine_sx/sy approximation of the sub_0803E058 slot) and the sub_080421AC room query are not ported; no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

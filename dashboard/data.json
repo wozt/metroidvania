@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T11:31:04+00:00",
+ "generated_at": "2026-11-09T11:41:31+00:00",
  "git": {
-  "commit": "c2b75333",
+  "commit": "91c22361",
   "branch": "main",
   "dirty": true
  },
@@ -17680,7 +17680,7 @@
     "tools.room_editor"
    ],
    "native_routines": [],
-   "limitations": "fusion_room_runtime applies the map editor's private room overlays (the private overrides/metroid/<area>_<NNN>.mvnative of the extracted assets, the editor's own save format read by the shared core/native_map reader) to the BG1 and BG2 block layers of every Zero Mission room it loads, at the start and through doors, when the document names the same room and tileset and has the room's layer dimensions; any other document is reported and ignored, and removing the file restores the reconstructed room. --no-overlays disables them and --overlay-dir DIR reads another directory. It also plays the room's project collision (the entities/<area>_<NNN>.json project document, schema metroidvania.project-room-data versions 2 to 4): each 16-pixel cell takes the smallest native Clipdata value of the native tables whose type and behavior are its type's counterpart (solid SOLID, one_way PASS_THROUGH_BOTTOM, hazard a lava air block, slope_up RIGHT_STEEP and slope_down LEFT_STEEP floor slopes, water a water air block, air AIR), without movement; a document of another room or other dimensions, with a cell outside, an unknown type or a type the tables cannot express is reported and ignored. The document's entities whose native reference is a Zero Mission sprite (PSPRITE_*) join every variant of the room's sprites at their 16-pixel block, with the variant's spriteset graphics slot for that sprite (else slot 0) and no room slot (0xFF); unassigned entities are skipped, and a document with an entity outside the room or a reference that is not a sprite is ignored. Checked on captures (edited blocks drawn; Samus falling through painted air and standing on painted solid cells; a placed Zoomer and Skree in Brinstar's save room). Limitations: native doors, hatches and objects stay, and the editor's project doors, item settings and events have no engine adapter; a placed sprite outside its room's spriteset uses graphics slot 0 for its palette tricks; a painted cell drops the block's breakability and movement; Aria's runtime, which draws pre-composited room backgrounds, applies no overlay.",
+   "limitations": "fusion_room_runtime applies the map editor's private room overlays (the private overrides/metroid/<area>_<NNN>.mvnative of the extracted assets, the editor's own save format read by the shared core/native_map reader) to the BG1 and BG2 block layers of every Zero Mission room it loads, at the start and through doors, when the document names the same room and tileset and has the room's layer dimensions; any other document is reported and ignored, and removing the file restores the reconstructed room. --no-overlays disables them and --overlay-dir DIR reads another directory. It also plays the room's project collision (the entities/<area>_<NNN>.json project document, schema metroidvania.project-room-data versions 2 to 4): each 16-pixel cell takes the smallest native Clipdata value of the native tables whose type and behavior are its type's counterpart (solid SOLID, one_way PASS_THROUGH_BOTTOM, hazard a lava air block, slope_up RIGHT_STEEP and slope_down LEFT_STEEP floor slopes, water a water air block, air AIR), without movement; a document of another room or other dimensions, with a cell outside, an unknown type or a type the tables cannot express is reported and ignored. The document's entities whose native reference is a Zero Mission sprite (PSPRITE_*) join every variant of the room's sprites at their 16-pixel block, with the variant's spriteset graphics slot for that sprite (else slot 0) and no room slot (0xFF); unassigned entities are skipped, and a document with an entity outside the room or a reference that is not a sprite is ignored. Its transitions to Zero Mission rooms lead their source door to the target's <area>_<NNN> export: a door adopted from a native door (native_source) redirects that native door, keeping its geometry and hatch, and any other door becomes a new hatchless door (index 1000 plus its id) whose blocks take the transition behavior of its facing (door for left and right, up and down transitions otherwise); Samus arrives with her feet at the spawn point, or without one (0, 0) beside the saved target door (one block past its inner edge, centred under an up door or over a down door), kept inside the target room; transitions to Aria are skipped, and a door off the block grid or outside the room or a transition with neither a spawn point nor a saved target door has the document's doors ignored. Checked on captures (edited blocks drawn; Samus falling through painted air and standing on painted solid cells; a placed Zoomer and Skree in Brinstar's save room; a new door in Brinstar's save room taking Samus to room 31 at its spawn point; native door 71 redirected to room 29, arriving beside the target project door, and room 31 again without overlays). Limitations: native hatches and objects stay, an adopted native door keeps its native geometry, door_type (boss, locked, portal, save) has no effect, cross-world transitions are not played, and the editor's item settings and events have no engine adapter; a placed sprite outside its room's spriteset uses graphics slot 0 for its palette tricks; a painted cell drops the block's breakability and movement; Aria's runtime, which draws pre-composited room backgrounds, applies no overlay.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -21983,6 +21983,12 @@
  },
  "timeline": [
   {
+   "commit": "91c22361",
+   "date": "2026-11-09",
+   "subject": "Port the Chronomage (Aria enemy id 40)",
+   "scope": "project"
+  },
+  {
    "commit": "c2b75333",
    "date": "2026-11-09",
    "subject": "Spawn the editor's placed sprites in the Zero Mission runtime",
@@ -22454,12 +22460,6 @@
    "commit": "7e2f1c95",
    "date": "2026-11-08",
    "subject": "Fix enemy detail rare-drop text x to the native 128 px",
-   "scope": "project"
-  },
-  {
-   "commit": "ac7ec105",
-   "date": "2026-11-08",
-   "subject": "Draw the Soul Set description window frame",
    "scope": "project"
   }
  ],

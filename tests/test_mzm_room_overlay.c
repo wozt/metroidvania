@@ -6,6 +6,8 @@
 #include "core/native_map.h"
 
 #include <assert.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -138,8 +140,94 @@ static void collision_tests(void) {
     remove(path);
 }
 
+/* A room document with doors and transitions, in <directory>/entities. */
+static void write_doors(const char *path, const char *header, const char *doors,
+                        const char *transitions) {
+    FILE *f = fopen(path, "w");
+    assert(f);
+    fprintf(f, "{\"schema\":\"metroidvania.project-room-data\",\"version\":4,%s,"
+               "\"next_id\":1,\"entities\":[],\"collision\":{\"resolution_px\":16,\"cells\":[]},"
+               "\"next_door_id\":9,\"doors\":[%s],\"next_transition_id\":9,"
+               "\"transitions\":[%s],\"next_event_id\":1,\"events\":[]}",
+            header, doors, transitions);
+    fclose(f);
+}
+
+static void door_tests(void) {
+    const char *directory = "test-mzm-room-doors";
+    char path[256], target[256], message[640];
+    mkdir(directory, 0755);
+    snprintf(path, sizeof path, "%s/entities", directory);
+    mkdir(path, 0755);
+    assert(mzm_room_document_path(path, sizeof path, directory, "Brinstar", 33));
+    assert(mzm_room_document_path(target, sizeof target, directory, "Kraid", 5));
+    remove(path);
+    remove(target);
+    MzmProjectDoor doors[4];
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 33, 64, 48, doors, 4, message,
+                                  sizeof message) == 0);
+    const char *room = "\"world\":\"mzm\",\"area\":\"Brinstar\",\"room\":33,"
+                       "\"width_px\":64,\"height_px\":48";
+    /* A new door with a spawn point, a door to Aria skipped. */
+    write_doors(path, room,
+                "{\"id\":1,\"x\":48,\"y\":0,\"width\":16,\"height\":48,\"label\":\"a\","
+                "\"door_type\":\"normal\",\"facing\":\"right\"},"
+                "{\"id\":2,\"x\":0,\"y\":0,\"width\":16,\"height\":32,\"label\":\"b\","
+                "\"door_type\":\"portal\",\"facing\":\"left\"}",
+                "{\"id\":1,\"source_door_id\":1,\"target_world\":\"mzm\",\"target_area\":\"Kraid\","
+                "\"target_room\":5,\"target_door_id\":0,\"spawn_x\":40,\"spawn_y\":95},"
+                "{\"id\":2,\"source_door_id\":2,\"target_world\":\"aria\",\"target_area\":\"00\","
+                "\"target_room\":3,\"target_door_id\":0,\"spawn_x\":8,\"spawn_y\":8}");
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 33, 64, 48, doors, 4, message,
+                                  sizeof message) == 1 &&
+           strstr(message, "1 to another world skipped"));
+    assert(doors[0].id == 1 && doors[0].native_index == -1 && doors[0].x0 == 3 &&
+           doors[0].x1 == 3 && doors[0].y0 == 0 && doors[0].y1 == 2 && doors[0].facing == 1 &&
+           !strcmp(doors[0].destination, "kraid_005") && doors[0].spawn_x == 40 &&
+           doors[0].spawn_y == 95);
+    /* An adopted native door without a spawn point arrives beside the saved
+     * target door (facing left: one block right of it, at its bottom). */
+    const char *adopted =
+        "{\"id\":3,\"x\":0,\"y\":16,\"width\":16,\"height\":32,\"label\":\"n\","
+        "\"door_type\":\"normal\",\"facing\":\"left\",\"native_source\":{\"index\":71,"
+        "\"variant\":\"native\",\"native_type\":\"71\"}}";
+    const char *to_target =
+        "{\"id\":1,\"source_door_id\":3,\"target_world\":\"mzm\",\"target_area\":\"Kraid\","
+        "\"target_room\":5,\"target_door_id\":4,\"spawn_x\":0,\"spawn_y\":0}";
+    write_doors(path, room, adopted, to_target);
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 33, 64, 48, doors, 4, message,
+                                  sizeof message) == -1 && strstr(message, "neither a spawn"));
+    write_doors(target, "\"world\":\"mzm\",\"area\":\"Kraid\",\"room\":5,\"width_px\":320,"
+                        "\"height_px\":160",
+                "{\"id\":4,\"x\":0,\"y\":64,\"width\":16,\"height\":64,\"label\":\"t\","
+                "\"door_type\":\"normal\",\"facing\":\"left\"}", "");
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 33, 64, 48, doors, 4, message,
+                                  sizeof message) == 1 &&
+           doors[0].native_index == 71 && doors[0].x0 == 0 && doors[0].y0 == 1 &&
+           doors[0].y1 == 2 && doors[0].spawn_x == 32 && doors[0].spawn_y == 128);
+    /* Off the block grid, outside, or another room: all ignored. */
+    write_doors(path, room,
+                "{\"id\":1,\"x\":8,\"y\":0,\"width\":16,\"height\":16,\"label\":\"a\","
+                "\"door_type\":\"normal\",\"facing\":\"left\"}",
+                "{\"id\":1,\"source_door_id\":1,\"target_world\":\"mzm\",\"target_area\":\"Kraid\","
+                "\"target_room\":5,\"target_door_id\":0,\"spawn_x\":40,\"spawn_y\":40}");
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 33, 64, 48, doors, 4, message,
+                                  sizeof message) == -1 && strstr(message, "block rectangle"));
+    write_doors(path, room, adopted, to_target);
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 34, 64, 48, doors, 4, message,
+                                  sizeof message) == -1);
+    assert(mzm_room_project_doors(path, directory, "Brinstar", 33, 64, 48, doors, 0, message,
+                                  sizeof message) == -1 && strstr(message, "door slots"));
+    remove(path);
+    remove(target);
+    snprintf(path, sizeof path, "%s/entities", directory);
+    rmdir(path);
+    rmdir(directory);
+}
+
 int main(void) {
     collision_tests();
+    door_tests();
     char path[256], message[512];
     assert(mzm_room_overlay_path(path, sizeof path, ".", "Brinstar", 7) &&
            !strcmp(path, "./brinstar_007.mvnative"));

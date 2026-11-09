@@ -124,7 +124,9 @@ Current progress: the Zero Mission runtime applies the editor's private room
 block overrides (BG1 and BG2) and its project collision cells (as native
 Clipdata values of the same type and behavior) and its sprite entities when
 they fit the room, and ignores them otherwise; removing an override restores
-the native room. Doors, events and every Aria overlay are not applied yet.
+the native room. Its transitions between Zero Mission rooms are played too
+(redirected native doors and new doors). Door types, cross-world
+transitions, events and every Aria overlay are not applied yet.
 
 Exit criterion: edits for both games apply reproducibly above native resources
 and behavior without modifying ROMs or generated source data.

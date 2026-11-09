@@ -58,7 +58,12 @@ platform, lava hazard, rising or falling steep slope, water, air), when the
 document names the same room and dimensions. Its entities whose native
 reference is a Zero Mission sprite (`PSPRITE_*`) join the room's sprites at
 their block, with the spriteset's graphics slot when the room uses that
-sprite; unassigned entities are skipped. Doors and events stay native.
+sprite; unassigned entities are skipped. Its transitions to Zero Mission rooms
+are played too: a door adopted from a native door redirects that door to the
+transition's room, any other project door becomes a new hatchless transition
+over its blocks (a side door for left and right, a vertical transition for up
+and down). Samus arrives with her feet at the spawn point or, without one,
+beside the saved target door. Transitions to Aria and events stay unplayed.
 
 ## Current limitations
 
@@ -70,8 +75,9 @@ sprite; unassigned entities are skipped. Doors and events stay native.
   changed from the canvas context menu, and project doors can be created,
   viewed and deleted. Project door properties and transition destinations have
   a dedicated GTK form backed by the same validated CLI operations. Zero
-  Mission's runtime plays the project collision; the doors, and everything in
-  Aria, are not playable yet.
+  Mission's runtime plays the project collision and the transitions between
+  its rooms; door types, cross-world transitions and everything in Aria are
+  not playable yet.
 - Project enemy, item and object forms edit the label, snapped position and
   verified native reference in both modes. Aria pickup forms additionally edit
   the typed item/soul ID, two native parameters and flags. Zero Mission's
@@ -94,9 +100,9 @@ sprite; unassigned entities are skipped. Doors and events stay native.
 - Native trigger regions, boss parameters, scripts, music and engine-backed
   cutscene authoring are not yet decoded or editable. Project trigger regions
   are authorable but are not consumed by either gameplay engine yet.
-- Only Zero Mission's block layers, project collision and sprite entities are
-  consumed by a gameplay runtime; Aria's runtime and every project door,
-  item setting and event edit are not.
+- Only Zero Mission's block layers, project collision, sprite entities and
+  transitions are consumed by a gameplay runtime; Aria's runtime, door types,
+  cross-world transitions, item settings and event edits are not.
 
 The collision toolbar is shared deliberately: both source formats have verified
 native counterparts for the seven exposed semantics. Zero Mission uses 16px

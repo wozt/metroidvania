@@ -77,6 +77,9 @@ typedef struct {
     /* The door's own xExit / yExit (X lines; RoomLoad's placement). */
     int exit_x, exit_y;
     bool has_exit;
+    /* A map editor transition: its destination fields place Samus's feet
+     * at the transition's spawn point, with no offset inside the door. */
+    bool project;
 } RoomDoor;
 /* One hatch built like ConnectionLoadDoors. */
 typedef struct {
@@ -842,7 +845,7 @@ static void runtime_place_after_door(MzmSamus *samus, const RoomDoor *door, int 
     samus->on_enemy = false;
     int32_t native_y = (door->dest_y_end + 1) * MZM_BLOCK_SIZE + door->dest_y_exit * 4 - 1;
     samus->x = door->dest_x * MZM_BLOCK_SIZE + (door->dest_x_exit + 8) * 4;
-    if (offset < 0) {
+    if (offset < 0 || door->project) {
         offset = 0;
     } else {
         int top = -mzm_block_hitbox(mzm_pose_hitbox(samus->pose))->top;
@@ -4370,6 +4373,65 @@ static void runtime_set_project_cell(void *context, int x, int y, unsigned short
     room->movements[y * columns + x] = 0;
 }
 
+/* The editor's transitions within Zero Mission: an adopted native door
+ * takes the transition's destination, another door becomes a new door
+ * (index 1000 + its project id, no hatch) whose blocks take the transition
+ * behavior of its facing (CLIP_BEHAVIOR_DOOR, or the vertical transitions
+ * for up and down). The destination fields encode the spawn point for
+ * runtime_place_after_door: feet x = dest_x blocks + dest_x_exit + 8 pixels,
+ * feet y = dest_y_end + 1 blocks + dest_y_exit pixels. */
+static void runtime_apply_project_doors(Room *room, const char *path) {
+    MzmProjectDoor doors[MAX_ROOM_DOORS];
+    char message[640];
+    int count = mzm_room_project_doors(path, runtime_overlay_directory, room->area, room->room,
+                                       room->width, room->height, doors, MAX_ROOM_DOORS, message,
+                                       sizeof message);
+    if (count != 0) fprintf(stderr, "%s\n", message);
+    int columns = room->width / 16;
+    for (int k = 0; k < count; ++k) {
+        const MzmProjectDoor *project = &doors[k];
+        RoomDoor *door = NULL;
+        if (project->native_index >= 0) {
+            for (int d = 0; d < room->door_count; ++d)
+                if (room->doors[d].index == project->native_index) door = &room->doors[d];
+            if (!door) {
+                fprintf(stderr, "editor door %d ignored: the room has no native door %d\n",
+                        project->id, project->native_index);
+                continue;
+            }
+        } else {
+            if (room->door_count >= MAX_ROOM_DOORS) {
+                fprintf(stderr, "editor door %d ignored: the room has no free door slot\n",
+                        project->id);
+                continue;
+            }
+            door = &room->doors[room->door_count++];
+            *door = (RoomDoor){0};
+            door->index = 1000 + project->id;
+            snprintf(door->kind, sizeof door->kind, "nohatch");
+            door->x0 = project->x0;
+            door->x1 = project->x1;
+            door->y0 = project->y0;
+            door->y1 = project->y1;
+            int behavior = project->facing == 2 ? BEHAVIOR_UP
+                         : project->facing == 3 ? BEHAVIOR_DOWN : BEHAVIOR_DOOR;
+            for (int y = door->y0; y <= door->y1; ++y)
+                for (int x = door->x0; x <= door->x1; ++x)
+                    room->behaviors[y * columns + x] = (unsigned char)behavior;
+        }
+        snprintf(door->destination, sizeof door->destination, "%s", project->destination);
+        door->dest_x = project->spawn_x / 16;
+        door->dest_x_exit = project->spawn_x % 16 - 8;
+        door->dest_y_end = project->spawn_y / 16 - 1;
+        door->dest_y_exit = project->spawn_y % 16;
+        door->project = true;
+        printf("Editor door %d (%s door %d) -> %s at (%d, %d)\n", project->id,
+               project->native_index >= 0 ? "native" : "new",
+               project->native_index >= 0 ? project->native_index : door->index,
+               door->destination, project->spawn_x, project->spawn_y);
+    }
+}
+
 static void runtime_apply_overlay(Room *room) {
     if (!runtime_overlays_enabled || !room->has_backgrounds) return;
     char path[512], message[640];
@@ -4414,6 +4476,7 @@ static void runtime_apply_overlay(Room *room) {
             variant->sprites[variant->sprite_count++] = sprite;
         }
     }
+    runtime_apply_project_doors(room, path);
 }
 
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
@@ -6331,6 +6394,16 @@ int room_runtime_main(int argc, char **argv) {
                     if(texture)SDL_DestroyTexture(texture);
                     texture=next_texture;
                     runtime_place_after_door(&samus,&used,door_offset);
+                    if(used.project) {
+                        /* An editor spawn point stays inside the room. */
+                        int32_t max_x=room->width/16*MZM_BLOCK_SIZE-1;
+                        int32_t max_y=room->height/16*MZM_BLOCK_SIZE-1;
+                        if(samus.x>max_x || samus.y>max_y)
+                            fprintf(stderr,"Editor spawn point outside %s, kept inside\n",
+                                    used.destination);
+                        if(samus.x>max_x)samus.x=max_x;
+                        if(samus.y>max_y)samus.y=max_y;
+                    }
                     sprites.globals.landing=false;
                     sprites.globals.hide_hud=false;
                     {

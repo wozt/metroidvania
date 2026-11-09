@@ -123,7 +123,8 @@ static bool string_member(const FusionJson *object, const char *key, const char 
 }
 
 /* The room's project document: NONE without one (or for a version-1
- * document), REJECTED with *reason when it does not describe this room. */
+ * document), REJECTED with *reason when it does not describe this room
+ * (its dimensions are not checked when width_px is negative). */
 static MzmOverlayResult load_document(const char *path, const char *area, int room, int width_px,
                                       int height_px, FusionJson *doc, char *message,
                                       size_t message_size) {
@@ -154,8 +155,9 @@ static MzmOverlayResult load_document(const char *path, const char *area, int ro
     else if (!string_member(doc, "world", "mzm") || !string_member(doc, "area", area) ||
              !integer_member(doc, "room", &doc_room) || doc_room != room)
         reason = "it names another room";
-    else if (!integer_member(doc, "width_px", &width) || width != width_px ||
-             !integer_member(doc, "height_px", &height) || height != height_px)
+    else if (width_px >= 0 &&
+             (!integer_member(doc, "width_px", &width) || width != width_px ||
+              !integer_member(doc, "height_px", &height) || height != height_px))
         reason = "its dimensions differ from the room's";
     if (reason) {
         snprintf(message, message_size, "editor document %s ignored: %s", path, reason);
@@ -274,5 +276,147 @@ int mzm_room_project_sprites(const char *path, const char *area, int room, int w
     }
     snprintf(message, message_size, "editor entities %s: %d sprites (%d unassigned skipped)", path,
              count, unassigned);
+    return count;
+}
+
+/* The project door `id` of a document's door list, or NULL. */
+static const FusionJson *find_door(const FusionJson *doors, int64_t id) {
+    for (size_t k = 0; doors && doors->kind == FUSION_JSON_ARRAY && k < doors->count; ++k) {
+        int64_t value = 0;
+        if (integer_member(&doors->items[k], "id", &value) && value == id) return &doors->items[k];
+    }
+    return NULL;
+}
+
+static const char *string_value(const FusionJson *object, const char *key) {
+    const FusionJson *member = fusion_json_member(object, key);
+    return member && member->kind == FUSION_JSON_STRING ? member->string : "";
+}
+
+/* A door's rectangle and facing; false when one is missing. */
+static bool door_geometry(const FusionJson *door, int64_t r[4], int *facing) {
+    static const char *const facings[] = {"left", "right", "up", "down"};
+    if (!integer_member(door, "x", &r[0]) || !integer_member(door, "y", &r[1]) ||
+        !integer_member(door, "width", &r[2]) || !integer_member(door, "height", &r[3]) ||
+        r[2] <= 0 || r[3] <= 0)
+        return false;
+    *facing = -1;
+    for (int k = 0; k < 4; ++k)
+        if (!strcmp(string_value(door, "facing"), facings[k])) *facing = k;
+    return *facing >= 0;
+}
+
+/* The arrival beside a target door, inside the room (see the header). */
+static void spawn_beside(const int64_t r[4], int facing, int *x, int *y) {
+    switch (facing) {
+    case 0: *x = (int)(r[0] + r[2] + 16); *y = (int)(r[1] + r[3]); break;
+    case 1: *x = (int)(r[0] - 16); *y = (int)(r[1] + r[3]); break;
+    case 2: *x = (int)(r[0] + r[2] / 2); *y = (int)(r[1] + r[3] + 48); break;
+    default: *x = (int)(r[0] + r[2] / 2); *y = (int)(r[1] - 16); break;
+    }
+    if (*x < 0) *x = 0;
+    if (*y < 0) *y = 0;
+}
+
+int mzm_room_project_doors(const char *path, const char *directory, const char *area, int room,
+                           int width_px, int height_px, MzmProjectDoor *doors, int max,
+                           char *message, size_t message_size) {
+    if (message && message_size) message[0] = '\0';
+    FusionJson doc = {0};
+    MzmOverlayResult loaded = load_document(path, area, room, width_px, height_px, &doc, message,
+                                            message_size);
+    if (loaded == MZM_OVERLAY_NONE) return 0;
+    if (loaded == MZM_OVERLAY_REJECTED) return -1;
+    const FusionJson *list = fusion_json_member(&doc, "doors");
+    const FusionJson *transitions = fusion_json_member(&doc, "transitions");
+    const char *reason = NULL;
+    int count = 0, other_world = 0;
+    if (!list || list->kind != FUSION_JSON_ARRAY || !transitions ||
+        transitions->kind != FUSION_JSON_ARRAY)
+        reason = "it has no door or transition list";
+    for (size_t k = 0; !reason && k < transitions->count; ++k) {
+        const FusionJson *transition = &transitions->items[k];
+        int64_t source_id = 0, target_room = -1, target_door = 0, spawn_x = 0, spawn_y = 0;
+        const FusionJson *source = NULL;
+        int64_t r[4];
+        int facing;
+        if (!integer_member(transition, "source_door_id", &source_id) ||
+            !(source = find_door(list, source_id)) || !door_geometry(source, r, &facing)) {
+            reason = "a transition's source door is missing or malformed";
+            break;
+        }
+        if (strcmp(string_value(transition, "target_world"), "mzm")) {
+            ++other_world;
+            continue;
+        }
+        const char *target_area = string_value(transition, "target_area");
+        char lower[32];
+        if (!integer_member(transition, "target_room", &target_room) || target_room < 0 ||
+            target_room > 999 || !lower_area(lower, sizeof lower, target_area) ||
+            !integer_member(transition, "target_door_id", &target_door) ||
+            !integer_member(transition, "spawn_x", &spawn_x) ||
+            !integer_member(transition, "spawn_y", &spawn_y)) {
+            reason = "a transition's target is malformed";
+            break;
+        }
+        if (r[0] < 0 || r[1] < 0 || r[0] + r[2] > width_px || r[1] + r[3] > height_px ||
+            r[0] % 16 || r[1] % 16 || r[2] % 16 || r[3] % 16) {
+            reason = "a door is not a block rectangle inside the room";
+            break;
+        }
+        if (count >= max) {
+            reason = "it has more doors than the room's door slots";
+            break;
+        }
+        MzmProjectDoor *door = &doors[count];
+        memset(door, 0, sizeof *door);
+        door->id = (int)source_id;
+        door->native_index = -1;
+        const FusionJson *native = fusion_json_member(source, "native_source");
+        int64_t index = -1;
+        if (native && integer_member(native, "index", &index)) door->native_index = (int)index;
+        door->x0 = (int)(r[0] / 16);
+        door->y0 = (int)(r[1] / 16);
+        door->x1 = (int)((r[0] + r[2]) / 16) - 1;
+        door->y1 = (int)((r[1] + r[3]) / 16) - 1;
+        door->facing = facing;
+        snprintf(door->destination, sizeof door->destination, "%.31s_%03d", lower,
+                 (int)target_room % 1000);
+        door->spawn_x = (int)spawn_x;
+        door->spawn_y = (int)spawn_y;
+        if (!spawn_x && !spawn_y) {
+            /* No spawn point: beside the saved target door. */
+            char target_path[1024];
+            FusionJson target = {0};
+            char ignored[256];
+            const FusionJson *arrival = NULL;
+            int64_t tr[4];
+            int target_facing;
+            if (target_door && directory &&
+                mzm_room_document_path(target_path, sizeof target_path, directory, target_area,
+                                       (int)target_room) &&
+                load_document(target_path, target_area, (int)target_room, -1, -1, &target,
+                              ignored, sizeof ignored) == MZM_OVERLAY_APPLIED) {
+                arrival = find_door(fusion_json_member(&target, "doors"), target_door);
+                if (arrival && door_geometry(arrival, tr, &target_facing))
+                    spawn_beside(tr, target_facing, &door->spawn_x, &door->spawn_y);
+                else
+                    arrival = NULL;
+                fusion_json_free(&target);
+            }
+            if (!arrival) {
+                reason = "a transition has neither a spawn point nor a saved target door";
+                break;
+            }
+        }
+        ++count;
+    }
+    fusion_json_free(&doc);
+    if (reason) {
+        snprintf(message, message_size, "editor doors %s ignored: %s", path, reason);
+        return -1;
+    }
+    snprintf(message, message_size, "editor doors %s: %d transitions (%d to another world skipped)",
+             path, count, other_world);
     return count;
 }

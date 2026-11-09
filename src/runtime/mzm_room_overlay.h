@@ -17,8 +17,10 @@
  * CLIP_BEHAVIOR_LAVA, slope_up RIGHT_STEEP_FLOOR_SLOPE (rising to the
  * right), slope_down LEFT_STEEP_FLOOR_SLOPE, water an air block of
  * CLIP_BEHAVIOR_WATER, air CLIPDATA_TYPE_AIR. Its entities referencing a
- * native sprite (PSPRITE_*) join the room's sprites. Doors and events stay
- * native. No SDL. */
+ * native sprite (PSPRITE_*) join the room's sprites. Its transitions within
+ * Zero Mission lead their source door to <area>_<NNN>: a door adopted from
+ * a native door (native_source) redirects that door, any other door is a new
+ * transition over its rectangle. Events stay native. No SDL. */
 #ifndef MZM_ROOM_OVERLAY_H
 #define MZM_ROOM_OVERLAY_H
 
@@ -90,5 +92,28 @@ typedef struct {
 int mzm_room_project_sprites(const char *path, const char *area, int room, int width_px,
                              int height_px, MzmProjectSprite *sprites, int max, char *message,
                              size_t message_size);
+
+/* A project transition within Zero Mission, from its source door. */
+typedef struct {
+    int id;                  /* project door id */
+    int native_index;        /* adopted native door (sAreaDoors index), or -1 */
+    int x0, y0, x1, y1;      /* the door's blocks, inclusive */
+    int facing;              /* 0 left, 1 right, 2 up, 3 down */
+    char destination[48];    /* the target's export alias, <area>_<NNN> */
+    /* Samus's feet in the target room, pixels: the transition's spawn point,
+     * or without one (0, 0) beside the saved target door: one block past
+     * its inner edge for a left or right door, centred under an up door
+     * (three blocks below) or over a down door (one block above). */
+    int spawn_x, spawn_y;
+} MzmProjectDoor;
+
+/* The document's transitions to Zero Mission rooms (those to Aria are
+ * skipped); `directory` holds the target rooms' documents. Their count, -1
+ * when the document is ignored (another room, other dimensions, a door
+ * outside the room or off the block grid, a transition without a spawn point
+ * or a saved target door, more than `max`), 0 without a document. */
+int mzm_room_project_doors(const char *path, const char *directory, const char *area, int room,
+                           int width_px, int height_px, MzmProjectDoor *doors, int max,
+                           char *message, size_t message_size);
 
 #endif

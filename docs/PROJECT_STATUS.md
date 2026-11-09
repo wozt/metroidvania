@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0881 - The editor's transitions in the Zero Mission runtime
+
+- The room's project document now also plays its transitions to Zero
+  Mission rooms: a door adopted from a native door (`native_source`) is
+  redirected to the transition's room, and any other project door becomes a
+  new hatchless transition over its blocks (a side door for left and right,
+  a vertical transition for up and down). Samus arrives with her feet at the
+  spawn point or, without one, beside the saved target door. Transitions to
+  Aria are skipped; a door off the block grid or a transition with no
+  arrival has the document's doors ignored.
+- Checked on captures: a new door in Brinstar's save room leads to room 31
+  at its spawn point; native door 71 redirected to room 29 arrives beside
+  the target project door, and leads to room 31 again without overlays.
+  ROM-free tests cover the mapping, the target-door arrival and the
+  rejections.
+- Limitations: door types (boss, locked, portal, save) have no effect, an
+  adopted door keeps its native geometry and hatch, and events stay native.
+
 ## Patch 0880 - Chronomage ported (id 40)
 
 - EnemyChronomageCreate (0x080B712C) /

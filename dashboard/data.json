@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:35:02+00:00",
+ "generated_at": "2026-11-09T14:36:52+00:00",
  "git": {
-  "commit": "363bae91",
+  "commit": "7538aced",
   "branch": "main",
   "dirty": true
  },
@@ -12850,6 +12850,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/ripper.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c",
@@ -19739,6 +19740,7 @@
     "src/runtime/aos_enemies/winged_skeleton.c",
     "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aos_enemies/tiny_devil.c",
+    "src/runtime/aos_enemies/ripper.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22193,6 +22195,12 @@
  },
  "timeline": [
   {
+   "commit": "7538aced",
+   "date": "2026-11-09",
+   "subject": "Compile Tiny Devil/Imp family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "363bae91",
    "date": "2026-11-09",
    "subject": "Compile Harpy/Siren family as an independent enemy unit",
@@ -22664,12 +22672,6 @@
    "commit": "50bfc987",
    "date": "2026-11-08",
    "subject": "Extend soul_description_id to native category 3",
-   "scope": "project"
-  },
-  {
-   "commit": "a27a1f71",
-   "date": "2026-11-08",
-   "subject": "Resolve the bestiary soul text id mapping",
    "scope": "project"
   }
  ],

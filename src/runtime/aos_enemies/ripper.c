@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Ripper (enemy 0x4A) and its blade.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define generic_death aos_enemy_generic_death
+#define merge_enemy_hit aos_enemy_merge_hit
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define snap_to_floor aos_enemy_snap_to_floor
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define toward_facing aos_enemy_toward_facing
+#define walk_collide aos_enemy_walk_collide
 
 /* sub_080C2ABC / sub_080C2B74: Ripper's short-range blade child. It is
  * placed twelve pixels toward the body's facing, accelerates horizontally,
@@ -31,7 +45,7 @@ static void ripper_blade(AosEnemy *owner, const AosEnemyKind *kind,
     report->children[report->child_count++] = blade;
 }
 
-static AosHitReport ripper_blade_update(AosEnemy *b, AosSoma *soma,
+AosHitReport aos_enemy_ripper_blade_update(AosEnemy *b, AosSoma *soma,
                                         const AosEnemyKind *kind,
                                         const AosWeaponEntity *weapon,
                                         const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -71,7 +85,7 @@ static AosHitReport ripper_blade_update(AosEnemy *b, AosSoma *soma,
 }
 
 /* sub_080C25F8 and sub_080C2A18. */
-static AosHitReport ripper_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_ripper_update(AosEnemy *e, AosSoma *soma,
                                   const AosCollision *layer, const AosEnemyKind *kind,
                                   const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,

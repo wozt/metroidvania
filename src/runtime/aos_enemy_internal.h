@@ -344,5 +344,14 @@ void aos_enemy_imp_helper_update(AosEnemy *enemy, const AosSoma *soma,
 void aos_enemy_imp_death_child_update(AosEnemy *enemy,
                                       const AosEnemyKind *kind,
                                       int cam_y);
+AosHitReport aos_enemy_ripper_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_ripper_blade_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y);
 
 #endif

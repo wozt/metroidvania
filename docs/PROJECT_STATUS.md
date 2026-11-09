@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0918 - Ripper family becomes a real translation unit
+
+- `aos_enemies/ripper.c` now compiles independently with its body and
+  blade updates exported through `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0917 - Tiny Devil/Imp family becomes a real translation unit
 
 - `aos_enemies/tiny_devil.c` now compiles independently with the Tiny

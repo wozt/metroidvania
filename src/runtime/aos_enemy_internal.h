@@ -622,5 +622,11 @@ AosHitReport aos_enemy_valkyrie_update(
     const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_bat_hang(AosEnemy *enemy, const AosSoma *soma,
+                        const AosAnimSet *anims, uint32_t (*random)(void));
+void aos_enemy_bat_swoop(AosEnemy *enemy, const AosSoma *soma,
+                         const AosAnimSet *anims, int cam_x);
+void aos_enemy_bat_die(AosEnemy *enemy, const AosEnemyKind *kind,
+                       uint32_t (*random)(void), AosHitReport *report);
 
 #endif

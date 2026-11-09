@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0943 - Bat family becomes a real translation unit
+
+- `aos_enemies/bat.c` now compiles independently with its hang, swoop
+  and death updates exported through `aos_enemy_internal.h`. This was
+  the last `#include "aos_enemies/"` in `aos_enemy.c`: every enemy
+  family is now a real C11 translation unit.
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions differ only by a GCC stack-slot padding difference in
+  `bat_sees`. Only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0942 - Valkyrie/Erinys family becomes a real translation unit
 
 - `aos_enemies/valkyrie.c` now compiles independently with its update

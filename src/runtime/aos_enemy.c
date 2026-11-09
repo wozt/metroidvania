@@ -338,7 +338,6 @@ bool aos_enemy_player_in(const AosSoma *soma, int32_t x, int32_t y,
 }
 #define player_in aos_enemy_player_in
 
-#include "aos_enemies/bat.c"
 
 /* sub_0806AF98: the entity's feet onto the floor below or above it. */
 void aos_enemy_snap_to_floor(AosEnemy *enemy, const AosCollision *layer) {
@@ -3367,7 +3366,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->state == 3) {
-        bat_die(enemy, kind, random, &report);
+        aos_enemy_bat_die(enemy, kind, random, &report);
         aos_combat_tick(&enemy->combat);
         return report;
     }
@@ -3375,8 +3374,8 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
     switch (enemy->state) {
-    case 1: bat_hang(enemy, soma, anims, random); break;
-    case 2: bat_swoop(enemy, soma, anims, cam_x); break;
+    case 1: aos_enemy_bat_hang(enemy, soma, anims, random); break;
+    case 2: aos_enemy_bat_swoop(enemy, soma, anims, cam_x); break;
     default:
         break;
     }

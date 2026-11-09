@@ -319,6 +319,14 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      is identical for all 488 symbols. One included family remains:
      `bat.c`, included early at the top of `aos_enemy.c`; convert it
      last with the same proof.
+   - *(Continued in patch 0943.)* `bat.c` is independent with its
+     hang, swoop and death updates exported. **No `#include
+     "aos_enemies/"` remains in `aos_enemy.c`: the translation-unit
+     conversion is complete.** The union proof keeps all 488 symbol
+     sizes; only a GCC stack-slot padding difference in `bat_sees`
+     differs. The next step is the deferred directory reorganization
+     (`runtime/aos/enemies`, souls, math and the analogous MZM
+     paths), one move per commit.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

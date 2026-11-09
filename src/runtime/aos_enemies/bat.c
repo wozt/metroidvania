@@ -1,9 +1,19 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Bat (enemy 0x00).
  *
- * Part of aos_enemy.c, which includes this file inside the shared enemy
- * framework (before enemy_create): it is not a separate translation unit
- * and uses that file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define death_flames aos_enemy_death_flames
+#define face_player aos_enemy_face_player
+#define play aos_enemy_play
+#define player_dy aos_enemy_player_dy
+#define player_in aos_enemy_player_in
+#define step_anim aos_enemy_step_anim
+#define toward_facing aos_enemy_toward_facing
 
 /* sub_080AD700: the player in a w x h box centred on X, below the bat. */
 static bool bat_sees(const AosEnemy *bat, const AosSoma *soma, int w, int h) {
@@ -11,7 +21,7 @@ static bool bat_sees(const AosEnemy *bat, const AosSoma *soma, int w, int h) {
 }
 
 /* sub_080AD364: hanging. */
-static void bat_hang(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims,
+void aos_enemy_bat_hang(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims,
                      uint32_t (*random)(void)) {
     face_player(bat, soma);
     switch (bat->step) {
@@ -53,7 +63,7 @@ static void bat_hang(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims
 }
 
 /* sub_080AD44C: swoop. */
-static void bat_swoop(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims, int cam_x) {
+void aos_enemy_bat_swoop(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anims, int cam_x) {
     switch (bat->step) {
     case 0:
         if (bat->substep == 0) {
@@ -113,7 +123,7 @@ static void bat_swoop(AosEnemy *bat, const AosSoma *soma, const AosAnimSet *anim
 /* sub_080AD5B8: the bat plays sound 0x72, falls, blinks with a flame every
  * 15 frames (sub_0806BE74 over 8 x 6 pixels) and is deleted. The palette
  * bits of + 0x5A are not ported; sub_080683BC is the caller's reward. */
-static void bat_die(AosEnemy *bat, const AosEnemyKind *kind, uint32_t (*random)(void),
+void aos_enemy_bat_die(AosEnemy *bat, const AosEnemyKind *kind, uint32_t (*random)(void),
                     AosHitReport *report) {
     if (bat->step == 0) {
         aos_audio_play_song(0x72);

@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Fleaman (enemy 0x18).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
 
 /* Sets the Fleaman's animation frame by hand, paused (+ 0x6E, + 0x6F, + 0x6C
  * bit 1). */
@@ -29,7 +31,7 @@ static void flea_hop(AosEnemy *f, const AosSoma *soma, const AosCollision *layer
                      const AosAnimSet *anims, uint32_t (*random)(void)) {
     switch (f->step) {
     case 0:
-        play(f, anims, 0);
+        aos_enemy_play(f, anims, 0);
         f->anim.flags |= 2;
         f->vx = f->mirrored ? 0x8000 : -0x8000;
         f->step = f->dropped ? 1 : 4;
@@ -40,14 +42,14 @@ static void flea_hop(AosEnemy *f, const AosSoma *soma, const AosCollision *layer
         return;
     case 2:
         if (f->anim.id != 3) {
-            play(f, anims, 3);
+            aos_enemy_play(f, anims, 3);
             flea_frame(f, 3);
         }
         f->x += f->vx;
         f->y += f->vy;
         f->vy += f->ay;
         if (!aos_collision_cell(layer, f->x >> 16, f->y >> 16)) return;
-        snap_to_floor(f, layer);
+        aos_enemy_snap_to_floor(f, layer);
         f->step = 3;
         f->timer = 0;
         return;
@@ -55,17 +57,17 @@ static void flea_hop(AosEnemy *f, const AosSoma *soma, const AosCollision *layer
         flea_frame(f, 0);
         if (f->timer++ <= 0xF) return;
         f->step = 4;
-        play(f, anims, 0);
+        aos_enemy_play(f, anims, 0);
         return;
     case 4: {
         f->x += f->vx;
-        f->mirrored = (f->x >> 16) < (target_x(soma) >> 16);
+        f->mirrored = (f->x >> 16) < (aos_enemy_target_x(soma) >> 16);
         uint32_t pick = random() % 0x1E;
         if (pick <= 9) {
             f->vx = 0xD000;
             f->vy = -0x30000;
             f->ay = 0xA000;
-            play(f, anims, 0);
+            aos_enemy_play(f, anims, 0);
             f->step = 6;
         } else {
             if (pick == 10) {
@@ -81,7 +83,7 @@ static void flea_hop(AosEnemy *f, const AosSoma *soma, const AosCollision *layer
                 f->vy = -0x30000;
                 f->ay = 0x5000;
             }
-            play(f, anims, 3);
+            aos_enemy_play(f, anims, 3);
             if (pick > 13) flea_frame(f, 1);
             f->anim.flags |= 2;
             f->step = 5;
@@ -130,18 +132,20 @@ static void flea_hop(AosEnemy *f, const AosSoma *soma, const AosCollision *layer
  * animation 2, then sub_0806BE74(e, 15, 8.0, 6.0) from timer 50), then
  * the animation step and, unless dying, the collision pass. Contact
  * sub_080C242C: type 0. */
-static AosHitReport flea_update(AosEnemy *f, AosSoma *soma, const AosCollision *layer,
-                                const AosEnemyKind *kind, const AosWeaponEntity *weapon,
-                                const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
-                                uint32_t (*random)(void)) {
+AosHitReport aos_enemy_fleaman_update(
+    AosEnemy *f, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void)) {
     AosHitReport report = {0}, effects = {0};
     if (f->state == 3) {
-        step_anim(f, kind->anims);
+        aos_enemy_step_anim(f, kind->anims);
         return report;
     }
     if (f->state != 0xFF && f->hit_flash) f->hit_flash--;
     if (f->hit_flash && f->state != 0xFF) {
-        report = collide(f, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(f, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
         aos_combat_tick(&f->combat);
         return report;
     }
@@ -150,17 +154,21 @@ static AosHitReport flea_update(AosEnemy *f, AosSoma *soma, const AosCollision *
     } else if (f->state == 0xFF) {
         if (f->step == 0) {
             aos_audio_play_song(0x72);
-            play(f, kind->anims, 2);
+            aos_enemy_play(f, kind->anims, 2);
             f->timer = 0x32;
             f->vx = f->ax = f->vy = 0;
             f->ay = 0x2000;
             f->step = 2;
         }
-        if (death_flames(f, kind, 15, 0x80000, 0x60000, random, &effects)) return effects;
+        if (aos_enemy_death_flames(f, kind, 15, 0x80000, 0x60000,
+                                   random, &effects))
+            return effects;
     }
-    step_anim(f, kind->anims);
-    if (f->state != 0xFF) report = collide(f, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_enemy_step_anim(f, kind->anims);
+    if (f->state != 0xFF)
+        report = aos_enemy_collide(f, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
     aos_combat_tick(&f->combat);
-    take_effects(&report, &effects);
+    aos_enemy_take_effects(&report, &effects);
     return report;
 }

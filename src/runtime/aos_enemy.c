@@ -183,13 +183,15 @@ static void spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*ra
 /* sub_0806BE74(e, period, w, h): a flame when the death timer is a multiple
  * of the period, the blink pattern (hidden below 40), then the timer drops
  * and the entity is deleted at 0. Returns true when deleted. */
-static bool death_flames(AosEnemy *e, const AosEnemyKind *kind, int period, uint32_t w,
-                         uint32_t h, uint32_t (*random)(void), AosHitReport *report) {
+bool aos_enemy_death_flames(AosEnemy *e, const AosEnemyKind *kind, int period,
+                            uint32_t w, uint32_t h,
+                            uint32_t (*random)(void), AosHitReport *report) {
     if (e->timer % period == 0) spawn_flame(e, w, h, random, report);
     e->hidden = e->timer <= 0x27 ? kind->blink[e->timer] & 1 : false;
     if ((int8_t)--e->timer <= 0) e->removed = true;
     return e->removed;
 }
+#define death_flames aos_enemy_death_flames
 
 void aos_enemy_take_effects(AosHitReport *to, const AosHitReport *from) {
     to->effect_count = from->effect_count;
@@ -2736,7 +2738,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/fleaman.c"
 #include "aos_enemies/skeleton_knight.c"
 #include "aos_enemies/killer_doll.c"
 #include "aos_enemies/lightning_doll.c"
@@ -3199,8 +3200,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_FLEAMAN)
-        return flea_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                           random);
+        return aos_enemy_fleaman_update(enemy, soma, layer, kind, weapon,
+                                        weapon_frames, soma_atk, soma_def,
+                                        random);
     if (enemy->id == AOS_ENEMY_MEDUSA_HEAD && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_medusa_head_update(enemy, soma, kind, weapon,
                                             weapon_frames, soma_atk, soma_def,

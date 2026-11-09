@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0902 - Fleaman becomes a real translation unit
+
+- `aos_enemies/fleaman.c` now compiles independently. Its four jump modes,
+  hand-set animation frames and collision handling remain family-local; the
+  timed death-flame helper joins the prefixed internal framework API.
+- The object union preserves all 488 `-O0` function sizes and normalized
+  instructions. No behavior or feature status changed.
+
 ## Patch 0901 - Mimic becomes a real translation unit
 
 - `aos_enemies/mimic.c` now compiles independently with both its body and

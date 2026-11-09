@@ -2,6 +2,99 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0870 - Evil Butcher decoded (id 25, not yet ported)
+
+EnemyEvilButcherCreate (0x080BFE1C) / EnemyEvilButcherUpdate
+(0x080BFF14) are fully traced in third_party/cvaos/asm/
+code/code_080B0AD4.s; the port is specced below, not yet
+written. Resources (sub_0806E0D0): graphics 0x082052D0,
+palette 0x0820C27C, frames 0x08256720, palette bank =
++ 0x32 & 0xFF (the record variant). + 0x5C = 0x13,
+animation 0, floor snap sub_0806AF98, + 0x46 += 1,
++ 0x59 |= 2, state 0; the global 0x8E & 0x40 path is
+state 3 (animation only). Otherwise the generic hurt
+sub_0806E1B8 / contact sub_0806E1E8-registered pair
+(sub_0806D244 picks the registration helper) — actually
+the create passes sub_0806E1B8 and sub_080BFECC.
+
+- State 0 sub_080BFB58 (+ 0xB step 0 only): when the
+  + 0x6E u16 flag is clear, sub_0806E29C(e, 0xA0, 0x78)
+  (the 160 x 120 player box) wakes it into state 1;
+  otherwise the u8 timer + 0xD counts and past 2 it
+  resets and flips the + 0x58 facing bit. It then walks
+  through sub_0806CAF8 with probes 0x085288FC, mode
+  0xC and speed 0xA000 - (+ 0x6F << 0xB) or 0x3000 by
+  + 0x6E bit 0 (the patrol cadence); result & 0x1B == 8
+  skips, else timer <= 2 sets it to 3.
+- State 1 sub_080BFBF4 (the cleaver throw): step 0 stops
+  (sub_0806BC40) and plays animation 1 once; step 1 at
+  + 0x6E == 0x202 spawns the cleaver child
+  sub_0806DFF8(e, sub_080BF738) copying + 0x42/+ 0x46 -
+  0x18, the + 0x58 facing, +/- 16 px by facing, + 0x3C
+  and + 0x32, then + 0x6C & 4 jumps to step 3; step 3
+  returns to state 0, animation 0 loop.
+- State 2 sub_080BFCD8 (death, returns delete): step 0
+  plays song 0x1C1 and spawns the gore entity
+  EntityCreateInRange(0x49, 0xCF, sub_080BF990) 18 px
+  to the facing side plus +/- 1 px and 32 px up, then
+  step 1, timer 0x40. Step 1 every 4th tick: RNG & 1
+  picks sub_08045CEC(x + rand, y + rand - 16 px, 0xD,
+  8) or a sub_080BF6B8 particle (same 0x49/0xCF family,
+  frame 9, + 0xD = (RNG & 7) + 8, + 0x59 |= 2, + 0x32
+  copied); at timer 0x10 sets + 0xF = 1; at 0 returns 1
+  for EntityDelete.
+- State 3: sub_0803F17C only (the flag-path idle).
+- Update epilogue: states 0-2 run sub_0806E314 (the
+  collision pass) then sub_0806DF20 unless state 2;
+  state 3 returns after the animation step.
+- Hurt callback sub_080BFECC: sub_0806E218 decides;
+  lethal -> sub_080683BC, palette bits, state 2, steps
+  0.
+- Contact callback sub_080BFF7C: hit record whose first
+  field is + 0x3C (or + 0x3C * 5 / 4 when + 0x14 bit 0),
+  element 3 when + 0x14 bit 0 else the + 0x3C byte,
+  position + 0x40/+ 0x44, then sub_08021654; element 3
+  with vx past 0x58000 does extra work (tail unread).
+- Cleaver child sub_080BF738 (283 lines): state 0 loads
+  the same resources, frame 8, + 0x5C = 0x13, vx =
+  +/- 0x28000 by facing (2.5 px/frame), + 0x1C = -6,
+  + 0x1A = 0x1234 (mirrored flips both signs), song
+  0x89, state 1, + 0x34 = 1 hp, callbacks
+  sub_0806E1E8 / sub_080BFF0C (the hurt callback just
+  zeroes + 0x34), physics preset 0x0810FCF8 through
+  sub_08042884 / sub_080428F0. State 1: accel_move
+  8.0, collide, margin 3 -> state 3, + 0x34 == 0 ->
+  state 3 + sub_0806D5C0 gore; a floor/wall probe
+  (sub_080020A0 on + 0x42 + cam + 0x1C, + 0x46 + cam +
+  4) sticks it: song 0x13A, + 0x34 = 0, + 0x58 fade
+  bits (rand & 0x1F) + 0x59 |= 0x30, vx negated half,
+  vy random -0x18000.., ay 0x2000, state 2. State 2:
+  accel_move 8.0, + 0x18 += + 0x1A spin, affine
+  sub_0803E058(+ 0x18, mirrored), margin 3 -> state 3.
+  State 3: sub_0803E6BC fade when + 0x58 & 0x101F,
+  EntityDelete.
+- Gore entity sub_080BF990 (224 lines): state 0 loads
+  the same resources, random spin/direction
+  (sub_0803E654 sign, + 0x1A spin, vx 0x8000 + rand
+  & 0x3FFF possibly negated, vy rand - 0x20000), state
+  1; state 1 accel_move 8.0, margin 3 -> state 3, a
+  second sub_080020A0 probe sticks it the same way
+  (song 0x13A, + 0x1A re-randomised, vx 0x8000 + rand
+  & 0x3FFF, state 2); state 2 accel_move 8.0, + 0x18 +=
+  + 0x1A, margin 3 -> state 3, affine sub_0803E058;
+  state 3 fades (+ 0x58 & 0x101F -> sub_0803E6BC) and
+  deletes.
+- Still to pin down for the port: sub_0806E29C (the
+  aggro box variant), sub_0806BC40 (the attack wind-up
+  stop), sub_08045CEC (the death spark effect), the
+  sub_080BFF7C element-3 tail, sub_080020A0 probe
+  semantics (shared with Bomber Armor's ground_walk
+  probes), sub_08042884 / sub_080428F0 physics preset
+  0x0810FCF8, sub_0803E654 / sub_0803E058 / sub_0803E6BC
+  (affine helpers already used by the worm segments),
+  and the + 0x6E / + 0x6C / + 0x6F animation-field
+  mapping onto AosAnim.
+
 ## Patch 0869 - Ectoplasm ported (id 27)
 
 - EnemyEctoplasmCreate (0x080995B8) /

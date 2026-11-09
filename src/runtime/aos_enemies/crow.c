@@ -1,9 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Blue Crow (enemy 0x09) and Red Crow (0x2D).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define death_flames aos_enemy_death_flames
+#define face_player aos_enemy_face_player
+#define integrate aos_enemy_integrate
+#define move_toward aos_enemy_move_toward
+#define play aos_enemy_play
+#define player_within aos_enemy_player_within
+#define play_loop aos_enemy_play_loop
+#define spawn_blood aos_enemy_spawn_blood
+#define step_anim aos_enemy_step_anim
+#define stop aos_enemy_stop
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_080C9AF4: perch until the player comes within 60 pixels (sound
  * 0x8B), then keep returning to a point 42 pixels above him and 32 pixels
@@ -88,7 +104,7 @@ static void crow_feathers(const AosEnemy *c, AosHitReport *report) {
  * per frame; after 49 frames (state 1) and 25 more (state 2) it is
  * deleted; it blinks on the timer's bit 0. The palette bits set at the end
  * of state 1 (+ 0x5A = 2) are not ported. */
-static void feather_update(AosEnemy *f) {
+void aos_enemy_feather_update(AosEnemy *f) {
     switch (f->state) {
     case 0:
         f->vx = 0x4000;
@@ -238,7 +254,7 @@ static void red_crow_fly(AosEnemy *c, const AosSoma *soma, const AosAnimSet *ani
  * flight and the animation step are skipped; the palette flash it writes,
  * the global pause 0x4BE (taken as 0), the + 0x38 bit 0x100 stop and the
  * tracking list of sub_08021924 are not ported. */
-static AosHitReport crow_update(AosEnemy *c, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_crow_update(AosEnemy *c, AosSoma *soma, const AosEnemyKind *kind,
                                 const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
                                 int soma_atk, int soma_def, uint32_t (*random)(void)) {
     AosHitReport report = {0};

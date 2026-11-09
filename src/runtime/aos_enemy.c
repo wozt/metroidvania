@@ -14,6 +14,7 @@ bool aos_enemy_flag_8e_40;
 #define no_target aos_enemy_no_target
 #define random_direction aos_enemy_random_direction
 #define spawn_particle aos_enemy_spawn_particle
+#define spawn_blood aos_enemy_spawn_blood
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
 static AosSoulAttack *soul_attacks;
@@ -98,7 +99,7 @@ static void grenade_particles(const AosEnemy *g, uint32_t (*random)(void), AosHi
 
 /* sub_0806E664(x, y, 1): EntityCreateInRange(0x49, 0xCF, sub_0806B5DC) at
  * integer pixels, mirrored by a random draw made only when created. */
-static void spawn_blood(int x, int y, uint32_t (*random)(void), AosHitReport *report) {
+void aos_enemy_spawn_blood(int x, int y, uint32_t (*random)(void), AosHitReport *report) {
     if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
     AosEffect *blood = &report->effects[report->effect_count++];
     *blood = (AosEffect){.kind = AOS_EFFECT_BLOOD, .x = (int32_t)((uint32_t)x << 16),
@@ -2757,7 +2758,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
-#include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
 
@@ -3152,7 +3152,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                              cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_BLUE_CROW || enemy->id == AOS_ENEMY_RED_CROW) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
+        return aos_enemy_crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_MIMIC_TRIGGER)
         return aos_enemy_mimic_trigger_update(enemy, soma, kind, weapon,
                                               weapon_frames, soma_atk,
@@ -3225,7 +3225,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_FEATHER) {
-        feather_update(enemy);
+        aos_enemy_feather_update(enemy);
         return report;
     }
     if (enemy->role == AOS_ROLE_GIB) {

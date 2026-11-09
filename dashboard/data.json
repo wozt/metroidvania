@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:59:04+00:00",
+ "generated_at": "2026-11-09T16:01:34+00:00",
  "git": {
-  "commit": "6d688cf2",
+  "commit": "2bdfceb5",
   "branch": "main",
   "dirty": true
  },
@@ -9247,6 +9247,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/crow.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -12692,6 +12693,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/crow.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19778,6 +19780,7 @@
     "src/runtime/aos_enemies/headhunter.c",
     "src/runtime/aos_enemies/zombie.c",
     "src/runtime/aos_enemies/nemesis.c",
+    "src/runtime/aos_enemies/crow.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22232,6 +22235,12 @@
  },
  "timeline": [
   {
+   "commit": "2bdfceb5",
+   "date": "2026-11-09",
+   "subject": "Compile Nemesis family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "6d688cf2",
    "date": "2026-11-09",
    "subject": "Compile Zombie family as an independent enemy unit",
@@ -22703,12 +22712,6 @@
    "commit": "fbba1f56",
    "date": "2026-11-08",
    "subject": "Decode Biphron (enemy id 78) and rank remaining families",
-   "scope": "project"
-  },
-  {
-   "commit": "967cb388",
-   "date": "2026-11-08",
-   "subject": "Port Giant Worm and Poison Worm (enemy ids 62 / 71)",
    "scope": "project"
   }
  ],

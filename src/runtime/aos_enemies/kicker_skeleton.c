@@ -1,9 +1,21 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Kicker Skeleton (enemy 0x53).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define append_effects aos_enemy_append_effects
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define player_in_centred aos_enemy_player_in_centred
+#define play_loop aos_enemy_play_loop
+#define random_centred aos_enemy_random_centred
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
 
 /* The Kicker Skeleton's attack machine (sub_080BFFF0): + 0x0B is its
  * substate, + 0x18 the walker speed (`kicker_speed`), + 0x14 the contact
@@ -50,7 +62,7 @@ static void kicker_shatter(AosEnemy *e, const AosEnemyKind *kind,
     e->removed = true;
 }
 
-static AosHitReport kicker_skeleton_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_kicker_skeleton_update(AosEnemy *e, AosSoma *soma,
                                            const AosCollision *layer,
                                            const AosEnemyKind *kind,
                                            const AosWeaponEntity *weapon,

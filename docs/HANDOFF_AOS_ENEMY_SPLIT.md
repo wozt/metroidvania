@@ -248,6 +248,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      symbols. The other 11 included families remain. Continue with
      `kicker_skeleton.c`; keep one family per commit and repeat the
      union proof.
+   - *(Continued in patch 0933.)* `kicker_skeleton.c` is independent
+     with its update exported. The union proof is identical for all
+     488 symbols. The other 10 included families remain (`bat.c` is
+     included early at the top of `aos_enemy.c`; convert it last).
+     Continue with `waiter_skeleton.c`; keep one family per commit
+     and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

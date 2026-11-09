@@ -2776,7 +2776,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/kicker_skeleton.c"
 #include "aos_enemies/waiter_skeleton.c"
 #include "aos_enemies/cockatrice.c"
 #include "aos_enemies/chronomage.c"
@@ -2900,7 +2899,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->id == AOS_ENEMY_KICKER_SKELETON && enemy->role == AOS_ROLE_ENEMY)
-        return kicker_skeleton_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_kicker_skeleton_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_WAITER_COMPANION) {

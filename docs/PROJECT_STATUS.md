@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0933 - Kicker Skeleton family becomes a real translation unit
+
+- `aos_enemies/kicker_skeleton.c` now compiles independently with its
+  update exported through `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the export changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0932 - Tsuchinoko family becomes a real translation unit
 
 - `aos_enemies/tsuchinoko.c` now compiles independently with its body

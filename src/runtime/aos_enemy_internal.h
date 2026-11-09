@@ -464,6 +464,9 @@ extern size_t aos_enemy_burst_source_count;
 void aos_enemy_append_effects(AosHitReport *to, const AosHitReport *from);
 void aos_enemy_random_direction(uint32_t (*random)(void), int32_t *vx,
                                 int32_t *vy);
+void aos_enemy_spawn_particle(uint8_t kind, uint8_t flags, int32_t x,
+                              int32_t y, int32_t vx, int32_t vy,
+                              AosHitReport *report);
 AosHitReport aos_enemy_butcher_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
@@ -498,6 +501,16 @@ AosHitReport aos_enemy_dryad_update(
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
 AosHitReport aos_enemy_dryad_seed_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_tsuchinoko_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_tsuchinoko_child_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,

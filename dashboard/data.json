@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:27:12+00:00",
+ "generated_at": "2026-11-09T15:36:02+00:00",
  "git": {
-  "commit": "72f634e5",
+  "commit": "0b6e32e6",
   "branch": "main",
   "dirty": true
  },
@@ -13579,6 +13579,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/tsuchinoko.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19751,6 +19752,7 @@
     "src/runtime/aos_enemies/winged_skeleton.c",
     "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aos_enemies/tiny_devil.c",
+    "src/runtime/aos_enemies/tsuchinoko.c",
     "src/runtime/aos_enemies/ripper.c",
     "src/runtime/aos_enemies/merman.c",
     "src/runtime/aos_enemies/peeping_eye.c",
@@ -22219,6 +22221,12 @@
  },
  "timeline": [
   {
+   "commit": "0b6e32e6",
+   "date": "2026-11-09",
+   "subject": "Compile Dryad family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "72f634e5",
    "date": "2026-11-09",
    "subject": "Compile Killer Mantle family as an independent enemy unit",
@@ -22690,12 +22698,6 @@
    "commit": "54bfe6da",
    "date": "2026-11-08",
    "subject": "Port Minotaur and Red Minotaur (enemy ids 0x15 / 0x58)",
-   "scope": "project"
-  },
-  {
-   "commit": "3aec44d0",
-   "date": "2026-11-08",
-   "subject": "Document Minotaur state handlers and aggro gate decode",
    "scope": "project"
   }
  ],

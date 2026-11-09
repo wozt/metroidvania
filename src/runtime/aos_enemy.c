@@ -12,6 +12,7 @@
 bool aos_enemy_flag_8e_40;
 #define flag_8e_40 aos_enemy_flag_8e_40
 #define random_direction aos_enemy_random_direction
+#define spawn_particle aos_enemy_spawn_particle
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
 static AosSoulAttack *soul_attacks;
@@ -48,7 +49,7 @@ void aos_enemy_set_burst_source(const AosEffect *list, size_t count) {
 /* sub_0806D894 (smoke, + 0x18 = 7), sub_0806D930(x, y, 0, 0, p, 1, 7, 5)
  * (dark smoke) and sub_0806D644 (flame art, + 0x18 = 3): EntityCreateInRange(
  * 0x49, 0xCF, sub_08068F78) at (x, y) with (vx, vy). */
-static void spawn_particle(uint8_t kind, uint8_t flags, int32_t x, int32_t y, int32_t vx,
+void aos_enemy_spawn_particle(uint8_t kind, uint8_t flags, int32_t x, int32_t y, int32_t vx,
                            int32_t vy, AosHitReport *report) {
     if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return;
     report->effects[report->effect_count++] = (AosEffect){
@@ -2775,7 +2776,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/tsuchinoko.c"
 #include "aos_enemies/kicker_skeleton.c"
 #include "aos_enemies/waiter_skeleton.c"
 #include "aos_enemies/cockatrice.c"
@@ -2892,11 +2892,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                  soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_TSUCHINOKO_SPIT ||
         enemy->role == AOS_ROLE_TSUCHINOKO_ROCK)
-        return tsuchinoko_child_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_tsuchinoko_child_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk, soma_def,
                                        cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_TSUCHINOKO && enemy->role == AOS_ROLE_ENEMY)
-        return tsuchinoko_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_tsuchinoko_update(enemy, soma, layer, kind, weapon,
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->id == AOS_ENEMY_KICKER_SKELETON && enemy->role == AOS_ROLE_ENEMY)

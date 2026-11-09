@@ -242,6 +242,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      symbols. The other 12 included families remain. Continue with
      `tsuchinoko.c`; keep one family per commit and repeat the union
      proof.
+   - *(Continued in patch 0932.)* `tsuchinoko.c` is independent with
+     its body and child updates exported; `spawn_particle` joined the
+     internal API for it. The union proof is identical for all 488
+     symbols. The other 11 included families remain. Continue with
+     `kicker_skeleton.c`; keep one family per commit and repeat the
+     union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

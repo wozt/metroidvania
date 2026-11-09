@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Tsuchinoko (enemy 0x23), its spit and rock.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define accel_move aos_enemy_accel_move
+#define append_effects aos_enemy_append_effects
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define outside_margins aos_enemy_outside_margins
+#define play_loop aos_enemy_play_loop
+#define player_in aos_enemy_player_in
+#define spawn_particle aos_enemy_spawn_particle
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define walk_collide aos_enemy_walk_collide
 
 /* sub_080A776C: the fast spit — entity type 0x1B, role 0x48, update
  * sub_080A79D8, animation 4 looping. It spawns at the parent's pixel
@@ -201,7 +215,7 @@ static void tsuchinoko_die(AosEnemy *e, AosHitReport *spawned,
     }
 }
 
-static AosHitReport tsuchinoko_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_tsuchinoko_update(AosEnemy *e, AosSoma *soma,
                                       const AosCollision *layer,
                                       const AosEnemyKind *kind,
                                       const AosWeaponEntity *weapon,
@@ -253,7 +267,7 @@ static AosHitReport tsuchinoko_update(AosEnemy *e, AosSoma *soma,
  * collision pass — its sub_080A7A54 contact deals the + 0x3C damage at
  * element 0x40 and deletes it; its sub_080A7A90 hurt deletes it on any
  * hit (handled in collide). The rock has no callbacks at all. */
-static AosHitReport tsuchinoko_child_update(AosEnemy *s, AosSoma *soma,
+AosHitReport aos_enemy_tsuchinoko_child_update(AosEnemy *s, AosSoma *soma,
                                             const AosCollision *layer,
                                             const AosEnemyKind *kind,
                                             const AosWeaponEntity *weapon,

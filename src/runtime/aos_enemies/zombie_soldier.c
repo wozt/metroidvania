@@ -1,9 +1,27 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Zombie Soldier (enemy 0x0C) and its grenade.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define generic_death aos_enemy_generic_death
+#define grenade_particles aos_enemy_grenade_particles
+#define make_gib aos_enemy_make_gib
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define player_near aos_enemy_player_near
+#define play_loop aos_enemy_play_loop
+#define projectile_collide aos_enemy_projectile_collide
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x aos_enemy_target_x
+#define walk_collide aos_enemy_walk_collide
 
 /* sub_08092BC0: a grenade at the soldier's position plus (dx, dy), thrown
  * at (vx, vy) with gravity 0x1800; it shows sprite frame 18, carries the
@@ -34,7 +52,7 @@ static AosEnemy make_grenade(const AosEnemy *soldier, int32_t dx, int32_t dy, in
  * whose attack box grows to 2 + t / 2 pixels around it until t = 14, hits
  * until t = 18 and ends at t = 24. The burst and the explosion's first 8
  * frames create the particles of grenade_particles. */
-static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_grenade_update(AosEnemy *g, AosSoma *soma, const AosCollision *layer,
                                    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
                                    int soma_def, int cam_x, int cam_y,
@@ -200,7 +218,7 @@ static void soldier_gibs(const AosEnemy *z, uint32_t (*random)(void), AosHitRepo
 
 /* sub_08093078: sub_0806D3D8(e, 8.0) (velocity, clamped, then position),
  * deleted below the soldier's y. */
-static void gib_update(AosEnemy *g) {
+void aos_enemy_gib_update(AosEnemy *g) {
     g->vx += g->ax;
     if (g->ax >= 0 ? g->vx > 0x80000 : g->vx < -0x80000) g->vx = g->ax >= 0 ? 0x80000 : -0x80000;
     g->vy += g->ay;
@@ -214,7 +232,7 @@ static void gib_update(AosEnemy *g) {
  * state 0 walks, 1 attacks, 2 dies (gibs on its first frame, then the
  * generic death), then the animation step and the on-screen collision
  * pass; state 3 only steps its animation. */
-static AosHitReport soldier_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_soldier_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
                                    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
                                    int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {

@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0941 - Zombie Soldier family becomes a real translation unit
+
+- `aos_enemies/zombie_soldier.c` now compiles independently with its
+  grenade, gib and soldier updates exported through
+  `aos_enemy_internal.h`; `grenade_particles` joins the internal API
+  and the `soldier_face` alias moved into `aos_enemy.c` for the
+  remaining fragments.
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions differ only by GCC stack-slot renumbering in
+  `soldier_face` and `valkyrie_recoil`. Only the exports changed
+  linkage. No behavior or feature status changed.
+
 ## Patch 0940 - Crow family becomes a real translation unit
 
 - `aos_enemies/crow.c` now compiles independently with its body and

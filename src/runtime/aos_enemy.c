@@ -15,6 +15,7 @@ bool aos_enemy_flag_8e_40;
 #define random_direction aos_enemy_random_direction
 #define spawn_particle aos_enemy_spawn_particle
 #define spawn_blood aos_enemy_spawn_blood
+#define soldier_face aos_enemy_soldier_face
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
 static AosSoulAttack *soul_attacks;
@@ -86,7 +87,7 @@ void aos_enemy_random_direction(uint32_t (*random)(void), int32_t *vx, int32_t *
 /* The grenade's burst particles of sub_08092CCC for timer t (already
  * incremented): smoke at a random direction, dark smoke at t = 3, a flame
  * particle at another random direction when t is odd. */
-static void grenade_particles(const AosEnemy *g, uint32_t (*random)(void), AosHitReport *report) {
+void aos_enemy_grenade_particles(const AosEnemy *g, uint32_t (*random)(void), AosHitReport *report) {
     int32_t vx, vy;
     random_direction(random, &vx, &vy);
     spawn_particle(AOS_EFFECT_SMOKE, 7, g->x, g->y, vx, vy, report);
@@ -2758,7 +2759,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
-#include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
 
 
@@ -3229,7 +3229,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_GIB) {
-        gib_update(enemy);
+        aos_enemy_gib_update(enemy);
         return report;
     }
     if (enemy->role == AOS_ROLE_NEEDLE_PIECE) {
@@ -3325,7 +3325,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                             cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_GRENADE)
-        return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_VALKYRIE || enemy->id == AOS_ENEMY_ERINYS) &&
         enemy->role == AOS_ROLE_ENEMY)
@@ -3354,7 +3354,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
             enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
             soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER)
-        return soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
     if (enemy->state == 4) {
         /* sub_080AD6AC: animation 1 (unless playing), stepped each frame;

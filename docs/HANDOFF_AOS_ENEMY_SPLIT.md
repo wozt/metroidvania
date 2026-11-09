@@ -303,6 +303,16 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      at the top of `aos_enemy.c`; convert it last). Continue with
      `zombie_soldier.c`; keep one family per commit and repeat the
      union proof.
+   - *(Continued in patch 0941.)* `zombie_soldier.c` is independent
+     with its grenade, gib and soldier updates exported;
+     `grenade_particles` joined the internal API and the
+     `soldier_face` alias moved into `aos_enemy.c` for `valkyrie.c`.
+     The union proof keeps all 488 symbol sizes; only GCC
+     stack-slot renumbering differs in `soldier_face` and
+     `valkyrie_recoil`. The other 2 included families remain
+     (`bat.c` is included early at the top of `aos_enemy.c`; convert
+     it last). Continue with `valkyrie.c`; keep one family per
+     commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

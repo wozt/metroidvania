@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 86 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 87 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1095 | 2478 |
+| Castlevania: Aria of Sorrow | 1108 | 2465 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1511,6 +1511,15 @@ Dependencies: `aos.enemies.valkyrie`.
 Known divergences: As the Valkyrie.  
 Next action: Follow the Valkyrie's open items.
 Evidence: in game: `aria area_09_room_009 (--spawn 300 160 --hp 9999): the red Erinys hovers in beside a gargoyle (frames 40 and 140)`.
+
+[+] **`aos.enemies.evil_butcher` — Evil Butcher.** EnemyEvilButcherCreate (0x080BFE1C) loads graphics 0x082052D0, palette 0x0820C27C banked by parameter 1 and frames 0x08256720, plays animation 0 and, unless the global 0x8E & 0x40 sends it to state 3, installs the contact sub_0806E1B8 and hurt sub_080BFECC callbacks. State 0 (sub_080BFB58) patrols with the sub_0806CAF8 probe walker (0x085288FC, mode 0xC) at a speed read off the animation parity and tick, flips its facing after a short obstacle timer and wakes into state 1 when the player enters the 0xA0 x 0x78 box of sub_0806E29C at an animation loop start. State 1 (sub_080BFBF4) faces the player, plays animation 1 once and throws the sub_080BF738 cleaver child through sub_0806DFF8 at frame 2 tick 2, then returns to the patrol. State 2 (sub_080BFCD8) is the death: song 0x1C1, a sub_080BF990 gore child, still frame 6, then 0x40 frames of gore bursts — every fourth tick a sub_08045CEC sparkle (animation 0xD, row 8) or a sub_080BF6B8 particle — before EntityDelete. State 3 only steps the animation. The cleaver flies at +/- 2.5 px/frame with element-1 contact, still frame 8 and its own boxes, sticks on a solid cell ahead (song 0x13A, hp 0, a negated-halved vx plus random, state 2 affine spin) or dies into a flame when struck; the gore falls under ay 0x2000, sticks 4 px above a floor cell and spins off; the particle shows still frame 9 for its 8..15-frame life; unit-tested in butcher_tests.
+
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806CC20`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1E8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080B0AD4.s:EnemyEvilButcherCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyEvilButcherUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF6B8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF738`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF990`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFB58`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFBF4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFCD8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFECC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFF0C`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_08001194.c:sub_080020A0`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The + 0x58 fade bits, the + 0x59 flags, the + 0xF death flag, the sub_0806D4C0 pause, the sub_080421AC box query, the + 0x5A palette bits of sub_080BFECC and the sub_0803E654 sign draw (approximated by the RNG sign) are not ported; the sub_080020A0 surface probes are normalized into room pixels.  
+Next action: Compare the patrol, the throw timing, the cleaver flight and the death bursts against an emulator; port the variant-0 art of Skill_EvilButcher_Ripper_Use.
+Evidence: in game: `aria area_02_room_002 (--spawn 512 176 --hp 9999): three Evil Butchers patrol the room and throw their cleavers at Soma`.
 
 [+] **`aos.enemies.fleaman` — Fleaman.** The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).
 

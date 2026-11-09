@@ -2989,6 +2989,232 @@ static void ectoplasm_tests(void) {
     assert(e.x == hx && !e.removed && !e.defeated);
 }
 
+static void butcher_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    /* Animations 0 (the patrol, 4 frames) and 1 (the throw, 4 frames with
+     * a 3-tick third frame so frame 2 tick 2 occurs once). */
+    static const uint8_t patrol[4] = {4, 4, 4, 4};
+    static const uint8_t throw_[4] = {4, 4, 3, 4};
+    const AosAnimDef defs[2] = {{4, patrol}, {4, throw_}};
+    const AosAnimSet anims = {defs, 2};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 2; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* The 0x085288FC probe descriptor: 1 wall probe, ceiling -30, floor
+     * -1, half width 6, wall y -7. */
+    kind.probes.count = 1;
+    kind.probes.ceiling = -30;
+    kind.probes.floor = -1;
+    kind.probes.half_width = 6;
+    kind.probes.wall_y[0] = -7;
+    const AosEnemyStats stats = {112, 22, 4, 15, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create: state 0, animation 0 looping, one pixel down, element 0
+     * contact. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_EVIL_BUTCHER, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && e.contact_elements == 0);
+
+    /* State 0 patrols on the floor with the probe walker; far from the
+     * player it keeps walking and flipping after obstacle frames. */
+    soma.x = AOS_FIXED(900);
+    soma.y = AOS_FIXED(40);
+    int32_t x0 = e.x;
+    for (int i = 0; i < 8; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+    assert(e.state == 0 && e.x != x0);
+
+    /* Soma inside the 0xA0 x 0x78 box at an animation loop start wakes it:
+     * state 1, then step 0 faces the player and plays animation 1. */
+    soma.x = e.x;
+    soma.y = e.y;
+    int frames = 0;
+    while (e.state == 0 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+        ++frames;
+    }
+    assert(e.state == 1 && frames < 200);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && e.anim.id == 1);
+
+    /* At frame 2 tick 2 the cleaver child is emitted: pixel position 24 px
+     * up and 16 px to the facing side, facing and palette bank copied. */
+    frames = 0;
+    AosHitReport thrown = {0};
+    while (!thrown.child_count && frames < 200) {
+        thrown = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                                  always_zero);
+        ++frames;
+    }
+    assert(thrown.child_count == 1);
+    const AosEnemy *cleaver = &thrown.children[0];
+    assert(cleaver->role == AOS_ROLE_BUTCHER_CLEAVER && cleaver->id == e.id);
+    assert(cleaver->x == ((e.x >> 16) + (e.mirrored ? 0x10 : -0x10)) * 0x10000);
+    assert(cleaver->y == ((e.y >> 16) - 0x18) * 0x10000);
+    assert(cleaver->mirrored == e.mirrored && cleaver->param1 == e.param1);
+
+    /* The throw animation ends: step 3 resets to the patrol, animation 0. */
+    frames = 0;
+    while (e.state == 1 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+        ++frames;
+    }
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0);
+
+    /* The cleaver's first update: still frame 8, hp 1, song 0x89, state 1,
+     * flying at +/- 2.5 px/frame with element-1 contact. */
+    AosEnemy c = *cleaver;
+    aos_audio_clear();
+    (void)aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(c.state == 1 && c.static_frame == 8 && c.hp == 1 &&
+           c.contact_elements == 1 && c.own_boxes &&
+           c.vx == (c.mirrored ? 0x28000 : (int32_t)0xFFFD8000) &&
+           c.producer_timer == (uint16_t)(c.mirrored ? -0x1234 : 0x1234) &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) >= 1);
+
+    /* It flies until a solid cell 6 px ahead sticks it: song 0x13A, hp 0,
+     * state 2, a negated-halved vx plus random, vy and ay set. */
+    c.x = AOS_FIXED(200);
+    c.y = AOS_FIXED(100);
+    c.vx = 0x28000;
+    c.vy = 0;
+    c.ay = 0;
+    c.hp = 1;
+    c.state = 1;
+    for (int cx = 20; cx <= 32; ++cx) cells[12 * W + cx] = 0x01;
+    (void)aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(c.state == 2 && c.hp == 0 && c.vy != 0 && c.ay == 0x2000 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x13A) >= 1);
+    int32_t angle0 = (int32_t)c.angle;
+    (void)aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(c.state == 2 && c.angle != (uint32_t)angle0);
+
+    /* A struck cleaver loses its hit point at once (sub_080BFF0C). */
+    AosEnemy c2 = c;
+    c2.state = 1;
+    c2.hp = 1;
+    c2.x = AOS_FIXED(200);
+    c2.y = AOS_FIXED(100);
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = c2.x;
+    soma.y = c2.y;
+    AosHitReport hit = aos_enemy_update(&c2, &soma, &layer, &kind, &weapon, &blade,
+                                        10, 4, 0, 0, always_zero);
+    assert(hit.enemy_hit && c2.hp == 0);
+
+    /* The parent's lethal blow: state 2, still frame 6 next update, song
+     * 0x1C1 and a gore child; then particles every fourth tick until the
+     * 0x40 timer deletes it. */
+    e.state = 0;
+    e.step = 0;
+    e.timer = 0;
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(100);
+    e.vx = e.vy = e.ax = e.ay = 0;
+    e.hp = stats.hp;
+    soma.x = e.x;
+    soma.y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 9999, 4,
+                           0, 0, always_zero);
+    assert(hit.killed && e.state == 2 && e.step == 0 && e.defeated);
+    aos_audio_clear();
+    AosHitReport death = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                                          10, 4, 0, 0, always_zero);
+    assert(e.static_frame == 6 && e.step == 1 && e.timer == 0x40 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1C1) >= 1);
+    assert(death.child_count == 1 &&
+           death.children[0].role == AOS_ROLE_BUTCHER_GORE);
+    /* The gore lands 18 px to the facing side plus or minus 1 px (the
+     * centred 0x20000 draw is -1 px with a zero RNG), 32 px up plus or
+     * minus 1. */
+    assert(death.children[0].x == e.x + (e.mirrored ? -0x120000 : 0x120000) -
+                                0x10000 &&
+           death.children[0].y == e.y - 0x200000 - 0x10000);
+
+    frames = 0;
+    int particles = 0;
+    while (!e.removed && frames < 100) {
+        AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                                          10, 4, 0, 0, always_zero);
+        particles += r.child_count;
+        ++frames;
+    }
+    assert(e.removed && particles >= 8 && e.helper_spawned);
+
+    /* A gore chunk survives the sign draw with a zero RNG, shows still
+     * frame 8, falls under ay 0x2000 and sticks 4 px above a floor cell. */
+    AosEnemy g = {0};
+    g.id = AOS_ENEMY_EVIL_BUTCHER;
+    g.role = AOS_ROLE_BUTCHER_GORE;
+    g.static_frame = -1;
+    g.x = AOS_FIXED(200);
+    g.y = AOS_FIXED(60);
+    (void)aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(g.state == 1 && g.static_frame == 8 && g.ay == 0x2000 &&
+           g.angle == 0xC000 && !g.removed);
+    cells[16 * W + 25] = 0x01;
+    frames = 0;
+    while (g.state == 1 && frames < 200) {
+        (void)aos_enemy_update(&g, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+        ++frames;
+    }
+    assert(g.state == 2 && g.vx != 0 && g.vy != 0);
+
+    /* A death particle counts its life down and is removed at zero. */
+    AosEnemy p = {0};
+    p.id = AOS_ENEMY_EVIL_BUTCHER;
+    p.role = AOS_ROLE_BUTCHER_PARTICLE;
+    p.static_frame = -1;
+    p.timer = 3;
+    (void)aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(p.state == 1 && p.static_frame == 9 && p.timer == 2);
+    (void)aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    (void)aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(!p.removed && p.timer == 0);
+    (void)aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(p.removed);
+
+    /* The flag path (0x8E & 0x40) is state 3: animation only. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_EVIL_BUTCHER, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(e.state == 3 && e.anim.id == 0);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -6105,6 +6331,7 @@ int main(void) {
     bomber_armor_tests();
     sky_fish_tests();
     ectoplasm_tests();
+    butcher_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

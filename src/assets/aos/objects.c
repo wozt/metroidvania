@@ -359,6 +359,15 @@ static const EntitySpec entities[] = {
      * reads the entity box record, not a probe table; the shared
      * 0x085286F8 descriptor stands in for the floor snap. */
     PROBES("biphron", 0x081CC05C, 0x0820AC04, 0, 0x08223FF8, 0x085286F8),
+    /* EnemyEvilButcherCreate / the cleaver, gore and particle children
+     * (sub_080BF738 / sub_080BF990 / sub_080BF6B8): graphics 0x082052D0,
+     * palette 0x0820C27C with parameter 1 as bank (sub_08068264), frames
+     * 0x08256720, the state-0 walker probes 0x085288FC (sub_0806CAF8
+     * mode 0xC). Still frames 6 (the death pose), 8 (cleaver and gore)
+     * and 9 (particle) are the children's + 0x65 direct frames. */
+    {"evil_butcher", 0x082052D0, 0x0820C27C, 0, 0x08256720, 0x085288FC,
+     0, 0, 3, {6, 8, 9}},
+    ENTITY("evil_butcher_bank1", 0x082052D0, 0x0820C27C, 1, 0x08256720),
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

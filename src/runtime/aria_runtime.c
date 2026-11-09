@@ -138,6 +138,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [20] = "winged_skeleton",
                                                      [21] = "minotaur",
                                                      [24] = "fleaman",
+                                                     [25] = "evil_butcher",
                                                      [28] = "catoblepas",
                                                      [29] = "ghost_dancer",
                                                      [31] = "killer_doll",
@@ -171,9 +172,9 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [99] = "lubicant"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
-#define VARIANT_ARTS 4
+#define VARIANT_ARTS 5
 static const struct { int id, bank; } variant_keys[VARIANT_ARTS] = {
-    {57, 1}, {29, 1}, {29, 2}, {-1, 0},
+    {57, 1}, {29, 1}, {29, 2}, {25, 1}, {-1, 0},
 };
 
 /* A WAV recording of the mixer output (unsigned 8-bit mono). */
@@ -250,6 +251,7 @@ static void start_mp2k_song(void *context, uint16_t song,
 static int enemy_bank(const AosEnemy *enemy) {
     if (enemy->id == AOS_ENEMY_MEDUSA_HEAD) return enemy->param1 & 1;
     if (enemy->id == AOS_ENEMY_GHOST_DANCER) return enemy->param0 & 0xFF;
+    if (enemy->id == AOS_ENEMY_EVIL_BUTCHER) return enemy->param1 & 0xFF;
     return 0;
 }
 #define ENEMY_STATIC_FRAMES 20 /* single sprite frames of child entities per kind */
@@ -4109,6 +4111,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
         SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x, (float)ey - rect.y - (float)cam_y};
         if (e->enemy.role == AOS_ROLE_AXE || e->enemy.role == AOS_ROLE_FIN ||
             e->enemy.role == AOS_ROLE_WORM_SEGMENT ||
+            e->enemy.role == AOS_ROLE_BUTCHER_CLEAVER ||
+            e->enemy.role == AOS_ROLE_BUTCHER_GORE ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
             ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS ||
               e->enemy.id == AOS_ENEMY_GIANT_WORM || e->enemy.id == AOS_ENEMY_POISON_WORM) &&

@@ -2,6 +2,73 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0871 - Evil Butcher ported (id 25)
+
+- EnemyEvilButcherCreate (0x080BFE1C) /
+  EnemyEvilButcherUpdate (0x080BFF14) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_EVIL_BUTCHER
+  (0x19), the enemy_names[25] = "evil_butcher" kind row
+  (objects.c PROBES: graphics 0x082052D0, palette
+  0x0820C27C banked by parameter 1, frames 0x08256720,
+  probes 0x085288FC; still frames 6, 8, 9; palette bank
+  1 exported as evil_butcher_bank1) and roles
+  AOS_ROLE_BUTCHER_CLEAVER / _GORE / _PARTICLE (56-58).
+- Create: animation 0 looping, the global 0x8E & 0x40
+  path is state 3, otherwise the floor snap, one pixel
+  down (+ 0x46 += 1) and state 0 with the generic
+  element-0 contact.
+- State 0 sub_080BFB58: at an animation loop start the
+  0xA0 x 0x78 player box wakes it into state 1, else the
+  u8 timer flips the facing past 2; every tick the probe
+  walker (mode 0xC) walks at 0xA000 - (tick << 0xB) or
+  0x3000 by frame parity, result & 0x1B != 8 with timer
+  <= 2 forcing it to 3.
+- State 1 sub_080BFBF4: step 0 faces the player and
+  plays animation 1 once; step 1 emits the cleaver
+  child at frame 2 tick 2 (pixel position 24 px up, 16 px
+  to the facing side, facing and parameter 1 copied);
+  step 3 returns to the patrol on animation 0.
+- State 2 sub_080BFCD8: song 0x1C1, a gore child 18 px
+  to the facing side plus or minus 1 px and 32 px up,
+  still frame 6, timer 0x40; every fourth tick a
+  sub_08045CEC sparkle (animation 0xD, row 8) or a
+  particle ((r & 7) + 8 frames) with the native centred
+  scatters; timer 0x10 sets the + 0xF flag; 0 deletes.
+- The cleaver sub_080BF738: state 0 still frame 8, own
+  (-8, -4, 16, 8) boxes, hp 1, element-1 contact, song
+  0x89, vx +/- 2.5 px/frame, spin -+ 0x1234; state 1
+  flies at accel 8.0, dies into a flame when struck
+  (sub_080BFF0C zeroes hp) and sticks on a solid cell 6
+  px ahead (song 0x13A, hp 0, negated-halved vx plus a
+  random 15 bits, vy, ay 0x2000); state 2 spins the
+  affine angle; margins and state 3 delete it.
+- The gore sub_080BF990: state 0 keeps still frame 8,
+  the sign draw deletes about half, falls under ay
+  0x2000 from angle 0xC000; a solid cell 4 px below
+  sticks it (song 0x13A, spin (r & 0x7FF) + 0xC00, vx
+  0x8000 + (r & 0x3FFF) and vy random, negated
+  together); state 2 spins and moves; margins delete.
+- The particle sub_080BF6B8: still frame 9, life of 8
+  to 15 frames set by the spawner.
+- The renderer turns the cleaver and gore by their
+  affine angle; enemy_bank() resolves the parameter-1
+  palette bank.
+- butcher_tests covers create, the patrol and wake box,
+  the throw and the cleaver emission offsets, the
+  cleaver's launch, floor stick, strike and spin, the
+  lethal transition (state 2, song 0x1C1, gore child,
+  frame 6, 0x40-tick burst loop and deletion), the gore
+  lifecycle and the flag-path state 3.
+- Divergences: the + 0x58 fade bits, the + 0x59 flags,
+  the + 0xF flag, the sub_0806D4C0 pause, the
+  sub_080421AC box query, the + 0x5A palette bits and
+  the sub_0803E654 sign draw (RNG sign instead) are not
+  ported; the sub_080020A0 probes are normalized into
+  room pixels; no emulator comparison.
+- The monster drops common 0x0022 / rare 0x0019 through
+  the generic roll and its red soul 18 shares the
+  ported SKILL_RIPPER_ROUTINE 0x08023A71 as variant 0.
+
 ## Patch 0870 - Evil Butcher decoded (id 25, not yet ported)
 
 EnemyEvilButcherCreate (0x080BFE1C) / EnemyEvilButcherUpdate

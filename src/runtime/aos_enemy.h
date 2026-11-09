@@ -169,6 +169,7 @@ enum {
     AOS_ENEMY_BOMBER_ARMOR = 0x3A,
     AOS_ENEMY_SKY_FISH = 0x51,
     AOS_ENEMY_ECTOPLASM = 0x1B,
+    AOS_ENEMY_EVIL_BUTCHER = 0x19,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -199,7 +200,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_PILLAR_PIECE = 47, AOS_ROLE_PILLAR_BREATH = 48, AOS_ROLE_PILLAR_FIREBALL = 49,
        AOS_ROLE_PILLAR_SMOKE = 50, AOS_ROLE_HEADHUNTER_HEAD = 51,
        AOS_ROLE_WORM_SEGMENT = 52, AOS_ROLE_BIPHRON_SHOT = 53,
-       AOS_ROLE_BOMBER_BOMB = 54, AOS_ROLE_BOMBER_SPARK = 55 };
+       AOS_ROLE_BOMBER_BOMB = 54, AOS_ROLE_BOMBER_SPARK = 55,
+       AOS_ROLE_BUTCHER_CLEAVER = 56, AOS_ROLE_BUTCHER_GORE = 57,
+       AOS_ROLE_BUTCHER_PARTICLE = 58 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot

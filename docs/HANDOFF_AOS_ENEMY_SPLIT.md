@@ -327,6 +327,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      differs. The next step is the deferred directory reorganization
      (`runtime/aos/enemies`, souls, math and the analogous MZM
      paths), one move per commit.
+   - *(Continued in patch 0944.)* The 53 family files moved to
+     `src/runtime/aos/enemies/`; includes, CMake and registry paths
+     updated. Continue the reorganization with the soul modules
+     (`aos/red_souls`, `aos/blue_souls`), weapons, math and the
+     analogous MZM paths, one category per commit.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

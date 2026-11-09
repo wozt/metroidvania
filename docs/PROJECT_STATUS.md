@@ -2,6 +2,13 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0944 - Enemy families move to src/runtime/aos/enemies/
+
+- The 53 family translation units moved from `src/runtime/aos_enemies/`
+  to `src/runtime/aos/enemies/`; their `../` includes became `../../`
+  and CMake, `annotations.tsv` and `features.tsv` paths were updated.
+  No code or behavior changed.
+
 ## Patch 0943 - Bat family becomes a real translation unit
 
 - `aos_enemies/bat.c` now compiles independently with its hang, swoop

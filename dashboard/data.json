@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T16:11:58+00:00",
+ "generated_at": "2026-11-09T16:17:06+00:00",
  "git": {
-  "commit": "19c78e8e",
+  "commit": "dc16bf51",
   "branch": "main",
   "dirty": true
  },
@@ -8855,7 +8855,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/axe_armor.c",
+    "src/runtime/aos/enemies/axe_armor.c",
     "src/runtime/aos_soul_red_axe.c",
     "src/runtime/aos_audio.c",
     "src/runtime/aria_runtime.c",
@@ -8981,7 +8981,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/bat.c",
+    "src/runtime/aos/enemies/bat.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9056,7 +9056,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/beam_skeleton.c",
+    "src/runtime/aos/enemies/beam_skeleton.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9141,8 +9141,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/biphron.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/biphron.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9249,7 +9249,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/crow.c",
+    "src/runtime/aos/enemies/crow.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9333,8 +9333,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/rock_armor.c",
-    "src/runtime/aos_enemies/bomber_armor.c",
+    "src/runtime/aos/enemies/rock_armor.c",
+    "src/runtime/aos/enemies/bomber_armor.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9423,8 +9423,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/bone_pillar.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/bone_pillar.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9506,7 +9506,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/buer.c",
+    "src/runtime/aos/enemies/buer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9595,7 +9595,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skull_millione.c",
+    "src/runtime/aos/enemies/skull_millione.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9668,8 +9668,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/gorgon.c",
-    "src/runtime/aos_enemies/harpy.c",
+    "src/runtime/aos/enemies/gorgon.c",
+    "src/runtime/aos/enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9740,7 +9740,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/chronomage.c",
+    "src/runtime/aos/enemies/chronomage.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9837,8 +9837,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/cockatrice.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/cockatrice.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -9940,7 +9940,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/curly.c",
+    "src/runtime/aos/enemies/curly.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10020,7 +10020,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/dead_crusader.c",
+    "src/runtime/aos/enemies/dead_crusader.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10096,7 +10096,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/dead_warrior.c",
+    "src/runtime/aos/enemies/dead_warrior.c",
     "src/runtime/aos_effect.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -10173,7 +10173,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/dryad.c",
+    "src/runtime/aos/enemies/dryad.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10272,7 +10272,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/curly.c",
+    "src/runtime/aos/enemies/curly.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10343,7 +10343,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/ectoplasm.c",
+    "src/runtime/aos/enemies/ectoplasm.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10442,7 +10442,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/valkyrie.c",
+    "src/runtime/aos/enemies/valkyrie.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10513,8 +10513,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/evil_butcher.c",
-    "src/runtime/aos_enemies/buer.c",
+    "src/runtime/aos/enemies/evil_butcher.c",
+    "src/runtime/aos/enemies/buer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10606,7 +10606,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/fleaman.c",
+    "src/runtime/aos/enemies/fleaman.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10684,7 +10684,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/gargoyle.c",
+    "src/runtime/aos/enemies/gargoyle.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10762,7 +10762,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/ghost.c",
+    "src/runtime/aos/enemies/ghost.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10836,7 +10836,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/ghost_dancer.c",
+    "src/runtime/aos/enemies/ghost_dancer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10914,8 +10914,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/giant_ghost.c",
-    "src/runtime/aos_enemies/white_dragon.c",
+    "src/runtime/aos/enemies/giant_ghost.c",
+    "src/runtime/aos/enemies/white_dragon.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -10996,8 +10996,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/worm.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/worm.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11092,8 +11092,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/gorgon.c",
-    "src/runtime/aos_enemies/harpy.c",
+    "src/runtime/aos/enemies/gorgon.c",
+    "src/runtime/aos/enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11170,7 +11170,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/gargoyle.c",
+    "src/runtime/aos/enemies/gargoyle.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11241,7 +11241,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/harpy.c",
+    "src/runtime/aos/enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11324,8 +11324,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/headhunter.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/headhunter.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos_pickup.c",
     "src/runtime/aos_save.c"
@@ -11409,7 +11409,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/tiny_devil.c",
+    "src/runtime/aos/enemies/tiny_devil.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11491,7 +11491,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/kicker_skeleton.c",
+    "src/runtime/aos/enemies/kicker_skeleton.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11579,7 +11579,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/killer_doll.c",
+    "src/runtime/aos/enemies/killer_doll.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11662,7 +11662,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/killer_fish.c",
+    "src/runtime/aos/enemies/killer_fish.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11754,7 +11754,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/killer_mantle.c",
+    "src/runtime/aos/enemies/killer_mantle.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -11851,8 +11851,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/killer_doll.c",
-    "src/runtime/aos_enemies/lightning_doll.c",
+    "src/runtime/aos/enemies/killer_doll.c",
+    "src/runtime/aos/enemies/lightning_doll.c",
     "src/runtime/aos_effect.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -11936,7 +11936,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skull_millione.c",
+    "src/runtime/aos/enemies/skull_millione.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12014,7 +12014,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/medusa_head.c",
+    "src/runtime/aos/enemies/medusa_head.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12093,7 +12093,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/merman.c",
+    "src/runtime/aos/enemies/merman.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12175,7 +12175,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/mimic.c",
+    "src/runtime/aos/enemies/mimic.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12255,8 +12255,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/minotaur.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/minotaur.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12349,7 +12349,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/needles.c",
+    "src/runtime/aos/enemies/needles.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12426,8 +12426,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/nemesis.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/nemesis.c",
     "src/runtime/aos_enemy.h",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -12517,7 +12517,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/peeping_eye.c",
+    "src/runtime/aos/enemies/peeping_eye.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12600,8 +12600,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/worm.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/worm.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12696,7 +12696,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/crow.c",
+    "src/runtime/aos/enemies/crow.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12773,8 +12773,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/minotaur.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/minotaur.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -12867,7 +12867,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/ripper.c",
+    "src/runtime/aos/enemies/ripper.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c",
     "src/runtime/aos_audio.c"
@@ -12947,7 +12947,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/rock_armor.c",
+    "src/runtime/aos/enemies/rock_armor.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13026,7 +13026,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/harpy.c",
+    "src/runtime/aos/enemies/harpy.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13097,7 +13097,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
+    "src/runtime/aos/enemies/skeleton.c",
     "src/assets/aos/objects.c",
     "src/runtime/aria_runtime.c"
    ],
@@ -13184,7 +13184,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton_knight.c",
+    "src/runtime/aos/enemies/skeleton_knight.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13261,7 +13261,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skull_archer.c",
+    "src/runtime/aos/enemies/skull_archer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13344,7 +13344,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skull_millione.c",
+    "src/runtime/aos/enemies/skull_millione.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13417,7 +13417,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/sky_fish.c",
+    "src/runtime/aos/enemies/sky_fish.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13508,7 +13508,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/tiny_devil.c",
+    "src/runtime/aos/enemies/tiny_devil.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13586,7 +13586,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/tsuchinoko.c",
+    "src/runtime/aos/enemies/tsuchinoko.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13694,7 +13694,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/valkyrie.c",
+    "src/runtime/aos/enemies/valkyrie.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13774,9 +13774,9 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skull_archer.c",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/waiter_skeleton.c",
+    "src/runtime/aos/enemies/skull_archer.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/waiter_skeleton.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13885,7 +13885,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/white_dragon.c",
+    "src/runtime/aos/enemies/white_dragon.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -13975,8 +13975,8 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/winged_skeleton.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/winged_skeleton.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -14056,7 +14056,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/zombie.c",
+    "src/runtime/aos/enemies/zombie.c",
     "src/runtime/aos_effect.h",
     "src/runtime/aos_audio.c",
     "src/runtime/aria_runtime.c",
@@ -14161,7 +14161,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/zombie_officer.c",
+    "src/runtime/aos/enemies/zombie_officer.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -14239,7 +14239,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/zombie_soldier.c",
+    "src/runtime/aos/enemies/zombie_soldier.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
    ],
@@ -19735,59 +19735,59 @@
     "include/fusion/assets/aos.h",
     "src/assets/aos/objects.c",
     "src/runtime/aos_enemy_internal.h",
-    "src/runtime/aos_enemies/sky_fish.c",
-    "src/runtime/aos_enemies/ectoplasm.c",
-    "src/runtime/aos_enemies/ghost_dancer.c",
-    "src/runtime/aos_enemies/medusa_head.c",
-    "src/runtime/aos_enemies/ghost.c",
-    "src/runtime/aos_enemies/zombie_officer.c",
-    "src/runtime/aos_enemies/curly.c",
-    "src/runtime/aos_enemies/needles.c",
-    "src/runtime/aos_enemies/gorgon.c",
-    "src/runtime/aos_enemies/dead_warrior.c",
-    "src/runtime/aos_enemies/mimic.c",
-    "src/runtime/aos_enemies/fleaman.c",
-    "src/runtime/aos_enemies/skeleton_knight.c",
-    "src/runtime/aos_enemies/killer_doll.c",
-    "src/runtime/aos_enemies/lightning_doll.c",
-    "src/runtime/aos_enemies/beam_skeleton.c",
-    "src/runtime/aos_enemies/skull_millione.c",
-    "src/runtime/aos_enemies/dead_crusader.c",
-    "src/runtime/aos_enemies/gargoyle.c",
-    "src/runtime/aos_enemies/axe_armor.c",
-    "src/runtime/aos_enemies/rock_armor.c",
-    "src/runtime/aos_enemies/skull_archer.c",
-    "src/runtime/aos_enemies/skeleton.c",
-    "src/runtime/aos_enemies/killer_fish.c",
-    "src/runtime/aos_enemies/winged_skeleton.c",
-    "src/runtime/aos_enemies/harpy.c",
-    "src/runtime/aos_enemies/tiny_devil.c",
-    "src/runtime/aos_enemies/tsuchinoko.c",
-    "src/runtime/aos_enemies/ripper.c",
-    "src/runtime/aos_enemies/merman.c",
-    "src/runtime/aos_enemies/peeping_eye.c",
-    "src/runtime/aos_enemies/buer.c",
-    "src/runtime/aos_enemies/white_dragon.c",
-    "src/runtime/aos_enemies/bone_pillar.c",
-    "src/runtime/aos_enemies/giant_ghost.c",
-    "src/runtime/aos_enemies/minotaur.c",
-    "src/runtime/aos_enemies/worm.c",
-    "src/runtime/aos_enemies/biphron.c",
-    "src/runtime/aos_enemies/bomber_armor.c",
-    "src/runtime/aos_enemies/evil_butcher.c",
-    "src/runtime/aos_enemies/killer_mantle.c",
-    "src/runtime/aos_enemies/dryad.c",
-    "src/runtime/aos_enemies/kicker_skeleton.c",
-    "src/runtime/aos_enemies/waiter_skeleton.c",
-    "src/runtime/aos_enemies/cockatrice.c",
-    "src/runtime/aos_enemies/chronomage.c",
-    "src/runtime/aos_enemies/headhunter.c",
-    "src/runtime/aos_enemies/zombie.c",
-    "src/runtime/aos_enemies/nemesis.c",
-    "src/runtime/aos_enemies/crow.c",
-    "src/runtime/aos_enemies/zombie_soldier.c",
-    "src/runtime/aos_enemies/valkyrie.c",
-    "src/runtime/aos_enemies/bat.c",
+    "src/runtime/aos/enemies/sky_fish.c",
+    "src/runtime/aos/enemies/ectoplasm.c",
+    "src/runtime/aos/enemies/ghost_dancer.c",
+    "src/runtime/aos/enemies/medusa_head.c",
+    "src/runtime/aos/enemies/ghost.c",
+    "src/runtime/aos/enemies/zombie_officer.c",
+    "src/runtime/aos/enemies/curly.c",
+    "src/runtime/aos/enemies/needles.c",
+    "src/runtime/aos/enemies/gorgon.c",
+    "src/runtime/aos/enemies/dead_warrior.c",
+    "src/runtime/aos/enemies/mimic.c",
+    "src/runtime/aos/enemies/fleaman.c",
+    "src/runtime/aos/enemies/skeleton_knight.c",
+    "src/runtime/aos/enemies/killer_doll.c",
+    "src/runtime/aos/enemies/lightning_doll.c",
+    "src/runtime/aos/enemies/beam_skeleton.c",
+    "src/runtime/aos/enemies/skull_millione.c",
+    "src/runtime/aos/enemies/dead_crusader.c",
+    "src/runtime/aos/enemies/gargoyle.c",
+    "src/runtime/aos/enemies/axe_armor.c",
+    "src/runtime/aos/enemies/rock_armor.c",
+    "src/runtime/aos/enemies/skull_archer.c",
+    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/enemies/killer_fish.c",
+    "src/runtime/aos/enemies/winged_skeleton.c",
+    "src/runtime/aos/enemies/harpy.c",
+    "src/runtime/aos/enemies/tiny_devil.c",
+    "src/runtime/aos/enemies/tsuchinoko.c",
+    "src/runtime/aos/enemies/ripper.c",
+    "src/runtime/aos/enemies/merman.c",
+    "src/runtime/aos/enemies/peeping_eye.c",
+    "src/runtime/aos/enemies/buer.c",
+    "src/runtime/aos/enemies/white_dragon.c",
+    "src/runtime/aos/enemies/bone_pillar.c",
+    "src/runtime/aos/enemies/giant_ghost.c",
+    "src/runtime/aos/enemies/minotaur.c",
+    "src/runtime/aos/enemies/worm.c",
+    "src/runtime/aos/enemies/biphron.c",
+    "src/runtime/aos/enemies/bomber_armor.c",
+    "src/runtime/aos/enemies/evil_butcher.c",
+    "src/runtime/aos/enemies/killer_mantle.c",
+    "src/runtime/aos/enemies/dryad.c",
+    "src/runtime/aos/enemies/kicker_skeleton.c",
+    "src/runtime/aos/enemies/waiter_skeleton.c",
+    "src/runtime/aos/enemies/cockatrice.c",
+    "src/runtime/aos/enemies/chronomage.c",
+    "src/runtime/aos/enemies/headhunter.c",
+    "src/runtime/aos/enemies/zombie.c",
+    "src/runtime/aos/enemies/nemesis.c",
+    "src/runtime/aos/enemies/crow.c",
+    "src/runtime/aos/enemies/zombie_soldier.c",
+    "src/runtime/aos/enemies/valkyrie.c",
+    "src/runtime/aos/enemies/bat.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -19924,7 +19924,7 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_enemy.c",
-    "src/runtime/aos_enemies/peeping_eye.c"
+    "src/runtime/aos/enemies/peeping_eye.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c"
@@ -19975,7 +19975,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemy.h",
-    "src/runtime/aos_enemies/peeping_eye.c"
+    "src/runtime/aos/enemies/peeping_eye.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c"
@@ -20025,7 +20025,7 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_enemy.c",
-    "src/runtime/aos_enemies/peeping_eye.c"
+    "src/runtime/aos/enemies/peeping_eye.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c"
@@ -20437,7 +20437,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_enemies/white_dragon.c"
+    "src/runtime/aos/enemies/white_dragon.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c"
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "dc16bf51",
+   "date": "2026-11-09",
+   "subject": "Compile Bat family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "19c78e8e",
    "date": "2026-11-09",
    "subject": "Compile Valkyrie/Erinys family as an independent enemy unit",
@@ -22713,12 +22719,6 @@
    "commit": "c705dffb",
    "date": "2026-11-09",
    "subject": "Port Bomber Armor enemy (Aria id 58) with bomb, fuse spark and burst",
-   "scope": "project"
-  },
-  {
-   "commit": "98ffd18c",
-   "date": "2026-11-09",
-   "subject": "Port Biphron enemy (Aria id 78) with attack projectile",
    "scope": "project"
   }
  ],

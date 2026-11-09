@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies.
  *
- * Layout: aos_enemy.c holds the shared framework of cvaos code_08060B98 and
- * includes one file per monster family from aos_enemies/ (each file names
- * the monsters and native routines it ports); the whole is still one
- * translation unit. The ROM sine, the BIOS ArcTan2 and Sqrt and the 16.16
- * product are in aos_math.
+ * Layout: aos_enemy.c holds the shared framework of cvaos code_08060B98;
+ * one file per monster family lives in aos/enemies/ (each file names
+ * the monsters and native routines it ports) and compiles as its own
+ * translation unit through aos_enemy_internal.h. The ROM sine, the BIOS
+ * ArcTan2 and Sqrt and the 16.16 product are in aos_math.
  *
  * The framework: creation (EnemyXCreate per id), the activity window of
  * sub_0806CC20, facing the player (sub_0806BC40), the signed velocity by

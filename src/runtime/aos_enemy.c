@@ -2756,8 +2756,8 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define target_in_water aos_enemy_target_in_water
 #define water_below aos_enemy_water_below
 #define whole aos_enemy_whole
-/* The monsters, one file each in aos_enemies/ (included here: they share
- * this file's static framework and helpers in one translation unit). */
+/* The monsters, one file each in aos/enemies/ (compiled as their own
+ * translation units through aos_enemy_internal.h). */
 
 
 

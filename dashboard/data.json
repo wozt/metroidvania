@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:36:52+00:00",
+ "generated_at": "2026-11-09T14:42:28+00:00",
  "git": {
-  "commit": "7538aced",
+  "commit": "1b23566e",
   "branch": "main",
   "dirty": true
  },
@@ -12079,6 +12079,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/merman.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19741,6 +19742,7 @@
     "src/runtime/aos_enemies/harpy.c",
     "src/runtime/aos_enemies/tiny_devil.c",
     "src/runtime/aos_enemies/ripper.c",
+    "src/runtime/aos_enemies/merman.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22195,6 +22197,12 @@
  },
  "timeline": [
   {
+   "commit": "1b23566e",
+   "date": "2026-11-09",
+   "subject": "Compile Ripper family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "7538aced",
    "date": "2026-11-09",
    "subject": "Compile Tiny Devil/Imp family as an independent enemy unit",
@@ -22666,12 +22674,6 @@
    "commit": "3fc763ed",
    "date": "2026-11-08",
    "subject": "Port bestiary detail bottom description window",
-   "scope": "project"
-  },
-  {
-   "commit": "50bfc987",
-   "date": "2026-11-08",
-   "subject": "Extend soul_description_id to native category 3",
    "scope": "project"
   }
  ],

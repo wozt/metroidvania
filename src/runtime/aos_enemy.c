@@ -2771,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/merman.c"
 #include "aos_enemies/peeping_eye.c"
 #include "aos_enemies/buer.c"
 #include "aos_enemies/white_dragon.c"
@@ -3147,7 +3146,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_MERMAN_SHOT)
-        return merman_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_merman_shot_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                   cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_RIPPER_BLADE)
         return aos_enemy_ripper_blade_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
@@ -3166,7 +3165,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_devil_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->id == AOS_ENEMY_MERMAN && enemy->role == AOS_ROLE_ENEMY)
-        return merman_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_merman_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_RIPPER && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_ripper_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,

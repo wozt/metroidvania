@@ -1,9 +1,22 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Merman (enemy 0x03), its producer and shot.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define generic_death aos_enemy_generic_death
+#define merge_enemy_hit aos_enemy_merge_hit
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define step_anim aos_enemy_step_anim
+#define stop aos_enemy_stop
+#define toward_facing aos_enemy_toward_facing
+#define walk_collide aos_enemy_walk_collide
 
 /* sub_08071648 / sub_08071764: the projectile emitted after Merman's
  * animation-3 wind-up. */
@@ -25,7 +38,7 @@ static void merman_shot(const AosEnemy *owner, const AosEnemyKind *kind,
     report->children[report->child_count++] = shot;
 }
 
-static AosHitReport merman_shot_update(AosEnemy *shot, AosSoma *soma,
+AosHitReport aos_enemy_merman_shot_update(AosEnemy *shot, AosSoma *soma,
                                        const AosEnemyKind *kind,
                                        const AosWeaponEntity *weapon,
                                        const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -57,7 +70,7 @@ static AosHitReport merman_shot_update(AosEnemy *shot, AosSoma *soma,
  * does not encode the separate room-water height, so the native surface
  * crossings are represented by their exact timed phases around the spawn
  * Y while the solid probes remain native BG1 probes. */
-static AosHitReport merman_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_merman_update(AosEnemy *e, AosSoma *soma,
                                   const AosCollision *layer, const AosEnemyKind *kind,
                                   const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,

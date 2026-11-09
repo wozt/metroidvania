@@ -85,7 +85,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      functions.
    - *(Continued in patch 0893.)* `ghost_dancer.c` is independent with only
      its update entry point exported. The object-union proof remains identical
-     for all 488 functions. The other 50 included family files remain.
+     for all 488 functions.
+   - *(Continued in patch 0894.)* `medusa_head.c` is independent and the
+     generic death helper joins the prefixed internal API. Its object-union
+     proof remains identical for all 488 functions. The other 49 included
+     family files remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

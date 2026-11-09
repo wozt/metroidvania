@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0894 - Medusa Head becomes a real translation unit
+
+- `aos_enemies/medusa_head.c` now compiles independently; its flight,
+  spawner and family-local helpers stay static behind one exported update
+  entry point. The shared generic death routine is now exposed through the
+  prefixed internal enemy API.
+- The union comparison again preserves all 488 `-O0` function sizes and
+  normalized instructions. This is a behavior-neutral source-layout change;
+  no feature status changed.
+
 ## Patch 0893 - Ghost Dancer becomes a real translation unit
 
 - `aos_enemies/ghost_dancer.c` now compiles independently with a single

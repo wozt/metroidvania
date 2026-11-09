@@ -2076,12 +2076,14 @@ void aos_enemy_accel_move(AosEnemy *e, int32_t limit);
 
 /* sub_0806AEAC: the generic death, a flame every 4 frames over 16 x 12
  * pixels, the blink, then the deletion. */
-static void generic_death(AosEnemy *enemy, const AosEnemyKind *kind, uint32_t (*random)(void),
-                          AosHitReport *report) {
+void aos_enemy_generic_death(AosEnemy *enemy, const AosEnemyKind *kind,
+                             uint32_t (*random)(void),
+                             AosHitReport *report) {
     if ((enemy->timer & 3) == 0) spawn_flame(enemy, 0x100000, 0xC0000, random, report);
     enemy->hidden = enemy->timer <= 0x27 ? kind->blink[enemy->timer] & 1 : false;
     if ((int8_t)--enemy->timer <= 0) enemy->removed = true;
 }
+#define generic_death aos_enemy_generic_death
 
 /* sub_08069A00 with the zombie's arguments: X then Y motion with the walls
  * at x +/- 8, y - 10, the ceiling at y - 32 and the floor; returns 1 / 2
@@ -2728,7 +2730,6 @@ static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/axe_armor.c"
 #include "aos_enemies/rock_armor.c"
 #include "aos_enemies/skull_archer.c"
-#include "aos_enemies/medusa_head.c"
 #include "aos_enemies/needles.c"
 #include "aos_enemies/skeleton.c"
 #include "aos_enemies/killer_fish.c"
@@ -3182,8 +3183,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return flea_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            random);
     if (enemy->id == AOS_ENEMY_MEDUSA_HEAD && enemy->role == AOS_ROLE_ENEMY)
-        return medusa_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
-                             cam_y, random);
+        return aos_enemy_medusa_head_update(enemy, soma, kind, weapon,
+                                            weapon_frames, soma_atk, soma_def,
+                                            cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_GHOST_DANCER)
         return aos_enemy_ghost_dancer_update(enemy, soma, kind, weapon,
                                              weapon_frames, soma_atk, soma_def,

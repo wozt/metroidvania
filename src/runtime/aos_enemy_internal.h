@@ -29,6 +29,9 @@ int32_t aos_enemy_target_x(const AosSoma *soma);
 int32_t aos_enemy_target_y(const AosSoma *soma);
 bool aos_enemy_player_near(const AosSoma *soma, int32_t x, int32_t y,
                            int w, int h);
+void aos_enemy_generic_death(AosEnemy *enemy, const AosEnemyKind *kind,
+                             uint32_t (*random)(void),
+                             AosHitReport *report);
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -46,5 +49,10 @@ AosHitReport aos_enemy_ghost_dancer_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y);
+AosHitReport aos_enemy_medusa_head_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
 
 #endif

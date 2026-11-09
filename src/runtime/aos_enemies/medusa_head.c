@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Medusa Head (enemy 0x39) and its spawner.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses only the prefixed
+ * internal enemy-framework API. */
+
+#include "../aos_enemy_internal.h"
 
 /* sub_08093A3C: vy swings by + 0x54 (subtracted while + 0x20 is set),
  * + 0x20 flips every + 0x22 frames (+ 0x21 counts), then the move
@@ -19,9 +20,10 @@ static void medusa_fly(AosEnemy *m, const AosAnimSet *anims, uint32_t (*random)(
     m->x += m->vx;
     m->y += m->vy;
     if (m->vy >= 0) {
-        if (m->anim.id == 2) play(m, anims, (random() & 1) ? 0 : 1);
+        if (m->anim.id == 2)
+            aos_enemy_play(m, anims, (random() & 1) ? 0 : 1);
     } else if (m->anim.id != 2) {
-        play(m, anims, 2);
+        aos_enemy_play(m, anims, 2);
     }
 }
 
@@ -35,7 +37,7 @@ static void medusa_spawner(AosEnemy *spawner, const AosSoma *soma, int cam_x, in
     if (random() & 0x1F) return;
     if (spawner->spawned_count >= spawner->param0) return;
     spawner->spawned_count++;
-    int px = (target_x(soma) >> 16) - cam_x;
+    int px = (aos_enemy_target_x(soma) >> 16) - cam_x;
     int sx = px <= 0x67 || (px <= 0x88 && !soma->facing_left) ? 256 : -16;
     report->spawn = true;
     report->spawn_x = cam_x + sx;
@@ -49,43 +51,47 @@ static void medusa_spawner(AosEnemy *spawner, const AosSoma *soma, int cam_x, in
  * and the collision pass (sub_0806E314). The contact callback sub_08093BF0
  * uses element 0x100 for gold heads (its petrification is not ported) and
  * the tracking list of sub_08021924 is not. */
-static AosHitReport medusa_update(AosEnemy *m, AosSoma *soma, const AosEnemyKind *kind,
-                                  const AosWeaponEntity *weapon,
-                                  const AosWeaponFrames *weapon_frames, int soma_atk,
-                                  int soma_def, int cam_x, int cam_y,
-                                  uint32_t (*random)(void)) {
+AosHitReport aos_enemy_medusa_head_update(
+    AosEnemy *m, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void)) {
     AosHitReport report = {0}, spawned = {0};
     if (m->state != 3 &&
-        outside_margins(kind, 4, (m->x >> 16) - cam_x, (m->y >> 16) - cam_y)) {
+        aos_enemy_outside_margins(kind, 4, (m->x >> 16) - cam_x,
+                                  (m->y >> 16) - cam_y)) {
         m->state = 2;
         m->timer = 1;
     }
     if (m->hp > 0 && m->hit_flash) {
         m->hit_flash--;
-        if (m->state != 2) report = collide(m, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        if (m->state != 2)
+            report = aos_enemy_collide(m, soma, kind, weapon, weapon_frames,
+                                       soma_atk, soma_def);
         aos_combat_tick(&m->combat);
         return report;
     }
     switch (m->state) {
     case 0: medusa_fly(m, kind->anims, random); break;
     case 2:
-        generic_death(m, kind, random, &spawned);
+        aos_enemy_generic_death(m, kind, random, &spawned);
         if (m->removed) return spawned;
         break;
     case 3:
         medusa_spawner(m, soma, cam_x, cam_y, random, &report);
         return report;
     case 4:
-        step_anim(m, kind->anims);
+        aos_enemy_step_anim(m, kind->anims);
         return report;
     default:
         break;
     }
-    step_anim(m, kind->anims);
+    aos_enemy_step_anim(m, kind->anims);
     int sx = (m->x >> 16) - cam_x, sy = (m->y >> 16) - cam_y;
     if (!m->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
-        report = collide(m, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(m, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
     aos_combat_tick(&m->combat);
-    take_effects(&report, &spawned);
+    aos_enemy_take_effects(&report, &spawned);
     return report;
 }

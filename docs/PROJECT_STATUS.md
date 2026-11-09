@@ -2,6 +2,48 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0879 - Cockatrice ported (id 46)
+
+- EnemyCockatriceCreate (0x080BC158) /
+  EnemyCockatriceUpdate (0x080BC164) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_COCKATRICE
+  (0x2E), with the sub_080BBCC4 patrol, sub_080BBD90
+  attack, sub_080BBEE4 death and sub_080BC0B4 hurt
+  handlers and the two linked children sub_080BB924
+  (shadow, role 66) and sub_080BBAC4 (rock, role 67).
+- Resources: tiles 0x081E41CC, palette 0x0820B8A4,
+  frames 0x08242994, walker probes 0x085288C0;
+  sounds 0x65 at the rock's end and the death start,
+  0x6E every eighth death tick.
+- State 0 walks the probes (mode 0x14) with the
+  (frame + 1) % 8 speed curve, three clean loop
+  boundaries before turning, and wakes on the centred
+  0xF0 x 0x64 box or on damage; state 1 repeats the
+  walk and at each loop boundary a facing-side check
+  plus a 0x77-pixel reach starts step 2 with
+  animation 1 once — frame 0xA tick 0 spawns the rock
+  and the animation's end arms the 0x20 return timer;
+  state 2 is the death (song 0x65, drift, song 0x6E,
+  gore, the + 0x18 bit-0 corpse mark).
+- The shadow rides the parent's attachment with the
+  affine bob/spin and deletes on the corpse mark;
+  the rock aims and tosses toward Soma, spins and
+  dies at + 0x1A 0x1F with sound 0x65.
+- Divergences: the shadow's palette nibble, trail
+  callback and scale are not ported and its affine
+  bob/spin are approximated by aos_sine; the rock's
+  launch velocity, + 0x58 palette byte and speed
+  factor are approximated and its empty still-frame
+  attack record is replaced by a small own box; the
+  sub_0803E654 sign draw is the RNG bit 15; the
+  gEwramData + 0x13270 bit-2 gate, the room queries,
+  the palette merges and the pause gate are not
+  ported. No emulator comparison.
+- Unit-tested in cockatrice_tests: create and flag
+  state, the shadow emit/ride/delete, the wake, the
+  attack and rock spawn, the rock flight and death,
+  its contact, the return to patrol and the death.
+
 ## Patch 0878 - Waiter Skeleton ported (id 30)
 
 - EnemyWaiterSkeletonCreate (0x080AF574) /

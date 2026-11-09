@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 92 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 93 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1172 | 2401 |
+| Castlevania: Aria of Sorrow | 1182 | 2391 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1452,6 +1452,15 @@ Dependencies: `aos.enemies.gorgon`.
 Known divergences: The exact native gait table, slope and edge probes, particle offsets, random flips, entity-slot ordering, palette callbacks and rewards are not modelled.  
 Next action: Refine the shared gait and collision probes when direct frame-by-frame comparison is available.
 Evidence: in game: `aria area_00_room_039 (--spawn 180 191 --hp 9999): Catoblepas renders with its native palette, emits the visible breath stream by frame 205 and damages Soma for 50 HP`.
+
+[+] **`aos.enemies.cockatrice` — Cockatrice.** sub_080BBFF0 (the shared create, variant 0 for the Cockatrice) loads tiles 0x081E41CC, palette 0x0820B8A4 and frames 0x08242994, plays animation 0 looping, links the sub_080BB924 shadow child through sub_0806DFF8, enters state 3 under the global 0x8E & 0x40 else state 0 after the sub_0806AF98 floor snap and a one-pixel lift, with the sub_0806E1B8 contact and sub_080BC0B4 hurt callbacks. EnemyCockatriceUpdate hides it above y -0x20 (sub_0806E4F8), gates on the sub_0806D128 margin 6 check and the sub_0806AD24 stun outside state 2, dispatches the states and steps the animation. State 0 (sub_080BBCC4) walks the 0x085288C0 probes (mode 0x14) with the (frame + 1) % 8 speed curve, counts three clean loop boundaries before turning, wakes on the centred 0xF0 x 0x64 box or on damage; state 1 (sub_080BBD90) repeats the walk, and at each loop boundary a facing-side check, a 0x77-pixel reach and the global gate start step 2 with animation 1 once — frame 0xA tick 0 spawns the sub_080BBAC4 rock (its + 0x14 the parent, + 0x5C the parent's contact + 1, + 0x65 frame 1, hurt off) and the animation's end arms the 0x20 return timer; the rock aims and tosses toward Soma, spins, dies at + 0x1A 0x1F with sound 0x65. State 2 (sub_080BBEE4) is the death: sound 0x65, animation 2, drift, song 0x6E every eighth tick, gore every other tick, the + 0x18 bit-0 corpse mark and deletion; the shadow rides the parent's attachment (edge + the 0x08119490 offset) and deletes on that mark or in state 3. The hurt sub_080BC0B4 enters state 2 on a lethal blow. Unit-tested in cockatrice_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BBC4`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D044`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E218`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyCockatriceCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyCockatriceUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB8B0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB924`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBAC4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBCC4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBD90`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBEE4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBFF0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BC0B4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BC0F4`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:sub_080009E4`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The shadow child's palette nibble, + 0x24 scale, + 0x4 trail callback and the sub_0803E058 affine fade bookkeeping are not ported and its + 0x18 bob / + 0x1C spin are approximated by aos_sine; the rock's launch velocity, + 0x58 palette byte and speed factor are approximated and its still frame's empty attack record is replaced by a small own box for the sub_080BC0F4 / sub_08021654 contact; the sub_0803E654 sign draw is the RNG bit 15; the gEwramData + 0x13270 bit-2 attack gate, the sub_080421AC room queries, the + 0x5A palette merges and the global pause 0x4BE are not ported; no emulator comparison.  
+Next action: Compare the patrol cadence, the rock throw and the death drift against an emulator; the rock's exact ballistics and the shadow's affine draw remain approximations.
+Evidence: in game: `aria area_05_room_001 (--spawn 320 223 --hp 9999): Cockatrice patrols, throws rocks and dies`.
 
 [+] **`aos.enemies.curly` — Curly.** Pacing at 0.5 slowed uphill (sub_0806AC5C), turning at walls, drops and the room's edges, chasing the player once hurt, the lunging attack with three chances in four, the frame boxes, the generic death with flames and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its walk plays 0x85 at the start of frame 4, its attack at frames 4, 7, 10 and 13, its death 0x1C3 (unit-tested, Durga included).
 

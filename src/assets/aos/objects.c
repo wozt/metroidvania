@@ -400,6 +400,13 @@ static const EntitySpec entities[] = {
      * (sub_0806CAF8 mode 0xC). */
     {"waiter_skeleton", 0x081E4194, 0x0820BE3C, 0, 0x082393E0,
      0x08528608, 0, 0, 0, {0}},
+    /* sub_080BBFF0 / the shadow (sub_080BB924) and rock (sub_080BBAC4)
+     * children, which share the same resources: tiles 0x081E41CC,
+     * palette 0x0820B8A4, frames 0x08242994; the state-0/1 walker
+     * probes 0x085288C0 (sub_0806CAF8 mode 0x14) and the rock's direct
+     * frame 1 (+ 0x65). */
+    {"cockatrice", 0x081E41CC, 0x0820B8A4, 0, 0x08242994,
+     0x085288C0, 0, 0, 1, {1}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

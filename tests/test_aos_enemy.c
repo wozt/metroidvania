@@ -4319,6 +4319,216 @@ static void waiter_skeleton_tests(void) {
     assert(e.removed && gone.child_count == 0);
 }
 
+static void cockatrice_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    /* A thick floor for the 0x085288C0 probes. */
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-2: 0 the patrol (8 frames), 1 the attack (16 frames
+     * so index 0xA exists for the rock spawn), 2 the death. */
+    static const uint8_t eight[8] = {6, 6, 6, 6, 6, 6, 6, 6};
+    static const uint8_t sixteen[16] = {2, 2, 2, 2, 2, 2, 2, 2,
+                                        2, 2, 2, 2, 2, 2, 2, 2};
+    static const uint8_t three[3] = {4, 4, 4};
+    const AosAnimDef defs[3] = {{8, eight}, {16, sixteen}, {3, three}};
+    const AosAnimSet anims = {defs, 3};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 3; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-24, -48, 48, 48};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    kind.probes = (AosProbes){2, -10, 16, 6, {6, -10}};
+    kind.edges[0][0][0] = 8;
+    kind.edges[0][0][1] = -8;
+    /* enemies.tsv id 46: hp 380, contact 35, defence 30, weak 0x20,
+     * resist 0x10, experience 150. */
+    const AosEnemyStats stats = {380, 35, 30, 0x20, 0x10, 150};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(800), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create (sub_080BBFF0): state 0, animation 0 looping,
+     * variant 0; the flag path (0x8E & 0x40) is state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_COCKATRICE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 &&
+           e.variant == 0 && e.hp == stats.hp);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_COCKATRICE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 3);
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(!flagged.removed && flagged.state == 3 && flagged.anim.tick == 2);
+
+    /* The first update emits the shadow child (sub_080BB924): state 0
+     * -> state 1, parent linked, inert to hits. */
+    AosHitReport built = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+    assert(built.child_count == 1 &&
+           built.children[0].role == AOS_ROLE_COCKATRICE_SHADOW &&
+           built.children[0].parent == &e);
+    AosEnemy shadow = built.children[0];
+    (void)aos_enemy_update(&shadow, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(shadow.state == 1);
+    /* The shadow rides the parent's attachment edge (8,-8) plus the
+     * -10 x offset flipped by the facing (the parent faces Soma on
+     * its right, so it is mirrored). */
+    (void)aos_enemy_update(&shadow, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    int sdx = e.mirrored ? -8 + 10 : 8 - 10;
+    assert((shadow.x >> 16) == (e.x >> 16) + sdx &&
+           (shadow.y >> 16) == (e.y >> 16) - 8);
+    /* The parent's death mark (+ 0x18 bit 0) deletes the shadow. */
+    e.ck_flags |= 1;
+    (void)aos_enemy_update(&shadow, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(shadow.removed);
+    e.ck_flags = 0;
+
+    /* The wake box (0xF0 x 0x64 centred): Soma 60 px to the left wakes
+     * it into state 1. */
+    soma.x = e.x - AOS_FIXED(60);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.state == 1 && e.step == 0);
+
+    /* State 1 step 0 -> 1; the walk reaches an animation boundary with
+     * Soma on the matching side within 0x77 px: step 2, animation 1. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1);
+    int frames = 0;
+    while (!(e.step == 2 && e.anim.id == 1) && frames < 120) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 2 && e.anim.id == 1 && frames < 120);
+
+    /* Animation 1 frame 0xA tick 0 spawns the rock (sub_080BBAC4):
+     * parent linked, static frame 1, own contact box, hurt off. */
+    AosHitReport thrown = {0};
+    frames = 0;
+    while (!thrown.child_count && frames < 40) {
+        thrown = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                                  4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(thrown.child_count == 1 &&
+           thrown.children[0].role == AOS_ROLE_COCKATRICE_ROCK &&
+           thrown.children[0].parent == &e &&
+           thrown.children[0].static_frame == 1 &&
+           thrown.children[0].combat.hurt_off);
+    AosEnemy rock = thrown.children[0];
+    /* The rock's first update: state 0 -> 1, aimed toss toward Soma. */
+    (void)aos_enemy_update(&rock, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(rock.state == 1);
+    /* It flies, spins and dies past + 0x1A 0x1F with sound 0x65. */
+    int32_t rx = rock.x, ry = rock.y;
+    uint32_t ra = rock.angle;
+    frames = 0;
+    while (!rock.removed && frames < 80) {
+        (void)aos_enemy_update(&rock, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(rock.removed && frames < 80 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x65) >= 1);
+    (void)rx; (void)ry; (void)ra;
+
+    /* The rock's contact: on Soma it deals damage through its own
+     * box. Rebuild a fresh rock on top of Soma. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_COCKATRICE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    e.state = 1;
+    e.step = 2;
+    e.anim.id = 1;
+    e.anim.frame = 0xA;
+    e.anim.tick = 0;
+    e.anim.flags = AOS_ANIM_TABLE;   /* the attack's non-looping play */
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    soma.hp = soma.max_hp = 320;
+    AosHitReport rock_hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                             NULL, 10, 4, 0, 0, always_zero);
+    /* The spawn update itself does not collide; place the emitted rock
+     * on Soma for its own update. */
+    (void)rock_hit;
+    AosEnemy live;
+    memset(&live, 0, sizeof live);
+    live.id = AOS_ENEMY_COCKATRICE;
+    live.role = AOS_ROLE_COCKATRICE_ROCK;
+    live.x = soma.x;
+    live.y = soma.y;
+    live.stats = stats;
+    live.hp = 1;
+    live.static_frame = 1;
+    live.own_boxes = true;
+    live.own_hurt = live.own_attack = (AosBox){-6, -6, 12, 12};
+    live.combat.type = AOS_TYPE_ENEMY;
+    live.state = 1;
+    AosHitReport contact = aos_enemy_update(&live, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+    assert(contact.soma_hit);
+
+    /* Let the attack finish: animation 1 ends -> step 3 timer 0x20 ->
+     * state 0 animation 0. */
+    frames = 0;
+    while (e.state != 0 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && frames < 200);
+
+    /* The lethal blow (sub_080BC0B4): state 2; the next update plays
+     * sound 0x65, then song 0x6E with gore, deletes at the timer's
+     * end. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_COCKATRICE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(150);
+    e.hp = 1;
+    soma.x = e.x + AOS_FIXED(10);
+    soma.y = e.y + AOS_FIXED(10);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 2 && e.step == 0 && e.defeated);
+    AosHitReport death = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+    assert(!e.removed && e.anim.id == 2 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x65) == 1);
+    (void)death;
+    int ticks = 0;
+    while (!e.removed && ticks < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++ticks;
+    }
+    assert(e.removed && ticks < 200 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) >= 1);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -7441,6 +7651,7 @@ int main(void) {
     tsuchinoko_tests();
     kicker_skeleton_tests();
     waiter_skeleton_tests();
+    cockatrice_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

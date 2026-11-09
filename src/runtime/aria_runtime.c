@@ -166,6 +166,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [35] = "tsuchinoko",
                                                      [83] = "kicker_skeleton",
                                                      [30] = "waiter_skeleton",
+                                                     [46] = "cockatrice",
                                                      [27] = "ectoplasm",
                                                      [82] = "dead_crusader",
                                                      [87] = "gargoyle",
@@ -2687,7 +2688,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_MANTLE_ORBIT ||
                  e->enemy.role == AOS_ROLE_MANTLE_GHOST ||
                  e->enemy.role == AOS_ROLE_WAITER_COMPANION ||
-                 e->enemy.role == AOS_ROLE_WAITER_TRAY) &&
+                 e->enemy.role == AOS_ROLE_WAITER_TRAY ||
+                 e->enemy.role == AOS_ROLE_COCKATRICE_SHADOW ||
+                 e->enemy.role == AOS_ROLE_COCKATRICE_ROCK) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
@@ -2844,7 +2847,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_MANTLE_ORBIT ||
                                        hit.children[c].role == AOS_ROLE_MANTLE_GHOST ||
                                        hit.children[c].role == AOS_ROLE_WAITER_COMPANION ||
-                                       hit.children[c].role == AOS_ROLE_WAITER_TRAY
+                                       hit.children[c].role == AOS_ROLE_WAITER_TRAY ||
+                                       hit.children[c].role == AOS_ROLE_COCKATRICE_SHADOW ||
+                                       hit.children[c].role == AOS_ROLE_COCKATRICE_ROCK
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -4128,6 +4133,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.role == AOS_ROLE_BUTCHER_GORE ||
             e->enemy.role == AOS_ROLE_MANTLE_ORBIT ||
             e->enemy.role == AOS_ROLE_WAITER_TRAY ||
+            e->enemy.role == AOS_ROLE_COCKATRICE_ROCK ||
+            e->enemy.role == AOS_ROLE_COCKATRICE_SHADOW ||
             (e->enemy.id == AOS_ENEMY_DRYAD && e->enemy.role == AOS_ROLE_ENEMY &&
              e->enemy.state == 3) ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||

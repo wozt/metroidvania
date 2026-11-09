@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:02:17+00:00",
+ "generated_at": "2026-11-09T14:05:37+00:00",
  "git": {
-  "commit": "1bcfdc0a",
+  "commit": "08f09f0f",
   "branch": "main",
   "dirty": true
  },
@@ -9328,6 +9328,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemies/rock_armor.c",
     "src/runtime/aos_enemies/bomber_armor.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -12905,6 +12906,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/rock_armor.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19699,6 +19701,7 @@
     "src/runtime/aos_enemies/dead_crusader.c",
     "src/runtime/aos_enemies/gargoyle.c",
     "src/runtime/aos_enemies/axe_armor.c",
+    "src/runtime/aos_enemies/rock_armor.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22153,6 +22156,12 @@
  },
  "timeline": [
   {
+   "commit": "08f09f0f",
+   "date": "2026-11-09",
+   "subject": "Compile Axe Armor family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "1bcfdc0a",
    "date": "2026-11-09",
    "subject": "Compile Gargoyle family as an independent enemy unit",
@@ -22624,12 +22633,6 @@
    "commit": "676b2b70",
    "date": "2026-11-08",
    "subject": "Mark secret rooms on the wall break, not on map visit",
-   "scope": "project"
-  },
-  {
-   "commit": "55d52d92",
-   "date": "2026-11-08",
-   "subject": "Document the Soma grab-state entry chain",
    "scope": "project"
   }
  ],

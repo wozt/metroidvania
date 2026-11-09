@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0911 - Rock Armor family becomes a real translation unit
+
+- `aos_enemies/rock_armor.c` now compiles independently with its body,
+  rock and rock-piece updates exported through `aos_enemy_internal.h`.
+  Its walker probes, walk speed, walk and death helpers join the internal
+  API for the still-included Bomber Armor family, which shares them.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0910 - Axe Armor family becomes a real translation unit
 
 - `aos_enemies/axe_armor.c` now compiles independently with its body and

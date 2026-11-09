@@ -1,18 +1,42 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Rock Armor (enemy 0x12) and its rocks.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define pixel_delta aos_enemy_pixel_delta
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_ahead_within aos_enemy_player_ahead_within
+#define random_centred aos_enemy_random_centred
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
+
+#define rock_armor_probes aos_enemy_rock_armor_probes
+#define rock_armor_speed aos_enemy_rock_armor_speed
+#define rock_armor_walk aos_enemy_rock_armor_walk
+#define rock_armor_die aos_enemy_rock_armor_die
+#define rock_probes aos_enemy_rock_probes
 
 /* The walker probes of the Rock Armor (0x0852872C) and of its rock
  * (0x08528738), read from the ROM: wall count, ceiling, floor, half width,
  * wall y offsets. */
-static const AosProbes rock_armor_probes = {2, -40, -1, 6, {-7, -24}};
-static const AosProbes rock_probes = {1, -8, 8, 6, {0}};
+const AosProbes aos_enemy_rock_armor_probes = {2, -40, -1, 6, {-7, -24}};
+const AosProbes aos_enemy_rock_probes = {1, -8, 8, 6, {0}};
 
 /* The walk speed of the Rock Armor for its walk frame (frame % 5 <= 3). */
-static int32_t rock_armor_speed(const AosEnemy *a) {
+int32_t aos_enemy_rock_armor_speed(const AosEnemy *a) {
     unsigned r = a->anim.frame % 5;
     return r > 3 ? 0 : 0x2000 + (int32_t)r * 0x4000;
 }
@@ -22,7 +46,7 @@ static int32_t rock_armor_speed(const AosEnemy *a) {
  * than that many updates, otherwise whenever it is not simply on a floor.
  * At the start of frame 9, the player ahead within 99 pixels starts the
  * throw. */
-static void rock_armor_walk(AosEnemy *a, const AosSoma *soma, const AosCollision *layer) {
+void aos_enemy_rock_armor_walk(AosEnemy *a, const AosSoma *soma, const AosCollision *layer) {
     if (a->step != 0) return;
     if (a->anim.frame == 9 && a->param0) {
         uint8_t shown = a->timer++;
@@ -85,7 +109,7 @@ static void rock_armor_throw(AosEnemy *a, const AosSoma *soma, const AosEnemyKin
  * burst (sub_08045CEC animation 15, row 7, vy 0.5, ay -0x2000) at x + 16 *
  * sin(phase + 0x9000) +/- 2.0, and every eighth (sound 0x72) a spark
  * (animation 16, row 6) at x +/- 8 and the height +/- 2 pixels. */
-static void rock_armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(void),
+void aos_enemy_rock_armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(void),
                            AosHitReport *report) {
     if (a->step == 0) {
         play_loop(a, kind->anims, 2, false);
@@ -122,7 +146,7 @@ static void rock_armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*ran
  * colliding while flashing from a blow), the state, the collision pass
  * (sub_080421AC, not while dying) and the animation step (sub_0806DF20);
  * state 3 (the global 0x8E & 0x40) only steps its animation. */
-static AosHitReport rock_armor_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_rock_armor_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
                                       const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                       const AosWeaponFrames *weapon_frames, int soma_atk,
                                       int soma_def, int cam_x, int cam_y,
@@ -169,7 +193,7 @@ static AosHitReport rock_armor_update(AosEnemy *a, AosSoma *soma, const AosColli
  * until it meets anything. State 2: sound 0x80, eight pieces within 8
  * pixels, 8 higher, facing at random, and it is gone. Beyond screen margin
  * 3 it is deleted. The global pause of gEwramData + 0x4BE is not ported. */
-static AosHitReport rock_update(AosEnemy *r, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_rock_update(AosEnemy *r, AosSoma *soma, const AosCollision *layer,
                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                                 int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -223,7 +247,7 @@ static AosHitReport rock_update(AosEnemy *r, AosSoma *soma, const AosCollision *
  * 0x1FFF) / 0x1000 with gravity 0.25, bounces once at half speed off a
  * solid cell 4 pixels below it, and is gone outside the screen box (-16,
  * -16, 0x110, 0xC0). */
-static void rock_piece_update(AosEnemy *p, const AosCollision *layer, const AosEnemyKind *kind,
+void aos_enemy_rock_piece_update(AosEnemy *p, const AosCollision *layer, const AosEnemyKind *kind,
                               int cam_x, int cam_y, uint32_t (*random)(void)) {
     switch (p->state) {
     case 0: {

@@ -2738,6 +2738,11 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 }
 #define merge_enemy_hit aos_enemy_merge_hit
 
+#define rock_armor_probes aos_enemy_rock_armor_probes
+#define rock_armor_speed aos_enemy_rock_armor_speed
+#define rock_armor_walk aos_enemy_rock_armor_walk
+#define rock_armor_die aos_enemy_rock_armor_die
+#define rock_probes aos_enemy_rock_probes
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
 #include "aos_enemies/headhunter.c"
@@ -2750,7 +2755,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/rock_armor.c"
+
 #include "aos_enemies/skull_archer.c"
 #include "aos_enemies/skeleton.c"
 #include "aos_enemies/killer_fish.c"
@@ -3277,10 +3282,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return fish_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_ROCK)
-        return rock_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_rock_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_ROCK_PIECE) {
-        rock_piece_update(enemy, layer, kind, cam_x, cam_y, random);
+        aos_enemy_rock_piece_update(enemy, layer, kind, cam_x, cam_y, random);
         return report;
     }
     if (enemy->role == AOS_ROLE_BUTCHER_CLEAVER)
@@ -3327,7 +3332,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                           weapon_frames, soma_atk, soma_def,
                                           cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ROCK_ARMOR && enemy->role == AOS_ROLE_ENEMY)
-        return rock_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_rock_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                  soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_AXE_ARMOR)
         return aos_enemy_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,

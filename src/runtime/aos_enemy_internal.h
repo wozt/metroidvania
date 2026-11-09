@@ -216,5 +216,27 @@ AosHitReport aos_enemy_armor_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+extern const AosProbes aos_enemy_rock_armor_probes;
+extern const AosProbes aos_enemy_rock_probes;
+int32_t aos_enemy_rock_armor_speed(const AosEnemy *enemy);
+void aos_enemy_rock_armor_walk(AosEnemy *enemy, const AosSoma *soma,
+                               const AosCollision *layer);
+void aos_enemy_rock_armor_die(AosEnemy *enemy, const AosEnemyKind *kind,
+                              uint32_t (*random)(void),
+                              AosHitReport *report);
+AosHitReport aos_enemy_rock_armor_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_rock_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_rock_piece_update(AosEnemy *enemy,
+                                 const AosCollision *layer,
+                                 const AosEnemyKind *kind, int cam_x,
+                                 int cam_y, uint32_t (*random)(void));
 
 #endif

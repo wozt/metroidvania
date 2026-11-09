@@ -134,9 +134,13 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      for all 488 symbols.
    - *(Continued in patch 0910.)* `axe_armor.c` is independent with its
      body and axe-child updates exported; `player_ahead_within` joins the
-     internal API. The union proof is identical for all 488 symbols. The
-     other 33 included families remain. Continue with `rock_armor.c`;
-     keep one family per commit and repeat the union proof.
+     internal API. The union proof is identical for all 488 symbols.
+   - *(Continued in patch 0911.)* `rock_armor.c` is independent with its
+     three updates exported; its probes, speed, walk and death helpers are
+     shared with the still-included `bomber_armor.c` through the internal
+     API. The union proof is identical for all 488 symbols. The other 32
+     included families remain. Continue with `skull_archer.c`; keep one
+     family per commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

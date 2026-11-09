@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0934 - Waiter Skeleton family becomes a real translation unit
+
+- `aos_enemies/waiter_skeleton.c` now compiles independently with its
+  body, tray and companion updates exported through
+  `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0933 - Kicker Skeleton family becomes a real translation unit
 
 - `aos_enemies/kicker_skeleton.c` now compiles independently with its

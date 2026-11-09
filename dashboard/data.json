@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:40:13+00:00",
+ "generated_at": "2026-11-09T15:42:19+00:00",
  "git": {
-  "commit": "e12520b3",
+  "commit": "792a71a0",
   "branch": "main",
   "dirty": true
  },
@@ -13767,6 +13767,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/skull_archer.c",
     "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/waiter_skeleton.c",
@@ -19769,6 +19770,7 @@
     "src/runtime/aos_enemies/killer_mantle.c",
     "src/runtime/aos_enemies/dryad.c",
     "src/runtime/aos_enemies/kicker_skeleton.c",
+    "src/runtime/aos_enemies/waiter_skeleton.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22223,6 +22225,12 @@
  },
  "timeline": [
   {
+   "commit": "792a71a0",
+   "date": "2026-11-09",
+   "subject": "Compile Kicker Skeleton family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "e12520b3",
    "date": "2026-11-09",
    "subject": "Compile Tsuchinoko family as an independent enemy unit",
@@ -22694,12 +22702,6 @@
    "commit": "b4907a8f",
    "date": "2026-11-08",
    "subject": "Document worm create sub_080AD7F0 segmented structure",
-   "scope": "project"
-  },
-  {
-   "commit": "9eb795ac",
-   "date": "2026-11-08",
-   "subject": "Document GiantWorm/PoisonWorm and Golem family decode",
    "scope": "project"
   }
  ],

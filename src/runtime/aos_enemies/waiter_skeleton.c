@@ -1,9 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Waiter Skeleton (enemy 0x1E), its companion and tray.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define append_effects aos_enemy_append_effects
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define make_debris aos_enemy_make_debris
+#define outside_margins aos_enemy_outside_margins
+#define player_in aos_enemy_player_in
+#define play_loop aos_enemy_play_loop
+#define skeleton_corner aos_enemy_skeleton_corner
+#define skeleton_place aos_enemy_skeleton_place
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 /* sub_0806DFF8 + the AF194 spawn blocks: a tray child (+ 0x14 = the
  * animation index 0x11 or 9) sharing the body's + 0x10 palette byte,
@@ -195,7 +211,7 @@ static bool waiter_death(AosEnemy *e, const AosEnemyKind *kind,
  * true) and state 4 only steps the animation. States 0-2 then run the
  * collision pass sub_0806E314 and the animation step sub_0803F17C;
  * state 4 skips both like the native early return. */
-static AosHitReport waiter_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_waiter_update(AosEnemy *e, AosSoma *soma,
                                   const AosCollision *layer,
                                   const AosEnemyKind *kind,
                                   const AosWeaponEntity *weapon,
@@ -266,7 +282,7 @@ static AosHitReport waiter_update(AosEnemy *e, AosSoma *soma,
  * facing and replays animation 8 while + 0x20 bit 3 is set. States
  * above 1 only step the animation (the + 0x5A palette merge is not
  * ported). */
-static void waiter_companion_update(AosEnemy *e, const AosEnemyKind *kind) {
+void aos_enemy_waiter_companion_update(AosEnemy *e, const AosEnemyKind *kind) {
     const AosEnemy *parent = e->parent;
     if (!parent || parent->state == 3 || !(parent->ws_flags & 2)) {
         e->hidden = true;
@@ -311,7 +327,7 @@ static void waiter_companion_update(AosEnemy *e, const AosEnemyKind *kind) {
  * the margin entry 4. State 5 bursts a sub_0806D5C0 dust puff within
  * 12 x 12 pixels and deletes. Contact (sub_080421AC) runs in states
  * 0-4, the animation step in all of them. */
-static AosHitReport waiter_tray_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_waiter_tray_update(AosEnemy *e, AosSoma *soma,
                                        const AosCollision *layer,
                                        const AosEnemyKind *kind,
                                        const AosWeaponEntity *weapon,

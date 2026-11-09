@@ -2776,7 +2776,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/waiter_skeleton.c"
 #include "aos_enemies/cockatrice.c"
 #include "aos_enemies/chronomage.c"
 
@@ -2903,15 +2902,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_WAITER_COMPANION) {
-        waiter_companion_update(enemy, kind);
+        aos_enemy_waiter_companion_update(enemy, kind);
         return report;
     }
     if (enemy->role == AOS_ROLE_WAITER_TRAY)
-        return waiter_tray_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_waiter_tray_update(enemy, soma, layer, kind, weapon,
                                   weapon_frames, soma_atk, soma_def, cam_x,
                                   cam_y, random);
     if (enemy->id == AOS_ENEMY_WAITER_SKELETON && enemy->role == AOS_ROLE_ENEMY)
-        return waiter_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_waiter_update(enemy, soma, layer, kind, weapon, weapon_frames,
                              soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_COCKATRICE_SHADOW) {
         cockatrice_shadow_update(enemy, kind);

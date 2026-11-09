@@ -128,8 +128,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      identical for all 488 symbols.
    - *(Continued in patch 0908.)* `dead_crusader.c` is independent with its
      update entry point exported; only GCC's inert `crusader_turn` stack
-     padding differs. The other 35 included families remain. Continue with
-     `gargoyle.c`; keep one family per commit and repeat the union proof.
+     padding differs.
+   - *(Continued in patch 0909.)* `gargoyle.c` is independent with its
+     shared Gargoyle/Gremlin update exported; the union proof is identical
+     for all 488 symbols. The other 34 included families remain. Continue
+     with the next family in include order; keep one family per commit and
+     repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

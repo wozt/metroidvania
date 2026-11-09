@@ -1561,7 +1561,7 @@ Evidence: in game: `aria area_03_room_003 (--spawn 200 190 --hp 9999): the four 
 [+] **`aos.enemies.gargoyle` — Gargoyle.** The pursuit of the point 64 pixels above the player, the brake, the swoop and its climb back (sub_08086534 steps 0 to 5), the frame boxes, the falling generic death with flames and state 2 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x87 is requested at the swoop (sub_08086534) and 0x6E at death (sub_08086878); both unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806CD38`, `aos:asm:asm/code/code_08060B98.s:sub_0806CD78`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleCreate`, `aos:asm:asm/code/code_080809C0.s:EnemyGargoyleUpdate`, `aos:asm:asm/code/code_080809C0.s:sub_08086534`, `aos:asm:asm/code/code_080809C0.s:sub_08086878`, `aos:asm:asm/code/code_080809C0.s:sub_08086900`, `aos:asm:asm/code/code_080809C0.s:sub_08086964`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemies/gargoyle.c`](../src/runtime/aos_enemies/gargoyle.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemy_internal.h`](../src/runtime/aos_enemy_internal.h), [`src/runtime/aos_enemies/gargoyle.c`](../src/runtime/aos_enemies/gargoyle.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.zombie`.  
 Known divergences: The palette bits and sub_080683BC are not ported; palette bank 1, used when another enemy id shares sub_08086900, is not exported.  
@@ -1618,7 +1618,7 @@ Evidence: in game: `aria area_05_room_000 (--spawn 340 223 --hp 9999): Gorgon re
 [+] **`aos.enemies.gremlin` — Gremlin (the gargoyle's routines).** EnemyGremlinCreate and EnemyGremlinUpdate only call the gargoyle's routines; sub_08086900 gives it palette bank 1. It shares Gargoyle's sounds (0x87 swoop, 0x6E death), requested and unit-tested.
 
 Native evidence: `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyGremlinUpdate`.  
-Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemies/gargoyle.c`](../src/runtime/aos_enemies/gargoyle.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aos_enemy_internal.h`](../src/runtime/aos_enemy_internal.h), [`src/runtime/aos_enemies/gargoyle.c`](../src/runtime/aos_enemies/gargoyle.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
 Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.enemies.gargoyle`.  
 Known divergences: As the gargoyle.  

@@ -2747,7 +2747,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/valkyrie.c"
 
 
-#include "aos_enemies/gargoyle.c"
+
 #include "aos_enemies/axe_armor.c"
 #include "aos_enemies/rock_armor.c"
 #include "aos_enemies/skull_archer.c"
@@ -3354,7 +3354,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_GARGOYLE || enemy->id == AOS_ENEMY_GREMLIN)
-        return gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_OFFICER)
         return aos_enemy_zombie_officer_update(

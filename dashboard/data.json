@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T13:48:09+00:00",
+ "generated_at": "2026-11-09T13:49:38+00:00",
  "git": {
-  "commit": "9e6f9ddb",
+  "commit": "537e7f2e",
   "branch": "main",
   "dirty": true
  },
@@ -10665,6 +10665,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/gargoyle.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -11145,6 +11146,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/gargoyle.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19694,6 +19696,7 @@
     "src/runtime/aos_enemies/beam_skeleton.c",
     "src/runtime/aos_enemies/skull_millione.c",
     "src/runtime/aos_enemies/dead_crusader.c",
+    "src/runtime/aos_enemies/gargoyle.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22148,6 +22151,12 @@
  },
  "timeline": [
   {
+   "commit": "537e7f2e",
+   "date": "2026-11-09",
+   "subject": "Compile Dead Crusader as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "9e6f9ddb",
    "date": "2026-11-09",
    "subject": "Compile Skull Millione family as an independent enemy unit",
@@ -22619,12 +22628,6 @@
    "commit": "b29ebff0",
    "date": "2026-11-08",
    "subject": "Wire the NOSOUL name flag into the soul gates",
-   "scope": "project"
-  },
-  {
-   "commit": "c64c4e0e",
-   "date": "2026-11-08",
-   "subject": "Decode the obtain-window reward list tables",
    "scope": "project"
   }
  ],

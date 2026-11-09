@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0909 - Gargoyle family becomes a real translation unit
+
+- `aos_enemies/gargoyle.c` now compiles independently with its shared
+  Gargoyle and Gremlin update exported through `aos_enemy_internal.h`;
+  the chase, fly and frame helpers stay family-local.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the update export changed linkage. No
+  behavior or feature status changed.
+
 ## Patch 0908 - Dead Crusader becomes a real translation unit
 
 - `aos_enemies/dead_crusader.c` now compiles independently with its update

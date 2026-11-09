@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T12:42:31+00:00",
+ "generated_at": "2026-11-09T12:47:30+00:00",
  "git": {
-  "commit": "d8f60f50",
+  "commit": "3b0edd19",
   "branch": "main",
   "dirty": true
  },
@@ -10320,6 +10320,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/ectoplasm.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19656,6 +19657,7 @@
     "src/assets/aos/objects.c",
     "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/sky_fish.c",
+    "src/runtime/aos_enemies/ectoplasm.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -19673,7 +19675,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 800 traced door, enemy, skill and shared-effect sequences, 2,363 indexed frames, 1,499 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 1,500 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish is the first family compiled as its own translation unit through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.",
+   "limitations": "The native C11 rebuild task exports 800 traced door, enemy, skill and shared-effect sequences, 2,363 indexed frames, 1,499 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 1,500 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish and Ectoplasm are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -22110,6 +22112,12 @@
  },
  "timeline": [
   {
+   "commit": "3b0edd19",
+   "date": "2026-11-09",
+   "subject": "Compile Sky Fish as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "d8f60f50",
    "date": "2026-11-09",
    "subject": "Move the Skull Archer soul's arrow into its own module",
@@ -22581,12 +22589,6 @@
    "commit": "a226cc33",
    "date": "2026-11-08",
    "subject": "Document the decoded obtain/reward window (patch 0831)",
-   "scope": "project"
-  },
-  {
-   "commit": "43bd6840",
-   "date": "2026-11-08",
-   "subject": "Port the new-soul sparkle storm (sub_08045350/sub_080451F4)",
    "scope": "project"
   }
  ],

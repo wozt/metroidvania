@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Ectoplasm (enemy 0x1B).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses only the prefixed
+ * internal enemy-framework API. */
+
+#include "../aos_enemy_internal.h"
+
+#include "../aos_audio.h"
 
 /* sub_08099690: state 0 of the ectoplasm drift. Step 0 hovers at the home
  * point (+ 0x14/+ 0x18, here in world pixels — the gEwramData + 0xA094
@@ -25,8 +28,9 @@ static void ectoplasm_drift(AosEnemy *enemy, const AosSoma *soma, uint32_t (*ran
                    (int32_t)(((int64_t)aos_sine(enemy->walk_timer + 0x4000) * 3));
         enemy->walk_timer += 0x200;
         enemy->timer++;
-        if (player_near(soma, (int16_t)((enemy->x >> 16) - 0x5A),
-                        (int16_t)((enemy->y >> 16) - 0x64), 0xB4, 0xC8)) {
+        if (aos_enemy_player_near(soma, (int16_t)((enemy->x >> 16) - 0x5A),
+                                  (int16_t)((enemy->y >> 16) - 0x64),
+                                  0xB4, 0xC8)) {
             enemy->step = 1;
             enemy->timer = 0;
         }
@@ -42,9 +46,10 @@ static void ectoplasm_drift(AosEnemy *enemy, const AosSoma *soma, uint32_t (*ran
             enemy->ec_dir = 0;
             ybias = (int32_t)0xFFE00000;      /* -32 pixels */
         }
-        int32_t xoff = (int32_t)(umod(random(), 0x3000000) + 0x100000);
-        enemy->target_x = target_x(soma) + ((random() & 1) ? xoff : -xoff);
-        enemy->target_y = target_y(soma) - (int32_t)umod(random(), 0x3000000) + ybias;
+        int32_t xoff = (int32_t)(aos_enemy_umod(random(), 0x3000000) + 0x100000);
+        enemy->target_x = aos_enemy_target_x(soma) + ((random() & 1) ? xoff : -xoff);
+        enemy->target_y = aos_enemy_target_y(soma) -
+                          (int32_t)aos_enemy_umod(random(), 0x3000000) + ybias;
         enemy->step = 2;
         enemy->timer = 0;
     }
@@ -53,11 +58,11 @@ static void ectoplasm_drift(AosEnemy *enemy, const AosSoma *soma, uint32_t (*ran
     enemy->ay = dy > 0x40000 ? 0x400 : dy < -0x40000 ? -0x400 : 0;
     enemy->vx = enemy->vx * 31 / 32;
     enemy->vy = enemy->vy * 31 / 32;
-    accel_move(enemy, 0x10000);
+    aos_enemy_accel_move(enemy, 0x10000);
     if (soma->flags & 0x360) {
         enemy->vx = enemy->vx * 31 / 32;
         enemy->vy = enemy->vy * 31 / 32;
-        accel_move(enemy, 0x10000);
+        aos_enemy_accel_move(enemy, 0x10000);
     }
     if ((dx < 0 ? -dx : dx) <= 0x3FFFF && (dy < 0 ? -dy : dy) <= 0x3FFFF)
         enemy->step = 1;
@@ -70,16 +75,17 @@ static void ectoplasm_drift(AosEnemy *enemy, const AosSoma *soma, uint32_t (*ran
  * switches to animation 1, state 1, step 0, timer 0x28, clears
  * vx/vy/ax and sets ay 0x1000. The + 0x2C/+ 0x5A palette bits are not
  * ported. */
-static void ectoplasm_struck(AosEnemy *enemy, const AosSoma *soma,
-                             const AosAnimSet *anims) {
-    int32_t dx = pixel_delta(enemy->x, soma->x), dy = pixel_delta(enemy->y, soma->y);
+void aos_enemy_ectoplasm_struck(AosEnemy *enemy, const AosSoma *soma,
+                                const AosAnimSet *anims) {
+    int32_t dx = aos_enemy_pixel_delta(enemy->x, soma->x);
+    int32_t dy = aos_enemy_pixel_delta(enemy->y, soma->y);
     uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
     enemy->vx = aos_fixed_mul(aos_sine(angle + 0x4000u), 0x10000);
     enemy->vy = aos_fixed_mul(aos_sine(angle), 0x10000);
     if (enemy->hp > 0) return;
     enemy->defeated = true;
     aos_audio_play_song(0x6D);
-    play_loop(enemy, anims, 1, true);
+    aos_enemy_play_loop(enemy, anims, 1, true);
     enemy->state = 1;
     enemy->step = 0;
     enemy->timer = 0x28;
@@ -95,19 +101,18 @@ static void ectoplasm_struck(AosEnemy *enemy, const AosSoma *soma,
  * the blink table then deletes, state 2 parks at home with the wobble and
  * only steps its animation. States 0 and 1 finish with the animation
  * step and the collision pass (skipped once defeated). */
-static AosHitReport ectoplasm_update(AosEnemy *enemy, AosSoma *soma,
-                                      const AosEnemyKind *kind,
-                                      const AosWeaponEntity *weapon,
-                                      const AosWeaponFrames *weapon_frames, int soma_atk,
-                                      int soma_def, int cam_x, int cam_y,
-                                      uint32_t (*random)(void)) {
+AosHitReport aos_enemy_ectoplasm_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void)) {
     AosHitReport report = {0}, spawned = {0};
     int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
-    if (enemy->state != 1 && outside_margins(kind, 4, sx, sy)) {
+    if (enemy->state != 1 && aos_enemy_outside_margins(kind, 4, sx, sy)) {
         aos_combat_tick(&enemy->combat);
         return report;
     }
-    enemy->hidden = outside_margins(kind, 4, sx, sy);
+    enemy->hidden = aos_enemy_outside_margins(kind, 4, sx, sy);
     if (enemy->state != 1 && enemy->hp > 0 && enemy->hit_flash)
         enemy->hit_flash--;
     switch (enemy->state) {
@@ -115,13 +120,13 @@ static AosHitReport ectoplasm_update(AosEnemy *enemy, AosSoma *soma,
         ectoplasm_drift(enemy, soma, random);
         break;
     case 1:
-        accel_move(enemy, 0x40000);
+        aos_enemy_accel_move(enemy, 0x40000);
         /* sub_0806AEAC: a wisp (the shared 0x49/0xCF flame spawn) every
          * 4th tick in a 16 x 3 pixel area, the blink table below 0x28,
          * deleted when the u8 timer wraps. */
         if ((enemy->timer & 3) == 0)
-            spawn_flame_at(enemy->x, enemy->y - 0xA8000, 0x100000, 0x30000,
-                           random, &spawned);
+            aos_enemy_spawn_flame_at(enemy->x, enemy->y - 0xA8000,
+                                     0x100000, 0x30000, random, &spawned);
         enemy->hidden = enemy->timer <= 0x27 ? kind->blink[enemy->timer] & 1 : false;
         if ((int8_t)--enemy->timer <= 0) enemy->removed = true;
         break;
@@ -133,16 +138,17 @@ static AosHitReport ectoplasm_update(AosEnemy *enemy, AosSoma *soma,
             enemy->walk_timer += 0x200;
             enemy->timer++;
         }
-        step_anim(enemy, kind->anims);
+        aos_enemy_step_anim(enemy, kind->anims);
         aos_combat_tick(&enemy->combat);
         return report;
     default:
         break;
     }
-    step_anim(enemy, kind->anims);
+    aos_enemy_step_anim(enemy, kind->anims);
     if (!enemy->defeated)
-        report = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(enemy, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
     aos_combat_tick(&enemy->combat);
-    take_effects(&report, &spawned);
+    aos_enemy_take_effects(&report, &spawned);
     return report;
 }

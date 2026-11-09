@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0892 - Ectoplasm becomes a real translation unit
+
+- `aos_enemies/ectoplasm.c` now compiles independently and exposes only its
+  update and struck callbacks. Its additional shared dependencies use the
+  collision-safe `aos_enemy_` internal API; the included families retain
+  function-like aliases so field names such as `target_x` remain untouched.
+- The union of the framework, Sky Fish and Ectoplasm `-O0` objects has the
+  same 488 function sizes and normalized instructions as the previous two
+  objects. This is a behavior-neutral source-layout change and no feature
+  status changed.
+
 ## Patch 0891 - Sky Fish becomes a real translation unit
 
 - `aos_enemies/sky_fish.c` is the first monster-family fragment removed

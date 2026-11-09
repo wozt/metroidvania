@@ -17,8 +17,26 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                                int soma_atk, int soma_def);
 void aos_enemy_accel_move(AosEnemy *enemy, int32_t limit);
 void aos_enemy_soldier_face(AosEnemy *enemy, const AosSoma *soma);
+uint32_t aos_enemy_umod(uint32_t value, uint32_t divisor);
+void aos_enemy_spawn_flame_at(int32_t cx, int32_t cy, uint32_t w,
+                              uint32_t h, uint32_t (*random)(void),
+                              AosHitReport *report);
+int32_t aos_enemy_pixel_delta(int32_t to, int32_t from);
+void aos_enemy_play_loop(AosEnemy *enemy, const AosAnimSet *anims,
+                         unsigned id, bool loop);
+int32_t aos_enemy_target_x(const AosSoma *soma);
+int32_t aos_enemy_target_y(const AosSoma *soma);
+bool aos_enemy_player_near(const AosSoma *soma, int32_t x, int32_t y,
+                           int w, int h);
 
 AosHitReport aos_enemy_sky_fish_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
+void aos_enemy_ectoplasm_struck(AosEnemy *enemy, const AosSoma *soma,
+                                const AosAnimSet *anims);
+AosHitReport aos_enemy_ectoplasm_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,

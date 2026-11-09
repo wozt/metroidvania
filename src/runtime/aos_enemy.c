@@ -151,12 +151,13 @@ static void spawn_hit_effect(uint8_t type, int x, int y, AosHitReport *report) {
  * draw, only when the entity was created); priority + 0x5C - 1. A 0 x 0
  * area still draws twice: the ROM's __umodsi3 (0x080DAA00) returns 0 for a
  * zero divisor. */
-static uint32_t umod(uint32_t value, uint32_t divisor) {
+uint32_t aos_enemy_umod(uint32_t value, uint32_t divisor) {
     return divisor ? value % divisor : 0;
 }
+#define umod aos_enemy_umod
 
-static void spawn_flame_at(int32_t cx, int32_t cy, uint32_t w, uint32_t h,
-                           uint32_t (*random)(void), AosHitReport *report) {
+void aos_enemy_spawn_flame_at(int32_t cx, int32_t cy, uint32_t w, uint32_t h,
+                              uint32_t (*random)(void), AosHitReport *report) {
     /* sub_0806D5C0 uses GBA 32-bit ADD/SUB for fixed-point sprite
      * positions. Explicit unsigned operations preserve its modulo-2^32
      * wrap near the signed room boundary without signed overflow in C.
@@ -171,6 +172,7 @@ static void spawn_flame_at(int32_t cx, int32_t cy, uint32_t w, uint32_t h,
     *flame = (AosEffect){.kind = AOS_EFFECT_FLAME, .x = x, .y = y};
     flame->mirrored = random() & 1;
 }
+#define spawn_flame_at aos_enemy_spawn_flame_at
 
 static void spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*random)(void),
                         AosHitReport *report) {
@@ -203,9 +205,10 @@ static void append_effects(AosHitReport *to, const AosHitReport *from) {
 }
 
 /* The whole-pixel distance from `from` to `to`, rounded toward zero. */
-static int32_t pixel_delta(int32_t to, int32_t from) {
+int32_t aos_enemy_pixel_delta(int32_t to, int32_t from) {
     return to >= from ? (to - from) >> 16 : -((from - to) >> 16);
 }
+#define pixel_delta aos_enemy_pixel_delta
 
 /* sub_080694B8: velocity toward (tx, ty) at `speed`; true once the target
  * is within `speed`. The gEwramData + 0xA094 offsets it adds to the entity
@@ -234,11 +237,13 @@ static bool accelerate_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed
 }
 
 /* sub_0803F2C8: starting an animation also clears + 0x59 bit 0. */
-static void play_loop(AosEnemy *enemy, const AosAnimSet *anims, unsigned id, bool loop) {
+void aos_enemy_play_loop(AosEnemy *enemy, const AosAnimSet *anims,
+                         unsigned id, bool loop) {
     aos_anim_start(&enemy->anim, anims, id, loop);
     enemy->anim.id = (uint8_t)id;
     enemy->cycle_done = false;
 }
+#define play_loop aos_enemy_play_loop
 
 /* sub_0806D128(e, n): the screen position beyond margin entry n. */
 bool aos_enemy_outside_margins(const AosEnemyKind *kind, int n, int sx, int sy) {
@@ -280,14 +285,16 @@ static const AosEnemy *aim_self;
 
 void aos_enemy_set_no_target(bool none) { no_target = none; }
 
-static int32_t target_x(const AosSoma *soma) {
+int32_t aos_enemy_target_x(const AosSoma *soma) {
     if (no_target && aim_self) return aim_self->x;
     return decoy.active ? decoy.x : soma->x;
 }
-static int32_t target_y(const AosSoma *soma) {
+#define target_x(...) aos_enemy_target_x(__VA_ARGS__)
+int32_t aos_enemy_target_y(const AosSoma *soma) {
     if (no_target && aim_self) return aim_self->y;
     return decoy.active ? decoy.y : soma->y;
 }
+#define target_y(...) aos_enemy_target_y(__VA_ARGS__)
 
 /* sub_0806BC40 */
 static void face_player(AosEnemy *enemy, const AosSoma *soma) {
@@ -1440,7 +1447,6 @@ static void doll_shatter(AosEnemy *e, AosHitReport *report);
 static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 static void nemesis_struck(AosEnemy *n);
 static void peeping_struck(AosEnemy *e, const AosSoma *soma);
-static void ectoplasm_struck(AosEnemy *e, const AosSoma *soma, const AosAnimSet *anims);
 static void fish_struck(AosEnemy *f, const AosEnemyKind *kind);
 static void dragon_struck(AosEnemy *d, uint8_t attacker);
 static void skeleton_merge(AosHitReport *report, const AosHitReport *hit);
@@ -1599,7 +1605,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 /* sub_080998E8: knockback on every hit, the death drift
                  * on a lethal one. */
                 if (enemy->hp <= 0) report.killed = enemy->defeated = true;
-                ectoplasm_struck(enemy, soma, kind->anims);
+                aos_enemy_ectoplasm_struck(enemy, soma, kind->anims);
                 goto contact;
             }
             if (enemy->role == AOS_ROLE_WORM_SEGMENT && enemy->parent &&
@@ -2137,9 +2143,11 @@ static int walk_collide(AosEnemy *e, const AosCollision *layer, int32_t bounce_v
 }
 
 /* sub_0806CFFC: the player inside a box given in room pixels. */
-static bool player_near(const AosSoma *soma, int32_t x, int32_t y, int w, int h) {
+bool aos_enemy_player_near(const AosSoma *soma, int32_t x, int32_t y,
+                           int w, int h) {
     return player_in(soma, x, y, w, h);
 }
+#define player_near aos_enemy_player_near
 
 /* sub_08092FCC(e, dx, dy, vx, vy, frame): a gib (EntityCreateInRange(0x49,
  * 0xCF, sub_08093078)) showing a sprite frame of the soldier, at its
@@ -2740,7 +2748,6 @@ static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/worm.c"
 #include "aos_enemies/biphron.c"
 #include "aos_enemies/bomber_armor.c"
-#include "aos_enemies/ectoplasm.c"
 #include "aos_enemies/evil_butcher.c"
 #include "aos_enemies/killer_mantle.c"
 #include "aos_enemies/dryad.c"
@@ -3282,8 +3289,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                          weapon_frames, soma_atk, soma_def,
                                          cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY)
-        return ectoplasm_update(enemy, soma, kind, weapon, weapon_frames,
-                                soma_atk, soma_def, cam_x, cam_y, random);
+        return aos_enemy_ectoplasm_update(enemy, soma, kind, weapon,
+                                          weapon_frames, soma_atk, soma_def,
+                                          cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ROCK_ARMOR && enemy->role == AOS_ROLE_ENEMY)
         return rock_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                  soma_def, cam_x, cam_y, random);

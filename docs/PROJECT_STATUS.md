@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0920 - Peeping Eye family becomes a real translation unit
+
+- `aos_enemies/peeping_eye.c` now compiles independently with its body
+  and segment updates plus the struck callback exported through
+  `aos_enemy_internal.h`. The shared `flag_8e_40` state is now an
+  exported variable so the family can read it without a getter.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0919 - Merman family becomes a real translation unit
 
 - `aos_enemies/merman.c` now compiles independently with its body and

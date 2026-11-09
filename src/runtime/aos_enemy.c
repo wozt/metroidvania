@@ -9,7 +9,8 @@
 #include <string.h>
 
 
-static bool flag_8e_40;
+bool aos_enemy_flag_8e_40;
+#define flag_8e_40 aos_enemy_flag_8e_40
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
 static AosSoulAttack *soul_attacks;
@@ -1455,7 +1456,6 @@ void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
 
 
 static void nemesis_struck(AosEnemy *n);
-static void peeping_struck(AosEnemy *e, const AosSoma *soma);
 
 static void dragon_struck(AosEnemy *d, uint8_t attacker);
 
@@ -1657,7 +1657,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 /* sub_08088638: sub_080683BC at a lethal blow, then its
                  * own reaction. */
                 if (enemy->hp <= 0) report.killed = enemy->defeated = true;
-                peeping_struck(enemy, soma);
+                aos_enemy_peeping_struck(enemy, soma);
                 goto contact;
             }
             if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY) {
@@ -2771,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/peeping_eye.c"
 #include "aos_enemies/buer.c"
 #include "aos_enemies/white_dragon.c"
 #include "aos_enemies/bone_pillar.c"
@@ -3106,11 +3105,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_PEEPING_SEGMENT) {
-        peeping_part_update(enemy, kind, soma, cam_x, cam_y, random, &report);
+        aos_enemy_peeping_part_update(enemy, kind, soma, cam_x, cam_y, random, &report);
         return report;
     }
     if (enemy->id == AOS_ENEMY_PEEPING_EYE && enemy->role == AOS_ROLE_ENEMY)
-        return peeping_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_peeping_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                               cam_y, random);
     if (enemy->id == AOS_ENEMY_GHOST && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_ghost_update(enemy, soma, kind, weapon,

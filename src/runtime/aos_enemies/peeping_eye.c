@@ -1,9 +1,26 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Peeping Eye (enemy 0x06) and its parts.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define accel_move aos_enemy_accel_move
+#define collide aos_enemy_collide
+#define flag_8e_40 aos_enemy_flag_8e_40
+#define make_static_child aos_enemy_make_static_child
+#define merge_enemy_hit aos_enemy_merge_hit
+#define outside_margins aos_enemy_outside_margins
+#define pixel_delta aos_enemy_pixel_delta
+#define play_loop aos_enemy_play_loop
+#define player_near aos_enemy_player_near
+#define soldier_face aos_enemy_soldier_face
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x(x) aos_enemy_target_x(x)
+#define target_y(x) aos_enemy_target_y(x)
 
 /* Peeping Eye. A sequence is (frame, ticks) pairs ending at 0xFF: the
  * opening (0x08527400) and the four looks of 0x08527450 (0 blink, 1 hurt,
@@ -166,7 +183,7 @@ static void peeping_showcase(AosEnemy *e, uint32_t (*random)(void)) {
  * hurt flag, a 2.0 push away from the attacker (Soma, whose position
  * stands in for the weapon entity) and, at a lethal blow, sound 0x6E and
  * the death (state 2, 45 frames). */
-static void peeping_struck(AosEnemy *e, const AosSoma *soma) {
+void aos_enemy_peeping_struck(AosEnemy *e, const AosSoma *soma) {
     e->pe_hurt = true;
     uint16_t a = aos_arctan2((int16_t)pixel_delta(e->x, soma->x),
                              (int16_t)pixel_delta(e->y, soma->y));
@@ -228,7 +245,7 @@ static void peeping_parts(const AosEnemy *eye, AosHitReport *report) {
  * and 3 for a placed eye, the collision pass. The hit stun of sub_0806D4C0
  * needs the global pause 0x4BE (taken as 0) and the tracking list of
  * sub_08021924 is not ported. */
-static AosHitReport peeping_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_peeping_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
                                    int soma_def, int cam_x, int cam_y,
@@ -297,7 +314,7 @@ static AosHitReport peeping_update(AosEnemy *e, AosSoma *soma, const AosEnemyKin
  * tip turns by its angle + half its distance from 0x4000. When the eye
  * dies each segment flames after 6 (k + 1) frames and again 4 frames
  * later, then hides until the eye goes. Hidden beyond sub_0806D128(e, 1). */
-static void peeping_part_update(AosEnemy *p, const AosEnemyKind *kind, const AosSoma *soma,
+void aos_enemy_peeping_part_update(AosEnemy *p, const AosEnemyKind *kind, const AosSoma *soma,
                                 int cam_x, int cam_y, uint32_t (*random)(void),
                                 AosHitReport *report) {
     AosEnemy *eye = (AosEnemy *)p->parent;

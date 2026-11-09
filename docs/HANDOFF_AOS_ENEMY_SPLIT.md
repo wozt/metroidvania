@@ -177,6 +177,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      symbols. The other 24 included families remain. Continue with
      `peeping_eye.c`; keep one family per commit and repeat the union
      proof.
+   - *(Continued in patch 0920.)* `peeping_eye.c` is independent with
+     its three entry points exported; `flag_8e_40` became an exported
+     variable (same normalized symbol, only linkage changed). The union
+     proof is identical for all 488 symbols. The other 23 included
+     families remain. Continue with `buer.c`; keep one family per
+     commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

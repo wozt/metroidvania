@@ -363,5 +363,17 @@ AosHitReport aos_enemy_merman_shot_update(
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_peeping_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
+void aos_enemy_peeping_part_update(AosEnemy *enemy,
+                                   const AosEnemyKind *kind,
+                                   const AosSoma *soma, int cam_x,
+                                   int cam_y, uint32_t (*random)(void),
+                                   AosHitReport *report);
+void aos_enemy_peeping_struck(AosEnemy *enemy, const AosSoma *soma);
+extern bool aos_enemy_flag_8e_40;
 
 #endif

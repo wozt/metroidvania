@@ -1,9 +1,26 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Nemesis (enemy 0x26) and its linked helper.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <stdlib.h>
+
+#define no_target aos_enemy_no_target
+#define angle_to_target aos_enemy_angle_to_target
+#define collide aos_enemy_collide
+#define nemesis_appear aos_enemy_nemesis_appear
+#define nemesis_helper_step aos_enemy_nemesis_helper_step
+#define player_dx aos_enemy_player_dx
+#define player_dy aos_enemy_player_dy
+#define player_within aos_enemy_player_within
+#define skeleton_merge aos_enemy_skeleton_merge
+#define spawn_flame_at aos_enemy_spawn_flame_at
+#define target_x aos_enemy_target_x
+#define turn_angle aos_enemy_turn_angle
 
 /* + 0x18 bits of Nemesis. */
 #define NEM_TARGET_LEFT 0x02    /* its target lies left of it */
@@ -28,7 +45,7 @@ static void helper_face(AosNemesisHelper *h, const AosSoma *soma) {
  * and 37 below, facing away from the target, for ten frames; 3 frame 3 ten
  * pixels behind and 4 above, facing Soma, for 40 frames; 4 a 31-frame
  * flicker (hidden unless + 0x0D % 3 = 0), then 0; 5 idle. */
-static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma) {
+void aos_enemy_nemesis_helper_step(AosEnemy *n, const AosSoma *soma) {
     AosNemesisHelper *h = &n->nem_helper;
     switch (h->state) {
     case 0: h->hidden = true; break;
@@ -88,7 +105,7 @@ static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma) {
 
 /* The child entity of sub_080C76D4 (translucent, + 0x5C + 2) shows the
  * linked sprite its body runs. */
-static void nemesis_helper_update(AosEnemy *h) {
+void aos_enemy_nemesis_helper_update(AosEnemy *h) {
     const AosEnemy *parent = h->parent;
     if (!parent || parent->removed) {
         h->removed = true;
@@ -111,7 +128,7 @@ static void nemesis_helper_update(AosEnemy *h) {
  * dying (state 0xFF). Keeping the sequence index in `variant` preserves the
  * native identity while the child scratch history selects a delayed direct
  * frame. */
-static void nemesis_effect_update(AosEnemy *effect, const AosEnemyKind *kind) {
+void aos_enemy_nemesis_effect_update(AosEnemy *effect, const AosEnemyKind *kind) {
     const AosEnemy *parent = effect->parent;
     if (!parent || parent->removed || parent->state == 0xFF) {
         effect->removed = true;
@@ -155,7 +172,7 @@ static void nemesis_effect_update(AosEnemy *effect, const AosEnemyKind *kind) {
  * pixels, flickers in translucent with its linked sprite for 41 frames,
  * waits 21, flickers the linked sprite out for 41 and after 21 more starts
  * its approach. Step 0 runs once at creation. */
-static void nemesis_appear(AosEnemy *n, const AosSoma *soma) {
+void aos_enemy_nemesis_appear(AosEnemy *n, const AosSoma *soma) {
     AosNemesisHelper *h = &n->nem_helper;
     switch (n->step) {
     case 0:
@@ -531,7 +548,7 @@ static void nemesis_die(AosEnemy *n, int cam_y, uint32_t (*random)(void), AosHit
  * three blows in four only count down + 0x24; the fourth, or a lethal one
  * (sound 0x1C3), sends it into its recoil (state 6) with the linked sprite
  * in state 3. Any blow shows it. */
-static void nemesis_struck(AosEnemy *n) {
+void aos_enemy_nemesis_struck(AosEnemy *n) {
     if (n->nem_hits && n->hp > 0) {
         n->nem_hits--;
     } else {
@@ -550,7 +567,7 @@ static void nemesis_struck(AosEnemy *n) {
  * the collision pass until dead. Its body is never mirrored; its affine
  * angle (+ 0x1C) turns it. The first update emits its linked sprite and
  * the three trails (native: at creation). */
-static AosHitReport nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_nemesis_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
                                    int soma_def, int cam_x, int cam_y,

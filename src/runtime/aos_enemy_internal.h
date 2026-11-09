@@ -375,6 +375,7 @@ void aos_enemy_peeping_part_update(AosEnemy *enemy,
                                    AosHitReport *report);
 void aos_enemy_peeping_struck(AosEnemy *enemy, const AosSoma *soma);
 extern bool aos_enemy_flag_8e_40;
+extern bool aos_enemy_no_target;
 int16_t aos_enemy_player_dx(const AosEnemy *enemy, const AosSoma *soma);
 AosHitReport aos_enemy_buer_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
@@ -548,6 +549,9 @@ AosHitReport aos_enemy_chronomage_update(
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
 bool aos_enemy_on_slope(const AosCollision *layer, int32_t x, int32_t y);
+uint16_t aos_enemy_angle_to_target(const AosEnemy *enemy,
+                                   const AosSoma *soma);
+bool aos_enemy_turn_angle(uint32_t *angle, uint16_t step, uint16_t target);
 bool aos_enemy_accelerate_toward(AosEnemy *enemy, int32_t tx, int32_t ty,
                                  int32_t speed);
 void aos_enemy_spawn_flame(const AosEnemy *enemy, uint32_t w, uint32_t h,
@@ -578,5 +582,16 @@ AosHitReport aos_enemy_zombie_update(
     int cam_x, int cam_y, uint32_t (*random)(void));
 void aos_enemy_drip_update(AosEnemy *enemy);
 void aos_enemy_puddle_update(AosEnemy *enemy);
+void aos_enemy_nemesis_helper_step(AosEnemy *enemy, const AosSoma *soma);
+void aos_enemy_nemesis_appear(AosEnemy *enemy, const AosSoma *soma);
+void aos_enemy_nemesis_helper_update(AosEnemy *enemy);
+void aos_enemy_nemesis_effect_update(AosEnemy *enemy,
+                                     const AosEnemyKind *kind);
+void aos_enemy_nemesis_struck(AosEnemy *enemy);
+AosHitReport aos_enemy_nemesis_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

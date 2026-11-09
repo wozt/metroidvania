@@ -11,6 +11,7 @@
 
 bool aos_enemy_flag_8e_40;
 #define flag_8e_40 aos_enemy_flag_8e_40
+#define no_target aos_enemy_no_target
 #define random_direction aos_enemy_random_direction
 #define spawn_particle aos_enemy_spawn_particle
 
@@ -293,7 +294,7 @@ void aos_enemy_set_decoy(bool active, int32_t x, int32_t y) {
 }
 
 /* The entity being updated, the target while 0x13168 is 0. */
-static bool no_target;
+bool aos_enemy_no_target;
 static const AosEnemy *aim_self;
 
 void aos_enemy_set_no_target(bool none) { no_target = none; }
@@ -363,8 +364,6 @@ static bool is_early_enemy(uint8_t id) {
            id == AOS_ENEMY_WINGED_SKELETON;
 }
 
-static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma);
-static void nemesis_appear(AosEnemy *n, const AosSoma *soma);
 
 static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                          int16_t param1, const AosSoma *soma, const AosCollision *layer,
@@ -1192,10 +1191,10 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->nem_index = 9;
         enemy->nem_hits = 3;
         enemy->nem_helper.state = 1;
-        nemesis_helper_step(enemy, soma);
+        aos_enemy_nemesis_helper_step(enemy, soma);
         enemy->state = 0;
         enemy->step = 0;
-        nemesis_appear(enemy, soma);
+        aos_enemy_nemesis_appear(enemy, soma);
         return true;
     }
     if (id == AOS_ENEMY_BEAM_SKELETON) {
@@ -1458,7 +1457,6 @@ void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
 #define frame_boxes aos_enemy_frame_boxes
 
 
-static void nemesis_struck(AosEnemy *n);
 
 
 /* sub_0806E314 / sub_080421AC: the player against the enemy, then the
@@ -1664,7 +1662,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 /* sub_080C7604: sub_080683BC at a lethal blow, then its
                  * own reaction. */
                 if (enemy->hp <= 0) report.killed = enemy->defeated = true;
-                nemesis_struck(enemy);
+                aos_enemy_nemesis_struck(enemy);
                 goto contact;
             }
             /* The Waiter Skeleton tray's + 0x34 reaching 0 enters its
@@ -2202,7 +2200,7 @@ int16_t aos_enemy_player_dx(const AosEnemy *enemy, const AosSoma *soma) {
 }
 
 /* sub_0806BAC8: the angle from the entity to its target, whole pixels. */
-static uint16_t angle_to_target(const AosEnemy *e, const AosSoma *soma) {
+uint16_t aos_enemy_angle_to_target(const AosEnemy *e, const AosSoma *soma) {
     return aos_arctan2((int16_t)((target_x(soma) >> 16) - (e->x >> 16)),
                        (int16_t)((target_y(soma) >> 16) - (e->y >> 16)));
 }
@@ -2214,7 +2212,7 @@ static int turn_side(uint16_t a, uint16_t target) {
     return (uint16_t)(a - target) > (uint16_t)(target - a) ? 1 : -1;
 }
 
-static bool turn_angle(uint32_t *angle, uint16_t step, uint16_t target) {
+bool aos_enemy_turn_angle(uint32_t *angle, uint16_t step, uint16_t target) {
     uint16_t a = (uint16_t)*angle;
     int side = turn_side(a, target);
     if (side == 0) return true;
@@ -2759,7 +2757,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
-#include "aos_enemies/nemesis.c"
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
@@ -3166,11 +3163,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_NEMESIS_HELPER) {
-        nemesis_helper_update(enemy);
+        aos_enemy_nemesis_helper_update(enemy);
         return report;
     }
     if (enemy->role == AOS_ROLE_NEMESIS_EFFECT) {
-        nemesis_effect_update(enemy, kind);
+        aos_enemy_nemesis_effect_update(enemy, kind);
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_DOLL && enemy->role == AOS_ROLE_ENEMY)
@@ -3178,7 +3175,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                             weapon_frames, soma_atk,
                                             soma_def, random);
     if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY)
-        return nemesis_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_nemesis_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_LIGHTNING_DOLL && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_lightning_doll_update(

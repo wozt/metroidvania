@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0939 - Nemesis family becomes a real translation unit
+
+- `aos_enemies/nemesis.c` now compiles independently with its helper,
+  effect, appear, struck and body updates exported through
+  `aos_enemy_internal.h`; `angle_to_target`, `turn_angle` and the
+  `no_target` flag join the internal API.
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions are identical except a GCC stack-slot padding
+  difference in `helper_face`. Only the exports changed linkage.
+  No behavior or feature status changed.
+
 ## Patch 0938 - Zombie family becomes a real translation unit
 
 - `aos_enemies/zombie.c` now compiles independently with its create,

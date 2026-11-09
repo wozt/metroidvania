@@ -34,6 +34,13 @@ void aos_enemy_generic_death(AosEnemy *enemy, const AosEnemyKind *kind,
                              uint32_t (*random)(void),
                              AosHitReport *report);
 void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit);
+int aos_enemy_walk_collide(AosEnemy *enemy, const AosCollision *layer,
+                           int32_t bounce_vy, int32_t head,
+                           int32_t max_speed, int half_width);
+AosEnemy aos_enemy_make_gib(const AosEnemy *enemy, int32_t dx, int32_t dy,
+                            int32_t vx, int32_t vy, int16_t frame);
+int32_t aos_enemy_gib_speed(const AosEnemy *enemy,
+                            uint32_t (*random)(void));
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -61,5 +68,10 @@ AosHitReport aos_enemy_ghost_update(
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_zombie_officer_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

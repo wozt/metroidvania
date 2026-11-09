@@ -1,9 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Zombie Officer (enemy 0x20).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses only the prefixed
+ * internal enemy-framework API. */
+
+#include "../aos_enemy_internal.h"
+
+#include "../aos_audio.h"
+
+#include <string.h>
 
 /* The officer's walk speed toward its facing (0.625). */
 static void officer_step(AosEnemy *z) {
@@ -21,9 +26,10 @@ static void officer_walk(AosEnemy *z, const AosSoma *soma, const AosCollision *l
     uint8_t frame = z->anim.frame;
     bool frame_start = z->anim.tick == 0;
     if ((frame == 3 || frame == 7) && frame_start) {
-        soldier_face(z, soma);
+        aos_enemy_soldier_face(z, soma);
         int32_t x = z->x >> 16, y = z->y >> 16;
-        if (player_near(soma, (int16_t)(x - 0x32), (int16_t)(y - 0x40), 0x64, 0x46)) {
+        if (aos_enemy_player_near(soma, (int16_t)(x - 0x32),
+                                  (int16_t)(y - 0x40), 0x64, 0x46)) {
             z->state = 1;
             z->step = 0;
             return;
@@ -31,20 +37,21 @@ static void officer_walk(AosEnemy *z, const AosSoma *soma, const AosCollision *l
         officer_step(z);
     }
     if ((frame == 2 || frame == 6) && frame_start) z->vx = 0;
-    walk_collide(z, layer, 0x10000, (int32_t)0xFFE00000, 0x80000, 10);
+    aos_enemy_walk_collide(z, layer, 0x10000, (int32_t)0xFFE00000,
+                           0x80000, 10);
 }
 
 /* sub_080924AC: animation 1 once (sound 0x85 at frame 4), then back to the
  * walk. */
 static void officer_attack(AosEnemy *z, const AosAnimSet *anims) {
     if (z->step == 0) {
-        play_loop(z, anims, 1, false);
+        aos_enemy_play_loop(z, anims, 1, false);
         z->step = 1;
         return;
     }
     if (z->anim.frame == 4 && z->anim.tick == 0) aos_audio_play_song(0x85);
     if (z->cycle_done) {
-        play(z, anims, 0);
+        aos_enemy_play(z, anims, 0);
         z->state = z->step = 0;
         officer_step(z);
     }
@@ -64,12 +71,14 @@ static void officer_gibs(const AosEnemy *z, uint32_t (*random)(void), AosHitRepo
             dx = z->mirrored ? 0x60000 : -0x60000;
             dy = (int32_t)0xFFF30000;
         }
-        int32_t vx = gib_speed(z, random);
+        int32_t vx = aos_enemy_gib_speed(z, random);
         int32_t vy = i < 2 ? -(int32_t)(random() % 0x18000u) - 0x18000
                            : -0x10000 - (int32_t)(random() & 0xFFFF);
         if (report->child_count < AOS_ENEMY_MAX_CHILDREN)
             report->children[report->child_count++] =
-                make_gib(z, dx, dy, vx, vy, (int16_t)(i == 0 ? 0x10 : i == 1 ? 0x11 : 0x0F));
+                aos_enemy_make_gib(
+                    z, dx, dy, vx, vy,
+                    (int16_t)(i == 0 ? 0x10 : i == 1 ? 0x11 : 0x0F));
     }
 }
 
@@ -77,10 +86,11 @@ static void officer_gibs(const AosEnemy *z, uint32_t (*random)(void), AosHitRepo
  * attacks, 2 dies (gibs, then the generic death), then the animation step
  * and the on-screen collision pass; state 3 steps its animation. The
  * contact callback sub_080926CC is type 0, element 0. */
-static AosHitReport officer_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
-                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
-                                   const AosWeaponFrames *weapon_frames, int soma_atk,
-                                   int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
+AosHitReport aos_enemy_zombie_officer_update(
+    AosEnemy *z, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void)) {
     AosHitReport report = {0}, spawned = {0};
     int sx = (z->x >> 16) - cam_x, sy = (z->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
@@ -89,23 +99,24 @@ static AosHitReport officer_update(AosEnemy *z, AosSoma *soma, const AosCollisio
     case 1: officer_attack(z, kind->anims); break;
     case 2:
         if (z->timer == 0x28) officer_gibs(z, random, &spawned);
-        generic_death(z, kind, random, &spawned);
+        aos_enemy_generic_death(z, kind, random, &spawned);
         break;
     case 3:
-        step_anim(z, kind->anims);
+        aos_enemy_step_anim(z, kind->anims);
         return report;
     default: break;
     }
     if (!z->removed) {
-        step_anim(z, kind->anims);
+        aos_enemy_step_anim(z, kind->anims);
         sx = (z->x >> 16) - cam_x;
         sy = (z->y >> 16) - cam_y;
         if (!z->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
-            report = collide(z, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+            report = aos_enemy_collide(z, soma, kind, weapon, weapon_frames,
+                                       soma_atk, soma_def);
         aos_combat_tick(&z->combat);
     }
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
-    take_effects(&report, &spawned);
+    aos_enemy_take_effects(&report, &spawned);
     return report;
 }

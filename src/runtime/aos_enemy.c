@@ -2089,8 +2089,9 @@ void aos_enemy_generic_death(AosEnemy *enemy, const AosEnemyKind *kind,
 /* sub_08069A00 with the zombie's arguments: X then Y motion with the walls
  * at x +/- 8, y - 10, the ceiling at y - 32 and the floor; returns 1 / 2
  * for a wall on the right / left, 8 for a ceiling, 4 for a landing. */
-static int walk_collide(AosEnemy *e, const AosCollision *layer, int32_t bounce_vy,
-                        int32_t head, int32_t max_speed, int half_width) {
+int aos_enemy_walk_collide(AosEnemy *e, const AosCollision *layer,
+                           int32_t bounce_vy, int32_t head,
+                           int32_t max_speed, int half_width) {
     int result = 0;
     if (e->vx || e->ax) {
         /* sub_0806D430 */
@@ -2145,6 +2146,7 @@ static int walk_collide(AosEnemy *e, const AosCollision *layer, int32_t bounce_v
     }
     return result;
 }
+#define walk_collide aos_enemy_walk_collide
 
 /* sub_0806CFFC: the player inside a box given in room pixels. */
 bool aos_enemy_player_near(const AosSoma *soma, int32_t x, int32_t y,
@@ -2157,8 +2159,8 @@ bool aos_enemy_player_near(const AosSoma *soma, int32_t x, int32_t y,
  * 0xCF, sub_08093078)) showing a sprite frame of the soldier, at its
  * position + (dx, dy), mirrored like it, falling with ay 0x1800; it keeps
  * the soldier's y (+ 0x1C) and is deleted once lower. Priority - 1. */
-static AosEnemy make_gib(const AosEnemy *z, int32_t dx, int32_t dy, int32_t vx, int32_t vy,
-                         int16_t frame) {
+AosEnemy aos_enemy_make_gib(const AosEnemy *z, int32_t dx, int32_t dy,
+                            int32_t vx, int32_t vy, int16_t frame) {
     AosEnemy g = {0};
     g.id = z->id;
     g.role = AOS_ROLE_GIB;
@@ -2173,6 +2175,7 @@ static AosEnemy make_gib(const AosEnemy *z, int32_t dx, int32_t dy, int32_t vx, 
     g.combat.attack_off = g.combat.hurt_off = true;
     return g;
 }
+#define make_gib aos_enemy_make_gib
 
 /* sub_0806BF78: the player within `range` of the entity on both axes. */
 static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
@@ -2728,7 +2731,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/dead_crusader.c"
 #include "aos_enemies/curly.c"
 #include "aos_enemies/gargoyle.c"
-#include "aos_enemies/zombie_officer.c"
 #include "aos_enemies/axe_armor.c"
 #include "aos_enemies/rock_armor.c"
 #include "aos_enemies/skull_archer.c"
@@ -3326,8 +3328,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_OFFICER)
-        return officer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                              cam_x, cam_y, random);
+        return aos_enemy_zombie_officer_update(
+            enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+            soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ZOMBIE_SOLDIER)
         return soldier_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);

@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0896 - Zombie Officer becomes a real translation unit
+
+- `aos_enemies/zombie_officer.c` now compiles independently. The zombie
+  walker, gib constructor and Zombie Soldier gib-speed helper are shared
+  through the prefixed internal API instead of being duplicated; all officer
+  walk, attack and death helpers remain static.
+- The object-union comparison preserves all 488 `-O0` function sizes and
+  normalized instructions. No behavior or feature status changed.
+
 ## Patch 0895 - Ghost becomes a real translation unit
 
 - `aos_enemies/ghost.c` now compiles independently with its controller and

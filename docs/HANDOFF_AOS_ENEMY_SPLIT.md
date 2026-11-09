@@ -91,7 +91,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      proof remains identical for all 488 functions.
    - *(Continued in patch 0895.)* `ghost.c` is independent; target facing and
      report merging join the internal API. Its object-union proof remains
-     identical for all 488 functions. The other 48 included families remain.
+     identical for all 488 functions.
+   - *(Continued in patch 0896.)* `zombie_officer.c` is independent; the
+     walker and gib helpers are shared through the internal API. Its union
+     proof remains identical for all 488 functions. The other 47 included
+     families remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

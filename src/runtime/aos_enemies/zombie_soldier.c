@@ -176,10 +176,11 @@ static void soldier_attack(AosEnemy *z, const AosSoma *soma, const AosAnimSet *a
 }
 
 /* The X speed of a gib: 0.5 to 1.0, backward when mirrored. */
-static int32_t gib_speed(const AosEnemy *z, uint32_t (*random)(void)) {
+int32_t aos_enemy_gib_speed(const AosEnemy *z, uint32_t (*random)(void)) {
     int32_t r = (int32_t)(random() & 0x7FFF);
     return z->mirrored ? -0x8000 - r : r + 0x8000;
 }
+#define gib_speed aos_enemy_gib_speed
 
 /* EnemyZombieSoldierUpdate state 2 at timer 0x28: two gibs, frames 0x13
  * (dx -8..8, dy -1..-17, vy -1.5..-3) and 0x14 (dy 0..-24), the random

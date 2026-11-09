@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Skull Archer soul's arrow: flight, stop on a hit, 16-frame blink. */
-#include "aos_soul_red_arrow.h"
+#include "aos/red_souls/aos_soul_red_arrow.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -15,6 +15,6 @@ int main(void) {
     assert(aos_arrow_update(&a, true) && a.x == 0x1C0000 && a.state == 2 && a.timer == 0x10);
     for (int k = 0; k < 16; ++k) assert(aos_arrow_update(&a, false) && a.x == 0x1C0000);
     assert(a.timer == 0 && !aos_arrow_update(&a, false));
-    puts("aos_soul_red_arrow: ok");
+    puts("aos/red_souls/aos_soul_red_arrow: ok");
     return 0;
 }

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free deterministic tests for SkillKillerFishUse. */
-#include "aos_soul_red_killer_fish.h"
+#include "aos/red_souls/aos_soul_red_killer_fish.h"
 #include "aos_audio.h"
 
 #include <assert.h>
@@ -105,6 +105,6 @@ int main(void) {
     creates_and_falls_outside_water();
     swims_toward_nearest_target();
     ends_on_wall_and_after_margin();
-    puts("aos_soul_red_killer_fish: OK (ROM-free source-derived water and air paths)");
+    puts("aos/red_souls/aos_soul_red_killer_fish: OK (ROM-free source-derived water and air paths)");
     return 0;
 }

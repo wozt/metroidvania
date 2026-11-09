@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_audio.h"
 #include "aos_enemy.h"
-#include "aos_soul.h"
+#include "aos/souls/aos_soul.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -64,6 +64,6 @@ int main(void) {
     aos_buer_guardian_update(&buer, &guardian, &stats, records, AOS_KEY_R, AOS_KEY_R, &flags,
                              100, 200, true);
     assert(buer.flames[0].speed == -0x200 && buer.flames[0].angle == 0xFE00);
-    puts("aos_soul_blue_buer: ok");
+    puts("aos/blue_souls/aos_soul_blue_buer: ok");
     return 0;
 }

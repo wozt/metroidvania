@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_soul_red_killer_doll.h"
+#include "aos/red_souls/aos_soul_red_killer_doll.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -47,6 +47,6 @@ int main(void) {
         bounced = d.vx > 0;
     }
     assert(bounced && (d.x >> 16) >= 112 && (d.x >> 16) <= 113);
-    puts("aos_soul_red_killer_doll: ok");
+    puts("aos/red_souls/aos_soul_red_killer_doll: ok");
     return 0;
 }

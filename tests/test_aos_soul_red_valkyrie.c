@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_valkyrie.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_valkyrie.h"
 
 static uint32_t mid(void) { return 0x10; }
 

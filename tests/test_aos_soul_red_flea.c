@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../src/runtime/aos_soul_red_flea.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_flea.h"
 
 enum { W = 64, H = 32 };
 static uint8_t cells[W * H];

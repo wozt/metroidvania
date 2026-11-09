@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_crow.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_crow.h"
 
 int main(void) {
     AosCrow crow = aos_crow_create(false);

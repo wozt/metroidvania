@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "aos_input.h"
-#include "aos_soul_menu.h"
+#include "aos/souls/aos_soul_menu.h"
 
 int main(void) {
     AosStats stats = {0};

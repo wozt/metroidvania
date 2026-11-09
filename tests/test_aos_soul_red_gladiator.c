@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free deterministic tests for SkillGladiatorUse. */
-#include "aos_soul_red_gladiator.h"
+#include "aos/red_souls/aos_soul_red_gladiator.h"
 #include "aos_audio.h"
 
 #include <assert.h>
@@ -84,6 +84,6 @@ static void mirror_wall_and_end(void) {
 int main(void) {
     flight_and_landing();
     mirror_wall_and_end();
-    puts("aos_soul_red_gladiator: OK (ROM-free source-derived rolling soul)");
+    puts("aos/red_souls/aos_soul_red_gladiator: OK (ROM-free source-derived rolling soul)");
     return 0;
 }

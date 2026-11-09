@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_soul_notice.h"
+#include "aos/souls/aos_soul_notice.h"
 
 #include <assert.h>
 #include <stdio.h>

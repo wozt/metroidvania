@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_audio.h"
 #include "aos_enemy.h"
-#include "aos_soul_blue_death.h"
+#include "aos/blue_souls/aos_soul_blue_death.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -84,6 +84,6 @@ int main(void) {
     assert(!aos_death_guardian_update(&death, &guardian, &stats, records, AOS_KEY_R, AOS_KEY_R,
                                       &flags, 100, 200, false, none, &art, 0, 0, 16, 16, fixed));
     assert(!guardian.active && !death.sickles[0].alive);
-    printf("aos_soul_blue_death: ok\n");
+    printf("aos/blue_souls/aos_soul_blue_death: ok\n");
     return 0;
 }

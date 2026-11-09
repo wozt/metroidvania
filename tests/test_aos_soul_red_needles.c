@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "../src/runtime/aos_audio.h"
-#include "../src/runtime/aos_soul_red_needles.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_needles.h"
 
 static uint32_t zero(void) { return 0; }
 

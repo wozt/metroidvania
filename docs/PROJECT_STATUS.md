@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0945 - Soul modules move to aos/{red,blue}_souls and aos/souls
+
+- The 23 red-soul and 3 blue-soul pairs moved to
+  `src/runtime/aos/red_souls/` and `src/runtime/aos/blue_souls/`; the
+  soul core, menu and notice moved to `src/runtime/aos/souls/`.
+  Includes inside the moved files became relative (`../souls/`,
+  `../../aos_*.h`), consumer includes use `aos/<dir>/` paths and
+  CMake plus the registries were updated. No code or behavior
+  changed. Yellow-soul effects live inside `aos_soul.c`, so no
+  `yellow_souls/` directory exists.
+
 ## Patch 0944 - Enemy families move to src/runtime/aos/enemies/
 
 - The 53 family translation units moved from `src/runtime/aos_enemies/`

@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_ghost.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_ghost.h"
 
 static uint32_t rolls[] = {0, 0xA0, 0x80, 0x40};
 static unsigned draw;

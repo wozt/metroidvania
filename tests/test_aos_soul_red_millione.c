@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free deterministic tests for SkillSkullMillioneUse. */
-#include "aos_soul_red_millione.h"
+#include "aos/red_souls/aos_soul_red_millione.h"
 #include "aos_audio.h"
 
 #include <assert.h>
@@ -45,6 +45,6 @@ static void follows_soma_and_mirrors(void) {
 int main(void) {
     right_facing_sequence();
     follows_soma_and_mirrors();
-    puts("aos_soul_red_millione: OK (ROM-free source-derived parent emission)");
+    puts("aos/red_souls/aos_soul_red_millione: OK (ROM-free source-derived parent emission)");
     return 0;
 }

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_soul_red_nemesis.h"
+#include "aos/red_souls/aos_soul_red_nemesis.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -20,6 +20,6 @@ int main(void) {
            aos_nemesis_soul_dy(&s) == -38);
     while (aos_nemesis_soul_update(&s)) ++frames;
     assert(frames == 301 + 29 && s.blink == 0);
-    puts("aos_soul_red_nemesis: ok");
+    puts("aos/red_souls/aos_soul_red_nemesis: ok");
     return 0;
 }

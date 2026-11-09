@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_shot.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_shot.h"
 
 int main(void) {
     AosShot s = aos_shot_create((100 << 16) + 0xC000, (200 << 16) + 0x8000, false);

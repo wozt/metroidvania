@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_devil.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_devil.h"
 
 int main(void) {
     AosDevilFire up = aos_devil_fire_create(0, 100 << 16, 80 << 16, false);

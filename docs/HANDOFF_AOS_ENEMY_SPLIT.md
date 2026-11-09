@@ -332,6 +332,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      updated. Continue the reorganization with the soul modules
      (`aos/red_souls`, `aos/blue_souls`), weapons, math and the
      analogous MZM paths, one category per commit.
+   - *(Continued in patch 0945.)* Soul pairs moved to
+     `aos/red_souls/`, `aos/blue_souls/` and the core to `aos/souls/`
+     with relative includes. Continue with weapons (`aos/weapons`),
+     math (`aos/math`) and the remaining `aos_*` groupings, then the
+     analogous MZM paths, one category per commit.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

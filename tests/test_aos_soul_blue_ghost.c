@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_audio.h"
-#include "aos_soul_blue_ghost.h"
+#include "aos/blue_souls/aos_soul_blue_ghost.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -70,6 +70,6 @@ int main(void) {
     aos_ghost_guardian_box(&ghost, box);
     assert(!ghost.giant && aos_audio_requested(AOS_AUDIO_START_SONG, 0x97) == 1 && box[0] == 16 &&
            box[3] == 32);
-    puts("aos_soul_blue_ghost: ok");
+    puts("aos/blue_souls/aos_soul_blue_ghost: ok");
     return 0;
 }

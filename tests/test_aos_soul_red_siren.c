@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_siren.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_siren.h"
 
 int main(void) {
     AosSirenSoul right = aos_siren_soul_create((100 << 16) + 0xA000,

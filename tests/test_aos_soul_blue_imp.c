@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_audio.h"
-#include "aos_soul_blue_imp.h"
+#include "aos/blue_souls/aos_soul_blue_imp.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -93,6 +93,6 @@ int main(void) {
                                    none, fixed))
         ++frames;
     assert(frames == 15 && !guardian.active && !(flags & 0x200));
-    puts("aos_soul_blue_imp: ok");
+    puts("aos/blue_souls/aos_soul_blue_imp: ok");
     return 0;
 }

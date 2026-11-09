@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_soul_red_lightning.h"
+#include "aos/red_souls/aos_soul_red_lightning.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -21,6 +21,6 @@ int main(void) {
     assert(l.x == 104 << 16 && l.reach == 0x80 && aos_lightning_box(&l).w == 0x80);
     aos_lightning_update(&l, 8, 0, 0, 0, false);
     assert(l.palette_reloaded);
-    puts("aos_soul_red_lightning: ok");
+    puts("aos/red_souls/aos_soul_red_lightning: ok");
     return 0;
 }

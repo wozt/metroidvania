@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free, deterministic phase tests for Skill_EvilButcher_Ripper_Use. */
-#include "aos_soul_red_ripper.h"
+#include "aos/red_souls/aos_soul_red_ripper.h"
 #include "aos_audio.h"
 
 #include <assert.h>
@@ -85,6 +85,6 @@ int main(void) {
     facing_left_and_fade();
     outside_and_invalid_variant();
     attached_target_lifecycle();
-    puts("aos_soul_red_ripper: OK (ROM-free source-derived motion and hit helper)");
+    puts("aos/red_souls/aos_soul_red_ripper: OK (ROM-free source-derived motion and hit helper)");
     return 0;
 }

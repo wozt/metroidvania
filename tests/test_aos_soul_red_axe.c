@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_axe.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_axe.h"
 #include "../src/runtime/aos_audio.h"
 
 static void axe_tests(void) {

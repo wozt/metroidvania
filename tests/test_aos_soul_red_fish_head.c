@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free deterministic tests for SkillFishHeadUse. */
-#include "aos_soul_red_fish_head.h"
+#include "aos/red_souls/aos_soul_red_fish_head.h"
 #include "aos_audio.h"
 
 #include <assert.h>
@@ -37,6 +37,6 @@ static void mirrors_and_exits(void) {
 int main(void) {
     accelerates_right();
     mirrors_and_exits();
-    puts("aos_soul_red_fish_head: OK (ROM-free source-derived accelerating shot)");
+    puts("aos/red_souls/aos_soul_red_fish_head: OK (ROM-free source-derived accelerating shot)");
     return 0;
 }

@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_soul_red_merman.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_merman.h"
 
 static void create_tests(void) {
     AosMermanDrop d = aos_merman_drop_create(4, 100 << 16, 50 << 16, false);

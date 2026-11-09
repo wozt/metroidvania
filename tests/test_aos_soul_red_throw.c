@@ -5,7 +5,7 @@
 
 #include "../src/runtime/aos_audio.h"
 
-#include "../src/runtime/aos_soul_red_throw.h"
+#include "../src/runtime/aos/red_souls/aos_soul_red_throw.h"
 
 /* A record shaped like the Skeleton's (parameter 3): half a pixel forward,
  * four up, gravity 0x2000, spin 0x0B00 (values chosen for the test). */

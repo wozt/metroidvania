@@ -2773,7 +2773,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/minotaur.c"
 #include "aos_enemies/worm.c"
 #include "aos_enemies/biphron.c"
 #include "aos_enemies/bomber_armor.c"
@@ -3115,7 +3114,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                       cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_MINOTAUR || enemy->id == AOS_ENEMY_RED_MINOTAUR) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return minotaur_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_minotaur_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);
     if (is_early_enemy(enemy->id) && enemy->role == AOS_ROLE_ENEMY)
         return early_enemy_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,

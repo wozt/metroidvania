@@ -1,9 +1,22 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Minotaur (enemy 0x15) and Red Minotaur (0x58).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define generic_death aos_enemy_generic_death
+#define ground_walk aos_enemy_ground_walk
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_in_centred aos_enemy_player_in_centred
+#define skeleton_merge aos_enemy_skeleton_merge
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
 
 /* sub_080AFE08(e, mask): the aggro gate of the Minotaur family. The brown
  * Minotaur (+ 0x15 = 0) always passes; the red one rolls
@@ -173,7 +186,7 @@ static void minotaur_attack(AosEnemy *e, const AosSoma *soma, const AosCollision
  * collision pass and the animation step. State 3 is sub_08079294 (its
  * timed particles differ from generic_death's flames) and state 4 is
  * sub_0803F17C alone (no collision, no extra step). */
-static AosHitReport minotaur_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_minotaur_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
                                     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                     const AosWeaponFrames *weapon_frames, int soma_atk,
                                     int soma_def, int cam_x, int cam_y,

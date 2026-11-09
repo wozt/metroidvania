@@ -421,5 +421,10 @@ void aos_enemy_giant_part_update(AosEnemy *enemy, const AosSoma *soma,
                                  const AosEnemyKind *kind,
                                  uint32_t (*random)(void),
                                  AosHitReport *report);
+AosHitReport aos_enemy_minotaur_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

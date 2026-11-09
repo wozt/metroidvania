@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:03:19+00:00",
+ "generated_at": "2026-11-09T15:05:10+00:00",
  "git": {
-  "commit": "3b584de7",
+  "commit": "fd4135e2",
   "branch": "main",
   "dirty": true
  },
@@ -19754,6 +19754,7 @@
     "src/runtime/aos_enemies/white_dragon.c",
     "src/runtime/aos_enemies/bone_pillar.c",
     "src/runtime/aos_enemies/giant_ghost.c",
+    "src/runtime/aos_enemies/minotaur.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22208,6 +22209,12 @@
  },
  "timeline": [
   {
+   "commit": "fd4135e2",
+   "date": "2026-11-09",
+   "subject": "Compile Giant Ghost family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "3b584de7",
    "date": "2026-11-09",
    "subject": "Compile Bone Pillar family as an independent enemy unit",
@@ -22679,12 +22686,6 @@
    "commit": "e3d812f6",
    "date": "2026-11-08",
    "subject": "Sync stale registry notes: quick-map secrets, damage resistances",
-   "scope": "project"
-  },
-  {
-   "commit": "fa4a6855",
-   "date": "2026-11-08",
-   "subject": "Center bestiary detail name, close weakness-label audit",
    "scope": "project"
   }
  ],

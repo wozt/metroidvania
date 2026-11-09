@@ -51,7 +51,12 @@ an edited room's BG1 and BG2 blocks from its `.mvnative` override, at the start
 and through doors, when the override names the same room and tileset and has
 the room's dimensions (otherwise it reports it and keeps the native room).
 Deleting the override restores the original; `--no-overlays` ignores them all.
-Only the graphics change: collision, doors and objects stay native.
+The collision painted in the editor is played as well: each project cell of the
+room's document (`overrides/metroid/entities/<area>_<NNN>.json`) replaces the
+native block with the native Clipdata value of its type (solid, one-way
+platform, lava hazard, rising or falling steep slope, water, air), when the
+document names the same room and dimensions. Doors, objects and events stay
+native.
 
 ## Current limitations
 
@@ -62,8 +67,9 @@ Only the graphics change: collision, doors and objects stay native.
   rising/falling Slope, Water and Air brushes or
   changed from the canvas context menu, and project doors can be created,
   viewed and deleted. Project door properties and transition destinations have
-  a dedicated GTK form backed by the same validated CLI operations. None of
-  this data is playable yet.
+  a dedicated GTK form backed by the same validated CLI operations. Zero
+  Mission's runtime plays the project collision; the doors, and everything in
+  Aria, are not playable yet.
 - Project enemy, item and object forms edit the label, snapped position and
   verified native reference in both modes. Aria pickup forms additionally edit
   the typed item/soul ID, two native parameters and flags. Runtime behavior and
@@ -85,8 +91,9 @@ Only the graphics change: collision, doors and objects stay native.
 - Native trigger regions, boss parameters, scripts, music and engine-backed
   cutscene authoring are not yet decoded or editable. Project trigger regions
   are authorable but are not consumed by either gameplay engine yet.
-- Only Zero Mission's block layers are consumed by a gameplay runtime; Aria's
-  runtime and every project collision, door, entity and event edit are not.
+- Only Zero Mission's block layers and project collision are consumed by a
+  gameplay runtime; Aria's runtime and every project door, entity and event
+  edit are not.
 
 The collision toolbar is shared deliberately: both source formats have verified
 native counterparts for the seven exposed semantics. Zero Mission uses 16px

@@ -3931,6 +3931,18 @@ numbers and hit-feedback comparisons.
   choreography, control-2 callbacks and the controller's later proximity
   conversations still need reconstruction.
 
+## Patch 0737 - The editor's collision in the Zero Mission runtime
+
+- `fusion_room_runtime` now plays the collision painted in the editor: the
+  room's project document (`overrides/metroid/entities/*.json`) has its
+  16-pixel cells replace the native blocks with the native Clipdata value of
+  their type (solid, one-way, lava hazard, steep slopes, water, air), found
+  in the native tables by type and behavior. A document that does not fit
+  the room is reported and ignored.
+- Checked on captures: Samus falls through painted air cells and stands on
+  painted solid cells. ROM-free tests cover the type mapping and every
+  rejection.
+
 ## Patch 0736 - Editor overlays in the Zero Mission runtime
 
 - New `mzm_room_overlay`: `fusion_room_runtime` now applies the map editor's

@@ -4356,6 +4356,17 @@ static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt 
 static bool runtime_overlays_enabled = true;
 static const char *runtime_overlay_directory = MZM_ROOM_OVERLAY_DIRECTORY;
 
+/* A project collision cell: the block's Clipdata value and type, no
+ * movement (conveyors and elevators stay native elsewhere). */
+static void runtime_set_project_cell(void *context, int x, int y, unsigned short raw,
+                                     unsigned char clip_type) {
+    Room *room = context;
+    int columns = room->width / 16;
+    room_set_cell(room, x, y, (ClipType)clip_type);
+    room->clip[y * columns + x] = raw;
+    room->movements[y * columns + x] = 0;
+}
+
 static void runtime_apply_overlay(Room *room) {
     if (!runtime_overlays_enabled || !room->has_backgrounds) return;
     char path[512], message[640];
@@ -4370,6 +4381,17 @@ static void runtime_apply_overlay(Room *room) {
     MzmOverlayResult result = mzm_room_overlay_apply(path, room->area, room->room, room->tileset,
                                                      layers, &changed, message, sizeof message);
     if (result != MZM_OVERLAY_NONE) fprintf(stderr, "%s\n", message);
+    /* The collision painted in the editor, over the native Clipdata. */
+    if (!mzm_room_document_path(path, sizeof path, runtime_overlay_directory, room->area,
+                                room->room))
+        return;
+    MzmClipTable table = {runtime_block_tables.main_types, runtime_block_tables.main_behaviors,
+                          runtime_block_tables.main_count};
+    result = mzm_room_collision_apply(path, room->area, room->room, room->width, room->height,
+                                      &table, runtime_set_project_cell, room, &changed, message,
+                                      sizeof message);
+    if (result == MZM_OVERLAY_REJECTED || (result == MZM_OVERLAY_APPLIED && changed))
+        fprintf(stderr, "%s\n", message);
 }
 
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
@@ -4767,7 +4789,11 @@ int room_runtime_main(int argc, char **argv) {
                     "--task metroid_rooms\n");
         free(room); return 2;
     }
-    if (native_format) runtime_apply_overlay(room);
+    /* The editor's overlays (their collision needs the Clipdata tables). */
+    if (native_format) {
+        runtime_block_tables_open(RUNTIME_BLOCK_TABLES);
+        runtime_apply_overlay(room);
+    }
     printf("Runtime room %s/%s/%d %dx%d: %zu %s collision cells\n",
            room->world,room->area,room->room,room->width,room->height,room->count,
            native_format?"native Clipdata":"project");

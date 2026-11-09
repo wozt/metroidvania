@@ -6,9 +6,18 @@
  * from the native export takes those layers when the document names the
  * same room and tileset and its layers have the room's dimensions; any
  * other document is rejected and the native room stays as it is. Removing
- * the file restores the reconstructed original. Only the block graphics are
- * applied: Clipdata, doors and objects stay native (the editor's project
- * collision and entities have no engine adapter yet). No SDL. */
+ * the file restores the reconstructed original.
+ *
+ * The room's project document (overrides/metroid/entities/<area>_<NNN>.json,
+ * schema metroidvania.project-room-data) carries the collision painted in
+ * the editor, sparse 16-pixel cells of seven types. Each cell takes the
+ * smallest native Clipdata value whose type and behavior are exactly the
+ * type's native counterpart (the editor's collision-capabilities): solid
+ * CLIPDATA_TYPE_SOLID, one_way PASS_THROUGH_BOTTOM, hazard an air block of
+ * CLIP_BEHAVIOR_LAVA, slope_up RIGHT_STEEP_FLOOR_SLOPE (rising to the
+ * right), slope_down LEFT_STEEP_FLOOR_SLOPE, water an air block of
+ * CLIP_BEHAVIOR_WATER, air CLIPDATA_TYPE_AIR. Doors, objects and events stay
+ * native. No SDL. */
 #ifndef MZM_ROOM_OVERLAY_H
 #define MZM_ROOM_OVERLAY_H
 
@@ -38,5 +47,32 @@ bool mzm_room_overlay_path(char *out, size_t size, const char *directory, const 
 MzmOverlayResult mzm_room_overlay_apply(const char *path, const char *area, int room, int tileset,
                                         MzmOverlayLayer layers[2], int *changed, char *message,
                                         size_t message_size);
+
+/* The native Clipdata tables (sClipdataCollisionTypes and the
+ * behaviors) of values 0 .. count - 1. */
+typedef struct {
+    const unsigned char *types;
+    const unsigned short *behaviors;
+    int count;
+} MzmClipTable;
+
+enum { MZM_PROJECT_COLLISION_TYPES = 7 };
+extern const char *const mzm_project_collision_names[MZM_PROJECT_COLLISION_TYPES];
+
+/* The Clipdata value and type for a project type (index into the names);
+ * false when the tables have no exact native counterpart. */
+bool mzm_project_collision_native(const MzmClipTable *table, int project_type,
+                                  unsigned short *raw, unsigned char *clip_type);
+/* <directory>/entities/<area in lower case>_<NNN>.json */
+bool mzm_room_document_path(char *out, size_t size, const char *directory, const char *area,
+                            int room);
+/* Applies the document's collision cells through `set` (block x, y, its
+ * Clipdata value and type), in the document's order. */
+typedef void (*MzmCollisionSetter)(void *context, int x, int y, unsigned short raw,
+                                   unsigned char clip_type);
+MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, int room,
+                                          int width_px, int height_px, const MzmClipTable *table,
+                                          MzmCollisionSetter set, void *context, int *changed,
+                                          char *message, size_t message_size);
 
 #endif

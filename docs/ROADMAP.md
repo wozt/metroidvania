@@ -121,8 +121,9 @@ through real runtime state.
 - guarantee that removing an overlay restores the reconstructed original.
 
 Current progress: the Zero Mission runtime applies the editor's private room
-block overrides (BG1 and BG2) when they fit the room, and ignores them
-otherwise; removing an override restores the native room. Collision, doors,
+block overrides (BG1 and BG2) and its project collision cells (as native
+Clipdata values of the same type and behavior) when they fit the room, and
+ignores them otherwise; removing an override restores the native room. Doors,
 entities, events and every Aria overlay are not applied yet.
 
 Exit criterion: edits for both games apply reproducibly above native resources

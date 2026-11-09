@@ -2,6 +2,74 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0869 - Ectoplasm ported (id 27)
+
+- EnemyEctoplasmCreate (0x080995B8) /
+  EnemyEctoplasmUpdate (0x080994E0) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_ECTOPLASM
+  (0x1B) and the enemy_names[27] = "ectoplasm" kind
+  row (objects.c ENTITY: graphics 0x081CC054, palette
+  0x0820ABE0 bank 0, frames 0x0822388C, art exported
+  through --aria-export-objects).
+- Create: sub_080999F0 loads the resources, animation
+  0 loops; the global 0x8E & 0x40 path is state 2
+  parked at home, otherwise + 0x5C = 3, the contact
+  sub_08099B30 (element 0x80, ported as
+  contact_elements) and hurt sub_080998E8 callbacks,
+  state 0 and + 0x59 |= 2. The home point + 0x14 /
+  + 0x18 is the position plus the gEwramData + 0xA094
+  camera offset; stored in world pixels since the
+  offset cancels in every use.
+- State 0 sub_08099690: step 0 hovers at home with x
+  pinned and y set to it plus a 3-pixel sine wobble
+  of phase + 0x1C (+= 0x200), the u8 timer counting
+  and the + 0x42 - 0x5A, + 0x46 - 0x64, 0xB4 x 0xC8
+  player box waking it to step 1. Step 1 picks a
+  destination around the aim target — x +/-(16 + RNG %
+  768) pixels by RNG & 1, y = target y - RNG % 768 -
+  16 or - 32 alternating through + 0x20 — and falls
+  into step 2 the same frame. Step 2 steers with
+  acceleration 0x400 beyond 4 pixels on each axis,
+  31/32 velocity damping, sub_0806D3D8(e, 1.0)
+  repeated once while Soma's + 0x10 flags & 0x360
+  (sub_080212C8) are set, back to step 1 within
+  0x3FFFF on both axes or after the timer passes 0x77.
+- State 1 is the death drift: sub_0806D3D8(e, 4.0)
+  sinks it while sub_0806AEAC spawns a wisp every
+  4th tick (the shared 0x49/0xCF flame spawn in a 16 x
+  3 pixel area), the 0x08118CE0 blink table hides it
+  and the u8 timer deletes it at 0.
+- State 2 (the flag path) parks it at home with the
+  same wobble and only steps its animation — no
+  drift, no collisions.
+- The hurt callback sub_080998E8 knocks it back at
+  1.0 px/frame along ArcTan2 to the attacker + 0x4000
+  on every hit; a lethal blow marks it defeated,
+  plays song 0x6D, switches to animation 1, state 1,
+  step 0, timer 0x28, clears vx/vy/ax and sets
+  ay 0x1000.
+- Divergences documented: the sub_08021924 target
+  table behind the sub_08068AD4 activity box is not
+  ported, the wisp child's + 0x5C - 1 priority is not
+  carried by the shared flame effect, the palette
+  merges (+ 0x2C/+ 0x5A, the create's 0xFFFFFF00)
+  and the sub_0806D4C0 global pause 0x4BE are not
+  ported, the hurt knockback uses Soma's position for
+  the attacker entity, no emulator comparison.
+- ectoplasm_tests covers create (home point, contact
+  element 0x80, animation 0), the step-0 hover and
+  wake box, the deterministic target pick and step-2
+  steering, arrival back to step 1, the knockback and
+  lethal transition (song 0x6D, state 1, timer 0x28),
+  the death drift (sink, wisps, blink, deletion) and
+  the flag-path state 2.
+- The monster drops common item 0x000A through the
+  generic roll and its yellow soul 20 (record
+  soul_type 2, soul_index 20; routine 0x080322A1, the
+  shared SkillPoisonWorm_Ectoplasm_Gargoyle_Use
+  resistance skill, ported through the generic
+  yellow-soul path).
+
 ## Patch 0868 - Sky Fish ported (id 81)
 
 - EnemySkyFishCreate (0x080A7C80) / EnemySkyFishUpdate

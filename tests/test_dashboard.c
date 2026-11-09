@@ -275,7 +275,7 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(red_souls->count == 55 && blue_souls->count == 24 &&
            yellow_souls->count == 35 && ability_souls->count == 6,
            "Aria soul families");
-    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 51,
+    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 52,
            "complete Aria monsters");
     const FusionJson *mzm_monster_coverage = fusion_json_member(mzm_coverage, "monsters");
     const FusionJson *mzm_item_coverage = fusion_json_member(mzm_coverage, "items");
@@ -370,7 +370,8 @@ static void test_bestiary(const FusionJson *data) {
         "Merman", "Ripper", "Ghost", "Skeleton", "Winged Skeleton", "Rock Armor",
         "Killer Fish", "Buer", "White Dragon",
         "Giant Ghost", "Bone Pillar", "Peeping Eye", "Minotaur", "Red Minotaur",
-        "Giant Worm", "Poison Worm", "Biphron", "Bomber Armor", "Sky Fish"};
+        "Giant Worm", "Poison Worm", "Biphron", "Bomber Armor", "Sky Fish",
+        "Ectoplasm"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

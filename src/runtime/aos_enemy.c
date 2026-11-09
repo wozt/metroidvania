@@ -593,7 +593,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MINOTAUR && id != AOS_ENEMY_RED_MINOTAUR &&
         id != AOS_ENEMY_GIANT_WORM && id != AOS_ENEMY_POISON_WORM &&
         id != AOS_ENEMY_BIPHRON && id != AOS_ENEMY_BOMBER_ARMOR &&
-        id != AOS_ENEMY_SKY_FISH &&
+        id != AOS_ENEMY_SKY_FISH && id != AOS_ENEMY_ECTOPLASM &&
         id != AOS_BOSS_HEADHUNTER)
         return false;
     const AosAnimSet *anims = kind->anims;
@@ -949,6 +949,32 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->sf_timer = (int16_t)(0x40 + (aos_random() & 0x3F));
         enemy->sf_variant = (uint8_t)(aos_random() & 1);
         enemy->hidden = true;
+        return true;
+    }
+    if (id == AOS_ENEMY_ECTOPLASM) {
+        /* EnemyEctoplasmCreate (sub_080995B8) with sub_080999F0 loading
+         * tiles 0x081CC054, palette 0x0820ABE0 bank 0 and frames
+         * 0x0822388C; animation 0 looping. Under the global 0x8E & 0x40 it
+         * is state 2 parked at its home point; otherwise + 0x5C = 3, the
+         * contact sub_08099B30 / hurt sub_080998E8 callbacks (the count
+         * variant sub_0806D260 only picks the registration helper), the
+         * box refresh, state 0 and + 0x59 |= 2. The home point + 0x14 /
+         * + 0x18 is the position plus the native camera offset
+         * (gEwramData + 0xA094); stored here in world pixels since the
+         * offset cancels in every use. The 0xFFFFFF00 palette merge is
+         * not ported. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        enemy->target_x = enemy->x;
+        enemy->target_y = enemy->y;
+        if (flag_8e_40) {
+            enemy->state = 2;
+            return true;
+        }
+        enemy->combat.attack_off = false;
+        enemy->contact_elements = 0x80;   /* sub_08099B30: element 0x80 */
+        enemy->state = 0;
+        enemy->step = 0;
         return true;
     }
     if (id == AOS_ENEMY_AXE_ARMOR) {
@@ -1463,6 +1489,7 @@ static void doll_shatter(AosEnemy *e, AosHitReport *report);
 static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 static void nemesis_struck(AosEnemy *n);
 static void peeping_struck(AosEnemy *e, const AosSoma *soma);
+static void ectoplasm_struck(AosEnemy *e, const AosSoma *soma, const AosAnimSet *anims);
 static void fish_struck(AosEnemy *f, const AosEnemyKind *kind);
 static void dragon_struck(AosEnemy *d, uint8_t attacker);
 static void skeleton_merge(AosHitReport *report, const AosHitReport *hit);
@@ -1607,6 +1634,13 @@ static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *
                                  contact_x, contact_y, &report);
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
+            if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY) {
+                /* sub_080998E8: knockback on every hit, the death drift
+                 * on a lethal one. */
+                if (enemy->hp <= 0) report.killed = enemy->defeated = true;
+                ectoplasm_struck(enemy, soma, kind->anims);
+                goto contact;
+            }
             if (enemy->role == AOS_ROLE_WORM_SEGMENT && enemy->parent &&
                 report.enemy_damage > 0) {
                 /* sub_080AD748: the segment's hurt callback forwards the
@@ -13162,6 +13196,148 @@ static AosHitReport sky_fish_update(AosEnemy *enemy, AosSoma *soma,
     return report;
 }
 
+/* sub_08099690: state 0 of the ectoplasm drift. Step 0 hovers at the home
+ * point (+ 0x14/+ 0x18, here in world pixels — the gEwramData + 0xA094
+ * camera offsets cancel): x is pinned, y is set to the target plus a
+ * 3-pixel sine wobble of phase + 0x1C (+= 0x200), the timer counts and the
+ * player box (+ 0x42 - 0x5A, + 0x46 - 0x64, 0xB4 x 0xC8 room pixels)
+ * advances to step 1. Step 1 picks a destination around the aim target:
+ * x +/- (16 + RNG % 768) pixels by RNG & 1, y = target y - RNG % 768 -
+ * 16 or - 32 pixels alternating through + 0x20, then falls into step 2
+ * the same frame. Step 2 steers: acceleration 0x400 toward the target
+ * beyond 4 pixels on each axis, velocity damped 31/32 (sub_0806D490 /
+ * sub_0806D4A8 with 0x20), sub_0806D3D8(e, 1.0), repeated once while
+ * sub_080212C8's Soma + 0x10 flags & 0x360 are set; back to step 1 within
+ * 0x3FFFF on both axes or after the u8 timer passes 0x77. */
+static void ectoplasm_drift(AosEnemy *enemy, const AosSoma *soma, uint32_t (*random)(void)) {
+    if (enemy->step == 0) {
+        enemy->x = enemy->target_x;
+        enemy->y = enemy->target_y +
+                   (int32_t)(((int64_t)aos_sine(enemy->walk_timer + 0x4000) * 3));
+        enemy->walk_timer += 0x200;
+        enemy->timer++;
+        if (player_near(soma, (int16_t)((enemy->x >> 16) - 0x5A),
+                        (int16_t)((enemy->y >> 16) - 0x64), 0xB4, 0xC8)) {
+            enemy->step = 1;
+            enemy->timer = 0;
+        }
+        return;
+    }
+    if (enemy->step > 2) return;
+    if (enemy->step == 1) {
+        int32_t ybias;
+        if (!enemy->ec_dir) {
+            enemy->ec_dir = 1;
+            ybias = (int32_t)0xFFF00000;      /* -16 pixels */
+        } else {
+            enemy->ec_dir = 0;
+            ybias = (int32_t)0xFFE00000;      /* -32 pixels */
+        }
+        int32_t xoff = (int32_t)(umod(random(), 0x3000000) + 0x100000);
+        enemy->target_x = target_x(soma) + ((random() & 1) ? xoff : -xoff);
+        enemy->target_y = target_y(soma) - (int32_t)umod(random(), 0x3000000) + ybias;
+        enemy->step = 2;
+        enemy->timer = 0;
+    }
+    int32_t dx = enemy->target_x - enemy->x, dy = enemy->target_y - enemy->y;
+    enemy->ax = dx > 0x40000 ? 0x400 : dx < -0x40000 ? -0x400 : 0;
+    enemy->ay = dy > 0x40000 ? 0x400 : dy < -0x40000 ? -0x400 : 0;
+    enemy->vx = enemy->vx * 31 / 32;
+    enemy->vy = enemy->vy * 31 / 32;
+    accel_move(enemy, 0x10000);
+    if (soma->flags & 0x360) {
+        enemy->vx = enemy->vx * 31 / 32;
+        enemy->vy = enemy->vy * 31 / 32;
+        accel_move(enemy, 0x10000);
+    }
+    if ((dx < 0 ? -dx : dx) <= 0x3FFFF && (dy < 0 ? -dy : dy) <= 0x3FFFF)
+        enemy->step = 1;
+    if (enemy->timer++ > 0x77) enemy->step = 1;
+}
+
+/* sub_080998E8: every hit knocks the ectoplasm back from the attacker at
+ * 1.0 pixel per frame along the angle to it + 0x4000; a lethal blow marks
+ * it defeated (sub_080683BC, done by the caller), plays song 0x6D,
+ * switches to animation 1, state 1, step 0, timer 0x28, clears
+ * vx/vy/ax and sets ay 0x1000. The + 0x2C/+ 0x5A palette bits are not
+ * ported. */
+static void ectoplasm_struck(AosEnemy *enemy, const AosSoma *soma,
+                             const AosAnimSet *anims) {
+    int32_t dx = pixel_delta(enemy->x, soma->x), dy = pixel_delta(enemy->y, soma->y);
+    uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
+    enemy->vx = fixed_mul(aos_sine(angle + 0x4000u), 0x10000);
+    enemy->vy = fixed_mul(aos_sine(angle), 0x10000);
+    if (enemy->hp > 0) return;
+    enemy->defeated = true;
+    aos_audio_play_song(0x6D);
+    play_loop(enemy, anims, 1, true);
+    enemy->state = 1;
+    enemy->step = 0;
+    enemy->timer = 0x28;
+    enemy->vx = enemy->vy = enemy->ax = 0;
+    enemy->ay = 0x1000;
+}
+
+/* EnemyEctoplasmUpdate (sub_080994E0): outside margin 4 it freezes; the
+ * sub_08068AD4 activity box only feeds the sub_08021924 target table
+ * (not ported). + 0x58 bit 0x20 is the margin flag, sub_0806AE54 the hit
+ * flash (skipped in state 1), sub_0806D4C0's global pause 0x4BE is taken
+ * as 0. State 0 runs the drift, state 1 sinks with sub_0806AEAC wisps and
+ * the blink table then deletes, state 2 parks at home with the wobble and
+ * only steps its animation. States 0 and 1 finish with the animation
+ * step and the collision pass (skipped once defeated). */
+static AosHitReport ectoplasm_update(AosEnemy *enemy, AosSoma *soma,
+                                      const AosEnemyKind *kind,
+                                      const AosWeaponEntity *weapon,
+                                      const AosWeaponFrames *weapon_frames, int soma_atk,
+                                      int soma_def, int cam_x, int cam_y,
+                                      uint32_t (*random)(void)) {
+    AosHitReport report = {0}, spawned = {0};
+    int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
+    if (enemy->state != 1 && outside_margins(kind, 4, sx, sy)) {
+        aos_combat_tick(&enemy->combat);
+        return report;
+    }
+    enemy->hidden = outside_margins(kind, 4, sx, sy);
+    if (enemy->state != 1 && enemy->hp > 0 && enemy->hit_flash)
+        enemy->hit_flash--;
+    switch (enemy->state) {
+    case 0:
+        ectoplasm_drift(enemy, soma, random);
+        break;
+    case 1:
+        accel_move(enemy, 0x40000);
+        /* sub_0806AEAC: a wisp (the shared 0x49/0xCF flame spawn) every
+         * 4th tick in a 16 x 3 pixel area, the blink table below 0x28,
+         * deleted when the u8 timer wraps. */
+        if ((enemy->timer & 3) == 0)
+            spawn_flame_at(enemy->x, enemy->y - 0xA8000, 0x100000, 0x30000,
+                           random, &spawned);
+        enemy->hidden = enemy->timer <= 0x27 ? kind->blink[enemy->timer] & 1 : false;
+        if ((int8_t)--enemy->timer <= 0) enemy->removed = true;
+        break;
+    case 2:
+        if (enemy->step == 0) {
+            enemy->x = enemy->target_x;
+            enemy->y = enemy->target_y +
+                       (int32_t)(((int64_t)aos_sine(enemy->walk_timer + 0x4000) * 3));
+            enemy->walk_timer += 0x200;
+            enemy->timer++;
+        }
+        step_anim(enemy, kind->anims);
+        aos_combat_tick(&enemy->combat);
+        return report;
+    default:
+        break;
+    }
+    step_anim(enemy, kind->anims);
+    if (!enemy->defeated)
+        report = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_combat_tick(&enemy->combat);
+    take_effects(&report, &spawned);
+    return report;
+}
+
 static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
                                  const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -13528,6 +13704,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->id == AOS_ENEMY_SKY_FISH && enemy->role == AOS_ROLE_ENEMY)
         return sky_fish_update(enemy, soma, kind, weapon, weapon_frames,
                                soma_atk, soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY)
+        return ectoplasm_update(enemy, soma, kind, weapon, weapon_frames,
+                                soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ROCK_ARMOR && enemy->role == AOS_ROLE_ENEMY)
         return rock_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                  soma_def, cam_x, cam_y, random);

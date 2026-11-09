@@ -174,6 +174,9 @@ static const EntitySpec entities[] = {
     /* Sky Fish (sub_080A8194): tiles 0x081CC0BC, palette 0x0820B000 bank 0,
      * frame table 0x0822976C shared with its splash effect entities. */
     ENTITY("sky_fish", 0x081CC0BC, 0x0820B000, 0, 0x0822976C),
+    /* Ectoplasm (sub_080999F0): tiles 0x081CC054, palette 0x0820ABE0
+     * bank 0, frames 0x0822388C. */
+    ENTITY("ectoplasm", 0x081CC054, 0x0820ABE0, 0, 0x0822388C),
     ENTITY("giant_ghost", 0x081CBFA4, 0x0820A698, 0, 0x08219140),
     /* The Winged Skeleton and its death pieces (frames 0x24-0x2A of
      * sub_0807540C). */

@@ -2852,6 +2852,143 @@ static void sky_fish_tests(void) {
     assert(a.removed && blinks > 0 && bubbles > 0 && a.y > 0x200000);
 }
 
+static void ectoplasm_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    /* Animations 0 (the drift, 12 frames) and 1 (the death, 3 frames)
+     * with the exported durations. */
+    static const uint8_t drift[12] = {8, 19, 17, 11, 5, 5, 8, 8, 15, 11, 10, 5};
+    static const uint8_t death[3] = {4, 2, 4};
+    const AosAnimDef defs[2] = {{12, drift}, {3, death}};
+    const AosAnimSet anims = {defs, 2};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 2; ++a)
+        for (int f = 0; f < 12; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-4, -9, 10, 18};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    const AosEnemyStats stats = {80, 24, 4, 0, 0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create: state 0, home point = position, contact element 0x80,
+     * animation 0. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_ECTOPLASM, 200, 150, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.target_x == e.x && e.target_y == e.y &&
+           e.contact_elements == 0x80 && e.anim.id == 0);
+
+    /* Step 0 hovers at home: x pinned, y = home + a wobble of at most
+     * 3 pixels, the phase advancing 0x200 a tick; Soma far away keeps it
+     * there. */
+    int32_t phase0 = e.walk_timer;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 0 && e.x == e.target_x && e.timer == 1 &&
+           e.walk_timer == phase0 + 0x200);
+    int32_t wobble = e.y - e.target_y;
+    assert(wobble >= -0x30000 && wobble <= 0x30000);
+
+    /* Soma in the 0xB4 x 0xC8 box wakes it: step 1 next tick, then the
+     * target pick (always_zero: -16 px in x by the RNG & 1 = 0 sign, -16 px
+     * in y on the first + 0x20 pass) falls into step 2 the same frame. */
+    soma.x = e.x;
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && e.timer == 0);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 2 && e.timer == 1 && e.ec_dir == 1);
+    assert(e.target_x == soma.x - 0x100000 && e.target_y == soma.y - 0x100000);
+    assert(e.ax == -0x400 && e.ay == -0x400);
+
+    /* Step 2 steers toward the target (damped 31/32, limit 1.0) and comes
+     * back to step 1 on arrival or after 0x78 ticks. */
+    int frames = 0;
+    while (e.step == 2 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+        ++frames;
+    }
+    assert(e.step == 1 && frames > 4);
+
+    /* A weapon hit knocks it back from Soma at 1.0 px/frame; a second,
+     * lethal one starts the death drift: state 1, anim 1, timer 0x28,
+     * song 0x6D, zeroed velocities and ay 0x1000. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = e.x;
+    soma.y = e.y;
+    e.step = 0;
+    e.state = 0;
+    e.x = e.target_x = AOS_FIXED(200);
+    e.y = e.target_y = AOS_FIXED(150);
+    e.vx = e.vy = e.ax = e.ay = 0;
+    e.timer = 0;
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 10, 4,
+                                        0, 0, always_zero);
+    assert(hit.enemy_hit && e.hp < stats.hp && !hit.killed);
+    assert(e.vx != 0 || e.vy != 0);
+    for (int i = 0; i < 20; ++i) {
+        soma.x = e.x;
+        soma.y = e.y;
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                               always_zero);
+    }
+    soma.x = e.x;
+    soma.y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 9999, 4, 0, 0,
+                           always_zero);
+    assert(hit.killed && e.state == 1 && e.step == 0 && e.timer == 0x28 &&
+           e.anim.id == 1 && e.defeated && e.vx == 0 && e.vy == 0 && e.ax == 0 &&
+           e.ay == 0x1000 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6D) == 1);
+
+    /* State 1: it sinks under ay 0x1000, a wisp every 4th tick, blinks on
+     * the table and is deleted when the u8 timer wraps. */
+    frames = 0;
+    int wisps = 0, blinks = 0;
+    bool was_hidden = false;
+    while (!e.removed && frames < 100) {
+        AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                          0, 0, always_zero);
+        wisps += r.effect_count;
+        if (e.hidden) {
+            if (!was_hidden) ++blinks;
+            was_hidden = true;
+        } else {
+            was_hidden = false;
+        }
+        ++frames;
+    }
+    assert(e.removed && wisps >= 8 && blinks > 0 && e.vy > 0);
+
+    /* The flag path (0x8E & 0x40) is state 2: parked at home with the
+     * wobble, animation only — no drift, no collisions. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_ECTOPLASM, 200, 150, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(e.state == 2 && e.step == 0 && e.target_x == e.x);
+    int32_t hx = e.x;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.x == hx && !e.removed && !e.defeated);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -5967,6 +6104,7 @@ int main(void) {
     rock_armor_tests();
     bomber_armor_tests();
     sky_fish_tests();
+    ectoplasm_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

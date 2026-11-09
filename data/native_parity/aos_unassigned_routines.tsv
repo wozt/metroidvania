@@ -710,9 +710,6 @@ aos:asm:asm/code/code_08060B98.s:sub_0806D35C	sub_0806D35C	unclassified				asm_f
 aos:asm:asm/code/code_08060B98.s:sub_0806D384	sub_0806D384	unclassified				asm_function	0x0806D384	asm/code/code_08060B98.s	25848	6	0
 aos:asm:asm/code/code_08060B98.s:sub_0806D3C0	sub_0806D3C0	unclassified				asm_function	0x0806D3C0	asm/code/code_08060B98.s	25887	14	0
 aos:asm:asm/code/code_08060B98.s:sub_0806D3CC	sub_0806D3CC	unclassified				asm_function	0x0806D3CC	asm/code/code_08060B98.s	25896	11	0
-aos:asm:asm/code/code_08060B98.s:sub_0806D490	sub_0806D490	unclassified				asm_function	0x0806D490	asm/code/code_08060B98.s	26017	66	0
-aos:asm:asm/code/code_08060B98.s:sub_0806D4A8	sub_0806D4A8	unclassified				asm_function	0x0806D4A8	asm/code/code_08060B98.s	26031	38	0
-aos:asm:asm/code/code_08060B98.s:sub_0806D4C0	sub_0806D4C0	enemies	referrers			asm_function	0x0806D4C0	asm/code/code_08060B98.s	26045	34	0
 aos:asm:asm/code/code_08060B98.s:sub_0806D578	sub_0806D578	unclassified		technical	exclusive_callees	asm_function	0x0806D578	asm/code/code_08060B98.s	26147	17	2
 aos:asm:asm/code/code_08060B98.s:sub_0806D6CC	sub_0806D6CC	enemies	referrers			asm_function	0x0806D6CC	asm/code/code_08060B98.s	26311	2	6
 aos:asm:asm/code/code_08060B98.s:sub_0806D76C	sub_0806D76C	enemies	referrers			asm_function	0x0806D76C	asm/code/code_08060B98.s	26386	1	3
@@ -1009,8 +1006,6 @@ aos:asm:asm/code/code_08090914.s:EnemyCreakingSkullCreate	EnemyCreakingSkullCrea
 aos:asm:asm/code/code_08090914.s:EnemyCreakingSkullUpdate	EnemyCreakingSkullUpdate	enemies	name			asm_function		asm/code/code_08090914.s	9325	1	12
 aos:asm:asm/code/code_08090914.s:EnemyDemonLordCreate	EnemyDemonLordCreate	enemies	name			asm_function		asm/code/code_08090914.s	3060	0	1
 aos:asm:asm/code/code_08090914.s:EnemyDemonLordUpdate	EnemyDemonLordUpdate	enemies	name			asm_function		asm/code/code_08090914.s	3052	0	1
-aos:asm:asm/code/code_08090914.s:EnemyEctoplasmCreate	EnemyEctoplasmCreate	enemies	name			asm_function		asm/code/code_08090914.s	17631	0	9
-aos:asm:asm/code/code_08090914.s:EnemyEctoplasmUpdate	EnemyEctoplasmUpdate	enemies	name			asm_function		asm/code/code_08090914.s	17523	0	13
 aos:asm:asm/code/code_08090914.s:EnemyFlameDemonCreate	EnemyFlameDemonCreate	enemies	name			asm_function		asm/code/code_08090914.s	3028	0	1
 aos:asm:asm/code/code_08090914.s:EnemyFlameDemonUpdate	EnemyFlameDemonUpdate	enemies	name			asm_function		asm/code/code_08090914.s	3020	0	1
 aos:asm:asm/code/code_08090914.s:EnemyGiantSkeletonCreate	EnemyGiantSkeletonCreate	enemies	name			asm_function		asm/code/code_08090914.s	16771	0	1
@@ -1092,12 +1087,6 @@ aos:asm:asm/code/code_08090914.s:sub_08098DF0	sub_08098DF0	enemies	referrers			a
 aos:asm:asm/code/code_08090914.s:sub_08098E00	sub_08098E00	enemies	referrers			asm_function	0x08098E00	asm/code/code_08090914.s	16645	1	3
 aos:asm:asm/code/code_08090914.s:sub_08098E74	sub_08098E74	enemies	referrers			asm_function	0x08098E74	asm/code/code_08090914.s	16702	0	1
 aos:asm:asm/code/code_08090914.s:sub_08098EA4	sub_08098EA4	enemies	referrers			asm_function	0x08098EA4	asm/code/code_08090914.s	16728	0	4
-aos:asm:asm/code/code_08090914.s:sub_08099690	sub_08099690	enemies	referrers			asm_function	0x08099690	asm/code/code_08090914.s	17734	1	9
-aos:asm:asm/code/code_08090914.s:sub_080998E8	sub_080998E8	enemies	referrers			asm_function	0x080998E8	asm/code/code_08090914.s	18030	0	9
-aos:asm:asm/code/code_08090914.s:sub_080999F0	sub_080999F0	enemies	referrers			asm_function	0x080999F0	asm/code/code_08090914.s	18159	1	3
-aos:asm:asm/code/code_08090914.s:sub_08099A3C	sub_08099A3C	enemies	referrers			asm_function	0x08099A3C	asm/code/code_08090914.s	18196	1	1
-aos:asm:asm/code/code_08090914.s:sub_08099A90	sub_08099A90	enemies	referrers			asm_function	0x08099A90	asm/code/code_08090914.s	18239	0	4
-aos:asm:asm/code/code_08090914.s:sub_08099B30	sub_08099B30	enemies	referrers			asm_function	0x08099B30	asm/code/code_08090914.s	18315	0	1
 aos:asm:asm/code/code_08090914.s:sub_08099B60	sub_08099B60	enemies	referrers			asm_function	0x08099B60	asm/code/code_08090914.s	18341	1	4
 aos:asm:asm/code/code_08090914.s:sub_08099C08	sub_08099C08	enemies	referrers			asm_function	0x08099C08	asm/code/code_08090914.s	18419	0	3
 aos:asm:asm/code/code_08090914.s:sub_0809A198	sub_0809A198	enemies	referrers			asm_function	0x0809A198	asm/code/code_08090914.s	19121	0	4
@@ -1720,7 +1709,6 @@ aos:asm:asm/code/code_080E032C.s:sub_080E032C	sub_080E032C	unclassified				asm_f
 aos:asm:asm/code/code_080E032C.s:sub_080E0330	sub_080E0330	unclassified				asm_function	0x080E0330	asm/code/code_080E032C.s	10	0	1
 aos:asm:asm/crt0.s:_intr_main	_intr_main	unclassified				asm_function		asm/crt0.s	24	0	0
 aos:asm:asm/crt0.s:_start	_start	unclassified				asm_function		asm/crt0.s	5	2	1
-aos:asm:asm/libagbsyscall.s:ArcTan2	ArcTan2	technical	name			asm_function		asm/libagbsyscall.s	5	71	0
 aos:asm:asm/libagbsyscall.s:BgAffineSet	BgAffineSet	technical	name			asm_function		asm/libagbsyscall.s	10	11	0
 aos:asm:asm/libagbsyscall.s:CpuSet	CpuSet	technical	name			asm_function		asm/libagbsyscall.s	15	0	0
 aos:asm:asm/libagbsyscall.s:Div	Div	technical	name			asm_function		asm/libagbsyscall.s	20	32	0
@@ -1985,7 +1973,6 @@ aos:c:src/code/code_08039340.c:sub_0803E7C0	sub_0803E7C0	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803E820	sub_0803E820	unclassified				c_function	0x0803E820	src/code/code_08039340.c	4081	0	0
 aos:c:src/code/code_08039340.c:sub_0803E83C	sub_0803E83C	unclassified				c_function	0x0803E83C	src/code/code_08039340.c	4097	0	0
 aos:c:src/code/code_08039340.c:sub_0803E854	sub_0803E854	unclassified				c_function	0x0803E854	src/code/code_08039340.c	4109	0	0
-aos:c:src/code/code_08039340.c:sub_0803E86C	sub_0803E86C	unclassified				c_function	0x0803E86C	src/code/code_08039340.c	4122	58	0
 aos:c:src/code/code_08039340.c:sub_0803E92C	sub_0803E92C	unclassified				c_function	0x0803E92C	src/code/code_08039340.c	4253	0	0
 aos:c:src/code/code_08039340.c:sub_0803E934	sub_0803E934	unclassified				c_function	0x0803E934	src/code/code_08039340.c	4265	1	0
 aos:c:src/code/code_08039340.c:sub_0803E944	sub_0803E944	unclassified				c_function	0x0803E944	src/code/code_08039340.c	4276	0	0
@@ -2054,7 +2041,6 @@ aos:c:src/code_080009A0.c:EntityGetSlot_Inline	EntityGetSlot_Inline	technical	na
 aos:c:src/code_080009A0.c:EntityUpdateNothing	EntityUpdateNothing	technical	name			c_function	0x08000F38	src/code_080009A0.c	484	0	0
 aos:c:src/code_080009A0.c:RandomNumberGenerator	RandomNumberGenerator	technical	name			c_function	0x08000A90	src/code_080009A0.c	173	418	0
 aos:c:src/code_080009A0.c:RandomNumberGenerator2	RandomNumberGenerator2	enemies	referrers			c_function	0x08000AB0	src/code_080009A0.c	183	7	0
-aos:c:src/code_080009A0.c:sub_080009E4	sub_080009E4	unclassified				c_function	0x080009E4	src/code_080009A0.c	127	216	0
 aos:c:src/code_080009A0.c:sub_08000B64	sub_08000B64	unclassified		technical	exclusive_callees	c_function	0x08000B64	src/code_080009A0.c	238	22	3
 aos:c:src/code_080009A0.c:sub_08000C28	sub_08000C28	unclassified		technical	exclusive_callees	c_function	0x08000C28	src/code_080009A0.c	288	1	1
 aos:c:src/code_080009A0.c:sub_08000C94	sub_08000C94	unclassified		technical	exclusive_callees	c_function	0x08000C94	src/code_080009A0.c	319	1	2

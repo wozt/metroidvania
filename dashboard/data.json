@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-08T23:49:19+00:00",
+ "generated_at": "2026-11-09T00:11:13+00:00",
  "git": {
-  "commit": "c705dffb",
+  "commit": "b17a8259",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 230,
+   "total": 231,
    "by_status": {
     "not_started": 8,
     "in_progress": 2,
     "partial": 55,
-    "functional": 164,
+    "functional": 165,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 164,
-   "functional_or_better_percent": 71.3,
-   "with_passing_tests": 216,
+   "functional_or_better": 165,
+   "functional_or_better_percent": 71.4,
+   "with_passing_tests": 217,
    "with_passing_tests_percent": 93.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -217,6 +217,7 @@
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
     "aos.enemies.durga",
+    "aos.enemies.ectoplasm",
     "aos.enemies.erinys",
     "aos.enemies.fleaman",
     "aos.enemies.gargoyle",
@@ -464,20 +465,20 @@
    "areas": [
     "aos"
    ],
-   "total": 85,
+   "total": 86,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 57,
+    "functional": 58,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 57,
-   "functional_or_better_percent": 67.1,
-   "with_passing_tests": 85,
+   "functional_or_better": 58,
+   "functional_or_better_percent": 67.4,
+   "with_passing_tests": 86,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -497,6 +498,7 @@
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
     "aos.enemies.durga",
+    "aos.enemies.ectoplasm",
     "aos.enemies.erinys",
     "aos.enemies.fleaman",
     "aos.enemies.gargoyle",
@@ -836,7 +838,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -919,7 +921,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1048,7 +1050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1119,7 +1121,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1247,7 +1249,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1336,7 +1338,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1415,7 +1417,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1487,7 +1489,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1560,7 +1562,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1638,7 +1640,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1730,7 +1732,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1804,7 +1806,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1878,7 +1880,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -1960,7 +1962,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2025,7 +2027,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2107,7 +2109,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2169,7 +2171,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2257,7 +2259,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2357,7 +2359,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2416,7 +2418,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2489,7 +2491,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2558,7 +2560,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2629,7 +2631,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2687,7 +2689,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2765,7 +2767,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2823,7 +2825,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2911,7 +2913,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -2994,7 +2996,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3081,7 +3083,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3187,7 +3189,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3305,7 +3307,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3363,7 +3365,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3438,7 +3440,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3531,7 +3533,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3589,7 +3591,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3684,7 +3686,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3748,7 +3750,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3818,7 +3820,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3878,7 +3880,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -3990,7 +3992,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4057,7 +4059,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4117,7 +4119,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4176,7 +4178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4302,7 +4304,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4374,7 +4376,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4459,7 +4461,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4517,7 +4519,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4576,7 +4578,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4699,7 +4701,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4761,7 +4763,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4829,7 +4831,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4888,7 +4890,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -4946,7 +4948,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5004,7 +5006,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5094,7 +5096,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5166,7 +5168,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5266,7 +5268,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5345,7 +5347,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5458,7 +5460,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5527,7 +5529,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5653,7 +5655,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5752,7 +5754,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5872,7 +5874,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -5937,7 +5939,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6012,7 +6014,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6110,7 +6112,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6198,7 +6200,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6347,7 +6349,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6419,7 +6421,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6496,7 +6498,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6571,7 +6573,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6632,7 +6634,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6721,7 +6723,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6784,7 +6786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6877,7 +6879,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -6972,7 +6974,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7162,7 +7164,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7251,7 +7253,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7375,7 +7377,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7434,7 +7436,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7542,7 +7544,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7624,7 +7626,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7701,7 +7703,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7780,7 +7782,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7906,7 +7908,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -7993,7 +7995,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8070,7 +8072,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8168,7 +8170,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8271,7 +8273,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8360,7 +8362,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8452,7 +8454,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8557,7 +8559,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8709,7 +8711,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8824,7 +8826,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -8948,7 +8950,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9021,7 +9023,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9104,7 +9106,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9209,7 +9211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9291,7 +9293,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9378,7 +9380,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9458,7 +9460,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9545,7 +9547,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9616,7 +9618,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9685,7 +9687,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9763,7 +9765,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9837,7 +9839,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9912,7 +9914,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -9981,7 +9983,104 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
+   }
+  },
+  {
+   "id": "aos.enemies.ectoplasm",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Ectoplasm",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyEctoplasmCreate",
+    "EnemyEctoplasmUpdate",
+    "sub_08099690",
+    "sub_080998E8",
+    "sub_080999F0",
+    "sub_08099A3C",
+    "sub_08099A90",
+    "sub_08099B30",
+    "sub_0806D490",
+    "sub_0806D4A8",
+    "sub_0806D3D8",
+    "sub_0806AEAC",
+    "sub_0806AE54",
+    "sub_0806D4C0",
+    "sub_0806D128",
+    "sub_0806CFFC",
+    "sub_0806CD38",
+    "sub_0806CD78",
+    "sub_080212C8",
+    "sub_080009E4",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_080683BC",
+    "sub_08021654",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "ArcTan2",
+    "sub_0803E86C"
+   ],
+   "limitations": "the gEwramData + 0xA094 camera offsets of the room-relative math cancel into world pixels; the sub_08021924 target-table bookkeeping behind the sub_08068AD4 activity box is not ported; the sub_0806AEAC wisp child (EntityCreateInRange 0x49/0xCF, sub_0806E524, priority + 0x5C - 1) is the shared flame effect in a 16 x 3 pixel area 6-12 pixels up; the + 0x5C = 3 create count, the + 0x59 bit 1 flag, the + 0x2C/+ 0x5A palette merges (including the create's 0xFFFFFF00) and the sub_0806D4C0 global pause 0x4BE are not ported; the hurt knockback uses Soma's position for the attacker entity; no emulator comparison. EnemyEctoplasmUpdate is ported from its traced routines: the create (sub_080995B8) loads tiles 0x081CC054, palette 0x0820ABE0 bank 0 and frames 0x0822388C through sub_080999F0, plays animation 0 and, unless the global 0x8E & 0x40 sends it to state 2 parked at home, installs the contact sub_08099B30 (element 0x80) and hurt sub_080998E8 callbacks with + 0x5C = 3 and state 0; the home point + 0x14/+ 0x18 is the position plus the camera offset. State 0 (sub_08099690) hovers at home with x pinned and y set to it plus a 3-pixel sine wobble of phase + 0x1C (+= 0x200), wakes when the player enters the + 0x42 - 0x5A, + 0x46 - 0x64, 0xB4 x 0xC8 box, then picks targets around him (x +/- 16 + RNG % 768 pixels by RNG & 1, y - RNG % 768 - 16 or - 32 alternating through + 0x20) and steers with acceleration 0x400 beyond 4 pixels, 31/32 damping, sub_0806D3D8(e, 1.0) doubled while Soma's + 0x10 flags & 0x360 are set, back to step 1 within 0x3FFFF or after 0x78 ticks. State 1 is the death drift: sub_0806D3D8(e, 4.0), sub_0806AEAC wisps every 4th tick, the 0x08118CE0 blink and deletion at timer 0. The hurt callback knocks it back at 1.0 px/frame along ArcTan2 to the attacker + 0x4000 and on a lethal blow plays 0x6D, animation 1, state 1, timer 0x28, zeroed velocities and ay 0x1000; unit-tested in ectoplasm_tests.",
+   "next_action": "Compare the drift targets, wobble and death timing against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_07_room_043: the Ectoplasm hovers at its spawn point, drifts toward targets around Soma when he approaches and sinks away blinking when killed."
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10050,7 +10149,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10126,7 +10225,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10202,7 +10301,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10274,7 +10373,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10350,7 +10449,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10429,7 +10528,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10522,7 +10621,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10597,7 +10696,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10666,7 +10765,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10747,7 +10846,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10829,7 +10928,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10909,7 +11008,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -10990,7 +11089,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11080,7 +11179,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11162,7 +11261,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11238,7 +11337,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11315,7 +11414,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11395,7 +11494,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11473,7 +11572,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11564,7 +11663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11639,7 +11738,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11727,7 +11826,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11808,7 +11907,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11901,7 +12000,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -11976,7 +12075,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12067,7 +12166,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12145,7 +12244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12222,7 +12321,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12291,7 +12390,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12376,7 +12475,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12451,7 +12550,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12532,7 +12631,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12603,7 +12702,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12692,7 +12791,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12768,7 +12867,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12846,7 +12945,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -12934,7 +13033,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13012,7 +13111,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13115,7 +13214,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13191,7 +13290,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13274,7 +13373,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13367,7 +13466,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13436,7 +13535,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13639,7 +13738,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13704,7 +13803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13830,7 +13929,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -13917,7 +14016,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14014,7 +14113,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14149,7 +14248,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14250,7 +14349,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14320,7 +14419,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14382,7 +14481,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14481,7 +14580,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14592,7 +14691,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14656,7 +14755,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14723,7 +14822,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14796,7 +14895,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14871,7 +14970,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -14976,7 +15075,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -15157,7 +15256,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -15289,7 +15388,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -15383,7 +15482,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -15859,7 +15958,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -15948,7 +16047,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -16115,7 +16214,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -16346,7 +16445,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -16501,7 +16600,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -16566,7 +16665,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -16641,7 +16740,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -16937,7 +17036,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17119,7 +17218,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17233,7 +17332,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17301,7 +17400,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17350,7 +17449,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17412,7 +17511,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17461,7 +17560,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17521,7 +17620,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17720,7 +17819,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17797,7 +17896,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17858,7 +17957,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -17942,7 +18041,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18009,7 +18108,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18109,7 +18208,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18188,7 +18287,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18239,7 +18338,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18302,7 +18401,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18351,7 +18450,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18559,7 +18658,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18623,7 +18722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18748,7 +18847,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18797,7 +18896,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18847,7 +18946,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18896,7 +18995,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18946,7 +19045,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19024,7 +19123,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19114,7 +19213,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19179,7 +19278,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19257,7 +19356,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19307,7 +19406,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19449,7 +19548,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19528,7 +19627,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19592,7 +19691,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19669,7 +19768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19760,7 +19859,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19838,7 +19937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -19996,7 +20095,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -20043,7 +20142,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -20086,7 +20185,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-08"
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -21053,6 +21152,12 @@
  },
  "timeline": [
   {
+   "commit": "b17a8259",
+   "date": "2026-11-09",
+   "subject": "Port Sky Fish (Aria enemy id 81)",
+   "scope": "project"
+  },
+  {
    "commit": "c705dffb",
    "date": "2026-11-09",
    "subject": "Port Bomber Armor enemy (Aria id 58) with bomb, fuse spark and burst",
@@ -21525,12 +21630,6 @@
    "date": "2026-11-08",
    "subject": "Match native text-window semantics in the cell engine",
    "scope": "project"
-  },
-  {
-   "commit": "fc8dc66d",
-   "date": "2026-11-08",
-   "subject": "Render hub info line through the native menu cell engine",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -21591,9 +21690,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1081,
-    "routines_attached_to_features": 1081,
-    "unassigned_routines": 2492,
+    "routines_cited_by_features": 1095,
+    "routines_attached_to_features": 1095,
+    "unassigned_routines": 2478,
     "call_edges": 14228
    }
   },
@@ -23835,12 +23934,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 54,
-      "functional_or_better": 54,
-      "functional_or_better_percent": 52,
+      "implemented": 55,
+      "functional_or_better": 55,
+      "functional_or_better_percent": 53,
       "by_status": {
-       "functional": 54,
-       "not_started": 48
+       "functional": 55,
+       "not_started": 47
       }
      },
      "bosses": {
@@ -24579,13 +24678,28 @@
      {
       "id": 27,
       "name": "Ectoplasm",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Ectoplasm",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_07_room_043: the Ectoplasm hovers at its spawn point, drifts toward targets around Soma when he approaches and sinks away blinking when killed."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.ectoplasm",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "yellow:20",
+       "notes": "Soul: drops (soul_rarity 150, common 0x000A through the generic roll) and is collected; its yellow soul 20 (routine 0x080322A1, the shared SkillPoisonWorm_Ectoplasm_Gargoyle_Use resistance skill) is ported through the generic yellow-soul path. Animations: EnemyEctoplasmCreate (0x080995B8) / EnemyEctoplasmUpdate (0x080994E0) and the sub_08099690 / sub_08099A3C handlers are ported — animation 0 looping drift, animation 1 the death; unit-tested in ectoplasm_tests. Sounds: PlaySong 0x6D at the lethal blow is requested and unit-tested, not listened to. Divergences: the gEwramData + 0xA094 camera offsets cancel into world pixels, the sub_08021924 target-table bookkeeping behind the sub_08068AD4 activity box is not ported, the sub_0806AEAC wisp child (0x49/0xCF, priority + 0x5C - 1) is the shared flame effect in a 16 x 3 pixel area, the + 0x20 direction flag alternates the -16 / -32 pixel target bias, the sub_0806D4C0 global pause 0x4BE is taken as 0, the 0xFFFFFF00 palette merge and the + 0x5A/+ 0x2C bits are not ported, and there is no emulator comparison."
       }
      },
      {
@@ -26078,32 +26192,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 54,
+      "ported": 55,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 54,
+      "ported": 55,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 54,
+      "ported": 55,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 31,
+      "ported": 32,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 51,
+      "ported": 52,
       "partial": 3,
       "missing": 0
      },
-     "complete": 51,
-     "monsters": 54
+     "complete": 52,
+     "monsters": 55
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -31571,7 +31685,7 @@
        "id": "07:14",
        "name": "Ectoplasm",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_rarity 150, common 0x000A through the generic roll) and is collected; its yellow soul 20 (routine 0x080322A1, the shared SkillPoisonWorm_Ectoplasm_Gargoyle_Use resistance skill) is ported through the generic yellow-soul path. Animations: EnemyEctoplasmCreate (0x080995B8) / EnemyEctoplasmUpdate (0x080994E0) and the sub_08099690 / sub_08099A3C handlers are ported — animation 0 looping drift, animation 1 the death; unit-tested in ectoplasm_tests. Sounds: PlaySong 0x6D at the lethal blow is requested and unit-tested, not listened to. Divergences: the gEwramData + 0xA094 camera offsets cancel into world pixels, the sub_08021924 target-table bookkeeping behind the sub_08068AD4 activity box is not ported, the sub_0806AEAC wisp child (0x49/0xCF, priority + 0x5C - 1) is the shared flame effect in a 16 x 3 pixel area, the + 0x20 direction flag alternates the -16 / -32 pixel target bias, the sub_0806D4C0 global pause 0x4BE is taken as 0, the 0xFFFFFF00 palette merge and the + 0x5A/+ 0x2C bits are not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

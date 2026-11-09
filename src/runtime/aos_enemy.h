@@ -168,6 +168,7 @@ enum {
     AOS_ENEMY_BIPHRON = 0x4E,
     AOS_ENEMY_BOMBER_ARMOR = 0x3A,
     AOS_ENEMY_SKY_FISH = 0x51,
+    AOS_ENEMY_ECTOPLASM = 0x1B,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -361,6 +362,11 @@ typedef struct AosEnemy {
     int8_t sf_gate;
     uint8_t sf_variant;
     int16_t sf_timer;
+    /* Ectoplasm (sub_08099690): + 0x20 the target-pick direction flag.
+     * `target_x`/`target_y` are + 0x14/+ 0x18 (the drift destination,
+     * stored here in world pixels — the native camera offset cancels),
+     * `walk_timer` is the + 0x1C sine phase. */
+    uint8_t ec_dir;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

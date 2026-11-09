@@ -102,11 +102,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    are in `zombie.c`, with prototypes left in `aos_enemy.c` for
    `enemy_create`.
 3. **Souls.**
-   - Rename the soul modules so their nature is visible, for example
-     `aos_skill_merman.c` to `aos_soul_red_merman.c` and
-     `aos_guardian_buer.c` to `aos_soul_blue_buer.c`. Update the CMake
-     targets, test names, annotation and feature sources and documents
-     that name them.
+   - *(Done in patch 0888.)* The red-soul modules are now
+     `aos_soul_red_*` (formerly `aos_skill_*`) and the blue-soul ones
+     `aos_soul_blue_*` (formerly `aos_guardian_*`), with their tests, CTest
+     names, include guards and registry sources. The shared blue-soul API
+     of `aos_soul` (`aos_guardian_end`, `aos_guardian_power`,
+     `aos_guardian_try`, `aos_guardian_upkeep`) kept its names.
    - Move the souls coded inline in `aria_runtime.c` into such modules:
      `update_skills` (around line 1800) has cases such as `SKILL_BAT`,
      `SKILL_ARROW`, `SKILL_BOW`, `SKILL_AXE`, `SKILL_DAGGER`, `SKILL_HARPY`,

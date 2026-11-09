@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0888 - Aria soul modules named as souls
+
+- The 22 red-soul modules `aos_skill_*` are now `aos_soul_red_*` and the 4
+  blue-soul modules `aos_guardian_*` are now `aos_soul_blue_*` (for example
+  `aos_soul_red_merman.c`, the Merman soul's drops, beside the Merman
+  monster in `aos_enemies/merman.c`). Their tests, CTest names, CMake
+  targets, include guards, registry sources and documents follow; the
+  shared blue-soul API of `aos_soul` keeps its `aos_guardian_*` names.
+  Renames only: all 136 tests pass.
+
 ## Patch 0887 - Shared Aria math and a short enemy header
 
 - `aos_math` now also holds the BIOS Sqrt (`aos_isqrt`) and the 16.16

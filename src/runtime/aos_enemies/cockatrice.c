@@ -1,9 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Cockatrice (enemy 0x2E), its shadow and rock.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define pixel_delta aos_enemy_pixel_delta
+#define player_in_centred aos_enemy_player_in_centred
+#define play_loop aos_enemy_play_loop
+#define skeleton_corner aos_enemy_skeleton_corner
+#define skeleton_place aos_enemy_skeleton_place
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_080BB8B0: the shadow sits at the parent's attachment component 4
  * plus the ROM constant -10 (0x08119490), the x offset negated by the
@@ -25,7 +41,7 @@ static void cockatrice_shadow_place(AosEnemy *e, const AosEnemy *parent,
  * + 0x1A into the bob (+ 0x18) and spin (+ 0x1C) of the affine draw —
  * approximated by aos_sine — and deletes it once the parent's + 0x18
  * bit 0 corpse mark is set. */
-static void cockatrice_shadow_update(AosEnemy *e, const AosEnemyKind *kind) {
+void aos_enemy_cockatrice_shadow_update(AosEnemy *e, const AosEnemyKind *kind) {
     const AosEnemy *parent = e->parent;
     if (!parent) {
         e->removed = true;
@@ -69,7 +85,7 @@ static void cockatrice_shadow_update(AosEnemy *e, const AosEnemyKind *kind) {
  * 0x1F with sound 0x65. Its + 0x14 is the parent, + 0x5C the parent's
  * contact + 1 and + 0x65 the direct frame 1; the + 0x4 trail callback,
  * the + 0x24 scale and the palette nibble are not ported. */
-static AosHitReport cockatrice_rock_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_cockatrice_rock_update(AosEnemy *e, AosSoma *soma,
                                            const AosCollision *layer,
                                            const AosEnemyKind *kind,
                                            const AosWeaponEntity *weapon,
@@ -256,7 +272,7 @@ static bool cockatrice_die(AosEnemy *e, const AosEnemyKind *kind,
  * state 2 the sub_0806D128 margin 6 check and the sub_0806AD24 stun gate
  * skip the state machine (the room query of sub_080421AC is not ported);
  * state 3 only steps its animation. */
-static AosHitReport cockatrice_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_cockatrice_update(AosEnemy *e, AosSoma *soma,
                                       const AosCollision *layer,
                                       const AosEnemyKind *kind,
                                       const AosWeaponEntity *weapon,

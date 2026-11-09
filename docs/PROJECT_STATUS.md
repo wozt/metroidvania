@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0935 - Cockatrice family becomes a real translation unit
+
+- `aos_enemies/cockatrice.c` now compiles independently with its body,
+  shadow and rock updates exported through `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0934 - Waiter Skeleton family becomes a real translation unit
 
 - `aos_enemies/waiter_skeleton.c` now compiles independently with its

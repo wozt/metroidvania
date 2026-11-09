@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:42:19+00:00",
+ "generated_at": "2026-11-09T15:44:07+00:00",
  "git": {
-  "commit": "792a71a0",
+  "commit": "e01e429f",
   "branch": "main",
   "dirty": true
  },
@@ -19771,6 +19771,7 @@
     "src/runtime/aos_enemies/dryad.c",
     "src/runtime/aos_enemies/kicker_skeleton.c",
     "src/runtime/aos_enemies/waiter_skeleton.c",
+    "src/runtime/aos_enemies/cockatrice.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22225,6 +22226,12 @@
  },
  "timeline": [
   {
+   "commit": "e01e429f",
+   "date": "2026-11-09",
+   "subject": "Compile Waiter Skeleton family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "792a71a0",
    "date": "2026-11-09",
    "subject": "Compile Kicker Skeleton family as an independent enemy unit",
@@ -22696,12 +22703,6 @@
    "commit": "f192a5d8",
    "date": "2026-11-08",
    "subject": "Decode worm child update and emerge/dive routines",
-   "scope": "project"
-  },
-  {
-   "commit": "b4907a8f",
-   "date": "2026-11-08",
-   "subject": "Document worm create sub_080AD7F0 segmented structure",
    "scope": "project"
   }
  ],

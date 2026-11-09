@@ -2776,7 +2776,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/cockatrice.c"
 #include "aos_enemies/chronomage.c"
 
 static bool early_enemy_inert(const AosEnemy *e) {
@@ -2913,15 +2912,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_waiter_update(enemy, soma, layer, kind, weapon, weapon_frames,
                              soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_COCKATRICE_SHADOW) {
-        cockatrice_shadow_update(enemy, kind);
+        aos_enemy_cockatrice_shadow_update(enemy, kind);
         return report;
     }
     if (enemy->role == AOS_ROLE_COCKATRICE_ROCK)
-        return cockatrice_rock_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_cockatrice_rock_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_COCKATRICE && enemy->role == AOS_ROLE_ENEMY)
-        return cockatrice_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_cockatrice_update(enemy, soma, layer, kind, weapon,
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->role == AOS_ROLE_CHRONO_WISP) {

@@ -201,9 +201,10 @@ void aos_enemy_take_effects(AosHitReport *to, const AosHitReport *from) {
     memcpy(to->effects, from->effects, sizeof from->effects[0] * from->effect_count);
 }
 #define take_effects aos_enemy_take_effects
+#define append_effects aos_enemy_append_effects
 #define trunc16 aos_enemy_trunc16
 
-static void append_effects(AosHitReport *to, const AosHitReport *from) {
+void aos_enemy_append_effects(AosHitReport *to, const AosHitReport *from) {
     for (int index = 0;
          index < from->effect_count &&
          to->effect_count < AOS_ENEMY_MAX_EFFECTS;
@@ -2773,7 +2774,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/evil_butcher.c"
 #include "aos_enemies/killer_mantle.c"
 #include "aos_enemies/dryad.c"
 #include "aos_enemies/tsuchinoko.c"
@@ -3289,17 +3289,17 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_BUTCHER_CLEAVER)
-        return butcher_cleaver_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_butcher_cleaver_update(enemy, soma, layer, kind, weapon, weapon_frames,
                                       soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_BUTCHER_GORE)
-        return butcher_gore_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_butcher_gore_update(enemy, soma, layer, kind, weapon, weapon_frames,
                                    soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_BUTCHER_PARTICLE) {
-        butcher_particle_update(enemy, kind);
+        aos_enemy_butcher_particle_update(enemy, kind);
         return report;
     }
     if (enemy->id == AOS_ENEMY_EVIL_BUTCHER && enemy->role == AOS_ROLE_ENEMY)
-        return butcher_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_butcher_update(enemy, soma, layer, kind, weapon, weapon_frames,
                               soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_MANTLE_ORBIT) {
         mantle_orbit_update(enemy, enemy->parent, random);

@@ -1,9 +1,24 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Evil Butcher (enemy 0x19), its cleaver, gore and particles.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define accel_move aos_enemy_accel_move
+#define append_effects aos_enemy_append_effects
+#define buer_player_in_window aos_enemy_buer_player_in_window
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define play_loop aos_enemy_play_loop
+#define random_centred aos_enemy_random_centred
+#define spawn_drift aos_enemy_spawn_drift
+#define spawn_flame_at aos_enemy_spawn_flame_at
+#define step_anim aos_enemy_step_anim
 
 /* Evil Butcher (EnemyEvilButcherCreate 0x080BFE1C / EnemyEvilButcherUpdate
  * 0x080BFF14 behind the sub_0806CC20 awake gate — approximated by the
@@ -29,7 +44,7 @@ static const AosProbes *butcher_probes(const AosEnemyKind *kind) {
     return kind && kind->probes.count > 0 && kind->probes.count <= 8 ? &kind->probes : NULL;
 }
 
-static AosHitReport butcher_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_butcher_update(AosEnemy *e, AosSoma *soma,
                                    const AosCollision *layer, const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
                                    const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -188,7 +203,7 @@ static AosHitReport butcher_update(AosEnemy *e, AosSoma *soma,
  * random 0..0x7FFF, vy random - 0x18000, ay 0x2000, state 2. State 2
  * spins the affine angle (+ 0x18 += + 0x1A) while moving; state 3 and
  * the margin check delete it (the + 0x58 fade is cosmetic). */
-static AosHitReport butcher_cleaver_update(AosEnemy *c, AosSoma *soma,
+AosHitReport aos_enemy_butcher_cleaver_update(AosEnemy *c, AosSoma *soma,
                                            const AosCollision *layer,
                                            const AosEnemyKind *kind,
                                            const AosWeaponEntity *weapon,
@@ -254,7 +269,7 @@ static AosHitReport butcher_cleaver_update(AosEnemy *c, AosSoma *soma,
  * (r & 0x7FF) + 0xC00, vx 0x8000 + (r & 0x3FFF) and vy random, both
  * negated together on a second draw, state 2. State 2 spins and moves;
  * state 3 deletes it. It never collides. */
-static AosHitReport butcher_gore_update(AosEnemy *g, AosSoma *soma,
+AosHitReport aos_enemy_butcher_gore_update(AosEnemy *g, AosSoma *soma,
                                         const AosCollision *layer,
                                         const AosEnemyKind *kind,
                                         const AosWeaponEntity *weapon,
@@ -311,7 +326,7 @@ static AosHitReport butcher_gore_update(AosEnemy *g, AosSoma *soma,
 
 /* sub_080BF6B8: a death particle — still frame 9, then its + 0xD life
  * counts down (8..15 frames set by the spawner); gone when it wraps. */
-static void butcher_particle_update(AosEnemy *p, const AosEnemyKind *kind) {
+void aos_enemy_butcher_particle_update(AosEnemy *p, const AosEnemyKind *kind) {
     (void)kind;
     if (p->state == 0) {
         p->static_frame = 9;

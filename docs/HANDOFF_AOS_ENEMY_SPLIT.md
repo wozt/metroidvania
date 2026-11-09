@@ -227,6 +227,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      proof is identical for all 488 symbols. The other 15 included
      families remain. Continue with `evil_butcher.c`; keep one family
      per commit and repeat the union proof.
+   - *(Continued in patch 0929.)* `evil_butcher.c` is independent with
+     its four updates exported; `append_effects` joins the internal
+     API. The union proof is identical for all 488 symbols. The other
+     14 included families remain. Continue with `killer_mantle.c`;
+     keep one family per commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

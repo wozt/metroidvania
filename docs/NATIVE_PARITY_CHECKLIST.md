@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 88 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 89 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1121 | 2452 |
+| Castlevania: Aria of Sorrow | 1131 | 2442 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1482,6 +1482,15 @@ Dependencies: `aos.enemies.axe_armor`.
 Known divergences: The death's palette flash, sub_080683BC and the dust's + 0x0F are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)`.
+
+[+] **`aos.enemies.dryad` — Dryad.** EnemyDryadCreate (0x080AEAAC) loads graphics 0x081E418C, palette 0x0820B768 and frames 0x082388AC and plays animation 0 looping. State 0 (sub_080AE4BC) notices the player in the 0xDC x 0x50 box of sub_0806CFFC and on RNG & 3 == 0 enters state 1; state 1 (sub_080AE554) loops animation 2 and on RNG & 7 == 0 while on screen plays animation 3 with timer 0x12, the last three ticks playing song 0x89 and calling sub_080AE96C — the seed, a linked role on entity type 0x1B arcing under 0x1000 gravity and then mining the floor while it tracks the player for 0xB4 ticks (state 2, table 0x08528604) then 0x78 more (state 3) with the periodic sub_08021654 contact; state 2 returns to state 0 on the animation end; state 3 (sub_080AE650) is the death — timer 0x40, song 0x6E and a sub_0806D5C0 drift burst every eighth tick, the timer to zero deleting it, its affine angle timer << 0xA while + 0x59 & 0x10 lasts; state 4 only animates. The hurt sub_080AE3FC plays animation 5 (state 1 with step) or 4 on a lethal blow, then state 3 with timer 0x28. Unit-tested in dryad_tests.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806B7D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806CD38`, `aos:asm:asm/code/code_08060B98.s:sub_0806CD78`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080A0A8C.s:EnemyDryadCreate`, `aos:asm:asm/code/code_080A0A8C.s:EnemyDryadUpdate`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE3FC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE4BC`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE554`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE650`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE78C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE7E4`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AE96C`, `aos:asm:asm/code/code_080A0A8C.s:sub_080AEB80`, `aos:asm:asm/libagbsyscall.s:ArcTan2`, `aos:c:src/code/code_080211F0.c:sub_080212C8`, `aos:c:src/code/code_080211F0.c:sub_08021530`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code/code_08039340.c:sub_0803E6BC`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:sub_080009E4`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos_enemy.c`](../src/runtime/aos_enemy.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The seed spawn velocity is approximated as a distance-scaled lob (the native sub_0806CD38 corrections are not traced), the landing is the floor probe standing in for the sub_080AE78C room-entity callback, the seed contact record is positional with a 16 px reach standing in for the native hitbox extent, the + 0xF fade ledger, the + 0x58 facing nibble draw, the sub_0806D518 blink palette merge and the sub_080428F0 box preset are not ported, and there is no emulator comparison.  
+Next action: Compare the notice/attack timing, the seed arc and the death turn against an emulator; port red soul 33.
+Evidence: in game: `aria area_07_room_020 (--spawn 200 160 --hp 9999): three Dryads notice, spray seeds and die`.
 
 [+] **`aos.enemies.durga` — Durga (Curly's routines).** EnemyDurgaCreate and EnemyDurgaUpdate only call EnemyCurlyCreate and EnemyCurlyUpdate; sub_08093540 picks palette bank 0 for any id other than 0x2B. Durga therefore shares Curly's port with its own record stats and palette. Curly's sounds apply: 0x85 for its steps and attack frames, 0x1C3 at its death (unit-tested).
 

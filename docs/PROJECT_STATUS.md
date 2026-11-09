@@ -68,7 +68,73 @@ Last updated: **2026-11-08**.
   through the generic roll; its red soul 53 (routine
   0x0802B9A9) has no ported update yet.
 
-## Patch 0872 - Dryad decoded (id 70, not yet ported)
+## Patch 0874 - Dryad ported (id 70)
+
+- EnemyDryadCreate (0x080AEAAC) /
+  EnemyDryadUpdate (0x080AEB8C) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_DRYAD
+  (0x46), the enemy_names[70] = "dryad" kind row
+  (objects.c: graphics 0x081E418C, palette 0x0820B768,
+  frames 0x082388AC) and role AOS_ROLE_DRYAD_SEED
+  (61) for the seed child.
+- Create: animation 0 looping, floor snap, the
+  global 0x8E & 0x40 path is state 4; otherwise
+  element contact through the + 0x3C byte
+  (sub_080AEB50 / sub_08021654) and hurt
+  sub_080AE3FC.
+- State 0 sub_080AE4BC: the facing write every tick,
+  step 0 the 0xDC x 0x50 notice box of
+  sub_0806CFFC, step 1 RNG & 3 == 0 into state 1
+  with animation 1 once.
+- State 1 sub_080AE554: animation end -> loop 2;
+  the on-screen gate (sub_08068AD4 margins,
+  approximated) then RNG & 7 == 0 -> animation 3
+  once, timer 0x12, step 2; the last three ticks
+  play song 0x89 and spit the seed.
+- State 2: the animation end returns to state 0.
+- State 3 sub_080AE650: step 0 arms timer 0x40 and,
+  when the sub_0803E654 sign-bit draw passes, owes
+  the affine turn (dryad_flags bit 0x10 = + 0x59 &
+  0x10); step 1 plays song 0x6E and the four-piece
+  sub_0806D5C0 drift burst every eighth tick, counts
+  down and deletes at zero; the shared tail turns
+  angle = timer << 0xA while the flag lasts.
+- The hurt path (collide lethal branch) plays
+  animation 5 (state 1 with step) or 4, timer
+  0x28, state 3, steps cleared.
+- The seed sub_080AE7E4 (role AOS_ROLE_DRYAD_SEED):
+  first update installs the (-2,-2,4,4) own boxes,
+  animation 8 loop and state 1; state 1 integrates
+  the lob under 0x1000 gravity and the floor probe
+  stands in for the sub_080AE78C landing callback
+  (state 2, timer 0xB4, contact box off); state 2
+  walks the 0x08528604 table {6, 7, end} then state
+  3 timer 0x78; states 2-3 share the landed tail —
+  x tracks the player, y snaps to the floor, state
+  3 emits the positional sub_08021654 contact
+  record every sixteenth tick within 16 px and the
+  timer deletes it; any weapon hit deletes it
+  (sub_080AEB80); sub_0806D128(1) removes it off
+  screen.
+- dryad_tests covers create, the notice box wake,
+  the attack and the three seeds with song 0x89,
+  the mirrored spawn offsets, the seed arc, landing,
+  floor tracking, contact damage and removal, the
+  lethal death with song 0x6E, bursts and the
+  affine turn, and the 0x8E & 0x40 state-4 path.
+- Divergences: the seed velocity is approximated
+  (the sub_0806CD38 corrections are not traced),
+  the landing callback is the floor probe, the
+  seed contact reach is a 16 px positional stand-in,
+  the + 0xF fade ledger, the + 0x58 facing nibble
+  draw, the sub_0806D518 blink palette merge and
+  the box presets are not ported; no emulator
+  comparison.
+- The monster drops rare item 0x0017 through the
+  generic roll; its red soul 33 (routine
+  0x080282DD) has no ported update yet.
+
+## Patch 0873 - Dryad decoded (id 70, not yet ported)
 
 - EnemyDryadCreate (0x080AEAAC) /
   EnemyDryadUpdate (0x080AEB8C) in

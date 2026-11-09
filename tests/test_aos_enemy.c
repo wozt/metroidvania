@@ -3424,6 +3424,216 @@ static void killer_mantle_tests(void) {
     assert(e.state == 4 && e.anim.id == 0);
 }
 
+static void dryad_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    /* Animations 0-8 (the seed reuses 6-8), two 4-tick frames each —
+     * animation 3 (the spit) gets six frames so its 24 ticks outlast the
+     * 0x12 seed timer like the native one. */
+    static const uint8_t two[2] = {4, 4};
+    static const uint8_t six[6] = {4, 4, 4, 4, 4, 4};
+    AosAnimDef defs[9];
+    for (int a = 0; a < 9; ++a) defs[a] = (AosAnimDef){2, two};
+    defs[3] = (AosAnimDef){6, six};
+    const AosAnimSet anims = {defs, 9};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 9; ++a)
+        for (int f = 0; f < 6; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    const AosEnemyStats stats = {350, 45, 38, 2, 0, 200};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create: state 0, animation 0 looping, one pixel down. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_DRYAD, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 &&
+           e.contact_elements == 0);
+
+    /* The notice box (+ 0x42 - 0x6E, + 0x46 - 0x28, 0xDC x 0x50) holds
+     * Soma: step 1, then RNG & 3 == 0 wakes it into state 1 with
+     * animation 1 once. */
+    soma.x = e.x;
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.state == 0 && e.step == 1);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.state == 1 && e.step == 0 && e.anim.id == 1);
+
+    /* State 1 step 0 waits the animation end, then loops animation 2;
+     * step 1 rolls RNG & 7 == 0 into animation 3, timer 0x12, step 2. */
+    int frames = 0;
+    while (e.step != 1 && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.anim.id == 2 && frames < 100);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 2 && e.anim.id == 3 && e.timer == 0x12);
+
+    /* Step 2 spits on the last three timer ticks: song 0x89 and one seed
+     * each (RNG & 0xF = 0 -> 10 px to the back since unmirrored, 26 px
+     * up; attack byte 45 - 11 = 34). */
+    aos_audio_clear();
+    AosEnemy seeds[3];
+    int seed_count = 0;
+    frames = 0;
+    while (seed_count < 3 && frames < 100) {
+        AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        for (int i = 0; i < r.child_count && seed_count < 3; ++i)
+            seeds[seed_count++] = r.children[i];
+        ++frames;
+    }
+    assert(seed_count == 3 && frames < 100 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) >= 1);
+    for (int i = 0; i < 3; ++i) {
+        assert(seeds[i].role == AOS_ROLE_DRYAD_SEED &&
+               seeds[i].stats.contact == 34 && seeds[i].contact_elements == 0);
+        assert(seeds[i].x == e.x + (e.mirrored ? 0xA0000 : -0xA0000) &&
+               seeds[i].y == e.y - 0x1A0000);
+        assert(seeds[i].vy < 0);
+    }
+
+    /* The seed's first update registers its (-2,-2,4,4) boxes, plays
+     * animation 8 loop and integrates the arc with gravity. */
+    AosEnemy s = seeds[0];
+    int32_t sx0 = s.x, sy0 = s.y;
+    (void)aos_enemy_update(&s, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(s.state == 1 && s.own_boxes && s.anim.id == 8 && s.vy < 0);
+    assert(s.own_hurt.x == -2 && s.own_attack.x == -2);
+    (void)aos_enemy_update(&s, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(s.x != sx0 || s.y != sy0);
+
+    /* It arcs down onto the row-20 floor: state 2 plays animations 6
+     * then 7 once each, then state 3 with timer 0x78 tracking the
+     * player's x on the floor. */
+    soma.x = s.x;
+    soma.y = s.y;
+    frames = 0;
+    while (s.state != 3 && frames < 600) {
+        (void)aos_enemy_update(&s, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    /* The shared landed tail counts the 0x78 timer down on the transition
+     * tick itself, like the native fall-through. */
+    assert(s.state == 3 && s.timer == 0x77 && frames < 600);
+    int32_t floor_y = s.y;
+    soma.x = s.x + 0x20000;
+    (void)aos_enemy_update(&s, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert((s.x >> 16) == (soma.x >> 16) && s.y == floor_y);
+
+    /* State 3 deals the periodic record every sixteenth tick while the
+     * player stands in its 16 px box: soma_hit with 34 attack. */
+    soma.x = s.x;
+    soma.y = s.y;
+    soma.hp = 300;
+    bool hurt = false;
+    frames = 0;
+    while (s.state == 3 && !hurt && frames < 600) {
+        AosHitReport r = aos_enemy_update(&s, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        if (r.soma_hit) hurt = true;
+        ++frames;
+    }
+    assert(hurt && frames < 600);
+
+    /* The 0x78 timer deletes it. */
+    frames = 0;
+    while (!s.removed && frames < 600) {
+        (void)aos_enemy_update(&s, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(s.removed && frames < 600);
+
+    /* Any weapon hit deletes a live seed (sub_080AEB80). */
+    AosEnemy s2 = seeds[1];
+    s2.state = 1;
+    s2.step = 0;
+    s2.vx = s2.vy = 0;
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = s2.x;
+    soma.y = s2.y;
+    (void)aos_enemy_update(&s2, &soma, &layer, &kind, &weapon, &blade, 10, 4,
+                           0, 0, always_zero);
+    assert(s2.removed);
+
+    /* The parent's lethal blow mid-attack: animation 5, state 3, timer
+     * 0x28; then the death handler arms 0x40, song 0x6E, bursts and the
+     * affine turn until the timer deletes it. */
+    e.state = 1;
+    e.step = 1;
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(100);
+    e.vx = e.vy = e.ax = e.ay = 0;
+    e.hp = stats.hp;
+    soma.x = e.x;
+    soma.y = e.y;
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 3 && e.step == 0 && e.defeated);
+    aos_audio_clear();
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && e.timer == 0x40 && e.anim.id == 5 &&
+           e.angle == 0x10000);
+    frames = 0;
+    int bursts = 0;
+    while (!e.removed && frames < 200) {
+        AosHitReport d = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        bursts += d.effect_count;
+        ++frames;
+    }
+    assert(e.removed && bursts > 0 && frames < 200 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) >= 1);
+
+    /* A lethal blow from state 0 plays animation 4 instead. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_DRYAD, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(100);
+    e.hp = 1;
+    soma.x = e.x;
+    soma.y = e.y;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon, &blade, 10, 4,
+                           0, 0, always_zero);
+    assert(hit.killed && e.state == 3);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.anim.id == 4);
+
+    /* The flag path (0x8E & 0x40) is state 4: animation only. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_DRYAD, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(e.state == 4 && e.anim.id == 0);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -6542,6 +6752,7 @@ int main(void) {
     ectoplasm_tests();
     butcher_tests();
     killer_mantle_tests();
+    dryad_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

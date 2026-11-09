@@ -139,6 +139,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [21] = "minotaur",
                                                      [24] = "fleaman",
                                                      [25] = "evil_butcher",
+                                                     [70] = "dryad",
                                                      [28] = "catoblepas",
                                                      [29] = "ghost_dancer",
                                                      [31] = "killer_doll",
@@ -4119,6 +4120,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.role == AOS_ROLE_BUTCHER_CLEAVER ||
             e->enemy.role == AOS_ROLE_BUTCHER_GORE ||
             e->enemy.role == AOS_ROLE_MANTLE_ORBIT ||
+            (e->enemy.id == AOS_ENEMY_DRYAD && e->enemy.role == AOS_ROLE_ENEMY &&
+             e->enemy.state == 3) ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
             ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS ||
               e->enemy.id == AOS_ENEMY_GIANT_WORM || e->enemy.id == AOS_ENEMY_POISON_WORM) &&

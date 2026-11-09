@@ -375,6 +375,12 @@ static const EntitySpec entities[] = {
      * + 0x65 direct frame. */
     {"killer_mantle", 0x081F421C, 0x0820BD04, 0, 0x0824AE0C, 0x085288B4,
      0, 0, 1, {0x12}},
+    /* EnemyDryadCreate / the seed child (sub_080AE96C / sub_080AE7E4):
+     * tiles 0x081E418C, palette 0x0820B768, frames 0x082388AC. The Dryad
+     * never walks — no probe table; the seed shares the same resources
+     * and its landed animation table is 0x08528604. */
+    {"dryad", 0x081E418C, 0x0820B768, 0, 0x082388AC, 0,
+     0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

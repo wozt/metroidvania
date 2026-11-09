@@ -125,8 +125,10 @@ block overrides (BG1 and BG2) and its project collision cells (as native
 Clipdata values of the same type and behavior) and its sprite entities when
 they fit the room, and ignores them otherwise; removing an override restores
 the native room. Its transitions between Zero Mission rooms are played too
-(redirected native doors and new doors). Door types, cross-world
-transitions, events and every Aria overlay are not applied yet.
+(redirected native doors and new doors). Aria's runtime applies the project
+collision (without water or hazard cells). Door types, cross-world
+transitions, events and Aria's tile, entity and door overlays are not
+applied yet.
 
 Exit criterion: edits for both games apply reproducibly above native resources
 and behavior without modifying ROMs or generated source data.

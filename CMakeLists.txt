@@ -195,7 +195,7 @@ add_executable(fusion_room_package_viewer src/tools/room_package_viewer.c)
 target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_package_viewer)
 
-add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion_host.c src/runtime/mzm_room_overlay.c src/core/native_map.c src/runtime/mzm_samus.c
+add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion_host.c src/runtime/mzm_room_overlay.c src/runtime/project_room_document.c src/core/native_map.c src/runtime/mzm_samus.c
                src/runtime/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
                src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c src/runtime/mzm_imago_cocoon.c src/runtime/mzm_mecha_ridley.c src/runtime/mzm_hive.c src/runtime/mzm_baristute.c src/runtime/mzm_tangle_vine.c src/runtime/mzm_ruins_test.c src/runtime/mzm_chozodia_scripted.c src/runtime/mzm_elevator_statue.c src/runtime/mzm_imago.c src/runtime/mzm_escape_ship.c src/runtime/mzm_crocomire.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
@@ -212,7 +212,7 @@ target_include_directories(fusion_room_runtime PRIVATE include)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 fusion_json m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_soul_notice.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_soul_notice.c src/runtime/aos_guardian_buer.c src/runtime/aos_guardian_imp.c src/runtime/aos_guardian_ghost.c src/runtime/aos_guardian_death.c src/runtime/aos_skill_lightning.c src/runtime/aos_skill_killer_doll.c src/runtime/aos_skill_nemesis.c src/runtime/aos_skill_throw.c src/runtime/aos_skill_merman.c src/runtime/aos_skill_axe.c src/runtime/aos_skill_spear.c src/runtime/aos_skill_shot.c src/runtime/aos_skill_dagger.c src/runtime/aos_skill_devil.c src/runtime/aos_skill_crow.c src/runtime/aos_skill_flea.c src/runtime/aos_skill_skull.c src/runtime/aos_skill_valkyrie.c src/runtime/aos_skill_needles.c src/runtime/aos_skill_ghost.c src/runtime/aos_skill_siren.c src/runtime/aos_skill_ripper.c src/runtime/aos_skill_millione.c src/runtime/aos_skill_fish_head.c src/runtime/aos_skill_killer_fish.c src/runtime/aos_skill_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
                src/runtime/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos_soul_menu.c
                src/runtime/aos_levelup.c
                src/runtime/aos_bestiary.c
@@ -248,7 +248,8 @@ target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets
 fusion_enable_warnings(fusion_aria_title_preview)
 
 
-target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 fusion_assets m)
+target_include_directories(fusion_aria_runtime PRIVATE include)
+target_link_libraries(fusion_aria_runtime PRIVATE SDL3::SDL3 fusion_assets fusion_json m)
 fusion_enable_warnings(fusion_aria_runtime)
 
 # The launcher runs the three frontends above in its own process and window
@@ -999,11 +1000,20 @@ if(BUILD_TESTING)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)
 
     add_executable(fusion_mzm_room_overlay_tests tests/test_mzm_room_overlay.c
-                   src/runtime/mzm_room_overlay.c src/core/native_map.c)
+                   src/runtime/mzm_room_overlay.c src/runtime/project_room_document.c
+                   src/runtime/aos_room_overlay.c src/core/native_map.c)
     target_include_directories(fusion_mzm_room_overlay_tests PRIVATE src/runtime include)
     target_link_libraries(fusion_mzm_room_overlay_tests PRIVATE fusion_json)
     fusion_enable_warnings(fusion_mzm_room_overlay_tests)
     add_test(NAME mzm_room_overlay COMMAND fusion_mzm_room_overlay_tests
+             WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
+    add_executable(fusion_aos_room_overlay_tests tests/test_aos_room_overlay.c
+                   src/runtime/aos_room_overlay.c src/runtime/project_room_document.c)
+    target_include_directories(fusion_aos_room_overlay_tests PRIVATE src/runtime include)
+    target_link_libraries(fusion_aos_room_overlay_tests PRIVATE fusion_json)
+    fusion_enable_warnings(fusion_aos_room_overlay_tests)
+    add_test(NAME aos_room_overlay COMMAND fusion_aos_room_overlay_tests
              WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
     add_executable(fusion_host_tests tests/test_fusion_host.c src/runtime/fusion_host.c)

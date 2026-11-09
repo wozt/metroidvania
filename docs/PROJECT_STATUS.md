@@ -2,6 +2,24 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0882 - The editor's collision in the Aria runtime
+
+- New `aos_room_overlay`: `fusion_aria_runtime` now plays the collision
+  painted in the editor. The room's project document
+  (`overrides/aria/entities/area_<AA>_room_<NNN>.json`, 8-pixel cells) has
+  its cells replace the native BG1 collision bytes with their type's byte
+  (solid 0x03, one-way 0x01, rising slope 0x45, falling slope 0x41, air
+  0x00). A document of another room or size, or with water or hazard
+  cells, which the runtime cannot play yet, is reported and ignored.
+  `--no-overlays` and `--overlay-dir DIR` work as in Zero Mission.
+- New `project_room_document`: the project document loader shared by both
+  runtimes.
+- Checked on captures in area 0 room 1: Soma stops at a painted wall and
+  falls through a painted hole; the native room is unchanged without
+  overlays. ROM-free tests cover the byte mapping and every rejection.
+- Limitations: Aria's pre-composited backgrounds do not show the painted
+  collision, and its tiles, entities and doors stay native.
+
 ## Patch 0881 - The editor's transitions in the Zero Mission runtime
 
 - The room's project document now also plays its transitions to Zero

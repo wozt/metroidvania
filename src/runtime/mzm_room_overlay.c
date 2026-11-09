@@ -4,6 +4,7 @@
 
 #include "core/json.h"
 #include "core/native_map.h"
+#include "project_room_document.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -110,61 +111,16 @@ bool mzm_room_document_path(char *out, size_t size, const char *directory, const
     return written > 0 && (size_t)written < size;
 }
 
-static bool integer_member(const FusionJson *object, const char *key, int64_t *value) {
-    const FusionJson *member = object ? fusion_json_member(object, key) : NULL;
-    if (!member || member->kind != FUSION_JSON_NUMBER || !member->integral) return false;
-    *value = member->integer;
-    return true;
-}
-
-static bool string_member(const FusionJson *object, const char *key, const char *value) {
-    const FusionJson *member = fusion_json_member(object, key);
-    return member && member->kind == FUSION_JSON_STRING && !strcmp(member->string, value);
-}
-
-/* The room's project document: NONE without one (or for a version-1
- * document), REJECTED with *reason when it does not describe this room
- * (its dimensions are not checked when width_px is negative). */
+/* The room's Zero Mission project document (see project_room_document.h). */
 static MzmOverlayResult load_document(const char *path, const char *area, int room, int width_px,
                                       int height_px, FusionJson *doc, char *message,
                                       size_t message_size) {
-    FILE *f = fopen(path, "rb");
-    if (!f) return MZM_OVERLAY_NONE;
-    enum { LIMIT = 4000000 };
-    char *text = malloc(LIMIT + 1);
-    size_t size = text ? fread(text, 1, LIMIT + 1, f) : 0;
-    fclose(f);
-    char error[128] = "";
-    if (!text || size > LIMIT || !fusion_json_parse(text, size, doc, error, sizeof error)) {
-        snprintf(message, message_size, "editor document %s ignored: %s", path,
-                 !text ? "out of memory" : size > LIMIT ? "too large" : error);
-        free(text);
-        return MZM_OVERLAY_REJECTED;
+    switch (project_room_document_load(path, "mzm", area, room, width_px, height_px, doc, message,
+                                       message_size)) {
+    case PROJECT_DOCUMENT_LOADED: return MZM_OVERLAY_APPLIED;
+    case PROJECT_DOCUMENT_REJECTED: return MZM_OVERLAY_REJECTED;
+    default: return MZM_OVERLAY_NONE;
     }
-    free(text);
-    /* Version 1 documents (project-room-entities) predate the room data. */
-    if (string_member(doc, "schema", "metroidvania.project-room-entities")) {
-        fusion_json_free(doc);
-        return MZM_OVERLAY_NONE;
-    }
-    int64_t version = 0, doc_room = -1, width = 0, height = 0;
-    const char *reason = NULL;
-    if (!string_member(doc, "schema", "metroidvania.project-room-data") ||
-        !integer_member(doc, "version", &version) || version < 2 || version > 4)
-        reason = "not a project room document of versions 2 to 4";
-    else if (!string_member(doc, "world", "mzm") || !string_member(doc, "area", area) ||
-             !integer_member(doc, "room", &doc_room) || doc_room != room)
-        reason = "it names another room";
-    else if (width_px >= 0 &&
-             (!integer_member(doc, "width_px", &width) || width != width_px ||
-              !integer_member(doc, "height_px", &height) || height != height_px))
-        reason = "its dimensions differ from the room's";
-    if (reason) {
-        snprintf(message, message_size, "editor document %s ignored: %s", path, reason);
-        fusion_json_free(doc);
-        return MZM_OVERLAY_REJECTED;
-    }
-    return MZM_OVERLAY_APPLIED;
 }
 
 MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, int room,
@@ -181,7 +137,7 @@ MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, in
     const FusionJson *collision = fusion_json_member(&doc, "collision");
     const FusionJson *cells = collision ? fusion_json_member(collision, "cells") : NULL;
     const char *reason = NULL;
-    if (!integer_member(collision, "resolution_px", &resolution) || resolution != 16 ||
+    if (!project_room_integer(collision, "resolution_px", &resolution) || resolution != 16 ||
         !cells || cells->kind != FUSION_JSON_ARRAY)
         reason = "its collision is not a 16-pixel cell list";
     int columns = width_px / 16, rows = height_px / 16;
@@ -194,7 +150,7 @@ MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, in
             if (!strcmp(type->string, mzm_project_collision_names[t])) index = t;
         unsigned short raw;
         unsigned char clip_type;
-        if (!integer_member(cell, "x", &x) || !integer_member(cell, "y", &y) || x < 0 ||
+        if (!project_room_integer(cell, "x", &x) || !project_room_integer(cell, "y", &y) || x < 0 ||
             y < 0 || x >= columns || y >= rows)
             reason = "a cell lies outside the room";
         else if (index < 0)
@@ -211,8 +167,8 @@ MzmOverlayResult mzm_room_collision_apply(const char *path, const char *area, in
     for (size_t k = 0; k < cells->count; ++k) {
         const FusionJson *cell = &cells->items[k];
         int64_t x = 0, y = 0;
-        integer_member(cell, "x", &x);
-        integer_member(cell, "y", &y);
+        project_room_integer(cell, "x", &x);
+        project_room_integer(cell, "y", &y);
         const char *name = fusion_json_member(cell, "type")->string;
         int index = 0;
         for (int t = 0; t < MZM_PROJECT_COLLISION_TYPES; ++t)
@@ -250,8 +206,8 @@ int mzm_room_project_sprites(const char *path, const char *area, int room, int w
         const FusionJson *entity = &entities->items[k];
         const FusionJson *type = fusion_json_member(entity, "native_type");
         int64_t x = -1, y = -1;
-        if (!type || type->kind != FUSION_JSON_STRING || !integer_member(entity, "x", &x) ||
-            !integer_member(entity, "y", &y)) {
+        if (!type || type->kind != FUSION_JSON_STRING || !project_room_integer(entity, "x", &x) ||
+            !project_room_integer(entity, "y", &y)) {
             reason = "an entity lacks its position or native reference";
         } else if (!strcmp(type->string, "unassigned")) {
             ++unassigned;
@@ -283,7 +239,7 @@ int mzm_room_project_sprites(const char *path, const char *area, int room, int w
 static const FusionJson *find_door(const FusionJson *doors, int64_t id) {
     for (size_t k = 0; doors && doors->kind == FUSION_JSON_ARRAY && k < doors->count; ++k) {
         int64_t value = 0;
-        if (integer_member(&doors->items[k], "id", &value) && value == id) return &doors->items[k];
+        if (project_room_integer(&doors->items[k], "id", &value) && value == id) return &doors->items[k];
     }
     return NULL;
 }
@@ -296,8 +252,8 @@ static const char *string_value(const FusionJson *object, const char *key) {
 /* A door's rectangle and facing; false when one is missing. */
 static bool door_geometry(const FusionJson *door, int64_t r[4], int *facing) {
     static const char *const facings[] = {"left", "right", "up", "down"};
-    if (!integer_member(door, "x", &r[0]) || !integer_member(door, "y", &r[1]) ||
-        !integer_member(door, "width", &r[2]) || !integer_member(door, "height", &r[3]) ||
+    if (!project_room_integer(door, "x", &r[0]) || !project_room_integer(door, "y", &r[1]) ||
+        !project_room_integer(door, "width", &r[2]) || !project_room_integer(door, "height", &r[3]) ||
         r[2] <= 0 || r[3] <= 0)
         return false;
     *facing = -1;
@@ -340,7 +296,7 @@ int mzm_room_project_doors(const char *path, const char *directory, const char *
         const FusionJson *source = NULL;
         int64_t r[4];
         int facing;
-        if (!integer_member(transition, "source_door_id", &source_id) ||
+        if (!project_room_integer(transition, "source_door_id", &source_id) ||
             !(source = find_door(list, source_id)) || !door_geometry(source, r, &facing)) {
             reason = "a transition's source door is missing or malformed";
             break;
@@ -351,11 +307,11 @@ int mzm_room_project_doors(const char *path, const char *directory, const char *
         }
         const char *target_area = string_value(transition, "target_area");
         char lower[32];
-        if (!integer_member(transition, "target_room", &target_room) || target_room < 0 ||
+        if (!project_room_integer(transition, "target_room", &target_room) || target_room < 0 ||
             target_room > 999 || !lower_area(lower, sizeof lower, target_area) ||
-            !integer_member(transition, "target_door_id", &target_door) ||
-            !integer_member(transition, "spawn_x", &spawn_x) ||
-            !integer_member(transition, "spawn_y", &spawn_y)) {
+            !project_room_integer(transition, "target_door_id", &target_door) ||
+            !project_room_integer(transition, "spawn_x", &spawn_x) ||
+            !project_room_integer(transition, "spawn_y", &spawn_y)) {
             reason = "a transition's target is malformed";
             break;
         }
@@ -374,7 +330,7 @@ int mzm_room_project_doors(const char *path, const char *directory, const char *
         door->native_index = -1;
         const FusionJson *native = fusion_json_member(source, "native_source");
         int64_t index = -1;
-        if (native && integer_member(native, "index", &index)) door->native_index = (int)index;
+        if (native && project_room_integer(native, "index", &index)) door->native_index = (int)index;
         door->x0 = (int)(r[0] / 16);
         door->y0 = (int)(r[1] / 16);
         door->x1 = (int)((r[0] + r[2]) / 16) - 1;

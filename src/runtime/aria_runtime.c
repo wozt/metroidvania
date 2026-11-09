@@ -24,6 +24,7 @@
 #include "aos_portrait.h"
 #include "aos_quick_map.h"
 #include "aos_room.h"
+#include "aos_room_overlay.h"
 #include "aos_save.h"
 #include "aos_stats.h"
 #include "aos_pickup.h"
@@ -564,10 +565,31 @@ static void room_folder(char *out, size_t size, int area, int number) {
     snprintf(out, size, "%s/area_%02d_room_%03d", DEFAULT_ROOMS, area, number);
 }
 
+/* The map editor's project collision (aos_room_overlay), applied to every
+ * room loaded for play; --no-overlays and the transition audit leave the
+ * native rooms, --overlay-dir DIR reads another directory. */
+static bool aria_overlays_enabled = true;
+static const char *aria_overlay_directory = AOS_ROOM_OVERLAY_DIRECTORY;
+
+static void apply_room_overlay(AriaRoom *room) {
+    char path[600], message[800];
+    if (!aria_overlays_enabled ||
+        !aos_room_document_path(path, sizeof path, aria_overlay_directory, room->area,
+                                room->number))
+        return;
+    int changed = 0;
+    if (aos_room_collision_apply(path, room->area, room->number, room->width_cells,
+                                 room->height_cells, room->cells, &changed, message,
+                                 sizeof message) != AOS_OVERLAY_NONE)
+        fprintf(stderr, "%s\n", message);
+}
+
 static bool load_room_folder(const char *folder, AriaRoom *room) {
     char path[600];
     snprintf(path, sizeof path, "%s/room.tsv", folder);
-    return load_room(path, room);
+    if (!load_room(path, room)) return false;
+    apply_room_overlay(room);
+    return true;
 }
 
 /* Leaves every room through the middle of each transition's screen edge,
@@ -5725,7 +5747,7 @@ static void usage(const char *name) {
             "Usage: %s [--check] [--save slot.sav] [--save-target slot.sav]"
             " [--consume-save] [--rom aria.gba] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
-            "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--atk N] [--def N] [--hp N]\n"
+            "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--no-overlays | --overlay-dir DIR] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
@@ -5771,7 +5793,13 @@ int aria_runtime_main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
-        else if (!strcmp(argv[i], "--audit-transitions")) return audit_transitions();
+        else if (!strcmp(argv[i], "--audit-transitions")) {
+            aria_overlays_enabled = false;
+            return audit_transitions();
+        }
+        else if (!strcmp(argv[i], "--no-overlays")) aria_overlays_enabled = false;
+        else if (!strcmp(argv[i], "--overlay-dir") && i + 1 < argc)
+            aria_overlay_directory = argv[++i];
         else if (!strcmp(argv[i], "--save") && i + 1 < argc) load_save_path = argv[++i];
         else if (!strcmp(argv[i], "--save-target") && i + 1 < argc) save_path = argv[++i];
         else if (!strcmp(argv[i], "--consume-save")) consume_save = true;
@@ -5884,6 +5912,7 @@ int aria_runtime_main(int argc, char **argv) {
                         "--task aria_rooms\n");
         return 1;
     }
+    apply_room_overlay(&room);
     AosCollision layer = room_layer(&room);
     if (spawn_x < 0 && !find_spawn(&layer, &spawn_x, &spawn_y)) {
         fprintf(stderr, "No floor with headroom found in %s\n", room_path);

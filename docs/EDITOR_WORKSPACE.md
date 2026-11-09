@@ -65,6 +65,16 @@ over its blocks (a side door for left and right, a vertical transition for up
 and down). Samus arrives with her feet at the spawn point or, without one,
 beside the saved target door. Transitions to Aria and events stay unplayed.
 
+Aria's runtime (`fusion_aria_runtime`) plays the project collision of its
+rooms (`overrides/aria/entities/area_<AA>_room_<NNN>.json`, 8-pixel cells):
+each cell replaces the native BG1 collision byte with its type's byte (solid
+0x03, one-way 0x01, rising slope 0x45, falling slope 0x41, air 0x00), when the
+document names the same room and dimensions. The runtime has no water or
+damage cells yet, so a document with water or hazard cells is ignored. The
+same `--no-overlays` and `--overlay-dir DIR` options apply. Aria draws
+pre-composited room backgrounds, so painted collision is not drawn there, and
+its tile edits, entities and doors are not played yet.
+
 ## Current limitations
 
 - BG0, full BG3 composition, animated graphics and several palette effects are
@@ -76,8 +86,9 @@ beside the saved target door. Transitions to Aria and events stay unplayed.
   viewed and deleted. Project door properties and transition destinations have
   a dedicated GTK form backed by the same validated CLI operations. Zero
   Mission's runtime plays the project collision and the transitions between
-  its rooms; door types, cross-world transitions and everything in Aria are
-  not playable yet.
+  its rooms, and Aria's runtime its collision without water or hazard cells;
+  door types, cross-world transitions and Aria's tiles, entities and doors
+  are not playable yet.
 - Project enemy, item and object forms edit the label, snapped position and
   verified native reference in both modes. Aria pickup forms additionally edit
   the typed item/soul ID, two native parameters and flags. Zero Mission's
@@ -101,8 +112,9 @@ beside the saved target door. Transitions to Aria and events stay unplayed.
   cutscene authoring are not yet decoded or editable. Project trigger regions
   are authorable but are not consumed by either gameplay engine yet.
 - Only Zero Mission's block layers, project collision, sprite entities and
-  transitions are consumed by a gameplay runtime; Aria's runtime, door types,
-  cross-world transitions, item settings and event edits are not.
+  transitions, and Aria's project collision, are consumed by a gameplay
+  runtime; Aria's tile edits, entities and doors, door types, cross-world
+  transitions, item settings and event edits are not.
 
 The collision toolbar is shared deliberately: both source formats have verified
 native counterparts for the seven exposed semantics. Zero Mission uses 16px

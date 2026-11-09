@@ -1,9 +1,28 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Zombie (enemy 0x01): drips, puddles and gore.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define flag_8e_40 aos_enemy_flag_8e_40
+#define append_effects aos_enemy_append_effects
+#define collide aos_enemy_collide
+#define generic_death aos_enemy_generic_death
+#define make_gib aos_enemy_make_gib
+#define on_slope aos_enemy_on_slope
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define player_near aos_enemy_player_near
+#define play_loop aos_enemy_play_loop
+#define snap_to_floor aos_enemy_snap_to_floor
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define walk_collide aos_enemy_walk_collide
 
 /* The removal of a zombie: state 1 with a one-frame death (HP 0). */
 static void zombie_vanish(AosEnemy *zombie) {
@@ -13,7 +32,7 @@ static void zombie_vanish(AosEnemy *zombie) {
 }
 
 /* EnemyZombieCreate (the facing of sub_0806CF2C; sub_0807B404 graphics). */
-static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollision *layer,
+void aos_enemy_zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollision *layer,
                           const AosAnimSet *anims) {
     if (zombie->param1) {
         /* A spawner: hidden, no boxes, state 3. */
@@ -77,14 +96,14 @@ static void zombie_puddle(const AosEnemy *z, AosHitReport *report) {
 }
 
 /* sub_0807B310 / sub_0807B3C8 */
-static void drip_update(AosEnemy *d) {
+void aos_enemy_drip_update(AosEnemy *d) {
     d->vy += d->ay;
     if (d->vy > 0x80000) d->vy = 0x80000;
     d->y += d->vy;
     if ((int8_t)d->timer-- <= 0) d->removed = true;
 }
 
-static void puddle_update(AosEnemy *p) {
+void aos_enemy_puddle_update(AosEnemy *p) {
     if (p->walk_timer-- <= 0) p->removed = true;
 }
 
@@ -220,7 +239,7 @@ static void zombie_spawner(AosEnemy *spawner, const AosSoma *soma, int cam_x,
     report->spawn_y = spawner->y >> 16;
 }
 
-static AosHitReport zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_zombie_update(AosEnemy *z, AosSoma *soma, const AosCollision *layer,
                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,
                                   int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {

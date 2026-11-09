@@ -280,6 +280,14 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      included early at the top of `aos_enemy.c`; convert it last).
      Continue with `zombie.c`; keep one family per commit and repeat
      the union proof.
+   - *(Continued in patch 0938.)* `zombie.c` is independent with its
+     create, body, drip and puddle updates exported; `on_slope`
+     joined the internal API and the stale prototypes were removed
+     from `aos_enemy.c`. The union proof is identical for all 488
+     symbols. The other 5 included families remain (`bat.c` is
+     included early at the top of `aos_enemy.c`; convert it last).
+     Continue with `nemesis.c`; keep one family per commit and
+     repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).
@@ -305,8 +313,9 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      and the full cycle.
 2. *(Done in patch 0886.)* The bat is in `aos_enemies/bat.c`, included
    before `enemy_create`. The zombie's `zombie_vanish` and `zombie_create`
-   are in `zombie.c`, with prototypes left in `aos_enemy.c` for
-   `enemy_create`.
+   are in `zombie.c`; since patch 0938 the file is an independent
+   translation unit and `enemy_create` calls the exported
+   `aos_enemy_zombie_create`.
 3. **Souls.**
    - *(Done in patch 0888.)* The red-soul modules are now
      `aos_soul_red_*` (formerly `aos_skill_*`) and the blue-soul ones

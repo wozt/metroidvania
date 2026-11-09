@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:49:54+00:00",
+ "generated_at": "2026-11-09T15:54:52+00:00",
  "git": {
-  "commit": "dd383084",
+  "commit": "997ecca8",
   "branch": "main",
   "dirty": true
  },
@@ -14050,6 +14050,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/zombie.c",
     "src/runtime/aos_effect.h",
     "src/runtime/aos_audio.c",
@@ -19775,6 +19776,7 @@
     "src/runtime/aos_enemies/cockatrice.c",
     "src/runtime/aos_enemies/chronomage.c",
     "src/runtime/aos_enemies/headhunter.c",
+    "src/runtime/aos_enemies/zombie.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22229,6 +22231,12 @@
  },
  "timeline": [
   {
+   "commit": "997ecca8",
+   "date": "2026-11-09",
+   "subject": "Compile Headhunter family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "dd383084",
    "date": "2026-11-09",
    "subject": "Compile Chronomage family as an independent enemy unit",
@@ -22700,12 +22708,6 @@
    "commit": "b488cb61",
    "date": "2026-11-08",
    "subject": "Resolve worm parent +0x1C as the state-3 lunge flag",
-   "scope": "project"
-  },
-  {
-   "commit": "b2b9ecf7",
-   "date": "2026-11-08",
-   "subject": "Resolve worm hit callbacks and segment->parent damage",
    "scope": "project"
   }
  ],

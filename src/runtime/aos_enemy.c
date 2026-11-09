@@ -353,14 +353,10 @@ void aos_enemy_snap_to_floor(AosEnemy *enemy, const AosCollision *layer) {
 #define snap_to_floor aos_enemy_snap_to_floor
 
 /* sub_0806D104: a slope byte at the position. */
-static bool on_slope(const AosCollision *layer, int32_t x, int32_t y) {
+bool aos_enemy_on_slope(const AosCollision *layer, int32_t x, int32_t y) {
     return aos_collision_cell(layer, x, y) & 0xC0;
 }
 
-/* The zombie's constructors, in aos_enemies/zombie.c. */
-static void zombie_vanish(AosEnemy *zombie);
-static void zombie_create(AosEnemy *zombie, const AosSoma *soma, const AosCollision *layer,
-                          const AosAnimSet *anims);
 
 static bool is_early_enemy(uint8_t id) {
     return id == AOS_ENEMY_SKELETON || id == AOS_ENEMY_GHOST ||
@@ -497,7 +493,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         return true;
     }
     if (id == AOS_ENEMY_ZOMBIE) {
-        zombie_create(enemy, soma, layer, anims);
+        aos_enemy_zombie_create(enemy, soma, layer, anims);
         return true;
     }
     if (id == AOS_ENEMY_MEDUSA_HEAD) {
@@ -2763,7 +2759,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
-#include "aos_enemies/zombie.c"
 #include "aos_enemies/nemesis.c"
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
@@ -3221,15 +3216,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                              weapon_frames, soma_atk, soma_def,
                                              cam_x, cam_y);
     if (enemy->id == AOS_ENEMY_ZOMBIE && enemy->role == AOS_ROLE_ENEMY)
-        return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->hit_flash) enemy->hit_flash--;
     if (enemy->role == AOS_ROLE_DRIP) {
-        drip_update(enemy);
+        aos_enemy_drip_update(enemy);
         return report;
     }
     if (enemy->role == AOS_ROLE_PUDDLE) {
-        puddle_update(enemy);
+        aos_enemy_puddle_update(enemy);
         return report;
     }
     if (enemy->role == AOS_ROLE_FEATHER) {

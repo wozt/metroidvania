@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0938 - Zombie family becomes a real translation unit
+
+- `aos_enemies/zombie.c` now compiles independently with its create,
+  body, drip and puddle updates exported through
+  `aos_enemy_internal.h`; `on_slope` joins the internal API.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0937 - Headhunter family becomes a real translation unit
 
 - `aos_enemies/headhunter.c` now compiles independently with its body,

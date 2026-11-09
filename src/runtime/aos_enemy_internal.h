@@ -547,6 +547,7 @@ AosHitReport aos_enemy_chronomage_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+bool aos_enemy_on_slope(const AosCollision *layer, int32_t x, int32_t y);
 bool aos_enemy_accelerate_toward(AosEnemy *enemy, int32_t tx, int32_t ty,
                                  int32_t speed);
 void aos_enemy_spawn_flame(const AosEnemy *enemy, uint32_t w, uint32_t h,
@@ -567,5 +568,15 @@ AosHitReport aos_enemy_headhunter_update(
 void aos_enemy_headhunter_head_update(AosEnemy *head,
                                       const AosEnemyKind *kind,
                                       uint32_t (*random)(void));
+void aos_enemy_zombie_create(AosEnemy *zombie, const AosSoma *soma,
+                             const AosCollision *layer,
+                             const AosAnimSet *anims);
+AosHitReport aos_enemy_zombie_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_drip_update(AosEnemy *enemy);
+void aos_enemy_puddle_update(AosEnemy *enemy);
 
 #endif

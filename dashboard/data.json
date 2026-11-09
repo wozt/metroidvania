@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:14:13+00:00",
+ "generated_at": "2026-11-09T14:23:48+00:00",
  "git": {
-  "commit": "957d4536",
+  "commit": "d65dab12",
   "branch": "main",
   "dirty": true
  },
@@ -11645,6 +11645,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/killer_fish.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19728,6 +19729,7 @@
     "src/runtime/aos_enemies/rock_armor.c",
     "src/runtime/aos_enemies/skull_archer.c",
     "src/runtime/aos_enemies/skeleton.c",
+    "src/runtime/aos_enemies/killer_fish.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22182,6 +22184,12 @@
  },
  "timeline": [
   {
+   "commit": "d65dab12",
+   "date": "2026-11-09",
+   "subject": "Compile Skeleton family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "957d4536",
    "date": "2026-11-09",
    "subject": "Compile Skull Archer family as an independent enemy unit",
@@ -22653,12 +22661,6 @@
    "commit": "66f1f8ab",
    "date": "2026-11-08",
    "subject": "Identify bestiary portraits as real enemy entities",
-   "scope": "project"
-  },
-  {
-   "commit": "e786adaa",
-   "date": "2026-11-08",
-   "subject": "Map the bestiary portrait record layout",
    "scope": "project"
   }
  ],

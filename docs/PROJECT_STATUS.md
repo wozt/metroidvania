@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0914 - Killer Fish family becomes a real translation unit
+
+- `aos_enemies/killer_fish.c` now compiles independently with its body,
+  fry, bubble and bubble-pop updates plus the struck callback exported
+  through `aos_enemy_internal.h`. Nine water/swim helpers (`cell_kind`,
+  `whole`, `water_below`, `swim_walk`, `bubble_walk`, `box_walk`,
+  `aim_at`, `target_in_water`, `player_in_range`) join the internal API.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0913 - Skeleton family becomes a real translation unit
 
 - `aos_enemies/skeleton.c` now compiles independently with its body,

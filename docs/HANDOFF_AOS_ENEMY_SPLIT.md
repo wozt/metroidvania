@@ -145,8 +145,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - *(Continued in patch 0913.)* `skeleton.c` is independent; its merge,
      corner, place and shatter helpers are shared with nine still-included
      families through the internal API. Only GCC stack-layout artifacts
-     differ. The other 30 included families remain. Continue with
-     `killer_fish.c`; keep one family per commit and repeat the union
+     differ. The other 30 included families remain.
+   - *(Continued in patch 0914.)* `killer_fish.c` is independent with its
+     four updates and struck callback exported; nine water/swim helpers
+     join the internal API. The union proof is identical for all 488
+     symbols. The other 29 included families remain. Continue with
+     `winged_skeleton.c`; keep one family per commit and repeat the union
      proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in

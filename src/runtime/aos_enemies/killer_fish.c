@@ -1,9 +1,33 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Killer Fish (enemy 0x07), its fry and bubbles.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define accel_move aos_enemy_accel_move
+#define aim_at aos_enemy_aim_at
+#define box_walk aos_enemy_box_walk
+#define bubble_walk aos_enemy_bubble_walk
+#define cell_kind aos_enemy_cell_kind
+#define collide aos_enemy_collide
+#define generic_death aos_enemy_generic_death
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_in_range aos_enemy_player_in_range
+#define player_near aos_enemy_player_near
+#define soldier_face aos_enemy_soldier_face
+#define step_anim aos_enemy_step_anim
+#define swim_walk aos_enemy_swim_walk
+#define take_effects aos_enemy_take_effects
+#define target_in_water aos_enemy_target_in_water
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
+#define water_below aos_enemy_water_below
+#define whole aos_enemy_whole
 
 /* sub_080707BC(e, x, y, frame, vx, vy): a bubble (sub_080708B0) facing at
  * random, priority +/- 1 at random, deleted at once out of water. */
@@ -241,7 +265,7 @@ static AosEnemy make_fry(const AosEnemy *f, uint32_t (*random)(void)) {
  * 5 only animates; then the animation step and the collision pass (not
  * while dying). The first update creates its fry (+ 0x32 of them; native:
  * at creation, in water only). */
-static AosHitReport fish_update(AosEnemy *f, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_fish_update(AosEnemy *f, AosSoma *soma, const AosCollision *layer,
                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                 const AosWeaponFrames *weapon_frames, int soma_atk,
                                 int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -288,7 +312,7 @@ static AosHitReport fish_update(AosEnemy *f, AosSoma *soma, const AosCollision *
 /* sub_080700CC (the fish's hit callback, after the damage and the flash):
  * a lethal blow plays animation 1 once and starts the death, 40 frames
  * (state 2 in water, 3 for a fish out of it). */
-static void fish_struck(AosEnemy *f, const AosEnemyKind *kind) {
+void aos_enemy_fish_struck(AosEnemy *f, const AosEnemyKind *kind) {
     if (f->hp > 0) return;
     play_loop(f, kind->anims, 1, false);
     step_anim(f, kind->anims);
@@ -326,7 +350,7 @@ static void fry_move(AosEnemy *y, const AosCollision *layer) {
  * (state 4) once done or after touching Soma. Struck (sub_08070A08), it
  * bursts into a bubble and blinks out over 40 frames (state 2). Outside
  * screen margin 4 (unless dying) it does nothing. */
-static AosHitReport fry_update(AosEnemy *y, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_fry_update(AosEnemy *y, AosSoma *soma, const AosCollision *layer,
                                const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                                int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -430,7 +454,7 @@ static AosHitReport fry_update(AosEnemy *y, AosSoma *soma, const AosCollision *l
 /* sub_080708B0: a bubble keeps 7/8 of its vx, sways by 0.25 every 8 frames
  * and rises (sub_08069B70, head 2 up) until its head leaves the water or
  * it meets the ceiling. */
-static void bubble_update(AosEnemy *b, const AosCollision *layer) {
+void aos_enemy_bubble_update(AosEnemy *b, const AosCollision *layer) {
     if (b->state == 0) {
         b->state = 1;
         b->timer = 0;
@@ -444,7 +468,7 @@ static void bubble_update(AosEnemy *b, const AosCollision *layer) {
 /* sub_0807091C: a bursting bubble sways by 0.25 every 8 frames rising at
  * 0.25, shows the previous frame from its sixth update and is gone after
  * twelve. */
-static void bubble_pop_update(AosEnemy *b) {
+void aos_enemy_bubble_pop_update(AosEnemy *b) {
     if (b->state == 0) {
         b->state = 1;
         b->timer = 0;

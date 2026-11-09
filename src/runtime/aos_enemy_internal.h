@@ -276,4 +276,34 @@ void aos_enemy_skeleton_head_update(AosEnemy *enemy,
 void aos_enemy_skeleton_held_update(AosEnemy *enemy,
                                     const AosEnemyKind *kind);
 
+int aos_enemy_cell_kind(const AosCollision *layer, int32_t x, int32_t y);
+int32_t aos_enemy_whole(int32_t v);
+int aos_enemy_water_below(const AosCollision *layer, int x, int y);
+int aos_enemy_swim_walk(AosEnemy *enemy, const AosCollision *layer, int half,
+                        int32_t head, int mode, int32_t limit);
+bool aos_enemy_aim_at(AosEnemy *enemy, int32_t tx, int32_t ty,
+                      int32_t speed);
+bool aos_enemy_target_in_water(const AosSoma *soma,
+                               const AosCollision *layer);
+bool aos_enemy_player_in_range(const AosEnemy *enemy,
+                               const AosSoma *soma, uint32_t range);
+int aos_enemy_box_walk(AosEnemy *enemy, const AosCollision *layer,
+                       int32_t limit);
+int aos_enemy_bubble_walk(AosEnemy *enemy, const AosCollision *layer,
+                          int32_t head, int mode);
+AosHitReport aos_enemy_fish_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_fry_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_bubble_update(AosEnemy *enemy,
+                             const AosCollision *layer);
+void aos_enemy_bubble_pop_update(AosEnemy *enemy);
+void aos_enemy_fish_struck(AosEnemy *enemy, const AosEnemyKind *kind);
+
 #endif

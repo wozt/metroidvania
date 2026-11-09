@@ -360,7 +360,6 @@ static bool is_early_enemy(uint8_t id) {
 }
 
 static void nemesis_helper_step(AosEnemy *n, const AosSoma *soma);
-static int cell_kind(const AosCollision *layer, int32_t x, int32_t y);
 static void nemesis_appear(AosEnemy *n, const AosSoma *soma);
 
 static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
@@ -691,7 +690,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->state = 5;
             return true;
         }
-        if (cell_kind(layer, enemy->x >> 16, enemy->y >> 16) != 3) {
+        if (aos_enemy_cell_kind(layer, enemy->x >> 16, enemy->y >> 16) != 3) {
             snap_to_floor(enemy, layer);
             enemy->step = 0x63;
             enemy->vflip = true;
@@ -1457,7 +1456,7 @@ void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
 
 static void nemesis_struck(AosEnemy *n);
 static void peeping_struck(AosEnemy *e, const AosSoma *soma);
-static void fish_struck(AosEnemy *f, const AosEnemyKind *kind);
+
 static void dragon_struck(AosEnemy *d, uint8_t attacker);
 
 /* sub_0806E314 / sub_080421AC: the player against the enemy, then the
@@ -1719,7 +1718,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_KILLER_FISH &&
                            enemy->role == AOS_ROLE_ENEMY) {
-                    fish_struck(enemy, kind);
+                    aos_enemy_fish_struck(enemy, kind);
                 } else if (enemy->id == AOS_ENEMY_AXE_ARMOR ||
                            enemy->id == AOS_ENEMY_ROCK_ARMOR ||
                            enemy->id == AOS_ENEMY_BOMBER_ARMOR) {
@@ -2295,7 +2294,7 @@ void aos_enemy_accel_move(AosEnemy *e, int32_t limit) {
 
 /* sub_080689F8 / sub_0806CEF8(e, range): the player's distance (whole
  * pixels, through Sqrt) within `range` (16.16). */
-static bool player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
+bool aos_enemy_player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
     int32_t dx = (e->x - target_x(soma)) >> 16, dy = (e->y - target_y(soma)) >> 16;
     return (uint32_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) << 16 <= range;
 }
@@ -2559,7 +2558,7 @@ void aos_enemy_copy_collision_result(AosHitReport *report,
 
 /* sub_0806D0B8(x, y): 2 (3 with bit 3) in a solid cell, else 0 above a
  * cell with bits 0-1 (a floor) and 1 in the air. */
-static int cell_kind(const AosCollision *layer, int32_t x, int32_t y) {
+int aos_enemy_cell_kind(const AosCollision *layer, int32_t x, int32_t y) {
     uint8_t c = aos_collision_cell(layer, x, y);
     if (c) return (c & 8) ? 3 : 2;
     return (aos_collision_cell(layer, x, y + 1) & 3) ? 0 : 1;
@@ -2567,13 +2566,13 @@ static int cell_kind(const AosCollision *layer, int32_t x, int32_t y) {
 
 /* The whole-pixel part of a 16.16 value, rounded toward zero (the native
  * absolute-value shifts). */
-static int32_t whole(int32_t v) { return v < 0 ? -((-v) >> 16) : v >> 16; }
+int32_t aos_enemy_whole(int32_t v) { return v < 0 ? -((-v) >> 16) : v >> 16; }
 
 /* sub_0806E5FC(x, y): how many pixels (0-7) below (x, y) the water starts,
  * skipping solid cells; 8 when it does not. */
-static int water_below(const AosCollision *layer, int x, int y) {
+int aos_enemy_water_below(const AosCollision *layer, int x, int y) {
     for (int d = 0; d < 8; ++d)
-        if (cell_kind(layer, x, y + d) == 3) return d;
+        if (aos_enemy_cell_kind(layer, x, y + d) == 3) return d;
     return 8;
 }
 
@@ -2586,8 +2585,8 @@ static void clamped_add(int32_t *v, int32_t a, int32_t limit) {
  * 0x40 with the feet. */
 static int water_flags(const AosEnemy *e, const AosCollision *layer, int32_t head) {
     int x = e->x >> 16, result = 0;
-    if (cell_kind(layer, x, whole(e->y + head)) == 3) result |= 0x80;
-    if (cell_kind(layer, x, e->y >> 16) == 3) result |= 0x40;
+    if (aos_enemy_cell_kind(layer, x, aos_enemy_whole(e->y + head)) == 3) result |= 0x80;
+    if (aos_enemy_cell_kind(layer, x, e->y >> 16) == 3) result |= 0x40;
     return result;
 }
 
@@ -2595,7 +2594,7 @@ static int water_flags(const AosEnemy *e, const AosCollision *layer, int32_t hea
  * with a wall `half` pixels ahead (2 left, 1 right) and a ceiling push at
  * that point, the y move (sub_0806D460), with mode a ceiling at y + head
  * (8), falling a floor (4), then the water flags. */
-static int swim_walk(AosEnemy *e, const AosCollision *layer, int half, int32_t head, int mode,
+int aos_enemy_swim_walk(AosEnemy *e, const AosCollision *layer, int half, int32_t head, int mode,
                      int32_t limit) {
     int result = 0;
     clamped_add(&e->vx, e->ax, limit);
@@ -2621,7 +2620,7 @@ static int swim_walk(AosEnemy *e, const AosCollision *layer, int half, int32_t h
     clamped_add(&e->vy, e->ay, limit);
     e->y += e->vy;
     if (mode) {
-        depth = aos_ceiling_depth(layer, e->x >> 16, whole(e->y + head), 0, false);
+        depth = aos_ceiling_depth(layer, e->x >> 16, aos_enemy_whole(e->y + head), 0, false);
         if (depth) {
             result |= 8;
             e->y += (int32_t)((uint32_t)depth << 16);
@@ -2639,7 +2638,7 @@ static int swim_walk(AosEnemy *e, const AosCollision *layer, int half, int32_t h
 
 /* sub_08069B70(e, -, head, mode): the same with an 8.0 limit, the walls at
  * the entity itself and the floor tested whatever its vy. */
-static int bubble_walk(AosEnemy *e, const AosCollision *layer, int32_t head, int mode) {
+int aos_enemy_bubble_walk(AosEnemy *e, const AosCollision *layer, int32_t head, int mode) {
     int result = 0;
     clamped_add(&e->vx, e->ax, 0x80000);
     e->x += e->vx;
@@ -2660,7 +2659,7 @@ static int bubble_walk(AosEnemy *e, const AosCollision *layer, int32_t head, int
     clamped_add(&e->vy, e->ay, 0x80000);
     e->y += e->vy;
     if (mode) {
-        int depth = aos_ceiling_depth(layer, e->x >> 16, whole(e->y + head), 0, false);
+        int depth = aos_ceiling_depth(layer, e->x >> 16, aos_enemy_whole(e->y + head), 0, false);
         if (depth) {
             result |= 8;
             e->y += (int32_t)((uint32_t)depth << 16);
@@ -2679,7 +2678,7 @@ static int bubble_walk(AosEnemy *e, const AosCollision *layer, int32_t head, int
  * or bottom edge (both corners), the water flag 0x80 for its top-left
  * corner. The corner-specific flags 0x100-0x800 and 0x10-0x40 are not
  * modelled (the fry reads only 0x80). */
-static int box_walk(AosEnemy *e, const AosCollision *layer, int32_t limit) {
+int aos_enemy_box_walk(AosEnemy *e, const AosCollision *layer, int32_t limit) {
     enum { BX = -4, BY = -4, BW = 8, BH = 8 };
     int result = 0;
     clamped_add(&e->vx, e->ax, limit);
@@ -2711,14 +2710,14 @@ static int box_walk(AosEnemy *e, const AosCollision *layer, int32_t limit) {
             }
         }
     }
-    if (cell_kind(layer, (e->x >> 16) + BX, (e->y >> 16) + BY) == 3) result |= 0x80;
+    if (aos_enemy_cell_kind(layer, (e->x >> 16) + BX, (e->y >> 16) + BY) == 3) result |= 0x80;
     return result;
 }
 
 /* sub_080693E4(e, tx, ty, speed): the velocity toward (tx, ty) at `speed`
  * (whole-pixel deltas over the BIOS Sqrt distance); true once within it. */
-static bool aim_at(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
-    int32_t dx = whole(tx - e->x), dy = whole(ty - e->y);
+bool aos_enemy_aim_at(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+    int32_t dx = aos_enemy_whole(tx - e->x), dy = aos_enemy_whole(ty - e->y);
     int32_t distance = (int32_t)(uint16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
     e->vx = distance ? dx * speed / distance : 0;
     e->vy = distance ? dy * speed / distance : 0;
@@ -2727,8 +2726,8 @@ static bool aim_at(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
 
 /* The target of the swimmers is in water (sub_0806D0B8 == 3), when there
  * is one (gEwramData + 0x13168). */
-static bool target_in_water(const AosSoma *soma, const AosCollision *layer) {
-    return !no_target && cell_kind(layer, target_x(soma) >> 16, target_y(soma) >> 16) == 3;
+bool aos_enemy_target_in_water(const AosSoma *soma, const AosCollision *layer) {
+    return !no_target && aos_enemy_cell_kind(layer, target_x(soma) >> 16, target_y(soma) >> 16) == 3;
 }
 
 void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
@@ -2746,6 +2745,15 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define skeleton_corner aos_enemy_skeleton_corner
 #define skeleton_merge aos_enemy_skeleton_merge
 #define skeleton_place aos_enemy_skeleton_place
+#define aim_at aos_enemy_aim_at
+#define box_walk aos_enemy_box_walk
+#define bubble_walk aos_enemy_bubble_walk
+#define cell_kind aos_enemy_cell_kind
+#define player_in_range aos_enemy_player_in_range
+#define swim_walk aos_enemy_swim_walk
+#define target_in_water aos_enemy_target_in_water
+#define water_below aos_enemy_water_below
+#define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
 #include "aos_enemies/headhunter.c"
@@ -2761,7 +2769,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/killer_fish.c"
+
 #include "aos_enemies/winged_skeleton.c"
 #include "aos_enemies/harpy.c"
 #include "aos_enemies/tiny_devil.c"
@@ -3271,18 +3279,18 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                           cam_y, random);
     if (enemy->role == AOS_ROLE_FRY)
-        return fry_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_fry_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                           cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_BUBBLE) {
-        bubble_update(enemy, layer);
+        aos_enemy_bubble_update(enemy, layer);
         return report;
     }
     if (enemy->role == AOS_ROLE_BUBBLE_POP) {
-        bubble_pop_update(enemy);
+        aos_enemy_bubble_pop_update(enemy);
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_FISH && enemy->role == AOS_ROLE_ENEMY)
-        return fish_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_fish_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_ROCK)
         return aos_enemy_rock_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,

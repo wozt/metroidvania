@@ -11,6 +11,7 @@
 
 bool aos_enemy_flag_8e_40;
 #define flag_8e_40 aos_enemy_flag_8e_40
+#define random_direction aos_enemy_random_direction
 
 /* The red soul skills' attack boxes this frame (aos_enemy_set_soul_attacks). */
 static AosSoulAttack *soul_attacks;
@@ -73,7 +74,7 @@ int32_t aos_enemy_random_centred(uint32_t (*random)(void), uint32_t n) {
 
 /* A unit vector at a random angle: (sin(a + 0x4000), sin(a)) times 1.0
  * (sub_0803E86C). */
-static void random_direction(uint32_t (*random)(void), int32_t *vx, int32_t *vy) {
+void aos_enemy_random_direction(uint32_t (*random)(void), int32_t *vx, int32_t *vy) {
     uint32_t a = random() & 0xFFFF;
     *vx = (int32_t)(((int64_t)aos_sine(a + 0x4000) * 0x10000) >> 16);
     *vy = (int32_t)(((int64_t)aos_sine(a) * 0x10000) >> 16);
@@ -2774,7 +2775,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/killer_mantle.c"
 #include "aos_enemies/dryad.c"
 #include "aos_enemies/tsuchinoko.c"
 #include "aos_enemies/kicker_skeleton.c"
@@ -3302,15 +3302,15 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_butcher_update(enemy, soma, layer, kind, weapon, weapon_frames,
                               soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_MANTLE_ORBIT) {
-        mantle_orbit_update(enemy, enemy->parent, random);
+        aos_enemy_mantle_orbit_update(enemy, enemy->parent, random);
         return report;
     }
     if (enemy->role == AOS_ROLE_MANTLE_GHOST) {
-        mantle_ghost_update(enemy, enemy->parent, kind->anims);
+        aos_enemy_mantle_ghost_update(enemy, enemy->parent, kind->anims);
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_MANTLE && enemy->role == AOS_ROLE_ENEMY)
-        return killer_mantle_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_killer_mantle_update(enemy, soma, layer, kind, weapon,
                                     weapon_frames, soma_atk, soma_def, cam_x,
                                     cam_y, random);
     if (enemy->role == AOS_ROLE_BOMBER_BOMB)

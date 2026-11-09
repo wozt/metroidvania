@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0930 - Killer Mantle family becomes a real translation unit
+
+- `aos_enemies/killer_mantle.c` now compiles independently with its
+  body, ghost and orbit updates exported through
+  `aos_enemy_internal.h`; `random_direction` joins the internal API
+  for the remaining families.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0929 - Evil Butcher family becomes a real translation unit
 
 - `aos_enemies/evil_butcher.c` now compiles independently with its

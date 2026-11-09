@@ -462,6 +462,8 @@ void aos_enemy_bomber_spark_update(AosEnemy *enemy,
 extern const AosEffect *aos_enemy_burst_source;
 extern size_t aos_enemy_burst_source_count;
 void aos_enemy_append_effects(AosHitReport *to, const AosHitReport *from);
+void aos_enemy_random_direction(uint32_t (*random)(void), int32_t *vx,
+                                int32_t *vy);
 AosHitReport aos_enemy_butcher_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
@@ -479,5 +481,16 @@ AosHitReport aos_enemy_butcher_gore_update(
     int cam_x, int cam_y, uint32_t (*random)(void));
 void aos_enemy_butcher_particle_update(AosEnemy *enemy,
                                        const AosEnemyKind *kind);
+AosHitReport aos_enemy_killer_mantle_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_mantle_ghost_update(AosEnemy *enemy,
+                                   const AosEnemy *parent,
+                                   const AosAnimSet *anims);
+void aos_enemy_mantle_orbit_update(AosEnemy *enemy,
+                                   const AosEnemy *parent,
+                                   uint32_t (*random)(void));
 
 #endif

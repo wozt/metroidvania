@@ -1,9 +1,24 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Killer Mantle (enemy 0x55), its ghost and orbit.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define append_effects aos_enemy_append_effects
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define play_loop aos_enemy_play_loop
+#define player_in_centred aos_enemy_player_in_centred
+#define random_centred aos_enemy_random_centred
+#define random_direction aos_enemy_random_direction
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 /* sub_0806E350(c, parent, dx, dy): the child's whole-pixel position
  * becomes the parent's plus the offset — dx negated by the parent's
@@ -198,7 +213,7 @@ static bool mantle_death(AosEnemy *e, const AosEnemyKind *kind,
  * 8 once (+ 0x5C = 0x14 and the + 0x5A merge are not ported); state 1
  * follows the parent 12 px to its back (negated by the facing) and 4 px
  * down, deleting when the animation ends. */
-static void mantle_ghost_update(AosEnemy *g, const AosEnemy *parent,
+void aos_enemy_mantle_ghost_update(AosEnemy *g, const AosEnemy *parent,
                                 const AosAnimSet *anims) {
     if (g->state == 0) {
         play_loop(g, anims, 8, false);
@@ -224,7 +239,7 @@ static void mantle_ghost_update(AosEnemy *g, const AosEnemy *parent,
  * States 1-3 end with the affine sub_0803E058 (angle = + 0x1A negated
  * by the child's facing, scale = + 0x1C): mapped to `angle` and
  * `walk_timer` for the renderer; the scale itself is not drawn. */
-static void mantle_orbit_update(AosEnemy *o, const AosEnemy *parent,
+void aos_enemy_mantle_orbit_update(AosEnemy *o, const AosEnemy *parent,
                                 uint32_t (*random)(void)) {
     if (!parent) {
         o->removed = true;
@@ -286,7 +301,7 @@ static void mantle_orbit_update(AosEnemy *o, const AosEnemy *parent,
  * (deleted when sub_080BB664 ends) and state 4 only steps the
  * animation. States 0-3 then run the collision pass sub_0806E314 and
  * the animation step sub_0803F17C; state 4 skips both. */
-static AosHitReport killer_mantle_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_killer_mantle_update(AosEnemy *e, AosSoma *soma,
                                          const AosCollision *layer,
                                          const AosEnemyKind *kind,
                                          const AosWeaponEntity *weapon,

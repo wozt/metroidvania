@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:19:54+00:00",
+ "generated_at": "2026-11-09T15:25:17+00:00",
  "git": {
-  "commit": "5839c692",
+  "commit": "c473e0d0",
   "branch": "main",
   "dirty": true
  },
@@ -11747,6 +11747,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/killer_mantle.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19761,6 +19762,7 @@
     "src/runtime/aos_enemies/biphron.c",
     "src/runtime/aos_enemies/bomber_armor.c",
     "src/runtime/aos_enemies/evil_butcher.c",
+    "src/runtime/aos_enemies/killer_mantle.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22215,6 +22217,12 @@
  },
  "timeline": [
   {
+   "commit": "c473e0d0",
+   "date": "2026-11-09",
+   "subject": "Compile Evil Butcher family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "5839c692",
    "date": "2026-11-09",
    "subject": "Compile Bomber Armor family as an independent enemy unit",
@@ -22686,12 +22694,6 @@
    "commit": "2aea9201",
    "date": "2026-11-08",
    "subject": "Document decoded Minotaur state machine (sub_080B0BE8)",
-   "scope": "project"
-  },
-  {
-   "commit": "c5c20789",
-   "date": "2026-11-08",
-   "subject": "Export Minotaur/RedMinotaur art; map Aria enemy controller families",
    "scope": "project"
   }
  ],

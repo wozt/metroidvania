@@ -186,8 +186,8 @@ static void dragon_fireball(const AosEnemy *d, AosHitReport *report) {
     b.x = d->x;
     b.y = d->y;
     b.mirrored = d->mirrored;
-    b.vx = fixed_mul(aos_sine((uint32_t)((int16_t)d->wd_aim + 0x4000)), 0x40000);
-    b.vy = fixed_mul(aos_sine((uint32_t)(int16_t)d->wd_aim), 0x40000);
+    b.vx = aos_fixed_mul(aos_sine((uint32_t)((int16_t)d->wd_aim + 0x4000)), 0x40000);
+    b.vy = aos_fixed_mul(aos_sine((uint32_t)(int16_t)d->wd_aim), 0x40000);
     b.stats = d->stats;
     b.hp = 1;
     b.combat.type = AOS_TYPE_ENEMY;

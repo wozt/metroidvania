@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0887 - Shared Aria math and a short enemy header
+
+- `aos_math` now also holds the BIOS Sqrt (`aos_isqrt`) and the 16.16
+  product sub_0803E86C (`aos_fixed_mul`), used by the enemy framework and
+  the title screen, which drops its own copy. Every function keeps its
+  size and its operations; only the stack slots of the six callers of
+  those helpers move, since they now call another file.
+- The first comment of `aos_enemy.h` describes the framework and the file
+  layout instead of listing every monster; each family file names its
+  monsters.
+
 ## Patch 0886 - Bat and zombie out of the enemy framework
 
 - The bat's code (`bat_sees`, `bat_hang`, `bat_swoop`, `bat_die`) is now in

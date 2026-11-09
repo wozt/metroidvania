@@ -199,33 +199,6 @@ static void append_effects(AosHitReport *to, const AosHitReport *from) {
         to->effects[to->effect_count++] = from->effects[index];
 }
 
-/* Sqrt (BIOS call 0x08): the integer square root, rounded down. */
-static uint32_t isqrt(uint32_t x) {
-    uint32_t r = 0;
-    for (uint32_t bit = 1u << 30; bit; bit >>= 2) {
-        if (x >= r + bit) {
-            x -= r + bit;
-            r = (r >> 1) + bit;
-        } else {
-            r >>= 1;
-        }
-    }
-    return r;
-}
-
-/* sub_0803E86C: a 16.16 product from the operands' top 24 bits, rounded
- * toward zero to a multiple of 0x100. */
-static int32_t fixed_mul(int32_t a, int32_t b) {
-    if (!a || !b) return 0;
-    if (a == 0x10000) return b;
-    if (b == 0x10000) return a;
-    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
-    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
-    int32_t p = a8 * b8;
-    if (p < 0) p += 0xFF;
-    return (int32_t)((uint32_t)(p >> 8) << 8);
-}
-
 /* The whole-pixel distance from `from` to `to`, rounded toward zero. */
 static int32_t pixel_delta(int32_t to, int32_t from) {
     return to >= from ? (to - from) >> 16 : -((from - to) >> 16);
@@ -237,23 +210,23 @@ static int32_t pixel_delta(int32_t to, int32_t from) {
 static bool move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
     uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
-    e->vx = fixed_mul(aos_sine(angle + 0x4000u), speed);
-    e->vy = fixed_mul(aos_sine(angle), speed);
-    return (int32_t)(isqrt((uint32_t)(dx * dx + dy * dy)) << 16) <= speed;
+    e->vx = aos_fixed_mul(aos_sine(angle + 0x4000u), speed);
+    e->vy = aos_fixed_mul(aos_sine(angle), speed);
+    return (int32_t)(aos_isqrt((uint32_t)(dx * dx + dy * dy)) << 16) <= speed;
 }
 
 /* sub_080695B4: the same polar solution, written to acceleration instead
  * of velocity. */
 static bool accelerate_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
-    uint32_t distance = isqrt((uint32_t)(dx * dx + dy * dy));
+    uint32_t distance = aos_isqrt((uint32_t)(dx * dx + dy * dy));
     if (!distance) {
         e->ax = e->ay = 0;
         return true;
     }
     uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
-    e->ax = fixed_mul(aos_sine(angle + 0x4000u), speed);
-    e->ay = fixed_mul(aos_sine(angle), speed);
+    e->ax = aos_fixed_mul(aos_sine(angle + 0x4000u), speed);
+    e->ay = aos_fixed_mul(aos_sine(angle), speed);
     return (int32_t)(distance << 16) <= speed;
 }
 
@@ -2289,7 +2262,7 @@ static void accel_move(AosEnemy *e, int32_t limit) {
  * pixels, through Sqrt) within `range` (16.16). */
 static bool player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
     int32_t dx = (e->x - target_x(soma)) >> 16, dy = (e->y - target_y(soma)) >> 16;
-    return (uint32_t)isqrt((uint32_t)(dx * dx + dy * dy)) << 16 <= range;
+    return (uint32_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) << 16 <= range;
 }
 
 /* sub_080696B0(e, tx, ty, speed): v = delta * speed / distance (whole
@@ -2297,7 +2270,7 @@ static bool player_in_range(const AosEnemy *e, const AosSoma *soma, uint32_t ran
  * zero distance (a division by zero natively) leaves it still. */
 static bool head_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
-    int32_t distance = (int32_t)isqrt((uint32_t)(dx * dx + dy * dy));
+    int32_t distance = (int32_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
     e->vx = distance ? dx * speed / distance : 0;
     e->vy = distance ? dy * speed / distance : 0;
     e->x += e->vx;
@@ -2523,7 +2496,7 @@ static bool player_ahead_within(const AosEnemy *e, const AosSoma *soma, int rang
     int side = e->x < target_x(soma) ? 1 : e->x > target_x(soma) ? -1 : 0;
     if (side != (e->mirrored ? 1 : -1)) return false;
     int32_t dx = pixel_delta(target_x(soma), e->x), dy = pixel_delta(target_y(soma), e->y);
-    return (int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) <= range;
+    return (int16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) <= range;
 }
 
 static void copy_collision_result(AosHitReport *report, const AosHitReport *hit) {
@@ -2698,7 +2671,7 @@ static int box_walk(AosEnemy *e, const AosCollision *layer, int32_t limit) {
  * (whole-pixel deltas over the BIOS Sqrt distance); true once within it. */
 static bool aim_at(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = whole(tx - e->x), dy = whole(ty - e->y);
-    int32_t distance = (int32_t)(uint16_t)isqrt((uint32_t)(dx * dx + dy * dy));
+    int32_t distance = (int32_t)(uint16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
     e->vx = distance ? dx * speed / distance : 0;
     e->vy = distance ? dy * speed / distance : 0;
     return (distance << 16) <= speed;

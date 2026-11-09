@@ -12,8 +12,8 @@ static void gorgon_breath(AosEnemy *owner, AosHitReport *report) {
     child.x += owner->mirrored ? 0x2A0000 : -0x2A0000;
     child.y -= 0x120000;
     child.angle = owner->phase;
-    child.vx = fixed_mul(aos_sine(child.angle + 0x4000u), 0xC000);
-    child.vy = fixed_mul(aos_sine(child.angle), 0xC000);
+    child.vx = aos_fixed_mul(aos_sine(child.angle + 0x4000u), 0xC000);
+    child.vy = aos_fixed_mul(aos_sine(child.angle), 0xC000);
     child.own_boxes = true;
     child.own_hurt = child.own_attack = (AosBox){-7, -7, 14, 14};
     child.contact_elements = 0x100;    /* sub_080899CC: the breath petrifies */

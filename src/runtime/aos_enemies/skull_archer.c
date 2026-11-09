@@ -94,7 +94,7 @@ static void archer_patrol(AosEnemy *a, const AosSoma *soma, const AosCollision *
     }
     ground_walk(a, soma, layer, &kind->probes, (int32_t)0xFFFF4000, 0xD);
     int32_t dx = pixel_delta(target_x(soma), a->x), dy = pixel_delta(target_y(soma), a->y);
-    if ((int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) > 0x63) archer_volley(a, kind->anims);
+    if ((int16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) > 0x63) archer_volley(a, kind->anims);
 }
 
 /* sub_080AF7EC: flying at 3.0 toward its facing with the collision pass;

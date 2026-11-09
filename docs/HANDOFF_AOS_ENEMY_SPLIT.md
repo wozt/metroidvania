@@ -114,12 +114,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - Several soul tests link `aos_enemy.c` only for the math. Check each
      test target in `CMakeLists.txt` and drop `aos_enemy.c` where it now
      links with `aos_math.c` alone.
-4. *(Done in patch 0886 for the sine and ArcTan2.)* `aos_title_screen.c`
-   now uses `aos_math`. `isqrt` and `fixed_mul` could still move to
-   `aos_math`: `aos_title_screen.c` also has its own `fixed_mul`.
-5. **Header comment.** The first comment of `aos_enemy.h` is one long
-   sentence listing every monster. Replace it with a short description of
-   the framework and leave the per-monster details in the family files.
+4. *(Done in patches 0886 and 0887.)* `aos_math` now also holds
+   `aos_isqrt` and `aos_fixed_mul`, and `aos_title_screen.c` uses it instead
+   of its own copies.
+5. *(Done in patch 0887.)* The first comment of `aos_enemy.h` now only
+   describes the framework and the layout.
 
 ## Rules and pitfalls
 

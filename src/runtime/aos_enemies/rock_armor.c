@@ -184,7 +184,7 @@ static AosHitReport rock_update(AosEnemy *r, AosSoma *soma, const AosCollision *
         r->own_boxes = true;
         r->own_hurt = r->own_attack = (AosBox){-16, -16, 32, 32};
         int32_t dx = pixel_delta(target_x(soma), r->x), dy = pixel_delta(target_y(soma), r->y);
-        int32_t distance = (int16_t)isqrt((uint32_t)(dx * dx + dy * dy));
+        int32_t distance = (int16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
         r->speed = -0x2000 - ((distance << 16) >> 6);
         r->y -= 0x3A0000;
         if (r->mirrored) r->speed = -r->speed;

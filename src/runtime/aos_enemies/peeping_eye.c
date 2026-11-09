@@ -170,8 +170,8 @@ static void peeping_struck(AosEnemy *e, const AosSoma *soma) {
     e->pe_hurt = true;
     uint16_t a = aos_arctan2((int16_t)pixel_delta(e->x, soma->x),
                              (int16_t)pixel_delta(e->y, soma->y));
-    e->vx = fixed_mul(aos_sine(a + 0x4000u), 0x20000);
-    e->vy = fixed_mul(aos_sine(a), 0x20000);
+    e->vx = aos_fixed_mul(aos_sine(a + 0x4000u), 0x20000);
+    e->vy = aos_fixed_mul(aos_sine(a), 0x20000);
     if (e->hp <= 0) {
         aos_audio_play_song(0x6E);
         e->timer = 0x2D;
@@ -367,8 +367,8 @@ static void peeping_part_update(AosEnemy *p, const AosEnemyKind *kind, const Aos
     int32_t a = (int16_t)p->angle;
     int32_t pull = (a - 0x4000) / 4;
     int32_t bent = k == 0 ? a - pull : k == 1 ? a : a + pull;
-    p->x = prev->x + fixed_mul(aos_sine((uint32_t)bent + 0x4000u), p->pe_radius);
-    p->y = prev->y + fixed_mul(aos_sine((uint32_t)bent), p->pe_radius);
+    p->x = prev->x + aos_fixed_mul(aos_sine((uint32_t)bent + 0x4000u), p->pe_radius);
+    p->y = prev->y + aos_fixed_mul(aos_sine((uint32_t)bent), p->pe_radius);
     if (k == 5) p->pe_rotation = (uint16_t)(a + (a - 0x4000) / 2);
     if (p->state == 0 && eye->state == 2) {
         p->state = 1;

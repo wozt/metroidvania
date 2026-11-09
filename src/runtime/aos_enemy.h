@@ -1,54 +1,22 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies.
  *
- * Layout: aos_enemy.c holds the shared framework (creation, the collision
- * pass, the common movement helpers and the update dispatch) and includes
- * one file per monster family from aos_enemies/; the whole is still one
- * translation unit. The ROM sine and
- * the BIOS ArcTan2 are in aos_math.
+ * Layout: aos_enemy.c holds the shared framework of cvaos code_08060B98 and
+ * includes one file per monster family from aos_enemies/ (each file names
+ * the monsters and native routines it ports); the whole is still one
+ * translation unit. The ROM sine, the BIOS ArcTan2 and Sqrt and the 16.16
+ * product are in aos_math.
  *
- * Shared parts of the enemy framework (cvaos code_08060B98): the activity
- * window of sub_0806CC20, facing the player (sub_0806BC40), the signed
- * velocity by facing (sub_0806E120), the vertical distance to the player
- * (sub_0806BDEC) and the sine of sub_080009E4; the bat (enemy 0x00,
- * EnemyBatCreate / EnemyBatUpdate) and the zombie (enemy 0x01,
- * EnemyZombieCreate / EnemyZombieUpdate, with its spawner records, the
- * walker collision sub_08069A00 and the generic death sub_0806AEAC) and the
- * blue crow (enemy 0x09, EnemyBlueCrowCreate / EnemyBlueCrowUpdate, with the
- * homing velocity of sub_080694B8) and the zombie soldier (enemy 0x0C,
- * EnemyZombieSoldierCreate / EnemyZombieSoldierUpdate) with its grenade
- * (sub_08092BC0 / sub_08092CCC and the projectile collision sub_08069770),
- * and the axe armor (enemy 0x04) with its axe (sub_080B0D5C) and the probe
- * walker sub_0806CAF8 / sub_0806C828, and the skull archer (enemy 0x05) with
- * its arrows (sub_080AF7EC), the Ghost Dancer (enemy 0x1D), the zombie
- * officer (enemy 0x20), Curly (enemy 0x2B) and Durga (enemy 0x11, the same
- * code), the skeleton knight (enemy 0x0D), the dead crusader (enemy 0x52),
- * Harpy (0x38) and Siren (0x0F, the same code) with their distinct volleys,
- * Gorgon (0x33) and Catoblepas (0x1C, the same code) with their breath clouds,
- * Tiny Devil (0x10) with its aimed orb, Imp (0x31) with its linked helper
- * and forced-attack state, Merman (0x03) with its hidden producer and shot,
- * and Ripper (0x4A) with its accelerating blade,
- * the Ghost (0x0E) with its appearance, attack flight, death and hidden
- * room producer,
- * the Killer Doll (0x1F) and Lightning Doll (0x3B) with their burning pieces, the beam skeleton
- * (0x59) with its beam and bones, Nemesis (0x26), Skull Millione (0x5B),
- * Cagnazzo (0x49, with its fin) and Lubicant (0x63,
- * with its fin; the same code),
- * the dead warrior (enemy 0x2F),
- * the Fleaman (enemy 0x18), the Mimic (enemy 0x60) with its hidden trigger,
- * the red crow (enemy 0x2D, the blue crow's death), the Valkyrie (enemy 0x29) and Erinys (0x62, the same code), the
- * gargoyle and the Gremlin (0x37, the same code)
- * (enemy 0x57), the Medusa head (enemy 0x39) with its
- * spawner, and Needles (enemy 0x3F) with its pieces
- * (sub_080CB6BC / sub_080CB7C8). Facing flag 0x40 of + 0x58 means
- * mirrored: enemy sprites face left by default. Combat: the frame boxes of
- * sub_0806B1FC, the collision pass of sub_0806E314 / sub_080421AC against
- * the player and his weapon, the bat's hit callback (sub_080AD6E4 /
- * sub_0806E218) and its death (state 3, sub_080AD5B8 / sub_0806BE74),
- * the death flames of sub_0806BE74 / sub_0806AEAC (sub_0806E524), the
- * blood splash of sub_0806E664 (sub_0806B5DC) and the crow's feathers.
- * Hit stun, damage numbers, other particles and drops are NOT ported.
- * No SDL. */
+ * The framework: creation (EnemyXCreate per id), the activity window of
+ * sub_0806CC20, facing the player (sub_0806BC40), the signed velocity by
+ * facing (sub_0806E120), the vertical distance to the player (sub_0806BDEC),
+ * the walker and projectile collisions (sub_08069A00, sub_08069770), the
+ * generic death sub_0806AEAC and the update dispatch. Facing flag 0x40 of
+ * + 0x58 means mirrored: enemy sprites face left by default. Combat: the
+ * frame boxes of sub_0806B1FC, the collision pass of sub_0806E314 /
+ * sub_080421AC against the player and his weapon, the death flames of
+ * sub_0806BE74 / sub_0806AEAC (sub_0806E524) and the blood splash of
+ * sub_0806E664 (sub_0806B5DC). No SDL. */
 #ifndef AOS_ENEMY_H
 #define AOS_ENEMY_H
 

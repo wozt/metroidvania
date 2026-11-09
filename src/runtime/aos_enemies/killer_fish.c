@@ -301,7 +301,7 @@ static void fish_struck(AosEnemy *f, const AosEnemyKind *kind) {
  * BIOS Sqrt distance). Returns the distance. */
 static int fry_head(AosEnemy *y, int32_t tx, int32_t ty) {
     int32_t dx = whole(tx) - (y->x >> 16), dy = whole(ty) - (y->y >> 16);
-    int distance = (uint16_t)isqrt((uint32_t)(dx * dx + dy * dy));
+    int distance = (uint16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
     y->vx = distance ? (dx << 17) / distance : 0;
     y->vy = distance ? (dy << 17) / distance : 0;
     return distance;

@@ -319,8 +319,8 @@ static void nemesis_choose(AosEnemy *n, uint32_t (*random)(void)) {
 /* sub_080C6EF8: both boxes 16 x 8 at the tip its angle points to. */
 static void nemesis_tip_box(AosEnemy *n) {
     int16_t a = (int16_t)n->angle;
-    int8_t x = (int8_t)(fixed_mul(aos_sine((uint32_t)(a + 0x8000)), 0x100000) >> 16);
-    int8_t y = (int8_t)(fixed_mul(aos_sine((uint32_t)(a + 0x4000)), 0x80000) >> 16);
+    int8_t x = (int8_t)(aos_fixed_mul(aos_sine((uint32_t)(a + 0x8000)), 0x100000) >> 16);
+    int8_t y = (int8_t)(aos_fixed_mul(aos_sine((uint32_t)(a + 0x4000)), 0x80000) >> 16);
     if (x > 0) x = (int8_t)(x - 16);
     n->own_attack = n->own_hurt = (AosBox){x, y, 16, 8};
 }
@@ -451,8 +451,8 @@ static void nemesis_dive(AosEnemy *n, const AosSoma *soma) {
         n->nem_spin = 0;
         n->angle = (uint16_t)(angle_to_target(n, soma) + 0xC000);
         int16_t a = (int16_t)n->angle;
-        n->vx = fixed_mul(aos_sine((uint32_t)(a + 0x8000)), 0x20000);
-        n->vy = fixed_mul(aos_sine((uint32_t)(a + 0x4000)), 0x20000);
+        n->vx = aos_fixed_mul(aos_sine((uint32_t)(a + 0x8000)), 0x20000);
+        n->vy = aos_fixed_mul(aos_sine((uint32_t)(a + 0x4000)), 0x20000);
         int32_t frames = n->vx ? (target_x(soma) - n->x) / n->vx : 0;
         n->timer = (uint8_t)(frames < 0 ? -frames : frames);
         n->step = 2;

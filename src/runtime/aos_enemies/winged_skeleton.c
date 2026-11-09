@@ -140,7 +140,7 @@ static void winged_attack(AosEnemy *e, const AosSoma *soma, const AosAnimSet *an
     switch (e->step) {
     case 0: {
         int32_t dx = pixel_delta(target_x(soma), e->x), dy = pixel_delta(target_y(soma), e->y);
-        bool far = (int16_t)isqrt((uint32_t)(dx * dx + dy * dy)) > 0x50;
+        bool far = (int16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) > 0x50;
         e->step = far ? 1 : 2;
         play_loop(e, anims, far ? 5 : 6, false);
         e->cycle_done = false;

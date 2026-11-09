@@ -74,8 +74,8 @@ static void ectoplasm_struck(AosEnemy *enemy, const AosSoma *soma,
                              const AosAnimSet *anims) {
     int32_t dx = pixel_delta(enemy->x, soma->x), dy = pixel_delta(enemy->y, soma->y);
     uint16_t angle = aos_arctan2((int16_t)dx, (int16_t)dy);
-    enemy->vx = fixed_mul(aos_sine(angle + 0x4000u), 0x10000);
-    enemy->vy = fixed_mul(aos_sine(angle), 0x10000);
+    enemy->vx = aos_fixed_mul(aos_sine(angle + 0x4000u), 0x10000);
+    enemy->vy = aos_fixed_mul(aos_sine(angle), 0x10000);
     if (enemy->hp > 0) return;
     enemy->defeated = true;
     aos_audio_play_song(0x6D);

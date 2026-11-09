@@ -58,3 +58,30 @@ uint16_t aos_arctan2(int16_t x16, int16_t y16) {
     }
     return (uint16_t)r;
 }
+
+/* Sqrt (BIOS call 0x08): the integer square root, rounded down. */
+uint32_t aos_isqrt(uint32_t x) {
+    uint32_t r = 0;
+    for (uint32_t bit = 1u << 30; bit; bit >>= 2) {
+        if (x >= r + bit) {
+            x -= r + bit;
+            r = (r >> 1) + bit;
+        } else {
+            r >>= 1;
+        }
+    }
+    return r;
+}
+
+/* sub_0803E86C: a 16.16 product from the operands' top 24 bits, rounded
+ * toward zero to a multiple of 0x100. */
+int32_t aos_fixed_mul(int32_t a, int32_t b) {
+    if (!a || !b) return 0;
+    if (a == 0x10000) return b;
+    if (b == 0x10000) return a;
+    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
+    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
+    int32_t p = a8 * b8;
+    if (p < 0) p += 0xFF;
+    return (int32_t)((uint32_t)(p >> 8) << 8);
+}

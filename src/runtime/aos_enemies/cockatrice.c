@@ -90,7 +90,7 @@ static AosHitReport cockatrice_rock_update(AosEnemy *e, AosSoma *soma,
          * early rise. */
         int32_t dx = pixel_delta(target_x(soma), e->x);
         int32_t dy = pixel_delta(target_y(soma), e->y);
-        int32_t d = (int32_t)isqrt((uint32_t)(dx * dx + dy * dy));
+        int32_t d = (int32_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
         if (d > 0) {
             e->vx = dx * 0x18000 / d;
             e->vy = dy * 0x18000 / d - 0x8000;
@@ -172,7 +172,7 @@ static void cockatrice_attack(AosEnemy *e, AosSoma *soma, const AosCollision *la
             bool side = e->mirrored ? dir == 1 : dir == -1;
             int32_t dx = pixel_delta(target_x(soma), e->x);
             int32_t dy = pixel_delta(target_y(soma), e->y);
-            int32_t dist = (int32_t)isqrt((uint32_t)(dx * dx + dy * dy));
+            int32_t dist = (int32_t)aos_isqrt((uint32_t)(dx * dx + dy * dy));
             if (side && dist <= 0x77) {
                 e->step = 2;
                 play_loop(e, kind->anims, 1, false);

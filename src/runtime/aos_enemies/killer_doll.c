@@ -116,8 +116,8 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
             int16_t dx = (int16_t)((target_x(soma) >> 16) - (d->x >> 16));
             int16_t dy = (int16_t)((target_y(soma) >> 16) - (d->y >> 16) - 0x10);
             uint16_t angle = aos_arctan2(dx, dy);
-            d->vx = fixed_mul(aos_sine(angle + 0x14000u), 0x10000);
-            d->vy = fixed_mul(aos_sine(angle + 0x10000u), 0x10000);
+            d->vx = aos_fixed_mul(aos_sine(angle + 0x14000u), 0x10000);
+            d->vy = aos_fixed_mul(aos_sine(angle + 0x10000u), 0x10000);
             int32_t frames = d->vx ? (target_x(soma) - d->x) / d->vx : 0;
             d->timer = (uint8_t)(frames < 0 ? -frames : frames);
             d->substep = 1;

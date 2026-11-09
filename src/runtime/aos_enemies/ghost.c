@@ -41,8 +41,8 @@ static void ghost_controller(AosEnemy *g, const AosSoma *soma, const AosEnemyKin
     int16_t away_y = (int16_t)pixel_delta(g->y + 0x400000, target_y(soma));
     uint16_t angle = aos_arctan2(away_x, away_y);
     angle = (uint16_t)(angle - 0x1000 + (random() & 0x1FFF));
-    g->vx = fixed_mul(aos_sine(angle + 0x4000u), 0x20000);
-    g->vy = fixed_mul(aos_sine(angle), 0x20000);
+    g->vx = aos_fixed_mul(aos_sine(angle + 0x4000u), 0x20000);
+    g->vy = aos_fixed_mul(aos_sine(angle), 0x20000);
 }
 
 /* EnemyGhostUpdate: the normal attack/death states, the event-state variant

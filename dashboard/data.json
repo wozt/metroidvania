@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T12:23:38+00:00",
+ "generated_at": "2026-11-09T12:26:22+00:00",
  "git": {
-  "commit": "e9f52c3d",
+  "commit": "42f1abec",
   "branch": "main",
   "dirty": true
  },
@@ -22075,6 +22075,12 @@
  },
  "timeline": [
   {
+   "commit": "42f1abec",
+   "date": "2026-11-09",
+   "subject": "Move the bat and zombie out of the Aria enemy framework",
+   "scope": "project"
+  },
+  {
    "commit": "e9f52c3d",
    "date": "2026-11-09",
    "subject": "Split the Aria enemies into one file per monster family",
@@ -22546,12 +22552,6 @@
    "commit": "c6450d66",
    "date": "2026-11-08",
    "subject": "Document the new/held soul feedback entity decode",
-   "scope": "project"
-  },
-  {
-   "commit": "c53ceb49",
-   "date": "2026-11-08",
-   "subject": "Show the soul description only for newly held souls",
    "scope": "project"
   }
  ],

@@ -27,8 +27,8 @@ static void harpy_shot(AosEnemy *owner, int variant, AosHitReport *report) {
     child.angle = siren ? siren_angles[owner->mirrored][variant]
                         : harpy_angles[owner->mirrored][variant];
     int32_t speed = siren ? 0x8000 : 0xC000;
-    child.vx = fixed_mul(aos_sine(child.angle + 0x4000u), speed);
-    child.vy = fixed_mul(aos_sine(child.angle), speed);
+    child.vx = aos_fixed_mul(aos_sine(child.angle + 0x4000u), speed);
+    child.vy = aos_fixed_mul(aos_sine(child.angle), speed);
     child.x += owner->mirrored ? 0x10000 : -0x10000;
     child.y += 0x20000;
     child.own_boxes = true;
@@ -49,8 +49,8 @@ static AosHitReport harpy_shot_update(AosEnemy *shot, AosSoma *soma,
             shot->angle += 0x400;
         else
             shot->angle -= 0x400;
-        shot->vx = fixed_mul(aos_sine(shot->angle + 0x4000u), 0x8000);
-        shot->vy = fixed_mul(aos_sine(shot->angle), 0x8000);
+        shot->vx = aos_fixed_mul(aos_sine(shot->angle + 0x4000u), 0x8000);
+        shot->vy = aos_fixed_mul(aos_sine(shot->angle), 0x8000);
     }
     integrate(shot);
     int sx = (shot->x >> 16) - cam_x, sy = (shot->y >> 16) - cam_y;

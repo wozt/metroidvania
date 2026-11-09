@@ -399,19 +399,6 @@ static void objects_update(AosTitleScreen *t) {
     }
 }
 
-/* sub_0803E86C: a 16.16 product from the operands' top 24 bits, rounded
- * toward zero to a multiple of 0x100 (as fixed_mul of aos_enemy.c). */
-static int32_t fixed_mul(int32_t a, int32_t b) {
-    if (!a || !b) return 0;
-    if (a == 0x10000) return b;
-    if (b == 0x10000) return a;
-    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
-    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
-    int32_t p = a8 * b8;
-    if (p < 0) p += 0xFF;
-    return (int32_t)((uint32_t)(p >> 8) << 8);
-}
-
 /* sub_0803E8FC: 1 / x in 16.16. */
 static int32_t reciprocal(int32_t x) {
     if (x == 0x10000) return 0x10000;
@@ -429,10 +416,10 @@ static void sprite_affine(AosTitleSprite *sprite, uint16_t angle, int32_t sx, in
     int32_t rx = sx > 0x400 ? reciprocal(sx) : 0x7FFFFF;
     int32_t ry = sy > 0x400 ? reciprocal(sy) : 0x7FFFFF;
     sprite->affine = true;
-    sprite->pa = toward_zero_8(fixed_mul(cosine, rx));
-    sprite->pb = toward_zero_8(fixed_mul(sine, rx));
-    sprite->pc = toward_zero_8(fixed_mul(-sine, ry));
-    sprite->pd = toward_zero_8(fixed_mul(cosine, ry));
+    sprite->pa = toward_zero_8(aos_fixed_mul(cosine, rx));
+    sprite->pb = toward_zero_8(aos_fixed_mul(sine, rx));
+    sprite->pc = toward_zero_8(aos_fixed_mul(-sine, ry));
+    sprite->pd = toward_zero_8(aos_fixed_mul(cosine, ry));
 }
 
 /* The layers of sub_0803DD14 (stage 1): BG0 at 7, BG1 at 6, BG2 at 0x16,

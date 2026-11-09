@@ -2,6 +2,51 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0878 - Waiter Skeleton ported (id 30)
+
+- EnemyWaiterSkeletonCreate (0x080AF574) /
+  EnemyWaiterSkeletonUpdate (0x080AF650) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_WAITER_SKELETON
+  (0x1E), with the sub_080AF194 attack, sub_080AF2A0 walk,
+  sub_080AF450 death and sub_080AF6FC hurt handlers and the
+  two linked children sub_080AEC0C (companion, role 64) and
+  sub_080AED28 (tray, role 65).
+- Resources: tiles 0x081E4194, palette 0x0820BE3C, frames
+  0x082393E0, walker probes 0x08528608; sounds 0x89 at the
+  tray throw and 0x6B at the death.
+- State 0 wakes on the (-0xA0, -0x28, 0x140, 0x50) box;
+  state 1 picks the normal tray (animation 6, child + 0x14 =
+  0x11) or the powered one (animation 7, + 0x14 = 9, + 0x20
+  bit 0) then loops animation 3 into the walk; state 2 walks
+  the probe table at 0x8000/0x10000 with the notice and
+  strike boxes, arms + 0x20 bit 2 on animation-5 frame 2 and
+  retreats on timers; state 3 throws 7 or 6 debris pieces
+  (animations 0xA-0x10) after song 0x6B; state 4 only
+  animates.
+- The companion hides while the parent dies or + 0x20 bit 1
+  clears, rides the parent's attachment on animation 0x11
+  and replays animation 8 on + 0x20 bit 3. The tray follows
+  the parent through attach table 0x0811937C during
+  animations 2-5, throws on + 0x20 bit 2 (aimed vx, vy
+  -0x20000, ay 0x2000, affine spin), and its contact
+  sub_080AF740 deals the parent's + 0x3C, sets + 0x20 bit 3
+  and zeroes + 0x34 through sub_080AF784 so it bursts a
+  sub_0806D5C0 dust puff in state 5.
+- Divergences: the + 0x10 palette byte gating the tray's
+  state-3 conversion is not modelled (dead path — the parent
+  never reaches state 5), the sub_0806C3F8 attachment
+  component index is approximated by the exported frame
+  edge for both children, the sub_0803E654 spawn sign draw
+  by the RNG bit 15, and the affine fade, palette merges,
+  + 0x72 bits, box presets, pause gate and room query are
+  not ported. The companion is emitted by the first update.
+  No emulator comparison.
+- Unit-tested in waiter_skeleton_tests: create and flag
+  state, the companion attach and hide, the wake, both tray
+  branches' shared path, the throw with song 0x89 and the
+  armed contact, the burst, the walk to idle and the
+  7-piece death.
+
 ## Patch 0877 - Waiter Skeleton decoded (id 30, not yet ported)
 
 Decode-only checkpoint; nothing is implemented yet. The family is the

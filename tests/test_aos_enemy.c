@@ -4096,6 +4096,229 @@ static void kicker_skeleton_tests(void) {
         assert(death.children[i].role == AOS_ROLE_DEBRIS);
 }
 
+static void waiter_skeleton_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    /* A thick floor like a real room for the 0x08528608 probes. */
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-17: 0 idle, 1 the post-attack loop, 3 the retreat,
+     * 4 the notice, 5 the strike (four frames so + 0x6E == 2 is
+     * reached), 6/7 the tray raises, 8 the companion replay, 9 and 17
+     * the tray frames, 10-16 the death debris. */
+    static const uint8_t four[4] = {4, 4, 4, 4};
+    static const uint8_t three[3] = {4, 4, 4};
+    static const uint8_t two[2] = {4, 4};
+    static const uint8_t one[1] = {4};
+    AosAnimDef defs[18];
+    defs[0] = (AosAnimDef){3, three};
+    defs[1] = (AosAnimDef){3, three};
+    defs[2] = (AosAnimDef){1, one};
+    defs[3] = (AosAnimDef){3, three};
+    defs[4] = (AosAnimDef){3, three};
+    defs[5] = (AosAnimDef){4, four};
+    defs[6] = (AosAnimDef){2, two};
+    defs[7] = (AosAnimDef){2, two};
+    defs[8] = (AosAnimDef){1, one};
+    defs[9] = (AosAnimDef){1, one};
+    for (int a = 10; a <= 16; ++a) defs[a] = (AosAnimDef){1, one};
+    defs[17] = (AosAnimDef){1, one};
+    const AosAnimSet anims = {defs, 18};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 18; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    /* The 0x08528608 walker probes, as in the Kicker Skeleton test. */
+    kind.probes = (AosProbes){2, -10, 16, 6, {6, -10}};
+    /* The companion and tray attach to the parent's frame edge
+     * (sub_0806C3F8 approximated): animation 0 frame 0 sits at (8, -8). */
+    kind.edges[0][0][0] = 8;
+    kind.edges[0][0][1] = -8;
+    /* enemies.tsv id 30: hp 120, contact 22, defence 14, weak 0x20,
+     * resist 0x10, experience 38. */
+    const AosEnemyStats stats = {120, 22, 14, 0x20, 0x10, 38};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create (sub_080AF574): state 0, animation 0 looping, + 0x20 = 2;
+     * the flag path (0x8E & 0x40) is state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_WAITER_SKELETON, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && e.ws_flags == 2 &&
+           e.hp == stats.hp);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_WAITER_SKELETON, 200, 150, 0,
+                            0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 4 && flagged.ws_flags == 2);
+    /* State 4: animation only — it steps and never collides. */
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(!flagged.removed && flagged.state == 4 && flagged.anim.id == 0 &&
+           flagged.anim.tick == 2);
+
+    /* The first update emits the constructor's companion child
+     * (sub_080AEC0C): state 0 plays animation 0x11, state 1 pins it to
+     * the parent's attachment (edge (8,-8), mirrored -> -8). */
+    AosHitReport built = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+    assert(built.child_count == 1 &&
+           built.children[0].role == AOS_ROLE_WAITER_COMPANION &&
+           built.children[0].parent == &e);
+    AosEnemy comp = built.children[0];
+    (void)aos_enemy_update(&comp, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(comp.state == 1 && comp.anim.id == 0x11);
+    (void)aos_enemy_update(&comp, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert((comp.x >> 16) == (e.x >> 16) - 8 &&
+           (comp.y >> 16) == (e.y >> 16) - 8);
+    /* The companion hides once + 0x20 bit 1 clears (after the first
+     * attack's step 2) or the parent dies. */
+    e.ws_flags = 0;
+    (void)aos_enemy_update(&comp, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(comp.hidden);
+    e.ws_flags = 2;
+
+    /* The wake box (-0xA0, -0x28, 0x140, 0x50): Soma inside moves it to
+     * state 1; substep 0 picks the normal tray (RNG & 3 == 0). */
+    soma.x = e.x - AOS_FIXED(0x40);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.state == 1 && e.step == 0);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1);
+    /* Step 1 spawns the tray (animation 0x11) and plays animation 6. */
+    AosHitReport tray_birth = aos_enemy_update(&e, &soma, &layer, &kind,
+                                               NULL, NULL, 10, 4, 0, 0,
+                                               always_zero);
+    assert(e.step == 2 && e.anim.id == 6 && tray_birth.child_count == 1 &&
+           tray_birth.children[0].role == AOS_ROLE_WAITER_TRAY &&
+           tray_birth.children[0].ws_anim == 0x11);
+    AosEnemy tray = tray_birth.children[0];
+    /* The tray's first update: state 0 -> state 1 at the parent's
+     * offset, animation 0x11. */
+    (void)aos_enemy_update(&tray, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(tray.state == 1 && tray.anim.id == 0x11 && !tray.hidden);
+    /* Animation 6 ends: state 2, animation 3 looping, steps cleared and
+     * + 0x20 bits 0-1 cleared (the companion now hides). */
+    int frames = 0;
+    while (e.state != 2 && frames < 60) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 2 && e.step == 0 && e.anim.id == 3 && e.ws_flags == 0 &&
+           frames < 60);
+
+    /* Walk step 0: Soma in the (-0x64, -0x28, 0xC8, 0x50) box plays
+     * animation 4; RNG & 3 != 0 -> step 1. */
+    soma.x = e.x + AOS_FIXED(0x40);
+    soma.y = e.y;
+    static const uint32_t odd[] = {1};
+    script = odd;
+    script_at = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           scripted);
+    assert(e.step == 1 && e.anim.id == 4);
+    /* Step 1: the tighter box (-0x50, -0x28, 0xA0, 0x50) plays
+     * animation 5 once -> step 2. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 2 && e.anim.id == 5);
+    /* Step 2: frame 2 arms + 0x20 bit 2 (the tray's throw window); the
+     * tray follows while the parent's animation is 2-5 and throws on
+     * the bit — sound 0x89, state 4, vy -0x20000, ay 0x2000. */
+    frames = 0;
+    while (!(tray.state == 4 && (e.ws_flags & 4)) && frames < 80) {
+        (void)aos_enemy_update(&tray, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(tray.state == 4 && (e.ws_flags & 4) && frames < 80 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x89) >= 1 &&
+           tray.vy == (int32_t)0xFFFE0000 && tray.ay == 0x2000);
+    /* The thrown tray spins and flies: state 4 integrates vx/vy and
+     * spins the affine angle. */
+    int32_t px = tray.x, py = tray.y;
+    (void)aos_enemy_update(&tray, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(tray.x != px || tray.y != py);
+    /* Its contact: on Soma it deals the parent's contact and zeroes
+     * + 0x34 — the parent's + 0x20 bit 3 is set (the palette bytes
+     * match). */
+    tray.x = soma.x;
+    tray.y = soma.y;
+    soma.combat = (AosCombat){.type = AOS_TYPE_PLAYER};
+    AosHitReport thrown = aos_enemy_update(&tray, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, 0, 0,
+                                           always_zero);
+    assert(thrown.soma_hit && tray.hp == 0 && (e.ws_flags & 8));
+    /* HP 0 -> state 5: the sub_0806D5C0 dust burst and deletion. */
+    (void)aos_enemy_update(&tray, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(tray.removed && tray.state == 5);
+
+    /* Let the walk finish: animation 5 ends -> step 5 (animation 1
+     * looping, timer 0x3C + RNG & 0xF), walks back, then state 0. */
+    frames = 0;
+    while (e.state != 0 && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && frames < 200);
+
+    /* The lethal blow (sub_080AF6FC): state 3, timer 0x28, steps
+     * cleared; the next update plays sound 0x6B and throws the 7
+     * debris pieces (animations 0xA-0x10, + 0x20 bit 1 cleared by the
+     * attack -> wait, bit 1 was cleared: 6 pieces 0xB-0x10). */
+    assert(aos_enemy_create(&e, AOS_ENEMY_WAITER_SKELETON, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(150);
+    e.hp = 1;
+    e.ws_flags = 2;   /* fresh: bit 1 still set -> 7 pieces */
+    soma.x = e.x + AOS_FIXED(10);
+    soma.y = e.y + AOS_FIXED(10);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 3 && e.timer == 0x28 && e.defeated);
+    AosHitReport death = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+    /* sub_080AF450 step 0: + 0x20 bit 1 still set on this fresh enemy ->
+     * animations 0xA-0x10, 7 pieces. */
+    assert(!e.removed && death.child_count == 7 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+    for (int i = 0; i < death.child_count; ++i)
+        assert(death.children[i].role == AOS_ROLE_DEBRIS);
+    AosHitReport gone = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                         NULL, 10, 4, 0, 0, always_zero);
+    assert(e.removed && gone.child_count == 0);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -7217,6 +7440,7 @@ int main(void) {
     dryad_tests();
     tsuchinoko_tests();
     kicker_skeleton_tests();
+    waiter_skeleton_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

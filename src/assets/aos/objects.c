@@ -393,6 +393,13 @@ static const EntitySpec entities[] = {
      * 0x08528908 probe table (sub_0806CAF8 mode 0). */
     {"kicker_skeleton", 0x08259214, 0x0825C320, 0, 0x0825DA58,
      0x08528908, 0, 0, 0, {0}},
+    /* EnemyWaiterSkeletonCreate (sub_080AF574) and its companion
+     * (sub_080AEC0C) and tray (sub_080AED28) children, which share the
+     * same resources: tiles 0x081E4194, palette 0x0820BE3C, frames
+     * 0x082393E0; the state-2 walker probes 0x08528608
+     * (sub_0806CAF8 mode 0xC). */
+    {"waiter_skeleton", 0x081E4194, 0x0820BE3C, 0, 0x082393E0,
+     0x08528608, 0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

@@ -174,6 +174,7 @@ enum {
     AOS_ENEMY_DRYAD = 0x46,
     AOS_ENEMY_TSUCHINOKO = 0x23,
     AOS_ENEMY_KICKER_SKELETON = 0x53,
+    AOS_ENEMY_WAITER_SKELETON = 0x1E,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -209,7 +210,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BUTCHER_PARTICLE = 58,
        AOS_ROLE_MANTLE_ORBIT = 59, AOS_ROLE_MANTLE_GHOST = 60,
        AOS_ROLE_DRYAD_SEED = 61, AOS_ROLE_TSUCHINOKO_SPIT = 62,
-       AOS_ROLE_TSUCHINOKO_ROCK = 63 };
+       AOS_ROLE_TSUCHINOKO_ROCK = 63,
+       AOS_ROLE_WAITER_COMPANION = 64, AOS_ROLE_WAITER_TRAY = 65 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -390,6 +392,13 @@ typedef struct AosEnemy {
     /* Tsuchinoko (sub_080A71CC create): + 0x14, its HP at create — the
      * wounded-hop thresholds of sub_080A7294 step 2 read it. */
     int16_t hp_home;
+    /* Waiter Skeleton: + 0x20 flags on the body (bit 0 the powered tray,
+     * bit 1 the held companion's visibility, bit 2 the tray's throw
+     * window, bit 3 its landed contact); + 0x14 animation index and
+     * + 0x52 spawn offset of the tray child. */
+    uint32_t ws_flags;
+    int16_t ws_anim;
+    int16_t ws_offset;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

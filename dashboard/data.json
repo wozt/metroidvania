@@ -1,10 +1,10 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T10:32:37+00:00",
+ "generated_at": "2026-11-09T10:56:56+00:00",
  "git": {
-  "commit": "2202bd8b",
-  "branch": "main",
-  "dirty": true
+  "commit": "59fed5f1",
+  "branch": "HEAD",
+  "dirty": false
  },
  "areas": [
   {
@@ -94,9 +94,9 @@
    ],
    "total": 238,
    "by_status": {
-    "not_started": 8,
+    "not_started": 7,
     "in_progress": 2,
-    "partial": 55,
+    "partial": 56,
     "functional": 172,
     "faithful": 0,
     "validated": 0,
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 172,
    "functional_or_better_percent": 72.3,
-   "with_passing_tests": 224,
-   "with_passing_tests_percent": 94.1,
+   "with_passing_tests": 225,
+   "with_passing_tests_percent": 94.5,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -680,9 +680,9 @@
    ],
    "total": 8,
    "by_status": {
-    "not_started": 7,
+    "not_started": 6,
     "in_progress": 0,
-    "partial": 1,
+    "partial": 2,
     "functional": 0,
     "faithful": 0,
     "validated": 0,
@@ -691,8 +691,8 @@
    },
    "functional_or_better": 0,
    "functional_or_better_percent": 0.0,
-   "with_passing_tests": 1,
-   "with_passing_tests_percent": 12.5,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 25.0,
    "unknown_or_blocked": 0,
    "features": [
     "mv.character_state",
@@ -17567,31 +17567,62 @@
    "area": "metroidvania",
    "category": "overlays",
    "title": "Editor overlays applied by the runtimes",
-   "status": "not_started",
+   "status": "partial",
    "fidelity": "n/a",
-   "local_sources": [],
-   "tests": [],
+   "local_sources": [
+    "src/runtime/mzm_room_overlay.c",
+    "src/core/native_map.c",
+    "src/runtime/room_runtime.c"
+   ],
+   "tests": [
+    "tests/test_mzm_room_overlay.c",
+    "tests/test_native_map.c"
+   ],
    "dependencies": [
     "tools.room_editor"
    ],
    "native_routines": [],
-   "limitations": "The runtimes do not read editor overrides yet.",
+   "limitations": "fusion_room_runtime applies the map editor's private room overlays (the private overrides/metroid/<area>_<NNN>.mvnative of the extracted assets, the editor's own save format read by the shared core/native_map reader) to the BG1 and BG2 block layers of every Zero Mission room it loads, at the start and through doors, when the document names the same room and tileset and has the room's layer dimensions; any other document is reported and ignored, and removing the file restores the reconstructed room. --no-overlays disables them and --overlay-dir DIR reads another directory. Checked on a capture (an edited Brinstar room shows its edited blocks over the native Clipdata). Limitations: only the block graphics are applied (Clipdata, doors, hatches and objects stay native; the editor's project collision, doors, entities and events have no engine adapter); Aria's runtime, which draws pre-composited room backgrounds, applies no overlay.",
    "next_action": "",
    "evidence": {
-    "unit_tests": [],
+    "unit_tests": [
+     "tests/test_mzm_room_overlay.c",
+     "tests/test_native_map.c"
+    ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": null,
+   "last_validated": "2026-11-09",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
     "missing_sources": [],
-    "tests": [],
-    "verdict": "untested",
+    "tests": [
+     {
+      "test": "tests/test_mzm_room_overlay.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "mzm_room_overlay"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_map.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_map_contract"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-09"
    }
   },
   {
@@ -18763,7 +18794,7 @@
    ],
    "dependencies": [],
    "native_routines": [],
-   "limitations": "The production workspace, unified room/entity/collision/event model, saved connection graph, immutable packages, render audits and headless commands are native; the former Python room model and backend implementations are removed, while private edits are still not applied by the runtimes.",
+   "limitations": "The production workspace, unified room/entity/collision/event model, saved connection graph, immutable packages, render audits and headless commands are native; the former Python room model and backend implementations are removed, while its private tile edits are applied by the Zero Mission runtime (mv.overlays_in_runtime) and not yet by Aria's.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -21587,6 +21618,13 @@
     "outcome": "passed"
    },
    {
+    "name": "mzm_room_overlay",
+    "files": [
+     "tests/test_mzm_room_overlay.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "fusion_host",
     "files": [
      "tests/test_fusion_host.c"
@@ -21840,12 +21878,18 @@
    }
   ],
   "summary": {
-   "passed": 134,
+   "passed": 135,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "59fed5f1",
+   "date": "2026-11-09",
+   "subject": "Port the Cockatrice (Aria enemy id 46)",
+   "scope": "project"
+  },
   {
    "commit": "2202bd8b",
    "date": "2026-11-09",
@@ -22318,12 +22362,6 @@
    "commit": "f37e52b7",
    "date": "2026-11-08",
    "subject": "Document VRAM cell framebuffer and Item Use strip decode",
-   "scope": "project"
-  },
-  {
-   "commit": "0b3d92dd",
-   "date": "2026-11-08",
-   "subject": "Correct enemy-detail drop decode: text only, no sprite icons",
    "scope": "project"
   }
  ],

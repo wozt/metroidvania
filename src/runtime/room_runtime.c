@@ -30,6 +30,7 @@
 #include "mzm_samus.h"
 #include "mzm_screen_shake.h"
 #include "mzm_screen.h"
+#include "mzm_room_overlay.h"
 #include "mzm_title_screen.h"
 #include "mzm_pause_screen.h"
 #include "mzm_save.h"
@@ -4350,6 +4351,27 @@ static void runtime_draw_backgrounds(SDL_Renderer *renderer, const RuntimeBgArt 
 }
 
 /* Load an exported native room and its background texture. */
+/* The map editor's private overlay of the room, when it fits
+ * (mzm_room_overlay); --no-overlays keeps every room native. */
+static bool runtime_overlays_enabled = true;
+static const char *runtime_overlay_directory = MZM_ROOM_OVERLAY_DIRECTORY;
+
+static void runtime_apply_overlay(Room *room) {
+    if (!runtime_overlays_enabled || !room->has_backgrounds) return;
+    char path[512], message[640];
+    if (!mzm_room_overlay_path(path, sizeof path, runtime_overlay_directory, room->area,
+                               room->room))
+        return;
+    MzmOverlayLayer layers[2];
+    for (int l = 0; l < 2; ++l)
+        layers[l] = (MzmOverlayLayer){room->bg_present[l + 1], room->bg_w[l + 1],
+                                      room->bg_h[l + 1], room->bg[l + 1]};
+    int changed = 0;
+    MzmOverlayResult result = mzm_room_overlay_apply(path, room->area, room->room, room->tileset,
+                                                     layers, &changed, message, sizeof message);
+    if (result != MZM_OVERLAY_NONE) fprintf(stderr, "%s\n", message);
+}
+
 static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *renderer,
                               SDL_Texture **texture) {
     char path[256],background[256];
@@ -4358,6 +4380,7 @@ static bool runtime_load_room(const char *alias,Room *room,SDL_Renderer *rendere
     snprintf(background,sizeof background,
              "assets/extracted/metroid/rooms/runtime/%s/background.bmp",alias);
     if(!parse_native_room(path,room))return false;
+    runtime_apply_overlay(room);
     SDL_Surface *surface=SDL_LoadBMP(background);
     if(!surface)return false;
     bool ok=surface->w==room->width && surface->h==room->height;
@@ -4522,6 +4545,8 @@ int room_runtime_main(int argc, char **argv) {
         else if (!strcmp(argv[i],"--title")) title_mode=true;
         else if (!strcmp(argv[i],"--intro")) title_mode=intro_mode=true;
         else if (!strcmp(argv[i],"--file-select")) title_mode=file_select_start=true;
+        else if (!strcmp(argv[i],"--no-overlays")) runtime_overlays_enabled=false;
+        else if (!strcmp(argv[i],"--overlay-dir") && i+1<argc) runtime_overlay_directory=argv[++i];
         else if (!strcmp(argv[i],"--cutscene") && i+1<argc) start_cutscene=atoi(argv[++i]);
         else if (!strcmp(argv[i],"--tourian-escape")) start_tourian_escape=true;
         else if (!strcmp(argv[i],"--chozodia-escape")) start_chozodia_escape=true;
@@ -4591,7 +4616,7 @@ int room_runtime_main(int argc, char **argv) {
             }
         }
         else if (argv[i][0]=='-' || room_path) {
-            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--title | --intro | --file-select] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+            fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--title | --intro | --file-select] [--no-overlays | --overlay-dir DIR] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
             return 2;
         } else room_path=argv[i];
     }
@@ -4720,7 +4745,7 @@ int room_runtime_main(int argc, char **argv) {
     }
     if (!room_path || (check && (background || library_index || animation_map_index ||
                                  projectile_index))) {
-        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--title | --intro | --file-select] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
+        fprintf(stderr,"Usage: %s [--check] [--tourian-escape] [--chozodia-escape] [--ruins-test-end] [--ruins-test-ghost] [--background-flash quick|slight|heavy] [--background image.bmp] [--native-source source.tsv] [--samus-assets directory | --samus-library index.tsv --samus-map map.tsv] [--input-map map.txt] [--debug-menu] [--mute] [--title | --intro | --file-select] [--no-overlays | --overlay-dir DIR] [--item NAME] [--ammo M S P] [--event N] [--input-script MASK:FRAMES,...] [--debug-input MASK,...] [--expect-room ALIAS] [--expect-event N] [--expect-item NAME] [--spawn X Y] preview.tsv\n",argv[0]);
         return 2;
     }
     if (!native_format) {
@@ -4742,6 +4767,7 @@ int room_runtime_main(int argc, char **argv) {
                     "--task metroid_rooms\n");
         free(room); return 2;
     }
+    if (native_format) runtime_apply_overlay(room);
     printf("Runtime room %s/%s/%d %dx%d: %zu %s collision cells\n",
            room->world,room->area,room->room,room->width,room->height,room->count,
            native_format?"native Clipdata":"project");

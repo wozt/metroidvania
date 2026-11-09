@@ -195,7 +195,7 @@ add_executable(fusion_room_package_viewer src/tools/room_package_viewer.c)
 target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_package_viewer)
 
-add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion_host.c src/runtime/mzm_samus.c
+add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion_host.c src/runtime/mzm_room_overlay.c src/core/native_map.c src/runtime/mzm_samus.c
                src/runtime/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
                src/runtime/mzm_sprites.c src/runtime/mzm_space_pirate.c src/runtime/mzm_parasite.c src/runtime/mzm_atomic.c src/runtime/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm_worker_robot.c src/runtime/mzm_metroid.c src/runtime/mzm_kraid.c src/runtime/mzm_ridley.c src/runtime/mzm_mother_brain.c src/runtime/mzm_deorem.c src/runtime/mzm_acid_worm.c src/runtime/mzm_gadora.c src/runtime/mzm_imago_larva.c src/runtime/mzm_imago_cocoon.c src/runtime/mzm_mecha_ridley.c src/runtime/mzm_hive.c src/runtime/mzm_baristute.c src/runtime/mzm_tangle_vine.c src/runtime/mzm_ruins_test.c src/runtime/mzm_chozodia_scripted.c src/runtime/mzm_elevator_statue.c src/runtime/mzm_imago.c src/runtime/mzm_escape_ship.c src/runtime/mzm_crocomire.c
                    src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
@@ -208,6 +208,7 @@ add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion
                src/runtime/mzm_pause_screen.c src/runtime/mzm_text.c src/runtime/mzm_save.c src/runtime/mzm_time_attack.c
                src/runtime/mzm_file_select.c src/runtime/mzm_game_over.c
                src/runtime/mzm_intro.c src/runtime/mzm_cutscene.c src/runtime/mzm_in_game_cutscene.c src/runtime/mzm_door_fade.c)
+target_include_directories(fusion_room_runtime PRIVATE include)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 m)
 fusion_enable_warnings(fusion_room_runtime)
 
@@ -265,7 +266,7 @@ set(fusion_metroidvania_sources src/runtime/metroidvania_launcher.c
 list(REMOVE_DUPLICATES fusion_metroidvania_sources)
 add_executable(fusion_metroidvania ${fusion_metroidvania_sources})
 target_compile_definitions(fusion_metroidvania PRIVATE FUSION_EMBEDDED=1)
-target_include_directories(fusion_metroidvania PRIVATE src/runtime)
+target_include_directories(fusion_metroidvania PRIVATE src/runtime include)
 target_link_libraries(fusion_metroidvania PRIVATE SDL3::SDL3 fusion_assets m)
 fusion_enable_warnings(fusion_metroidvania)
 
@@ -996,6 +997,13 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_game_mode_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)
+
+    add_executable(fusion_mzm_room_overlay_tests tests/test_mzm_room_overlay.c
+                   src/runtime/mzm_room_overlay.c src/core/native_map.c)
+    target_include_directories(fusion_mzm_room_overlay_tests PRIVATE src/runtime include)
+    fusion_enable_warnings(fusion_mzm_room_overlay_tests)
+    add_test(NAME mzm_room_overlay COMMAND fusion_mzm_room_overlay_tests
+             WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
     add_executable(fusion_host_tests tests/test_fusion_host.c src/runtime/fusion_host.c)
     target_include_directories(fusion_host_tests PRIVATE src/runtime)

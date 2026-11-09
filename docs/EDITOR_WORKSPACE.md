@@ -46,6 +46,13 @@ Saving a native room creates an ignored override under
 `assets/extracted/overrides/<world>/`. Generated annotations, previews, the
 base import, ROMs and upstream source remain unchanged.
 
+The Zero Mission runtime plays those overrides: `fusion_room_runtime` loads
+an edited room's BG1 and BG2 blocks from its `.mvnative` override, at the start
+and through doors, when the override names the same room and tileset and has
+the room's dimensions (otherwise it reports it and keeps the native room).
+Deleting the override restores the original; `--no-overlays` ignores them all.
+Only the graphics change: collision, doors and objects stay native.
+
 ## Current limitations
 
 - BG0, full BG3 composition, animated graphics and several palette effects are
@@ -78,7 +85,8 @@ base import, ROMs and upstream source remain unchanged.
 - Native trigger regions, boss parameters, scripts, music and engine-backed
   cutscene authoring are not yet decoded or editable. Project trigger regions
   are authorable but are not consumed by either gameplay engine yet.
-- Editor output is not consumed by a native gameplay runtime yet.
+- Only Zero Mission's block layers are consumed by a gameplay runtime; Aria's
+  runtime and every project collision, door, entity and event edit are not.
 
 The collision toolbar is shared deliberately: both source formats have verified
 native counterparts for the seven exposed semantics. Zero Mission uses 16px

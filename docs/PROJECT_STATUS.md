@@ -3931,6 +3931,19 @@ numbers and hit-feedback comparisons.
   choreography, control-2 callbacks and the controller's later proximity
   conversations still need reconstruction.
 
+## Patch 0736 - Editor overlays in the Zero Mission runtime
+
+- New `mzm_room_overlay`: `fusion_room_runtime` now applies the map editor's
+  private room overrides (`assets/extracted/overrides/metroid/*.mvnative`,
+  read by the editor's own `core/native_map` reader) to the BG1 and BG2
+  blocks of each room it loads, when the override fits the room (same room,
+  tileset and dimensions); otherwise it reports it and keeps the native room.
+  `--no-overlays` and `--overlay-dir DIR` control it.
+- Only graphics: Clipdata, doors and objects stay native. Aria's runtime
+  applies no overlay yet.
+- ROM-free tests (fit, other room, tileset, dimensions, missing layer,
+  damaged document) and a capture of an edited Brinstar room.
+
 ## Patch 0735 - Soma's sounds and voices
 
 - Soma now plays his sounds: the jumps (0xB9, the high jump 0xBA), the

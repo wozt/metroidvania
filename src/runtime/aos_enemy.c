@@ -199,6 +199,7 @@ void aos_enemy_take_effects(AosHitReport *to, const AosHitReport *from) {
     memcpy(to->effects, from->effects, sizeof from->effects[0] * from->effect_count);
 }
 #define take_effects aos_enemy_take_effects
+#define trunc16 aos_enemy_trunc16
 
 static void append_effects(AosHitReport *to, const AosHitReport *from) {
     for (int index = 0;
@@ -1457,7 +1458,6 @@ void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
 
 static void nemesis_struck(AosEnemy *n);
 
-static void dragon_struck(AosEnemy *d, uint8_t attacker);
 
 /* sub_0806E314 / sub_080421AC: the player against the enemy, then the
  * weapon against the enemy, then the contact callbacks. */
@@ -1650,7 +1650,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
             }
             if (enemy->id == AOS_ENEMY_WHITE_DRAGON && enemy->role == AOS_ROLE_ENEMY) {
                 if (enemy->hp <= 0) report.killed = enemy->defeated = true;
-                dragon_struck(enemy, attacker);
+                aos_enemy_dragon_struck(enemy, attacker);
                 goto contact;
             }
             if (enemy->id == AOS_ENEMY_PEEPING_EYE && enemy->role == AOS_ROLE_ENEMY) {
@@ -2773,7 +2773,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/white_dragon.c"
 #include "aos_enemies/bone_pillar.c"
 #include "aos_enemies/giant_ghost.c"
 #include "aos_enemies/minotaur.c"
@@ -2997,11 +2996,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return giant_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->role == AOS_ROLE_WHITE_DRAGON_PART) {
-        dragon_segment_update(enemy, kind, random, &report);
+        aos_enemy_dragon_segment_update(enemy, kind, random, &report);
         return report;
     }
     if (enemy->role == AOS_ROLE_DRAGON_FIREBALL)
-        return dragon_fireball_update(enemy, soma, kind, soma_def, random);
+        return aos_enemy_dragon_fireball_update(enemy, soma, kind, soma_def, random);
     if (enemy->role == AOS_ROLE_DRAGON_FLAME) {
         /* sub_08077BB0: flips at random for 10 frames. */
         enemy->mirrored = random() & 1;
@@ -3030,7 +3029,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->id == AOS_ENEMY_WHITE_DRAGON && enemy->role == AOS_ROLE_ENEMY)
-        return dragon_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_dragon_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                              cam_y, random);
     if (enemy->role == AOS_ROLE_BUER_PROJECTILE) {
         aos_enemy_buer_burst_update(enemy, kind);

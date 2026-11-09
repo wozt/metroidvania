@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0922 - White Dragon family becomes a real translation unit
+
+- `aos_enemies/white_dragon.c` now compiles independently with its
+  body, segment and fireball updates plus the struck callback exported
+  through `aos_enemy_internal.h`; `trunc16` joins the internal API for
+  Giant Ghost.
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions are identical except GCC stack-padding differences in
+  `dragon_tx`/`dragon_ty` (0x8 vs 0x10). Only the exports changed
+  linkage. No behavior or feature status changed.
+
 ## Patch 0921 - Buer family becomes a real translation unit
 
 - `aos_enemies/buer.c` now compiles independently with its body, fire

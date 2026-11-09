@@ -387,5 +387,19 @@ void aos_enemy_buer_burst_update(AosEnemy *enemy,
 bool aos_enemy_buer_player_in_window(const AosEnemy *enemy,
                                      const AosSoma *soma, uint16_t width,
                                      uint16_t height);
+AosHitReport aos_enemy_dragon_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
+void aos_enemy_dragon_segment_update(AosEnemy *enemy,
+                                     const AosEnemyKind *kind,
+                                     uint32_t (*random)(void),
+                                     AosHitReport *report);
+AosHitReport aos_enemy_dragon_fireball_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    int soma_def, uint32_t (*random)(void));
+void aos_enemy_dragon_struck(AosEnemy *enemy, uint8_t attacker);
+int32_t aos_enemy_trunc16(int32_t v);
 
 #endif

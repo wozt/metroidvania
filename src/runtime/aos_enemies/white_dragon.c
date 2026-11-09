@@ -1,12 +1,27 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: White Dragon (enemy 0x0B), its segments and fireballs.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <math.h>
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define copy_collision_result aos_enemy_copy_collision_result
+#define play aos_enemy_play
+#define player_near aos_enemy_player_near
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define trunc16 aos_enemy_trunc16
+#define target_x(x) aos_enemy_target_x(x)
+#define target_y(x) aos_enemy_target_y(x)
 
 /* A 16.16 product shifted down 16, rounded toward zero. */
-static int32_t trunc16(int32_t v) { return v < 0 ? -((-v) >> 16) : v >> 16; }
+int32_t aos_enemy_trunc16(int32_t v) { return v < 0 ? -((-v) >> 16) : v >> 16; }
 
 /* The angle of a neck point: heading + sin(swing) * amplitude / 4096 +
  * sin(phase) / 16 (both rounded toward zero). */
@@ -373,7 +388,7 @@ static void dragon_die(AosEnemy *d, uint32_t (*random)(void), AosHitReport *repo
 /* sub_080773AC (the head's hit callback, after the damage and the flash):
  * dead, sound 0x6E, 120 frames of state 2 (frame 1); struck by the weapon
  * (attacker type 3 or 4) while idle, the recoil (state 3, frame 1). */
-static void dragon_struck(AosEnemy *d, uint8_t attacker) {
+void aos_enemy_dragon_struck(AosEnemy *d, uint8_t attacker) {
     if (d->hp <= 0) {
         aos_audio_play_song(0x6E);
         d->timer = 0x78;
@@ -393,7 +408,7 @@ static void dragon_struck(AosEnemy *d, uint8_t attacker) {
  * idles; then the collision pass (not in state 4) and the draw callback
  * placing the head. The ten segments are made by its first update
  * (native: at creation). */
-static AosHitReport dragon_update(AosEnemy *d, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_dragon_update(AosEnemy *d, AosSoma *soma, const AosEnemyKind *kind,
                                   const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,
                                   int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -468,7 +483,7 @@ static AosHitReport dragon_update(AosEnemy *d, AosSoma *soma, const AosEnemyKind
  * and once the head is gone (step 1) they show again and, every four
  * frames, the next one falls apart into a piece (frame 3); it animates
  * unless the head flashes; sub_080771C8 places it. */
-static void dragon_segment_update(AosEnemy *s, const AosEnemyKind *kind,
+void aos_enemy_dragon_segment_update(AosEnemy *s, const AosEnemyKind *kind,
                                   uint32_t (*random)(void), AosHitReport *report) {
     const AosEnemy *d = s->parent;
     if (!d || d->removed || d->id != AOS_ENEMY_WHITE_DRAGON) {
@@ -497,7 +512,7 @@ static void dragon_segment_update(AosEnemy *s, const AosEnemyKind *kind,
  * (frame 6, box (-5, -5, 10, 10)), slows by 1/6 for 14 (frame 7, box (-8,
  * -8, 16, 16)), fades for 4 (frame 8, the small box) and 4 more (frame 9,
  * no collision); its flips flicker at random. */
-static AosHitReport dragon_fireball_update(AosEnemy *b, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_dragon_fireball_update(AosEnemy *b, AosSoma *soma, const AosEnemyKind *kind,
                                            int soma_def, uint32_t (*random)(void)) {
     AosHitReport report = {0};
     b->mirrored = random() & 1;

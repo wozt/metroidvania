@@ -190,6 +190,13 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      `buer_player_in_window`. The other 22 included families remain.
      Continue with `white_dragon.c`; keep one family per commit and
      repeat the union proof.
+   - *(Continued in patch 0922.)* `white_dragon.c` is independent with
+     its four entry points exported; `trunc16` joins the internal API
+     for Giant Ghost. The union proof is identical for all 488 symbols
+     except GCC stack-padding artifacts in `dragon_tx`/`dragon_ty`.
+     The other 21 included families remain. Continue with
+     `bone_pillar.c`; keep one family per commit and repeat the union
+     proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

@@ -1461,8 +1461,6 @@ static void nemesis_struck(AosEnemy *n);
 
 /* sub_0806E314 / sub_080421AC: the player against the enemy, then the
  * weapon against the enemy, then the contact callbacks. */
-static void worm_segment_hurt(AosEnemy *c, AosEnemy *parent, AosSoma *soma,
-                              AosHitReport *report);
 AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                                const AosEnemyKind *kind,
                                const AosWeaponEntity *weapon,
@@ -1621,7 +1619,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 /* sub_080AD748: the segment's hurt callback forwards the
                  * damage to the parent (+ 0x14) — the segment itself
                  * takes none and cannot die. */
-                worm_segment_hurt(enemy, enemy->parent, soma, &report);
+                aos_enemy_worm_segment_hurt(enemy, enemy->parent, soma, &report);
                 enemy->hit_flash = 0;
                 goto contact;
             }
@@ -2773,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/worm.c"
 #include "aos_enemies/biphron.c"
 #include "aos_enemies/bomber_armor.c"
 #include "aos_enemies/evil_butcher.c"
@@ -2882,11 +2879,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     const AosAnimSet *anims = kind->anims;
     if (enemy->removed) return report;
     if (enemy->role == AOS_ROLE_WORM_SEGMENT)
-        return worm_segment_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_worm_segment_update(enemy, soma, layer, kind, weapon, weapon_frames,
                                    soma_atk, soma_def, random);
     if ((enemy->id == AOS_ENEMY_GIANT_WORM || enemy->id == AOS_ENEMY_POISON_WORM) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return worm_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_worm_update(enemy, soma, layer, kind, weapon, weapon_frames,
                            soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_BIPHRON_SHOT)
         return biphron_shot_update(enemy, soma, layer, kind, weapon, weapon_frames,

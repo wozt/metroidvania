@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:05:10+00:00",
+ "generated_at": "2026-11-09T15:11:22+00:00",
  "git": {
-  "commit": "fd4135e2",
+  "commit": "fdca6a0c",
   "branch": "main",
   "dirty": true
  },
@@ -19755,6 +19755,7 @@
     "src/runtime/aos_enemies/bone_pillar.c",
     "src/runtime/aos_enemies/giant_ghost.c",
     "src/runtime/aos_enemies/minotaur.c",
+    "src/runtime/aos_enemies/worm.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22209,6 +22210,12 @@
  },
  "timeline": [
   {
+   "commit": "fdca6a0c",
+   "date": "2026-11-09",
+   "subject": "Compile Minotaur family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "fd4135e2",
    "date": "2026-11-09",
    "subject": "Compile Giant Ghost family as an independent enemy unit",
@@ -22680,12 +22687,6 @@
    "commit": "eb8214c8",
    "date": "2026-11-08",
    "subject": "Audit equipment record-specific effects",
-   "scope": "project"
-  },
-  {
-   "commit": "e3d812f6",
-   "date": "2026-11-08",
-   "subject": "Sync stale registry notes: quick-map secrets, damage resistances",
    "scope": "project"
   }
  ],

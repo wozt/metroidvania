@@ -426,5 +426,17 @@ AosHitReport aos_enemy_minotaur_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_worm_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void));
+AosHitReport aos_enemy_worm_segment_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void));
+void aos_enemy_worm_segment_hurt(AosEnemy *enemy, AosEnemy *parent,
+                                 AosSoma *soma, AosHitReport *report);
 
 #endif

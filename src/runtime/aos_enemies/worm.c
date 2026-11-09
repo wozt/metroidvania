@@ -1,9 +1,22 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Giant Worm (enemy 0x3E) and Poison Worm (0x47) with their segments.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define flag_8e_40 aos_enemy_flag_8e_40
+#define play aos_enemy_play
+#define player_near aos_enemy_player_near
+#define skeleton_merge aos_enemy_skeleton_merge
+#define snap_to_floor aos_enemy_snap_to_floor
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
+#define worm_segment_hurt aos_enemy_worm_segment_hurt
 
 /* ---- Giant Worm / Poison Worm (sub_080AD7F0 family) ---- */
 
@@ -107,7 +120,7 @@ static uint16_t worm_ground_angle(const AosEnemy *e, const AosCollision *layer) 
  * HP <= 0 the parent dies in state 3 — PlaySong(0x70), + 0x0D = 0x40,
  * vx toward the player (+/-0x8000 by its x) and vy = -0x30000. The
  * sub_080683BC reward is the parent's own killed report. */
-static void worm_segment_hurt(AosEnemy *c, AosEnemy *parent, AosSoma *soma,
+void aos_enemy_worm_segment_hurt(AosEnemy *c, AosEnemy *parent, AosSoma *soma,
                               AosHitReport *report) {
     if (!report->enemy_hit || report->enemy_damage <= 0) return;
     /* The native callback replaces the child's own HP loss. */
@@ -126,7 +139,7 @@ static void worm_segment_hurt(AosEnemy *c, AosEnemy *parent, AosSoma *soma,
 /* sub_080AE390 is the cleanup walk over the + 0x20-indexed chain:
  * the room removes dead entities, nothing to port. */
 
-static AosHitReport worm_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_worm_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                 const AosWeaponFrames *weapon_frames, int soma_atk,
                                 int soma_def, uint32_t (*random)(void)) {
@@ -291,7 +304,7 @@ static void worm_segment_affine(AosEnemy *c, AosEnemy *parent) {
     c->angle = (uint32_t)((uint16_t)aos_arctan2((int16_t)dx, (int16_t)dy) + sl);
 }
 
-static AosHitReport worm_segment_update(AosEnemy *c, AosSoma *soma,
+AosHitReport aos_enemy_worm_segment_update(AosEnemy *c, AosSoma *soma,
                                         const AosCollision *layer, const AosEnemyKind *kind,
                                         const AosWeaponEntity *weapon,
                                         const AosWeaponFrames *weapon_frames, int soma_atk,

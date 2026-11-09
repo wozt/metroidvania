@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0926 - Worm family becomes a real translation unit
+
+- `aos_enemies/worm.c` now compiles independently with its body,
+  segment updates and segment hurt callback exported through
+  `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0925 - Minotaur family becomes a real translation unit
 
 - `aos_enemies/minotaur.c` now compiles independently with its update

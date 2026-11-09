@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Beam Skeleton (enemy 0x59), its beam and bones.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+
+#include <stdlib.h>
+
+#define clamp_to_room aos_enemy_clamp_to_room
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_dy aos_enemy_player_dy
+#define player_in_centred aos_enemy_player_in_centred
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 /* The beam skeleton's walker probes at 0x08528B04 are the kind's. Its
  * bones (0x08528B17, 6 bytes each): x and y offsets, sprite frame, vx *
@@ -18,7 +32,8 @@ static const int8_t beam_bones[7][5] = {
 /* sub_080CB1B4: seven bones of sub_0806C5AC at its position (+ 0x5C and
  * facing its own), + 0x54 0x3000; with the player to its right
  * (sub_0806BBC4 > 0) their x offsets and vx point left. */
-static void beam_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report) {
+void aos_enemy_beam_shatter(AosEnemy *e, const AosSoma *soma,
+                            AosHitReport *report) {
     bool right = e->x < target_x(soma);
     for (int i = 0; i < 7 && report->child_count < AOS_ENEMY_MAX_CHILDREN; ++i) {
         AosEnemy b = {0};
@@ -254,10 +269,10 @@ static void beam_attack(AosEnemy *e, const AosEnemyKind *kind, AosHitReport *rep
  * vertical scale unless full, it stops hurting (+ 0x72 bit 1) once the
  * scale shrinks. The flash only follows the scale. Both are deleted with
  * + 0x1A clear or the owner hidden. The sound 0x66 loop is not ported. */
-static AosHitReport beam_update(AosEnemy *b, AosSoma *soma, const AosEnemyKind *kind,
-                                const AosWeaponEntity *weapon,
-                                const AosWeaponFrames *weapon_frames, int soma_atk,
-                                int soma_def) {
+AosHitReport aos_enemy_beam_update(
+    AosEnemy *b, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def) {
     AosHitReport report = {0};
     const AosEnemy *o = b->parent;
     if (!o) return report;
@@ -311,11 +326,11 @@ static AosHitReport beam_update(AosEnemy *b, AosSoma *soma, const AosEnemyKind *
  * after a RandomNumberGenerator draw for + 0x1E, which nothing reads), 0
  * patrols, 1 closes in, 2 pauses. Then the animation step and the
  * collision pass (sub_0806E314). */
-static AosHitReport beam_skeleton_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
-                                         const AosEnemyKind *kind, const AosWeaponEntity *weapon,
-                                         const AosWeaponFrames *weapon_frames, int soma_atk,
-                                         int soma_def, int cam_x, int cam_y,
-                                         uint32_t (*random)(void)) {
+AosHitReport aos_enemy_beam_skeleton_update(
+    AosEnemy *e, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void)) {
     AosHitReport report = {0}, spawned = {0};
     if (e->state == 4) {
         if (e->step == 0) {

@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0906 - Beam Skeleton becomes a real translation unit
+
+- `aos_enemies/beam_skeleton.c` now compiles independently with its body,
+  beam, muzzle flash and seven-bone shatter producer exported. Patrol, firing
+  and child behavior remain family-local.
+- The object union preserves all 488 `-O0` function sizes and normalized
+  instructions. No behavior or feature status changed.
+
 ## Patch 0905 - Lightning Doll becomes a real translation unit
 
 - `aos_enemies/lightning_doll.c` now compiles independently with its body,

@@ -118,7 +118,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - *(Continued in patch 0905.)* `lightning_doll.c` is independent with its
      shatter producer and burning-piece update. After normalizing GCC's
      renumbered function-local static symbols, its union proof remains
-     identical for all 488 functions. The other 38 included families remain.
+     identical for all 488 functions.
+   - *(Continued in patch 0906.)* `beam_skeleton.c` is independent with its
+     beam, muzzle flash and seven-bone shatter producer. Its union proof
+     remains identical for all 488 functions. The other 37 included families
+     remain. Continue with `skull_millione.c`, then `dead_crusader.c` and
+     `gargoyle.c`; keep one family per commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

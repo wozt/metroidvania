@@ -1453,7 +1453,6 @@ void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
 }
 #define frame_boxes aos_enemy_frame_boxes
 
-static void beam_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 
 static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 static void nemesis_struck(AosEnemy *n);
@@ -1830,7 +1829,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->substep = 0;
                     enemy->timer = 0x32;
                     enemy->hidden = true;
-                    beam_shatter(enemy, soma, &report);
+                    aos_enemy_beam_shatter(enemy, soma, &report);
                     aos_audio_play_song(0x6B);
                 } else if (enemy->id == AOS_ENEMY_SKULL_MILLIONE ||
                            enemy->id == AOS_ENEMY_CAGNAZZO || enemy->id == AOS_ENEMY_LUBICANT) {
@@ -2745,7 +2744,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/beam_skeleton.c"
 #include "aos_enemies/skull_millione.c"
 #include "aos_enemies/dead_crusader.c"
 #include "aos_enemies/gargoyle.c"
@@ -3190,10 +3188,12 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
             enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
             soma_def, random);
     if (enemy->role == AOS_ROLE_BEAM || enemy->role == AOS_ROLE_BEAM_FLASH)
-        return beam_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        return aos_enemy_beam_update(enemy, soma, kind, weapon,
+                                     weapon_frames, soma_atk, soma_def);
     if (enemy->id == AOS_ENEMY_BEAM_SKELETON && enemy->role == AOS_ROLE_ENEMY)
-        return beam_skeleton_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
-                                    soma_def, cam_x, cam_y, random);
+        return aos_enemy_beam_skeleton_update(
+            enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+            soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_FIN) {
         fin_update(enemy, kind, cam_x, cam_y, random);
         return report;

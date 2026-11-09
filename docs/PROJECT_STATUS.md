@@ -68,6 +68,34 @@ Last updated: **2026-11-08**.
   through the generic roll; its red soul 53 (routine
   0x0802B9A9) has no ported update yet.
 
+## Patch 0875 - Tsuchinoko ported (id 35)
+
+- EnemyTsuchinokoCreate (0x080A71CC) /
+  EnemyTsuchinokoUpdate (0x080A7B54) ported in
+  src/runtime/aos_enemy.c behind AOS_ENEMY_TSUCHINOKO
+  (0x23), with the sub_080A7294 hop table, the
+  sub_080A7534 rear-up attack, the sub_080A75B0 death,
+  the sub_080A76E0 hurt, the sub_080A776C spit and the
+  sub_080A78A4 rock children (entity type 0x1B roles).
+- Resources: tiles 0x081CC0B4, palette 0x0820AFDC bank 0,
+  frames 0x0822952C; sounds 0x85 at the spit, 0x152 on the
+  dormant spitter and 0x70 at the lethal blow.
+- The dormant state-3 hop (RNG & 0x7F > 0x18 at create)
+  parks it on animation 3 frame 8; the spit flies at
+  +/-3.0 with the element-0x40 self-deleting contact;
+  the rock is a harmless still frame 0x12.
+- Divergences: the sub_0803F0E4 death table 0x085283FC is
+  approximated by the running animation, the sub_08069A00
+  walk is walk_collide with native arguments, the
+  sub_0806DD64 gore chunks are AOS_EFFECT_BLOOD, and the
+  blink / palette merge / pause / box preset / + 0x72
+  flags / room query are not ported. Yellow soul 9
+  (routine 0x08032205, argument bit 0x200000) has no
+  reader natively, so it does nothing.
+- Unit-tested in tsuchinoko_tests: create, hop and facing,
+  attack and spit, rock child, dormant spitter, death and
+  removal. No emulator comparison.
+
 ## Patch 0874 - Dryad ported (id 70)
 
 - EnemyDryadCreate (0x080AEAAC) /

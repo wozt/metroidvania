@@ -3634,6 +3634,291 @@ static void dryad_tests(void) {
     assert(e.state == 4 && e.anim.id == 0);
 }
 
+/* A seeded sequence for the landed-hop draws: the default 0x7F fails
+ * every threshold (deepest path), 0 passes the first gate. */
+static const uint32_t *tsu_seq;
+static size_t tsu_seq_len, tsu_seq_i;
+static uint32_t tsu_rand(void) {
+    return tsu_seq_i < tsu_seq_len ? tsu_seq[tsu_seq_i++] : 0x7F;
+}
+
+static void tsuchinoko_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    /* Animations 0-4 (the children reuse 4): anim 1 needs a third frame
+     * for the + 0x6E == 2 hop launch, anim 2 a fourth for the state 1
+     * spit at frame 3 tick 0, anim 3 ten frames (the dormant spawn parks
+     * on frame 8) with a long fourth frame for the step 0xB wait at
+     * frame 3 tick 0x14. */
+    static const uint8_t two[2] = {4, 4};
+    static const uint8_t f3[3] = {4, 4, 4};
+    /* anim 2's last frame must outlast the step 0xB wait (+ 0x6E ==
+     * 0x1403, frame 3 tick 0x14) like the native one. */
+    static const uint8_t f4[4] = {4, 4, 4, 30};
+    static const uint8_t f10[10] = {4, 4, 4, 30, 4, 4, 4, 4, 4, 4};
+    AosAnimDef defs[5];
+    defs[0] = (AosAnimDef){2, two};
+    defs[1] = (AosAnimDef){3, f3};
+    defs[2] = (AosAnimDef){4, f4};
+    defs[3] = (AosAnimDef){10, f10};
+    defs[4] = (AosAnimDef){2, two};
+    const AosAnimSet anims = {defs, 5};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 5; ++a)
+        for (int f = 0; f < 10; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -8, 16, 16};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    const AosEnemyStats stats = {300, 30, 25, 2, 0, 80};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(900), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* The create: state 0, animation 0 looping, + 0x14 = the HP. The
+     * dormant roll (RNG & 0x7F > 0x18) reads the first LCG draw, which
+     * is constant across a 256-seed block: 1536 rolls active, 256
+     * dormant. */
+    AosEnemy e;
+    aos_random_seed(1536);
+    assert(aos_enemy_create(&e, AOS_ENEMY_TSUCHINOKO, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 &&
+           e.hp_home == stats.hp);
+
+    /* The notice box (+ 0x42 - 0x5A, + 0x46 - 0x64, 0xB4 x 0xC8) holds
+     * Soma: step 1 with animation 1 once. At frame 2 tick 0 the facing
+     * boxes pick the hop — Soma at +70 px sits in the far 0xC8 box (the
+     * near 0x78 box ends at +60), which keeps the facing step 0 wrote,
+     * so mirrored stays and vx = +1.0, vy = -1.5. */
+    soma.x = e.x + AOS_FIXED(70);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && e.anim.id == 1);
+    int frames = 0;
+    while (!(e.step == 2 && e.vy == (int32_t)0xFFFE8000) && frames < 100) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 2 && e.mirrored && e.vx == 0x10000 && e.ay == 0x2800 &&
+           frames < 100);
+
+    /* The hop lands on the row-20 floor: the first landed roll
+     * (always_zero) enters state 1, the attack. */
+    frames = 0;
+    while (e.state != 1 && frames < 600) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 1 && e.step == 0 && frames < 600);
+
+    /* State 1 step 0 rears with animation 2 once; step 1 at frame 3
+     * tick 0 spits the fast lob with song 0x85, then the animation end
+     * re-enters the hop at step 1. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && e.anim.id == 2);
+    aos_audio_clear();
+    AosEnemy spit;
+    bool got_spit = false;
+    frames = 0;
+    while (e.state == 1 && frames < 200) {
+        AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        if (r.child_count) { spit = r.children[0]; got_spit = true; }
+        ++frames;
+    }
+    assert(got_spit && e.state == 0 && e.step == 1 && e.anim.id == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) >= 1 &&
+           frames < 200);
+    /* The spit: role, facing copy, +3.0/-3.0 by facing, vy -1.0, ay
+     * 0x1800, 26 px above the parent's pixel, element 0x40. */
+    assert(spit.role == AOS_ROLE_TSUCHINOKO_SPIT && spit.mirrored == e.mirrored);
+    assert(spit.x == (e.x >> 16) << 16 && spit.y == (((e.y >> 16) - 0x1A) << 16));
+    assert(spit.vx == (e.mirrored ? 0x30000 : (int32_t)0xFFFD0000) &&
+           spit.vy == (int32_t)0xFFFF0000 && spit.ay == 0x1800 &&
+           spit.contact_elements == 0x40 && spit.stats.contact == 30);
+
+    /* The spit arcs and deletes off screen (sub_0806D128). */
+    frames = 0;
+    while (!spit.removed && frames < 600) {
+        (void)aos_enemy_update(&spit, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(spit.removed || frames < 600);
+
+    /* A spit touching Soma deals the 30-byte contact at element 0x40
+     * and deletes itself (sub_080A7A54). */
+    AosEnemy s2;
+    memset(&s2, 0, sizeof s2);
+    s2.id = AOS_ENEMY_TSUCHINOKO;
+    s2.role = AOS_ROLE_TSUCHINOKO_SPIT;
+    s2.static_frame = -1;
+    s2.stats = stats;
+    s2.contact_elements = 0x40;
+    s2.combat.type = AOS_TYPE_ENEMY;
+    s2.x = soma.x;
+    s2.y = soma.y;
+    s2.vx = 0x30000;
+    s2.vy = (int32_t)0xFFFF0000;
+    s2.ay = 0x1800;
+    AosHitReport contact = aos_enemy_update(&s2, &soma, &layer, &kind, NULL,
+                                            NULL, 10, 4, 0, 0, always_zero);
+    assert(contact.soma_hit && s2.removed);
+
+    /* Any weapon hit deletes a live spit (sub_080A7A90). */
+    memset(&s2, 0, sizeof s2);
+    s2.id = AOS_ENEMY_TSUCHINOKO;
+    s2.role = AOS_ROLE_TSUCHINOKO_SPIT;
+    s2.static_frame = -1;
+    s2.stats = stats;
+    s2.combat.type = AOS_TYPE_ENEMY;
+    s2.x = soma.x;
+    s2.y = soma.y;
+    s2.vx = 0x30000;
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    (void)aos_enemy_update(&s2, &soma, &layer, &kind, &weapon, &blade, 10, 4,
+                           0, 0, always_zero);
+    assert(s2.removed);
+
+    /* The dormant spawn (RNG & 0x7F > 0x18): step 0xC parked on anim 3
+     * frame 8 spits a harmless rock every sixteenth tick with song
+     * 0x152 and deletes itself when the animation ends. */
+    aos_random_seed(256);
+    assert(aos_enemy_create(&e, AOS_ENEMY_TSUCHINOKO, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    assert(e.step == 0xC && e.anim.id == 3 && e.anim.frame == 8 &&
+           e.anim.tick == 0);
+    aos_audio_clear();
+    int rocks = 0;
+    frames = 0;
+    while (!e.removed && frames < 600) {
+        AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, tsu_rand);
+        for (int i = 0; i < r.child_count; ++i)
+            if (r.children[i].role == AOS_ROLE_TSUCHINOKO_ROCK) ++rocks;
+        ++frames;
+    }
+    assert(e.removed && rocks >= 1 && frames < 600 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x152) >= 1);
+
+    /* The rock itself: still frame 0x12, no contact, arcs and deletes
+     * off screen. */
+    AosEnemy rock;
+    memset(&rock, 0, sizeof rock);
+    rock.id = AOS_ENEMY_TSUCHINOKO;
+    rock.role = AOS_ROLE_TSUCHINOKO_ROCK;
+    rock.static_frame = 0x12;
+    rock.stats = stats;
+    rock.combat.type = AOS_TYPE_ENEMY;
+    rock.combat.attack_off = rock.combat.hurt_off = true;
+    rock.x = AOS_FIXED(200);
+    rock.y = AOS_FIXED(100);
+    rock.vx = 0x8000;
+    rock.vy = (int32_t)0xFFFF0000;
+    rock.ay = 0x1800;
+    int32_t rx = rock.x, ry = rock.y;
+    (void)aos_enemy_update(&rock, &soma, &layer, &kind, NULL, NULL, 10, 4, 0,
+                           0, always_zero);
+    assert(rock.x != rx || rock.y != ry);
+
+    /* The landed tree's burrow gate: roll1 fails, roll2 passes ->
+     * step 0xA. Drive a fresh snake to a landing with that sequence. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_TSUCHINOKO, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    e.step = 0;
+    e.state = 0;
+    e.hp_home = stats.hp;
+    e.hp = stats.hp;
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(100);
+    e.vx = 0x10000;
+    e.vy = 0;
+    e.ay = 0x2800;
+    e.step = 2;   /* mid-hop: the next grounded frame runs the tree */
+    static const uint32_t burrow_seq[] = {0x7F, 0x00};
+    tsu_seq = burrow_seq;
+    tsu_seq_len = 2;
+    tsu_seq_i = 0;
+    /* Force the landing: put the snake just above the floor with a
+     * downward velocity so walk_collide reports the ground bit. */
+    e.y = AOS_FIXED(158);
+    e.vy = 0x4000;
+    frames = 0;
+    while (e.step == 2 && frames < 60) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, tsu_rand);
+        ++frames;
+    }
+    assert(e.step == 0xA && frames < 60);
+    tsu_seq = NULL;
+    tsu_seq_len = tsu_seq_i = 0;
+
+    /* Steps 0xA/0xB play anims 2 then 3 into the dormant spitter. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 0xB && e.anim.id == 2);
+    frames = 0;
+    while (e.step != 0xC && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 0xC && e.anim.id == 3 && frames < 200);
+
+    /* The parent's lethal blow: song 0x70, state 2, timer 0x3C; the
+     * death spawns two gore chunks, falls and deletes at timer 0. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_TSUCHINOKO, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    e.x = AOS_FIXED(200);
+    e.y = AOS_FIXED(150);
+    e.hp = 1;
+    soma.x = e.x;
+    soma.y = e.y;
+    static const uint8_t blade_ticks2[] = {8};
+    const AosAnimDef blade_def2 = {1, blade_ticks2};
+    const AosAnimSet blade_set2 = {&blade_def2, 1};
+    const AosHitbox blade_box2[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade2 = {&blade_set2, blade_box2};
+    AosWeaponEntity weapon2 = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon2,
+                                        &blade2, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 2 && e.step == 0 && e.timer == 0x3C &&
+           e.defeated);
+    frames = 0;
+    int chunks = 0;
+    while (!e.removed && frames < 200) {
+        AosHitReport d = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+        chunks += d.effect_count;
+        ++frames;
+    }
+    assert(e.removed && chunks >= 2 && frames < 200 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);
+
+    /* The flag path (0x8E & 0x40) is state 3: animation only. */
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_TSUCHINOKO, 200, 150, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(e.state == 3 && e.anim.id == 0);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -6753,6 +7038,7 @@ int main(void) {
     butcher_tests();
     killer_mantle_tests();
     dryad_tests();
+    tsuchinoko_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

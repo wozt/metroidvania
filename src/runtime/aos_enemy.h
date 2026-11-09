@@ -172,6 +172,7 @@ enum {
     AOS_ENEMY_EVIL_BUTCHER = 0x19,
     AOS_ENEMY_KILLER_MANTLE = 0x55,
     AOS_ENEMY_DRYAD = 0x46,
+    AOS_ENEMY_TSUCHINOKO = 0x23,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -206,7 +207,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BUTCHER_CLEAVER = 56, AOS_ROLE_BUTCHER_GORE = 57,
        AOS_ROLE_BUTCHER_PARTICLE = 58,
        AOS_ROLE_MANTLE_ORBIT = 59, AOS_ROLE_MANTLE_GHOST = 60,
-       AOS_ROLE_DRYAD_SEED = 61 };
+       AOS_ROLE_DRYAD_SEED = 61, AOS_ROLE_TSUCHINOKO_SPIT = 62,
+       AOS_ROLE_TSUCHINOKO_ROCK = 63 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -380,6 +382,9 @@ typedef struct AosEnemy {
      * owed. Set on the arming tick when the RNG gate passes, cleared
      * when the timer deletes it. */
     uint8_t dryad_flags;
+    /* Tsuchinoko (sub_080A71CC create): + 0x14, its HP at create — the
+     * wounded-hop thresholds of sub_080A7294 step 2 read it. */
+    int16_t hp_home;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

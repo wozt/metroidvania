@@ -371,7 +371,7 @@ static void test_bestiary(const FusionJson *data) {
         "Killer Fish", "Buer", "White Dragon",
         "Giant Ghost", "Bone Pillar", "Peeping Eye", "Minotaur", "Red Minotaur",
         "Giant Worm", "Poison Worm", "Biphron", "Bomber Armor", "Sky Fish",
-        "Ectoplasm", "Evil Butcher", "Killer Mantle", "Dryad"};
+        "Ectoplasm", "Evil Butcher", "Killer Mantle", "Dryad", "Tsuchinoko"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

@@ -381,6 +381,13 @@ static const EntitySpec entities[] = {
      * and its landed animation table is 0x08528604. */
     {"dryad", 0x081E418C, 0x0820B768, 0, 0x082388AC, 0,
      0, 0, 0, {0}},
+    /* EnemyTsuchinokoCreate / the spit and rock children
+     * (sub_080A776C / sub_080A78A4): tiles 0x081CC0B4, palette
+     * 0x0820AFDC bank 0, frames 0x0822952C — the children share the
+     * same resources. The snake never walks a probe table (its hop
+     * uses sub_08069A00 collision probes instead). */
+    {"tsuchinoko", 0x081CC0B4, 0x0820AFDC, 0, 0x0822952C, 0,
+     0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

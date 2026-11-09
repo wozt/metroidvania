@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0883 - The editor's entities in the Aria runtime
+
+- `fusion_aria_runtime` now adds the room document's entities that have an
+  Aria native reference (`enemy:HH`, `special-object:HH`,
+  `generic-candle:HH`, `pickup:HH` and the hard-mode and all-souls pickup
+  families) to the room's entities, at the centre of their 16-pixel box. A
+  pickup takes its item from `item_id` and its collection flag from
+  `parameter_0`; the runtime plays the kinds it has ported. A document with
+  an entity outside the room or an unknown reference is ignored.
+- Checked on a capture in area 0 room 1: a placed bat and a Potion appear,
+  and Soma collects the Potion. ROM-free tests cover the reference mapping,
+  the position, the item fields and the rejections.
+- Limitations: the runtime keeps collection flags 0 to 191 only, so a
+  pickup above them never appears; Aria's tiles and doors stay native.
+
 ## Patch 0882 - The editor's collision in the Aria runtime
 
 - New `aos_room_overlay`: `fusion_aria_runtime` now plays the collision

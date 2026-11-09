@@ -18,7 +18,60 @@ static void write_document(const char *path, const char *room_fields, int resolu
     fclose(f);
 }
 
+static void write_entities(const char *path, const char *room_fields, const char *entities) {
+    FILE *f = fopen(path, "w");
+    assert(f);
+    fprintf(f, "{\"schema\":\"metroidvania.project-room-data\",\"version\":4,%s,"
+               "\"next_id\":9,\"entities\":[%s],\"collision\":{\"resolution_px\":8,\"cells\":[]}}",
+            room_fields, entities);
+    fclose(f);
+}
+
+static void entity_tests(void) {
+    const char *path = "test-aos-room-entities.json";
+    const char *room = "\"world\":\"aria\",\"area\":\"3\",\"room\":17,"
+                       "\"width_px\":256,\"height_px\":256";
+    char message[512];
+    AosProjectEntity e[4];
+    remove(path);
+    assert(aos_room_project_entities(path, 3, 17, 32, 32, e, 4, message, sizeof message) == 0);
+    write_entities(path, room,
+                   "{\"id\":1,\"kind\":\"ENEMY\",\"x\":32,\"y\":160,\"label\":\"a\","
+                   "\"native_type\":\"enemy:0F\"},"
+                   "{\"id\":2,\"kind\":\"ITEM\",\"x\":64,\"y\":168,\"label\":\"b\","
+                   "\"native_type\":\"pickup:04\",\"settings\":{\"item_id\":38,"
+                   "\"parameter_0\":71,\"parameter_1\":38,\"flags\":0}},"
+                   "{\"id\":3,\"kind\":\"OBJECT\",\"x\":0,\"y\":0,\"label\":\"c\","
+                   "\"native_type\":\"unassigned\"},"
+                   "{\"id\":4,\"kind\":\"OBJECT\",\"x\":200,\"y\":96,\"label\":\"d\","
+                   "\"native_type\":\"generic-candle:01\"}");
+    assert(aos_room_project_entities(path, 3, 17, 32, 32, e, 4, message, sizeof message) == 3 &&
+           strstr(message, "1 unassigned"));
+    assert(e[0].kind == 1 && e[0].id == 0x0F && e[0].x == 40 && e[0].y == 168 &&
+           e[0].param0 == 0 && e[0].param1 == 0);
+    assert(e[1].kind == 4 && e[1].id == 4 && e[1].x == 72 && e[1].y == 176 &&
+           e[1].param0 == 71 && e[1].param1 == 38 && e[1].flags == 0);
+    assert(e[2].kind == 3 && e[2].id == 1 && e[2].x == 208 && e[2].y == 104);
+    assert(aos_room_project_entities(path, 3, 17, 32, 32, e, 2, message, sizeof message) == -1 &&
+           strstr(message, "entity slots"));
+    assert(aos_room_project_entities(path, 3, 18, 32, 32, e, 4, message, sizeof message) == -1);
+    const char *rejected[] = {
+        "{\"id\":1,\"kind\":\"ENEMY\",\"x\":256,\"y\":0,\"label\":\"a\",\"native_type\":\"enemy:01\"}",
+        "{\"id\":1,\"kind\":\"ENEMY\",\"x\":0,\"y\":0,\"label\":\"a\",\"native_type\":\"PSPRITE_ZOOMER\"}",
+        "{\"id\":1,\"kind\":\"ENEMY\",\"x\":0,\"y\":0,\"label\":\"a\",\"native_type\":\"enemy:1\"}",
+        "{\"id\":1,\"kind\":\"ITEM\",\"x\":0,\"y\":0,\"label\":\"a\",\"native_type\":\"pickup:02\","
+        "\"settings\":{\"item_id\":-1,\"parameter_0\":0,\"parameter_1\":0,\"flags\":0}}",
+    };
+    for (size_t k = 0; k < sizeof rejected / sizeof rejected[0]; ++k) {
+        write_entities(path, room, rejected[k]);
+        assert(aos_room_project_entities(path, 3, 17, 32, 32, e, 4, message, sizeof message) ==
+                   -1 && strstr(message, "ignored"));
+    }
+    remove(path);
+}
+
 int main(void) {
+    entity_tests();
     char path[256], message[512];
     assert(aos_room_document_path(path, sizeof path, ".", 3, 17) &&
            !strcmp(path, "./entities/area_03_room_017.json"));

@@ -71,9 +71,15 @@ each cell replaces the native BG1 collision byte with its type's byte (solid
 0x03, one-way 0x01, rising slope 0x45, falling slope 0x41, air 0x00), when the
 document names the same room and dimensions. The runtime has no water or
 damage cells yet, so a document with water or hazard cells is ignored. The
-same `--no-overlays` and `--overlay-dir DIR` options apply. Aria draws
-pre-composited room backgrounds, so painted collision is not drawn there, and
-its tile edits, entities and doors are not played yet.
+same `--no-overlays` and `--overlay-dir DIR` options apply. The document's
+entities with an Aria native reference (`enemy:HH`, `special-object:HH`,
+`generic-candle:HH`, `pickup:HH`, `hard-mode-pickup:HH`,
+`all-souls-reward:HH`) join the room's entities at the centre of their
+16-pixel box; a pickup takes its item from `item_id` and its collection flag
+from `parameter_0` (the runtime keeps flags 0 to 191), and the runtime plays
+the kinds it has ported. Aria draws pre-composited room backgrounds, so
+painted collision is not drawn there, and its tile edits and doors are not
+played yet.
 
 ## Current limitations
 
@@ -86,13 +92,14 @@ its tile edits, entities and doors are not played yet.
   viewed and deleted. Project door properties and transition destinations have
   a dedicated GTK form backed by the same validated CLI operations. Zero
   Mission's runtime plays the project collision and the transitions between
-  its rooms, and Aria's runtime its collision without water or hazard cells;
-  door types, cross-world transitions and Aria's tiles, entities and doors
-  are not playable yet.
+  its rooms, and Aria's runtime its collision without water or hazard cells
+  and its entities; door types, cross-world transitions and Aria's tiles and
+  doors are not playable yet.
 - Project enemy, item and object forms edit the label, snapped position and
   verified native reference in both modes. Aria pickup forms additionally edit
   the typed item/soul ID, two native parameters and flags. Zero Mission's
-  runtime spawns the entities that reference a native sprite; runtime behavior
+  runtime spawns the entities that reference a native sprite, and Aria's
+  runtime those with an Aria native reference; runtime behavior
   and native stats remain the native ones, read-only.
 - Project event and trigger regions can be created from the canvas context
   menu, resized and typed in a dedicated form, moved with Grab, inspected and
@@ -112,8 +119,8 @@ its tile edits, entities and doors are not played yet.
   cutscene authoring are not yet decoded or editable. Project trigger regions
   are authorable but are not consumed by either gameplay engine yet.
 - Only Zero Mission's block layers, project collision, sprite entities and
-  transitions, and Aria's project collision, are consumed by a gameplay
-  runtime; Aria's tile edits, entities and doors, door types, cross-world
+  transitions, and Aria's project collision and entities, are consumed by a
+  gameplay runtime; Aria's tile edits and doors, door types, cross-world
   transitions, item settings and event edits are not.
 
 The collision toolbar is shared deliberately: both source formats have verified

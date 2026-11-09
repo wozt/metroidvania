@@ -582,6 +582,27 @@ static void apply_room_overlay(AriaRoom *room) {
                                  room->height_cells, room->cells, &changed, message,
                                  sizeof message) != AOS_OVERLAY_NONE)
         fprintf(stderr, "%s\n", message);
+    /* The editor's entities join the room's records, after the native ones
+     * (no persistent index; the runtime plays the kinds it has ported). */
+    AosProjectEntity placed[MAX_ENTITIES];
+    int count = aos_room_project_entities(path, room->area, room->number, room->width_cells,
+                                          room->height_cells, placed, MAX_ENTITIES, message,
+                                          sizeof message);
+    if (count != 0) fprintf(stderr, "%s\n", message);
+    for (int k = 0; k < count; ++k) {
+        if (room->entity_count >= MAX_ENTITIES) {
+            fprintf(stderr, "editor entities beyond the room's %d entity slots skipped\n",
+                    MAX_ENTITIES);
+            break;
+        }
+        const AosProjectEntity *p = &placed[k];
+        AriaEntity *e = &room->entities[room->entity_count++];
+        *e = (AriaEntity){.kind = p->kind, .id = p->id, .x = p->x, .y = p->y,
+                          .persistent_index = -1, .param0 = p->param0, .param1 = p->param1,
+                          .flags = p->flags, .spawner = -1};
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == AOS_OBJECT_SAVE_POINT)
+            room->room_flags |= AOS_ROOM_FLAG_SAVE;
+    }
 }
 
 static bool load_room_folder(const char *folder, AriaRoom *room) {

@@ -5,6 +5,7 @@
 #include "project_room_document.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char *const project_types[7] = {"solid", "one_way", "hazard", "slope_up",
@@ -85,4 +86,85 @@ AosOverlayResult aos_room_collision_apply(const char *path, int area, int room, 
              list->count, counts[0], counts[1], counts[3] + counts[4], counts[6]);
     fusion_json_free(&doc);
     return AOS_OVERLAY_APPLIED;
+}
+
+/* "<family>:<HH>": the native kind and id, false for any other token. */
+static bool entity_reference(const char *token, int *kind, int *id) {
+    static const char *const families[] = {"enemy", "special-object", "generic-candle", "pickup",
+                                           "hard-mode-pickup", "all-souls-reward"};
+    const char *colon = strrchr(token, ':');
+    if (!colon || strlen(colon + 1) != 2) return false;
+    char *end = NULL;
+    long value = strtol(colon + 1, &end, 16);
+    if (*end || value < 0 || value > 0xFF) return false;
+    for (int f = 0; f < 6; ++f)
+        if (strlen(families[f]) == (size_t)(colon - token) &&
+            !strncmp(token, families[f], (size_t)(colon - token))) {
+            *kind = f + 1;
+            *id = (int)value;
+            return true;
+        }
+    return false;
+}
+
+int aos_room_project_entities(const char *path, int area, int room, int width_cells,
+                              int height_cells, AosProjectEntity *entities, int max,
+                              char *message, size_t message_size) {
+    if (message && message_size) message[0] = '\0';
+    char area_text[8];
+    snprintf(area_text, sizeof area_text, "%d", area);
+    FusionJson doc = {0};
+    ProjectDocumentResult loaded =
+        project_room_document_load(path, "aria", area_text, room, width_cells * 8,
+                                   height_cells * 8, &doc, message, message_size);
+    if (loaded == PROJECT_DOCUMENT_NONE) return 0;
+    if (loaded == PROJECT_DOCUMENT_REJECTED) return -1;
+    const FusionJson *list = fusion_json_member(&doc, "entities");
+    const char *reason = NULL;
+    int count = 0, unassigned = 0;
+    if (!list || list->kind != FUSION_JSON_ARRAY) reason = "it has no entity list";
+    for (size_t k = 0; !reason && k < list->count; ++k) {
+        const FusionJson *entity = &list->items[k];
+        const FusionJson *type = fusion_json_member(entity, "native_type");
+        int64_t x = -1, y = -1;
+        int kind = 0, id = 0;
+        if (!type || type->kind != FUSION_JSON_STRING || !project_room_integer(entity, "x", &x) ||
+            !project_room_integer(entity, "y", &y)) {
+            reason = "an entity lacks its position or native reference";
+        } else if (!strcmp(type->string, "unassigned")) {
+            ++unassigned;
+        } else if (!entity_reference(type->string, &kind, &id)) {
+            reason = "an entity's native reference is not an Aria entity";
+        } else if (x < 0 || y < 0 || x >= width_cells * 8 || y >= height_cells * 8) {
+            reason = "an entity lies outside the room";
+        } else if (count >= max) {
+            reason = "it has more entities than the room's entity slots";
+        } else {
+            AosProjectEntity *out = &entities[count++];
+            *out = (AosProjectEntity){.kind = kind, .id = id, .x = (int)x + 8, .y = (int)y + 8};
+            const FusionJson *settings = fusion_json_member(entity, "settings");
+            int64_t item = 0, parameter = 0, flags = 0;
+            if (settings && settings->kind == FUSION_JSON_OBJECT) {
+                if (!project_room_integer(settings, "item_id", &item) ||
+                    !project_room_integer(settings, "parameter_0", &parameter) ||
+                    !project_room_integer(settings, "flags", &flags) || item < 0 ||
+                    item > 0xFFFF || parameter < 0 || parameter > 0xFFFF || flags < 0 ||
+                    flags > 0xFF) {
+                    reason = "an item's settings are malformed";
+                    break;
+                }
+                out->param0 = (int)parameter;
+                out->param1 = (int)item;
+                out->flags = (int)flags;
+            }
+        }
+    }
+    fusion_json_free(&doc);
+    if (reason) {
+        snprintf(message, message_size, "editor entities %s ignored: %s", path, reason);
+        return -1;
+    }
+    snprintf(message, message_size, "editor entities %s: %d entities (%d unassigned skipped)",
+             path, count, unassigned);
+    return count;
 }

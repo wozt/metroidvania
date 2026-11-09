@@ -83,5 +83,11 @@ AosHitReport aos_enemy_curly_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_needle_piece_update(AosEnemy *enemy, int cam_x, int cam_y);
+AosHitReport aos_enemy_needles_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
 
 #endif

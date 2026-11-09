@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Needles (enemy 0x3F) and its pieces.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses only the prefixed
+ * internal enemy-framework API. */
+
+#include "../aos_enemy_internal.h"
+
+#include "../aos_audio.h"
 
 /* sub_080CB5E0: the animation loops with a pause of 0 to 127 frames
  * (RandomNumberGenerator & 0x7F) after every cycle; with parameter 0 set
@@ -11,7 +14,7 @@
  * 0x400. */
 static void needles_idle(AosEnemy *n, const AosAnimSet *anims, uint32_t (*random)(void)) {
     if (n->step == 0) {
-        if (n->anim.id != 0) play(n, anims, 0);
+        if (n->anim.id != 0) aos_enemy_play(n, anims, 0);
         n->cycle_done = true;
         n->step = 1;
         n->substep = 0;
@@ -68,7 +71,7 @@ static void needles_shatter(const AosEnemy *n, AosHitReport *report) {
 /* sub_080CB7C8: a piece is deleted outside sub_08068AD4(e, -128, -64,
  * 0x1F0, 0x120), when its timer runs out or below screen Y 0xAA; otherwise
  * it moves and falls (vy += 0x3000). */
-static void needle_piece_update(AosEnemy *p, int cam_x, int cam_y) {
+void aos_enemy_needle_piece_update(AosEnemy *p, int cam_x, int cam_y) {
     int sx = (p->x >> 16) - cam_x, sy = (p->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120 || --p->timer == 0xFF ||
         sy > 0xAA) {
@@ -84,14 +87,14 @@ static void needle_piece_update(AosEnemy *p, int cam_x, int cam_y) {
  * hides it, throws its pieces (sound 0x70; sub_080683BC is not ported) and
  * deletes it once they are gone (+ 0x13); otherwise, inside the activity
  * window, sub_080CB5E0, the animation step and the collision pass. */
-static AosHitReport needles_update(AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
-                                   const AosWeaponEntity *weapon,
-                                   const AosWeaponFrames *weapon_frames, int soma_atk,
-                                   int soma_def, int cam_x, int cam_y,
-                                   uint32_t (*random)(void)) {
+AosHitReport aos_enemy_needles_update(
+    AosEnemy *n, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (n->state == 3) {
-        step_anim(n, kind->anims);
+        aos_enemy_step_anim(n, kind->anims);
         return report;
     }
     if (n->state == 2) {
@@ -109,11 +112,12 @@ static AosHitReport needles_update(AosEnemy *n, AosSoma *soma, const AosEnemyKin
     int sx = (n->x >> 16) - cam_x, sy = (n->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
     needles_idle(n, kind->anims, random);
-    step_anim(n, kind->anims);
+    aos_enemy_step_anim(n, kind->anims);
     sx = (n->x >> 16) - cam_x;
     sy = (n->y >> 16) - cam_y;
     if (!n->defeated && (uint16_t)(sx + 0x10) <= 0x110 && (uint16_t)sy <= 0xB0)
-        report = collide(n, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(n, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
     aos_combat_tick(&n->combat);
     return report;
 }

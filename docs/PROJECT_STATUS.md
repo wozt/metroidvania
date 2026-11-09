@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0898 - Needles becomes a real translation unit
+
+- `aos_enemies/needles.c` now compiles independently. It exports only the
+  body update and fragment update used by the central dispatch; idle and
+  shatter construction remain family-local.
+- The object-union comparison preserves all 488 `-O0` function sizes and
+  normalized instructions. No behavior or feature status changed.
+
 ## Patch 0897 - Curly and Durga become a real translation unit
 
 - The shared Curly/Durga family in `aos_enemies/curly.c` now compiles

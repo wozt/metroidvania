@@ -273,6 +273,13 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      at the top of `aos_enemy.c`; convert it last). Continue with
      `headhunter.c`; keep one family per commit and repeat the union
      proof.
+   - *(Continued in patch 0937.)* `headhunter.c` is independent with
+     its body, death and head updates exported; `accelerate_toward`
+     joined the internal API. The union proof is identical for all
+     488 symbols. The other 6 included families remain (`bat.c` is
+     included early at the top of `aos_enemy.c`; convert it last).
+     Continue with `zombie.c`; keep one family per commit and repeat
+     the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

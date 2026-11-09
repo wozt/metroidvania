@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:47:30+00:00",
+ "generated_at": "2026-11-09T15:49:54+00:00",
  "git": {
-  "commit": "0d234c0b",
+  "commit": "dd383084",
   "branch": "main",
   "dirty": true
  },
@@ -19774,6 +19774,7 @@
     "src/runtime/aos_enemies/waiter_skeleton.c",
     "src/runtime/aos_enemies/cockatrice.c",
     "src/runtime/aos_enemies/chronomage.c",
+    "src/runtime/aos_enemies/headhunter.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22228,6 +22229,12 @@
  },
  "timeline": [
   {
+   "commit": "dd383084",
+   "date": "2026-11-09",
+   "subject": "Compile Chronomage family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "0d234c0b",
    "date": "2026-11-09",
    "subject": "Compile Cockatrice family as an independent enemy unit",
@@ -22699,12 +22706,6 @@
    "commit": "b2b9ecf7",
    "date": "2026-11-08",
    "subject": "Resolve worm hit callbacks and segment->parent damage",
-   "scope": "project"
-  },
-  {
-   "commit": "6c6211d3",
-   "date": "2026-11-08",
-   "subject": "Resolve worm helper semantics (angle, particles, tracking, affine)",
    "scope": "project"
   }
  ],

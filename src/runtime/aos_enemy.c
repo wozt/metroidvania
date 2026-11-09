@@ -235,7 +235,7 @@ bool aos_enemy_move_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
 
 /* sub_080695B4: the same polar solution, written to acceleration instead
  * of velocity. */
-static bool accelerate_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
+bool aos_enemy_accelerate_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
     int32_t dx = pixel_delta(tx, e->x), dy = pixel_delta(ty, e->y);
     uint32_t distance = aos_isqrt((uint32_t)(dx * dx + dy * dy));
     if (!distance) {
@@ -2763,7 +2763,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define whole aos_enemy_whole
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
-#include "aos_enemies/headhunter.c"
 #include "aos_enemies/zombie.c"
 #include "aos_enemies/nemesis.c"
 #include "aos_enemies/crow.c"
@@ -2938,12 +2937,12 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_biphron_update(enemy, soma, layer, kind, weapon, weapon_frames,
                               soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_HEADHUNTER_HEAD) {
-        headhunter_head_update(enemy, kind, random);
+        aos_enemy_headhunter_head_update(enemy, kind, random);
         return report;
     }
     if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY) {
-        if (enemy->state == 2) return headhunter_death(enemy, kind, cam_y);
-        return headhunter_update(enemy, soma, kind, weapon, weapon_frames,
+        if (enemy->state == 2) return aos_enemy_headhunter_death(enemy, kind, cam_y);
+        return aos_enemy_headhunter_update(enemy, soma, kind, weapon, weapon_frames,
                                  soma_atk, soma_def, cam_x, cam_y);
     }
     if (enemy->role == AOS_ROLE_SKELETON_BONE)

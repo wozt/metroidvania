@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0937 - Headhunter family becomes a real translation unit
+
+- `aos_enemies/headhunter.c` now compiles independently with its body,
+  death and head updates exported through `aos_enemy_internal.h`;
+  `accelerate_toward` joins the internal API.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0936 - Chronomage family becomes a real translation unit
 
 - `aos_enemies/chronomage.c` now compiles independently with its body

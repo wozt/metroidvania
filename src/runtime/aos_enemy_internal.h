@@ -547,6 +547,8 @@ AosHitReport aos_enemy_chronomage_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+bool aos_enemy_accelerate_toward(AosEnemy *enemy, int32_t tx, int32_t ty,
+                                 int32_t speed);
 void aos_enemy_spawn_flame(const AosEnemy *enemy, uint32_t w, uint32_t h,
                            uint32_t (*random)(void), AosHitReport *report);
 AosHitReport aos_enemy_cockatrice_update(
@@ -554,5 +556,16 @@ AosHitReport aos_enemy_cockatrice_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy,
+                                         const AosEnemyKind *kind,
+                                         int cam_y);
+AosHitReport aos_enemy_headhunter_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y);
+void aos_enemy_headhunter_head_update(AosEnemy *head,
+                                      const AosEnemyKind *kind,
+                                      uint32_t (*random)(void));
 
 #endif

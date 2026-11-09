@@ -1,14 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Headhunter (boss 0x6A).
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define accelerate_toward aos_enemy_accelerate_toward
+#define accel_move aos_enemy_accel_move
+#define collide aos_enemy_collide
+#define move_toward aos_enemy_move_toward
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define skeleton_merge aos_enemy_skeleton_merge
+#define step_anim aos_enemy_step_anim
 
 /* sub_08083860, Headhunter's main-body death. The native body waits at the
  * lower screen edge for its linked heads before step 2; those actors are not
  * reconstructed, so their completed signal is immediate after the landing. */
-static AosHitReport headhunter_death(AosEnemy *enemy, const AosEnemyKind *kind, int cam_y) {
+AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy, const AosEnemyKind *kind, int cam_y) {
     AosHitReport report = {0};
     switch (enemy->step) {
     case 0:
@@ -65,7 +76,7 @@ static AosEnemy headhunter_head(AosEnemy *body, unsigned index, int cam_x, int c
     return head;
 }
 
-static AosHitReport headhunter_update(AosEnemy *enemy, AosSoma *soma,
+AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
                                       const AosEnemyKind *kind,
                                       const AosWeaponEntity *weapon,
                                       const AosWeaponFrames *weapon_frames,
@@ -114,7 +125,7 @@ static AosHitReport headhunter_update(AosEnemy *enemy, AosSoma *soma,
     return report;
 }
 
-static void headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
+void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
                                    uint32_t (*random)(void)) {
     AosEnemy *body = head->parent;
     if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {

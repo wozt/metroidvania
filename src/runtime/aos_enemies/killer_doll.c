@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Killer Doll (enemy 0x1F) and both dolls' piece tables.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. The piece tables are shared with Lightning Doll. */
+
+#include "../aos_enemy_internal.h"
 
 /* sub_080C86A0: Killer Doll flight stays inside the room. Crossing a room
  * edge reflects that speed; a wall, floor or ceiling zeros it. Horizontal
@@ -11,7 +12,7 @@
 static void killer_bounds(AosEnemy *d, const AosCollision *layer) {
     int32_t x = d->x >> 16, y = d->y >> 16;
     int32_t column = x < 0 ? (x + 7) >> 3 : x >> 3;
-    if (column < 0 || column >= room_columns(layer)) {
+    if (column < 0 || column >= aos_enemy_room_columns(layer)) {
         d->vx = -d->vx;
         d->x += d->vx * 2;
         d->mirrored = !d->mirrored;
@@ -53,16 +54,18 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
     if ((int16_t)d->flight > 0) d->flight--;
     switch (d->step) {
     case 0:
-        if (d->anim.id != 0) play(d, anims, 0);
-        if (player_within(d, soma, 0x3C0000) && (target_x(soma) != d->x || target_y(soma) != d->y)) {
-            if (d->anim.id != 1) play_loop(d, anims, 1, false);
+        if (d->anim.id != 0) aos_enemy_play(d, anims, 0);
+        if (aos_enemy_player_within(d, soma, 0x3C0000) &&
+            (aos_enemy_target_x(soma) != d->x ||
+             aos_enemy_target_y(soma) != d->y)) {
+            if (d->anim.id != 1) aos_enemy_play_loop(d, anims, 1, false);
             d->timer = 0;
             d->step = 1;
         }
         break;
     case 1:
         if (d->cycle_done) {
-            if (d->anim.id != 2) play_loop(d, anims, 2, false);
+            if (d->anim.id != 2) aos_enemy_play_loop(d, anims, 2, false);
             d->vy = -0x4000;
             d->timer = 0;
             d->step = 2;
@@ -70,7 +73,7 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
         break;
     case 2:
         if (d->timer++ <= 0x20) break;
-        if (d->anim.id != 4) play(d, anims, 4);
+        if (d->anim.id != 4) aos_enemy_play(d, anims, 4);
         d->vy = 0;
         d->timer = 0;
         d->step = 4;
@@ -79,18 +82,19 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
     case 3:
         if (d->substep == 0) {
             d->vx = d->vy = d->ax = d->ay = 0;
-            int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
+            int dx = (int16_t)((d->x >> 16) -
+                               (aos_enemy_target_x(soma) >> 16));
             if ((random() & 3) == 0) {
-                face_player(d, soma);
+                aos_enemy_face_player(d, soma);
                 d->mirrored = !d->mirrored;
                 d->vx = 0x10000;
                 if (dx < 0) d->vx = -d->vx;
             } else {
                 d->vx = d->vy = 0x8800;
                 if (dx > 0) d->vx = -d->vx;
-                if (player_dy(d, soma) > 0) d->vy = -d->vy;
+                if (aos_enemy_player_dy(d, soma) > 0) d->vy = -d->vy;
             }
-            if (d->anim.id != 4) play(d, anims, 4);
+            if (d->anim.id != 4) aos_enemy_play(d, anims, 4);
             d->substep = 1;
             break;
         }
@@ -101,24 +105,28 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
     case 4:
         if (d->substep != 0) break;
         d->vx = d->vy = d->ax = d->ay = 0;
-        if (d->anim.id != 3) play_loop(d, anims, 3, false);
+        if (d->anim.id != 3) aos_enemy_play_loop(d, anims, 3, false);
         if (!d->cycle_done) break;
         d->step = 3;
         d->attack_wait = (uint16_t)(d->attack_wait + 0x20);
         d->flight = (uint16_t)(d->flight + 0x20);
         d->leg = (int16_t)((random() & 0xFF) + 0x20);
-        face_player(d, soma);
+        aos_enemy_face_player(d, soma);
         break;
     case 5:
         switch (d->substep) {
         case 0: {
-            if (d->anim.id != 5) play_loop(d, anims, 5, false);
-            int16_t dx = (int16_t)((target_x(soma) >> 16) - (d->x >> 16));
-            int16_t dy = (int16_t)((target_y(soma) >> 16) - (d->y >> 16) - 0x10);
+            if (d->anim.id != 5) aos_enemy_play_loop(d, anims, 5, false);
+            int16_t dx = (int16_t)((aos_enemy_target_x(soma) >> 16) -
+                                   (d->x >> 16));
+            int16_t dy = (int16_t)((aos_enemy_target_y(soma) >> 16) -
+                                   (d->y >> 16) - 0x10);
             uint16_t angle = aos_arctan2(dx, dy);
             d->vx = aos_fixed_mul(aos_sine(angle + 0x14000u), 0x10000);
             d->vy = aos_fixed_mul(aos_sine(angle + 0x10000u), 0x10000);
-            int32_t frames = d->vx ? (target_x(soma) - d->x) / d->vx : 0;
+            int32_t frames = d->vx
+                                 ? (aos_enemy_target_x(soma) - d->x) / d->vx
+                                 : 0;
             d->timer = (uint8_t)(frames < 0 ? -frames : frames);
             d->substep = 1;
             break;
@@ -129,7 +137,8 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
             break;
         }
         case 2: {
-            int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
+            int dx = (int16_t)((d->x >> 16) -
+                               (aos_enemy_target_x(soma) >> 16));
             bool ahead = d->mirrored ? dx < 0 : dx > 0;
             d->step = ahead ? 3 : 4;
             d->substep = 0;
@@ -148,7 +157,8 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
                 d->attack_wait = (uint16_t)(d->attack_wait + 0x20);
                 d->leg = (int16_t)(d->leg + 0x20);
                 d->flight = (uint16_t)((random() & 0x3FF) + 0x200);
-                if (d->anim.id != 1) play_loop(d, anims, 1, false);
+                if (d->anim.id != 1)
+                    aos_enemy_play_loop(d, anims, 1, false);
                 d->step = 1;
                 d->substep = 0;
             }
@@ -159,7 +169,7 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
             d->y += 0x10000;
             break;
         }
-        if (d->anim.id != 6) play_loop(d, anims, 6, false);
+        if (d->anim.id != 6) aos_enemy_play_loop(d, anims, 6, false);
         d->timer = (uint8_t)((random() & 0x3F) + 0x40);
         d->substep++;
         break;
@@ -180,9 +190,9 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
         d->substep = 0;
     }
     if ((int16_t)d->attack_wait != 0) return;
-    int dx = (int16_t)((d->x >> 16) - (target_x(soma) >> 16));
+    int dx = (int16_t)((d->x >> 16) - (aos_enemy_target_x(soma) >> 16));
     bool ahead = d->mirrored ? dx < 0 : dx > 0;
-    if (ahead && player_within(d, soma, 0x280000)) {
+    if (ahead && aos_enemy_player_within(d, soma, 0x280000)) {
         d->step = 5;
         d->substep = 0;
     }
@@ -191,19 +201,20 @@ static void killer_act(AosEnemy *d, const AosSoma *soma, const AosCollision *lay
 /* sub_080C8914: the inert global-flag state only loops animation 0. */
 static void killer_cycle(AosEnemy *d, const AosAnimSet *anims) {
     if (d->step == 0) {
-        play(d, anims, 0);
+        aos_enemy_play(d, anims, 0);
         d->step = 1;
     }
-    step_anim(d, anims);
+    aos_enemy_step_anim(d, anims);
 }
 
 /* EnemyKillerDollUpdate: the active AI, animation step and collision pass;
  * its hit callback sub_080C81AC creates the five pieces through
  * sub_080C8968 and waits in state 0xFF until they leave. */
-static AosHitReport killer_update(AosEnemy *d, AosSoma *soma, const AosCollision *layer,
-                                  const AosEnemyKind *kind, const AosWeaponEntity *weapon,
-                                  const AosWeaponFrames *weapon_frames, int soma_atk,
-                                  int soma_def, uint32_t (*random)(void)) {
+AosHitReport aos_enemy_killer_doll_update(
+    AosEnemy *d, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (d->state == 2) {
         killer_cycle(d, kind->anims);
@@ -211,7 +222,8 @@ static AosHitReport killer_update(AosEnemy *d, AosSoma *soma, const AosCollision
     }
     if (d->hp > 0 && d->hit_flash && d->state != 0xFF) {
         d->hit_flash--;
-        report = collide(d, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(d, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
         aos_combat_tick(&d->combat);
         return report;
     }
@@ -220,8 +232,9 @@ static AosHitReport killer_update(AosEnemy *d, AosSoma *soma, const AosCollision
         if (!d->spawned_count) d->removed = true;
         return report;
     }
-    step_anim(d, kind->anims);
-    report = collide(d, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    aos_enemy_step_anim(d, kind->anims);
+    report = aos_enemy_collide(d, soma, kind, weapon, weapon_frames,
+                               soma_atk, soma_def);
     aos_combat_tick(&d->combat);
     return report;
 }
@@ -229,11 +242,11 @@ static AosHitReport killer_update(AosEnemy *d, AosSoma *soma, const AosCollision
 /* The Killer Doll's (0x08528AC4) and Lightning Doll's (0x08528AE4)
  * pieces, 6 bytes each: x and y offsets (the y one places the glow),
  * sprite frame, vx / 0x1000, -vy / 0x1000, timer. */
-static const int8_t killer_doll_pieces[5][6] = {
+const int8_t aos_enemy_killer_doll_pieces[5][6] = {
     {4, -8, 13, 8, 24, 60}, {4, 0, 14, 4, 24, -128}, {4, 8, 15, 0, 24, 46},
     {4, 8, 16, -4, 24, 86}, {4, 0, 17, -8, 24, 80},
 };
-static const int8_t lightning_doll_pieces[5][6] = {
+const int8_t aos_enemy_lightning_doll_pieces[5][6] = {
     {4, -8, 20, 8, 24, 60}, {4, 0, 21, 4, 24, -128}, {4, 8, 22, 0, 24, 46},
     {4, 8, 23, -4, 24, 86}, {4, 0, 24, -8, 24, 80},
 };

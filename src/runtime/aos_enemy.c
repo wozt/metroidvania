@@ -314,9 +314,10 @@ int32_t aos_enemy_toward_facing(const AosEnemy *enemy, int32_t speed) {
 #define toward_facing aos_enemy_toward_facing
 
 /* sub_0806BDEC */
-static int16_t player_dy(const AosEnemy *enemy, const AosSoma *soma) {
+int16_t aos_enemy_player_dy(const AosEnemy *enemy, const AosSoma *soma) {
     return (int16_t)((enemy->y >> 16) - (target_y(soma) >> 16));
 }
+#define player_dy aos_enemy_player_dy
 
 /* sub_08068AD4 with the player as the entity. */
 bool aos_enemy_player_in(const AosSoma *soma, int32_t x, int32_t y,
@@ -2185,10 +2186,12 @@ AosEnemy aos_enemy_make_gib(const AosEnemy *z, int32_t dx, int32_t dy,
 #define make_gib aos_enemy_make_gib
 
 /* sub_0806BF78: the player within `range` of the entity on both axes. */
-static bool player_within(const AosEnemy *e, const AosSoma *soma, uint32_t range) {
+bool aos_enemy_player_within(const AosEnemy *e, const AosSoma *soma,
+                             uint32_t range) {
     int32_t dx = e->x - target_x(soma), dy = e->y - target_y(soma);
     return (uint32_t)(dx < 0 ? -dx : dx) <= range && (uint32_t)(dy < 0 ? -dy : dy) <= range;
 }
+#define player_within aos_enemy_player_within
 
 void aos_enemy_integrate(AosEnemy *e);
 void aos_enemy_stop(AosEnemy *e);
@@ -2343,9 +2346,10 @@ bool aos_enemy_blocked_ahead(const AosCollision *layer, int32_t x, int32_t y) {
 
 /* The room width in cell columns as sub_0806D188 / sub_0806B120 count it
  * (30 for a one-screen room). */
-static int room_columns(const AosCollision *layer) {
+int aos_enemy_room_columns(const AosCollision *layer) {
     return layer->width_cells == 32 ? 0x1E : layer->width_cells;
 }
+#define room_columns aos_enemy_room_columns
 
 /* sub_0806D188(e, 1): the entity's cell column outside [1, width - 1]
  * (a one-screen room counts 30 columns). */
@@ -2740,7 +2744,8 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/killer_doll.c"
+#define killer_doll_pieces aos_enemy_killer_doll_pieces
+#define lightning_doll_pieces aos_enemy_lightning_doll_pieces
 #include "aos_enemies/lightning_doll.c"
 #include "aos_enemies/beam_skeleton.c"
 #include "aos_enemies/skull_millione.c"
@@ -3175,8 +3180,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->id == AOS_ENEMY_KILLER_DOLL && enemy->role == AOS_ROLE_ENEMY)
-        return killer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                             random);
+        return aos_enemy_killer_doll_update(enemy, soma, layer, kind, weapon,
+                                            weapon_frames, soma_atk,
+                                            soma_def, random);
     if (enemy->id == AOS_ENEMY_NEMESIS && enemy->role == AOS_ROLE_ENEMY)
         return nemesis_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                               cam_x, cam_y, random);

@@ -73,6 +73,12 @@ bool aos_enemy_death_flames(AosEnemy *enemy, const AosEnemyKind *kind,
                             AosHitReport *report);
 bool aos_enemy_clamp_to_room(AosEnemy *enemy, const AosCollision *layer,
                              int margin);
+int16_t aos_enemy_player_dy(const AosEnemy *enemy, const AosSoma *soma);
+bool aos_enemy_player_within(const AosEnemy *enemy, const AosSoma *soma,
+                             uint32_t range);
+int aos_enemy_room_columns(const AosCollision *layer);
+extern const int8_t aos_enemy_killer_doll_pieces[5][6];
+extern const int8_t aos_enemy_lightning_doll_pieces[5][6];
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -149,5 +155,10 @@ AosHitReport aos_enemy_skeleton_knight_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_killer_doll_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    uint32_t (*random)(void));
 
 #endif

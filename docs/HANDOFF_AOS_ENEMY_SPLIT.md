@@ -111,7 +111,10 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      remains identical for all 488 functions.
    - *(Continued in patch 0903.)* `skeleton_knight.c` is independent. All 488
      function sizes match; normalized instructions differ only in GCC's inert
-     `knight_turn` stack padding (from `0x18` to `0x20`). The other 40
+     `knight_turn` stack padding (from `0x18` to `0x20`).
+   - *(Continued in patch 0904.)* `killer_doll.c` is independent and exports
+     its read-only piece tables for the still-included Lightning Doll family.
+     Its union proof remains identical for all 488 functions. The other 39
      included families remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in

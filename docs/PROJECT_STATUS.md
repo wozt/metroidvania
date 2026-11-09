@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0904 - Killer Doll becomes a real translation unit
+
+- `aos_enemies/killer_doll.c` now compiles independently. Its bounded flight,
+  charge and landing handlers remain family-local, while its two native piece
+  tables are exposed read-only for the still-included Lightning Doll family.
+- The object union preserves all 488 `-O0` function sizes and normalized
+  instructions. No behavior or feature status changed.
+
 ## Patch 0903 - Skeleton Knight becomes a real translation unit
 
 - `aos_enemies/skeleton_knight.c` now compiles independently. Its wait,

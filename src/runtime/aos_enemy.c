@@ -298,10 +298,11 @@ int32_t aos_enemy_target_y(const AosSoma *soma) {
 #define target_y(...) aos_enemy_target_y(__VA_ARGS__)
 
 /* sub_0806BC40 */
-static void face_player(AosEnemy *enemy, const AosSoma *soma) {
+void aos_enemy_face_player(AosEnemy *enemy, const AosSoma *soma) {
     if (target_x(soma) == enemy->x) return;
     enemy->mirrored = enemy->x < target_x(soma);
 }
+#define face_player aos_enemy_face_player
 
 /* sub_0806E120 */
 static int32_t toward_facing(const AosEnemy *enemy, int32_t speed) {
@@ -2703,9 +2704,10 @@ static bool target_in_water(const AosSoma *soma, const AosCollision *layer) {
     return !no_target && cell_kind(layer, target_x(soma) >> 16, target_y(soma) >> 16) == 3;
 }
 
-static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
+void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
     copy_collision_result(report, &hit);
 }
+#define merge_enemy_hit aos_enemy_merge_hit
 
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
@@ -2744,7 +2746,6 @@ static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/white_dragon.c"
 #include "aos_enemies/bone_pillar.c"
 #include "aos_enemies/giant_ghost.c"
-#include "aos_enemies/ghost.c"
 #include "aos_enemies/minotaur.c"
 #include "aos_enemies/worm.c"
 #include "aos_enemies/biphron.c"
@@ -3082,8 +3083,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return peeping_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                               cam_y, random);
     if (enemy->id == AOS_ENEMY_GHOST && enemy->role == AOS_ROLE_ENEMY)
-        return enemy_ghost_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
-                                  cam_x, cam_y, random);
+        return aos_enemy_ghost_update(enemy, soma, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_MINOTAUR || enemy->id == AOS_ENEMY_RED_MINOTAUR) &&
         enemy->role == AOS_ROLE_ENEMY)
         return minotaur_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,

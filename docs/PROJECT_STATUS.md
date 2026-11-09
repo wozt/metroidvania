@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0895 - Ghost becomes a real translation unit
+
+- `aos_enemies/ghost.c` now compiles independently with its controller and
+  producer helpers kept static. Target facing and hit-report merging join the
+  prefixed internal framework API; only the family update is exported.
+- The object-union comparison preserves all 488 `-O0` function sizes and
+  normalized instructions. No behavior or feature status changed.
+
 ## Patch 0894 - Medusa Head becomes a real translation unit
 
 - `aos_enemies/medusa_head.c` now compiles independently; its flight,

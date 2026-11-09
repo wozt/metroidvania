@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0897 - Curly and Durga become a real translation unit
+
+- The shared Curly/Durga family in `aos_enemies/curly.c` now compiles
+  independently. Slope pacing, forward obstruction and room-edge probes join
+  the prefixed internal framework API; all family state handlers stay static.
+- The object-union comparison preserves all 488 `-O0` function sizes and
+  normalized instructions. No behavior or feature status changed.
+
 ## Patch 0896 - Zombie Officer becomes a real translation unit
 
 - `aos_enemies/zombie_officer.c` now compiles independently. The zombie

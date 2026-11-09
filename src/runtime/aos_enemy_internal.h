@@ -41,6 +41,11 @@ AosEnemy aos_enemy_make_gib(const AosEnemy *enemy, int32_t dx, int32_t dy,
                             int32_t vx, int32_t vy, int16_t frame);
 int32_t aos_enemy_gib_speed(const AosEnemy *enemy,
                             uint32_t (*random)(void));
+int32_t aos_enemy_slope_speed(const AosEnemy *enemy,
+                              const AosCollision *layer, int32_t speed);
+bool aos_enemy_blocked_ahead(const AosCollision *layer, int32_t x, int32_t y);
+bool aos_enemy_at_room_edge(const AosEnemy *enemy,
+                            const AosCollision *layer);
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -69,6 +74,11 @@ AosHitReport aos_enemy_ghost_update(
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
 AosHitReport aos_enemy_zombie_officer_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_curly_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,

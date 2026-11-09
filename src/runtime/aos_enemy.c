@@ -2305,7 +2305,8 @@ static bool head_toward(AosEnemy *e, int32_t tx, int32_t ty, int32_t speed) {
 /* sub_0806AC5C: a walking speed halved (slope type 1) or cut to 2/3 (type
  * 2) when climbing the slope under the entity (the cell at its feet, or
  * one pixel lower when empty; bit 2 the slope's direction). */
-static int32_t slope_speed(const AosEnemy *e, const AosCollision *layer, int32_t speed) {
+int32_t aos_enemy_slope_speed(const AosEnemy *e, const AosCollision *layer,
+                              int32_t speed) {
     int32_t x = e->x >> 16, y = e->y >> 16;
     uint8_t cell = aos_collision_cell(layer, x, y);
     if (!cell) cell = aos_collision_cell(layer, x, y + 1);
@@ -2317,10 +2318,11 @@ static int32_t slope_speed(const AosEnemy *e, const AosCollision *layer, int32_t
     if (type == 2) return speed * 2 / 3;
     return speed;
 }
+#define slope_speed aos_enemy_slope_speed
 
 /* sub_0806B1A0: no floor 8 pixels below an empty cell ahead (a drop), or a
  * wall ahead that is not a slope. */
-static bool blocked_ahead(const AosCollision *layer, int32_t x, int32_t y) {
+bool aos_enemy_blocked_ahead(const AosCollision *layer, int32_t x, int32_t y) {
     if (!aos_collision_cell(layer, x, y)) {
         if (!aos_collision_cell(layer, x, y + 8)) return true;
         return aos_collision_cell(layer, x, y - 7) != 0;
@@ -2328,6 +2330,7 @@ static bool blocked_ahead(const AosCollision *layer, int32_t x, int32_t y) {
     uint8_t above = aos_collision_cell(layer, x, y - 7);
     return above && !(above & 0xC0);
 }
+#define blocked_ahead aos_enemy_blocked_ahead
 
 /* The room width in cell columns as sub_0806D188 / sub_0806B120 count it
  * (30 for a one-screen room). */
@@ -2337,11 +2340,12 @@ static int room_columns(const AosCollision *layer) {
 
 /* sub_0806D188(e, 1): the entity's cell column outside [1, width - 1]
  * (a one-screen room counts 30 columns). */
-static bool at_room_edge(const AosEnemy *e, const AosCollision *layer) {
+bool aos_enemy_at_room_edge(const AosEnemy *e, const AosCollision *layer) {
     int32_t column = (e->x >> 16) >> 3;
     int width = room_columns(layer);
     return column < 1 || column > width - 1;
 }
+#define at_room_edge aos_enemy_at_room_edge
 
 /* sub_0806B120(e, margin): an entity beyond `margin` columns of either
  * room edge is put back on that column boundary (whole pixel); true when
@@ -2729,7 +2733,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/beam_skeleton.c"
 #include "aos_enemies/skull_millione.c"
 #include "aos_enemies/dead_crusader.c"
-#include "aos_enemies/curly.c"
 #include "aos_enemies/gargoyle.c"
 #include "aos_enemies/axe_armor.c"
 #include "aos_enemies/rock_armor.c"
@@ -3322,8 +3325,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return knight_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_CURLY || enemy->id == AOS_ENEMY_DURGA)
-        return curly_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                            cam_x, cam_y, random);
+        return aos_enemy_curly_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_GARGOYLE || enemy->id == AOS_ENEMY_GREMLIN)
         return gargoyle_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                cam_x, cam_y, random);

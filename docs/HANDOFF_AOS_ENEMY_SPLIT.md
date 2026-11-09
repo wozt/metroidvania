@@ -94,7 +94,10 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      identical for all 488 functions.
    - *(Continued in patch 0896.)* `zombie_officer.c` is independent; the
      walker and gib helpers are shared through the internal API. Its union
-     proof remains identical for all 488 functions. The other 47 included
+     proof remains identical for all 488 functions.
+   - *(Continued in patch 0897.)* the shared Curly/Durga `curly.c` family is
+     independent; its slope and edge probes join the internal API. Its union
+     proof remains identical for all 488 functions. The other 46 included
      families remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T15:13:07+00:00",
+ "generated_at": "2026-11-09T15:17:24+00:00",
  "git": {
-  "commit": "24f6df9a",
+  "commit": "820771d8",
   "branch": "main",
   "dirty": true
  },
@@ -9330,6 +9330,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/rock_armor.c",
     "src/runtime/aos_enemies/bomber_armor.c",
     "src/runtime/aria_runtime.c",
@@ -19757,6 +19758,7 @@
     "src/runtime/aos_enemies/minotaur.c",
     "src/runtime/aos_enemies/worm.c",
     "src/runtime/aos_enemies/biphron.c",
+    "src/runtime/aos_enemies/bomber_armor.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22211,6 +22213,12 @@
  },
  "timeline": [
   {
+   "commit": "820771d8",
+   "date": "2026-11-09",
+   "subject": "Compile Biphron family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "24f6df9a",
    "date": "2026-11-09",
    "subject": "Compile Worm family as an independent enemy unit",
@@ -22682,12 +22690,6 @@
    "commit": "b682def2",
    "date": "2026-11-08",
    "subject": "Port Blocking Mail (armor 0x17) hit evasion from sub_08021654",
-   "scope": "project"
-  },
-  {
-   "commit": "0e4a6cfb",
-   "date": "2026-11-08",
-   "subject": "Port func_08021E50 as aos_stats_cure_status",
    "scope": "project"
   }
  ],

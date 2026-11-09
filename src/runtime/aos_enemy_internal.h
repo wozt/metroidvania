@@ -447,5 +447,19 @@ AosHitReport aos_enemy_biphron_shot_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def);
+AosHitReport aos_enemy_bomber_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_bomber_bomb_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_bomber_spark_update(AosEnemy *enemy,
+                                   const AosEnemyKind *kind);
+extern const AosEffect *aos_enemy_burst_source;
+extern size_t aos_enemy_burst_source_count;
 
 #endif

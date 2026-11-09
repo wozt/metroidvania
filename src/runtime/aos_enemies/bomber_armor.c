@@ -1,9 +1,32 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Bomber Armor (enemy 0x3A), its bomb and sparks.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define burst_source aos_enemy_burst_source
+#define burst_source_count aos_enemy_burst_source_count
+#define collide aos_enemy_collide
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define pixel_delta aos_enemy_pixel_delta
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_ahead_within aos_enemy_player_ahead_within
+#define rock_armor_die aos_enemy_rock_armor_die
+#define rock_armor_probes aos_enemy_rock_armor_probes
+#define rock_armor_speed aos_enemy_rock_armor_speed
+#define rock_armor_walk aos_enemy_rock_armor_walk
+#define rock_probes aos_enemy_rock_probes
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_080B2A80: the throw. Substep 0 plays animation 1 once; at frame 7
  * sound 0x88 and the bomb (sub_0806DFF8 with sub_080B243C: the facing,
@@ -75,7 +98,7 @@ static void bomber_burst(const AosEnemy *b, AosHitReport *report) {
     }
 }
 
-static AosHitReport bomber_bomb_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_bomber_bomb_update(AosEnemy *b, AosSoma *soma, const AosCollision *layer,
                                        const AosEnemyKind *kind,
                                        const AosWeaponEntity *weapon,
                                        const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -150,7 +173,7 @@ static AosHitReport bomber_bomb_update(AosEnemy *b, AosSoma *soma, const AosColl
 
 /* sub_080B2FC4: the fuse spark — animation 4 once, then its affine step;
  * gone when the animation ends (the affine slot's return 3). */
-static void bomber_spark_update(AosEnemy *s, const AosEnemyKind *kind) {
+void aos_enemy_bomber_spark_update(AosEnemy *s, const AosEnemyKind *kind) {
     if (s->state == 0) {
         play_loop(s, kind->anims, 4, false);
         s->state = 1;
@@ -164,7 +187,7 @@ static void bomber_spark_update(AosEnemy *s, const AosEnemyKind *kind) {
  * pass (sub_0806E314, skipped while defeated) and the animation step
  * (sub_0806DF20); state 3 (the global 0x8E & 0x40) only steps its
  * animation. */
-static AosHitReport bomber_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_bomber_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
                                   const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                   const AosWeaponFrames *weapon_frames, int soma_atk,
                                   int soma_def, int cam_x, int cam_y,

@@ -34,8 +34,10 @@ void aos_enemy_set_flag_8e_40(bool set) {
     flag_8e_40 = set;
 }
 
-static const AosEffect *burst_source;
-static size_t burst_source_count;
+const AosEffect *aos_enemy_burst_source;
+size_t aos_enemy_burst_source_count;
+#define burst_source aos_enemy_burst_source
+#define burst_source_count aos_enemy_burst_source_count
 
 void aos_enemy_set_burst_source(const AosEffect *list, size_t count) {
     burst_source = list;
@@ -2771,7 +2773,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/bomber_armor.c"
 #include "aos_enemies/evil_butcher.c"
 #include "aos_enemies/killer_mantle.c"
 #include "aos_enemies/dryad.c"
@@ -3313,14 +3314,14 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                     weapon_frames, soma_atk, soma_def, cam_x,
                                     cam_y, random);
     if (enemy->role == AOS_ROLE_BOMBER_BOMB)
-        return bomber_bomb_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_bomber_bomb_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                   soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_BOMBER_SPARK) {
-        bomber_spark_update(enemy, kind);
+        aos_enemy_bomber_spark_update(enemy, kind);
         return report;
     }
     if (enemy->id == AOS_ENEMY_BOMBER_ARMOR && enemy->role == AOS_ROLE_ENEMY)
-        return bomber_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_bomber_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                              soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_SKY_FISH && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_sky_fish_update(enemy, soma, kind, weapon,

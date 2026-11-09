@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0928 - Bomber Armor family becomes a real translation unit
+
+- `aos_enemies/bomber_armor.c` now compiles independently with its
+  body, bomb and spark updates exported through
+  `aos_enemy_internal.h`; the shared `burst_source` state is now an
+  exported variable like `flag_8e_40`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0927 - Biphron family becomes a real translation unit
 
 - `aos_enemies/biphron.c` now compiles independently with its body and

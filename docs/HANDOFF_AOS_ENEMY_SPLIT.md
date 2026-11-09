@@ -221,6 +221,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      symbols. The other 16 included families remain. Continue with
      `bomber_armor.c`; keep one family per commit and repeat the union
      proof.
+   - *(Continued in patch 0928.)* `bomber_armor.c` is independent with
+     its three updates exported; `burst_source`/`burst_source_count`
+     became exported variables (same normalized symbols). The union
+     proof is identical for all 488 symbols. The other 15 included
+     families remain. Continue with `evil_butcher.c`; keep one family
+     per commit and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

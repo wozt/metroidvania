@@ -1,9 +1,19 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Chronomage (enemy 0x28) and its wisps.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define play_loop aos_enemy_play_loop
+#define spawn_flame aos_enemy_spawn_flame
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 /* sub_080B6C3C: state 0 loads the shared resources, keeps the
  * sub_0803E654 sign draw (~half delete, approximated by the RNG bit
@@ -15,7 +25,7 @@
  * restore of sub_0803E6BC is not ported). The shared tail draws it
  * through sub_0803E058 with + 0x18 — approximated by the spin field
  * and the affine renderer. */
-static void chrono_wisp_update(AosEnemy *e, const AosEnemyKind *kind,
+void aos_enemy_chrono_wisp_update(AosEnemy *e, const AosEnemyKind *kind,
                                uint32_t (*random)(void)) {
     switch (e->state) {
     case 0:
@@ -235,7 +245,7 @@ static void chrono_inert(AosEnemy *e, const AosEnemyKind *kind) {
  * the sub_0806AEAC generic death flames, deleting on the animation's
  * end; state 4 runs the inert sequence; every other state gets the
  * sub_080421AC room query (not ported) and the animation step. */
-static AosHitReport chronomage_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_chronomage_update(AosEnemy *e, AosSoma *soma,
                                       const AosCollision *layer,
                                       const AosEnemyKind *kind,
                                       const AosWeaponEntity *weapon,

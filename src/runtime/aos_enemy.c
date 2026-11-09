@@ -179,8 +179,9 @@ void aos_enemy_spawn_flame_at(int32_t cx, int32_t cy, uint32_t w, uint32_t h,
     flame->mirrored = random() & 1;
 }
 #define spawn_flame_at aos_enemy_spawn_flame_at
+#define spawn_flame aos_enemy_spawn_flame
 
-static void spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*random)(void),
+void aos_enemy_spawn_flame(const AosEnemy *e, uint32_t w, uint32_t h, uint32_t (*random)(void),
                         AosHitReport *report) {
     spawn_flame_at(e->x, e->y - 0x60000, w, h, random, report);
 }
@@ -2776,7 +2777,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/chronomage.c"
 
 static bool early_enemy_inert(const AosEnemy *e) {
     if (e->id == AOS_ENEMY_SKELETON && e->state == 5)
@@ -2924,11 +2924,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->role == AOS_ROLE_CHRONO_WISP) {
-        chrono_wisp_update(enemy, kind, random);
+        aos_enemy_chrono_wisp_update(enemy, kind, random);
         return report;
     }
     if (enemy->id == AOS_ENEMY_CHRONOMAGE && enemy->role == AOS_ROLE_ENEMY)
-        return chronomage_update(enemy, soma, layer, kind, weapon,
+        return aos_enemy_chronomage_update(enemy, soma, layer, kind, weapon,
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->id == AOS_ENEMY_DRYAD && enemy->role == AOS_ROLE_ENEMY)

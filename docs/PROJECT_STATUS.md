@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0936 - Chronomage family becomes a real translation unit
+
+- `aos_enemies/chronomage.c` now compiles independently with its body
+  and wisp updates exported through `aos_enemy_internal.h`;
+  `spawn_flame` joins the internal API.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0935 - Cockatrice family becomes a real translation unit
 
 - `aos_enemies/cockatrice.c` now compiles independently with its body,

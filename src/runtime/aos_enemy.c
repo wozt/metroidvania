@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies; comments name the cvaos routine. */
-#include "aos_enemy.h"
+#include "aos_enemy_internal.h"
 
 #include "aos_audio.h"
 
@@ -53,12 +53,14 @@ static void spawn_particle(uint8_t kind, uint8_t flags, int32_t x, int32_t y, in
 
 /* sub_08045CEC(x, y, animation, row): a drifting effect, NULL when no
  * slot is left (EntityCreateInRange(0x49, 0xCF) failing). */
-static AosEffect *spawn_drift(uint8_t kind, int32_t x, int32_t y, AosHitReport *report) {
+AosEffect *aos_enemy_spawn_drift(uint8_t kind, int32_t x, int32_t y,
+                                 AosHitReport *report) {
     if (report->effect_count >= AOS_ENEMY_MAX_EFFECTS) return NULL;
     AosEffect *e = &report->effects[report->effect_count++];
     *e = (AosEffect){.kind = kind, .x = x, .y = y, .drift = true};
     return e;
 }
+#define spawn_drift aos_enemy_spawn_drift
 
 /* sub_0802D5EC(n): (random & (n - 1)) - n / 2. */
 static int32_t random_centred(uint32_t (*random)(void), uint32_t n) {
@@ -186,10 +188,11 @@ static bool death_flames(AosEnemy *e, const AosEnemyKind *kind, int period, uint
     return e->removed;
 }
 
-static void take_effects(AosHitReport *to, const AosHitReport *from) {
+void aos_enemy_take_effects(AosHitReport *to, const AosHitReport *from) {
     to->effect_count = from->effect_count;
     memcpy(to->effects, from->effects, sizeof from->effects[0] * from->effect_count);
 }
+#define take_effects aos_enemy_take_effects
 
 static void append_effects(AosHitReport *to, const AosHitReport *from) {
     for (int index = 0;
@@ -238,21 +241,23 @@ static void play_loop(AosEnemy *enemy, const AosAnimSet *anims, unsigned id, boo
 }
 
 /* sub_0806D128(e, n): the screen position beyond margin entry n. */
-static bool outside_margins(const AosEnemyKind *kind, int n, int sx, int sy) {
+bool aos_enemy_outside_margins(const AosEnemyKind *kind, int n, int sx, int sy) {
     int mx = kind->margins[n][0], my = kind->margins[n][1];
     return sx < -mx || sx > mx + 0xF0 || sy < -my || sy > my + 0xA0;
 }
+#define outside_margins aos_enemy_outside_margins
 
 static void play(AosEnemy *enemy, const AosAnimSet *anims, unsigned id) {
     play_loop(enemy, anims, id, true);
 }
 
 /* sub_0803F17C; + 0x59 bit 0 is set when the animation loops or ends. */
-static void step_anim(AosEnemy *enemy, const AosAnimSet *anims) {
+void aos_enemy_step_anim(AosEnemy *enemy, const AosAnimSet *anims) {
     bool ended = enemy->anim.flags & AOS_ANIM_ENDED;
     int result = aos_anim_step(&enemy->anim, anims);
     if (result == 4 || (result == 3 && !ended)) enemy->cycle_done = true;
 }
+#define step_anim aos_enemy_step_anim
 
 /* gEwramData + 0x13168, the entity the enemies aim at (sub_0806CD38 /
  * sub_0806CD78 and the helpers built on them): Soma, or the Killer Doll
@@ -1444,9 +1449,11 @@ static void skeleton_merge(AosHitReport *report, const AosHitReport *hit);
  * weapon against the enemy, then the contact callbacks. */
 static void worm_segment_hurt(AosEnemy *c, AosEnemy *parent, AosSoma *soma,
                               AosHitReport *report);
-static AosHitReport collide(AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
-                            const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
-                            int soma_atk, int soma_def) {
+AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
+                               const AosEnemyKind *kind,
+                               const AosWeaponEntity *weapon,
+                               const AosWeaponFrames *weapon_frames,
+                               int soma_atk, int soma_def) {
     AosHitReport report = {0};
     AosBox hurt, attack;
     bool hurt_on, attack_on;
@@ -2055,8 +2062,10 @@ contact:
     }
     return report;
 }
+#define collide aos_enemy_collide
 
-static void accel_move(AosEnemy *e, int32_t limit);
+void aos_enemy_accel_move(AosEnemy *e, int32_t limit);
+#define accel_move aos_enemy_accel_move
 
 /* sub_0806AEAC: the generic death, a flame every 4 frames over 16 x 12
  * pixels, the blink, then the deletion. */
@@ -2249,7 +2258,7 @@ static int projectile_collide(AosEnemy *e, const AosCollision *layer, int32_t fl
 
 /* sub_0806D3D8(e, limit): velocity plus acceleration, clamped toward the
  * acceleration's sign, then the move. */
-static void accel_move(AosEnemy *e, int32_t limit) {
+void aos_enemy_accel_move(AosEnemy *e, int32_t limit) {
     e->vx += e->ax;
     if (e->ax >= 0 ? e->vx > limit : e->vx < -limit) e->vx = e->ax >= 0 ? limit : -limit;
     e->vy += e->ay;
@@ -2731,7 +2740,6 @@ static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/worm.c"
 #include "aos_enemies/biphron.c"
 #include "aos_enemies/bomber_armor.c"
-#include "aos_enemies/sky_fish.c"
 #include "aos_enemies/ectoplasm.c"
 #include "aos_enemies/evil_butcher.c"
 #include "aos_enemies/killer_mantle.c"
@@ -3270,8 +3278,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return bomber_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                              soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_SKY_FISH && enemy->role == AOS_ROLE_ENEMY)
-        return sky_fish_update(enemy, soma, kind, weapon, weapon_frames,
-                               soma_atk, soma_def, cam_x, cam_y, random);
+        return aos_enemy_sky_fish_update(enemy, soma, kind, weapon,
+                                         weapon_frames, soma_atk, soma_def,
+                                         cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY)
         return ectoplasm_update(enemy, soma, kind, weapon, weapon_frames,
                                 soma_atk, soma_def, cam_x, cam_y, random);

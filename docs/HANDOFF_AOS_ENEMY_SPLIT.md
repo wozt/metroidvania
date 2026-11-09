@@ -74,6 +74,12 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
 ## Remaining work, in order
 
 1. **Make the fragments real translation units.**
+   - *(Started in patch 0891.)* `sky_fish.c` is now a real translation unit.
+     `aos_enemy_internal.h` exposes its seven required framework helpers
+     with collision-safe `aos_enemy_` names, and `AOS_ENEMY_SOURCES` adds it
+     to every target. The old monolithic object and the union of the two new
+     objects have identical sizes and normalized disassembly for all 488
+     functions. The other 52 included family files still remain to convert.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

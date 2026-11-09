@@ -93,9 +93,10 @@ static AosHitReport grenade_update(AosEnemy *g, AosSoma *soma, const AosCollisio
 }
 
 /* sub_0806CF2C: facing the player, mirrored when he is to the right. */
-static void soldier_face(AosEnemy *z, const AosSoma *soma) {
+void aos_enemy_soldier_face(AosEnemy *z, const AosSoma *soma) {
     z->mirrored = (z->x >> 16) < (target_x(soma) >> 16);
 }
+#define soldier_face aos_enemy_soldier_face
 
 /* sub_08092A28 steps 1 / 0xB: back to walking. */
 static void soldier_walk_again(AosEnemy *z, const AosAnimSet *anims) {

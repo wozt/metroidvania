@@ -1,6 +1,19 @@
 # Project status
 
-Last updated: **2026-11-08**.
+Last updated: **2026-11-09**.
+
+## Patch 0891 - Sky Fish becomes a real translation unit
+
+- `aos_enemies/sky_fish.c` is the first monster-family fragment removed
+  from the textual includes in `aos_enemy.c` and compiled independently.
+  `aos_enemy_internal.h` introduces the prefixed internal framework API;
+  the seven helpers used by Sky Fish have `aos_enemy_` symbols, while the
+  remaining included families retain temporary macro aliases.
+- `AOS_ENEMY_SOURCES` keeps every runtime and test target on the same enemy
+  source set, including the combined Metroidvania executable. Comparing the
+  old monolithic `-O0` object with the union of the new framework and Sky
+  Fish objects found all 488 function sizes and normalized instructions
+  identical. This is a code-layout change only; no feature status changed.
 
 ## Patch 0890 - The Skull Archer soul's arrow in its own module
 

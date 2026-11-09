@@ -2,6 +2,13 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0889 - Soul tests without the enemy code
+
+- Ten red and blue soul test binaries (spear, devil, crow, needles, ghost,
+  siren, and the Buer, Ghost, Imp and Death familiars) no longer compile
+  `aos_enemy.c`: they only needed `aos_math`. The throw, Fleaman and
+  Gladiator soul tests keep it, as their modules hold an `AosEnemy`.
+
 ## Patch 0888 - Aria soul modules named as souls
 
 - The 22 red-soul modules `aos_skill_*` are now `aos_soul_red_*` and the 4

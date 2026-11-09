@@ -750,7 +750,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_axe COMMAND fusion_aos_soul_red_axe_tests)
 
     add_executable(fusion_aos_soul_red_spear_tests tests/test_aos_soul_red_spear.c
-                   src/runtime/aos_soul_red_spear.c src/runtime/aos_audio.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_red_spear.c src/runtime/aos_audio.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c)
@@ -777,7 +777,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_room_music COMMAND fusion_aos_room_music_tests)
 
     add_executable(fusion_aos_soul_red_devil_tests tests/test_aos_soul_red_devil.c
-                   src/runtime/aos_soul_red_devil.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_red_devil.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -787,7 +787,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_devil COMMAND fusion_aos_soul_red_devil_tests)
 
     add_executable(fusion_aos_soul_red_crow_tests tests/test_aos_soul_red_crow.c
-                   src/runtime/aos_soul_red_crow.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_red_crow.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -819,7 +819,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_valkyrie COMMAND fusion_aos_soul_red_valkyrie_tests)
 
     add_executable(fusion_aos_soul_red_needles_tests tests/test_aos_soul_red_needles.c
-                   src/runtime/aos_soul_red_needles.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_red_needles.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -829,7 +829,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_needles COMMAND fusion_aos_soul_red_needles_tests)
 
     add_executable(fusion_aos_soul_blue_buer_tests tests/test_aos_soul_blue_buer.c
-                   src/runtime/aos_soul_blue_buer.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_blue_buer.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -839,7 +839,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_blue_buer COMMAND fusion_aos_soul_blue_buer_tests)
 
     add_executable(fusion_aos_soul_blue_ghost_tests tests/test_aos_soul_blue_ghost.c
-                   src/runtime/aos_soul_blue_ghost.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_blue_ghost.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -849,7 +849,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_blue_ghost COMMAND fusion_aos_soul_blue_ghost_tests)
 
     add_executable(fusion_aos_soul_blue_imp_tests tests/test_aos_soul_blue_imp.c
-                   src/runtime/aos_soul_blue_imp.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_blue_imp.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -859,7 +859,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_blue_imp COMMAND fusion_aos_soul_blue_imp_tests)
 
     add_executable(fusion_aos_soul_blue_death_tests tests/test_aos_soul_blue_death.c
-                   src/runtime/aos_soul_blue_death.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
+                   src/runtime/aos_soul_blue_death.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c
                    src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos_soul.c
                    src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
                    src/runtime/aos_stats.c src/runtime/aos_audio.c)
@@ -923,7 +923,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_soul_red_ghost_tests tests/test_aos_soul_red_ghost.c
                    src/runtime/aos_soul_red_ghost.c src/runtime/aos_soul_red_devil.c
-                   src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
+                   src/runtime/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos_weapon.c src/runtime/aos_effect.c
                    src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_collision.c
                    src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_stats.c
                    src/runtime/aos_audio.c)
@@ -933,7 +933,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_ghost COMMAND fusion_aos_soul_red_ghost_tests)
 
     add_executable(fusion_aos_soul_red_siren_tests tests/test_aos_soul_red_siren.c
-                   src/runtime/aos_soul_red_siren.c src/runtime/aos_enemy.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c
+                   src/runtime/aos_soul_red_siren.c src/runtime/aos_math.c src/runtime/aos_damage_popup.c
                    src/runtime/aos_weapon.c src/runtime/aos_effect.c src/runtime/aos_soma.c
                    src/runtime/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
                    src/runtime/aos_anim.c src/runtime/aos_stats.c src/runtime/aos_audio.c)

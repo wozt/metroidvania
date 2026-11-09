@@ -112,9 +112,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      `update_skills` (around line 1800) has cases such as `SKILL_BAT`,
      `SKILL_ARROW`, `SKILL_BOW`, `SKILL_AXE`, `SKILL_DAGGER`, `SKILL_HARPY`,
      `SKILL_GLADIATOR` and `SKILL_DECOY`; only 7 of them call a module.
-   - Several soul tests link `aos_enemy.c` only for the math. Check each
-     test target in `CMakeLists.txt` and drop `aos_enemy.c` where it now
-     links with `aos_math.c` alone.
+   - *(Done in patch 0889.)* Ten soul tests no longer link `aos_enemy.c`.
+     The throw, Fleaman and Gladiator soul tests still do: their modules
+     keep their state in an `AosEnemy`. Some soul tests may still list
+     other enemy-side sources they do not need; check them the same way.
+
 4. *(Done in patches 0886 and 0887.)* `aos_math` now also holds
    `aos_isqrt` and `aos_fixed_mul`, and `aos_title_screen.c` uses it instead
    of its own copies.

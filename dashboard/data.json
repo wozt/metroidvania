@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T12:28:42+00:00",
+ "generated_at": "2026-11-09T12:30:35+00:00",
  "git": {
-  "commit": "93686aa7",
+  "commit": "12de9efe",
   "branch": "main",
   "dirty": true
  },
@@ -22075,6 +22075,12 @@
  },
  "timeline": [
   {
+   "commit": "12de9efe",
+   "date": "2026-11-09",
+   "subject": "Name the Aria soul modules as red and blue souls",
+   "scope": "project"
+  },
+  {
    "commit": "93686aa7",
    "date": "2026-11-09",
    "subject": "Share the Aria Sqrt and 16.16 product through aos_math",
@@ -22546,12 +22552,6 @@
    "commit": "f940352f",
    "date": "2026-11-08",
    "subject": "Port the held-soul sparkle above Soma (sub_08045BC8/sub_08045164)",
-   "scope": "project"
-  },
-  {
-   "commit": "fdf376b2",
-   "date": "2026-11-08",
-   "subject": "Note the held-soul sparkle reuses the exported sequence-12 frames",
    "scope": "project"
   }
  ],

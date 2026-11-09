@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0910 - Axe Armor family becomes a real translation unit
+
+- `aos_enemies/axe_armor.c` now compiles independently with its body and
+  axe-child updates exported through `aos_enemy_internal.h`;
+  `player_ahead_within` joins the prefixed internal API for the remaining
+  armor families.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the three exports changed linkage. No
+  behavior or feature status changed.
+
 ## Patch 0909 - Gargoyle family becomes a real translation unit
 
 - `aos_enemies/gargoyle.c` now compiles independently with its shared

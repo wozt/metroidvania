@@ -2539,12 +2539,13 @@ int aos_enemy_probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes
 
 /* sub_0806BBC4 and sub_0806D044: the player ahead (by the facing) within
  * `range` pixels (the BIOS Sqrt of the squared whole-pixel distance). */
-static bool player_ahead_within(const AosEnemy *e, const AosSoma *soma, int range) {
+bool aos_enemy_player_ahead_within(const AosEnemy *e, const AosSoma *soma, int range) {
     int side = e->x < target_x(soma) ? 1 : e->x > target_x(soma) ? -1 : 0;
     if (side != (e->mirrored ? 1 : -1)) return false;
     int32_t dx = pixel_delta(target_x(soma), e->x), dy = pixel_delta(target_y(soma), e->y);
     return (int16_t)aos_isqrt((uint32_t)(dx * dx + dy * dy)) <= range;
 }
+#define player_ahead_within aos_enemy_player_ahead_within
 
 void aos_enemy_copy_collision_result(AosHitReport *report,
                                      const AosHitReport *hit) {
@@ -2748,7 +2749,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/axe_armor.c"
+
 #include "aos_enemies/rock_armor.c"
 #include "aos_enemies/skull_archer.c"
 #include "aos_enemies/skeleton.c"
@@ -3259,7 +3260,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return archer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_AXE)
-        return axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_axe_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                           cam_y, random);
     if (enemy->role == AOS_ROLE_FRY)
         return fry_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
@@ -3329,7 +3330,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return rock_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                  soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_AXE_ARMOR)
-        return armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_armor_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                             cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_GRENADE)
         return grenade_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,

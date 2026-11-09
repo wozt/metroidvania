@@ -199,10 +199,22 @@ AosHitReport aos_enemy_crusader_update(
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
+bool aos_enemy_player_ahead_within(const AosEnemy *enemy,
+                                   const AosSoma *soma, int range);
 AosHitReport aos_enemy_gargoyle_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_axe_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y,
+    uint32_t (*random)(void));
+AosHitReport aos_enemy_armor_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

@@ -1,9 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Axe Armor (enemy 0x04) and its axe.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define ground_walk aos_enemy_ground_walk
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_ahead_within aos_enemy_player_ahead_within
+#define random_centred aos_enemy_random_centred
+#define spawn_drift aos_enemy_spawn_drift
+#define spawn_flame_at aos_enemy_spawn_flame_at
+#define step_anim aos_enemy_step_anim
+#define take_effects aos_enemy_take_effects
 
 /* The walk speed of the axe armor for its walk frame (frame % 9 <= 6). */
 static int32_t armor_speed(const AosEnemy *a) {
@@ -102,7 +118,7 @@ static void armor_attack(AosEnemy *a, const AosSoma *soma, const AosCollision *l
  * Later updates run the collision pass first: struck, it vanishes with a
  * flame of sub_0806D5C0 within 8 x 8 pixels. It is deleted beyond screen
  * margin 4. The global pause of gEwramData + 0x4BE is not ported. */
-static AosHitReport axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_axe_update(AosEnemy *axe, AosSoma *soma, const AosEnemyKind *kind,
                                const AosWeaponEntity *weapon,
                                const AosWeaponFrames *weapon_frames, int soma_atk,
                                int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {
@@ -197,7 +213,7 @@ static void armor_die(AosEnemy *a, const AosEnemyKind *kind, uint32_t (*random)(
 
 /* EnemyAxeArmorUpdate: inside the activity window, the state, then the
  * collision pass (sub_0806E314) before the animation step. */
-static AosHitReport armor_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_armor_update(AosEnemy *a, AosSoma *soma, const AosCollision *layer,
                                  const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
                                  int cam_x, int cam_y, uint32_t (*random)(void)) {

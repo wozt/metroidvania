@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T13:49:38+00:00",
+ "generated_at": "2026-11-09T14:02:17+00:00",
  "git": {
-  "commit": "537e7f2e",
+  "commit": "1bcfdc0a",
   "branch": "main",
   "dirty": true
  },
@@ -8854,6 +8854,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/axe_armor.c",
     "src/runtime/aos_soul_red_axe.c",
     "src/runtime/aos_audio.c",
@@ -19697,6 +19698,7 @@
     "src/runtime/aos_enemies/skull_millione.c",
     "src/runtime/aos_enemies/dead_crusader.c",
     "src/runtime/aos_enemies/gargoyle.c",
+    "src/runtime/aos_enemies/axe_armor.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22151,6 +22153,12 @@
  },
  "timeline": [
   {
+   "commit": "1bcfdc0a",
+   "date": "2026-11-09",
+   "subject": "Compile Gargoyle family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "537e7f2e",
    "date": "2026-11-09",
    "subject": "Compile Dead Crusader as an independent enemy unit",
@@ -22622,12 +22630,6 @@
    "commit": "55d52d92",
    "date": "2026-11-08",
    "subject": "Document the Soma grab-state entry chain",
-   "scope": "project"
-  },
-  {
-   "commit": "b29ebff0",
-   "date": "2026-11-08",
-   "subject": "Wire the NOSOUL name flag into the soul gates",
    "scope": "project"
   }
  ],

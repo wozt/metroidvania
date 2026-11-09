@@ -2,6 +2,116 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0877 - Waiter Skeleton decoded (id 30, not yet ported)
+
+Decode-only checkpoint; nothing is implemented yet. The family is the
+largest single-enemy chain ported so far (~1400 asm lines): the parent
+plus two linked children of entity type 0x1B / role 0x48 allocated by
+sub_0806DFF8 (0x1B/0x48 normally, 0xD0/0xDF under the global 0x8E &
+0x40 inert flag).
+
+- EnemyWaiterSkeletonCreate (0x080AF574): tiles 0x081E4194,
+  palette 0x0820BE3C, frames 0x082393E0; sets + 0x20 bit 1, spawns the
+  companion child sub_080AEC0C, copies + 0x3C / + 0x34, plays
+  animation 0, + 0x5C = 0x13, element-1 contact sub_0806E1B8, hurt
+  sub_080AF6FC, floor snap sub_0806AF98, + 0x46 += 1, + 0x59 bit 1;
+  global inert -> state 4, else state 0.
+- EnemyWaiterSkeletonUpdate (0x080AF650): pause gate sub_0806CC20,
+  states 0-4 then the shared sub_0806E314 / sub_0806DF20 tail.
+  - State 0: sub_0806BC40 facing; while + 0xB == 0 the centred wake
+    box sub_0806CFFC(+ 0x42 - 0xA0, + 0x46 - 0x28, 0x140, 0x50)
+    enters state 1 (+ 0xC = + 0xB = 0).
+  - State 1 sub_080AF194, step machine + 0xB cases 0-4: case 0 picks
+    branch on RNG & 3 (== 0 -> case 1, else case 3); cases 1 and 3
+    each spawn a tray child sub_080AED28 via sub_0806DFF8 with
+    + 0x14 = 0x11 (case 1, then anim 6, step 2) or + 0x14 = 9
+    (+ 0x20 bit 0 set, anim 7, step 4); cases 2 and 4 share the tail
+    that waits for the animation-end flag + 0x6C & 4, replays
+    animation 3 looping and returns to state 2.
+  - State 2 sub_080AF2A0, step machine + 0xB cases 0-5 on the
+    sub_0806CAF8 walker with probe table 0x08528608: case 0 walks at
+    speed 0x8000 and the near box (+ 0x42 - 0x64, + 0x46 - 0x28,
+    0x190, 0x50) triggers anim 4 with RNG & 3 choosing step 1 (3/4)
+    or a 0x14-tick repeat; case 1 walks faster, the tighter box
+    (+ 0x42 - 0x50, 0x140 wide) plays anim 5 and goes to step 2;
+    case 2 sets + 0x20 bit 2 while + 0x6E == 2 (contact window),
+    clears + 0x20 bits 1-2 on animation end, goes to step 5, replays
+    anim 1 and arms + 0xD = 0x3C + (RNG & 0xF); cases 3-5 walk
+    backwards at -speed counting + 0xD down (case 3 re-arms 0x32 and
+    anim 3 at zero, case 4 falls to step 0, case 5 returns to state 0
+    with anim 0). Cases 3-4 appear unreachable from case 2's step-5
+    transition; ported as decoded.
+  - State 3 sub_080AF450 death: step 0 plays song 0x6B and flings
+    0xA debris pieces (0xB when + 0x20 bit 1 is clear) of type
+    0x49 / role 0xCF through sub_0806C5AC at the parent position
+    (vx = (RNG & 0xF - 8) << 0xE, vy = (RNG & 0xF - 8) << 0xC -
+    0x28000, + 0x54 = 0x2000, same tiles/palette merge, + 0xD =
+    0x28 + RNG & 0xF), sets the parent fade byte + 0x58 bit 0x20 and
+    step 1; step 1 returns 1 so the dispatcher deletes the parent.
+  - State 4 only steps the animation (sub_0803F17C).
+- Hurt sub_080AF6FC: only when sub_0806E218 applies a blow - it
+  computes the damage itself (sub_08021530 / sub_0806B7D8), sets
+  the + 0x2D hit timer, subtracts + 0x34 HP and returns lethal; on
+  lethal the callback runs sub_080683BC, merges palette bits into
+  + 0x5A ((+ 0x2C & 0xF) << 3 | + 0x5A & ~0x79), arms + 0xD = 0x28,
+  enters state 3 with + 0xB = + 0xC = 0.
+- Companion child sub_080AEC0C (~140 lines): hides (+ 0x59 bit 3)
+  while the parent is in state 3 or + 0x20 bit 1 is clear; state 0
+  loads the same tiles/palette/frames, sets + 0x59 bit 1, copies
+  + 0x5C and plays anim 0x11; state 1 anchors itself to the parent
+  through sub_0806C3F8 (the current frame's attach point, index 0)
+  plus the parent's + 0x42 / + 0x46, copies the facing bit and
+  replays anim 0 whenever the parent's + 0x20 bit 3 is set and its
+  own + 0x6D != 8; higher states only run the palette merge and the
+  animation step.
+- Tray child sub_080AED28 (~560 lines, the big one): preamble forces
+  state 5 when its + 0x34 life runs out and, while state <= 2,
+  converts to the flying state 3 (clears facing bits, + 0x5C = 0x13,
+  installs contact sub_080AF740 / despawn sub_080AF784 through
+  sub_0804277C type 0xA, box preset 0x0808FCFC, + 0x72 bits) when its
+  + 0x10 palette id differs from the parent's or the parent reaches
+  state 5. Case 0 loads the same resources and, after a sub_0803E654
+  draw-side check that can delete it, seeds facing/anim bits, + 0x59
+  bits 1+4, the parent + 0x5C, anim index + 0x14 (0x11 or 9), the
+  facing-dependent + 0x52 offset (+/- 0xA) and the spawn anchor
+  (+ 0x42 = parent + 0x42 + offset, + 0x46 = parent + 0x46 - 0x10);
+  parent + 0x20 bit 0 set -> state 2 directly. Case 1 mirrors the
+  parent while + 0x10 matches and the parent's + 0x6D is 2-5 through
+  the per-frame attach table 0x0811937C (x +/- byte 2, y +/- byte 3,
+  facing byte 0) and, when the parent's + 0x20 bit 2 is set, plays
+  song 0x89, arms the throw (vx from sub_0806CD38 aim vs the player,
+  + 0x48 speed, + 0x4C = 0xFFFE0000, + 0x54 = 0x2000, facing bit)
+  entering state 2? - the throw path sets state via + 0xA and falls
+  into the shared tail; case 2 detaches on palette/parent-state
+  change (+ 0x6E == 1 bumps + 0x5C, == 3 copies it and offsets -0xA)
+  or state 5. Case 3 is the flight: + 0x48 = +/- 0x8000 by facing,
+  + 0x4C = 0xFFFD8000, + 0x54 = 0x2000, song 0x89, then per frame
+  + 0x20 += + 0x48 >> 6, sub_0806D490 / sub_0806D384 / sub_0806D3C0 /
+  sub_0806D3CC physics, despawn check sub_0806D128 and, on floor or
+  margin exit, sub_0806D5C0 effect + sub_0803E6BC + delete. Case 4
+  integrates + 0x20 into the draw spin (sub_0803E058) with the
+  sub_080421AC tail; case 5 spawns the sub_0806D5C0 burst at + 0x40 /
+  + 0x44 with spin + 0x58 & 0x1F, calls sub_0803E6BC and deletes.
+  Contact sub_080AF740 deals the parent's + 0x3C through
+  sub_08021654 type field and flags the parent + 0x20 bit 3 when the
+  palette ids match; sub_080AF784 clears + 0x34 (the life the
+  preamble watches); sub_080AF78C is a second contact installing
+  sub_08021654 type 1 and recording the hit entity.
+- Shared/native approximations still to resolve at port time:
+  sub_0806C3F8 frame attach points (no exported anchor table yet -
+  fall back to the frame box centre or add the anchor export),
+  box presets 0x0808FCFC / 0x0202E8EE via exported frame boxes,
+  sub_0803E058 / sub_0803E654 / sub_0803E6BC / sub_0803B9D0 draw
+  calls approximated by the standard renderer, sub_080421AC /
+  sub_0806D128 margin and floor probes via the existing helpers,
+  the + 0x34 tray life source, and the 0x08528608 probe table.
+- Resources to export: waiter_skeleton tiles 0x081E4194, palette
+  0x0820BE3C, frames 0x082393E0 (the children reuse the same set);
+  sounds 0x89 at the tray throw.
+- Estimated port size ~800-900 lines of C plus tests; do it as its
+  own cycle. Enemy id 30, stats row: hp 120, contact 22, defence 14,
+  weak 0x0020, resist 0x0010, soul type 0 index 19 (red soul).
+
 ## Patch 0876 - Kicker Skeleton ported (id 83)
 
 - EnemyKickerSkeletonCreate (0x080C0324) /

@@ -212,7 +212,7 @@ target_include_directories(fusion_room_runtime PRIVATE include)
 target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 fusion_json m)
 fusion_enable_warnings(fusion_room_runtime)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_soul_notice.c src/runtime/aos_soul_blue_buer.c src/runtime/aos_soul_blue_imp.c src/runtime/aos_soul_blue_ghost.c src/runtime/aos_soul_blue_death.c src/runtime/aos_soul_red_lightning.c src/runtime/aos_soul_red_killer_doll.c src/runtime/aos_soul_red_nemesis.c src/runtime/aos_soul_red_throw.c src/runtime/aos_soul_red_merman.c src/runtime/aos_soul_red_axe.c src/runtime/aos_soul_red_spear.c src/runtime/aos_soul_red_shot.c src/runtime/aos_soul_red_dagger.c src/runtime/aos_soul_red_devil.c src/runtime/aos_soul_red_crow.c src/runtime/aos_soul_red_flea.c src/runtime/aos_soul_red_skull.c src/runtime/aos_soul_red_valkyrie.c src/runtime/aos_soul_red_needles.c src/runtime/aos_soul_red_ghost.c src/runtime/aos_soul_red_siren.c src/runtime/aos_soul_red_ripper.c src/runtime/aos_soul_red_millione.c src/runtime/aos_soul_red_fish_head.c src/runtime/aos_soul_red_killer_fish.c src/runtime/aos_soul_red_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos_soul_red_arrow.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos_soul.c src/runtime/aos_soul_notice.c src/runtime/aos_soul_blue_buer.c src/runtime/aos_soul_blue_imp.c src/runtime/aos_soul_blue_ghost.c src/runtime/aos_soul_blue_death.c src/runtime/aos_soul_red_lightning.c src/runtime/aos_soul_red_killer_doll.c src/runtime/aos_soul_red_nemesis.c src/runtime/aos_soul_red_throw.c src/runtime/aos_soul_red_merman.c src/runtime/aos_soul_red_axe.c src/runtime/aos_soul_red_spear.c src/runtime/aos_soul_red_shot.c src/runtime/aos_soul_red_dagger.c src/runtime/aos_soul_red_devil.c src/runtime/aos_soul_red_crow.c src/runtime/aos_soul_red_flea.c src/runtime/aos_soul_red_skull.c src/runtime/aos_soul_red_valkyrie.c src/runtime/aos_soul_red_needles.c src/runtime/aos_soul_red_ghost.c src/runtime/aos_soul_red_siren.c src/runtime/aos_soul_red_ripper.c src/runtime/aos_soul_red_millione.c src/runtime/aos_soul_red_fish_head.c src/runtime/aos_soul_red_killer_fish.c src/runtime/aos_soul_red_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
                src/runtime/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos_soul_menu.c
                src/runtime/aos_levelup.c
                src/runtime/aos_bestiary.c
@@ -763,6 +763,11 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_soul_red_shot_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_shot_tests)
     add_test(NAME aos_soul_red_shot COMMAND fusion_aos_soul_red_shot_tests)
+
+    add_executable(fusion_aos_soul_red_arrow_tests tests/test_aos_soul_red_arrow.c src/runtime/aos_soul_red_arrow.c)
+    target_include_directories(fusion_aos_soul_red_arrow_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_soul_red_arrow_tests)
+    add_test(NAME aos_soul_red_arrow COMMAND fusion_aos_soul_red_arrow_tests)
 
     add_executable(fusion_aos_soul_red_dagger_tests tests/test_aos_soul_red_dagger.c
                    src/runtime/aos_soul_red_dagger.c src/runtime/aos_collision.c)

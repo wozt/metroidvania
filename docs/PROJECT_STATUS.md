@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0890 - The Skull Archer soul's arrow in its own module
+
+- The arrow of the Skull Archer red soul (sub_08028BC4) leaves
+  `aria_runtime.c` for `aos_soul_red_arrow.{c,h}`: flight at 6 pixels a
+  frame, stop on its hit and 16 blinking frames, with a ROM-free test.
+  The runtime copies its position and state back for the collision pass
+  and the blink, so the behaviour is unchanged. It is the pattern for the
+  other souls still coded in the runtime (see the handoff).
+
 ## Patch 0889 - Soul tests without the enemy code
 
 - Ten red and blue soul test binaries (spear, devil, crow, needles, ghost,

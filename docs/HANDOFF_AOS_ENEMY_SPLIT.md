@@ -112,6 +112,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      `update_skills` (around line 1800) has cases such as `SKILL_BAT`,
      `SKILL_ARROW`, `SKILL_BOW`, `SKILL_AXE`, `SKILL_DAGGER`, `SKILL_HARPY`,
      `SKILL_GLADIATOR` and `SKILL_DECOY`; only 7 of them call a module.
+     Patch 0890 moved `SKILL_ARROW` as the pattern to follow: a pure
+     submodel in `aos_soul_red_arrow.{c,h}` (create and update, no SDL, its
+     own ROM-free test), stored in `AriaSkill`, with the runtime copying
+     back the fields other code reads (here `x`, `vx`, `state`, `timer`,
+     used by the collision pass and the blink).
    - *(Done in patch 0889.)* Ten soul tests no longer link `aos_enemy.c`.
      The throw, Fleaman and Gladiator soul tests still do: their modules
      keep their state in an `AosEnemy`. Some soul tests may still list

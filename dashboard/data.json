@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T12:30:35+00:00",
+ "generated_at": "2026-11-09T12:32:38+00:00",
  "git": {
-  "commit": "12de9efe",
+  "commit": "7177842d",
   "branch": "main",
   "dirty": true
  },
@@ -16379,7 +16379,8 @@
     "src/runtime/aos_soul_red_lightning.c",
     "src/runtime/aos_soul_red_killer_doll.c",
     "src/runtime/aos_soul_red_nemesis.c",
-    "src/runtime/aos_enemy.c"
+    "src/runtime/aos_enemy.c",
+    "src/runtime/aos_soul_red_arrow.c"
    ],
    "tests": [
     "tests/test_aos_soul.c",
@@ -16408,7 +16409,8 @@
     "tests/test_aos_soul_red_lightning.c",
     "tests/test_aos_soul_red_killer_doll.c",
     "tests/test_aos_soul_red_nemesis.c",
-    "tests/test_aos_enemy.c"
+    "tests/test_aos_enemy.c",
+    "tests/test_aos_soul_red_arrow.c"
    ],
    "dependencies": [
     "aos.souls.inventory_pickups",
@@ -16529,7 +16531,8 @@
      "tests/test_aos_soul_red_lightning.c",
      "tests/test_aos_soul_red_killer_doll.c",
      "tests/test_aos_soul_red_nemesis.c",
-     "tests/test_aos_enemy.c"
+     "tests/test_aos_enemy.c",
+     "tests/test_aos_soul_red_arrow.c"
     ],
     "in_game_check": [
      "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -16809,6 +16812,16 @@
       "registered": true,
       "ctest": [
        "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_soul_red_arrow.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul_red_arrow"
       ],
       "outcome": "passed",
       "exists": true
@@ -21591,6 +21604,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_soul_red_arrow",
+    "files": [
+     "tests/test_aos_soul_red_arrow.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_soul_red_dagger",
     "files": [
      "tests/test_aos_soul_red_dagger.c"
@@ -22068,12 +22088,18 @@
    }
   ],
   "summary": {
-   "passed": 136,
+   "passed": 137,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "7177842d",
+   "date": "2026-11-09",
+   "subject": "Build ten Aria soul tests without the enemy code",
+   "scope": "project"
+  },
   {
    "commit": "12de9efe",
    "date": "2026-11-09",
@@ -22546,12 +22572,6 @@
    "commit": "ba77b3fe",
    "date": "2026-11-08",
    "subject": "Decode the new-soul sparkle storm (sub_080451F4/sub_08045350)",
-   "scope": "project"
-  },
-  {
-   "commit": "f940352f",
-   "date": "2026-11-08",
-   "subject": "Port the held-soul sparkle above Soma (sub_08045BC8/sub_08045164)",
    "scope": "project"
   }
  ],
@@ -29657,7 +29677,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29700,7 +29721,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29743,7 +29765,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29786,7 +29809,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29829,7 +29853,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29872,7 +29897,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29915,7 +29941,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -29958,7 +29985,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30001,7 +30029,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30044,7 +30073,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30087,7 +30117,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30130,7 +30161,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30173,7 +30205,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30216,7 +30249,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30259,7 +30293,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30302,7 +30337,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30345,7 +30381,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30388,7 +30425,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30431,7 +30469,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30474,7 +30513,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30517,7 +30557,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30560,7 +30601,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30603,7 +30645,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30646,7 +30689,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30689,7 +30733,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30732,7 +30777,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30775,7 +30821,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30818,7 +30865,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30861,7 +30909,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30904,7 +30953,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30947,7 +30997,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -30990,7 +31041,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31033,7 +31085,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31076,7 +31129,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31119,7 +31173,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31162,7 +31217,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31205,7 +31261,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31248,7 +31305,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31291,7 +31349,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31334,7 +31393,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31377,7 +31437,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31420,7 +31481,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31463,7 +31525,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31506,7 +31569,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31549,7 +31613,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31592,7 +31657,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31635,7 +31701,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31678,7 +31745,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31721,7 +31789,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31764,7 +31833,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31807,7 +31877,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31850,7 +31921,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31893,7 +31965,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31936,7 +32009,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -31979,7 +32053,8 @@
          "tests/test_aos_soul_red_lightning.c",
          "tests/test_aos_soul_red_killer_doll.c",
          "tests/test_aos_soul_red_nemesis.c",
-         "tests/test_aos_enemy.c"
+         "tests/test_aos_enemy.c",
+         "tests/test_aos_soul_red_arrow.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"

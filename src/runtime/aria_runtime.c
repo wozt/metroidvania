@@ -51,6 +51,7 @@
 #include "aos_soul_red_nemesis.h"
 #include "aos_soul_red_ripper.h"
 #include "aos_soul_red_millione.h"
+#include "aos_soul_red_arrow.h"
 #include "aos_soul_red_shot.h"
 #include "aos_soul_red_skull.h"
 #include "aos_soul_red_valkyrie.h"
@@ -931,6 +932,7 @@ typedef struct {
     AosAxeTrail trail;      /* SKILL_AXE_TRAIL */
     AosSpear spear;         /* SKILL_SPEAR */
     AosShot shot;           /* SKILL_SHOT */
+    AosArrow arrow;         /* SKILL_ARROW */
     AosDagger dagger;       /* SKILL_DAGGER, with its trail entity */
     AosDevilFire fire;      /* SKILL_DEVIL_FIRE */
     AosCrow crow;           /* SKILL_CROW */
@@ -2543,27 +2545,20 @@ static void update_skills(AriaSouls *souls) {
             break;
         }
         case SKILL_ARROW:
-            /* sub_08028BC4: frame 1, 6 pixels a frame (sound 0xC8 is not
-             * played); once its hit callback has run it stops and blinks 16
-             * frames (the stuck-arrow helper sub_080239E4 is not ported). */
+            /* sub_08028BC4 (aos_soul_red_arrow); the state and position are
+             * copied back for the collision pass and the blink. */
             if (!skill->started) {
                 skill->started = true;
-                skill->vx = skill->facing_left ? -0x60000 : 0x60000;
-                skill->state = 1;
+                skill->arrow = aos_arrow_start(skill->x, skill->facing_left);
             }
-            if (skill->state == 1) {
-                skill->x += skill->vx;
-                if (skill->struck) {
-                    skill->state = 2;
-                    skill->timer = 0x10;
-                }
-            } else if (skill->state == 2) {
-                if (skill->timer == 0) {
-                    end_skill(souls, skill);
-                    break;
-                }
-                skill->timer--;
+            if (!aos_arrow_update(&skill->arrow, skill->struck)) {
+                end_skill(souls, skill);
+                break;
             }
+            skill->x = skill->arrow.x;
+            skill->vx = skill->arrow.vx;
+            skill->state = skill->arrow.state;
+            skill->timer = skill->arrow.timer;
             if (skill_outside(souls, skill, 2)) end_skill(souls, skill);
             break;
         default: break;

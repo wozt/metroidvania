@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0913 - Skeleton family becomes a real translation unit
+
+- `aos_enemies/skeleton.c` now compiles independently with its body,
+  head, held-bone, thrown-bone, shatter and merge helpers exported
+  through `aos_enemy_internal.h` for the nine still-included families
+  that share them (Biphron, Bone Pillar, Cockatrice, Head Hunter,
+  Minotaur, Nemesis, Waiter Skeleton, Winged Skeleton, Worms).
+- The object union preserves all 488 `-O0` symbol sizes; normalized
+  instructions differ only in GCC stack layout (`cockatrice_shadow_place`
+  padding, `skeleton_merge` slot offsets). No behavior or feature status
+  changed.
+
 ## Patch 0912 - Skull Archer family becomes a real translation unit
 
 - `aos_enemies/skull_archer.c` now compiles independently with its body,

@@ -1,9 +1,27 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Skeleton (enemy 0x02): its parts, bones and update.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <stdlib.h>
+
+#define clamp_to_room aos_enemy_clamp_to_room
+#define collide aos_enemy_collide
+#define copy_collision_result aos_enemy_copy_collision_result
+#define face_player aos_enemy_face_player
+#define ground_walk aos_enemy_ground_walk
+#define play_loop aos_enemy_play_loop
+#define player_dy aos_enemy_player_dy
+#define player_in_centred aos_enemy_player_in_centred
+#define skeleton_corner aos_enemy_skeleton_corner
+#define skeleton_merge aos_enemy_skeleton_merge
+#define skeleton_place aos_enemy_skeleton_place
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 void aos_enemy_make_static_child(AosEnemy *child, const AosEnemy *owner,
                                  uint8_t role, int frame) {
@@ -30,7 +48,7 @@ static const int8_t skeleton_hand[7][2] = {
 
 /* sub_0806C3F8(body, 0): the far corner of the body's current frame's last
  * OAM component, mirrored with its facing, as an integer offset. */
-static void skeleton_corner(const AosEnemy *body, const AosEnemyKind *kind, int *dx, int *dy) {
+void aos_enemy_skeleton_corner(const AosEnemy *body, const AosEnemyKind *kind, int *dx, int *dy) {
     int anim = body->anim.id < AOS_ENEMY_MAX_ANIMS ? body->anim.id : 0;
     int frame = body->anim.frame < AOS_ENEMY_MAX_FRAMES ? body->anim.frame : 0;
     int ex = kind->edges[anim][frame][0], ey = kind->edges[anim][frame][1];
@@ -39,7 +57,7 @@ static void skeleton_corner(const AosEnemy *body, const AosEnemyKind *kind, int 
 }
 
 /* A child at the body's position plus `dx`, `dy` (whole pixels). */
-static void skeleton_place(AosEnemy *child, const AosEnemy *body, int dx, int dy) {
+void aos_enemy_skeleton_place(AosEnemy *child, const AosEnemy *body, int dx, int dy) {
     child->x = (int32_t)((uint32_t)(uint16_t)((body->x >> 16) + dx) << 16) | (child->x & 0xFFFF);
     child->y = (int32_t)((uint32_t)(uint16_t)((body->y >> 16) + dy) << 16) | (child->y & 0xFFFF);
 }
@@ -66,7 +84,7 @@ static void skeleton_child(AosEnemy *body, uint8_t role, AosHitReport *report) {
  * last component) or in its hand (state 2, plus the 0x0852892C offset),
  * animation 0x10, or 7 while the body laughs (+ 0x1A bit 5). It goes with
  * the body or once neither head bit is set. */
-static void skeleton_head_update(AosEnemy *h, const AosEnemyKind *kind) {
+void aos_enemy_skeleton_head_update(AosEnemy *h, const AosEnemyKind *kind) {
     const AosEnemy *body = h->parent;
     if (!body || body->removed || !(body->skel_flags & 3)) {
         h->removed = true;
@@ -99,7 +117,7 @@ static void skeleton_head_update(AosEnemy *h, const AosEnemyKind *kind) {
 /* sub_080C43C4: the bone in the body's hand (animation 8) while + 0x1A
  * bit 2 is set: shown at frame 3 of the body's animation 6 (the pick-up),
  * gone if the body hides while it shows. */
-static void skeleton_held_update(AosEnemy *b, const AosEnemyKind *kind) {
+void aos_enemy_skeleton_held_update(AosEnemy *b, const AosEnemyKind *kind) {
     const AosEnemy *body = b->parent;
     if (!body || body->removed || !(body->skel_flags & 4)) {
         b->removed = true;
@@ -163,7 +181,7 @@ static void skeleton_throw(AosEnemy *body, bool head, AosHitReport *report) {
  * sound 0x151) and a head flies back twelve times faster (vy negated,
  * 0x15D), both without collisions (state 3). Below screen row 0xAA it is
  * gone (state 4) and the body counts it back. */
-static AosHitReport skeleton_bone_update(AosEnemy *p, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_skeleton_bone_update(AosEnemy *p, AosSoma *soma, const AosEnemyKind *kind,
                                          const AosWeaponEntity *weapon,
                                          const AosWeaponFrames *weapon_frames, int soma_atk,
                                          int soma_def, int cam_x, int cam_y) {
@@ -219,7 +237,7 @@ static const int8_t skeleton_pieces[7][5] = {
     {-4, -2, 0x1A, 0x0C, 0x28},
 };
 
-static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report) {
+void aos_enemy_skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report) {
     e->hidden = true;
     bool right = e->x < target_x(soma);
     for (int i = (e->skel_flags & 3) ? 0 : 1; i < 7 && report->child_count < AOS_ENEMY_MAX_CHILDREN;
@@ -348,7 +366,7 @@ static void skeleton_close_in(AosEnemy *e, const AosSoma *soma, const AosCollisi
 }
 
 /* The collision pass's report with its children (the death pieces). */
-static void skeleton_merge(AosHitReport *report, const AosHitReport *hit) {
+void aos_enemy_skeleton_merge(AosHitReport *report, const AosHitReport *hit) {
     copy_collision_result(report, hit);
     report->targetable |= hit->targetable;
     report->wake_spawner |= hit->wake_spawner;
@@ -365,7 +383,7 @@ static void skeleton_merge(AosHitReport *report, const AosHitReport *hit) {
  * + 0x12 takes a random value and states 0-4 run, then the animation step
  * and the collision pass. The first update creates the head and the bone
  * in hand (EnemySkeletonCreate's children). */
-static AosHitReport skeleton_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
+AosHitReport aos_enemy_skeleton_update(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
                                     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
                                     const AosWeaponFrames *weapon_frames, int soma_atk,
                                     int soma_def, int cam_x, int cam_y, uint32_t (*random)(void)) {

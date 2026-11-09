@@ -1455,12 +1455,10 @@ void aos_enemy_frame_boxes(const AosEnemy *enemy, const AosEnemyKind *kind,
 #define frame_boxes aos_enemy_frame_boxes
 
 
-static void skeleton_shatter(AosEnemy *e, const AosSoma *soma, AosHitReport *report);
 static void nemesis_struck(AosEnemy *n);
 static void peeping_struck(AosEnemy *e, const AosSoma *soma);
 static void fish_struck(AosEnemy *f, const AosEnemyKind *kind);
 static void dragon_struck(AosEnemy *d, uint8_t attacker);
-static void skeleton_merge(AosHitReport *report, const AosHitReport *hit);
 
 /* sub_0806E314 / sub_080421AC: the player against the enemy, then the
  * weapon against the enemy, then the contact callbacks. */
@@ -1686,7 +1684,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                      * seven pieces (sub_080C3E18), the reward (the host's)
                      * and 256 hidden frames in state 0xFF. */
                     aos_audio_play_song(0x6B);
-                    skeleton_shatter(enemy, soma, &report);
+                    aos_enemy_skeleton_shatter(enemy, soma, &report);
                     enemy->state = 0xFF;
                     enemy->step = 1;
                     enemy->timer = 0xFF;
@@ -2744,6 +2742,10 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #define rock_armor_die aos_enemy_rock_armor_die
 #define rock_probes aos_enemy_rock_probes
 #define make_debris aos_enemy_make_debris
+#define make_static_child aos_enemy_make_static_child
+#define skeleton_corner aos_enemy_skeleton_corner
+#define skeleton_merge aos_enemy_skeleton_merge
+#define skeleton_place aos_enemy_skeleton_place
 /* The monsters, one file each in aos_enemies/ (included here: they share
  * this file's static framework and helpers in one translation unit). */
 #include "aos_enemies/headhunter.c"
@@ -2758,7 +2760,7 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/skeleton.c"
+
 #include "aos_enemies/killer_fish.c"
 #include "aos_enemies/winged_skeleton.c"
 #include "aos_enemies/harpy.c"
@@ -2952,14 +2954,14 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                  soma_atk, soma_def, cam_x, cam_y);
     }
     if (enemy->role == AOS_ROLE_SKELETON_BONE)
-        return skeleton_bone_update(enemy, soma, kind, weapon, weapon_frames,
+        return aos_enemy_skeleton_bone_update(enemy, soma, kind, weapon, weapon_frames,
                                     soma_atk, soma_def, cam_x, cam_y);
     if (enemy->role == AOS_ROLE_SKELETON_HEAD) {
-        skeleton_head_update(enemy, kind);
+        aos_enemy_skeleton_head_update(enemy, kind);
         return report;
     }
     if (enemy->role == AOS_ROLE_SKELETON_HELD) {
-        skeleton_held_update(enemy, kind);
+        aos_enemy_skeleton_held_update(enemy, kind);
         return report;
     }
     if (enemy->role == AOS_ROLE_WINGED_BONE)
@@ -2974,7 +2976,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return winged_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_SKELETON && enemy->role == AOS_ROLE_ENEMY)
-        return skeleton_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_skeleton_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk,
                                soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_GIANT_GHOST_PART) {
         giant_part_update(enemy, soma, kind, random, &report);

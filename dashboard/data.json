@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:10:28+00:00",
+ "generated_at": "2026-11-09T14:14:13+00:00",
  "git": {
-  "commit": "1d9a40bc",
+  "commit": "957d4536",
   "branch": "main",
   "dirty": true
  },
@@ -9139,6 +9139,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/biphron.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -9417,6 +9419,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/bone_pillar.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -9826,6 +9830,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/cockatrice.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -10977,6 +10983,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/worm.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -11301,6 +11309,8 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/headhunter.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos_pickup.c",
@@ -12225,6 +12235,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/minotaur.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -12394,6 +12406,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/nemesis.c",
     "src/runtime/aos_enemy.h",
     "src/runtime/aria_runtime.c",
@@ -12565,6 +12579,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/worm.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -12735,6 +12751,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/minotaur.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -13055,6 +13073,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/skeleton.c",
     "src/assets/aos/objects.c",
     "src/runtime/aria_runtime.c"
@@ -13729,6 +13748,7 @@
    "local_sources": [
     "src/runtime/aos_enemy.c",
     "src/runtime/aos_enemies/skull_archer.c",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/waiter_skeleton.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -13926,6 +13946,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/runtime/aos_enemies/winged_skeleton.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19705,6 +19727,7 @@
     "src/runtime/aos_enemies/axe_armor.c",
     "src/runtime/aos_enemies/rock_armor.c",
     "src/runtime/aos_enemies/skull_archer.c",
+    "src/runtime/aos_enemies/skeleton.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22159,6 +22182,12 @@
  },
  "timeline": [
   {
+   "commit": "957d4536",
+   "date": "2026-11-09",
+   "subject": "Compile Skull Archer family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "1d9a40bc",
    "date": "2026-11-09",
    "subject": "Compile Rock Armor family as an independent enemy unit",
@@ -22630,12 +22659,6 @@
    "commit": "e786adaa",
    "date": "2026-11-08",
    "subject": "Map the bestiary portrait record layout",
-   "scope": "project"
-  },
-  {
-   "commit": "52072baf",
-   "date": "2026-11-08",
-   "subject": "Document the bestiary enemy-portrait path",
    "scope": "project"
   }
  ],

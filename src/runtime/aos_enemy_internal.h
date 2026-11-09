@@ -254,5 +254,26 @@ void aos_enemy_debris_update(AosEnemy *enemy, const AosCollision *layer,
                              AosHitReport *report);
 AosEnemy aos_enemy_make_debris(const AosEnemy *parent,
                                const AosAnimSet *anims, unsigned anim);
+void aos_enemy_skeleton_corner(const AosEnemy *body,
+                               const AosEnemyKind *kind, int *dx, int *dy);
+void aos_enemy_skeleton_place(AosEnemy *child, const AosEnemy *body,
+                              int dx, int dy);
+void aos_enemy_skeleton_merge(AosHitReport *report,
+                              const AosHitReport *hit);
+void aos_enemy_skeleton_shatter(AosEnemy *enemy, const AosSoma *soma,
+                                AosHitReport *report);
+AosHitReport aos_enemy_skeleton_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_skeleton_bone_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y);
+void aos_enemy_skeleton_head_update(AosEnemy *enemy,
+                                    const AosEnemyKind *kind);
+void aos_enemy_skeleton_held_update(AosEnemy *enemy,
+                                    const AosEnemyKind *kind);
 
 #endif

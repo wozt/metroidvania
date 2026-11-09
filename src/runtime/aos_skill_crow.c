@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_skill_crow.h"
 
-#include "aos_enemy.h"
+#include "aos_math.h"
 
 AosCrow aos_crow_create(bool soma_facing_left) {
     AosCrow crow = {.angle = 0x1000, .step = (int16_t)0xFEB9, .timer = AOS_CROW_FRAMES,

@@ -2,7 +2,7 @@
 #include "aos_skill_needles.h"
 
 #include "aos_audio.h"
-#include "aos_enemy.h"
+#include "aos_math.h"
 
 AosNeedles aos_needles_create(int32_t soma_x, int32_t soma_y, bool soma_facing_left) {
     return (AosNeedles){

@@ -3,7 +3,7 @@
 #include "aos_guardian_imp.h"
 
 #include "aos_audio.h"
-#include "aos_enemy.h"
+#include "aos_math.h"
 
 /* Sqrt (BIOS call 0x08): the integer square root, rounded down. */
 static uint32_t bios_sqrt(uint32_t x) {

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SkillBuerUse and its flames sub_0802FDE4 (see aos_soul.h). */
 #include "aos_audio.h"
-#include "aos_enemy.h"
+#include "aos_math.h"
 #include "aos_soul.h"
 
 bool aos_buer_guardian_update(AosBuerGuardian *buer, AosGuardian *guardian, AosStats *stats,

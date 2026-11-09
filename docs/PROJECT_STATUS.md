@@ -2,6 +2,25 @@
 
 Last updated: **2026-11-08**.
 
+## Patch 0885 - Aria enemies split into one file per monster
+
+- `src/runtime/aos_enemy.c` (16,586 lines) is now the shared enemy
+  framework (about 3,500 lines: creation, collision pass, common movement
+  helpers, update dispatch) and includes 52 monster-family files from
+  `src/runtime/aos_enemies/` (for example `zombie.c`, `harpy.c` for Harpy
+  and Siren, `skull_millione.c` for Skull Millione, Cagnazzo and
+  Lubicant). It remains a single translation unit so the monsters keep
+  sharing its static helpers; the code was moved, not changed: every one
+  of the 488 functions compiles to the same size and instructions as
+  before (only `angle_to_target`'s stack frame padding differs, since
+  `aos_arctan2` is now in another file).
+- New `aos_math`: the ROM sine and the BIOS ArcTan2, which the red and
+  blue soul modules only needed from `aos_enemy.h`. Those modules now
+  include `aos_math.h` instead.
+- The monster annotations now list their own file. The remaining
+  restructuring (real translation units, the soul modules) is described in
+  `docs/HANDOFF_AOS_ENEMY_SPLIT.md`.
+
 ## Patch 0884 - The editor's transitions in the Aria runtime
 
 - `fusion_aria_runtime` now plays the room document's transitions to Aria

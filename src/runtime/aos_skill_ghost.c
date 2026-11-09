@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_skill_ghost.h"
 
-#include "aos_enemy.h"
+#include "aos_math.h"
 
 #include <limits.h>
 

@@ -45,7 +45,7 @@ uint8_t aos_title_affine_index(const AosTitleGraphics *graphics, const AosTitleA
     return graphics->affine[(size_t)ty * AOS_TITLE_LAYER_SIZE + (size_t)tx];
 }
 
-/* sub_080009E4: the ROM sine (as aos_sine of aos_enemy.c). */
+/* sub_080009E4: the ROM sine (as aos_sine of aos_math.c). */
 static int32_t title_sine(uint32_t angle) {
     static uint16_t table[0x400];
     if (!table[1])
@@ -262,7 +262,7 @@ static int32_t random_centered(AosTitleScreen *t, int32_t n) {
     return (int32_t)(title_random(t) & (uint32_t)(n - 1)) - n / 2;
 }
 
-/* ArcTan2 (BIOS call 0x0A), as aos_arctan2 of aos_enemy.c. */
+/* ArcTan2 (BIOS call 0x0A), as aos_arctan2 of aos_math.c. */
 static int32_t arctan(int32_t i) {
     int32_t a = -((i * i) >> 14);
     int32_t b = ((0xA9 * a) >> 14) + 0x390;

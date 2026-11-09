@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_skill_siren.h"
 
-#include "aos_enemy.h"
+#include "aos_math.h"
 
 AosSirenSoul aos_siren_soul_create(int32_t soma_x, int32_t soma_y, bool soma_facing_left,
                                    uint32_t variant_random, uint32_t phase_random) {

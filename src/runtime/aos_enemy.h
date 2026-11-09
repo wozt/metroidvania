@@ -1,6 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies.
  *
+ * Layout: aos_enemy.c holds the shared framework (creation, the collision
+ * pass, the bat and zombie constructors, the common movement helpers and
+ * the update dispatch) and includes one file per monster family from
+ * aos_enemies/; the whole is still one translation unit. The ROM sine and
+ * the BIOS ArcTan2 are in aos_math.
+ *
  * Shared parts of the enemy framework (cvaos code_08060B98): the activity
  * window of sub_0806CC20, facing the player (sub_0806BC40), the signed
  * velocity by facing (sub_0806E120), the vertical distance to the player
@@ -50,6 +56,7 @@
 #include <stdint.h>
 
 #include "aos_anim.h"
+#include "aos_math.h"
 #include "aos_collision.h"
 #include "aos_damage_popup.h"
 #include "aos_combat.h"
@@ -449,10 +456,7 @@ typedef struct {
 uint32_t aos_random(void);
 void aos_random_seed(uint32_t seed);
 uint32_t aos_random_get(void);
-/* sub_080009E4: sine of a 16-bit angle (0x10000 per turn), 16.16. */
-int32_t aos_sine(uint32_t angle);
-/* ArcTan2 (BIOS call 0x0A): the angle of (x, y), 0x10000 per turn. */
-uint16_t aos_arctan2(int16_t x, int16_t y);
+/* aos_sine and aos_arctan2: aos_math.h (included above). */
 /* gEwramData + 0x8E bit 0x40, read by EnemyBatCreate (a bat created while
  * it is set stays in state 4, inert). It is set by sub_0804C404 (reached
  * through the table 0x085254D8) and cleared by sub_0804CC14; its meaning is

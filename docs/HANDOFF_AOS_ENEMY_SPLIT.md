@@ -1,0 +1,136 @@
+# Handoff: finishing the Aria enemy and soul code reorganisation
+
+Audience: the next coding agent (Codex) continuing this refactor. Read
+`AGENTS.md` first; its cycle, registry and commit rules apply unchanged.
+
+## Why
+
+All 63 ported Aria monsters lived in one file, `src/runtime/aos_enemy.c`
+(16,586 lines), while 26 files named after monsters
+(`aos_skill_*.c`, `aos_guardian_*.c`) are not monsters at all: they are the
+**souls** Soma gets from them (red-soul attacks and blue-soul familiars).
+Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
+(about 8,100 lines). The goal is one obvious place per monster and per soul.
+
+## Done in the first pass (patch 0885)
+
+1. **Monsters split by file, behaviour unchanged.**
+   `aos_enemy.c` now holds only the shared framework, in this order:
+   - the soul-attack, decoy and burst state, particles, flames, math
+     helpers, `play`/`step_anim`, targeting;
+   - the bat and zombie constructors and the big `enemy_create`;
+   - the collision pass (`frame_boxes`, `collide`) and `generic_death`;
+   - the common movement helpers that used to be scattered between
+     monsters (walker collision, aiming, `integrate`/`stop`, projectile and
+     fall collision, flight, ground probes, water probes,
+     `copy_collision_result`, `merge_enemy_hit`);
+   - `#include "aos_enemies/<family>.c"` for each of the 52 monster-family
+     files, in their original order;
+   - the update dispatch (`early_enemy_*`, `aos_enemy_update`,
+     `enemy_update`).
+   The fragments are **not** translation units. They are included by
+   `aos_enemy.c` and use its `static` helpers. They are not listed in
+   CMake. Each starts with a comment saying so.
+   Families sharing native code stay together: `crow.c` (blue and red
+   crow), `harpy.c` (Harpy and Siren), `gorgon.c` (Gorgon and Catoblepas),
+   `curly.c` (Curly and Durga), `valkyrie.c` (Valkyrie and Erinys),
+   `gargoyle.c` (Gargoyle and Gremlin), `skull_millione.c` (Skull
+   Millione, Cagnazzo, Lubicant), `worm.c` (Giant and Poison Worm),
+   `minotaur.c` (both Minotaurs), `tiny_devil.c` (Tiny Devil and Imp).
+   `killer_doll.c` also holds the Lightning Doll's piece table (it shares
+   one comment with the Killer Doll's).
+2. **Proof of no change.** Both versions were compiled at `-O0` and every
+   function's size and normalised disassembly was compared: all 488
+   symbols are identical. The only difference is `angle_to_target`'s stack
+   padding, because its callee `aos_arctan2` moved to another file.
+   Procedure to repeat for every later step:
+   ```sh
+   git show HEAD~1:src/runtime/aos_enemy.c > /tmp/old_enemy.c   # adjust the revision
+   cc -Iinclude -Isrc/runtime -std=c11 -O0 -c /tmp/old_enemy.c -o /tmp/old.o
+   cc -Iinclude -Isrc/runtime -std=c11 -O0 -c src/runtime/aos_enemy.c -o /tmp/new.o
+   for v in old new; do
+     objdump -d --no-show-raw-insn -r /tmp/$v.o | awk '/^[0-9a-f]+ <.*>:$/{n=$2}
+       /^ /{sub(/^ *[0-9a-f]+:\t/,""); gsub(/[0-9a-f]+ <[^>]*>/,"X"); print n"\t"$0}' |
+       sort > /tmp/$v.txt
+     nm -S /tmp/$v.o | awk 'NF==4{print $4,$2}' | sort > /tmp/$v.sizes
+   done
+   diff /tmp/old.sizes /tmp/new.sizes && diff -q /tmp/old.txt /tmp/new.txt
+   ```
+   Once functions move to separate object files, compare the union of all
+   the new objects' symbols with the old object's, as was done for
+   `aos_math`.
+3. **`aos_math.{c,h}`** now holds `aos_sine` (with `sSineTable`) and
+   `aos_arctan2`. Every soul module that included `aos_enemy.h` only for
+   them now includes `aos_math.h`. `aos_enemy.h` includes `aos_math.h`, so
+   existing callers still compile. `aos_math.c` was added next to every
+   `aos_enemy.c` in `CMakeLists.txt`.
+4. **Registries.** The `local_sources` of the monster rows in
+   `data/native_parity/annotations.tsv` list `aos_enemy.c` plus their
+   family file. The soul rows also list `aos_math.c`. Four
+   `data/dashboard/features.tsv` rows (White Dragon, Peeping Eye) list
+   their family file.
+
+## Remaining work, in order
+
+1. **Make the fragments real translation units.**
+   - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
+     framework helper the fragments use (currently `static` in
+     `aos_enemy.c`; there are 109 `static` definitions there).
+   - Make those helpers non-static with an `aos_enemy_` prefix, or another
+     distinct one. Generic names such as `play`, `stop`, `integrate`,
+     `whole`, `place` and `target_x` would clash at link time in
+     `fusion_metroidvania`, which links both games' runtimes.
+   - Move the shared mutable state behind accessors or `extern`
+     declarations in the internal header: `flag_8e_40`, `soul_attacks`,
+     `soul_attack_count`, `soul_contact`, `burst_source`,
+     `burst_source_count`, `no_target`, `aim_self` (all near the top of
+     `aos_enemy.c`). Do not duplicate them.
+   - Each family file keeps its own helpers `static`. It exposes only its
+     create, update and child-update entry points through the internal
+     header, as `enemy_create`, `collide` and `enemy_update` call them.
+   - `enemy_create` (the long per-id constructor) and `collide` reach into
+     many families' fields. You can leave them in `aos_enemy.c`, or turn
+     them into per-family `*_create` functions. Do it one family at a time.
+   - Add each new `.c` file to every CMake target that lists
+     `src/runtime/aos_enemy.c` (16 places). A small CMake variable such as
+     `AOS_ENEMY_SOURCES` would avoid repeating the list.
+   - Verify with the comparison above, then with `fusion_aos_enemy_tests`
+     and the full cycle.
+2. **Move the bat and zombie** out of the framework region into
+   `aos_enemies/bat.c` and `zombie.c`. They are interleaved with framework
+   code (`bat_sees` .. `bat_swoop`, `zombie_vanish`, `zombie_create`,
+   `bat_die`). Point the bat's annotation row at the new file.
+3. **Souls.**
+   - Rename the soul modules so their nature is visible, for example
+     `aos_skill_merman.c` to `aos_soul_red_merman.c` and
+     `aos_guardian_buer.c` to `aos_soul_blue_buer.c`. Update the CMake
+     targets, test names, annotation and feature sources and documents
+     that name them.
+   - Move the souls coded inline in `aria_runtime.c` into such modules:
+     `update_skills` (around line 1800) has cases such as `SKILL_BAT`,
+     `SKILL_ARROW`, `SKILL_BOW`, `SKILL_AXE`, `SKILL_DAGGER`, `SKILL_HARPY`,
+     `SKILL_GLADIATOR` and `SKILL_DECOY`; only 7 of them call a module.
+   - Several soul tests link `aos_enemy.c` only for the math. Check each
+     test target in `CMakeLists.txt` and drop `aos_enemy.c` where it now
+     links with `aos_math.c` alone.
+4. **Duplicate math.** `src/runtime/aos_title_screen.c` has its own copies
+   of the sine, ArcTan2 and `fixed_mul`. Replace them with `aos_math`
+   after checking they are identical. `isqrt` and `fixed_mul` could move to
+   `aos_math` too.
+5. **Header comment.** The first comment of `aos_enemy.h` is one long
+   sentence listing every monster. Replace it with a short description of
+   the framework and leave the per-monster details in the family files.
+
+## Rules and pitfalls
+
+- Move code only. Do not change behaviour in the same commit, and keep
+  every native routine name and comment.
+- One family or one step per commit. Run the comparison, the targeted
+  tests (`ctest --test-dir build -R aos_enemy` and the soul tests), then
+  the full `AGENTS.md` cycle before committing.
+- Keep the registries in sync in the same commit: `annotations.tsv`
+  `local_sources`, `features.tsv`, `aos_monster_aspects.tsv` if it names
+  files, and the documents. Do not change any status.
+- Never add Julius mode or SOUL TRADE (see `AGENTS.md`).
+- Another session ports monsters into these files. Pull before starting
+  and keep each refactor commit small to limit conflicts.

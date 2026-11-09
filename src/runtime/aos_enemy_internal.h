@@ -492,5 +492,15 @@ void aos_enemy_mantle_ghost_update(AosEnemy *enemy,
 void aos_enemy_mantle_orbit_update(AosEnemy *enemy,
                                    const AosEnemy *parent,
                                    uint32_t (*random)(void));
+AosHitReport aos_enemy_dryad_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_dryad_seed_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 
 #endif

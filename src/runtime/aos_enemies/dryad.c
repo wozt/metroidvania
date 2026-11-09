@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Dryad (enemy 0x46) and its seeds.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define append_effects aos_enemy_append_effects
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define outside_margins aos_enemy_outside_margins
+#define play_loop aos_enemy_play_loop
+#define player_in aos_enemy_player_in
+#define random_direction aos_enemy_random_direction
+#define snap_to_floor aos_enemy_snap_to_floor
+#define spawn_drift aos_enemy_spawn_drift
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 /* sub_080AE96C: the seed it spits — entity type 0x1B, role 0x48, update
  * sub_080AE7E4. Spawned 10..-5 px to the facing side and 11..26 px up
@@ -34,7 +48,7 @@ static void dryad_spit(AosEnemy *e, AosSoma *soma, AosHitReport *report,
     report->children[report->child_count++] = seed;
 }
 
-static AosHitReport dryad_update(AosEnemy *e, AosSoma *soma,
+AosHitReport aos_enemy_dryad_update(AosEnemy *e, AosSoma *soma,
                                  const AosCollision *layer,
                                  const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
@@ -219,7 +233,7 @@ static void dryad_seed_landed(AosEnemy *s, AosSoma *soma,
  * ported — the last animation keeps running), song 0x70, timer 0x3C,
  * state 2. */
 
-static AosHitReport dryad_seed_update(AosEnemy *s, AosSoma *soma,
+AosHitReport aos_enemy_dryad_seed_update(AosEnemy *s, AosSoma *soma,
                                       const AosCollision *layer,
                                       const AosEnemyKind *kind,
                                       const AosWeaponEntity *weapon,

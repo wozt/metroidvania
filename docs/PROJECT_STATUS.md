@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0931 - Dryad family becomes a real translation unit
+
+- `aos_enemies/dryad.c` now compiles independently with its body and
+  seed updates exported through `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0930 - Killer Mantle family becomes a real translation unit
 
 - `aos_enemies/killer_mantle.c` now compiles independently with its

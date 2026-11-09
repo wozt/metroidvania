@@ -2775,7 +2775,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/dryad.c"
 #include "aos_enemies/tsuchinoko.c"
 #include "aos_enemies/kicker_skeleton.c"
 #include "aos_enemies/waiter_skeleton.c"
@@ -2889,7 +2888,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_biphron_shot_update(enemy, soma, layer, kind, weapon, weapon_frames,
                                    soma_atk, soma_def);
     if (enemy->role == AOS_ROLE_DRYAD_SEED)
-        return dryad_seed_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_dryad_seed_update(enemy, soma, layer, kind, weapon, weapon_frames,
                                  soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_TSUCHINOKO_SPIT ||
         enemy->role == AOS_ROLE_TSUCHINOKO_ROCK)
@@ -2936,7 +2935,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->id == AOS_ENEMY_DRYAD && enemy->role == AOS_ROLE_ENEMY)
-        return dryad_update(enemy, soma, layer, kind, weapon, weapon_frames,
+        return aos_enemy_dryad_update(enemy, soma, layer, kind, weapon, weapon_frames,
                             soma_atk, soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_BIPHRON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_biphron_update(enemy, soma, layer, kind, weapon, weapon_frames,

@@ -252,9 +252,10 @@ bool aos_enemy_outside_margins(const AosEnemyKind *kind, int n, int sx, int sy) 
 }
 #define outside_margins aos_enemy_outside_margins
 
-static void play(AosEnemy *enemy, const AosAnimSet *anims, unsigned id) {
+void aos_enemy_play(AosEnemy *enemy, const AosAnimSet *anims, unsigned id) {
     play_loop(enemy, anims, id, true);
 }
+#define play aos_enemy_play
 
 /* sub_0803F17C; + 0x59 bit 0 is set when the animation loops or ends. */
 void aos_enemy_step_anim(AosEnemy *enemy, const AosAnimSet *anims) {
@@ -2722,7 +2723,6 @@ static void merge_enemy_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/skull_millione.c"
 #include "aos_enemies/dead_crusader.c"
 #include "aos_enemies/curly.c"
-#include "aos_enemies/ghost_dancer.c"
 #include "aos_enemies/gargoyle.c"
 #include "aos_enemies/zombie_officer.c"
 #include "aos_enemies/axe_armor.c"
@@ -3185,8 +3185,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return medusa_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                              cam_y, random);
     if (enemy->id == AOS_ENEMY_GHOST_DANCER)
-        return ghost_dancer_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
-                                   cam_x, cam_y);
+        return aos_enemy_ghost_dancer_update(enemy, soma, kind, weapon,
+                                             weapon_frames, soma_atk, soma_def,
+                                             cam_x, cam_y);
     if (enemy->id == AOS_ENEMY_ZOMBIE && enemy->role == AOS_ROLE_ENEMY)
         return zombie_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                              cam_x, cam_y, random);

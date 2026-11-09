@@ -24,6 +24,7 @@ void aos_enemy_spawn_flame_at(int32_t cx, int32_t cy, uint32_t w,
 int32_t aos_enemy_pixel_delta(int32_t to, int32_t from);
 void aos_enemy_play_loop(AosEnemy *enemy, const AosAnimSet *anims,
                          unsigned id, bool loop);
+void aos_enemy_play(AosEnemy *enemy, const AosAnimSet *anims, unsigned id);
 int32_t aos_enemy_target_x(const AosSoma *soma);
 int32_t aos_enemy_target_y(const AosSoma *soma);
 bool aos_enemy_player_near(const AosSoma *soma, int32_t x, int32_t y,
@@ -41,5 +42,9 @@ AosHitReport aos_enemy_ectoplasm_update(
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_ghost_dancer_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y);
 
 #endif

@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0893 - Ghost Dancer becomes a real translation unit
+
+- `aos_enemies/ghost_dancer.c` now compiles independently with a single
+  exported update entry point. The shared animation starter is exposed as
+  `aos_enemy_play`; all family-local dance and fade helpers remain static.
+- The previous framework, Sky Fish and Ectoplasm objects and the new object
+  union retain all 488 function sizes and normalized instructions. No
+  behavior or feature status changed.
+
 ## Patch 0892 - Ectoplasm becomes a real translation unit
 
 - `aos_enemies/ectoplasm.c` now compiles independently and exposes only its

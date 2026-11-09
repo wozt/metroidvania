@@ -2773,7 +2773,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/bone_pillar.c"
 #include "aos_enemies/giant_ghost.c"
 #include "aos_enemies/minotaur.c"
 #include "aos_enemies/worm.c"
@@ -3043,10 +3042,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_buer_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT)
-        return pillar_skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
+        return aos_enemy_pillar_skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                    random);
     if (enemy->id == AOS_ENEMY_BONE_PILLAR && enemy->role == AOS_ROLE_ENEMY)
-        return pillar_update(enemy, kind, cam_x, cam_y);
+        return aos_enemy_pillar_update(enemy, kind, cam_x, cam_y);
     if (enemy->role == AOS_ROLE_PILLAR_PIECE) {
         /* sub_080B3EE8. */
         enemy->vx = enemy->vx * 39 / 40;
@@ -3088,7 +3087,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
             int32_t y = AOS_FIXED((enemy->y >> 16) + random_centred(random, 8));
             int32_t v = enemy->vx + random_centred(random, 0x8000);
             v = -v;
-            pillar_smoke(enemy, x, y, (v < 0 ? v + 3 : v) >> 2, -0x1000, -0x100, 0, random,
+            aos_enemy_pillar_smoke(enemy, x, y, (v < 0 ? v + 3 : v) >> 2, -0x1000, -0x100, 0, random,
                          &report);
         }
         accel_move(enemy, 0x80000);

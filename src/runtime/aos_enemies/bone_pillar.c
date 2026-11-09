@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Bone Pillar (enemy 0x08), its skulls and fireballs.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#include <string.h>
+
+#define collide aos_enemy_collide
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define player_near aos_enemy_player_near
+#define pillar_smoke aos_enemy_pillar_smoke
+#define random_centred aos_enemy_random_centred
+#define skeleton_merge aos_enemy_skeleton_merge
+#define step_anim aos_enemy_step_anim
+#define target_x aos_enemy_target_x
 
 /* sub_080B3A68: a skull falls (gravity 0x1000) onto the next live skull
  * below it, or the controller, 22 pixels above it. */
@@ -95,7 +109,7 @@ static AosEnemy pillar_fireball(const AosEnemy *s) {
 
 /* sub_080B32F4: a smoke puff (sprite frame 0x14), translucent, both flips
  * at random, 16-31 frames of the accelerated move (sub_0806D3D8, 8.0). */
-static void pillar_smoke(const AosEnemy *from, int32_t x, int32_t y, int32_t vx, int32_t vy,
+void aos_enemy_pillar_smoke(const AosEnemy *from, int32_t x, int32_t y, int32_t vx, int32_t vy,
                          int32_t ax, int32_t ay, uint32_t (*random)(void),
                          AosHitReport *report) {
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN) return;
@@ -194,7 +208,7 @@ static void pillar_attack(AosEnemy *s, const AosSoma *soma, const AosAnimSet *an
  * (state 0) for its target inside the 160 x 120 box around it, attacks
  * (1), shatters (2) or only animates (3, the global 0x8E & 0x40); then the
  * collision pass (not while shattering) and the animation step. */
-static AosHitReport pillar_skull_update(AosEnemy *s, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_pillar_skull_update(AosEnemy *s, AosSoma *soma, const AosEnemyKind *kind,
                                         const AosWeaponEntity *weapon,
                                         const AosWeaponFrames *weapon_frames, int soma_atk,
                                         int soma_def, uint32_t (*random)(void)) {
@@ -260,7 +274,7 @@ static AosHitReport pillar_skull_update(AosEnemy *s, AosSoma *soma, const AosEne
  * shattered skulls, puts the topmost live one in the homing list
  * (sub_08021278), and is deleted with none left. Its skulls (EnemyBone
  * PillarCreate's) are made by its first update. */
-static AosHitReport pillar_update(AosEnemy *b, const AosEnemyKind *kind, int cam_x, int cam_y) {
+AosHitReport aos_enemy_pillar_update(AosEnemy *b, const AosEnemyKind *kind, int cam_x, int cam_y) {
     AosHitReport report = {0};
     if (!b->helper_spawned) {
         b->helper_spawned = true;

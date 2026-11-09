@@ -401,5 +401,16 @@ AosHitReport aos_enemy_dragon_fireball_update(
     int soma_def, uint32_t (*random)(void));
 void aos_enemy_dragon_struck(AosEnemy *enemy, uint8_t attacker);
 int32_t aos_enemy_trunc16(int32_t v);
+AosHitReport aos_enemy_pillar_update(AosEnemy *enemy,
+                                     const AosEnemyKind *kind, int cam_x,
+                                     int cam_y);
+AosHitReport aos_enemy_pillar_skull_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, uint32_t (*random)(void));
+void aos_enemy_pillar_smoke(const AosEnemy *from, int32_t x, int32_t y,
+                            int32_t vx, int32_t vy, int32_t ax,
+                            int32_t ay, uint32_t (*random)(void),
+                            AosHitReport *report);
 
 #endif

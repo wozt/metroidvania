@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0923 - Bone Pillar family becomes a real translation unit
+
+- `aos_enemies/bone_pillar.c` now compiles independently with its
+  pillar and skull updates plus the smoke producer exported through
+  `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior
+  or feature status changed.
+
 ## Patch 0922 - White Dragon family becomes a real translation unit
 
 - `aos_enemies/white_dragon.c` now compiles independently with its

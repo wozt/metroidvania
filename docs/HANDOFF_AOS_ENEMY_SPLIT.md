@@ -197,6 +197,11 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      The other 21 included families remain. Continue with
      `bone_pillar.c`; keep one family per commit and repeat the union
      proof.
+   - *(Continued in patch 0923.)* `bone_pillar.c` is independent with
+     its two updates and the smoke producer exported. The union proof
+     is identical for all 488 symbols. The other 20 included families
+     remain. Continue with `giant_ghost.c`; keep one family per commit
+     and repeat the union proof.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

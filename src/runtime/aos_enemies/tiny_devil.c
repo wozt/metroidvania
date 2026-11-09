@@ -1,9 +1,26 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Tiny Devil (enemy 0x10) and Imp (0x31) with their orb and helper.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+#include "../aos_audio.h"
+
+#define collide aos_enemy_collide
+#define face_player aos_enemy_face_player
+#define generic_death aos_enemy_generic_death
+#define integrate aos_enemy_integrate
+#define make_static_child aos_enemy_make_static_child
+#define merge_enemy_hit aos_enemy_merge_hit
+#define move_toward aos_enemy_move_toward
+#define outside_margins aos_enemy_outside_margins
+#define play aos_enemy_play
+#define play_loop aos_enemy_play_loop
+#define step_anim aos_enemy_step_anim
+#define stop aos_enemy_stop
+#define target_x aos_enemy_target_x
+#define target_y aos_enemy_target_y
 
 /* sub_080C5898: the Tiny Devil holds an aimed animation-4 orb beside its
  * body. The orb cycles animation 5 a short random number of times, changes
@@ -26,7 +43,7 @@ static void tiny_devil_orb(AosEnemy *owner, const AosSoma *soma,
     report->children[report->child_count++] = orb;
 }
 
-static AosHitReport tiny_devil_orb_update(AosEnemy *orb, AosSoma *soma,
+AosHitReport aos_enemy_tiny_devil_orb_update(AosEnemy *orb, AosSoma *soma,
                                            const AosEnemyKind *kind,
                                            const AosWeaponEntity *weapon,
                                            const AosWeaponFrames *weapon_frames, int soma_atk,
@@ -81,7 +98,7 @@ static void imp_helper(AosEnemy *owner, const AosEnemyKind *kind, AosHitReport *
     owner->helper_spawned = true;
 }
 
-static void imp_helper_update(AosEnemy *helper, const AosSoma *soma,
+void aos_enemy_imp_helper_update(AosEnemy *helper, const AosSoma *soma,
                               const AosEnemyKind *kind) {
     if (!helper->parent || helper->parent->removed || helper->parent->defeated) {
         helper->removed = true;
@@ -110,7 +127,7 @@ static void imp_death_child(AosEnemy *owner, AosHitReport *report) {
     report->children[report->child_count++] = child;
 }
 
-static void imp_death_child_update(AosEnemy *child, const AosEnemyKind *kind,
+void aos_enemy_imp_death_child_update(AosEnemy *child, const AosEnemyKind *kind,
                                    int cam_y) {
     child->y += child->vy;
     child->hidden = kind->blink[child->timer] & 1;
@@ -252,7 +269,7 @@ static void imp_control(AosEnemy *e, AosSoma *soma, AosHitReport *report) {
     }
 }
 
-static AosHitReport devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+AosHitReport aos_enemy_devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
                                  const AosWeaponEntity *weapon,
                                  const AosWeaponFrames *weapon_frames, int soma_atk,
                                  int soma_def, int cam_x, int cam_y,

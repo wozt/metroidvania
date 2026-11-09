@@ -2771,7 +2771,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 
 
 
-#include "aos_enemies/tiny_devil.c"
 #include "aos_enemies/ripper.c"
 #include "aos_enemies/merman.c"
 #include "aos_enemies/peeping_eye.c"
@@ -3138,14 +3137,14 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->role == AOS_ROLE_TINY_DEVIL_ORB)
-        return tiny_devil_orb_update(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+        return aos_enemy_tiny_devil_orb_update(enemy, soma, kind, weapon, weapon_frames, soma_atk,
                                      soma_def, cam_x, cam_y);
     if (enemy->role == AOS_ROLE_IMP_HELPER) {
-        imp_helper_update(enemy, soma, kind);
+        aos_enemy_imp_helper_update(enemy, soma, kind);
         return report;
     }
     if (enemy->role == AOS_ROLE_IMP_DEATH) {
-        imp_death_child_update(enemy, kind, cam_y);
+        aos_enemy_imp_death_child_update(enemy, kind, cam_y);
         return report;
     }
     if (enemy->role == AOS_ROLE_MERMAN_SHOT)
@@ -3165,7 +3164,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                        cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_TINY_DEVIL || enemy->id == AOS_ENEMY_IMP) &&
         enemy->role == AOS_ROLE_ENEMY)
-        return devil_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
+        return aos_enemy_devil_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->id == AOS_ENEMY_MERMAN && enemy->role == AOS_ROLE_ENEMY)
         return merman_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,

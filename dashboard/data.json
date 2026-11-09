@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-09T14:31:50+00:00",
+ "generated_at": "2026-11-09T14:35:02+00:00",
  "git": {
-  "commit": "04eedb83",
+  "commit": "363bae91",
   "branch": "main",
   "dirty": true
  },
@@ -11397,6 +11397,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/tiny_devil.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -13489,6 +13490,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos_enemy.c",
+    "src/runtime/aos_enemy_internal.h",
     "src/runtime/aos_enemies/tiny_devil.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c"
@@ -19736,6 +19738,7 @@
     "src/runtime/aos_enemies/killer_fish.c",
     "src/runtime/aos_enemies/winged_skeleton.c",
     "src/runtime/aos_enemies/harpy.c",
+    "src/runtime/aos_enemies/tiny_devil.c",
     "src/assets/core/sprite_library.c",
     "src/tools/fusion_rebuild.c"
    ],
@@ -22190,6 +22193,12 @@
  },
  "timeline": [
   {
+   "commit": "363bae91",
+   "date": "2026-11-09",
+   "subject": "Compile Harpy/Siren family as an independent enemy unit",
+   "scope": "project"
+  },
+  {
    "commit": "04eedb83",
    "date": "2026-11-09",
    "subject": "Compile Winged Skeleton family as an independent enemy unit",
@@ -22661,12 +22670,6 @@
    "commit": "a27a1f71",
    "date": "2026-11-08",
    "subject": "Resolve the bestiary soul text id mapping",
-   "scope": "project"
-  },
-  {
-   "commit": "16e534ee",
-   "date": "2026-11-08",
-   "subject": "Document the bestiary soul text path",
    "scope": "project"
   }
  ],

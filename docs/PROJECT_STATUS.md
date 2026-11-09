@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0917 - Tiny Devil/Imp family becomes a real translation unit
+
+- `aos_enemies/tiny_devil.c` now compiles independently with the Tiny
+  Devil, Imp, orb and helper updates exported through
+  `aos_enemy_internal.h`.
+- The object union preserves all 488 `-O0` symbol sizes and normalized
+  instructions exactly; only the exports changed linkage. No behavior or
+  feature status changed.
+
 ## Patch 0916 - Harpy/Siren family becomes a real translation unit
 
 - `aos_enemies/harpy.c` now compiles independently with its volley

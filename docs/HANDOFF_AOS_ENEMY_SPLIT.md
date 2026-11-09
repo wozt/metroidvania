@@ -104,8 +104,10 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    - *(Continued in patch 0899.)* the Gorgon/Catoblepas family and breath are
      independent. Its union proof remains identical for all 488 functions.
    - *(Continued in patch 0900.)* `dead_warrior.c` is independent. Its union
-     proof remains identical for all 488 functions. The other 43 included
-     families remain.
+     proof remains identical for all 488 functions.
+   - *(Continued in patch 0901.)* `mimic.c` is independent with its hidden
+     trigger. Its union proof remains identical for all 488 functions. The
+     other 42 included families remain.
    - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

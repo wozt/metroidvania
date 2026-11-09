@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0901 - Mimic becomes a real translation unit
+
+- `aos_enemies/mimic.c` now compiles independently with both its body and
+  hidden-trigger updates exported. Its rectangular player test and falling
+  collision helper join the prefixed internal framework API.
+- The object union preserves all 488 `-O0` function sizes and normalized
+  instructions. No behavior or feature status changed.
+
 ## Patch 0900 - Dead Warrior becomes a real translation unit
 
 - `aos_enemies/dead_warrior.c` now compiles independently. Its centred

@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria of Sorrow enemies: Mimic (enemy 0x60) and its hidden trigger.
  *
- * Part of aos_enemy.c, which includes this file after the shared enemy
- * framework: it is not a separate translation unit and uses that
- * file's static helpers. */
+ * This family is a separate translation unit and uses the shared internal
+ * enemy framework API. */
+
+#include "../aos_enemy_internal.h"
+
+#include <string.h>
 
 /* sub_080992C8: the Mimic's trigger, a hidden entity at its position with
  * the hurtbox of the bytes 0x100CF8FA (-6, -8, 12, 16), no attack box;
@@ -28,19 +31,21 @@ static AosEnemy mimic_trigger(const AosEnemy *m) {
 /* sub_0809937C: the trigger collides until struck; then, hidden, it sends
  * flames of sub_0806D5C0 (8 x 8) every 4 frames while its timer is above
  * 30 and is deleted after 41 frames. */
-static AosHitReport trigger_update(AosEnemy *t, AosSoma *soma, const AosEnemyKind *kind,
-                                   const AosWeaponEntity *weapon,
-                                   const AosWeaponFrames *weapon_frames, int soma_atk,
-                                   int soma_def, uint32_t (*random)(void)) {
+AosHitReport aos_enemy_mimic_trigger_update(
+    AosEnemy *t, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, uint32_t (*random)(void)) {
     AosHitReport report = {0};
     if (t->state == 0) {
-        report = collide(t, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(t, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
         aos_combat_tick(&t->combat);
         return report;
     }
     t->hidden = true;
     if (t->timer > 0x1E && (t->timer & 3) == 0)
-        spawn_flame_at(t->x, t->y, 0x80000, 0x80000, random, &report);
+        aos_enemy_spawn_flame_at(t->x, t->y, 0x80000, 0x80000, random,
+                                 &report);
     if (--t->timer == 0xFF) t->removed = true;
     return report;
 }
@@ -70,7 +75,8 @@ static bool mimic_act(AosEnemy *m, const AosSoma *soma, const AosCollision *laye
         /* fall through */
     case 2:
         m->static_frame = 0;
-        if (fall_collide(m, layer, 0x10000, (int32_t)0xFFF00000, 0x40000) & 4) {
+        if (aos_enemy_fall_collide(m, layer, 0x10000,
+                                   (int32_t)0xFFF00000, 0x40000) & 4) {
             m->step = 3;
             m->own_boxes = true;
             m->own_hurt = m->own_attack = (AosBox){-8, -14, 16, 14};
@@ -80,23 +86,25 @@ static bool mimic_act(AosEnemy *m, const AosSoma *soma, const AosCollision *laye
         return true;
     case 3:
         m->static_frame = 0;
-        if (player_in(soma, (int16_t)((m->x >> 16) - 0x10), (int16_t)((m->y >> 16) - 0x14), 0x20,
-                      0x14)) {
+        if (aos_enemy_player_in(soma, (int16_t)((m->x >> 16) - 0x10),
+                                (int16_t)((m->y >> 16) - 0x14), 0x20,
+                                0x14)) {
             m->static_frame = -1;
             m->own_boxes = false;
             m->combat.attack_off = false;
-            play_loop(m, kind->anims, 0, false);
+            aos_enemy_play_loop(m, kind->anims, 0, false);
             m->step = 4;
         }
         return false;
     case 4:
         if (m->cycle_done) {
-            play(m, kind->anims, 1);
+            aos_enemy_play(m, kind->anims, 1);
             m->step = 5;
         }
         return false;
     case 5:
-        m->hidden = outside_margins(kind, 4, (m->x >> 16) - cam_x, (m->y >> 16) - cam_y);
+        m->hidden = aos_enemy_outside_margins(
+            kind, 4, (m->x >> 16) - cam_x, (m->y >> 16) - cam_y);
         return false;
     default:
         return false;
@@ -107,10 +115,11 @@ static bool mimic_act(AosEnemy *m, const AosSoma *soma, const AosCollision *laye
  * generic death, 2 (inert) plays animation 1 once animation 0 ends; then
  * the animation step (a closed chest holds sprite frame 0) and, unless
  * dying or with collisions off, the collision pass. */
-static AosHitReport mimic_update(AosEnemy *m, AosSoma *soma, const AosCollision *layer,
-                                 const AosEnemyKind *kind, const AosWeaponEntity *weapon,
-                                 const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
-                                 int cam_x, int cam_y, uint32_t (*random)(void)) {
+AosHitReport aos_enemy_mimic_update(
+    AosEnemy *m, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void)) {
     AosHitReport report = {0}, spawned = {0};
     int sx = (m->x >> 16) - cam_x, sy = (m->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x80) > 0x1F0 || (uint16_t)(sy + 0x40) > 0x120) return report;
@@ -118,25 +127,26 @@ static AosHitReport mimic_update(AosEnemy *m, AosSoma *soma, const AosCollision 
     switch (m->state) {
     case 0: quiet = mimic_act(m, soma, layer, kind, cam_x, cam_y, &spawned); break;
     case 1:
-        generic_death(m, kind, random, &spawned);
+        aos_enemy_generic_death(m, kind, random, &spawned);
         if (m->removed) return spawned;
         break;
     case 2:
         if (m->step == 0 && m->cycle_done) {
-            play(m, kind->anims, 1);
+            aos_enemy_play(m, kind->anims, 1);
             m->step = 1;
         }
-        step_anim(m, kind->anims);
+        aos_enemy_step_anim(m, kind->anims);
         return report;
     default:
         break;
     }
-    if (m->static_frame < 0) step_anim(m, kind->anims);
+    if (m->static_frame < 0) aos_enemy_step_anim(m, kind->anims);
     if (m->state != 1 && !quiet)
-        report = collide(m, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+        report = aos_enemy_collide(m, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
     aos_combat_tick(&m->combat);
     report.child_count = spawned.child_count;
     memcpy(report.children, spawned.children, sizeof spawned.children[0] * spawned.child_count);
-    take_effects(&report, &spawned);
+    aos_enemy_take_effects(&report, &spawned);
     return report;
 }

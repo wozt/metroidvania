@@ -63,6 +63,10 @@ int aos_enemy_ground_walk(AosEnemy *enemy, const AosSoma *soma,
                           int32_t speed, int mode);
 bool aos_enemy_player_in_centred(const AosEnemy *enemy,
                                  const AosSoma *soma, int w, int h);
+bool aos_enemy_player_in(const AosSoma *soma, int32_t x, int32_t y,
+                         int w, int h);
+int aos_enemy_fall_collide(AosEnemy *enemy, const AosCollision *layer,
+                           int32_t floor_vy, int32_t head, int32_t limit);
 
 AosHitReport aos_enemy_sky_fish_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
@@ -116,6 +120,15 @@ AosHitReport aos_enemy_gorgon_update(
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
 AosHitReport aos_enemy_dead_warrior_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_mimic_trigger_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, uint32_t (*random)(void));
+AosHitReport aos_enemy_mimic_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,

@@ -317,9 +317,11 @@ static int16_t player_dy(const AosEnemy *enemy, const AosSoma *soma) {
 }
 
 /* sub_08068AD4 with the player as the entity. */
-static bool player_in(const AosSoma *soma, int32_t x, int32_t y, int w, int h) {
+bool aos_enemy_player_in(const AosSoma *soma, int32_t x, int32_t y,
+                         int w, int h) {
     return (uint16_t)((target_x(soma) >> 16) - x) <= w && (uint16_t)((target_y(soma) >> 16) - y) <= h;
 }
+#define player_in aos_enemy_player_in
 
 #include "aos_enemies/bat.c"
 
@@ -2383,8 +2385,8 @@ bool aos_enemy_player_in_centred(const AosEnemy *e, const AosSoma *soma, int w, 
  * moving each axis only when its speed or acceleration is set; the ceiling
  * only while rising, the floor only while falling (subpixel cleared, vy =
  * floor_vy). */
-static int fall_collide(AosEnemy *e, const AosCollision *layer, int32_t floor_vy, int32_t head,
-                        int32_t limit) {
+int aos_enemy_fall_collide(AosEnemy *e, const AosCollision *layer,
+                           int32_t floor_vy, int32_t head, int32_t limit) {
     int result = 0;
     if (e->vx || e->ax) {
         e->vx += e->ax;
@@ -2428,6 +2430,7 @@ static int fall_collide(AosEnemy *e, const AosCollision *layer, int32_t floor_vy
     }
     return result;
 }
+#define fall_collide aos_enemy_fall_collide
 
 /* sub_0806C828: the probe walker. X first: vx += ax (clamped to 8.0), then
  * the wall probes at the position before the move, half_width to the side
@@ -2733,7 +2736,6 @@ void aos_enemy_merge_hit(AosHitReport *report, AosHitReport hit) {
 #include "aos_enemies/crow.c"
 #include "aos_enemies/zombie_soldier.c"
 #include "aos_enemies/valkyrie.c"
-#include "aos_enemies/mimic.c"
 #include "aos_enemies/fleaman.c"
 #include "aos_enemies/skeleton_knight.c"
 #include "aos_enemies/killer_doll.c"
@@ -3155,8 +3157,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         enemy->role == AOS_ROLE_ENEMY)
         return crow_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_MIMIC_TRIGGER)
-        return trigger_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
-                              random);
+        return aos_enemy_mimic_trigger_update(enemy, soma, kind, weapon,
+                                              weapon_frames, soma_atk,
+                                              soma_def, random);
     if (enemy->role == AOS_ROLE_DOLL_PIECE) {
         doll_piece_update(enemy, soma, layer, kind, cam_y, random, &report);
         return report;
@@ -3192,8 +3195,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def, cam_x,
                             cam_y, random);
     if (enemy->id == AOS_ENEMY_MIMIC)
-        return mimic_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
-                            cam_x, cam_y, random);
+        return aos_enemy_mimic_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_FLEAMAN)
         return flea_update(enemy, soma, layer, kind, weapon, weapon_frames, soma_atk, soma_def,
                            random);

@@ -68,6 +68,112 @@ Last updated: **2026-11-08**.
   through the generic roll; its red soul 53 (routine
   0x0802B9A9) has no ported update yet.
 
+## Patch 0872 - Dryad decoded (id 70, not yet ported)
+
+- EnemyDryadCreate (0x080AEAAC) /
+  EnemyDryadUpdate (0x080AEB8C) in
+  third_party/cvaos/asm/code/code_080A0A8C.s, plus the
+  hurt callback sub_080AE3FC, the contact callback
+  sub_080AEB50, the seed projectile sub_080AE96C and the
+  seed update sub_080AE7E4. Three-entity chain: the
+  Dryad spits a seed (entity type 0x1B, role 0x48) that
+  arcs, lands and becomes a floor hazard tracking the
+  player for 120 ticks. The nearby sub_080AEC0C sprout
+  code belongs to EnemyWaiterSkeletonCreate, not Dryad.
+- Create: tiles 0x081E418C, palette 0x0820B768, frames
+  0x082388AC; animation 0 loop; the global 0x8E & 0x40
+  path is state 4 (animation only); otherwise floor
+  snap, + 0x46 += 1, + 0x59 |= 2, state 0, contact
+  sub_080AEB50 (contact element is the entity + 0x3C
+  byte through sub_08021654) and hurt sub_080AE3FC.
+- State 0 sub_080AE4BC (notice): step 0 mirrors the
+  facing from sub_0806CF2C bit 0 into + 0x58 bit 6 and
+  runs the player box sub_0806CFFC centred
+  (+ 0x42 - 0x6E, + 0x46 - 0x28) sized 0xDC x 0x50;
+  step 1 repeats the facing write and on RNG & 3 == 0
+  enters state 1 with animation 1 once, step and
+  substep cleared.
+- State 1 sub_080AE554 (attack): step 0 waits for the
+  animation-end flag (+ 0x6C & 4) then plays animation
+  2 loop; step 1 runs the generic mover sub_08068AD4
+  (-0x80, -0x1F0, 0x1A0) each tick - on its zero return
+  it clears a gEwramData ledger dword (0x3D4 +
+  (+ 0x37 >> 5) * 4, mask 1 << (+ 0x37 & 0x1F)) and
+  sets + 0x59 |= 8, otherwise it faces the player and
+  on RNG & 7 == 0 plays animation 3 once with timer
+  + 0xD = 0x12 and step 2; step 2 decrements the timer
+  and while the post-decrement value is <= 2 plays
+  song 0x89 and calls sub_080AE96C every tick, then
+  animation end returns to step 1.
+- State 2: waits for the animation-end flag then
+  returns to state 0 with step and substep cleared.
+- State 3 sub_080AE650 (death): step 0 sets timer
+  + 0xD = 0x40, advances to step 1 and draws the
+  sub_0803E654 sign bit into the + 0x58 low-5 fade when
+  non-negative and sets + 0x59 |= 0x10; step 1 at
+  timer 0x10 sets + 0xF = 1, every eighth tick plays
+  song 0x6E and calls sub_0806D5C0 at
+  (x, y - 16.0, 0x40000, + 0x5C - 1), the timer counts
+  to zero then sets + 0x59 |= 8, + 0x58 |= 0x20 and,
+  when + 0x59 & 0x10 was set, runs the sub_0803E6BC
+  fade and clears the bit; the shared tail runs the
+  sub_0806D518 blink into + 0x5A bits 0-4 / 7 and the
+  sub_0803E058 affine with angle + 0xD << 0xA while
+  + 0x59 & 0x10 persists.
+- Hurt sub_080AE3FC: standard damage path
+  (sub_08021530 / sub_0806B7D8), + 0x2D = 8, HP
+  subtract, sub_08042B8C knockback; lethal (HP <= 0)
+  plays animation 5 when state 1 with step != 0 else
+  animation 4, sub_080683BC, sets the 0x37E ledger bit
+  when + 0x30 != 0, merges + 0x2C bits into + 0x5A,
+  timer 0x28, state 3, step and substep cleared.
+- Seed sub_080AE96C: EntityCreateInRange(0x1B, 0x48,
+  sub_080AE7E4); stores the parent at + 0x14, copies
+  facing bit 0x40 into + 0x58, offsets the spawn by
+  RNG & 0xF - 10 px on x and y - 16 px; velocity x is
+  0xFFFE0000 + ((RNG & 0xF) << 8) adjusted by the
+  signed x distance to the player / 64 toward it,
+  flipped by facing bit 0x40; velocity y is
+  -0x80000 - ((RNG & 0xF) << 0xA) plus the signed y
+  distance / 64; + 0x3C = parent + 0x3C -
+  (parent + 0x3C >> 2) (three quarters).
+- Seed update sub_080AE7E4: sub_0806D128(1) sets
+  + 0x59 |= 8; state 0 loads the same Dryad resources
+  (0x081E418C / 0x0820B768 / 0x082388AC), registers
+  contact sub_080AE78C (+ 0x59 |= 8, i.e. harmless
+  ghost contact) and hurt sub_080AEB80 (+ 0x59 |= 8),
+  box preset 0x0404FEFE, + 0x5C = 0x11, animation 8
+  loop, + 0x59 |= 2, state 1; state 1 integrates
+  + 0x40 += + 0x48, + 0x44 += + 0x4C and adds 0x1000
+  gravity to + 0x4C each tick; state 2 walks the
+  animation table 0x08528604 by + 0xB, entry 0xFF
+  enters state 3 with timer 0x78, otherwise the frame
+  index advances on the animation-end flag; state 3
+  snaps x to the player x (gEwramData + 0x13110 ->
+  player + 0x42), y to the sub_0801CFB0 floor probe,
+  every sixteenth tick (timer & 0xF == 0) emits the
+  sub_08021654 contact record (element + 0x3C, class
+  2, position + 0x40 / + 0x44) and the timer counts
+  to zero then + 0x59 |= 8; the tail runs the
+  sub_0803F17C affine and the sub_080421AC box query.
+- Update tail for states 0-3: sub_0806E314 mover plus
+  sub_0806DF20; state 4 runs only sub_0803F17C.
+- Helpers to port or map: sub_0806CC20 wake gate,
+  sub_0806CF2C facing, sub_0806CFFC player box,
+  sub_08068AD4 generic mover, sub_0806D518 blink,
+  sub_0806D5C0 burst, sub_0806E314 / sub_0806DF20
+  shared tail, sub_08021654 contact record,
+  sub_0801CFB0 floor probe, sub_080421AC box query,
+  sub_0803E654 sign draw, sub_0803E6BC fade,
+  sub_0803E058 affine, table 0x08528604 seed frames,
+  ledger base gEwramData + 0x8E flags and + 0x3D4.
+- Remaining for the port: objects.c kind row (graphics
+  0x081E418C, palette 0x0820B768, frames 0x082388AC,
+  seed table 0x08528604), enemy_names[70], seed role
+  wiring in aria_runtime.c parent/spawner lists, the
+  five-state machine, the contact element from + 0x3C,
+  tests, registries and the in_game_check room.
+
 ## Patch 0871 - Evil Butcher ported (id 25)
 
 - EnemyEvilButcherCreate (0x080BFE1C) /

@@ -181,6 +181,7 @@ enum {
     AOS_ENEMY_FLAME_DEMON = 0x68,
     AOS_ENEMY_QUEZLCOATL = 0x1A,
     AOS_ENEMY_ALASTOR = 0x5A,
+    AOS_ENEMY_MAN_EATER = 0x40,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -238,7 +239,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DEVIL_IMP = 99, AOS_ROLE_DEVIL_FIRE = 100,
        AOS_ROLE_DEVIL_ORB = 101, AOS_ROLE_QUEZLCOATL_SEGMENT = 102,
        AOS_ROLE_QUEZLCOATL_GORE = 103, AOS_ROLE_ALASTOR_BODY = 104,
-       AOS_ROLE_ALASTOR_SHOT = 105 };
+       AOS_ROLE_ALASTOR_SHOT = 105, AOS_ROLE_MAN_LEVEL = 106,
+       AOS_ROLE_MAN_VOLLEY = 107, AOS_ROLE_MAN_SHOT = 108,
+       AOS_ROLE_MAN_DEATHP = 109 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -679,6 +682,19 @@ typedef struct AosEnemy {
     int16_t ala_rot, ala_probe;
     uint8_t ala_hits, ala_row, ala_col, ala_vol;
     uint8_t ala_pstate, ala_pstep, ala_psub, ala_ptmr, ala_plife, ala_pslot;
+    /* Man Eater (EnemyManEaterCreate 0x080BAC3C / update 0x080BAD68):
+     * `me_fan` is the + 0xB fan-volley index (0..2), `me_ang` the + 0x18
+     * shot angle (the parent's spin or a bolt's fan angle), `me_bolt`
+     * the + 0x17 slot a level child or bolt answers to, `me_life` the
+     * + 0x20 volley lifetime and `me_seen` the + 0xF half-death flag.
+     * The three level children (sub_080BAAC0), the volley entities
+     * (sub_080BA788), their six bolts (sub_080BA37C) and the death
+     * particles (sub_080BABD4) are persistent children of roles
+     * AOS_ROLE_MAN_*. */
+    uint8_t me_fan, me_bolt;
+    int16_t me_ang;
+    int32_t me_life;
+    uint8_t me_seen;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

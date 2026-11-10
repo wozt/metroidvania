@@ -44,6 +44,40 @@ Last updated: **2026-11-10**.
   `0x0803226D`, already ported); sprites, animations, sounds
   and loot are registered in `aos_monster_aspects.tsv`.
 
+## Patch 0983 - Man Eater ported (id 64)
+
+- `EnemyManEaterCreate` (0x080BAC3C) / `EnemyManEaterUpdate`
+  (0x080BAD68) and the `sub_080BA280`..`sub_080BB0F0` cluster of
+  `code_080B0AD4.s`: tiles `0x081F4224`, palette `0x0820BD28`,
+  frames `0x0824B178` shared by the head and every descendant,
+  `+0x5C = 0x12`, `+0x1C = 3`, `+0x59` palette bit, the
+  `sub_0803E654` variant into `+0x58 & 0x1F`, the three
+  `sub_080BAAC0` level children and the `0x8E & 0x40` flag
+  parking state 4.
+- The native `gEwramData + 0x4E4` slot table (stride `0x84`)
+  folds into `parent` pointers plus `me_bolt`/`me_fan`/`me_ang`/
+  `me_life`/`me_seen` indices. Roles: `AOS_ROLE_MAN_LEVEL`
+  (three mouth segments), `AOS_ROLE_MAN_VOLLEY` (the `sub_080BA788`
+  fan entity), `AOS_ROLE_MAN_SHOT` (the six `sub_080BA37C` bolts
+  at angles `0xAAAA * i - 0x2000`) and `AOS_ROLE_MAN_DEATHP`
+  (the `sub_080BABD4` death particles with their gore rows).
+- States: 0 `sub_0806E29C` aggro box `0xA0 x 0x78` into state 1;
+  1 three volleys of `0x30` ticks at angles `((fan+1) << 16)/3
+  - 0x4000`; 2 the `sub_0806E43C` chase toward the point `2.0`
+  px ahead and `3.0` above the target at speed `8`; 3 the death
+  rain (`+0xD = 0x80`, song `0x6B`, `sub_0806D3D8` drift, fade
+  delete); 4 dormant. The `+0x1E` spin feeds the `+0x18` angle.
+- The hurt `sub_080BB04C` clears `+0x34` (covered by the shared
+  lethal pass); the contact `sub_080BB014` maps to the shared
+  `collide`. The `param0` spawn gate, the `sub_08013CF0`/
+  `sub_08034498` event calls and the `sub_080D6450`/`sub_080D6EF8`
+  room bookkeeping are not ported (documented).
+- `maneater_tests` covers create/dormant/level emit/aggro/the
+  three-volley fan/the six-bolt volley/death rain/lethal;
+  `enemy_frames.tsv` gained the Man Eater sequences (golden
+  regenerated). Yellow soul 27 drops through the generic roll
+  (routine `0x0803226D`, already ported).
+
 ## Patch 0982 - Alastor ported (id 90)
 
 - `EnemyAlastorCreate` (0x080CD544) / `EnemyAlastorUpdate`

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T22:36:53+00:00",
+ "generated_at": "2026-11-10T22:49:23+00:00",
  "git": {
-  "commit": "c83c86a9",
+  "commit": "1a004a0e",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 268,
+   "total": 269,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 202,
+    "functional": 203,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 202,
-   "functional_or_better_percent": 75.4,
-   "with_passing_tests": 255,
-   "with_passing_tests_percent": 95.1,
+   "functional_or_better": 203,
+   "functional_or_better_percent": 75.5,
+   "with_passing_tests": 256,
+   "with_passing_tests_percent": 95.2,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -254,6 +254,7 @@
     "aos.enemies.lightning_doll",
     "aos.enemies.lilith",
     "aos.enemies.lubicant",
+    "aos.enemies.man_eater",
     "aos.enemies.mandragora",
     "aos.enemies.medusa_head",
     "aos.enemies.merman",
@@ -502,20 +503,20 @@
    "areas": [
     "aos"
    ],
-   "total": 123,
+   "total": 124,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 95,
+    "functional": 96,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 95,
-   "functional_or_better_percent": 77.2,
-   "with_passing_tests": 123,
+   "functional_or_better": 96,
+   "functional_or_better_percent": 77.4,
+   "with_passing_tests": 124,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -572,6 +573,7 @@
     "aos.enemies.lightning_doll",
     "aos.enemies.lilith",
     "aos.enemies.lubicant",
+    "aos.enemies.man_eater",
     "aos.enemies.mandragora",
     "aos.enemies.medusa_head",
     "aos.enemies.merman",
@@ -13419,6 +13421,114 @@
    }
   },
   {
+   "id": "aos.enemies.man_eater",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Man Eater",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/maneater.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyManEaterCreate",
+    "EnemyManEaterUpdate",
+    "sub_080BA280",
+    "sub_080BA37C",
+    "sub_080BA788",
+    "sub_080BAAC0",
+    "sub_080BABD4",
+    "sub_080BB014",
+    "sub_080BB04C",
+    "sub_080B9FC8",
+    "sub_0806E0D0",
+    "sub_0806B04C",
+    "sub_0803E654",
+    "sub_0803E058",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803E6BC",
+    "sub_0806DFF8",
+    "sub_0806E29C",
+    "sub_0806E43C",
+    "sub_0806D3D8",
+    "sub_0806D490",
+    "sub_0806D5C0",
+    "sub_0806CDB8",
+    "sub_0806CDFC",
+    "sub_080686CC",
+    "sub_080009E4",
+    "sub_08045CEC",
+    "sub_08021654",
+    "sub_080683BC",
+    "EntityCreateInRange",
+    "EntityDelete",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "ArcTan2",
+    "sub_0806D5C0",
+    "sub_08013CF0",
+    "sub_08034498",
+    "sub_080D6450",
+    "sub_080D6EF8"
+   ],
+   "limitations": "The gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the me_bolt/me_fan indices; the volley entity's sub_080BA280 mouth flash, its ArcTan2 re-aim, the + 0x20 life decay and the sub_08045CEC effect spawns are approximated by a fixed 0x40-tick life; the bolt flight of sub_080BA37C keeps the fan angles but uses an approximated 8.0 px/frame speed and margin delete; the param0 gEwramData + 0x4CC/+ 0x37E spawn gate, the sub_08013CF0/sub_08034498 event calls and the sub_080D6450/sub_080D6EF8 room bookkeeping are not ported; and there is no emulator comparison. EnemyManEaterCreate (0x080BAC3C) through sub_0806E0D0 loads tiles 0x081F4224, palette 0x0820BD28 and frames 0x0824B178 shared by every descendant, sets + 0x5C = 0x12 and + 0x1C = 3, picks the + 0x58 & 0x1F palette variant through sub_0803E654, spawns the three level children of sub_080BAAC0 and parks state 4 under the global 0x8E & 0x40 flag. EnemyManEaterUpdate (0x080BAD68) gates the + 0x1C death trigger (state 3, song 0x6B, + 0xD = 0x80), then dispatches: state 0 sub_0806E29C's 0xA0 x 0x78 aggro box into state 1; state 1 the three-shot fan — one sub_080BA788 volley entity per + 0xB index at angle ((fan+1) << 16) / 3 - 0x4000, each spawning six sub_080BA37C bolts at angles 0xAAAA * i - 0x2000 — then state 2; state 2 the sub_0806E43C chase toward the point 2.0 px ahead and 3.0 above the target at speed 8; state 3 the sub_080BABD4 death-particle rain through EntityCreateInRange every other tick, the sub_0806D3D8 drift and the fade delete; state 4 inert. The level children ride the parent position, flash their 0x085288A8-table animation on their fan turn and delete; the hurt sub_080BB04C clears + 0x34 and the contact sub_080BB014 maps to the shared collide. Unit-tested in maneater_tests.",
+   "next_action": "Compare the fan cadence, the chase and the death rain against an emulator; port the volley re-aim and mouth flash.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_009/area_05_room_002 (--spawn 220 150): Man Eater aggros, fans three volleys and dies in the particle rain"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.mandragora",
    "area": "aos",
    "category": "enemies",
@@ -25231,6 +25341,12 @@
  },
  "timeline": [
   {
+   "commit": "1a004a0e",
+   "date": "2026-11-10",
+   "subject": "Port Alastor (Aria of Sorrow enemy id 0x5A)",
+   "scope": "project"
+  },
+  {
    "commit": "c83c86a9",
    "date": "2026-11-10",
    "subject": "Port Quezlcoatl (Aria of Sorrow enemy id 0x1A)",
@@ -25703,12 +25819,6 @@
    "date": "2026-11-09",
    "subject": "Compile Killer Doll as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "a77a7e03",
-   "date": "2026-11-09",
-   "subject": "Compile Skeleton Knight as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -25769,9 +25879,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1522,
-    "routines_attached_to_features": 1522,
-    "unassigned_routines": 2051,
+    "routines_cited_by_features": 1535,
+    "routines_attached_to_features": 1535,
+    "unassigned_routines": 2038,
     "call_edges": 14228
    }
   },
@@ -28013,12 +28123,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 92,
-      "functional_or_better": 92,
-      "functional_or_better_percent": 90,
+      "implemented": 93,
+      "functional_or_better": 93,
+      "functional_or_better_percent": 91,
       "by_status": {
-       "functional": 92,
-       "not_started": 10
+       "functional": 93,
+       "not_started": 9
       }
      },
      "bosses": {
@@ -29705,13 +29815,28 @@
      {
       "id": 64,
       "name": "Man Eater",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Man Eater",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_009/area_05_room_002 (--spawn 220 150): Man Eater aggros, fans three volleys and dies in the particle rain"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.man_eater",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "yellow:27",
+       "notes": "Soul: drops (soul_index 27, rates 15/15/20 through the generic roll, rare item 0x002c, no common item) and is collected; yellow soul 27 (routine 0x0803226d) is the shared stat soul already ported. Animations: ported from EnemyManEaterCreate (0x080BAC3C) / EnemyManEaterUpdate (0x080BAD68) and the sub_080BAAC0 level children, sub_080BA788 volley entities, sub_080BA37C fan bolts, sub_080BABD4 death particles and sub_080BB054 visual helper — the shared animation record 0x0824B178 through the shared play/step helpers; unit-tested in maneater_tests. Sounds: PlaySong 0x6B (death) and the param0 sub_08013CF0 event are requested/unit-covered where ported, not listened to. Loot: the enemies.tsv record drops rare item 0x002c (no common item) through the generic roll. Sprite: tiles 0x081F4224, palette 0x0820BD28, animation record 0x0824B178 exported natively, shared with every descendant. Divergences: the gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the me_bolt/me_fan indices, the volley mouth flash and re-aim are approximated by a fixed 0x40-tick life, the bolt flight keeps the fan angles with an approximated speed and margins, the param0 spawn gate and event calls are not ported, and there is no emulator comparison."
       }
      },
      {
@@ -30826,32 +30951,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 92,
+      "ported": 93,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 92,
+      "ported": 93,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 91,
+      "ported": 92,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 55,
+      "ported": 56,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 61,
+      "ported": 62,
       "partial": 31,
       "missing": 0
      },
-     "complete": 61,
-     "monsters": 92
+     "complete": 62,
+     "monsters": 93
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -36493,7 +36618,7 @@
        "id": "07:1B",
        "name": "Quezlcoatl",
        "status": "not_started",
-       "note": "Soul: drops (soul_index 27, soul_rarity 15, rates 20/30 through the generic roll, rare item 0x007C, no common item), is collected and casts the stat yellow soul 27 (routine 0x0803226D, already ported). Animations: ported from EnemyQuezlcoatlCreate (0x08077DF4) / EnemyQuezlcoatlUpdate (0x08077CBC) and the sub_08077FC0 patrol, sub_08077D22 death, sub_08078178 dormant drift, sub_08078318 segment spawn, sub_08078544 segment hurt setup, sub_08078588/sub_08078654 gore and sub_080786B0 loader handlers — head frames 0xC/0xD and segment frames 0x11/0x10/0xF/3/4 through the shared play/step helpers; unit-tested in quezlcoatl_tests. Sounds: PlaySong 0x7C (the edge-turn cry) and 0x6B (the death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops rare item 0x007C (no common item) through the generic roll. Sprite: tiles 0x081CBF74, palette 0x0820A580 bank 1, animation record 0x0821631C exported natively, shared with the fifteen segments and the two gore pieces. Divergences: the + 0x20 trail container allocation is folded into the qz_trail array, the fifteen segments emit as persistent child entities on the first two updates instead of inside the create, the segment contact cadence is every eighth frame, the sub_0806D260 callback pick, the + 0x5A palette merge, the sub_08021924/sub_080421AC bookkeeping and the gore affine draw are not ported, and there is no emulator comparison.",
+       "note": "Soul: drops (soul_index 27, rates 15/15/20 through the generic roll, rare item 0x002c, no common item) and is collected; yellow soul 27 (routine 0x0803226d) is the shared stat soul already ported. Animations: ported from EnemyManEaterCreate (0x080BAC3C) / EnemyManEaterUpdate (0x080BAD68) and the sub_080BAAC0 level children, sub_080BA788 volley entities, sub_080BA37C fan bolts, sub_080BABD4 death particles and sub_080BB054 visual helper — the shared animation record 0x0824B178 through the shared play/step helpers; unit-tested in maneater_tests. Sounds: PlaySong 0x6B (death) and the param0 sub_08013CF0 event are requested/unit-covered where ported, not listened to. Loot: the enemies.tsv record drops rare item 0x002c (no common item) through the generic roll. Sprite: tiles 0x081F4224, palette 0x0820BD28, animation record 0x0824B178 exported natively, shared with every descendant. Divergences: the gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the me_bolt/me_fan indices, the volley mouth flash and re-aim are approximated by a fixed 0x40-tick life, the bolt flight keeps the fan angles with an approximated speed and margins, the param0 spawn gate and event calls are not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

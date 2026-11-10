@@ -405,6 +405,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_DEMON_LORD && id != AOS_ENEMY_FLAME_DEMON &&
         id != AOS_ENEMY_QUEZLCOATL &&
         id != AOS_ENEMY_ALASTOR &&
+        id != AOS_ENEMY_MAN_EATER &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1227,6 +1228,34 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         enemy->step = 9;
         enemy->substep = 3;
+        return true;
+    }
+    if (id == AOS_ENEMY_MAN_EATER) {
+        /* EnemyManEaterCreate 0x080BAC3C: tiles 0x081F4224, palette
+         * 0x0820BD28, frames 0x0824B178 through sub_0806E0D0; + 0x5C =
+         * 0x12, + 0x1C = 3, + 0x59 bit 0x10, the rng variant into
+         * + 0x58 & 0x1F; the three level children of sub_080BAAC0 emit
+         * on the first update via boss_parts_spawned; the 0x8E & 0x40
+         * flag parks state 4; param0's gEwramData + 0x4CC/+ 0x37E gate
+         * and the sub_08013CF0/sub_08034498 event are not ported
+         * (documented). The hurt sub_080BB04C clears + 0x34 — the
+         * shared lethal pass covers it. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        enemy->static_frame = 0x12;
+        enemy->me_fan = 0;
+        enemy->me_bolt = 0;
+        enemy->me_ang = 0;
+        enemy->me_life = 0;
+        enemy->me_seen = 0;
+        enemy->boss_parts_spawned = false;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = 0;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -4136,6 +4165,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_alastor_update(enemy, soma, layer, kind, weapon,
                                         weapon_frames, soma_atk, soma_def,
                                         cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_MAN_EATER)
+        return aos_enemy_man_eater_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

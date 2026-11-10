@@ -234,6 +234,11 @@ static const EntitySpec entities[] = {
      * frames 0x0824FEE0 — shared by the head, the partner body and
      * the state-6 muzzle shots. */
     ENTITY("alastor", 0x081F4294, 0x0820BFE0, 0, 0x0824FEE0),
+    /* Man Eater (sub_0806E0D0 in EnemyManEaterCreate): tiles
+     * 0x081F4224, palette 0x0820BD28, frames 0x0824B178 — shared by
+     * the head, the three level children, the volley entities, the
+     * bolts and the death particles. */
+    ENTITY("man_eater", 0x081F4224, 0x0820BD28, 0, 0x0824B178),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

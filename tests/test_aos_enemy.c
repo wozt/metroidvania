@@ -11144,6 +11144,128 @@ static void alastor_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x1BE) == 1);
 }
 
+
+static void maneater_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { ME_ANIMS = 20 };
+    static const uint8_t ticks20[20] = {4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4};
+    static AosAnimDef defs[ME_ANIMS];
+    for (int a = 0; a < ME_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks20};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = ME_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < ME_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 64: hp 666, contact 45, defence 35, weak 0x0001,
+     * resist 0, exp 444, rare 0x002c. */
+    const AosEnemyStats stats = {666, 45, 35, 0x0001, 0x0000, 444};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyManEaterCreate: state 0, + 0x1C = 3 death flag armed,
+     * + 0x5C = 0x12 static frame; the 0x8E & 0x40 flag parks state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_MAN_EATER, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.static_frame == 0x12 && e.hp == 666);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_MAN_EATER, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The first update emits the three level children (sub_080BAAC0):
+     * roles MAN_LEVEL with slots 0..2, hidden, attack/hurt off. */
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.child_count == 3);
+    for (int i = 0; i < 3; ++i) {
+        assert(hit.children[i].role == AOS_ROLE_MAN_LEVEL &&
+               hit.children[i].me_bolt == i &&
+               hit.children[i].parent == &e &&
+               hit.children[i].combat.attack_off &&
+               hit.children[i].combat.hurt_off);
+    }
+
+    /* State 0 aggro: the soma inside the 0xA0 x 0x78 box flips state 1
+     * with the 0x30 fan timer. */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.state == 1 && e.timer == 0x30);
+
+    /* The fan: three volleys of timer 0x30 each; every volley entity
+     * emits six MAN_SHOT bolts on its own first update. */
+    int volleys = 0;
+    AosEnemy first_volley;
+    int have_volley = 0;
+    for (int i = 0; i < 200 && e.state == 1; ++i) {
+        hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        for (int c = 0; c < hit.child_count; ++c) {
+            if (hit.children[c].role == AOS_ROLE_MAN_VOLLEY) {
+                volleys++;
+                if (!have_volley) {
+                    first_volley = hit.children[c];
+                    first_volley.parent = &e;
+                    have_volley = 1;
+                }
+            }
+        }
+    }
+    assert(e.state == 2 && volleys == 3 && have_volley);
+    /* The volley's first update emits the six-bolt fan. */
+    hit = aos_enemy_update(&first_volley, &soma, &layer, &kind, NULL,
+                           NULL, 10, 4, 0, 0, always_zero);
+    int bolts = 0;
+    for (int c = 0; c < hit.child_count; ++c)
+        if (hit.children[c].role == AOS_ROLE_MAN_SHOT) bolts++;
+    assert(bolts == 6);
+
+    /* State 3 death: song 0x6B, the particle rain, then removed. */
+    e.state = 3;
+    e.timer = 0x80;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int parts = 0;
+    for (int c = 0; c < hit.child_count; ++c)
+        if (hit.children[c].role == AOS_ROLE_MAN_DEATHP) parts++;
+    assert(parts >= 1);
+    for (int i = 0; i < 200 && !e.removed; ++i)
+        hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(e.removed);
+
+    /* Lethal: hp 0 -> state 3 death sequence (song 0x6B armed by the
+     * head gate), never a plain flinch. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, AOS_ENEMY_MAN_EATER, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.state == 3 && el.defeated && el.timer >= 0x7F &&
+           el.timer <= 0x80 && el.static_frame == 0x11);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -11392,6 +11514,7 @@ int main(void) {
     devil_tests();
     quezlcoatl_tests();
     alastor_tests();
+    maneater_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

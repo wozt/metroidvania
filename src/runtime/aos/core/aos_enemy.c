@@ -392,6 +392,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_GIANT_GHOST && id != AOS_ENEMY_BONE_PILLAR &&
         id != AOS_ENEMY_FISH_HEAD && id != AOS_ENEMY_UKOBACK &&
         id != AOS_ENEMY_STUDENT_WITCH && id != AOS_ENEMY_WITCH &&
+        id != AOS_ENEMY_MUDMAN &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -690,6 +691,30 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         enemy->state = 0;
         enemy->step = enemy->substep = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_MUDMAN) {
+        /* EnemyMudmanCreate (0x08072670) through sub_080726F0: tiles
+         * 0x081CBF4C, palette 0x0820A4AC, frames 0x082138AC;
+         * sub_0806B04C stats, animation (0, 0, 2) stepped once; the
+         * global 0x8E & 0x40 sends it to state 4 with animation
+         * (2, 0, 1), else the sub_0807273C contact and sub_08071F74
+         * hurt callbacks, sub_0806AF98 floor snap, state 0. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->md_spawns = 0;
+        enemy->md_flags = 0;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            play_loop(enemy, anims, 2, false);
+            step_anim(enemy, anims);
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        snap_to_floor(enemy, layer);
         return true;
     }
     if (id == AOS_ENEMY_GIANT_GHOST) {
@@ -1784,6 +1809,18 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->step = enemy->substep = 0;
                 enemy->timer = 0;
             }
+            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+                enemy->id == AOS_ENEMY_MUDMAN &&
+                enemy->role == AOS_ROLE_ENEMY &&
+                (enemy->state == 0 || enemy->state == 1)) {
+                /* sub_08071F74: a surviving weapon blow (+ 0x70 = 3
+                 * or 4) splashes the mudman — animation 1, + 0x59 bit
+                 * 0 cleared, state 3. */
+                play_loop(enemy, kind->anims, 1, false);
+                enemy->cycle_done = false;
+                enemy->state = 3;
+                enemy->step = enemy->substep = 0;
+            }
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON && enemy->id == AOS_ENEMY_VALKYRIE &&
                 enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
@@ -1958,6 +1995,18 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 3;
                     enemy->step = 1;
                     enemy->substep = 1;
+                } else if (enemy->id == AOS_ENEMY_MUDMAN &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_08071F74 lethal: sub_080683BC, song 0x70,
+                     * animation 4, + 0x59 bit 0 cleared, timer 0x28,
+                     * state 2 step 0 — the sinking bubble burst (the
+                     * palette merge is not ported). */
+                    aos_audio_play_song(0x70);
+                    play_loop(enemy, kind->anims, 4, false);
+                    enemy->cycle_done = false;
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_0807D88C: its update finishes the death. */
@@ -3207,6 +3256,23 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
             return aos_enemy_witch_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
+    }
+    if (enemy->id == AOS_ENEMY_MUDMAN) {
+        if (enemy->role == AOS_ROLE_MUDMAN_BUBBLE) {
+            /* sub_080725C0: the bubble's whole update is the timer,
+             * the accel move and the delete — no collide pass. */
+            aos_enemy_mudman_bubble_update(enemy);
+            return report;
+        }
+        if (enemy->role == AOS_ROLE_MUDMAN_ARM)
+            return aos_enemy_mudman_arm_update(enemy, soma, layer, kind,
+                                               weapon, weapon_frames,
+                                               soma_atk, soma_def, cam_x,
+                                               cam_y, random);
+        if (enemy->role == AOS_ROLE_ENEMY)
+            return aos_enemy_mudman_update(enemy, soma, layer, kind, weapon,
+                                           weapon_frames, soma_atk,
+                                           soma_def, cam_x, cam_y, random);
     }
     if (enemy->role == AOS_ROLE_ALURA_SCYTHE)
         return aos_enemy_alura_scythe_update(enemy, soma, layer, kind,

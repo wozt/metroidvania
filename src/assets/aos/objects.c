@@ -169,6 +169,7 @@ static const EntitySpec entities[] = {
      * 0x081E41C4, palette 0x0820B880, frames 0x08241790. */
     ENTITY("student_witch", 0x081E41C4, 0x0820B880, 0, 0x08241790),
     ENTITY("witch", 0x081E41C4, 0x0820B880, 0, 0x08241790),
+    ENTITY("mudman", 0x081CBF4C, 0x0820A4AC, 0, 0x082138AC),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
     /* Buer sub_0806CAF8: the shared 0x08528B64 s16 probe descriptor
      * has wall count, ceiling, floor, half-width and wall Y offsets.

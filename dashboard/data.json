@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T04:41:40+00:00",
+ "generated_at": "2026-11-10T05:30:34+00:00",
  "git": {
-  "commit": "12cc3608",
+  "commit": "d64beca8",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 247,
+   "total": 248,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 181,
+    "functional": 182,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 181,
-   "functional_or_better_percent": 73.3,
-   "with_passing_tests": 234,
-   "with_passing_tests_percent": 94.7,
+   "functional_or_better": 182,
+   "functional_or_better_percent": 73.4,
+   "with_passing_tests": 235,
+   "with_passing_tests_percent": 94.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -249,6 +249,7 @@
     "aos.enemies.merman",
     "aos.enemies.mimic",
     "aos.enemies.minotaur",
+    "aos.enemies.mudman",
     "aos.enemies.needles",
     "aos.enemies.nemesis",
     "aos.enemies.peeping_eye",
@@ -481,20 +482,20 @@
    "areas": [
     "aos"
    ],
-   "total": 102,
+   "total": 103,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 74,
+    "functional": 75,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 74,
-   "functional_or_better_percent": 72.5,
-   "with_passing_tests": 102,
+   "functional_or_better": 75,
+   "functional_or_better_percent": 72.8,
+   "with_passing_tests": 103,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -546,6 +547,7 @@
     "aos.enemies.merman",
     "aos.enemies.mimic",
     "aos.enemies.minotaur",
+    "aos.enemies.mudman",
     "aos.enemies.needles",
     "aos.enemies.nemesis",
     "aos.enemies.peeping_eye",
@@ -12830,6 +12832,104 @@
    }
   },
   {
+   "id": "aos.enemies.mudman",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Mudman",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/mudman.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyMudmanCreate",
+    "EnemyMudmanUpdate",
+    "sub_080719F4",
+    "sub_08071BA4",
+    "sub_08071C30",
+    "sub_08071DBC",
+    "sub_08071F74",
+    "sub_08072038",
+    "sub_08072120",
+    "sub_08072434",
+    "sub_08072504",
+    "sub_080725C0",
+    "sub_08072608",
+    "sub_08072658",
+    "sub_080726F0",
+    "sub_0807273C",
+    "sub_08069A00",
+    "sub_0806AE54",
+    "sub_0806CF2C",
+    "sub_0806CFFC",
+    "sub_0806D128",
+    "sub_0806D288",
+    "sub_0806D3D8",
+    "sub_0806D4C0",
+    "sub_0806D518",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_08021924",
+    "sub_080421AC",
+    "sub_08068AD4",
+    "PlaySong"
+   ],
+   "limitations": "The arm helper's projectile spawn windows and the state-3 approach are approximations of the native probe bits; the + 0x59 bit-1 translucency is approximated by translucent; the sub_08068AD4 activity and sub_08021924 marks, the sub_0806D4C0 pause gate and the sub_080421AC room query are not ported; no emulator comparison. EnemyMudmanCreate (0x08072670) loads tiles 0x081CBF4C, palette 0x0820A4AC and frames 0x082138AC through sub_080726F0, plays animation (0, 0, 2) and steps it, enters state 4 under the global 0x8E & 0x40, else state 0 with the sub_0807273C contact and sub_08071F74 hurt callbacks after the sub_0806AF98 floor snap. EnemyMudmanUpdate dispatches: state 0 sub_080719F4 patrols with the sub_08069A00 walk and wakes on the player aggro box into state 1; state 1 sub_08071BA4 rears up — the preparation animation, the arm helper spawn (sub_08072038: entity kind 0x1B subtype 0x48 linked at + 0x10), song 0x85 and the ~0x40-tick wait back to idle; state 2 sub_08071DBC lobs four mud bubbles in two pairs with random velocity offsets, then a delayed vanish; state 3 sub_08071C30 is the falling attack — seeded velocities and acceleration, two emitted projectiles, collision movement and floor-touch return to state 0; state 4 finishes the animation. The arm helper sub_08072120 moves and collides in state 0, spawns its projectiles in states 1-2 and follows the parent until it is gone; the bubble sub_080725C0 lives 0x11 ticks, swaps direct frames at 6 and 12 and accelerates through sub_0806D3D8. Unit-tested in mudman_tests.",
+   "next_action": "Compare the patrol, the arm attack and the mud lob against an emulator; port the red soul 21 update (the Mudman soul).",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_10_room_000 (--spawn 480 143): the Mudman engages Soma for repeated hits (89 + 89 + 89 + 57 + 57 damage, death at frame 468)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.needles",
    "area": "aos",
    "category": "enemies",
@@ -20549,6 +20649,7 @@
     "src/runtime/aos/enemies/ukoback.c",
     "src/runtime/aos/enemies/student_witch.c",
     "src/runtime/aos/enemies/witch.c",
+    "src/runtime/aos/enemies/mudman.c",
     "src/runtime/aos/enemies/mimic.c",
     "src/runtime/aos/enemies/fleaman.c",
     "src/runtime/aos/enemies/skeleton_knight.c",
@@ -23047,6 +23148,12 @@
  },
  "timeline": [
   {
+   "commit": "d64beca8",
+   "date": "2026-11-10",
+   "subject": "Aria: port Witch (0x2A) with companion, bolt and spark entities",
+   "scope": "project"
+  },
+  {
    "commit": "12cc3608",
    "date": "2026-11-10",
    "subject": "Aria: port Student Witch (0x16) with witch bolt projectile",
@@ -23519,12 +23626,6 @@
    "date": "2026-11-09",
    "subject": "Share the Aria Sqrt and 16.16 product through aos_math",
    "scope": "project"
-  },
-  {
-   "commit": "42f1abec",
-   "date": "2026-11-09",
-   "subject": "Move the bat and zombie out of the Aria enemy framework",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -23585,9 +23686,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1277,
-    "routines_attached_to_features": 1277,
-    "unassigned_routines": 2296,
+    "routines_cited_by_features": 1293,
+    "routines_attached_to_features": 1293,
+    "unassigned_routines": 2280,
     "call_edges": 14228
    }
   },
@@ -25829,12 +25930,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 71,
-      "functional_or_better": 71,
-      "functional_or_better_percent": 69,
+      "implemented": 72,
+      "functional_or_better": 72,
+      "functional_or_better_percent": 70,
       "by_status": {
-       "functional": 71,
-       "not_started": 31
+       "functional": 72,
+       "not_started": 30
       }
      },
      "bosses": {
@@ -27833,13 +27934,28 @@
      {
       "id": 86,
       "name": "Mudman",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Mudman",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_10_room_000 (--spawn 480 143): the Mudman engages Soma for repeated hits (89 + 89 + 89 + 57 + 57 damage, death at frame 468)"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.mudman",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "red:21",
+       "notes": "Soul: drops (soul_index 21, soul_rarity 11, common/rare rates 20/30 through the generic roll) and is collected, but its red soul 21 has no ported update yet. Animations: ported from EnemyMudmanCreate (0x08072670) / EnemyMudmanUpdate (0x08071904) and the sub_080719F4 patrol, sub_08071BA4 preparation, sub_08071DBC lob and sub_08071C30 falling attack handlers plus the sub_08072038 arm spawn / sub_08072120 arm update and the sub_080725C0 bubble update; unit-tested in mudman_tests. Sounds: PlaySong 0x85 at the start of the arm-attack preparation is requested and unit-tested, not listened to. Loot: the native record drops no items (common and rare item 0). Divergences: the arm projectile spawn windows and the state-3 approach are approximations of the native probe bits, the + 0x59 bit-1 translucency is approximated by translucent, the sub_08068AD4/sub_08021924 activity marks, the sub_0806D4C0 pause gate and the sub_080421AC room query are not ported, and there is no emulator comparison."
       }
      },
      {
@@ -28327,17 +28443,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 71,
+      "ported": 72,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 71,
+      "ported": 72,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 71,
+      "ported": 72,
       "partial": 0,
       "missing": 0
      },
@@ -28348,11 +28464,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 14,
+      "partial": 15,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 71
+     "monsters": 72
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -31600,7 +31716,7 @@
        "id": "05:15",
        "name": "Mudman",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 21, soul_rarity 11, common/rare rates 20/30 through the generic roll) and is collected, but its red soul 21 has no ported update yet. Animations: ported from EnemyMudmanCreate (0x08072670) / EnemyMudmanUpdate (0x08071904) and the sub_080719F4 patrol, sub_08071BA4 preparation, sub_08071DBC lob and sub_08071C30 falling attack handlers plus the sub_08072038 arm spawn / sub_08072120 arm update and the sub_080725C0 bubble update; unit-tested in mudman_tests. Sounds: PlaySong 0x85 at the start of the arm-attack preparation is requested and unit-tested, not listened to. Loot: the native record drops no items (common and rare item 0). Divergences: the arm projectile spawn windows and the state-3 approach are approximations of the native probe bits, the + 0x59 bit-1 translucency is approximated by translucent, the sub_08068AD4/sub_08021924 activity marks, the sub_0806D4C0 pause gate and the sub_080421AC room query are not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

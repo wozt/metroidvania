@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 102 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 103 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1277 | 2296 |
+| Castlevania: Aria of Sorrow | 1293 | 2280 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1791,6 +1791,15 @@ Dependencies: `aos.audio.play_song`, `aos.enemies.zombie`.
 Known divergences: The two sub_0806DFF8 helpers, the param0 channel claim sub_08013CF0(0x10), the hit callbacks sub_080B0CCC / sub_080AFF98, the sub_080458E4 charge-dust entities (approximated by two drift-dust reports), the palette bits of + 0x5A, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE (taken as 0) are not ported.  
 Next action: Port the charge-dust entities sub_080458E4, the hit callbacks and the param0 channel claim; compare a room fight against an emulator.
 Evidence: in game: `aria area_02_room_007 (--spawn 304 191): eight Minotaur records are placed across the area_02/area_03 rooms; in-game verification pending`.
+
+[+] **`aos.enemies.mudman` — Mudman.** EnemyMudmanCreate (0x08072670) loads tiles 0x081CBF4C, palette 0x0820A4AC and frames 0x082138AC through sub_080726F0, plays animation (0, 0, 2) and steps it, enters state 4 under the global 0x8E & 0x40, else state 0 with the sub_0807273C contact and sub_08071F74 hurt callbacks after the sub_0806AF98 floor snap. EnemyMudmanUpdate dispatches: state 0 sub_080719F4 patrols with the sub_08069A00 walk and wakes on the player aggro box into state 1; state 1 sub_08071BA4 rears up — the preparation animation, the arm helper spawn (sub_08072038: entity kind 0x1B subtype 0x48 linked at + 0x10), song 0x85 and the ~0x40-tick wait back to idle; state 2 sub_08071DBC lobs four mud bubbles in two pairs with random velocity offsets, then a delayed vanish; state 3 sub_08071C30 is the falling attack — seeded velocities and acceleration, two emitted projectiles, collision movement and floor-touch return to state 0; state 4 finishes the animation. The arm helper sub_08072120 moves and collides in state 0, spawns its projectiles in states 1-2 and follows the parent until it is gone; the bubble sub_080725C0 lives 0x11 ticks, swaps direct frames at 6 and 12 and accelerates through sub_0806D3D8. Unit-tested in mudman_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_08069A00`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806CF2C`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D288`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D4C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080709D8.s:EnemyMudmanCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyMudmanUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_080719F4`, `aos:asm:asm/code/code_080709D8.s:sub_08071BA4`, `aos:asm:asm/code/code_080709D8.s:sub_08071C30`, `aos:asm:asm/code/code_080709D8.s:sub_08071DBC`, `aos:asm:asm/code/code_080709D8.s:sub_08071F74`, `aos:asm:asm/code/code_080709D8.s:sub_08072038`, `aos:asm:asm/code/code_080709D8.s:sub_08072120`, `aos:asm:asm/code/code_080709D8.s:sub_08072434`, `aos:asm:asm/code/code_080709D8.s:sub_08072504`, `aos:asm:asm/code/code_080709D8.s:sub_080725C0`, `aos:asm:asm/code/code_080709D8.s:sub_08072608`, `aos:asm:asm/code/code_080709D8.s:sub_08072658`, `aos:asm:asm/code/code_080709D8.s:sub_080726F0`, `aos:asm:asm/code/code_080709D8.s:sub_0807273C`, `aos:c:src/code/code_080211F0.c:sub_08021924`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/mudman.c`](../src/runtime/aos/enemies/mudman.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The arm helper's projectile spawn windows and the state-3 approach are approximations of the native probe bits; the + 0x59 bit-1 translucency is approximated by translucent; the sub_08068AD4 activity and sub_08021924 marks, the sub_0806D4C0 pause gate and the sub_080421AC room query are not ported; no emulator comparison.  
+Next action: Compare the patrol, the arm attack and the mud lob against an emulator; port the red soul 21 update (the Mudman soul).
+Evidence: in game: `aria area_10_room_000 (--spawn 480 143): the Mudman engages Soma for repeated hits (89 + 89 + 89 + 57 + 57 damage, death at frame 468)`.
 
 [+] **`aos.enemies.needles` — Needles and its pieces.** The looping animation with its random pauses, the optional bobbing (parameter 0), the (-8, -8, 16, 16) boxes packed in 0x1010F8F8, the contact damage, the shattering into the five pieces of 0x08528B44 and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its shattering plays 0x70 (sub_080CB894 step 0), unit-tested.
 

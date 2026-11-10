@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0967 - Mudman ported (id 86)
+
+- `EnemyMudmanCreate` (0x08072670) / `EnemyMudmanUpdate` (0x08071904)
+  plus the `sub_080719F4` patrol, `sub_08071BA4` preparation,
+  `sub_08071DBC` mud-lob and `sub_08071C30` falling-attack handlers,
+  the `sub_08071F74` hurt, the `sub_08072038` arm spawn /
+  `sub_08072120` arm update and the `sub_080725C0` bubble update as
+  `src/runtime/aos/enemies/mudman.c` with two new child roles. Tiles
+  `0x081CBF4C`, palette `0x0820A4AC`, frames `0x082138AC`. He patrols,
+  rears up spawning the linked arm helper (song `0x85`), lobs four mud
+  bubbles in two pairs, then leaps at Soma; state 4 is the inert form.
+- Verified in game in `area_10_room_000` (`--spawn 480 143`): repeated
+  hits on Soma (89 + 89 + 89 + 57 + 57 damage, death at frame 468).
+- Ported enemies: 72/113. Red soul 21 not ported yet.
+
 ## Patch 0966 - Witch ported (id 42)
 
 - `EnemyWitchCreate` (0x080B9D90) / `EnemyWitchUpdate` (0x080B9E2C)

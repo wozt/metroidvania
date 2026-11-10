@@ -160,6 +160,7 @@ enum {
     AOS_ENEMY_UKOBACK = 0x4C,
     AOS_ENEMY_STUDENT_WITCH = 0x16,
     AOS_ENEMY_WITCH = 0x2A,
+    AOS_ENEMY_MUDMAN = 0x56,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -206,7 +207,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_UKOBACK_LID = 78, AOS_ROLE_STUDENT_WITCH_BOLT = 79,
        AOS_ROLE_WITCH_COMPANION = 80, AOS_ROLE_WITCH_ORBIT = 81,
        AOS_ROLE_WITCH_BOLT = 82, AOS_ROLE_WITCH_SPARK = 83,
-       AOS_ROLE_WITCH_TRAIL = 84 };
+       AOS_ROLE_WITCH_TRAIL = 84, AOS_ROLE_MUDMAN_BUBBLE = 85,
+       AOS_ROLE_MUDMAN_ARM = 86 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -464,6 +466,12 @@ typedef struct AosEnemy {
      * sparkle's active mark (`w_active`). */
     uint16_t w_spin;
     bool w_active;
+    /* Mudman (EnemyMudmanCreate 0x08072670): + 0x5C the spawned-child
+     * counter the bubble/arm copies read (md_spawns) and the + 0x59
+     * gameplay bits 2-3 the death sequence sets (md_flags, raw bits
+     * 4/8); the + 0x32 aggro direction memory is param1 and the arm's
+     * + 0x18/+ 0x1C follow anchor lives in target_x/target_y. */
+    uint8_t md_spawns, md_flags;
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

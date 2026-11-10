@@ -5604,6 +5604,183 @@ static void witch_tests(void) {
     assert(d.removed && sparks > 0 && bolts == 1);
 }
 
+
+static void mudman_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;   /* floor top 160 */
+    enum { M_ANIMS = 7 };
+    static const uint8_t four[4] = {4, 4, 4, 4};
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[M_ANIMS];
+    for (int a = 0; a < M_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    defs[0] = (AosAnimDef){4, four};
+    defs[1] = (AosAnimDef){4, four};
+    defs[3] = (AosAnimDef){4, four};
+    defs[4] = (AosAnimDef){4, four};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = M_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < M_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv id 86: hp 200, contact 50, defence 1, weak 0, resist 0,
+     * experience 400, soul_type 0 (red) soul_index 21. */
+    const AosEnemyStats stats = {200, 50, 1, 0, 0, 400};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+
+    /* EnemyMudmanCreate (0x08072670): state 0 animation 0; the global
+     * 0x8E & 0x40 sends it to the inert state 4 with animation 2. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_MUDMAN, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 200 && e.param1 == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ei;
+    assert(aos_enemy_create(&ei, AOS_ENEMY_MUDMAN, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ei.state == 4 && ei.anim.id == 2);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* sub_080719F4 step 0: Soma inside the 0x78x0x50 box at
+     * (px-0x3C, py-0x28) advances to step 1 and clears + 0x59 bit 0. */
+    soma.x = e.x + AOS_FIXED(0x10);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 1 && !e.cycle_done);
+
+    /* Step 1 waits on the animation cycle, then arms animation 2,
+     * timer 0x64 and vy 0x20000 (sub_08071AD4). */
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(e.step == 2 && e.anim.id == 2 && e.timer == 0x64 &&
+           e.vy == 0x20000);
+
+    /* Step 2 walks: the floor bit wraps the 0x64 timer past 0x3B on the
+     * first grounded frame; rng&3 == 0 (always_zero) enters state 1. */
+    script = (const uint32_t[]){0, 0, 0, 0, 0, 0, 0, 0};
+    script_at = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           scripted);
+    assert(e.state == 1 && e.step == 0);
+
+    /* sub_08071BA4: step 0 plays animation 3; once anim frame > 1 the
+     * arm child spawns (sub_08072038) and song 0x85 plays; step 2
+     * counts 0x3B then returns to state 0 step 2. */
+    AosHitReport rep;
+    AosEnemy arm;
+    memset(&arm, 0, sizeof arm);
+    int arm_seen = 0;
+    for (int i = 0; i < 120 && e.state == 1; ++i) {
+        rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+        for (int c = 0; c < rep.child_count; ++c)
+            if (rep.children[c].role == AOS_ROLE_MUDMAN_ARM) {
+                arm = rep.children[c];
+                arm_seen = 1;
+            }
+    }
+    assert(arm_seen);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
+    assert(e.state == 0 && e.step == 2);
+
+    /* The arm child (sub_08072120 state 0): it drifts toward Soma and
+     * sheds bubbles; near the target it enters state 2 and re-attaches
+     * to the parent's offset. */
+    arm.parent = &e;
+    assert(arm.role == AOS_ROLE_MUDMAN_ARM && arm.vx == 0x20000 &&
+           arm.vy == (int32_t)0xFFFF0000 && arm.ay == 0x1800);
+    int bubble_seen = 0, arm_state2 = 0;
+    for (int i = 0; i < 80 && !arm.removed; ++i) {
+        AosHitReport arep = aos_enemy_update(&arm, &soma, &layer, &kind,
+                                             NULL, NULL, 10, 4, 0, 0,
+                                             always_zero);
+        for (int c = 0; c < arep.child_count; ++c) {
+            assert(arep.children[c].role == AOS_ROLE_MUDMAN_BUBBLE);
+            assert(arep.children[c].static_frame == 0x12 ||
+                   arep.children[c].static_frame == 0x15);
+            bubble_seen = 1;
+        }
+        if (arm.state == 2) arm_state2 = 1;
+    }
+    assert(bubble_seen && arm_state2);
+
+    /* sub_080725C0: the bubble's timer counts to 0x12, the direct frame
+     * advances at counts 6 and 0xC, and it deletes past 0x11. */
+    AosEnemy bub;
+    memset(&bub, 0, sizeof bub);
+    bub.id = AOS_ENEMY_MUDMAN;
+    bub.role = AOS_ROLE_MUDMAN_BUBBLE;
+    bub.stats = stats;
+    bub.hp = 1;
+    bub.static_frame = 0x12;
+    bub.x = AOS_FIXED(120);
+    bub.y = AOS_FIXED(140);
+    bub.vx = 0x1000;
+    bub.vy = -0x10000;
+    bub.ay = 0x2800;
+    for (int i = 0; i < 6; ++i)
+        (void)aos_enemy_update(&bub, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+    assert(bub.timer == 6 && bub.static_frame == 0x13);
+    for (int i = 0; i < 8; ++i)
+        (void)aos_enemy_update(&bub, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+    assert(bub.timer == 0xE && bub.static_frame == 0x14);
+    for (int i = 0; i < 6 && !bub.removed; ++i)
+        (void)aos_enemy_update(&bub, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+    assert(bub.removed);
+
+    /* sub_08071DBC state 2 (the lethal path wired in aos_enemy.c):
+     * step 0 bursts eight bubbles and shares the step-1 probe; on the
+     * floor bit plus the animation cycle it arms timer 0x28, step 2
+     * blinks and sets + 0x59 bit 3 before the corpse deletes. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_MUDMAN, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_anim_start(&d.anim, &anims, 4, false);
+    d.state = 2;
+    d.step = 0;
+    d.cycle_done = true;
+    rep = aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(d.step == 2 && d.timer == 0x28 && rep.child_count == 4);
+    for (int i = 0; i < 4; ++i)
+        assert(rep.children[i].role == AOS_ROLE_MUDMAN_BUBBLE);
+    for (int i = 0; i < 0x2A && !d.removed; ++i)
+        (void)aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               0, 0, always_zero);
+    assert(d.removed && (d.md_flags & 8));
+
+    /* sub_08071C30 state 3 (the weapon flinch): step 0 spits two
+     * bubbles off the facing side and shares the probe; on the floor
+     * bit plus the cycle it returns to state 0 step 0 animation 0. */
+    AosEnemy f;
+    assert(aos_enemy_create(&f, AOS_ENEMY_MUDMAN, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    f.state = 3;
+    f.step = 0;
+    f.cycle_done = true;
+    rep = aos_enemy_update(&f, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           always_zero);
+    assert(f.state == 0 && f.step == 0 && f.anim.id == 0);
+    assert(rep.child_count == 2);
+    for (int i = 0; i < 2; ++i)
+        assert(rep.children[i].role == AOS_ROLE_MUDMAN_BUBBLE);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -8844,6 +9021,7 @@ int main(void) {
     ukoback_tests();
     student_witch_tests();
     witch_tests();
+    mudman_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

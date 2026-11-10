@@ -724,8 +724,6 @@ aos:asm:asm/code/code_080709D8.s:EnemyGolemCreate	EnemyGolemCreate	enemies	name	
 aos:asm:asm/code/code_080709D8.s:EnemyGolemUpdate	EnemyGolemUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	27846	3	14
 aos:asm:asm/code/code_080709D8.s:EnemyManticoreCreate	EnemyManticoreCreate	enemies	name			asm_function		asm/code/code_080709D8.s	3873	0	12
 aos:asm:asm/code/code_080709D8.s:EnemyManticoreUpdate	EnemyManticoreUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	3753	0	9
-aos:asm:asm/code/code_080709D8.s:EnemyPersephoneCreate	EnemyPersephoneCreate	enemies	name			asm_function		asm/code/code_080709D8.s	22054	0	11
-aos:asm:asm/code/code_080709D8.s:EnemyPersephoneUpdate	EnemyPersephoneUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	21888	0	15
 aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlCreate	EnemyQuezlcoatlCreate	enemies	name			asm_function		asm/code/code_080709D8.s	14834	0	13
 aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlUpdate	EnemyQuezlcoatlUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	14678	0	11
 aos:asm:asm/code/code_080709D8.s:sub_0807171C	sub_0807171C	enemies	referrers			asm_function	0x0807171C	asm/code/code_080709D8.s	1686	1	3
@@ -776,15 +774,6 @@ aos:asm:asm/code/code_080709D8.s:sub_08078728	sub_08078728	enemies	referrers			a
 aos:asm:asm/code/code_080709D8.s:sub_0807A9C0	sub_0807A9C0	enemies	referrers			asm_function	0x0807A9C0	asm/code/code_080709D8.s	20516	0	1
 aos:asm:asm/code/code_080709D8.s:sub_0807B404	sub_0807B404	enemies	referrers			asm_function	0x0807B404	asm/code/code_080709D8.s	21827	1	3
 aos:asm:asm/code/code_080709D8.s:sub_0807B450	sub_0807B450	enemies	referrers			asm_function	0x0807B450	asm/code/code_080709D8.s	21864	0	1
-aos:asm:asm/code/code_080709D8.s:sub_0807B680	sub_0807B680	enemies	referrers			asm_function	0x0807B680	asm/code/code_080709D8.s	22137	1	9
-aos:asm:asm/code/code_080709D8.s:sub_0807BA20	sub_0807BA20	enemies	referrers			asm_function	0x0807BA20	asm/code/code_080709D8.s	22601	1	10
-aos:asm:asm/code/code_080709D8.s:sub_0807BD70	sub_0807BD70	enemies	referrers			asm_function	0x0807BD70	asm/code/code_080709D8.s	23030	1	2
-aos:asm:asm/code/code_080709D8.s:sub_0807BDD0	sub_0807BDD0	enemies	referrers			asm_function	0x0807BDD0	asm/code/code_080709D8.s	23081	1	7
-aos:asm:asm/code/code_080709D8.s:sub_0807BE60	sub_0807BE60	enemies	referrers			asm_function	0x0807BE60	asm/code/code_080709D8.s	23150	0	7
-aos:asm:asm/code/code_080709D8.s:sub_0807BF1C	sub_0807BF1C	enemies	referrers			asm_function	0x0807BF1C	asm/code/code_080709D8.s	23241	1	5
-aos:asm:asm/code/code_080709D8.s:sub_0807BFEC	sub_0807BFEC	enemies	referrers			asm_function	0x0807BFEC	asm/code/code_080709D8.s	23338	0	2
-aos:asm:asm/code/code_080709D8.s:sub_0807C014	sub_0807C014	enemies	referrers			asm_function	0x0807C014	asm/code/code_080709D8.s	23360	1	2
-aos:asm:asm/code/code_080709D8.s:sub_0807C068	sub_0807C068	enemies	referrers			asm_function	0x0807C068	asm/code/code_080709D8.s	23404	0	1
 aos:asm:asm/code/code_080709D8.s:sub_0807E8EC	sub_0807E8EC	enemies	referrers			asm_function	0x0807E8EC	asm/code/code_080709D8.s	28567	1	12
 aos:asm:asm/code/code_080709D8.s:sub_0807F494	sub_0807F494	enemies	referrers			asm_function	0x0807F494	asm/code/code_080709D8.s	30021	1	10
 aos:asm:asm/code/code_080809C0.s:EnemyDevilCreate	EnemyDevilCreate	enemies	name			asm_function		asm/code/code_080809C0.s	30400	3	18
@@ -1730,7 +1719,6 @@ aos:c:src/code/code_08039340.c:sub_080413F8	sub_080413F8	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0804140C	sub_0804140C	unclassified				c_function	0x0804140C	src/code/code_08039340.c	7235	0	0
 aos:c:src/code/code_08039340.c:sub_08041420	sub_08041420	unclassified				c_function	0x08041420	src/code/code_08039340.c	7246	1	0
 aos:c:src/code_080009A0.c:EntityCreate	EntityCreate	technical	name			c_function	0x08000B00	src/code_080009A0.c	204	3	0
-aos:c:src/code_080009A0.c:EntityDelete	EntityDelete	technical	name			c_function	0x08000E14	src/code_080009A0.c	421	660	2
 aos:c:src/code_080009A0.c:EntityDeleteAll	EntityDeleteAll	technical	name			c_function	0x08000D44	src/code_080009A0.c	360	9	0
 aos:c:src/code_080009A0.c:EntityGetSlot	EntityGetSlot	technical	name			c_function	0x08000F3C	src/code_080009A0.c	495	7	0
 aos:c:src/code_080009A0.c:EntityGetSlot_Inline	EntityGetSlot_Inline	technical	name			c_function		src/code_080009A0.c	278	2	0

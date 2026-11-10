@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T14:34:22+00:00",
+ "generated_at": "2026-11-10T15:58:59+00:00",
  "git": {
-  "commit": "76be2416",
+  "commit": "16b2a939",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 258,
+   "total": 259,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 192,
+    "functional": 193,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 192,
-   "functional_or_better_percent": 74.4,
-   "with_passing_tests": 245,
+   "functional_or_better": 193,
+   "functional_or_better_percent": 74.5,
+   "with_passing_tests": 246,
    "with_passing_tests_percent": 95.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -258,6 +258,7 @@
     "aos.enemies.nemesis",
     "aos.enemies.nightmare",
     "aos.enemies.peeping_eye",
+    "aos.enemies.persephone",
     "aos.enemies.poison_worm",
     "aos.enemies.red_crow",
     "aos.enemies.red_minotaur",
@@ -492,20 +493,20 @@
    "areas": [
     "aos"
    ],
-   "total": 113,
+   "total": 114,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 85,
+    "functional": 86,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 85,
-   "functional_or_better_percent": 75.2,
-   "with_passing_tests": 113,
+   "functional_or_better": 86,
+   "functional_or_better_percent": 75.4,
+   "with_passing_tests": 114,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -566,6 +567,7 @@
     "aos.enemies.nemesis",
     "aos.enemies.nightmare",
     "aos.enemies.peeping_eye",
+    "aos.enemies.persephone",
     "aos.enemies.poison_worm",
     "aos.enemies.red_crow",
     "aos.enemies.red_minotaur",
@@ -13700,6 +13702,122 @@
    }
   },
   {
+   "id": "aos.enemies.persephone",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Persephone",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/persephone.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyPersephoneCreate",
+    "EnemyPersephoneUpdate",
+    "sub_0807B680",
+    "sub_0807BA20",
+    "sub_0807BD70",
+    "sub_0807BDD0",
+    "sub_0807BE60",
+    "sub_0807BF1C",
+    "sub_0807BFEC",
+    "sub_0807C014",
+    "sub_0807C068",
+    "sub_0806D128",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0806AE54",
+    "sub_0806D4C0",
+    "sub_080421AC",
+    "sub_08042B8C",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_0806CF2C",
+    "sub_0806CFFC",
+    "sub_0806D54C",
+    "sub_0806B120",
+    "sub_0806D490",
+    "sub_0806D518",
+    "sub_08069A00",
+    "sub_0806BD64",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_0806D244",
+    "sub_0806D260",
+    "sub_080427B8",
+    "sub_0804277C",
+    "sub_08042848",
+    "sub_0803AFB8",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_08021654",
+    "sub_08068264",
+    "EntityCreateInRange",
+    "EntityDelete",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "sub_08069A00 maps to projectile_collide with the same wall/ceiling/floor flag bits and 8.0 clamp but without the native probe margins; sub_0806BD64 (the dive distance) is approximated by the pixel distance to Soma; the + 0x6E gates read the shared anim.frame and + 0x6C the shared anim.flags; the strike child lives two ticks through the + 0x1C countdown and registers contact through the shared collide instead of sub_08021654; the + 0x2D freeze runs the contact check alone; the + 0x5A palette merge, the sub_0806CCE8 draw variant, the sub_08013D60/sub_08013DA8/sub_08013E18 room events and the hurt callback's + 0x70 hitstun gate and 1/16 coin are skipped or approximated; and there is no emulator comparison. EnemyPersephoneCreate (0x0807B5D0) through sub_0807BDD0 loads tiles 0x081CBF94, palette 0x0820A650 and frames 0x08217D48 shared with the strike children, plays animation (0, 0, 1), faces the player, self-links + 0x14 and enters state 0 (the 0x8E & 0x40 flag parks the dormant state 4). EnemyPersephoneUpdate gates the activity box and margin hide, runs the hit-flash contact-only path, then dispatches state 0 sub_0807B680 (the seven-substep approach: aggro box, animation-1 windup with song 0x1C9, the animation-2 charge, floor and proximity checks into animation 3, then the state-1 attack), state 1 sub_0807BA20 (twelve substeps: animation-4 windup, the distance-banded dive with song 0x1CA, the frame-synced melee strikes of sub_0807BF1C at animation frame 3 with song 0x85, the landing walk and the step-0xA/0xB uppercut), state 2 (the inline blink/sink death with timer delete), state 3 sub_0807C014 (the hurt knockdown that resumes the approach on the floor) and state 4 sub_0807BD70 (the dormant idle shuffle), then the animation step. Unit-tested in persephone_tests.",
+   "next_action": "Compare a room fight against an emulator and port any missing room events.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_001: three Persephones spawn dormant until Soma approaches"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.poison_worm",
    "area": "aos",
    "category": "enemies",
@@ -24210,6 +24328,12 @@
  },
  "timeline": [
   {
+   "commit": "16b2a939",
+   "date": "2026-11-10",
+   "subject": "Port Arachne (id 0x17): ceiling crawler with five linked legs and web rain",
+   "scope": "project"
+  },
+  {
    "commit": "76be2416",
    "date": "2026-11-10",
    "subject": "Port Une (id 0x3D): the splitting ghost swarm",
@@ -24682,12 +24806,6 @@
    "date": "2026-11-09",
    "subject": "Compile Curly and Durga as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "b4095275",
-   "date": "2026-11-09",
-   "subject": "Compile Zombie Officer as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24748,9 +24866,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1401,
-    "routines_attached_to_features": 1401,
-    "unassigned_routines": 2172,
+    "routines_cited_by_features": 1413,
+    "routines_attached_to_features": 1413,
+    "unassigned_routines": 2160,
     "call_edges": 14228
    }
   },
@@ -26992,12 +27110,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 82,
-      "functional_or_better": 82,
-      "functional_or_better_percent": 80,
+      "implemented": 83,
+      "functional_or_better": 83,
+      "functional_or_better_percent": 81,
       "by_status": {
-       "functional": 82,
-       "not_started": 20
+       "functional": 83,
+       "not_started": 19
       }
      },
      "bosses": {
@@ -27982,13 +28100,28 @@
      {
       "id": 36,
       "name": "Persephone",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Persephone",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_001: three Persephones spawn dormant until Soma approaches"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.persephone",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "blue:16",
+       "notes": "Soul: drops (soul_index 16, soul_rarity 50, rates 20/30 through the generic roll, common item 0x007A, rare 0x0014), is collected and casts SkillPersephoneUse (the toggled translucent maid that heals Soma 5 HP per strike, already ported). Animations: ported from EnemyPersephoneCreate (0x0807B5D0) / EnemyPersephoneUpdate (0x0807B47C) and the sub_0807B680 approach, sub_0807BA20 attack, sub_0807C014 knockdown, sub_0807BD70 dormant, sub_0807BE60 hurt, sub_0807BF1C strike spawn, sub_0807BFEC strike update and sub_0807C068 contact handlers — animations 0-7 through the shared play/step helpers; unit-tested in persephone_tests. Sounds: PlaySong 0x1C9 (approach), 0x1CA (attack windup), 0x85 (strike) and 0x1CC (death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x007A and rare item 0x0014 through the generic roll. Sprite: tiles 0x081CBF94, palette 0x0820A650, animation record 0x08217D48 exported natively, shared with the strike children. Divergences: sub_08069A00 maps to projectile_collide (same flag bits, no probe margin), sub_0806BD64 is approximated by the pixel distance, the + 0x6E/+ 0x6C gates read the shared anim.frame/anim.flags, the strike lives two ticks through the + 0x1C countdown and registers through the shared collide, the + 0x2D freeze runs the contact check alone, the + 0x5A palette merge, the sub_0806CCE8 draw variant, the room events and the hurt + 0x70 hitstun gate / 1/16 coin are skipped or approximated, and there is no emulator comparison."
       }
      },
      {
@@ -29655,32 +29788,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 82,
+      "ported": 83,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 82,
+      "ported": 83,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 81,
+      "ported": 82,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 45,
+      "ported": 46,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 57,
+      "ported": 58,
       "partial": 25,
       "missing": 0
      },
-     "complete": 57,
-     "monsters": 82
+     "complete": 58,
+     "monsters": 83
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -34725,7 +34858,7 @@
        "id": "06:10",
        "name": "Persephone",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 16, soul_rarity 50, rates 20/30 through the generic roll, common item 0x007A, rare 0x0014), is collected and casts SkillPersephoneUse (the toggled translucent maid that heals Soma 5 HP per strike, already ported). Animations: ported from EnemyPersephoneCreate (0x0807B5D0) / EnemyPersephoneUpdate (0x0807B47C) and the sub_0807B680 approach, sub_0807BA20 attack, sub_0807C014 knockdown, sub_0807BD70 dormant, sub_0807BE60 hurt, sub_0807BF1C strike spawn, sub_0807BFEC strike update and sub_0807C068 contact handlers — animations 0-7 through the shared play/step helpers; unit-tested in persephone_tests. Sounds: PlaySong 0x1C9 (approach), 0x1CA (attack windup), 0x85 (strike) and 0x1CC (death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x007A and rare item 0x0014 through the generic roll. Sprite: tiles 0x081CBF94, palette 0x0820A650, animation record 0x08217D48 exported natively, shared with the strike children. Divergences: sub_08069A00 maps to projectile_collide (same flag bits, no probe margin), sub_0806BD64 is approximated by the pixel distance, the + 0x6E/+ 0x6C gates read the shared anim.frame/anim.flags, the strike lives two ticks through the + 0x1C countdown and registers through the shared collide, the + 0x2D freeze runs the contact check alone, the + 0x5A palette merge, the sub_0806CCE8 draw variant, the room events and the hurt + 0x70 hitstun gate / 1/16 coin are skipped or approximated, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

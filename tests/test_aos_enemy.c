@@ -6935,6 +6935,145 @@ static void arachne_tests(void) {
     assert(e.removed);
 }
 
+static uint32_t persephone_odd(void) { return 1; }
+
+static void persephone_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { PR_ANIMS = 8 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[PR_ANIMS];
+    for (int a = 0; a < PR_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = PR_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < PR_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 36: hp 150, field_e 96, contact 23, defence 25,
+     * weak 0x0041, resist 0x0000, experience 55. */
+    const AosEnemyStats stats = {150, 23, 25, 0x0041, 0x0000, 55};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(250), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 400;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemyPersephoneCreate: state 0, the hit mark cleared, + 0x14
+     * self-linked; the 0x8E & 0x40 flag parks the dormant state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_PERSEPHONE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 150 && e.step == 0 && e.pr_hit == 0 &&
+           e.parent == &e);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_PERSEPHONE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* State 0 step 0: Soma inside the 0xF0 x 0x60 approach box steps
+     * into the animation-1 windup. */
+    AosHitReport lr = aos_enemy_update(&e, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, CAM, CAMY,
+                                       always_zero);
+    (void)lr;
+    assert(e.step == 1 && e.state == 0);
+
+    /* Step 1: the animation end launches the animation-2 charge with
+     * vx +/-0x10000, vy 0x10000 and ay 0x2800. */
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2 && e.vx == (e.mirrored ? 0x10000 : -0x10000) &&
+           e.vy == 0x10000 && e.ay == 0x2800);
+
+    /* State 1 step 0: animation 4, the hit mark cleared; a far target
+     * and an odd coin take the step-0xA uppercut. */
+    e.state = 1;
+    e.step = 0;
+    e.mirrored = false;
+    soma.x = AOS_FIXED(600);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, persephone_odd);
+    assert(e.step == 0xA && e.pr_hit == 0);
+    /* Step 0xA frame gate: song 0x1CA, step 0xB, the launch. */
+    e.anim.frame = 1;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 0xB && e.vy < 0 && e.ay == 0x2000);
+
+    /* Step 2 on frame 3 emits the two-tick strike child and song 0x85. */
+    e.state = 1;
+    e.step = 2;
+    e.anim.frame = 3;
+    e.cycle_done = false;
+    e.timer = 0;
+    e.pr_hit = 0;
+    soma.x = AOS_FIXED(250);
+    AosHitReport sr = aos_enemy_update(&e, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, CAM, CAMY,
+                                       always_zero);
+    const AosEnemy *strike = NULL;
+    for (unsigned i = 0; i < sr.child_count; ++i)
+        if (sr.children[i].role == AOS_ROLE_PERSEPHONE_STRIKE)
+            strike = &sr.children[i];
+    assert(strike && strike->parent == &e && strike->static_frame == 0x14 &&
+           strike->combat.hurt_off && strike->walk_timer == 1);
+
+    /* The strike registers contact and expires after two updates. */
+    AosEnemy st = *strike;
+    st.removed = false;
+    st.walk_timer = 1;
+    (void)aos_enemy_update(&st, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(!st.removed);
+    (void)aos_enemy_update(&st, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(st.removed);
+
+    /* State 3 knockdown: gravity drop, floor landing resumes state 0
+     * step 6 with animation 5. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_PERSEPHONE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    d.state = 3;
+    d.vy = 0;
+    for (int i = 0; i < 40 && d.state == 3; ++i)
+        (void)aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(d.state == 0 && d.step == 6 && d.vy == 0x10000);
+
+    /* State 2 death: the 0x46-tick blink/sink removes the body. */
+    e.state = 2;
+    e.timer = 0x46;
+    for (int i = 0; i < 0x50 && !e.removed; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.removed);
+
+    /* State 4 dormant: ~0x78 ticks on step 0, then step 1 waits for
+     * the animation end before looping back with a re-seeded timer. */
+    ed.step = 0;
+    ed.timer = 0x78;
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(ed.step == 1);
+    ed.cycle_done = true;
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(ed.step == 0 && ed.timer <= 0x1F);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -10185,6 +10324,7 @@ int main(void) {
     nightmare_tests();
     une_tests();
     arachne_tests();
+    persephone_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

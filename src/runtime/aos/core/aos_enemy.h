@@ -171,6 +171,7 @@ enum {
     AOS_ENEMY_NIGHTMARE = 0x42,
     AOS_ENEMY_UNE = 0x3D,
     AOS_ENEMY_ARACHNE = 0x17,
+    AOS_ENEMY_PERSEPHONE = 0x24,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -221,7 +222,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87,
        AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89,
        AOS_ROLE_UNE_DEBRIS = 90,
-       AOS_ROLE_ARACHNE_LEG = 91, AOS_ROLE_ARACHNE_WEB = 92 };
+       AOS_ROLE_ARACHNE_LEG = 91, AOS_ROLE_ARACHNE_WEB = 92,
+       AOS_ROLE_PERSEPHONE_STRIKE = 93 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -578,6 +580,10 @@ typedef struct AosEnemy {
      * palette byte and the leg's vertical drop. */
     uint8_t ar_leg, ar_mode, ar_cool, ar_pal;
     int32_t ar_drop;
+    /* Persephone (EnemyPersephoneCreate 0x0807B5D0, EnemyPersephoneUpdate
+     * 0x0807B47C): `pr_hit` is + 0x20 (a strike already connected);
+     * + 0x6C is the shared anim.flags, + 0x6E the shared anim.frame. */
+    uint8_t pr_hit;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

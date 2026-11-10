@@ -2,6 +2,47 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0977 - Persephone ported (id 36)
+
+- `EnemyPersephoneCreate` (0x0807B5D0) through `sub_0807BDD0`
+  (tiles `0x081CBF94`, palette `0x0820A650`, frames `0x08217D48`,
+  shared with the strike children) and `EnemyPersephoneUpdate`
+  (0x0807B47C) dispatching `sub_0807B680` state 0,
+  `sub_0807BA20` state 1, the inline state-2 blink/sink death,
+  `sub_0807C014` state 3 and `sub_0807BD70` state 4 as
+  `src/runtime/aos/enemies/persephone.c`.
+- Create plays animation (0, 0, 1), faces the player, self-links
+  `+0x14` and enters state 0 (the `0x8E & 0x40` flag parks the
+  dormant state 4). State 0 is the seven-substep approach:
+  aggro box `0xF0 x 0x60`, animation-1 windup with song `0x1C9`,
+  the animation-2 charge (`vx +/-0x10000`, `vy 0x10000`,
+  `ay 0x2800`), floor and `0x50 x 0x60` proximity checks into
+  animation 3, then the state-1 attack. State 1 is the
+  twelve-substep attack: animation-4 windup, the
+  distance-banded dive (song `0x1CA`), the frame-synced melee
+  strikes of `sub_0807BF1C` at animation frame 3 (song `0x85`,
+  two-tick children of role `PERSEPHONE_STRIKE` linked through
+  `+0x14`), the landing walk and the step-`0xA`/`0xB` uppercut.
+  `sub_0807BE60` hurt: hit flash, state-3 knockdown
+  (`sub_0807C014` gravity drop resuming the approach on the
+  floor) or the `0x1CC`/animation-7/`0x46` death.
+- Unit-tested in `persephone_tests` (create variants, aggro,
+  charge launch, uppercut, strike spawn and expiry, knockdown
+  landing, blink death, dormant shuffle) and in
+  `area_04_room_001` through gdb (three Persephones spawning and
+  updating).
+- Divergences: `sub_08069A00` maps to `projectile_collide` (same
+  flag bits and 8.0 clamp, no probe margin), `sub_0806BD64` is
+  approximated by the pixel distance to Soma, the `+0x6E`/`+0x6C`
+  gates read the shared `anim.frame`/`anim.flags`, the strike
+  lives two ticks through the `+0x1C` countdown and registers
+  through the shared collide instead of `sub_08021654`, the
+  `+0x2D` freeze runs the contact check alone, the `+0x5A`
+  palette merge, the `sub_0806CCE8` draw variant, the room
+  events and the hurt `+0x70` hitstun gate / 1/16 coin are
+  skipped or approximated, and there is no emulator comparison.
+- Ported enemies: 83/113.
+
 ## Patch 0976 - Arachne ported (id 23)
 
 - `EnemyArachneCreate` (0x080799FC) through `sub_0807A970` (tiles

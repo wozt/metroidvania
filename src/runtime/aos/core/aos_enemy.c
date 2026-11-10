@@ -398,7 +398,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
         id != AOS_ENEMY_ALTAIR && id != AOS_ENEMY_BAEL &&
         id != AOS_ENEMY_NIGHTMARE && id != AOS_ENEMY_UNE &&
-        id != AOS_ENEMY_ARACHNE &&
+        id != AOS_ENEMY_ARACHNE && id != AOS_ENEMY_PERSEPHONE &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -995,6 +995,27 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->parent = NULL;
         enemy->spawned_count = 0;
         enemy->static_frame = -1;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            enemy->timer = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        enemy->timer = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_PERSEPHONE) {
+        /* EnemyPersephoneCreate 0x0807B5D0 through sub_0807BDD0: tiles
+         * 0x081CBF94, palette 0x0820A650, frames 0x08217D48 shared with
+         * the strike children; anim (0, 0, 1), facing from
+         * sub_0806CF2C, the 0x8E & 0x40 flag parks it in state 4, else
+         * state 0 with + 0x14 self-linked (the strike's parent read). */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->pr_hit = 0;
+        enemy->parent = enemy;
         if (flag_8e_40) {
             enemy->state = 4;
             enemy->step = enemy->substep = 0;
@@ -2106,6 +2127,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->state = 3;
                 enemy->step = 0;
             }
+            if (enemy->id == AOS_ENEMY_PERSEPHONE &&
+                enemy->role == AOS_ROLE_ENEMY && enemy->hp > 0 &&
+                enemy->state != 2 && enemy->state != 3) {
+                /* sub_0807BE60 non-lethal: animation 6 and the state 3
+                 * knockdown while the native's + 0x70 hitstun gate and
+                 * 1/16 coin hold (approximated by the state check). */
+                play_loop(enemy, kind->anims, 6, false);
+                enemy->state = 3;
+                enemy->step = 0;
+                enemy->timer = 0;
+            }
             if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY) {
                 /* sub_080998E8: knockback on every hit, the death drift
                  * on a lethal one. */
@@ -2373,6 +2405,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x5A;
+                } else if (enemy->id == AOS_ENEMY_PERSEPHONE &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_0807BE60 lethal: sub_080683BC defeated (the
+                     * framework's mark), the + 0x5A palette merge
+                     * skipped, sound 0x1CC, animation 7, + 0xD = 0x46,
+                     * state 2 — the inline blink/sink death. */
+                    aos_audio_play_song(0x1CC);
+                    play_loop(enemy, kind->anims, 7, false);
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x46;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3768,6 +3811,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_ARACHNE)
         return aos_enemy_arachne_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_PERSEPHONE)
+        return aos_enemy_persephone_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)

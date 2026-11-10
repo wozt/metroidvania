@@ -277,6 +277,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/nightmare.c
     src/runtime/aos/enemies/une.c
     src/runtime/aos/enemies/arachne.c
+    src/runtime/aos/enemies/persephone.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

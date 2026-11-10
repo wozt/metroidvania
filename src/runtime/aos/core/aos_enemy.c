@@ -391,7 +391,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_KILLER_FISH && id != AOS_ENEMY_BUER && id != AOS_ENEMY_WHITE_DRAGON &&
         id != AOS_ENEMY_GIANT_GHOST && id != AOS_ENEMY_BONE_PILLAR &&
         id != AOS_ENEMY_FISH_HEAD && id != AOS_ENEMY_UKOBACK &&
-        id != AOS_ENEMY_STUDENT_WITCH &&
+        id != AOS_ENEMY_STUDENT_WITCH && id != AOS_ENEMY_WITCH &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -665,6 +665,31 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->step = enemy->substep = 0;
         snap_to_floor(enemy, layer);
         enemy->y += 0x10000;
+        return true;
+    }
+    if (id == AOS_ENEMY_WITCH) {
+        /* EnemyWitchCreate (0x080B9D90): the shared witch tiles
+         * 0x081E41C4, palette 0x0820B880 and frames 0x08241790;
+         * sub_0806B04C stats, + 0x5C = 4, animation (0, 0, 1) stepped
+         * once; the global 0x8E & 0x40 sends it to state 4, else the
+         * sub_0806E1B8 contact and sub_080B9F2C hurt callbacks,
+         * sub_0806B1FC facing, + 0x59 bit 1 (the ghost translucency,
+         * approximated by translucent), state 0. No floor snap: she
+         * flies. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->angle = 0;
+        enemy->spin = 0;
+        enemy->variant = 0;
+        enemy->translucent = true;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
         return true;
     }
     if (id == AOS_ENEMY_GIANT_GHOST) {
@@ -1718,6 +1743,14 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 report.enemy_damage = 0;
                 aos_audio_play_song(0x69);
             }
+            /* sub_080B9F2C: while + 0x14 bit 0 stands (the attack
+             * charge) the witch shrugs blows off — sound 0x69 and the
+             * sub_08042B8C popup, no damage. */
+            if (enemy->id == AOS_ENEMY_WITCH &&
+                enemy->role == AOS_ROLE_ENEMY && (enemy->variant & 1)) {
+                report.enemy_damage = 0;
+                aos_audio_play_song(0x69);
+            }
             report.has_damage_popup = true;
             report.damage_popup = aos_damage_popup_create(enemy->x, enemy->y,
                                                           (int16_t)report.enemy_damage, 0);
@@ -1917,6 +1950,14 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                      * palette merge is not ported). */
                     enemy->state = 4;
                     enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_WITCH &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080B9F2C: sub_080683BC then state 3 at step
+                     * and substep 1 (the + 0x5A palette merge is not
+                     * ported). */
+                    enemy->state = 3;
+                    enemy->step = 1;
+                    enemy->substep = 1;
                 } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_0807D88C: its update finishes the death. */
@@ -3142,6 +3183,31 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                               weapon, weapon_frames,
                                               soma_atk, soma_def, cam_x,
                                               cam_y, random);
+    if (enemy->id == AOS_ENEMY_WITCH) {
+        if (enemy->role == AOS_ROLE_WITCH_COMPANION)
+            return aos_enemy_witch_companion_update(enemy, kind);
+        if (enemy->role == AOS_ROLE_WITCH_ORBIT)
+            return aos_enemy_witch_orbit_update(enemy, kind);
+        if (enemy->role == AOS_ROLE_WITCH_BOLT)
+            return aos_enemy_witch_bolt_update(enemy, soma, layer, kind,
+                                               weapon, weapon_frames,
+                                               soma_atk, soma_def, cam_x,
+                                               cam_y, random);
+        if (enemy->role == AOS_ROLE_WITCH_SPARK)
+            return aos_enemy_witch_spark_update(enemy, layer, kind);
+        if (enemy->role == AOS_ROLE_WITCH_TRAIL)
+            return aos_enemy_witch_trail_update(enemy, layer, kind);
+        if (enemy->role == AOS_ROLE_STUDENT_WITCH_BOLT)
+            return aos_enemy_student_witch_bolt_update(enemy, soma, layer,
+                                                       kind, weapon,
+                                                       weapon_frames,
+                                                       soma_atk, soma_def,
+                                                       cam_x, cam_y, random);
+        if (enemy->role == AOS_ROLE_ENEMY)
+            return aos_enemy_witch_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
+    }
     if (enemy->role == AOS_ROLE_ALURA_SCYTHE)
         return aos_enemy_alura_scythe_update(enemy, soma, layer, kind,
                                              weapon, weapon_frames,

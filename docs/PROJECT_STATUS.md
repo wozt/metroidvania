@@ -2,6 +2,37 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0966 - Witch ported (id 42)
+
+- `EnemyWitchCreate` (0x080B9D90) / `EnemyWitchUpdate` (0x080B9E2C)
+  plus the `sub_080B9614` hover/aggro, `sub_080B96DC` seven-substate
+  approach/charge, `sub_080B9B20` four-substate attack and
+  `sub_080B9CF8` death handlers, the `sub_080B9F2C` hurt (song
+  `0x69` while `+ 0x14` bit 0 stands, lethal into state 3), the
+  `sub_080B93D8` companion orb, the `sub_080B8ECC`/`sub_080B8FD0`
+  orbit sparks, the `sub_080B911C` homing bolt and the
+  `sub_080B94E4`/`sub_080B9074`/`sub_080B9560` sparkles as
+  `src/runtime/aos/enemies/witch.c` with five new child roles
+  (companion, orbit, bolt, spark, trail) wired through
+  `aria_runtime.c`.
+- She shares the Student Witch's resources (tiles `0x081E41C4`,
+  palette `0x0820B880`, frames `0x08241790`), hovers on the
+  centred player box (grown once `+ 0x14` bit 2 latches), steers a
+  sine-bobbed point beside Soma, charges for `0x40` ticks with the
+  companion orb, orbit spark pairs and the homing bolt (song
+  `0x12A`), lunges at `0x18000` and dies flinging sine-offset
+  sparks before the param-1 bolt deletes her.
+- Verified in game in `area_04_room_009`: the Witch engages Soma
+  for repeated 39-damage hits (frames to 3000; contact vs bolt not
+  distinguished). Unit-tested in `witch_tests`.
+- Ported enemies: 71/113. Blue soul 5 (the Witch soul, routine
+  `0x0802F96D`) is not ported yet. Divergences are listed in
+  `data/native_parity/annotations.tsv` (orbit centre approximated
+  by the spawn position, spark/trail entities as dedicated child
+  roles, the `sub_0803E058`/`sub_0803E6BC` tail and `sub_08021654`
+  popup approximated, activity/stun/room-query/palette bookkeeping
+  not ported, no emulator comparison).
+
 ## Patch 0965 - Student Witch ported (id 22)
 
 - `EnemyStudentWitchCreate` (0x080B8CA0) / `EnemyStudentWitchUpdate`

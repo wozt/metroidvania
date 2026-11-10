@@ -451,6 +451,30 @@ AosHitReport aos_enemy_student_witch_bolt_update(AosEnemy *enemy,
                                                int soma_atk, int soma_def,
                                                int cam_x, int cam_y,
                                                uint32_t (*random)(void));
+AosHitReport aos_enemy_witch_update(AosEnemy *enemy, AosSoma *soma,
+                                    const AosCollision *layer,
+                                    const AosEnemyKind *kind,
+                                    const AosWeaponEntity *weapon,
+                                    const AosWeaponFrames *weapon_frames,
+                                    int soma_atk, int soma_def, int cam_x,
+                                    int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_witch_companion_update(AosEnemy *enemy,
+                                              const AosEnemyKind *kind);
+AosHitReport aos_enemy_witch_orbit_update(AosEnemy *enemy,
+                                          const AosEnemyKind *kind);
+AosHitReport aos_enemy_witch_bolt_update(AosEnemy *enemy, AosSoma *soma,
+                                         const AosCollision *layer,
+                                         const AosEnemyKind *kind,
+                                         const AosWeaponEntity *weapon,
+                                         const AosWeaponFrames *weapon_frames,
+                                         int soma_atk, int soma_def, int cam_x,
+                                         int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_witch_spark_update(AosEnemy *enemy,
+                                          const AosCollision *layer,
+                                          const AosEnemyKind *kind);
+AosHitReport aos_enemy_witch_trail_update(AosEnemy *enemy,
+                                          const AosCollision *layer,
+                                          const AosEnemyKind *kind);
 AosHitReport aos_enemy_giant_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,

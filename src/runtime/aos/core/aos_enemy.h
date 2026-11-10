@@ -159,6 +159,7 @@ enum {
     AOS_ENEMY_BASILISK = 0x64,
     AOS_ENEMY_UKOBACK = 0x4C,
     AOS_ENEMY_STUDENT_WITCH = 0x16,
+    AOS_ENEMY_WITCH = 0x2A,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -202,7 +203,10 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DISC_BLADE = 72, AOS_ROLE_DISC_SHARD = 73,
        AOS_ROLE_DISC_GLOW = 74, AOS_ROLE_ALURA_SCYTHE = 75,
        AOS_ROLE_ALURA_BLADE = 76, AOS_ROLE_UKOBACK_CREATURE = 77,
-       AOS_ROLE_UKOBACK_LID = 78, AOS_ROLE_STUDENT_WITCH_BOLT = 79 };
+       AOS_ROLE_UKOBACK_LID = 78, AOS_ROLE_STUDENT_WITCH_BOLT = 79,
+       AOS_ROLE_WITCH_COMPANION = 80, AOS_ROLE_WITCH_ORBIT = 81,
+       AOS_ROLE_WITCH_BOLT = 82, AOS_ROLE_WITCH_SPARK = 83,
+       AOS_ROLE_WITCH_TRAIL = 84 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -446,6 +450,20 @@ typedef struct AosEnemy {
     int16_t uk_death_y;      /* the shatter's sink reference (+0x46 approx) */
     uint8_t sw_probe;        /* Student Witch: last sub_0806CAF8 result
                               * byte (+ 0x6C), its bit 2 the ceiling mark */
+    /* Witch (EnemyWitchCreate 0x080B9D90 and its children): + 0x14 the
+     * flags byte — bit 0 the invulnerable attack window read by
+     * sub_080B9F2C, bit 1 the companion's wait, bit 2 the tall aggro box
+     * (`variant`); + 0x18 the state-1 hover tick and the bolt's lock
+     * timer (`spin`); + 0x10 the orbit spark's shrinking radius and the
+     * bolt's speed ramp (`speed`); + 0x14 the orbit/bolt spin angle
+     * (`angle`, low 16 bits signed) and + 0x16 its spin rate (`w_spin`);
+     * the orbit spark's + 0x50/+ 0x54 orbit centre (`ax`/`ay`, world
+     * 16.16, approximating the native screen-space base) and + 0x48 its
+     * radius velocity (`vx`); the bolt's + 0x1C/+ 0x20 homing target
+     * (`target_x`/`target_y`); + 0xF the companion's and the trail
+     * sparkle's active mark (`w_active`). */
+    uint16_t w_spin;
+    bool w_active;
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

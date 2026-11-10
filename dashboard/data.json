@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T03:56:53+00:00",
+ "generated_at": "2026-11-10T04:41:40+00:00",
  "git": {
-  "commit": "20533a48",
+  "commit": "12cc3608",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 246,
+   "total": 247,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 180,
+    "functional": 181,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 180,
-   "functional_or_better_percent": 73.2,
-   "with_passing_tests": 233,
+   "functional_or_better": 181,
+   "functional_or_better_percent": 73.3,
+   "with_passing_tests": 234,
    "with_passing_tests_percent": 94.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -271,6 +271,7 @@
     "aos.enemies.waiter_skeleton",
     "aos.enemies.white_dragon",
     "aos.enemies.winged_skeleton",
+    "aos.enemies.witch",
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
     "aos.enemies.zombie_soldier",
@@ -480,20 +481,20 @@
    "areas": [
     "aos"
    ],
-   "total": 101,
+   "total": 102,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 73,
+    "functional": 74,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 73,
-   "functional_or_better_percent": 72.3,
-   "with_passing_tests": 101,
+   "functional_or_better": 74,
+   "functional_or_better_percent": 72.5,
+   "with_passing_tests": 102,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -567,6 +568,7 @@
     "aos.enemies.waiter_skeleton",
     "aos.enemies.white_dragon",
     "aos.enemies.winged_skeleton",
+    "aos.enemies.witch",
     "aos.enemies.zombie",
     "aos.enemies.zombie_officer",
     "aos.enemies.zombie_soldier",
@@ -14727,6 +14729,123 @@
    }
   },
   {
+   "id": "aos.enemies.witch",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Witch",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/witch.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyWitchCreate",
+    "EnemyWitchUpdate",
+    "sub_080B9614",
+    "sub_080B96DC",
+    "sub_080B9B20",
+    "sub_080B9CF8",
+    "sub_080B9EEC",
+    "sub_080B9F2C",
+    "sub_080B93D8",
+    "sub_080B94E4",
+    "sub_080B9560",
+    "sub_080B8ECC",
+    "sub_080B8FD0",
+    "sub_080B911C",
+    "sub_080B9074",
+    "sub_080B8E14",
+    "sub_080B87C4",
+    "sub_080B8668",
+    "sub_0806CF2C",
+    "sub_0806CDB8",
+    "sub_0806CDFC",
+    "sub_0806CD38",
+    "sub_0806CD78",
+    "sub_0806E29C",
+    "sub_0806D490",
+    "sub_0806D4A8",
+    "sub_0806D3D8",
+    "sub_0806D3C0",
+    "sub_0806D3CC",
+    "sub_0806D430",
+    "sub_080009E4",
+    "sub_0803E058",
+    "sub_0803E6BC",
+    "sub_08021654",
+    "sub_08042B8C",
+    "sub_080458E4",
+    "sub_08045CEC",
+    "sub_0806E0D0",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806D128",
+    "sub_0806AD24",
+    "sub_08021924",
+    "sub_0806DF20",
+    "sub_0806E218",
+    "sub_080683BC",
+    "sub_0806E1B8",
+    "sub_0806DFF8",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The sub_080458E4 charge smoke and the sub_08045CEC/sub_080B94E4/sub_080B9074 spark entities are approximated by the shared smoke/spark drifts and dedicated child roles; the sub_080B8ECC orbit spark's screen-space centre is approximated by the world position captured at spawn; the sub_0803E058/sub_0803E6BC bolt tail routines and the sub_08021654 contact popup are approximated; the + 0x59 bit-1 ghost translucency is approximated by translucent; the + 0x5A palette merges, the sub_08021924 activity mark, the sub_0806AD24 stun gate, the sub_080421AC room queries and the sub_0806D128 bookkeeping are not ported; no emulator comparison. EnemyWitchCreate (0x080B9D90) loads the shared witch tiles 0x081E41C4, palette 0x0820B880 and frames 0x08241790, sets + 0x5C = 4, plays animation (0, 0, 1), steps it and enters state 4 under the global 0x8E & 0x40, else state 0 with the sub_0806E1B8 contact and sub_080B9F2C hurt callbacks, the sub_0806B1FC facing and the + 0x59 bit-1 translucent mark (no floor snap: she flies). EnemyWitchUpdate dispatches: state 0 sub_080B9614 hovers — on animation frame 0 tick 0 a player in the centred box (0xDC x 0xA0, grown to 0x190 x 0xF0 once + 0x14 bit 2 latches) latches bit 2, then a facing check plus a RandomNumberGenerator & 2 roll and a 0x1F vertical gate pick the 0x20-tick approach (state 1) or the attack (state 2); state 1 sub_080B96DC approaches in seven substates — a sine-bobbed steering point beside the player with the 0x28000 accel limit, a case-2 dive 0x38 px under the player, the 0x20 hover-out, the brace animation gate, the 0x40-tick charge (companion orb, orbit spark pairs through sub_080B8FD0, the sub_080B911C homing bolt at timer 0x20, song 0x81) and the recovery; state 2 sub_080B9B20 attacks in four substates — the 0x18000 lunge with -0x600 decel, the 0x1C0000 slam with the smoke puffs, the 0x20000 integrate with alternating sparks and the drift home; state 3 sub_080B9CF8 dies — the 0x20 counter flings sine-offset animation-5/row-6 sparks on even counts then the sub_080B87C4 param-1 bolt deletes her; state 4 is animation only. The hurt sub_080B9F2C shrugs blows off with song 0x69 while + 0x14 bit 0 stands and otherwise runs the lethal path into state 3. The companion sub_080B93D8 waits invisible, activates through the charge and fades with her; the bolt sub_080B911C rolls its shade, launches at -0x18000, ramps to 0xFFFF, steers through sub_080B8E14 and fades off-screen with trail sparkles. Unit-tested in witch_tests.",
+   "next_action": "Compare the hover cadence, the charge timing and the bolt homing against an emulator; port the blue soul 5 update (the Witch soul).",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_009: the Witch hovers and engages Soma for repeated 39-damage hits (frames to 3000; contact vs bolt not distinguished)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.zombie",
    "area": "aos",
    "category": "enemies",
@@ -20429,6 +20548,7 @@
     "src/runtime/aos/enemies/alura_une.c",
     "src/runtime/aos/enemies/ukoback.c",
     "src/runtime/aos/enemies/student_witch.c",
+    "src/runtime/aos/enemies/witch.c",
     "src/runtime/aos/enemies/mimic.c",
     "src/runtime/aos/enemies/fleaman.c",
     "src/runtime/aos/enemies/skeleton_knight.c",
@@ -22927,6 +23047,12 @@
  },
  "timeline": [
   {
+   "commit": "12cc3608",
+   "date": "2026-11-10",
+   "subject": "Aria: port Student Witch (0x16) with witch bolt projectile",
+   "scope": "project"
+  },
+  {
    "commit": "20533a48",
    "date": "2026-11-10",
    "subject": "Port Ukoback (Aria enemy 0x4C) with peeked creature and lid children",
@@ -23399,12 +23525,6 @@
    "date": "2026-11-09",
    "subject": "Move the bat and zombie out of the Aria enemy framework",
    "scope": "project"
-  },
-  {
-   "commit": "e9f52c3d",
-   "date": "2026-11-09",
-   "subject": "Split the Aria enemies into one file per monster family",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -23465,9 +23585,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1261,
-    "routines_attached_to_features": 1261,
-    "unassigned_routines": 2312,
+    "routines_cited_by_features": 1277,
+    "routines_attached_to_features": 1277,
+    "unassigned_routines": 2296,
     "call_edges": 14228
    }
   },
@@ -25709,12 +25829,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 70,
-      "functional_or_better": 70,
-      "functional_or_better_percent": 68,
+      "implemented": 71,
+      "functional_or_better": 71,
+      "functional_or_better_percent": 69,
       "by_status": {
-       "functional": 70,
-       "not_started": 32
+       "functional": 71,
+       "not_started": 31
       }
      },
      "bosses": {
@@ -26801,13 +26921,28 @@
      {
       "id": 42,
       "name": "Witch",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Witch",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_009: the Witch hovers and engages Soma for repeated 39-damage hits (frames to 3000; contact vs bolt not distinguished)"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.witch",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "blue:5",
+       "notes": "Soul: drops (soul_index 5, soul_rarity 7, common 0x0015 / rare 0x0050, rates 20/35 through the generic roll) and is collected, but its blue soul 5 (routine 0x0802F96D) has no ported update yet. Animations: ported from EnemyWitchCreate (0x080B9D90) / EnemyWitchUpdate (0x080B9E2C) and the sub_080B9614 hover/aggro, sub_080B96DC seven-substate approach and charge, sub_080B9B20 four-substate attack, sub_080B9CF8 death handlers plus the sub_080B93D8 companion, sub_080B8ECC orbit spark, sub_080B8FD0 pair spawn, sub_080B911C homing bolt, sub_080B94E4/sub_080B9074 sparkles and sub_080B9560 drift spawn; unit-tested in witch_tests. Sounds: PlaySong 0x81 (charge start), 0x12A (bolt launch) and 0x69 (the + 0x14 bit-0 invulnerability) are requested and unit-tested, not listened to. Loot: the native record drops common 0x0015 and rare 0x0050 through the generic roll. Divergences: the orbit centre is approximated by the spawn-time world position, the spark/trail/companion entities are approximated by dedicated child roles on the shared witch art, the sub_0803E058/sub_0803E6BC tail and sub_08021654 popup are approximated, the activity/stun/room-query/palette bookkeeping is not ported, and there is no emulator comparison."
       }
      },
      {
@@ -28192,17 +28327,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 70,
+      "ported": 71,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 70,
+      "ported": 71,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 70,
+      "ported": 71,
       "partial": 0,
       "missing": 0
      },
@@ -28213,11 +28348,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 13,
+      "partial": 14,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 70
+     "monsters": 71
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -33075,7 +33210,7 @@
        "id": "06:05",
        "name": "Witch",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 5, soul_rarity 7, common 0x0015 / rare 0x0050, rates 20/35 through the generic roll) and is collected, but its blue soul 5 (routine 0x0802F96D) has no ported update yet. Animations: ported from EnemyWitchCreate (0x080B9D90) / EnemyWitchUpdate (0x080B9E2C) and the sub_080B9614 hover/aggro, sub_080B96DC seven-substate approach and charge, sub_080B9B20 four-substate attack, sub_080B9CF8 death handlers plus the sub_080B93D8 companion, sub_080B8ECC orbit spark, sub_080B8FD0 pair spawn, sub_080B911C homing bolt, sub_080B94E4/sub_080B9074 sparkles and sub_080B9560 drift spawn; unit-tested in witch_tests. Sounds: PlaySong 0x81 (charge start), 0x12A (bolt launch) and 0x69 (the + 0x14 bit-0 invulnerability) are requested and unit-tested, not listened to. Loot: the native record drops common 0x0015 and rare 0x0050 through the generic roll. Divergences: the orbit centre is approximated by the spawn-time world position, the spark/trail/companion entities are approximated by dedicated child roles on the shared witch art, the sub_0803E058/sub_0803E6BC tail and sub_08021654 popup are approximated, the activity/stun/room-query/palette bookkeeping is not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

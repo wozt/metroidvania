@@ -184,7 +184,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [99] = "lubicant",
                                                      [100] = "basilisk",
                                                      [76] = "ukoback",
-                                                     [22] = "student_witch"};
+                                                     [22] = "student_witch",
+                                                     [42] = "witch"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
@@ -2980,7 +2981,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_DISC_SHARD ||
                                        hit.children[c].role == AOS_ROLE_DISC_GLOW ||
                                        hit.children[c].role == AOS_ROLE_ALURA_SCYTHE ||
-                                       hit.children[c].role == AOS_ROLE_ALURA_BLADE
+                                       hit.children[c].role == AOS_ROLE_ALURA_BLADE ||
+                                       hit.children[c].role == AOS_ROLE_WITCH_COMPANION ||
+                                       hit.children[c].role == AOS_ROLE_WITCH_ORBIT ||
+                                       hit.children[c].role == AOS_ROLE_WITCH_BOLT ||
+                                       hit.children[c].role == AOS_ROLE_WITCH_SPARK ||
+                                       hit.children[c].role == AOS_ROLE_WITCH_TRAIL
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

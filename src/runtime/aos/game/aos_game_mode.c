@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_game_mode.h"
-#include "aos/title/aos_title_fade.h"
+#include "../title/aos_title_fade.h"
 
 enum {
     AOS_DCNT_BG0 = 1u << 8,

@@ -2,7 +2,7 @@
 /* The editor's collision in Aria's runtime: see aos_room_overlay.h. */
 #include "aos_room_overlay.h"
 
-#include "project_room_document.h"
+#include "../../project_room_document.h"
 
 #include <stdio.h>
 #include <stdlib.h>

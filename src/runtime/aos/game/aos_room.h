@@ -14,8 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "aos/core/aos_collision.h"
-#include "aos/core/aos_soma.h"
+#include "../core/aos_collision.h"
+#include "../core/aos_soma.h"
 
 #define AOS_EXIT_CELL 0xF0
 

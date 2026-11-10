@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../aos_game_mode.h"
+#include "../../aos/game/aos_game_mode.h"
 #include "../core/aos_input.h"
 #include "../math/aos_math.h"
 

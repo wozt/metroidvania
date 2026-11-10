@@ -342,6 +342,15 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      the remaining `aos_*` groupings (menus, intro, HUD, save,
      gameplay core) and then the analogous MZM paths, one category
      per commit.
+   - *(Continued in patches 0947-0951.)* All remaining `aos_*`
+     modules are now categorized: shared primitives in `aos/core/`,
+     menus/HUD/text in `aos/menus/`, title and opening in
+     `aos/title/`, intro cutscene/entities/font/graphics/resources,
+     game-over and level-up in `aos/intro/`, and bestiary, doors,
+     lifecycle, game mode, objects, pickups, recent items, rooms and
+     save in `aos/game/`. No flat `src/runtime/aos_*.c/h` remains.
+     Continue with the analogous MZM paths (`runtime/mzm/...`),
+     one category per commit.
    - Create `src/runtime/aos/core/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

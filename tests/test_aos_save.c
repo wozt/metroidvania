@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_save.h"
+#include "aos/game/aos_save.h"
 
 #include <assert.h>
 #include <stdio.h>

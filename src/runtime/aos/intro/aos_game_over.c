@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_game_over.h"
 
-#include "../../aos_game_mode.h"
+#include "../../aos/game/aos_game_mode.h"
 
 int32_t aos_fixed_divide(int32_t numerator, int32_t denominator) {
     if (denominator == 0) return 0;

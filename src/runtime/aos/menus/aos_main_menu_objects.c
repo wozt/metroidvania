@@ -2,7 +2,7 @@
 /* The main menu's object graphics: see aos_main_menu_objects.h. */
 #include "aos_main_menu_objects.h"
 
-#include "../../aos_obj_rom.h"
+#include "../../aos/game/aos_obj_rom.h"
 #include "../core/aos_rom_graphics.h"
 
 #include <stdio.h>

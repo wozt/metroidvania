@@ -582,7 +582,7 @@ with BG1 at `sub_0800ED5C(load_x)` and `sub_0800EE54(load_y)` = load_y +
 0x30 (BG1 scrolls 1:1); `sub_0803FBBC` pins one-screen axes to X 0 and Y
 0x30. The arrival is therefore X = (W > 1 ? load_x : 0) + local X +
 adjustment and Y = (H > 1 ? load_y + 0x30 : 0x30) + local Y.
-`src/runtime/aos_room.c` ports these rules. `fusion_aria_runtime
+`src/runtime/aos/game/aos_room.c` ports these rules. `fusion_aria_runtime
 --audit-transitions` leaves every exported room through each entry: all
 725 entries match an exit, all 723 edge transitions arrive inside their
 target, and the 2 exit-cell transitions arrive outside when leaving from
@@ -632,7 +632,7 @@ through `sub_0800C5A8(0)` (`sub_0800C5A8(1)` restores it); every update
 hides it (`+0x58` bit 0x20) unless `sub_08068AD4(e, -32, 0, 0x130, 0xD0)`
 holds on its screen position. With `+0x59` bit 2 clear it enters state
 `0x63`: input locked, the `0x42C` bits cleared, the entity deleted and its
-graphics slots freed (`sub_0803E6BC`). `src/runtime/aos_door.c` ports this
+graphics slots freed (`sub_0803E6BC`). `src/runtime/aos/game/aos_door.c` ports this
 except state `0x63` (the setter of that bit is not traced); the global
 flags are exposed as `holding`, their readers are not traced.
 

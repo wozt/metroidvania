@@ -2,6 +2,20 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0951 - Remaining Aria modules move to src/runtime/aos/game/
+
+- The last flat modules moved to `src/runtime/aos/game/`:
+  `aos_bestiary`, `aos_door`, `aos_game_lifecycle`, `aos_game_mode`,
+  `aos_obj`, `aos_obj_rom`, `aos_pickup`, `aos_recent_items`,
+  `aos_room`, `aos_room_overlay`, `aos_save` and `aos_save_room`.
+  With this move no flat `src/runtime/aos_*.c/h` remains: the whole
+  Aria runtime now lives under `src/runtime/aos/{core,enemies,
+  red_souls,blue_souls,souls,math,weapons,menus,title,intro,game}/`.
+  Includes inside the directory use `../<category>/` for siblings
+  and bare names for same-directory headers; consumers use
+  `aos/game/` paths. CMake plus the registries were updated.
+  No code or behavior changed.
+
 ## Patch 0950 - Intro and game-over modules move to src/runtime/aos/intro/
 
 - The intro cutscene, entities, font, graphics and resources, the
@@ -7126,7 +7140,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0580 - Aria money pickups
 
-- `src/runtime/aos_pickup.c` ports the money pickup: creation from the
+- `src/runtime/aos/game/aos_pickup.c` ports the money pickup: creation from the
   table 0x085250E4 (`sub_08043F70`, 1 to 2000 gold, exported as
   `metadata/money.tsv`), its fall, landing, 300-frame rest and 64-frame
   blink (`sub_08043DD0`, types up to 4) and its collection (money case of
@@ -7581,7 +7595,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0558 - Aria GameModeUpdate dispatcher
 
-- `aos_game_mode_update` (`src/runtime/aos_game_mode.c`) ports Aria's
+- `aos_game_mode_update` (`src/runtime/aos/game/aos_game_mode.c`) ports Aria's
   `GameModeUpdate`: the native 21-entry `enum GameMode`, one handler per mode,
   the empty `GAME_MODE_UNK_F` case, out-of-range modes kept and the
   stage/timer reset on a new mode. `aos_game_mode_boot` reproduces the mode
@@ -11843,7 +11857,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   of `sub_0800ED5C`/`sub_0800EE54` (vertical + 0x30) and `sub_0803FBBC`.
   Recorded in `docs/AOS_SOMA.md`.
 - `scripts/aos_runtime_room.py` exports the transition list (format version
-  2) and gains `--all`; `src/runtime/aos_room.c` ports the rules with
+  2) and gains `--all`; `src/runtime/aos/game/aos_room.c` ports the rules with
   ROM-free tests; `fusion_aria_runtime` changes rooms at the native arrival
   position and follows Soma with the transition camera target.
 - `--audit-transitions` over the 342 exported rooms: 725 entries matched,
@@ -11881,7 +11895,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Ported the 16x16 solid-block override of `sub_08002200` / `sub_08002248`
   and its rule in `sub_08001A00` into `aos_collision.c`.
 - Ported the wooden door (special object 0x00, `Object00Create` /
-  `Object00Update`) into `src/runtime/aos_door.c`: blocking, contact and
+  `Object00Update`) into `src/runtime/aos/game/aos_door.c`: blocking, contact and
   facing test, input lock while it swings open for 64 frames, forced walk
   through, and the open/walk-out/close sequence when Soma enters through a
   door, with ROM-free tests.

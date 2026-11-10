@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos/core/aos_collision.h"
-#include "aos/core/aos_combat.h"
+#include "../core/aos_collision.h"
+#include "../core/aos_combat.h"
 #include "aos_recent_items.h"
-#include "aos/core/aos_stats.h"
+#include "../core/aos_stats.h"
 
 /* One record of the money table 0x085250E4 (12 bytes), exported as
  * metadata/money.tsv. */

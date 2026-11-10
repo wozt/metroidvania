@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_save_room.h"
+#include "aos/game/aos_save_room.h"
 #include "aos/core/aos_soma.h"
 
 #include <assert.h>

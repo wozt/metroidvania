@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "aos_game_mode.h"
+#include "aos/game/aos_game_mode.h"
 #include "aos/core/aos_input.h"
 
 /* A palette resource: 4-byte header (+ 2: its row count), then the rows;

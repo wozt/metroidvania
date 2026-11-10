@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The editor's collision in Aria's runtime: applied when the document fits
  * the room, ignored otherwise, absent without a document. */
-#include "aos_room_overlay.h"
+#include "aos/game/aos_room_overlay.h"
 
 #include <assert.h>
 #include <sys/stat.h>

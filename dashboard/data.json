@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:11:28+00:00",
+ "generated_at": "2026-11-10T01:16:06+00:00",
  "git": {
-  "commit": "3b30c5bd",
+  "commit": "461495c8",
   "branch": "main",
   "dirty": true
  },
@@ -8741,7 +8741,7 @@
     "src/runtime/aos/core/aos_soma.c",
     "src/runtime/aos/intro/aos_game_over.c",
     "src/runtime/aos/intro/aos_game_over_graphics.c",
-    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos/game/aos_game_lifecycle.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/runtime_room.c",
@@ -11327,8 +11327,8 @@
     "src/runtime/aos/enemies/skeleton.c",
     "src/runtime/aos/enemies/headhunter.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_pickup.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_pickup.c",
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c",
@@ -14326,7 +14326,7 @@
     "src/runtime/aos/core/aos_effect.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/objects.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_wall.c",
@@ -14415,7 +14415,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/aos_door.c",
+    "src/runtime/aos/game/aos_door.c",
     "src/assets/aos/objects.c"
    ],
    "tests": [
@@ -14498,7 +14498,7 @@
     "src/runtime/aos/souls/aos_soul_notice.c",
     "src/runtime/aos/souls/aos_soul_notice.h",
     "src/runtime/aos/core/aos_room_music.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/runtime/aos/core/aos_stats.c",
     "src/assets/aos/objects.c",
     "src/pipeline/tasks.c"
@@ -14752,10 +14752,10 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_pickup.c",
-    "src/runtime/aos_recent_items.c",
+    "src/runtime/aos/game/aos_pickup.c",
+    "src/runtime/aos/game/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/assets/aos/runtime_room.c",
     "src/assets/aos/objects.c"
    ],
@@ -14883,7 +14883,7 @@
     "src/runtime/aos/menus/aos_pause_graphics.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/core/aos_stats.h",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_soul_menu.c",
@@ -14965,11 +14965,11 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_bestiary.c",
+    "src/runtime/aos/game/aos_bestiary.c",
     "src/runtime/aos/souls/aos_soul_menu.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/core/aos_stats.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_soul_menu.c",
@@ -15066,11 +15066,11 @@
     "src/runtime/aos/intro/aos_intro_resources.c",
     "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_menu.c",
-    "src/runtime/aos_recent_items.c",
+    "src/runtime/aos/game/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/core/aos_stats.c",
     "src/runtime/aos/weapons/aos_weapon.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_pause_graphics.c",
@@ -15201,7 +15201,7 @@
     "src/runtime/aos/souls/aos_soul_menu.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/core/aos_stats.h",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/pipeline/tasks.c"
    ],
    "tests": [
@@ -15432,7 +15432,7 @@
    "local_sources": [
     "src/runtime/aos/souls/aos_soul_menu.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/menus/aos_pause_graphics.c"
@@ -15706,7 +15706,7 @@
    "local_sources": [
     "src/runtime/aos/core/aos_soma.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_soma.c",
@@ -15773,7 +15773,7 @@
    "local_sources": [
     "src/runtime/aos/core/aos_stats.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/assets/aos/objects.c"
    ],
    "tests": [
@@ -15846,7 +15846,7 @@
    "local_sources": [
     "src/runtime/aos/core/aos_stats.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/assets/aos/objects.c"
    ],
    "tests": [
@@ -15919,8 +15919,8 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_save.c",
-    "src/runtime/aos_save_room.c",
+    "src/runtime/aos/game/aos_save.c",
+    "src/runtime/aos/game/aos_save_room.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
@@ -16206,15 +16206,15 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos/menus/aos_pause_graphics.c",
-    "src/runtime/aos_recent_items.c",
+    "src/runtime/aos/game/aos_recent_items.c",
     "src/runtime/aos/intro/aos_intro_resources.c",
     "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_menu.c",
-    "src/runtime/aos_bestiary.c",
+    "src/runtime/aos/game/aos_bestiary.c",
     "src/runtime/aos/menus/aos_button_config.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/core/aos_stats.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_pause_graphics.c",
@@ -16338,10 +16338,10 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos/core/aos_stats.c",
-    "src/runtime/aos_pickup.c",
-    "src/runtime/aos_recent_items.c",
+    "src/runtime/aos/game/aos_pickup.c",
+    "src/runtime/aos/game/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/runtime/aos/souls/aos_soul_notice.c",
     "src/runtime/aos/souls/aos_soul_notice.h",
     "src/runtime/aos/intro/aos_intro_resources.c",
@@ -16446,7 +16446,7 @@
     "src/runtime/aos/red_souls/aos_soul_red_needles.c",
     "src/runtime/aos/core/aos_soma.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/assets/aos/objects.c",
     "src/runtime/aos/core/aos_enemy.c",
     "src/runtime/aos/math/aos_math.c",
@@ -17010,8 +17010,8 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_game_mode.c",
-    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos/game/aos_game_mode.c",
+    "src/runtime/aos/game/aos_game_lifecycle.c",
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos/intro/aos_intro_cutscene.c",
     "src/runtime/aos/title/aos_title_fade.c",
@@ -17177,14 +17177,14 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos/game/aos_game_lifecycle.c",
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos/menus/aos_main_menu_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aos/title/aos_title_fade.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/runtime/aos/intro/aos_intro_resources.c",
     "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/title/aos_title_screen.c",
@@ -17195,8 +17195,8 @@
     "src/runtime/aos/menus/aos_main_menu_sprites.c",
     "src/runtime/aos/menus/aos_main_menu_objects.c",
     "src/runtime/aos/menus/aos_main_menu_files.c",
-    "src/runtime/aos_obj.c",
-    "src/runtime/aos_obj_rom.c",
+    "src/runtime/aos/game/aos_obj.c",
+    "src/runtime/aos/game/aos_obj_rom.c",
     "src/runtime/aos/core/aos_stats.c"
    ],
    "tests": [
@@ -17414,9 +17414,9 @@
     "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/intro/aos_intro_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
-    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos/game/aos_game_lifecycle.c",
     "src/runtime/aos/title/aos_title_preview.c",
-    "src/runtime/aos_save.c"
+    "src/runtime/aos/game/aos_save.c"
    ],
    "tests": [
     "tests/test_aos_intro_cutscene.c",
@@ -17832,7 +17832,7 @@
     "src/runtime/room_runtime.c",
     "src/core/json.c",
     "src/runtime/project_room_document.c",
-    "src/runtime/aos_room_overlay.c",
+    "src/runtime/aos/game/aos_room_overlay.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
@@ -18092,7 +18092,7 @@
     "src/runtime/aos/souls/aos_soul_notice.c",
     "src/runtime/aos/souls/aos_soul_notice.h",
     "src/runtime/aos/core/aos_room_music.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/assets/aos/objects.c",
     "src/pipeline/tasks.c"
    ],
@@ -19462,8 +19462,8 @@
    "local_sources": [
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
-    "src/runtime/aos_save.c",
-    "src/runtime/aos_game_lifecycle.c",
+    "src/runtime/aos/game/aos_save.c",
+    "src/runtime/aos/game/aos_game_lifecycle.c",
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos/menus/aos_main_menu_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
@@ -20204,8 +20204,8 @@
    "local_sources": [
     "src/assets/aos/runtime_room.c",
     "src/assets/aos/export.c",
-    "src/runtime/aos_save_room.c",
-    "src/runtime/aos_save.c",
+    "src/runtime/aos/game/aos_save_room.c",
+    "src/runtime/aos/game/aos_save.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "461495c8",
+   "date": "2026-11-10",
+   "subject": "Move Aria intro and game-over modules into src/runtime/aos/intro/",
+   "scope": "project"
+  },
+  {
    "commit": "3b30c5bd",
    "date": "2026-11-10",
    "subject": "Move Aria title modules into src/runtime/aos/title/",
@@ -22713,12 +22719,6 @@
    "commit": "ec12a942",
    "date": "2026-11-09",
    "subject": "Port the Dryad (Aria of Sorrow enemy id 70) with its seed projectile",
-   "scope": "project"
-  },
-  {
-   "commit": "78ef1230",
-   "date": "2026-11-09",
-   "subject": "docs: decode Dryad enemy chain spec (id 70)",
    "scope": "project"
   }
  ],

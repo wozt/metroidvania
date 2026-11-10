@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow room exits. */
-#include "aos_room.h"
+#include "aos/game/aos_room.h"
 
 #include <assert.h>
 #include <stdio.h>

@@ -11,10 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../core/aos_audio.h"
-#include "aos_game_lifecycle.h"
-#include "aos/intro/aos_intro_font.h"
-#include "aos/intro/aos_intro_graphics.h"
-#include "aos/intro/aos_intro_resources.h"
+#include "../game/aos_game_lifecycle.h"
+#include "../intro/aos_intro_font.h"
+#include "../intro/aos_intro_graphics.h"
+#include "../intro/aos_intro_resources.h"
 #include "aos_logo_graphics.h"
 #include "../menus/aos_main_menu_graphics.h"
 #include "../menus/aos_main_menu_objects.h"
@@ -23,12 +23,12 @@
 #include "../core/aos_stats.h"
 #include "aos_title_graphics.h"
 #include "gba_input.h"
-#include "aos/intro/aos_game_over_graphics.h"
+#include "../intro/aos_game_over_graphics.h"
 #include "../menus/aos_text_window.h"
 #include "../menus/aos_menu_bg0.h"
 #include "../menus/aos_menu_save_bridge.h"
 #include "../core/aos_mp2k.h"
-#include "aos_save.h"
+#include "../game/aos_save.h"
 
 enum { GBA_W = 240, GBA_H = 160, SCALE = 3 };
 

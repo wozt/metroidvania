@@ -7,8 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../../aos_bestiary.h"
-#include "../../aos_recent_items.h"
+#include "../../aos/game/aos_bestiary.h"
+#include "../../aos/game/aos_recent_items.h"
 #include "../../aos/core/aos_stats.h"
 
 enum {

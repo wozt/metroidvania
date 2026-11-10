@@ -19,8 +19,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos/core/aos_collision.h"
-#include "aos/core/aos_soma.h"
+#include "../core/aos_collision.h"
+#include "../core/aos_soma.h"
 
 /* SetPlayerInput(1, keys): replaces the player's input for a frame. */
 typedef struct {

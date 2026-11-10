@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_obj.h"
+#include "../../aos/game/aos_obj.h"
 
 enum { AOS_TITLE_TEXT_LAYERS = 2, AOS_TITLE_LAYER_SIZE = 256 };
 

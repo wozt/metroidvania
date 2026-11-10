@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow wooden door. */
-#include "aos_door.h"
+#include "aos/game/aos_door.h"
 
 #include <assert.h>
 #include <stdio.h>

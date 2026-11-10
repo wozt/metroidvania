@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos/menus/aos_pause_graphics.h"
 
-#include "aos_recent_items.h"
+#include "aos/game/aos_recent_items.h"
 
 #include <assert.h>
 #include <stdio.h>

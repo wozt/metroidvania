@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../../aos_game_mode.h"
+#include "../../aos/game/aos_game_mode.h"
 #include "../core/aos_input.h"
 
 /* Source-derived GameModeMainMenuUpdate controller state. Slot masks retain

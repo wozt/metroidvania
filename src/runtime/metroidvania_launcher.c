@@ -16,7 +16,7 @@
 #include <string.h>
 
 #include "aos/core/aos_audio.h"
-#include "aos_game_mode.h"
+#include "aos/game/aos_game_mode.h"
 #include "aos/core/aos_input.h"
 #include "aos/core/aos_mp2k.h"
 #include "aos/title/aos_title_graphics.h"

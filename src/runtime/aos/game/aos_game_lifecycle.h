@@ -6,10 +6,10 @@
 #include <stdint.h>
 
 #include "aos_game_mode.h"
-#include "aos/intro/aos_game_over.h"
-#include "aos/intro/aos_intro_cutscene.h"
-#include "aos/menus/aos_main_menu.h"
-#include "aos/title/aos_title_screen.h"
+#include "../intro/aos_game_over.h"
+#include "../intro/aos_intro_cutscene.h"
+#include "../menus/aos_main_menu.h"
+#include "../title/aos_title_screen.h"
 
 /* Host-neutral owner of Aria's native game-mode dispatcher. The SDL runtime
  * consumes the frame requests while the individual controllers retain their

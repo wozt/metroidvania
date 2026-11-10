@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos/core/aos_stats.h"
+#include "../core/aos_stats.h"
 
 enum {
     AOS_PICKUP_RECENT_LISTS = 3,

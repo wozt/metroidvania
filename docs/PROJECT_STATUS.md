@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0957 - MZM cutscene modules move to src/runtime/mzm/cutscenes/
+
+- The cutscene and escape modules moved to
+  `src/runtime/mzm/cutscenes/`: `mzm_cutscene`,
+  `mzm_in_game_cutscene`, the Chozodia escape/scripted/security
+  modules, `mzm_chozo_statue`, `mzm_elevator_statue`, `mzm_escape`,
+  `mzm_escape_ship`, `mzm_gunship` and `mzm_tourian_escape`.
+  Includes inside the directory use `../core/`, `../menus/` for
+  sibling categories and `../../mzm_*.h` for modules not yet
+  moved; consumers use `mzm/cutscenes/` paths. CMake plus the
+  registries were updated. No code or behavior changed.
+
 ## Patch 0956 - MZM title modules move to src/runtime/mzm/title/
 
 - `mzm_title_screen`, `mzm_intro` and `mzm_credits` moved to
@@ -13011,7 +13023,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0254 - Zero Mission Chozodia security systems
 
-- `src/runtime/mzm_chozodia_security.c` ports `Searchlight`,
+- `src/runtime/mzm/cutscenes/mzm_chozodia_security.c` ports `Searchlight`,
   `SecurityLaser`, `SearchlightEye`, `SearchlightEyeBeam` and
   `SearchlightEyeProjectile`; the engine handles `SSC_CHECK_COLLIDING`
   contacts and `SP_IMMUNE_TO_PROJECTILES` (invincible impact, 2-frame stun,
@@ -14418,7 +14430,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0397 - getting the fully powered suit
 
 - Ported the "getting the fully powered suit" cutscene
-  (`GettingFullyPoweredSuit*`) in `src/runtime/mzm_cutscene.c`:
+  (`GettingFullyPoweredSuit*`) in `src/runtime/mzm/cutscenes/mzm_cutscene.c`:
   - Samus and the backdrop on BG2 and BG3;
   - the rising ring with its palette cycled through OBJ row 10;
   - the sparkles around the ring and the ones rising from below;
@@ -14429,7 +14441,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   - `CutsceneStartSpriteEffect` and `CutsceneFadeScreenToWhite`;
   - 14 cutscene objects, with the per-object counters
     (`MzmCutsceneOamData`) kept beside the menu objects.
-- New module `src/runtime/mzm_in_game_cutscene.c` for the suit upgrade
+- New module `src/runtime/mzm/cutscenes/mzm_in_game_cutscene.c` for the suit upgrade
   (`InGameCutsceneUpgradingSuit` and its start, process, init and
   flash-offset helpers):
   - BG0 faded out and hidden;
@@ -15403,7 +15415,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0328 - Zero Mission Zebes escape countdown and destruction
 
-- `src/runtime/mzm_escape.c` ports `EscapeDetermineTimer`,
+- `src/runtime/mzm/cutscenes/mzm_escape.c` ports `EscapeDetermineTimer`,
   `EscapeCheckHasEscaped`, `EscapeSetTimer` and `EscapeUpdateTimer`. The event
   route selects Tourian or Chozodia, the difficulty selects the native limit,
   and the hundredths/seconds countdown freezes outside gameplay and while a
@@ -15794,7 +15806,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   targets then show on the pause map (with the elevators towards the first
   one), the world map and as viewable areas.
 - A hint statue now opens this screen when its flashing ends, then sits
-  down (`src/runtime/mzm_chozo_statue.c`).
+  down (`src/runtime/mzm/cutscenes/mzm_chozo_statue.c`).
 - Checked by capture (brinstar_002's Long Beam hint, then the pause map);
   test in `tests/test_mzm_screens.c`.
 
@@ -15836,7 +15848,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0298 - Zero Mission gunship and the new game's landing
 
-- `src/runtime/mzm_gunship.c`: the gunship and its parts (gunship.c): the
+- `src/runtime/mzm/cutscenes/mzm_gunship.c`: the gunship and its parts (gunship.c): the
   landing of a new game with its flames, the entrance opening and the
   platform rising while Samus is near, Samus entering from the top, the
   refill, the save prompt and the save, Samus rising out of the hatch, the
@@ -15856,7 +15868,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0297 - Zero Mission story text cutscenes
 
-- `src/runtime/mzm_cutscene.c`: CutsceneHandler for the non-gameplay
+- `src/runtime/mzm/cutscenes/mzm_cutscene.c`: CutsceneHandler for the non-gameplay
   cutscenes (CutsceneInit, the background blending effect, the backgrounds'
   positions, CutsceneVBlank) and the story text cutscenes: the English
   monologue drawn with the native font, the vertical centering, the fade in
@@ -16361,7 +16373,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0270 - Zero Mission item Chozo statues
 
-- `src/runtime/mzm_chozo_statue.c` ports `ChozoStatue`, `ChozoStatuePart` and
+- `src/runtime/mzm/cutscenes/mzm_chozo_statue.c` ports `ChozoStatue`, `ChozoStatuePart` and
   `ChozoBall` for the eight item statues (Long, Ice and Wave Beams, Bombs,
   Speed Booster, High Jump, Screw Attack, Varia Suit) and their hint
   statues: `gSubSpriteData1` with the Standing, Sitting and Seated

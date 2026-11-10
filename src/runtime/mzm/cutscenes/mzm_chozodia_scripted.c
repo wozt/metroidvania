@@ -3,8 +3,8 @@
  * the Fully Powered Suit (src/sprites_ai/falling_chozo_pillar.c) and the
  * Power Bomb theft seen during the suitless sequence
  * (src/sprites_ai/space_pirate_carrying_power_bomb.c). */
-#include "mzm/core/mzm_sprite_ai.h"
-#include "mzm/core/mzm_screen_shake.h"
+#include "../core/mzm_sprite_ai.h"
+#include "../core/mzm_screen_shake.h"
 
 enum {
     PILLAR_POSE_CHECK_SUIT_ANIM_ENDED = 0x9,

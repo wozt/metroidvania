@@ -54,7 +54,7 @@ about 18 seconds instead of three minutes.
   `gPreventMovementTimer`, the sprite update
   only runs uninitialized and `SP_ALWAYS_ACTIVE` sprites
   (`SpriteUtilCheckStopSpritesPose`).
-- Chozo statues (`src/runtime/mzm_chozo_statue.c`): `multi` lines carry the
+- Chozo statues (`src/runtime/mzm/cutscenes/mzm_chozo_statue.c`): `multi` lines carry the
   `MultiSpriteData` tables (frame timer, then each part's OAM index and
   offsets) read from the ROM; the statue, its parts and its ball
   use the statue's graphics (statues export only unflipped and X-flipped

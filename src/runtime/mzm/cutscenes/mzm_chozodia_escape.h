@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm/core/mzm_screen.h"
+#include "../core/mzm_screen.h"
 
 enum { MZM_CHOZODIA_ESCAPE_OBJECTS = 5, MZM_CHOZODIA_ESCAPE_LINES = 160 };
 

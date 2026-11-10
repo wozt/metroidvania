@@ -3,9 +3,9 @@
  * (src/sprites_ai/escape_ship.c) and the two gates of its hangar
  * (src/sprites_ai/escape_gate.c), the first spawning the black pirates and
  * the pirate that chases the ship. */
-#include "mzm/core/mzm_sprite_ai.h"
-#include "mzm/core/mzm_blocks.h"
-#include "mzm_samus.h"
+#include "../core/mzm_sprite_ai.h"
+#include "../core/mzm_blocks.h"
+#include "../../mzm_samus.h"
 
 enum {
     SHIP_POSE_CHECK_OPEN = 0x8,

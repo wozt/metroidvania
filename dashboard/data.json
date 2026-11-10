@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:24:16+00:00",
+ "generated_at": "2026-11-10T01:25:14+00:00",
  "git": {
-  "commit": "91922de4",
+  "commit": "6e6409d9",
   "branch": "main",
   "dirty": true
  },
@@ -1148,8 +1148,8 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_chozodia_escape.c",
-    "src/runtime/mzm_chozodia_escape.h",
+    "src/runtime/mzm/cutscenes/mzm_chozodia_escape.c",
+    "src/runtime/mzm/cutscenes/mzm_chozodia_escape.h",
     "src/runtime/mzm/core/mzm_screen.c",
     "src/runtime/gba_ppu.c",
     "src/runtime/room_runtime.c",
@@ -1365,10 +1365,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_cutscene.c",
-    "src/runtime/mzm_cutscene.h",
-    "src/runtime/mzm_in_game_cutscene.c",
-    "src/runtime/mzm_in_game_cutscene.h",
+    "src/runtime/mzm/cutscenes/mzm_cutscene.c",
+    "src/runtime/mzm/cutscenes/mzm_cutscene.h",
+    "src/runtime/mzm/cutscenes/mzm_in_game_cutscene.c",
+    "src/runtime/mzm/cutscenes/mzm_in_game_cutscene.h",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_ruins_test.c",
     "src/runtime/mzm/menus/mzm_message_banner.c"
@@ -1444,7 +1444,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_cutscene.c",
+    "src/runtime/mzm/cutscenes/mzm_cutscene.c",
     "src/runtime/mzm/core/mzm_screen.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_door_fade.c"
@@ -1516,7 +1516,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_cutscene.c",
+    "src/runtime/mzm/cutscenes/mzm_cutscene.c",
     "src/runtime/mzm/core/mzm_text.c",
     "src/runtime/room_runtime.c"
    ],
@@ -1989,7 +1989,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_chozodia_scripted.c",
+    "src/runtime/mzm/cutscenes/mzm_chozodia_scripted.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/mzm/menus/mzm_message_banner.c",
@@ -2054,7 +2054,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_chozodia_security.c",
+    "src/runtime/mzm/cutscenes/mzm_chozodia_security.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/mzm/core/mzm_sfx.c",
@@ -2445,7 +2445,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_elevator_statue.c",
+    "src/runtime/mzm/cutscenes/mzm_elevator_statue.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -2518,7 +2518,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_escape_ship.c",
+    "src/runtime/mzm/cutscenes/mzm_escape_ship.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
@@ -4211,7 +4211,7 @@
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
-    "src/runtime/mzm_in_game_cutscene.c"
+    "src/runtime/mzm/cutscenes/mzm_in_game_cutscene.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -5374,7 +5374,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_gunship.c",
+    "src/runtime/mzm/cutscenes/mzm_gunship.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
@@ -5781,14 +5781,14 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_escape.c",
-    "src/runtime/mzm_escape.h",
+    "src/runtime/mzm/cutscenes/mzm_escape.c",
+    "src/runtime/mzm/cutscenes/mzm_escape.h",
     "src/runtime/mzm/menus/mzm_hud.c",
     "src/runtime/mzm/menus/mzm_message_banner.c",
     "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/enemies/mzm_mother_brain.c",
-    "src/runtime/mzm_tourian_escape.c",
-    "src/runtime/mzm_tourian_escape.h",
+    "src/runtime/mzm/cutscenes/mzm_tourian_escape.c",
+    "src/runtime/mzm/cutscenes/mzm_tourian_escape.h",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm/core/mzm_room_gfx.c"
    ],
@@ -6227,7 +6227,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_chozo_statue.c",
+    "src/runtime/mzm/cutscenes/mzm_chozo_statue.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/core/mzm_blocks.c",
     "src/runtime/mzm_background_effect.c",
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "6e6409d9",
+   "date": "2026-11-10",
+   "subject": "Move MZM title modules into src/runtime/mzm/title/",
+   "scope": "project"
+  },
+  {
    "commit": "91922de4",
    "date": "2026-11-10",
    "subject": "Move MZM menu modules into src/runtime/mzm/menus/",
@@ -22713,12 +22719,6 @@
    "commit": "da80f538",
    "date": "2026-11-09",
    "subject": "Apply the map editor's room overlays in the Zero Mission runtime",
-   "scope": "project"
-  },
-  {
-   "commit": "59fed5f1",
-   "date": "2026-11-09",
-   "subject": "Port the Cockatrice (Aria enemy id 46)",
    "scope": "project"
   }
  ],

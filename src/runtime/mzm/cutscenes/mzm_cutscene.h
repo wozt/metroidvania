@@ -19,8 +19,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm/core/mzm_screen.h"
-#include "mzm/core/mzm_text.h"
+#include "../core/mzm_screen.h"
+#include "../core/mzm_text.h"
 
 /* Cutscene (constants/cutscene.h) */
 enum {

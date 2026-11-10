@@ -3,7 +3,7 @@
 #include "mzm/core/mzm_sfx.h"
 #include "mzm_background_effect.h"
 #include "mzm/core/mzm_blocks.h"
-#include "mzm_escape.h"
+#include "mzm/cutscenes/mzm_escape.h"
 #include "mzm/menus/mzm_items.h"
 #include "mzm/menus/mzm_message_banner.h"
 #include "mzm/weapons/mzm_projectiles.h"

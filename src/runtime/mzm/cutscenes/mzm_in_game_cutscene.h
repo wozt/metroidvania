@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm_samus.h"
+#include "../../mzm_samus.h"
 
 /* ItemAcquisition (gCurrentItemBeingAcquired) */
 enum { MZM_ACQUISITION_VARIA = 14, MZM_ACQUISITION_GRAVITY = 15 };

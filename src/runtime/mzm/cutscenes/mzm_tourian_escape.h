@@ -7,9 +7,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm/core/mzm_room_gfx.h"
-#include "mzm/core/mzm_screen.h"
-#include "mzm/core/mzm_text.h"
+#include "../core/mzm_room_gfx.h"
+#include "../core/mzm_screen.h"
+#include "../core/mzm_text.h"
 
 enum { MZM_TOURIAN_ESCAPE_OBJECTS = 10 };
 

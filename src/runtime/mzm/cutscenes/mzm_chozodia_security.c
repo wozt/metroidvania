@@ -5,7 +5,7 @@
  * comments name the pinned decompilation's routines. Sounds and the BG0
  * transparency (TransparencyUpdateBldcnt / TransparencySpriteUpdateBldalpha,
  * whose fade state is kept in work2 / work3) are not ported. */
-#include "mzm/core/mzm_sprite_ai.h"
+#include "../core/mzm_sprite_ai.h"
 
 #include <stddef.h>
 

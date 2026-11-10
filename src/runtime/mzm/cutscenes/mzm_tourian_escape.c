@@ -3,9 +3,9 @@
 
 #include <string.h>
 
-#include "gba_input.h"
-#include "mzm/core/mzm_rom.h"
-#include "mzm/core/mzm_sfx.h"
+#include "../../gba_input.h"
+#include "../core/mzm_rom.h"
+#include "../core/mzm_sfx.h"
 
 enum {
     AREA_TOURIAN = 4, AREA_CRATERIA = 5, OAM_BLOCK = 64, PI_2 = 64,

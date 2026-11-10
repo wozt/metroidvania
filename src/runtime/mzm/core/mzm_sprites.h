@@ -33,7 +33,7 @@
 #include <stdint.h>
 
 #include "mzm_effects.h"
-#include "../../mzm_escape.h"
+#include "../../mzm/cutscenes/mzm_escape.h"
 #include "../../mzm/weapons/mzm_projectiles.h"
 
 enum {

@@ -5781,6 +5781,170 @@ static void mudman_tests(void) {
         assert(rep.children[i].role == AOS_ROLE_MUDMAN_BUBBLE);
 }
 
+static void were_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;   /* floor top 160 */
+    enum { W_ANIMS = 8 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[W_ANIMS];
+    for (int a = 0; a < W_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = W_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < W_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv: id 75 hp 380 contact 45 defence 30 weak 0x00C1 resist
+     * 0 exp 260 soul red:35; id 84 hp 400 contact 45 defence 35 exp 320
+     * soul red:36. */
+    const AosEnemyStats jstats = {380, 45, 30, 0x00C1, 0x0000, 260};
+    const AosEnemyStats tstats = {400, 45, 35, 0x00C1, 0x0000, 320};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(600), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+
+    /* EnemyWerejaguarCreate / EnemyWeretigerCreate through
+     * sub_0807968C: state 0 animation 0; the global 0x8E & 0x40 sends
+     * it to the inert state 4. */
+    AosEnemy e, t;
+    assert(aos_enemy_create(&e, AOS_ENEMY_WEREJAGUAR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &jstats));
+    assert(e.state == 0 && e.hp == 380 && e.anim.id == 0);
+    assert(aos_enemy_create(&t, AOS_ENEMY_WERETIGER, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &tstats));
+    assert(t.state == 0 && t.hp == 400);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ei;
+    assert(aos_enemy_create(&ei, AOS_ENEMY_WEREJAGUAR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &jstats));
+    assert(ei.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* sub_08078880 step 0: each floor frame grows + 0x0D; past 0x1D the
+     * shared leap setup arms vy 0x40000 / vx +/-0x20000, static frame
+     * 0x10 and + 0x14 = 1, then step 1 (the walk) takes over. */
+    soma.x = AOS_FIXED(600);
+    soma.y = AOS_FIXED(140);
+    int saw_leap = 0;
+    for (int i = 0; i < 60 && !saw_leap; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.step == 1 && e.state == 0 && e.vy == 0x40000 &&
+            (e.vx == 0x20000 || e.vx == (int32_t)-0x20000) &&
+            e.static_frame == 0x10 && e.were_attack)
+            saw_leap = 1;
+    }
+    assert(saw_leap);
+
+    /* Step 1 walk: on animation frame 3 with Soma inside the probe box
+     * it enters state 1 step 0 (the pounce). Keep Soma close so the
+     * step-2 decision box (px-0x14, py-0x28, 0x28x0x50) also catches
+     * it. */
+    soma.x = e.x + AOS_FIXED(0x10);
+    soma.y = e.y;
+    int pounced = 0;
+    for (int i = 0; i < 240 && !pounced; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.state == 1 && e.step == 0) pounced = 1;
+    }
+    assert(pounced);
+
+    /* sub_08078BB4 step 0 mirrors step 0 of state 0: past timer 0x1D it
+     * re-arms the leap setup into step 1. */
+    e.timer = 0x1E;
+    e.step = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 1 && e.vy == 0x40000 && e.were_attack);
+
+    /* The shared miss tail (_080791CC): a walk probe that finds no
+     * floor ends the attack — state 0, step 0, animation 0, + 0x14
+     * cleared. Rising velocity keeps it airborne for the probe. */
+    e.state = 1;
+    e.step = 1;
+    e.vy = (int32_t)-0x40000;
+    e.were_attack = 1;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0 &&
+           !e.were_attack);
+
+    /* sub_08079294 state 2 (the vanish): every fourth tick spawns the
+     * ash drift, the timer counts down and the enemy removes itself. */
+    memset(&e, 0, sizeof e);
+    e.id = AOS_ENEMY_WEREJAGUAR;
+    e.role = AOS_ROLE_ENEMY;
+    e.stats = jstats;
+    e.hp = 10;
+    e.x = AOS_FIXED(300);
+    e.y = AOS_FIXED(140);
+    e.state = 2;
+    e.timer = 8;
+    int ash = 0;
+    for (int i = 0; i < 12 && !e.removed; ++i) {
+        AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 200, 0,
+                                            always_zero);
+        if (rep.effect_count) ash = 1;
+    }
+    assert(e.removed && ash);
+
+    /* sub_080791E8 state 3 (the leap): step 0 arms vx -/+0x18000 away
+     * from the player, vy -0x24000, ay 0x3000; the floor bit in step 1
+     * lands it into state 0 step 1 animation 6. */
+    memset(&e, 0, sizeof e);
+    e.id = AOS_ENEMY_WEREJAGUAR;
+    e.role = AOS_ROLE_ENEMY;
+    e.stats = jstats;
+    e.hp = 10;
+    e.x = AOS_FIXED(300);
+    e.y = AOS_FIXED(140);
+    e.state = 3;
+    e.step = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 1 && (e.vx == 0x18000 || e.vx == (int32_t)-0x18000) &&
+           e.vy == (int32_t)-0x24000 && e.ay == 0x3000);
+    int landed = 0;
+    for (int i = 0; i < 90 && !landed; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.state == 0 && e.step == 1 && e.anim.id == 6) landed = 1;
+    }
+    assert(landed);
+
+    /* sub_08078BB4 step 0xA (the Weretiger dash): on animation frame 1
+     * it dashes — song 0x86, two dust drifts, were_element 3, step 0xB. */
+    memset(&t, 0, sizeof t);
+    t.id = AOS_ENEMY_WERETIGER;
+    t.role = AOS_ROLE_ENEMY;
+    t.stats = tstats;
+    t.hp = 10;
+    t.x = AOS_FIXED(300);
+    t.y = AOS_FIXED(140);
+    t.state = 1;
+    t.step = 0xA;
+    t.anim.frame = 1;
+    AosHitReport rep = aos_enemy_update(&t, &soma, &layer, &kind, NULL,
+                                        NULL, 10, 4, 200, 0, always_zero);
+    assert(t.step == 0xB && t.were_element == 3 &&
+           (t.vx == 0x10000 || t.vx == (int32_t)-0x10000));
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x86) == 1);
+    assert(rep.effect_count >= 2);
+
+    /* sub_0807931C contact: the were family carries the shared attack
+     * element, so contact damage flows through the standard collide
+     * pass — verified live in area_10_room_000 / area_08_room_003. */
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9022,6 +9186,7 @@ int main(void) {
     student_witch_tests();
     witch_tests();
     mudman_tests();
+    were_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

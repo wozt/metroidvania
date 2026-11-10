@@ -393,6 +393,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_FISH_HEAD && id != AOS_ENEMY_UKOBACK &&
         id != AOS_ENEMY_STUDENT_WITCH && id != AOS_ENEMY_WITCH &&
         id != AOS_ENEMY_MUDMAN &&
+        id != AOS_ENEMY_WEREJAGUAR && id != AOS_ENEMY_WERETIGER &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -710,6 +711,28 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->step = enemy->substep = 0;
             play_loop(enemy, anims, 2, false);
             step_anim(enemy, anims);
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        snap_to_floor(enemy, layer);
+        return true;
+    }
+    if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
+        /* EnemyWerejaguarCreate (0x080796F0) / EnemyWeretigerCreate
+         * (0x08079874) through sub_0807968C: the shared 0x081CBF7C
+         * record, frames 0x08216A40, palette 0x0820A5C4 bank 0 for
+         * 0x4B / bank 1 for 0x54 (the kind carries the bank);
+         * sub_0803F2C8 animation (0, 0, 1), sub_08042A54(3, 6), the
+         * global 0x8E & 0x40 sends it to state 4, else the
+         * sub_0807931C contact and sub_08079458 hurt callbacks,
+         * sub_0806B1FC facing and the sub_0806AF98 floor snap into
+         * state 0. */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
             return true;
         }
         enemy->state = 0;
@@ -1821,6 +1844,18 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->state = 3;
                 enemy->step = enemy->substep = 0;
             }
+            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+                (enemy->id == AOS_ENEMY_WEREJAGUAR ||
+                 enemy->id == AOS_ENEMY_WERETIGER) &&
+                enemy->role == AOS_ROLE_ENEMY && enemy->state == 1 &&
+                enemy->step != 0) {
+                /* sub_08079458: a surviving weapon blow during the
+                 * pounce (attacker + 0x70 = 3 or 4) flinches it into
+                 * the state-3 leap. */
+                play_loop(enemy, kind->anims, 5, false);
+                enemy->state = 3;
+                enemy->step = enemy->substep = 0;
+            }
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON && enemy->id == AOS_ENEMY_VALKYRIE &&
                 enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
@@ -2004,6 +2039,18 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     aos_audio_play_song(0x70);
                     play_loop(enemy, kind->anims, 4, false);
                     enemy->cycle_done = false;
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                } else if ((enemy->id == AOS_ENEMY_WEREJAGUAR ||
+                            enemy->id == AOS_ENEMY_WERETIGER) &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_08079458 lethal: sub_080683BC, song 0x6E,
+                     * animation 5, + 0x0D = 0x28, state 2 step 0 — the
+                     * blinking vanish (the + 0x5A palette merge is
+                     * not ported). */
+                    aos_audio_play_song(0x6E);
+                    play_loop(enemy, kind->anims, 5, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
@@ -3274,6 +3321,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                            weapon_frames, soma_atk,
                                            soma_def, cam_x, cam_y, random);
     }
+    if ((enemy->id == AOS_ENEMY_WEREJAGUAR ||
+         enemy->id == AOS_ENEMY_WERETIGER) && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_were_update(enemy, soma, layer, kind, weapon,
+                                     weapon_frames, soma_atk, soma_def,
+                                     cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_ALURA_SCYTHE)
         return aos_enemy_alura_scythe_update(enemy, soma, layer, kind,
                                              weapon, weapon_frames,

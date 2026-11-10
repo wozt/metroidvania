@@ -183,7 +183,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [98] = "erinys",
                                                      [99] = "lubicant",
                                                      [100] = "basilisk",
-                                                     [76] = "ukoback", [86] = "mudman",
+                                                     [75] = "werejaguar", [76] = "ukoback", [84] = "weretiger", [86] = "mudman",
                                                      [22] = "student_witch",
                                                      [42] = "witch"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold

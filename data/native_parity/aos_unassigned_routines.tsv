@@ -146,7 +146,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08042828	sub_08042828	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_080428B4	sub_080428B4	unclassified				asm_function	0x080428B4	asm/code/code_08040A38.s	2785	71	0
 aos:asm:asm/code/code_08040A38.s:sub_08042920	sub_08042920	unclassified				asm_function	0x08042920	asm/code/code_08040A38.s	2848	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08042998	sub_08042998	unclassified				asm_function	0x08042998	asm/code/code_08040A38.s	2908	0	0
-aos:asm:asm/code/code_08040A38.s:sub_08042A54	sub_08042A54	unclassified				asm_function	0x08042A54	asm/code/code_08040A38.s	3015	74	0
 aos:asm:asm/code/code_08040A38.s:sub_08042A6C	sub_08042A6C	unclassified				asm_function	0x08042A6C	asm/code/code_08040A38.s	3028	2	0
 aos:asm:asm/code/code_08040A38.s:sub_08042A7C	sub_08042A7C	unclassified		technical	exclusive_callees	asm_function	0x08042A7C	asm/code/code_08040A38.s	3039	2	5
 aos:asm:asm/code/code_08040A38.s:sub_08042D4C	sub_08042D4C	unclassified				asm_function	0x08042D4C	asm/code/code_08040A38.s	3422	0	0
@@ -747,10 +746,6 @@ aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlCreate	EnemyQuezlcoatlCreate	ene
 aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlUpdate	EnemyQuezlcoatlUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	14678	0	11
 aos:asm:asm/code/code_080709D8.s:EnemyUneCreate	EnemyUneCreate	enemies	name			asm_function		asm/code/code_080709D8.s	7256	2	9
 aos:asm:asm/code/code_080709D8.s:EnemyUneUpdate	EnemyUneUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	7091	0	12
-aos:asm:asm/code/code_080709D8.s:EnemyWerejaguarCreate	EnemyWerejaguarCreate	enemies	name			asm_function		asm/code/code_080709D8.s	18074	0	9
-aos:asm:asm/code/code_080709D8.s:EnemyWerejaguarUpdate	EnemyWerejaguarUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	16054	0	13
-aos:asm:asm/code/code_080709D8.s:EnemyWeretigerCreate	EnemyWeretigerCreate	enemies	name			asm_function		asm/code/code_080709D8.s	18263	0	9
-aos:asm:asm/code/code_080709D8.s:EnemyWeretigerUpdate	EnemyWeretigerUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	18132	0	11
 aos:asm:asm/code/code_080709D8.s:sub_0807171C	sub_0807171C	enemies	referrers			asm_function	0x0807171C	asm/code/code_080709D8.s	1686	1	3
 aos:asm:asm/code/code_080709D8.s:sub_080717E0	sub_080717E0	enemies	referrers			asm_function	0x080717E0	asm/code/code_080709D8.s	1784	1	4
 aos:asm:asm/code/code_080709D8.s:sub_080718D8	sub_080718D8	enemies	referrers			asm_function	0x080718D8	asm/code/code_080709D8.s	1909	0	1
@@ -803,15 +798,6 @@ aos:asm:asm/code/code_080709D8.s:sub_08078654	sub_08078654	enemies	referrers			a
 aos:asm:asm/code/code_080709D8.s:sub_080786B0	sub_080786B0	enemies	referrers			asm_function	0x080786B0	asm/code/code_080709D8.s	15969	1	3
 aos:asm:asm/code/code_080709D8.s:sub_080786FC	sub_080786FC	enemies	referrers			asm_function	0x080786FC	asm/code/code_080709D8.s	16006	0	1
 aos:asm:asm/code/code_080709D8.s:sub_08078728	sub_08078728	enemies	referrers			asm_function	0x08078728	asm/code/code_080709D8.s	16030	0	1
-aos:asm:asm/code/code_080709D8.s:sub_08078880	sub_08078880	enemies	referrers			asm_function	0x08078880	asm/code/code_080709D8.s	16204	2	10
-aos:asm:asm/code/code_080709D8.s:sub_08078BB4	sub_08078BB4	enemies	referrers			asm_function	0x08078BB4	asm/code/code_080709D8.s	16624	2	11
-aos:asm:asm/code/code_080709D8.s:sub_080791E8	sub_080791E8	enemies	referrers			asm_function	0x080791E8	asm/code/code_080709D8.s	17426	2	3
-aos:asm:asm/code/code_080709D8.s:sub_08079294	sub_08079294	enemies	referrers			asm_function	0x08079294	asm/code/code_080709D8.s	17514	4	2
-aos:asm:asm/code/code_080709D8.s:sub_0807931C	sub_0807931C	enemies	referrers			asm_function	0x0807931C	asm/code/code_080709D8.s	17586	0	4
-aos:asm:asm/code/code_080709D8.s:sub_08079458	sub_08079458	enemies	referrers			asm_function	0x08079458	asm/code/code_080709D8.s	17739	0	6
-aos:asm:asm/code/code_080709D8.s:sub_08079510	sub_08079510	enemies	referrers			asm_function	0x08079510	asm/code/code_080709D8.s	17830	1	2
-aos:asm:asm/code/code_080709D8.s:sub_080795A8	sub_080795A8	enemies	referrers			asm_function	0x080795A8	asm/code/code_080709D8.s	17910	0	6
-aos:asm:asm/code/code_080709D8.s:sub_0807968C	sub_0807968C	enemies	referrers			asm_function	0x0807968C	asm/code/code_080709D8.s	18023	2	3
 aos:asm:asm/code/code_080709D8.s:sub_08079B38	sub_08079B38	enemies	referrers			asm_function	0x08079B38	asm/code/code_080709D8.s	18606	1	6
 aos:asm:asm/code/code_080709D8.s:sub_08079EF0	sub_08079EF0	enemies	referrers			asm_function	0x08079EF0	asm/code/code_080709D8.s	19092	1	18
 aos:asm:asm/code/code_080709D8.s:sub_0807A2E4	sub_0807A2E4	enemies	referrers			asm_function	0x0807A2E4	asm/code/code_080709D8.s	19592	1	5
@@ -1677,10 +1663,8 @@ aos:c:src/code/code_08039340.c:sub_0803AEFC	sub_0803AEFC	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803AFB8	sub_0803AFB8	unclassified				c_function	0x0803AFB8	src/code/code_08039340.c	832	209	0
 aos:c:src/code/code_08039340.c:sub_0803B04C	sub_0803B04C	unclassified				c_function	0x0803B04C	src/code/code_08039340.c	866	3	1
 aos:c:src/code/code_08039340.c:sub_0803B66C	sub_0803B66C	unclassified				c_function	0x0803B66C	src/code/code_08039340.c	914	2	3
-aos:c:src/code/code_08039340.c:sub_0803B800	sub_0803B800	unclassified				c_function	0x0803B800	src/code/code_08039340.c	1013	212	3
 aos:c:src/code/code_08039340.c:sub_0803B840	sub_0803B840	unclassified				c_function	0x0803B840	src/code/code_08039340.c	1043	2	1
 aos:c:src/code/code_08039340.c:sub_0803B8C4	sub_0803B8C4	unclassified		technical	exclusive_callees	c_function	0x0803B8C4	src/code/code_08039340.c	1067	0	1
-aos:c:src/code/code_08039340.c:sub_0803B924	sub_0803B924	unclassified		technical	exclusive_callees	c_function	0x0803B924	src/code/code_08039340.c	1101	471	2
 aos:c:src/code/code_08039340.c:sub_0803B980	sub_0803B980	unclassified				c_function	0x0803B980	src/code/code_08039340.c	1128	18	2
 aos:c:src/code/code_08039340.c:sub_0803B998	sub_0803B998	unclassified				c_function	0x0803B998	src/code/code_08039340.c	1140	25	0
 aos:c:src/code/code_08039340.c:sub_0803B9B4	sub_0803B9B4	unclassified				c_function	0x0803B9B4	src/code/code_08039340.c	1150	6	1

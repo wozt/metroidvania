@@ -161,6 +161,8 @@ enum {
     AOS_ENEMY_STUDENT_WITCH = 0x16,
     AOS_ENEMY_WITCH = 0x2A,
     AOS_ENEMY_MUDMAN = 0x56,
+    AOS_ENEMY_WEREJAGUAR = 0x4B,
+    AOS_ENEMY_WERETIGER = 0x54,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -472,6 +474,11 @@ typedef struct AosEnemy {
      * 4/8); the + 0x32 aggro direction memory is param1 and the arm's
      * + 0x18/+ 0x1C follow anchor lives in target_x/target_y. */
     uint8_t md_spawns, md_flags;
+    /* Werejaguar/Weretiger (the shared sub_08078880 family): + 0x14 the
+     * pounce-active mark the hurt clears, + 0x15 the attack element
+     * (1 slash, 2/3 the dash), + 0x16 the Werejaguar chain latch and
+     * + 0x17 the repeat-attack mark read at the pounce landing. */
+    uint8_t were_attack, were_element, were_chain, were_flag;
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

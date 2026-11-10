@@ -170,6 +170,12 @@ static const EntitySpec entities[] = {
     ENTITY("student_witch", 0x081E41C4, 0x0820B880, 0, 0x08241790),
     ENTITY("witch", 0x081E41C4, 0x0820B880, 0, 0x08241790),
     ENTITY("mudman", 0x081CBF4C, 0x0820A4AC, 0, 0x082138AC),
+    /* EnemyWerejaguarCreate (0x080796F0) / EnemyWeretigerCreate
+     * (0x08079874) share sub_0807968C: the 0x081CBF7C record, frames
+     * 0x08216A40 and palette 0x0820A5C4 — bank 0 for id 0x4B, bank 1
+     * for id 0x54. */
+    ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
+    ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
     /* Buer sub_0806CAF8: the shared 0x08528B64 s16 probe descriptor
      * has wall count, ceiling, floor, half-width and wall Y offsets.

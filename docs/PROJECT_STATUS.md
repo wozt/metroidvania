@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0968 - Werejaguar and Weretiger ported (ids 75/84)
+
+- `EnemyWerejaguarCreate` (0x080796F0) / `EnemyWeretigerCreate`
+  (0x08079874) share `sub_0807968C`: the `0x081CBF7C` tiles record,
+  frames `0x08216A40` and palette `0x0820A5C4` bank 0 for id `0x4B` /
+  bank 1 for id `0x54` — one AI behind two palettes. The shared
+  `EnemyWerejaguarUpdate` (0x08078754) / `EnemyWeretigerUpdate`
+  (0x0807976C) dispatch the `sub_08078880` idle/walk, the
+  `sub_08078BB4` fourteen-substep pounce (run-up and approach leaps,
+  the slash/dash element choice, the Werejaguar chain latch and the
+  Weretiger `0xA`/`0xD` dash with song `0x86` and two dust puffs), the
+  `sub_08079294` blinking vanish, the `sub_080791E8` hit leap and the
+  `sub_08079458` hurt as `src/runtime/aos/enemies/were.c`.
+- Verified in game: `area_10_room_000`/`area_07_room_013`
+  (Werejaguar) and `area_08_room_003` (Weretiger) — repeated
+  79/89-damage hits, Soma dies (frames 398/234).
+- Divergences: the `sub_08079510` ash is a smoke drift, the blink
+  palette merges are not ported. Red souls 35/36 not ported yet.
+- Ported enemies: 74/113.
+
 ## Patch 0967 - Mudman ported (id 86)
 
 - `EnemyMudmanCreate` (0x08072670) / `EnemyMudmanUpdate` (0x08071904)

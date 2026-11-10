@@ -473,6 +473,13 @@ AosHitReport aos_enemy_mudman_update(AosEnemy *enemy, AosSoma *soma,
                                      const AosWeaponFrames *weapon_frames,
                                      int soma_atk, int soma_def, int cam_x,
                                      int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_were_update(AosEnemy *enemy, AosSoma *soma,
+                                   const AosCollision *layer,
+                                   const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames,
+                                   int soma_atk, int soma_def, int cam_x,
+                                   int cam_y, uint32_t (*random)(void));
 AosHitReport aos_enemy_witch_companion_update(AosEnemy *enemy,
                                               const AosEnemyKind *kind);
 AosHitReport aos_enemy_witch_orbit_update(AosEnemy *enemy,

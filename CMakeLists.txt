@@ -268,6 +268,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/student_witch.c
     src/runtime/aos/enemies/witch.c
     src/runtime/aos/enemies/mudman.c
+    src/runtime/aos/enemies/were.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

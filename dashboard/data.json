@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T17:57:10+00:00",
+ "generated_at": "2026-11-10T20:36:25+00:00",
  "git": {
-  "commit": "efb1aa38",
+  "commit": "a84b545e",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 261,
+   "total": 262,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 195,
+    "functional": 196,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 195,
-   "functional_or_better_percent": 74.7,
-   "with_passing_tests": 248,
+   "functional_or_better": 196,
+   "functional_or_better_percent": 74.8,
+   "with_passing_tests": 249,
    "with_passing_tests_percent": 95.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -275,6 +275,7 @@
     "aos.enemies.student_witch",
     "aos.enemies.succubus",
     "aos.enemies.tiny_devil",
+    "aos.enemies.triton",
     "aos.enemies.tsuchinoko",
     "aos.enemies.ukoback",
     "aos.enemies.une",
@@ -495,20 +496,20 @@
    "areas": [
     "aos"
    ],
-   "total": 116,
+   "total": 117,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 88,
+    "functional": 89,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 88,
-   "functional_or_better_percent": 75.9,
-   "with_passing_tests": 116,
+   "functional_or_better": 89,
+   "functional_or_better_percent": 76.1,
+   "with_passing_tests": 117,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -586,6 +587,7 @@
     "aos.enemies.student_witch",
     "aos.enemies.succubus",
     "aos.enemies.tiny_devil",
+    "aos.enemies.triton",
     "aos.enemies.tsuchinoko",
     "aos.enemies.ukoback",
     "aos.enemies.une",
@@ -15238,6 +15240,125 @@
    }
   },
   {
+   "id": "aos.enemies.triton",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Triton",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/triton.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyTritonCreate",
+    "EnemyTritonUpdate",
+    "sub_08086B78",
+    "sub_08086E98",
+    "sub_08087138",
+    "sub_080871C0",
+    "sub_08087318",
+    "sub_080878C8",
+    "sub_080879E0",
+    "sub_08087AD8",
+    "sub_08087B84",
+    "sub_08087C24",
+    "sub_08087C54",
+    "sub_08087C84",
+    "sub_08087C8C",
+    "sub_08087D24",
+    "sub_08087D70",
+    "sub_08087D9C",
+    "sub_0806D518",
+    "sub_0806D3AC",
+    "sub_0806D2F8",
+    "sub_08069CF4",
+    "sub_08069A00",
+    "sub_0806CEF8",
+    "sub_0806D54C",
+    "sub_0806D0B8",
+    "sub_0806E5FC",
+    "sub_0806CF2C",
+    "sub_0806D490",
+    "sub_0806D4A8",
+    "sub_0806AE54",
+    "sub_0806D4C0",
+    "sub_0806D260",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0806D128",
+    "sub_0806AD24",
+    "sub_0804277C",
+    "sub_080427B8",
+    "sub_08042848",
+    "sub_0803E238",
+    "sub_0803E654",
+    "sub_0803F17C",
+    "sub_0803F2C8",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_08021654",
+    "sub_080683BC",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "ArcTan2"
+   ],
+   "limitations": "EnemyTritonCreate (0x08086AD4) through sub_08087D24 loads tiles 0x081CBFE4, palette 0x0820A848 and frames 0x0821D4E8 shared with its children, plays animation 1 looping, links the sub_080871C0 whirlpool head at + 0x1C, registers the sub_08087D70 contact and sub_08087138 hurt callbacks and, unless gEwramData + 0x8E & 0x40 parks it in state 4, snaps to the floor in state 0 step 0xA. EnemyTritonUpdate (0x080869F4) steps the hit flash outside state 2, freezes on the sub_0806D4C0 stun gate and dispatches: state 0 sub_08086B78 is the fourteen-substep swim/aggro machine (facing refresh, water sink, the 0x5A00000/0x6400000 proximity and damage advances, ax +/-0x400 drift, the 0x3B-tick aggro roll gated on the floor bit into state 1, and the animation-5 turn); state 1 sub_08086E98 is the fifteen-substep attack — a minor bubble spit (sub_080878C8 homing bubble at anim frame 1) or the whirlpool launch (anim 3/2 with song 0x8A, tr_launch past timer 0x1D, jets sub_08087AD8 every 32 ticks, the head's return playing anim 4 and restoring state 0 on the saved step); state 2 is the inline blink death (+ 0xD = 0x28 -> state 3 hidden removal); state 3 fades hidden; state 4 only steps the animation. The head child sub_08087318 attaches at the parent's + 0x65 table offset (0x08118F2C), rises to y <= 0x200000 (song 0x86), spins its + 0x20 angle, aims + 0x50 with ArcTan2, splashes (sub_08087C8C) at timer 0xB, launches home at 4.0 and docks 0x300000 above the parent to signal the return; it blinks and deletes with the parent's death. The bubble homes after timer 0x31 and deletes past 0xB3; the jet strobes its + 0x14 speed and deletes past age 0x3B or outside margin 1; the splash deletes on its animation cycle. sub_08087138 hurts without flinching (+ 0x2D = 8); lethal marks sub_080683BC, plays song 0x6D, animation 0 and + 0xD = 0x28 into state 2. Unit-tested in triton_tests.",
+   "next_action": "Compare the swim, whirlpool attack and bubble homing cadence against an emulator; the head child's spawn-time palette merge and spawn coin flip are cosmetic and unported.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_07_room_012 (--spawn 220 150): three Tritons swim in state 0 step 0xA/11, the whirlpool head child (role 95) attaches below the parent, homing bubbles (role 96) and streak jets (role 98) spawn during the state-1 attack"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.tsuchinoko",
    "area": "aos",
    "category": "enemies",
@@ -24551,6 +24672,12 @@
  },
  "timeline": [
   {
+   "commit": "a84b545e",
+   "date": "2026-11-10",
+   "subject": "Port Succubus (Aria of Sorrow enemy id 0x5F)",
+   "scope": "project"
+  },
+  {
    "commit": "efb1aa38",
    "date": "2026-11-10",
    "subject": "Port Lilith (Aria of Sorrow enemy id 0x25)",
@@ -25023,12 +25150,6 @@
    "date": "2026-11-09",
    "subject": "Compile Dead Warrior as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "d0ceb5c8",
-   "date": "2026-11-09",
-   "subject": "Compile Gorgon and Catoblepas as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -25089,9 +25210,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1434,
-    "routines_attached_to_features": 1434,
-    "unassigned_routines": 2139,
+    "routines_cited_by_features": 1453,
+    "routines_attached_to_features": 1453,
+    "unassigned_routines": 2120,
     "call_edges": 14228
    }
   },
@@ -27333,12 +27454,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 85,
-      "functional_or_better": 85,
-      "functional_or_better_percent": 83,
+      "implemented": 86,
+      "functional_or_better": 86,
+      "functional_or_better_percent": 84,
       "by_status": {
-       "functional": 85,
-       "not_started": 17
+       "functional": 86,
+       "not_started": 16
       }
      },
      "bosses": {
@@ -29061,13 +29182,28 @@
      {
       "id": 67,
       "name": "Triton",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Triton",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_07_room_012 (--spawn 220 150): three Tritons swim in state 0 step 0xA/11, the whirlpool head child (role 95) attaches below the parent, homing bubbles (role 96) and streak jets (role 98) spawn during the state-1 attack"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.triton",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "yellow:25",
+       "notes": "Soul: drops (soul_index 25, soul_rarity 25, rates 15/25 through the generic roll, common item 0x004D, rare item 0x000B), is collected and casts the stat yellow soul 25 (routine 0x0803226D, already ported). Animations: ported from EnemyTritonCreate (0x08086AD4) / EnemyTritonUpdate (0x080869F4) and the sub_08086B78 swim/aggro, sub_08086E98 attack, sub_08087138 hurt, sub_080871C0/sub_08087318 whirlpool head, sub_080878C8/sub_080879E0 bubble, sub_08087AD8/sub_08087B84 jet and sub_08087C8C/sub_08087D9C splash handlers — animations 0-0xA through the shared play/step helpers; unit-tested in triton_tests. Sounds: PlaySong 0x86 (whirlpool rise/spin), 0x85 (launch), 0x8A (attack cycle and jets) and 0x6D (death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x004D and rare item 0x000B through the generic roll. Sprite: tiles 0x081CBFE4, palette 0x0820A848, animation record 0x0821D4E8 exported natively, shared with the whirlpool head, bubbles, jets and splashes (the head draws scaled). Divergences: the head child is emitted by the first update instead of the create, the + 0x58 sprite-variant bits, the palette merges, the sub_0803E654 spawn coin flip and the sub_0806D260 callback-variant pick are not reproduced, the bubble's sub_08087C54/sub_08087C84 hurt callbacks fade it out natively and are approximated by removal, sub_08069CF4 maps to swim_walk, sub_0806E5FC's water sink to water_below, sub_0806CEF8 to player_in_range, sub_08068AD4/sub_08021924 collapse to the margin hide plus the targetable box, and there is no emulator comparison."
       }
      },
      {
@@ -30041,32 +30177,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 85,
+      "ported": 86,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 85,
+      "ported": 86,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 84,
+      "ported": 85,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 48,
+      "ported": 49,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 59,
+      "ported": 60,
       "partial": 26,
       "missing": 0
      },
-     "complete": 59,
-     "monsters": 85
+     "complete": 60,
+     "monsters": 86
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -35674,7 +35810,7 @@
        "id": "07:19",
        "name": "Triton",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 25, soul_rarity 25, rates 15/25 through the generic roll, common item 0x004D, rare item 0x000B), is collected and casts the stat yellow soul 25 (routine 0x0803226D, already ported). Animations: ported from EnemyTritonCreate (0x08086AD4) / EnemyTritonUpdate (0x080869F4) and the sub_08086B78 swim/aggro, sub_08086E98 attack, sub_08087138 hurt, sub_080871C0/sub_08087318 whirlpool head, sub_080878C8/sub_080879E0 bubble, sub_08087AD8/sub_08087B84 jet and sub_08087C8C/sub_08087D9C splash handlers — animations 0-0xA through the shared play/step helpers; unit-tested in triton_tests. Sounds: PlaySong 0x86 (whirlpool rise/spin), 0x85 (launch), 0x8A (attack cycle and jets) and 0x6D (death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x004D and rare item 0x000B through the generic roll. Sprite: tiles 0x081CBFE4, palette 0x0820A848, animation record 0x0821D4E8 exported natively, shared with the whirlpool head, bubbles, jets and splashes (the head draws scaled). Divergences: the head child is emitted by the first update instead of the create, the + 0x58 sprite-variant bits, the palette merges, the sub_0803E654 spawn coin flip and the sub_0806D260 callback-variant pick are not reproduced, the bubble's sub_08087C54/sub_08087C84 hurt callbacks fade it out natively and are approximated by removal, sub_08069CF4 maps to swim_walk, sub_0806E5FC's water sink to water_below, sub_0806CEF8 to player_in_range, sub_08068AD4/sub_08021924 collapse to the margin hide plus the targetable box, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

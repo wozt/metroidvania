@@ -2,6 +2,61 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0980 - Triton ported (id 67)
+
+- `EnemyTritonCreate` (0x08086AD4) through `sub_08087D24`
+  (tiles `0x081CBFE4`, palette `0x0820A848`, frames `0x0821D4E8`,
+  shared with its children), the linked whirlpool head
+  (`sub_080871C0`/`sub_08087318`), the homing bubble
+  (`sub_080878C8`/`sub_080879E0`), the streak jets
+  (`sub_08087AD8`/`sub_08087B84`) and the splash effects
+  (`sub_08087C8C`/`sub_08087D9C`) as
+  `src/runtime/aos/enemies/triton.c`, driven by
+  `EnemyTritonUpdate` (0x080869F4).
+- Create plays animation 1 looping and, unless the `0x8E & 0x40`
+  flag parks state 4, snaps to the floor in state 0 step `0xA`.
+  State 0 `sub_08086B78` is the fourteen-substep swim/aggro
+  machine (facing refresh, water sink, the `0x5A00000`/`0x6400000`
+  proximity and damage advances, `ax +/-0x400` drift, the
+  `0x3B`-tick aggro roll gated on the floor bit, the
+  animation-5 turn). State 1 `sub_08086E98` is the
+  fifteen-substep attack: a minor bubble spit or the whirlpool
+  launch — animation 3/2 with song `0x8A`, `tr_launch` past
+  timer `0x1D`, jets every 32 ticks, the head child's return
+  playing animation 4 and restoring state 0 on the saved step.
+  State 2 is the inline blink death (`+0xD = 0x28` -> state 3
+  hidden removal); state 4 only steps the animation.
+- The head child attaches at the parent's `+0x65` sprite-table
+  offset (`0x08118F2C`), rises to `y <= 0x200000` (song `0x86`),
+  spins its `+0x20` angle, aims `+0x50` with ArcTan2, splashes
+  at timer `0xB`, launches home at 4.0 and docks `0x300000`
+  above the parent to signal the return; it blinks and deletes
+  with the parent's death. The bubble homes after timer `0x31`
+  and deletes past `0xB3`; the jet strobes its `+0x14` speed and
+  deletes past age `0x3B`; the splash deletes on its cycle.
+  `sub_08087138` hurt never flinches (`+0x2D = 8`); lethal:
+  `sub_080683BC`, song `0x6D`, animation 0, `+0xD = 0x28`,
+  state 2. Yellow soul 25 (routine `0x0803226D`) was already
+  ported.
+- Unit-tested in `triton_tests` (create variants, dormant,
+  state-0 advance, the full state-1 chain, bubble homing and
+  expiry, head attach/rise/spin/turn/splash/launch/dock,
+  blink death) and in `area_07_room_012` through gdb (entity
+  67 swimming, the role-95 head attaching, role-96 bubbles
+  and role-98 jets spawning in the state-1 attack).
+- Divergences: the head child is emitted by the first update
+  instead of the create, the `+0x58` sprite-variant bits, the
+  palette merges, the `sub_0803E654` spawn coin flip, the
+  affine draw calls and the `sub_0806D260` callback pick are
+  not reproduced, the bubble's hurt callbacks are approximated
+  by removal, `sub_08069CF4` maps to `swim_walk`, `sub_0806E5FC`
+  to `water_below`, `sub_0806CEF8` to `player_in_range`,
+  `sub_0806D0B8` to `cell_kind == 3`, `sub_0806D518` to
+  `kind->blink`, `sub_0806D4C0` to `hit_flash`, and
+  `sub_08068AD4`/`sub_08021924` collapse to the margin hide
+  plus the targetable box; no emulator comparison.
+- Ported enemies: 86/113.
+
 ## Patch 0979 - Succubus ported (id 95)
 
 - `EnemySuccubusCreate` (0x08093D24) through `sub_08094710`

@@ -400,6 +400,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_NIGHTMARE && id != AOS_ENEMY_UNE &&
         id != AOS_ENEMY_ARACHNE && id != AOS_ENEMY_PERSEPHONE &&
         id != AOS_ENEMY_LILITH && id != AOS_ENEMY_SUCCUBUS &&
+        id != AOS_ENEMY_TRITON &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1092,6 +1093,37 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->su_touch = 0;
             enemy->su_inactive = 0;
         }
+        return true;
+    }
+    if (id == AOS_ENEMY_TRITON) {
+        /* EnemyTritonCreate 0x08086AD4 through sub_08087D24: tiles
+         * 0x081CBFE4, palette 0x0820A848, frames 0x0821D4E8; animation
+         * (1, 0, 1) stepped once, sub_0806B04C stats, the linked head
+         * child sub_080871C0 stored at + 0x1C — emitted on the first
+         * update through boss_parts_spawned (the native deletes the
+         * parent when the spawn fails; here the attack simply cannot
+         * launch); the 0x8E & 0x40 flag parks it in state 4, else the
+         * sub_0804277C/sub_080427B8 callback pair (the sub_0806D260
+         * count picks the installer — not ported), sub_0806B1FC
+         * facing, sub_0806AF98 floor snap, state 0 step 0xA. */
+        play_loop(enemy, anims, 1, true);
+        step_anim(enemy, anims);
+        enemy->tr_launch = enemy->tr_returned = enemy->tr_saved = 0;
+        enemy->tr_angle = 0;
+        enemy->tr_angle_target = 0;
+        enemy->tr_jvy = 0;
+        enemy->boss_parts_spawned = false;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            enemy->timer = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = 0xA;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        snap_to_floor(enemy, layer);
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2229,6 +2261,13 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->hit_flash = 0;
                 goto contact;
             }
+            if (enemy->role == AOS_ROLE_TRITON_BUBBLE &&
+                report.enemy_damage > 0) {
+                /* sub_08087C54/sub_08087C84: a struck bubble fades out
+                 * (+ 0xD = 0xFA) — approximated by immediate removal. */
+                enemy->removed = true;
+                goto contact;
+            }
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
                 (enemy->id == AOS_ENEMY_HARPY || enemy->id == AOS_ENEMY_SIREN)) {
                 /* sub_08075CAC: a surviving weapon hit throws the flyer
@@ -2514,6 +2553,19 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     aos_audio_play_song(0x1CC);
                     play_loop(enemy, kind->anims, 9, false);
                     enemy->su_tint = (enemy->su_pal & 0xF) << 3;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_TRITON &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_08087138 lethal: sub_080683BC defeated, sound
+                     * 0x6D, animation 0 one-shot (the + 0x5A palette
+                     * merge is not ported), + 0xD = 0x28, state 2,
+                     * step 0. Non-lethal hits only flash (+ 0x2D = 8):
+                     * Triton never flinches. */
+                    aos_audio_play_song(0x6D);
+                    play_loop(enemy, kind->anims, 0, false);
+                    enemy->defeated = true;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x28;
@@ -3926,6 +3978,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_succubus_update(enemy, soma, layer, kind, weapon,
                                          weapon_frames, soma_atk,
                                          soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_TRITON)
+        return aos_enemy_triton_update(enemy, soma, layer, kind, weapon,
+                                       weapon_frames, soma_atk,
+                                       soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

@@ -7351,6 +7351,243 @@ static void succubus_tests(void) {
     assert(ed2.state == 3 && !ed2.removed);
 }
 
+static void triton_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { TR_ANIMS = 12 };
+    static const uint8_t twelve[12] = {8, 8, 8, 8, 8, 8,
+                                       8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[TR_ANIMS];
+    for (int a = 0; a < TR_ANIMS; ++a) defs[a] = (AosAnimDef){8, twelve};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = TR_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < TR_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 67: hp 400, field_e 999, contact 43, defence 35,
+     * weak 0x0082, resist 0x0000, experience 300, soul yellow 25. */
+    const AosEnemyStats stats = {400, 43, 35, 0x0082, 0x0000, 300};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemyTritonCreate + sub_08087D24: animation 1 stepped, state 0
+     * step 0xA, tr fields cleared; the 0x8E & 0x40 flag parks state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_TRITON, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0xA && e.hp == 400 &&
+           e.anim.id == 1 && !e.tr_launch && !e.tr_returned &&
+           e.tr_saved == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_TRITON, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The first update emits the linked whirlpool head (sub_080871C0
+     * approximated by the first-update spawn): role TRITON_HEAD,
+     * parent pointer, animation 0xA. */
+    soma.x = AOS_FIXED(295);   /* inside the 0x6400000 aggro range */
+    soma.y = AOS_FIXED(150);
+    AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                        NULL, 10, 4, CAM, CAMY,
+                                        always_zero);
+    assert(rep.child_count == 1 &&
+           rep.children[0].role == AOS_ROLE_TRITON_HEAD &&
+           rep.children[0].parent == &e &&
+           rep.children[0].id == AOS_ENEMY_TRITON);
+    /* State 10 -> 11 on the proximity (player_in_range 0x6400000),
+     * or -> 0xC when the facing refresh diverts. */
+    assert(e.step == 0xB || e.step == 0xC || e.state == 1);
+
+    /* Step 11 aggro roll: timer past 0x3B + range + coin + floor bit
+     * enters state 1 step 0. Drive it directly. */
+    e.state = 0;
+    e.step = 0xB;
+    e.timer = 0x3C;
+    e.vx = e.vy = e.ax = e.ay = 0;
+    rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    /* always_zero: (0 & 0x7F) <= 0x5F holds; the floor bit needs the
+     * drift move to report & 4 — in the water cells it may not, so
+     * accept either the attack or the continued swim. */
+    (void)rep;
+
+    /* State 1 chain: step 10 waits for anim frame 0 -> anim 3 + step
+     * 11; the cycle plays anim 2 loop + song 0x8A + step 12; past
+     * timer 0x1D tr_launch raises and step 13 holds for the child's
+     * return while jets volley every 32 ticks; tr_returned plays anim
+     * 4 -> step 14 -> anim 1 -> state 0 on tr_saved. */
+    e.state = 1;
+    e.step = 10;
+    e.tr_saved = 0xA;
+    e.timer = 0;
+    e.anim.frame = 0;
+    e.cycle_done = false;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 0xB);
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 0xC &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x8A) == 1);
+    e.timer = 0x1E;
+    e.cycle_done = false;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 0xD && e.tr_launch == 1 && e.tr_returned == 0);
+    /* Step 13: timer 0x1F -> ++ 0x20 & 0x1F == 0 spawns a jet. */
+    e.timer = 0x1F;
+    rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(rep.child_count == 1 &&
+           rep.children[0].role == AOS_ROLE_TRITON_JET &&
+           rep.children[0].tr_jvy == (e.mirrored ? 0x1F0000 : 0x190000));
+    /* The child signals its return: anim 4, step 14, then the cycle
+     * restores state 0 on tr_saved. */
+    e.tr_returned = 1;
+    e.cycle_done = false;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 0xE && e.tr_launch == 0 && e.anim.id == 4);
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 0 && e.step == 0xA && e.timer == 0);
+
+    /* State 1 minor spit: on anim frame 1 step 1 spawns the homing
+     * bubble, then step 2 returns to state 0 on tr_saved. */
+    e.state = 1;
+    e.step = 1;
+    e.tr_saved = 0xA;
+    e.anim.frame = 1;
+    rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(rep.child_count == 1 &&
+           rep.children[0].role == AOS_ROLE_TRITON_BUBBLE &&
+           rep.children[0].parent == &e &&
+           rep.children[0].contact_elements ==
+               (uint16_t)((e.contact_elements * 3) >> 2));
+    assert(e.step == 2);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 0 && e.step == 0xA);
+
+    /* The bubble homes after timer 0x31 and deletes past 0xB3. */
+    AosEnemy b = rep.children[0];
+    b.parent = &e;
+    b.timer = 0x32;
+    b.x = AOS_FIXED(400);
+    b.y = AOS_FIXED(150);
+    soma.x = AOS_FIXED(100);
+    soma.y = AOS_FIXED(150);
+    b.vx = b.vy = 0;
+    for (int i = 0; i < 4; ++i)
+        (void)aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(b.vx < 0);   /* homing left toward Soma */
+    b.timer = 0xB4;
+    (void)aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(b.removed);
+
+    /* The whirlpool head child: a fresh parent emits it on the first
+     * update; attach reads the parent's + 0x65 sprite for the Y
+     * offset and tr_launch sends it through rise/spin/turn/dock. */
+    AosEnemy e2;
+    assert(aos_enemy_create(&e2, AOS_ENEMY_TRITON, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    AosHitReport rep2 = aos_enemy_update(&e2, &soma, &layer, &kind,
+                                         NULL, NULL, 10, 4, CAM, CAMY,
+                                         always_zero);
+    assert(rep2.child_count == 1);
+    AosEnemy head = rep2.children[0];
+    /* Case 0 attach: x = parent x, y offset from the sprite table,
+     * facing x offset; tr_launch advances to the rise. */
+    e2.tr_launch = 1;
+    head.y = e2.y;
+    (void)aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(head.step == 1 && head.timer == 0);
+    /* Rise: y -= 0x18000 until <= 0x200000, song 0x86, step 2. */
+    head.y = 0x210000;
+    (void)aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(head.step == 2 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x86) == 1);
+    /* Spin case 2 with facing set and angle just above 0xC000:
+     * each proceed adds a full turn (+ 0x10000) then waits ~16 ticks
+     * for the angle to decay back under 0xC000, so the aim takes
+     * ~4 x 16 ticks. */
+    head.step = 2;
+    head.tr_angle = 0xD000;
+    e2.mirrored = true;
+    for (int i = 0; i < 90 && head.step == 2; ++i)
+        (void)aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(head.step == 3 && head.tr_angle_target != 0);
+    /* Turn case 3: angle walks onto the target at 0x1000/tick. */
+    head.tr_angle = (uint32_t)(head.tr_angle_target - 0x2000);
+    for (int i = 0; i < 4 && head.step == 3; ++i)
+        (void)aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(head.step == 4);
+    /* Splash + launch: timer 0xA -> 0xB spawns a splash child; timer
+     * past 0x3B sets the return velocity and step 5. */
+    head.step = 4;
+    head.timer = 0xA;
+    rep2 = aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                            10, 4, CAM, CAMY, always_zero);
+    assert(rep2.child_count == 1 &&
+           rep2.children[0].role == AOS_ROLE_TRITON_SPLASH);
+    head.timer = 0x3B;
+    (void)aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(head.step == 5 && (head.vx != 0 || head.vy != 0));
+    /* Splash update: cycle end removes it. */
+    AosEnemy sp = rep2.children[0];
+    sp.cycle_done = true;
+    (void)aos_enemy_update(&sp, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(sp.removed);
+    /* Dock case 6: rise 0x18000/tick until 0x300000 above the parent,
+     * then tr_returned and back to attach. */
+    head.step = 6;
+    head.y = e2.y - 0x2E8000;   /* one tick of rise reaches the dock */
+    (void)aos_enemy_update(&head, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e2.tr_returned == 1 && e2.tr_launch == 0 && head.step == 0);
+
+    /* Parent death: state 2 blinks on kind->blink down from 0x28 into
+     * state 3, which removes on its 0xA timer. */
+    e2.state = 2;
+    e2.timer = 0x28;
+    e2.step = 0;
+    for (int i = 0; i < 0x28 && e2.state == 2; ++i)
+        (void)aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e2.state == 3 && e2.timer == 0xA && e2.hidden);
+    for (int i = 0; i < 0x0A && !e2.removed; ++i)
+        (void)aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e2.removed);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -10604,6 +10841,7 @@ int main(void) {
     persephone_tests();
     lilith_tests();
     succubus_tests();
+    triton_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

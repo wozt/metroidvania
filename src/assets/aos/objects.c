@@ -215,6 +215,10 @@ static const EntitySpec entities[] = {
     /* Succubus (sub_080946C4): the same tiles 0x081CC03C, palette
      * 0x0820AAF4 and frames 0x08222EFC as Lilith. */
     ENTITY("succubus", 0x081CC03C, 0x0820AAF4, 0, 0x08222EFC),
+    /* Triton (sub_08087D24): tiles 0x081CBFE4, palette 0x0820A848,
+     * frames 0x0821D4E8 — shared with the whirlpool head, the bubble,
+     * the streak jets and the splashes. */
+    ENTITY("triton", 0x081CBFE4, 0x0820A848, 0, 0x0821D4E8),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

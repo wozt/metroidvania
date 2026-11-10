@@ -173,6 +173,7 @@ enum {
     AOS_ENEMY_ARACHNE = 0x17,
     AOS_ENEMY_PERSEPHONE = 0x24,
     AOS_ENEMY_LILITH = 0x25,
+    AOS_ENEMY_TRITON = 0x43,
     AOS_ENEMY_SUCCUBUS = 0x5F,
 };
 
@@ -225,7 +226,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89,
        AOS_ROLE_UNE_DEBRIS = 90,
        AOS_ROLE_ARACHNE_LEG = 91, AOS_ROLE_ARACHNE_WEB = 92,
-       AOS_ROLE_PERSEPHONE_STRIKE = 93, AOS_ROLE_LILITH_BOLT = 94 };
+       AOS_ROLE_PERSEPHONE_STRIKE = 93, AOS_ROLE_LILITH_BOLT = 94,
+       AOS_ROLE_TRITON_HEAD = 95, AOS_ROLE_TRITON_BUBBLE = 96,
+       AOS_ROLE_TRITON_JET = 97, AOS_ROLE_TRITON_SPLASH = 98 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -600,6 +603,17 @@ typedef struct AosEnemy {
      * + 0x20, `su_aggro` + 0x21, `su_pal` + 0x2C, `su_tint` + 0x5A. */
     uint8_t su_gate, su_try, su_touch, su_inactive, su_dash, su_chain;
     uint8_t su_age, su_volley, su_emit, su_aggro, su_pal, su_tint;
+    /* Triton (EnemyTritonCreate 0x08086AD4): `tr_launch` is the head's
+     * + 0x18 (the state-1 attack's whirlpool launch flag), `tr_returned`
+     * mirrors the head child's + 0x18, `tr_saved` is the head's + 0x19
+     * (the saved state-0 step), the head child's `tr_angle` is its + 0x20
+     * whirlpool angle and `tr_angle_target` its + 0x50 turn target, and
+     * the jet's `tr_jvy` is its + 0x14 rise speed; the bubble homes with
+     * the shared + 0x48/+ 0x4C/+ 0x50/+ 0x54 velocity/accel fields. */
+    uint8_t tr_launch, tr_returned, tr_saved;
+    uint32_t tr_angle;
+    int32_t tr_angle_target;
+    int32_t tr_jvy;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

@@ -10807,6 +10807,173 @@ static void soul_attack_tests(void) {
     memset(cells, 0, sizeof cells);
 }
 
+static void quezlcoatl_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { QZ_ANIMS = 20 };
+    static const uint8_t ticks20[20] = {4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4};
+    static AosAnimDef defs[QZ_ANIMS];
+    for (int a = 0; a < QZ_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks20};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = QZ_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < QZ_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 26: hp 60, contact 20, defence 12, weak 0x0020,
+     * resist 0x0010, exp 42, rare 0x007c, soul type 2 index 27. */
+    const AosEnemyStats stats = {60, 20, 12, 0x0020, 0x0010, 42};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyQuezlcoatlCreate: state 0, + 0x65 = 0xC static frame, the
+     * trail cleared, the dormant flag parks state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_QUEZLCOATL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.hp == 60 &&
+           e.static_frame == 0xC && e.substep == 0);
+    for (int i = 0; i < 240; i += 2)
+        assert(e.qz_trail[i] == 0 && e.qz_trail[i + 1] == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_QUEZLCOATL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 3 && ed.step == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* First update emits the first eight segments (depths 0xE..7,
+     * frames 0x11/0x10/0xF by the native role table). */
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.child_count == 8 && e.substep == 8);
+    assert(hit.children[0].role == AOS_ROLE_QUEZLCOATL_SEGMENT &&
+           hit.children[0].qz_depth == 0xE &&
+           hit.children[0].qz_seg == 1 &&
+           hit.children[0].static_frame == 0x11);
+    assert(hit.children[7].qz_depth == 7 && hit.children[7].qz_seg == 8);
+    /* Second update emits the remaining seven (depths 6..0). */
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(hit.child_count == 7 && e.substep == 15);
+    assert(hit.children[0].qz_depth == 6 && hit.children[0].qz_seg == 9);
+    assert(hit.children[6].qz_depth == 0 && hit.children[6].qz_seg == 15);
+
+    /* State 0 step 1: facing/probe init — vx +-2.0 by the mirrored
+     * bit, vy -4.0, ay 0x2800, trail cleared, step 2. */
+    e.step = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.step == 2 && e.timer == 0);
+    assert(e.vx == (e.mirrored ? 0x20000 : (int32_t)0xFFFE0000) &&
+           e.vy == (int32_t)0xFFFC0000 && e.ay == 0x2800);
+
+    /* Step 2 records the per-frame pixel delta into the trail head. */
+    e.x += 0x30000;                    /* +3 px this frame */
+    int before_x = e.x;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.qz_trail[0] != 0 || e.qz_trail[1] != 0);
+    (void)before_x;
+
+    /* A segment follows its trail record: depth 4 reads entry 16 for
+     * facing and entry 20 for the move. */
+    AosEnemy seg;
+    assert(aos_enemy_create(&seg, AOS_ENEMY_QUEZLCOATL, 300, 140, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    seg.role = AOS_ROLE_QUEZLCOATL_SEGMENT;
+    seg.parent = &e;
+    seg.state = 0;
+    seg.qz_depth = 4;
+    seg.qz_seg = 5;
+    seg.timer = 8;                     /* & 7 == 0: the contact tick */
+    e.qz_trail[32] = 1;                /* dir > 0 -> face right */
+    e.qz_trail[40] = 2;                /* entry 20 dx = +2 px */
+    e.qz_trail[41] = -1;               /* entry 20 dy = -1 px */
+    int sx0 = seg.x, sy0 = seg.y;
+    (void)aos_enemy_update(&seg, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(seg.x == sx0 + (2 << 16) && seg.y == sy0 - 0x10000);
+    assert(seg.mirrored);
+
+    /* Parent death scatters the segment into state 1. */
+    e.state = 2;
+    seg.state = 0;
+    seg.timer = 0;
+    (void)aos_enemy_update(&seg, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(seg.state == 1 && seg.step == 0);
+    /* Next update: state 1 step 0 -> 1, attack/hurt off. */
+    (void)aos_enemy_update(&seg, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(seg.step == 1 && seg.combat.attack_off &&
+           seg.combat.hurt_off);
+
+    /* Lethal blow: song 0x6B, defeated, state 2, timer 0x28 — the soma
+     * stands under the head like the native room placement. */
+    soma.x = AOS_FIXED(300);
+    soma.y = AOS_FIXED(150);
+    AosEnemy kd;
+    assert(aos_enemy_create(&kd, AOS_ENEMY_QUEZLCOATL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    kd.y = AOS_FIXED(150);
+    static const uint8_t qz_steps[] = {8};
+    const AosAnimDef qz_def = {1, qz_steps};
+    const AosAnimSet qz_set = {&qz_def, 1};
+    const AosHitbox qz_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames qz_weapon = {&qz_set, qz_box};
+    AosWeaponEntity weapon = {.active = true};
+    /* step 0 -> 1 -> 2 warm-up: the patrol collide only runs at step 2. */
+    (void)aos_enemy_update(&kd, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    (void)aos_enemy_update(&kd, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    hit = aos_enemy_update(&kd, &soma, &layer, &kind,
+                           &weapon, &qz_weapon, 9999, 4,
+                           0, 0, always_zero);
+    assert(hit.enemy_hit && hit.killed && kd.state == 2 &&
+           kd.timer == 0x28 && kd.step == 0 && kd.defeated &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x6B) == 1);
+
+    /* State 2 step 0 spawns the two gore entities. */
+    kd.step = 0;
+    hit = aos_enemy_update(&kd, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(kd.step == 1 && hit.child_count == 2);
+    assert(hit.children[0].role == AOS_ROLE_QUEZLCOATL_GORE &&
+           hit.children[0].static_frame == 0x12);
+    assert(hit.children[1].static_frame == 0xB);
+    /* Steps 1 and 2 retire the head. */
+    (void)aos_enemy_update(&kd, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(kd.step == 2);
+    (void)aos_enemy_update(&kd, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(kd.removed);
+
+    /* Dormant state 3: step 1 init then the drift records the trail. */
+    ed.state = 3;
+    ed.step = 0;
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ed.step == 2 && ed.vx == (ed.mirrored ? 0x8000 : (int32_t)0xFFFF8000) &&
+           ed.vy == (int32_t)0xFFFE0000 && ed.ay == 0x1800);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -11051,7 +11218,9 @@ int main(void) {
     lilith_tests();
     succubus_tests();
     triton_tests();
+
     devil_tests();
+    quezlcoatl_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

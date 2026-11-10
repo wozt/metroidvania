@@ -226,6 +226,10 @@ static const EntitySpec entities[] = {
     ENTITY("arc_demon", 0x081CC014, 0x0820A9A0, 0, 0x08220A38),
     ENTITY("demon_lord", 0x081CC014, 0x0820A9A0, 1, 0x08220A38),
     ENTITY("flame_demon", 0x081CC014, 0x0820A9A0, 3, 0x08220A38),
+    /* Quezlcoatl (sub_080786B0): tiles 0x081CBF74, palette 0x0820A580
+     * bank 1, frames 0x0821631C — shared by the head, its fifteen
+     * segments and the death gore. */
+    ENTITY("quezlcoatl", 0x081CBF74, 0x0820A580, 1, 0x0821631C),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

@@ -721,8 +721,6 @@ aos:asm:asm/code/code_080709D8.s:EnemyGolemCreate	EnemyGolemCreate	enemies	name	
 aos:asm:asm/code/code_080709D8.s:EnemyGolemUpdate	EnemyGolemUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	27846	3	14
 aos:asm:asm/code/code_080709D8.s:EnemyManticoreCreate	EnemyManticoreCreate	enemies	name			asm_function		asm/code/code_080709D8.s	3873	0	12
 aos:asm:asm/code/code_080709D8.s:EnemyManticoreUpdate	EnemyManticoreUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	3753	0	9
-aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlCreate	EnemyQuezlcoatlCreate	enemies	name			asm_function		asm/code/code_080709D8.s	14834	0	13
-aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlUpdate	EnemyQuezlcoatlUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	14678	0	11
 aos:asm:asm/code/code_080709D8.s:sub_0807171C	sub_0807171C	enemies	referrers			asm_function	0x0807171C	asm/code/code_080709D8.s	1686	1	3
 aos:asm:asm/code/code_080709D8.s:sub_080717E0	sub_080717E0	enemies	referrers			asm_function	0x080717E0	asm/code/code_080709D8.s	1784	1	4
 aos:asm:asm/code/code_080709D8.s:sub_080718D8	sub_080718D8	enemies	referrers			asm_function	0x080718D8	asm/code/code_080709D8.s	1909	0	1
@@ -758,16 +756,6 @@ aos:asm:asm/code/code_080709D8.s:sub_08075614	sub_08075614	enemies	referrers			a
 aos:asm:asm/code/code_080709D8.s:sub_08076054	sub_08076054	enemies	referrers			asm_function	0x08076054	asm/code/code_080709D8.s	11027	1	4
 aos:asm:asm/code/code_080709D8.s:sub_080761B8	sub_080761B8	enemies	referrers			asm_function	0x080761B8	asm/code/code_080709D8.s	11216	0	5
 aos:asm:asm/code/code_080709D8.s:sub_080762F0	sub_080762F0	enemies	referrers			asm_function	0x080762F0	asm/code/code_080709D8.s	11374	0	1
-aos:asm:asm/code/code_080709D8.s:sub_08077FC0	sub_08077FC0	enemies	referrers			asm_function	0x08077FC0	asm/code/code_080709D8.s	15056	1	7
-aos:asm:asm/code/code_080709D8.s:sub_08078178	sub_08078178	enemies	referrers			asm_function	0x08078178	asm/code/code_080709D8.s	15288	1	1
-aos:asm:asm/code/code_080709D8.s:sub_0807829C	sub_0807829C	enemies	referrers			asm_function	0x0807829C	asm/code/code_080709D8.s	15447	0	5
-aos:asm:asm/code/code_080709D8.s:sub_08078318	sub_08078318	enemies	referrers			asm_function	0x08078318	asm/code/code_080709D8.s	15508	0	6
-aos:asm:asm/code/code_080709D8.s:sub_08078544	sub_08078544	enemies	referrers			asm_function	0x08078544	asm/code/code_080709D8.s	15795	1	3
-aos:asm:asm/code/code_080709D8.s:sub_08078588	sub_08078588	enemies	referrers			asm_function	0x08078588	asm/code/code_080709D8.s	15828	1	4
-aos:asm:asm/code/code_080709D8.s:sub_08078654	sub_08078654	enemies	referrers			asm_function	0x08078654	asm/code/code_080709D8.s	15922	0	4
-aos:asm:asm/code/code_080709D8.s:sub_080786B0	sub_080786B0	enemies	referrers			asm_function	0x080786B0	asm/code/code_080709D8.s	15969	1	3
-aos:asm:asm/code/code_080709D8.s:sub_080786FC	sub_080786FC	enemies	referrers			asm_function	0x080786FC	asm/code/code_080709D8.s	16006	0	1
-aos:asm:asm/code/code_080709D8.s:sub_08078728	sub_08078728	enemies	referrers			asm_function	0x08078728	asm/code/code_080709D8.s	16030	0	1
 aos:asm:asm/code/code_080709D8.s:sub_0807A9C0	sub_0807A9C0	enemies	referrers			asm_function	0x0807A9C0	asm/code/code_080709D8.s	20516	0	1
 aos:asm:asm/code/code_080709D8.s:sub_0807B404	sub_0807B404	enemies	referrers			asm_function	0x0807B404	asm/code/code_080709D8.s	21827	1	3
 aos:asm:asm/code/code_080709D8.s:sub_0807B450	sub_0807B450	enemies	referrers			asm_function	0x0807B450	asm/code/code_080709D8.s	21864	0	1

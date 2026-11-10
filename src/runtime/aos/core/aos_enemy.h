@@ -179,6 +179,7 @@ enum {
     AOS_ENEMY_ARC_DEMON = 0x48,
     AOS_ENEMY_DEMON_LORD = 0x66,
     AOS_ENEMY_FLAME_DEMON = 0x68,
+    AOS_ENEMY_QUEZLCOATL = 0x1A,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -234,7 +235,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_TRITON_HEAD = 95, AOS_ROLE_TRITON_BUBBLE = 96,
        AOS_ROLE_TRITON_JET = 97, AOS_ROLE_TRITON_SPLASH = 98,
        AOS_ROLE_DEVIL_IMP = 99, AOS_ROLE_DEVIL_FIRE = 100,
-       AOS_ROLE_DEVIL_ORB = 101 };
+       AOS_ROLE_DEVIL_ORB = 101, AOS_ROLE_QUEZLCOATL_SEGMENT = 102,
+       AOS_ROLE_QUEZLCOATL_GORE = 103 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -646,6 +648,20 @@ typedef struct AosEnemy {
     int32_t dv_ax16, dv_ay16;
     uint8_t dv_form, dv_cyc, dv_pal, dv_f27, dv_c26;
     int32_t dv_slot, dv_dvx, dv_dvy, dv_ang, dv_life, dv_kind;
+    /* Quezlcoatl (EnemyQuezlcoatlCreate 0x08077DF4, head update
+     * 0x08077FC0/0x08078178, segment sub_08078318): `qz_trail` is the
+     * + 0x20 container's movement-history buffer — 2-byte (dx, dy)
+     * pixel-delta entries, index 0 newest, shifted up every recorded
+     * frame; `substep` counts the segments already emitted (the native
+     * create spawns all fifteen at once, here they go out 8 + 7 over
+     * the first two updates).  On a segment `qz_depth` is its + 0x1C
+     * trail index (0xE down to 0), `qz_seg` its + 0x5C number (1..15),
+     * `qz_tx`/`qz_ty` the + 0x4A/+ 0x4E pixel-anchor deltas and
+     * `qz_pal`/`qz_tint` the + 0x2C/+ 0x5A palette bytes. */
+    int8_t qz_trail[240];
+    int8_t qz_depth;
+    uint8_t qz_seg, qz_pal, qz_tint;
+    int16_t qz_tx, qz_ty;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

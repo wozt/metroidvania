@@ -2,6 +2,48 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0982 - Quezlcoatl ported (id 26)
+
+- `EnemyQuezlcoatlCreate` (0x08077DF4) through `sub_080786B0`
+  loads tiles `0x081CBF74`, palette `0x0820A580` bank 1 and
+  frames `0x0821631C`, parks the body in state 3 under the
+  global `0x8E & 0x40` flag, else snaps to the floor and
+  enters state 0 with `+0x65 = 0xC`.
+- `EnemyQuezlcoatlUpdate` (0x08077CBC) runs state 0
+  `sub_08077FC0` — the edge-probe facing, the `vx +-2.0` /
+  `vy -4.0` / `ay 0x2800` launch, the `0x13..0x21` `vx`
+  decay, the walk collide and the per-frame pixel-delta push
+  into the `+0x20` trail container of 120 16-bit `(dx, dy)`
+  records — and dormant state 3 `sub_08078178`, spawning the
+  fifteen linked segments through `sub_08078318` (entity id
+  `0x49`, depths `0xE` down to 0, frames `0x11`/`0x10`/`0xF`/
+  3-4 by depth, the `+0x14` parent link and the `sub_08078544`
+  hurt-off contact setup) eight per update then seven; each
+  segment replays its trail record for facing and movement
+  and scatters into state 1 when the parent dies.
+- State 2 `sub_08077D22` spawns the two gore pieces of
+  `sub_08078588`/`sub_08078654` (frames `0x12` and `0xB`,
+  random velocities, the `0x3C..0x3F` blink-delete timer and
+  the flame spits) plus the four `sub_0806D578`/`sub_0806D5C0`
+  flames, then retires the head; the `sub_0807829C`/
+  `sub_080786FC`/`sub_08078728` callbacks map to the shared
+  hurt/contact passes and the lethal blow plays song `0x6B`.
+- The `+0x20` container allocation is folded into the
+  `qz_trail` array; the segments emit as persistent child
+  entities on the first two updates; the `+0x5A` palette
+  merge, the `sub_0806D260` callback pick and the
+  `sub_08021924`/`sub_080421AC` bookkeeping are not ported.
+- `quezlcoatl_tests` covers the create/dormant states, the
+  8+7 segment emission, the trail follow and facing, the
+  parent-death scatter, the state-2 gore spawn and the
+  song-`0x6B` lethal hook. Checked live in
+  `area_03_room_002` (`--spawn 150 120`): both heads patrol
+  state 0 step 2 and the depth-0 segment replays the trail
+  a few pixels behind its head.
+- Yellow soul 27 drops through the generic roll (routine
+  `0x0803226D`, already ported); sprites, animations, sounds
+  and loot are registered in `aos_monster_aspects.tsv`.
+
 ## Patch 0981 - Devil family ported (ids 48, 72, 102, 104)
 
 - `EnemyDevilCreate` (0x0808FA30) through `sub_08092048` serves

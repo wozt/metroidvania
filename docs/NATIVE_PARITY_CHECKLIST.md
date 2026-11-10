@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 121 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 122 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1487 | 2086 |
+| Castlevania: Aria of Sorrow | 1499 | 2074 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1936,6 +1936,14 @@ Dependencies: `aos.audio.play_song`.
 Known divergences: The affine transform is approximated by the renderer rotation on e->angle (the secondary sine scale of the segments is not modelled); the + 0x5A palette merge, the + 0x5C parameter and the sub_080683BC reward walk are not ported; the four segments are emitted on the first update (the Headhunter pattern) instead of inside the create; the sub_0806D5C0 dust is approximated by AOS_EFFECT_DUST and the native 0x1010F8F8 collision boxes by 16x16 own boxes; the sleep/activity-window helpers of the generic controller and the sub_08021278 homing registration detail are not applied.  
 Next action: Compare a room fight against an emulator; port the remaining affine detail and the sub_0806DFF8 in-create spawn order.
 Evidence: in game: `aria area_07_room_012 (--spawn 816 128): Poison Worm records are placed in area_07 rooms 012/020 and area_10_room_003; in-game verification pending`.
+
+[+] **`aos.enemies.quezlcoatl` — Quezlcoatl.** EnemyQuezlcoatlCreate (0x08077DF4) through sub_080786B0 loads tiles 0x081CBF74, palette 0x0820A580 bank 1 and frames 0x0821631C through the shared loader, parks the body in state 3 under the global 0x8E & 0x40 flag, else snaps to the floor and enters state 0 with + 0x65 = 0xC. EnemyQuezlcoatlUpdate (0x08077CBC) runs state 0 sub_08077FC0 (the edge-probe facing, the vx +-2.0 / vy -4.0 / ay 0x2800 launch, the 0x13..0x21 vx decay, the walk collide and the per-frame pixel-delta push into the + 0x20 trail container of 120 16-bit (dx, dy) records) and dormant state 3 sub_08078178 (the slow drift and its own trail), spawning the fifteen linked segments through sub_08078318 (entity id 0x49, depths 0xE down to 0, frames 0x11/0x10/0xF/3-4 by depth, the + 0x14 parent link and the sub_08078544 hurt-off contact setup) eight per update then seven; each segment replays its trail record for facing and movement and scatters into state 1 when the parent dies. State 2 spawns the two gore pieces of sub_08078588/sub_08078654 (frames 0x12 and 0xB, random velocities, the 0x3C..0x3F blink-delete timer and the flame spits) plus the four sub_0806D578/sub_0806D5C0 flames, then retires the head. The sub_0807829C/sub_080786FC/sub_08078728 callbacks map to the shared hurt/contact passes; the lethal blow plays song 0x6B through the state-2 hook. Unit-tested in quezlcoatl_tests.
+
+Native evidence: `aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyQuezlcoatlUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_08077FC0`, `aos:asm:asm/code/code_080709D8.s:sub_08078178`, `aos:asm:asm/code/code_080709D8.s:sub_0807829C`, `aos:asm:asm/code/code_080709D8.s:sub_08078318`, `aos:asm:asm/code/code_080709D8.s:sub_08078544`, `aos:asm:asm/code/code_080709D8.s:sub_08078588`, `aos:asm:asm/code/code_080709D8.s:sub_08078654`, `aos:asm:asm/code/code_080709D8.s:sub_080786B0`, `aos:asm:asm/code/code_080709D8.s:sub_080786FC`, `aos:asm:asm/code/code_080709D8.s:sub_08078728`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/core/aos_enemy.h`](../src/runtime/aos/core/aos_enemy.h), [`src/runtime/aos/enemies/quezlcoatl.c`](../src/runtime/aos/enemies/quezlcoatl.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Next action: Compare the slither cadence, the segment spacing and the gore scatter against an emulator; the + 0x20 container allocation is folded into the qz_trail array, the fifteen segments emit as persistent child entities two updates after create instead of inside it, the sub_0806D260 callback pick, the + 0x5A palette merge, the sub_08021924/sub_080421AC bookkeeping and the gore affine draw are not ported, and there is no emulator comparison.
+Evidence: in game: `aria area_03_room_002 and area_03_room_004 (--spawn 150 120): two Quezlcoatl heads patrol state 0 step 2 and their fifteen segments replay the trail behind them`.
 
 [+] **`aos.enemies.red_crow` — Red crow.** The perch until the player is within 120 pixels, the 128-frame hover turning to him or away, the 64-frame V-shaped swoop, the return to its perch after an odd round with the player away, the hit stun, and the blue crow's death (feathers, blood, flames; sub_080CA308 and sub_080CA3CC / sub_080CA474 copy it) with palette bank 1 are ported, with state 3 under gEwramData + 0x8E bit 0x40. Its swoop plays 0x8B (sub_080CA0D4) and its death 0x72 (sub_080CA308), unit-tested.
 

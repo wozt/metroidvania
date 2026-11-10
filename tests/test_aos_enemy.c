@@ -706,6 +706,20 @@ static void bone_pillar_tests(void) {
         aos_enemy_update(&s[1], &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
     }
     assert((s[1].y >> 16) == floor_y);
+
+    /* The Fish Head (id 0x41) shares sub_080B3BAC/sub_080B3DCC: its
+     * create is the variant-1 resource row of 0x081193DC and its
+     * update the same controller; the skulls inherit its id. */
+    const AosEnemyStats fish_stats = {280, 48, 40, 0x0020, 0x0010, 100};
+    AosEnemy f;
+    assert(aos_enemy_create(&f, AOS_ENEMY_FISH_HEAD, 100, 150, 3, 0,
+                            &soma, &layer, &kind, &fish_stats));
+    assert(f.param0 == 3 && f.hidden && f.state == 0);
+    AosHitReport ff = aos_enemy_update(&f, &soma, &layer, &kind, NULL,
+                                        NULL, 10, 4, 0, 0, always_zero);
+    assert(ff.child_count == 3 && ff.children[0].id == AOS_ENEMY_FISH_HEAD &&
+           ff.children[0].role == AOS_ROLE_BONE_PILLAR_SEGMENT &&
+           ff.children[0].hp == 280);
 }
 
 static void giant_ghost_tests(void) {

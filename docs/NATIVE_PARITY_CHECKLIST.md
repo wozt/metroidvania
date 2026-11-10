@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 97 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 98 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1229 | 2344 |
+| Castlevania: Aria of Sorrow | 1231 | 2342 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1565,6 +1565,16 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: The + 0x58 fade bits, the + 0x59 flags, the + 0xF death flag, the sub_0806D4C0 pause, the sub_080421AC box query, the + 0x5A palette bits of sub_080BFECC and the sub_0803E654 sign draw (approximated by the RNG sign) are not ported; the sub_080020A0 surface probes are normalized into room pixels.  
 Next action: Compare the patrol, the throw timing, the cleaver flight and the death bursts against an emulator; port the variant-0 art of Skill_EvilButcher_Ripper_Use.
 Evidence: in game: `aria area_02_room_002 (--spawn 512 176 --hp 9999): three Evil Butchers patrol the room and throw their cleavers at Soma`.
+
+[+] **`aos.enemies.fish_head` — Fish Head.** EnemyFishHeadCreate (0x080B3F34) is a thunk to sub_080B3BAC with variant 1 and EnemyFishHeadUpdate (0x080B3F40) to sub_080B3DCC, the Bone Pillar's shared controller: the same stacked-skull pillar (sub_080B3A68 settle, sub_080B3954 shatter into three pieces, breath and fireball attacks of the even/odd skulls) runs on the Fish Head's own frames 0x08243830; unit-tested in bone_pillar_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08042884`, `aos:asm:asm/code/code_08040A38.s:sub_080428F0`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1B8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyFishHeadCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyFishHeadUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B32F4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B33C8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B350C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3954`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3A68`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3AEC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3BAC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3DCC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B3E70`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/bone_pillar.c`](../src/runtime/aos/enemies/bone_pillar.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.enemies.bone_pillar`.  
+Known divergences: None beyond Bone Pillar's: EnemyFishHeadCreate (0x080B3F34) and EnemyFishHeadUpdate (0x080B3F40) only call sub_080B3BAC(e, 1) and sub_080B3DCC, so the whole family is the Bone Pillar port with the variant-1 resource row of 0x081193DC (frames 0x08243830 instead of 0x08242F8C); the skull children inherit the Fish Head id and kind.  
+Next action: Compare the pillar timing against an emulator; observe it in game.
+Evidence: in game: `aria area_11_room_009 (--spawn 290 430 --hp 9999): the Fish Head's skulls stack and strike Soma for three 85-damage hits (frames to 300)`.
 
 [+] **`aos.enemies.fleaman` — Fleaman.** The four random jumps by r % 30 (hop, long, high, straight up) with their speeds, gravities and hand-set animation frames, the ceiling and wall pushes in the air, the landing, the 7-frame hit stun, the death with the blink and flames of sub_0806BE74 and state 3 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).
 

@@ -141,6 +141,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [21] = "minotaur",
                                                      [24] = "fleaman",
                                                      [25] = "evil_butcher",
+                                                     [65] = "fish_head",
                                                      [70] = "dryad",
                                                      [28] = "catoblepas",
                                                      [29] = "ghost_dancer",

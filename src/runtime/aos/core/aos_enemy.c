@@ -390,6 +390,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR && id != AOS_ENEMY_ROCK_ARMOR &&
         id != AOS_ENEMY_KILLER_FISH && id != AOS_ENEMY_BUER && id != AOS_ENEMY_WHITE_DRAGON &&
         id != AOS_ENEMY_GIANT_GHOST && id != AOS_ENEMY_BONE_PILLAR &&
+        id != AOS_ENEMY_FISH_HEAD &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -592,8 +593,11 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         return true;
     }
-    if (id == AOS_ENEMY_BONE_PILLAR) {
-        /* sub_080B3BAC (variant 0): + 0x30 clamped to 1-8 (2 under the
+    if (id == AOS_ENEMY_BONE_PILLAR || id == AOS_ENEMY_FISH_HEAD) {
+        /* sub_080B3BAC (variant 0 for Bone Pillar, variant 1 for the
+         * Fish Head — the argument only selects the resource row of
+         * 0x081193DC, exported per id in objects.c): + 0x30 clamped to
+         * 1-8 (2 under the
          * global 0x8E & 0x40, its skulls inert in state 3); otherwise the
          * floor snap and one pixel down. The unseen controller sits 22
          * pixels below the bottom skull, which rests on that floor. */
@@ -3163,7 +3167,8 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     if (enemy->role == AOS_ROLE_BONE_PILLAR_SEGMENT)
         return aos_enemy_pillar_skull_update(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def,
                                    random);
-    if (enemy->id == AOS_ENEMY_BONE_PILLAR && enemy->role == AOS_ROLE_ENEMY)
+    if ((enemy->id == AOS_ENEMY_BONE_PILLAR ||
+         enemy->id == AOS_ENEMY_FISH_HEAD) && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_pillar_update(enemy, kind, cam_x, cam_y);
     if (enemy->role == AOS_ROLE_PILLAR_PIECE) {
         /* sub_080B3EE8. */

@@ -2,6 +2,22 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0962 - Fish Head ported (id 65)
+
+- `EnemyFishHeadCreate` (0x080B3F34) / `EnemyFishHeadUpdate`
+  (0x080B3F40) are thunks to `sub_080B3BAC(e, 1)` /
+  `sub_080B3DCC` — the Bone Pillar's shared controller and skull
+  routines. The port reuses `aos_enemy_pillar_update` and the
+  pillar skull/piece roles; only the resource row differs
+  (variant 1 of 0x081193DC: same tiles 0x081E41D4 and palette
+  0x0820B8E8, frames 0x08243830), exported as `fish_head` in
+  `objects.c`.
+- Verified in game in `area_11_room_009`: the stacked skulls
+  strike Soma for three 85-damage hits.
+- Ported enemies: 67/113. Red soul 29 (Fish Head) is already
+  ported. Divergences identical to Bone Pillar's (no emulator
+  comparison).
+
 ## Patch 0961 - Alura Une ported (id 77)
 
 - `EnemyAluraUneCreate` (0x0807C0A0) /

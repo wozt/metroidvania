@@ -1272,8 +1272,6 @@ aos:asm:asm/code/code_080B0AD4.s:EnemyBasiliskCreate	EnemyBasiliskCreate	enemies
 aos:asm:asm/code/code_080B0AD4.s:EnemyBasiliskUpdate	EnemyBasiliskUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	23583	0	9
 aos:asm:asm/code/code_080B0AD4.s:EnemyDeathCreate	EnemyDeathCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	29785	0	12
 aos:asm:asm/code/code_080B0AD4.s:EnemyDeathUpdate	EnemyDeathUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	30174	0	12
-aos:asm:asm/code/code_080B0AD4.s:EnemyFishHeadCreate	EnemyFishHeadCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	6749	0	1
-aos:asm:asm/code/code_080B0AD4.s:EnemyFishHeadUpdate	EnemyFishHeadUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	6757	0	1
 aos:asm:asm/code/code_080B0AD4.s:EnemyManEaterCreate	EnemyManEaterCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	20788	0	8
 aos:asm:asm/code/code_080B0AD4.s:EnemyManEaterUpdate	EnemyManEaterUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	20934	0	19
 aos:asm:asm/code/code_080B0AD4.s:EnemyNightmareCreate	EnemyNightmareCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	15576	0	10

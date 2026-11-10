@@ -182,6 +182,7 @@ enum {
     AOS_ENEMY_QUEZLCOATL = 0x1A,
     AOS_ENEMY_ALASTOR = 0x5A,
     AOS_ENEMY_MAN_EATER = 0x40,
+    AOS_ENEMY_GLADIATOR = 0x5D,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -241,7 +242,10 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_QUEZLCOATL_GORE = 103, AOS_ROLE_ALASTOR_BODY = 104,
        AOS_ROLE_ALASTOR_SHOT = 105, AOS_ROLE_MAN_LEVEL = 106,
        AOS_ROLE_MAN_VOLLEY = 107, AOS_ROLE_MAN_SHOT = 108,
-       AOS_ROLE_MAN_DEATHP = 109 };
+       AOS_ROLE_MAN_DEATHP = 109, AOS_ROLE_GLADIATOR_PART0 = 110,
+       AOS_ROLE_GLADIATOR_PART1 = 111, AOS_ROLE_GLADIATOR_PART2 = 112,
+       AOS_ROLE_GLADIATOR_SHOT = 113, AOS_ROLE_GLADIATOR_TRAIL = 114,
+       AOS_ROLE_GLADIATOR_GORE = 115 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -695,6 +699,20 @@ typedef struct AosEnemy {
     int16_t me_ang;
     int32_t me_life;
     uint8_t me_seen;
+    /* Gladiator (EnemyGladiatorCreate 0x080A07FC / update 0x080A1D64):
+     * `gl_part` is the + 0x18 child index (0 shield arm, 1 sword arm,
+     * 2 flail ball), `gl_atk` the + 0x6D attack phase of the sword
+     * arm, `gl_atk2` its + 0x6F one-shot gate, `gl_ang`/`gl_ang2` the
+     * + 0x1C/+ 0x1E spin pair of the flail and the shot's + 0x1E
+     * angle, `gl_ox`/`gl_oy` the 16-bit attach offsets (+ 0x42/+ 0x46)
+     * and `gl_life` the + 0x48 parent-frame memory. The three limb
+     * children (sub_080A0DEC/sub_080A1060/sub_080A13D0), the spinning
+     * shot and its trail (sub_080A15CC/sub_080A18C0 through
+     * sub_080A19C4), the death chunks (sub_080A1A50/sub_080A1B98) are
+     * persistent children of roles AOS_ROLE_GLADIATOR_*. */
+    uint8_t gl_part, gl_atk, gl_atk2;
+    int16_t gl_ang, gl_ang2, gl_ox, gl_oy;
+    int32_t gl_life;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

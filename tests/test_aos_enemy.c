@@ -11266,6 +11266,130 @@ static void maneater_tests(void) {
            el.timer <= 0x80 && el.static_frame == 0x11);
 }
 
+
+static void gladiator_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { GL_ANIMS = 20 };
+    static const uint8_t ticks20[20] = {4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4};
+    static AosAnimDef defs[GL_ANIMS];
+    for (int a = 0; a < GL_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks20};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = GL_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < GL_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 93: hp 600, contact 55, defence 35, weak 0x0020,
+     * resist 0x0010, exp 1000. */
+    const AosEnemyStats stats = {600, 55, 35, 0x0020, 0x0010, 1000};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyGladiatorCreate: state 0, anim 0xC, the dormant flag
+     * parks state 2. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_GLADIATOR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 600 && !e.boss_parts_spawned);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_GLADIATOR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 2);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The first update emits the three limbs (sub_0806DFF8 x3). */
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.child_count == 3);
+    assert(hit.children[0].role == AOS_ROLE_GLADIATOR_PART0 &&
+           hit.children[1].role == AOS_ROLE_GLADIATOR_PART1 &&
+           hit.children[2].role == AOS_ROLE_GLADIATOR_PART2);
+    for (int i = 0; i < 3; ++i)
+        assert(hit.children[i].parent == &e &&
+               hit.children[i].combat.hurt_off);
+
+    /* State 0 approach: the soma inside the aggro area flips the
+     * attack substate (step 1) with song 0x127. */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    (void)hit;
+
+    /* The sword arm's strike phases spawn GLADIATOR_SHOT children
+     * with their GLADIATOR_TRAIL afterimages. */
+    AosEnemy arm;
+    memset(&arm, 0, sizeof arm);
+    arm.role = AOS_ROLE_GLADIATOR_PART1;
+    arm.parent = &e;
+    arm.id = AOS_ENEMY_GLADIATOR;
+    arm.state = 0;
+    arm.gl_atk = 1;
+    arm.gl_atk2 = 0;
+    arm.gl_life = 100;
+    arm.anim.frame = 3;
+    hit = aos_enemy_update(&arm, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int shots = 0, trails = 0;
+    for (int c = 0; c < hit.child_count; ++c) {
+        if (hit.children[c].role == AOS_ROLE_GLADIATOR_SHOT) shots++;
+        if (hit.children[c].role == AOS_ROLE_GLADIATOR_TRAIL) trails++;
+    }
+    assert(shots == 1 && trails == 1);
+
+    /* The shot orbits the parent and dies with it. */
+    AosEnemy shot = hit.children[0];
+    shot.role = AOS_ROLE_GLADIATOR_SHOT;
+    shot.parent = &e;
+    for (int i = 0; i < 10; ++i)
+        hit = aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(!shot.removed);
+    e.removed = true;
+    hit = aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(shot.removed);
+
+    /* The flail detaches into its thrown state when the parent dies. */
+    AosEnemy mace;
+    memset(&mace, 0, sizeof mace);
+    mace.role = AOS_ROLE_GLADIATOR_PART2;
+    mace.parent = &e;
+    mace.id = AOS_ENEMY_GLADIATOR;
+    mace.state = 0;
+    e.removed = false;
+    e.state = 1;
+    hit = aos_enemy_update(&mace, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(mace.state == 1 && mace.timer >= 0x3F && mace.timer <= 0x40);
+
+    /* Lethal: hp 0 -> sub_080A0D7C song 0x71, state 1 death spin. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, AOS_ENEMY_GLADIATOR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.state == 1 && el.defeated && el.timer <= 0x3C &&
+           el.timer >= 0x3B);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -11292,7 +11416,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x5D, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x21, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -11515,6 +11639,7 @@ int main(void) {
     quezlcoatl_tests();
     alastor_tests();
     maneater_tests();
+    gladiator_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

@@ -406,6 +406,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_QUEZLCOATL &&
         id != AOS_ENEMY_ALASTOR &&
         id != AOS_ENEMY_MAN_EATER &&
+        id != AOS_ENEMY_GLADIATOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1256,6 +1257,36 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         enemy->state = 0;
         enemy->step = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_GLADIATOR) {
+        /* EnemyGladiatorCreate 0x080A07FC through sub_080A1BEC:
+         * tiles 0x081CC0AC, frames 0x08229104, palette bank via
+         * sub_08068264(0x0820AF98); anim 0xC looped, sub_0803F17C,
+         * sub_0806B04C; the three limbs of sub_0806DFF8 (shield arm
+         * sub_080A0DEC attach + 0x20 anim 4, sword arm sub_080A1060
+         * attach + 0x20 anim 0 with the Random & 0x3F idle timer,
+         * flail sub_080A13D0 attach + 0x21 anim 0x10) emit on the
+         * first update via boss_parts_spawned; the dormant
+         * gEwramData + 0x8E & 0x40 flag parks state 2; hurt/contact
+         * callbacks sub_080A1C50/sub_080A1C80 (body) and
+         * sub_080A1CC8/sub_080A1CF8 (limbs, forwarding to the
+         * parent's sub_080A0D7C) fold into the shared collide and
+         * lethal pass; the sub_0804277C/sub_080427B8 box choice on
+         * sub_0806D260 is approximated. */
+        play_loop(enemy, anims, 0xC, true);
+        step_anim(enemy, anims);
+        enemy->state = 0;
+        enemy->step = 0;
+        enemy->timer = 0;
+        enemy->gl_part = enemy->gl_atk = enemy->gl_atk2 = 0;
+        enemy->gl_ang = enemy->gl_ang2 = enemy->gl_ox = enemy->gl_oy = 0;
+        enemy->gl_life = 0;
+        enemy->boss_parts_spawned = false;
+        if (flag_8e_40) {
+            enemy->state = 2;
+            enemy->step = 0;
+        }
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -4167,6 +4198,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                         cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_MAN_EATER)
         return aos_enemy_man_eater_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_GLADIATOR)
+        return aos_enemy_gladiator_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)

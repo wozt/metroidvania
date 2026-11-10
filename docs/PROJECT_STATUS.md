@@ -1,3 +1,34 @@
+## Patch 0984 - Gladiator ported (id 93)
+
+- `EnemyGladiatorCreate` (0x080A07FC) / `EnemyGladiatorUpdate`
+  (0x080A1D64) and the `sub_080A0A8C`..`sub_080A1E00` cluster of
+  `code_08090914.s` / `code_080A0A8C.s`: tiles `0x081CC0AC`,
+  frames `0x08229104`, palette banks `0x0820AF98`, anim 0xC, and
+  the three limbs spawned through `sub_0806DFF8`: shield arm
+  `sub_080A0DEC` (attach `+0x20`, anim 4), sword arm
+  `sub_080A1060` (attach `+0x20`, anim 0, `+0x1C` idle timer) and
+  the flail ball `sub_080A13D0` (attach `+0x21`, anim 0x10, the
+  `+0x1C`/`+0x1E` chain spin).
+- `gladiator.c` ports the states: state 0 `sub_080A0A8C` approach
+  (`sub_080698A8`, edge probe `sub_0806D188`, roar song 0x7D every
+  32 ticks, attack song 0x127 and `sub_0806D9CC` knife volleys on
+  the `0x08119144`/`0x0811915C`/`0x0811917C`/`0x08119194` tables),
+  state 1 `sub_080A1E00` death spin (song 0x6B once), state 2 the
+  dormant animation under `gEwramData + 0x8E & 0x40`, and the hurt
+  `sub_080A0D7C` flash `+0x2D = 8`, song 0x71 lethal entry into
+  state 1 with `+0xD = 0x3C`.
+- Roles `AOS_ROLE_GLADIATOR_PART0`/`PART1`/`PART2`,
+  `GLADIATOR_SHOT` (the `sub_080A15CC` sword shot + trail
+  `sub_080A18C0`) and `GLADIATOR_TRAIL` afterimages; the flail
+  detaches into its thrown state and the shield arm throws the
+  seven `sub_080A1A50` chunks on the parent death.
+- Soul red:42 (SkillGladiatorUse, routine `0x0802B4C9`) was already
+  ported, so all five monster aspects are `ported`; red soul 42,
+  loot and sounds are unit-tested in `gladiator_tests`.
+- One affine OAM component (frame 44 of `0x08229104`, 8x8) is
+  skipped by the object exporter; all five monster aspects carry
+  their divergences in `aos_monster_aspects.tsv`.
+
 # Project status
 
 Last updated: **2026-11-10**.

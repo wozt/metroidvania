@@ -202,7 +202,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [104] = "flame_demon",
                                                      [26] = "quezlcoatl",
                                                      [90] = "alastor",
-                                                     [64] = "man_eater"};
+                                                     [64] = "man_eater",
+                                                     [93] = "gladiator"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
@@ -2839,7 +2840,13 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_MAN_LEVEL ||
                  e->enemy.role == AOS_ROLE_MAN_VOLLEY ||
                  e->enemy.role == AOS_ROLE_MAN_SHOT ||
-                 e->enemy.role == AOS_ROLE_MAN_DEATHP) &&
+                 e->enemy.role == AOS_ROLE_MAN_DEATHP ||
+                 e->enemy.role == AOS_ROLE_GLADIATOR_PART0 ||
+                 e->enemy.role == AOS_ROLE_GLADIATOR_PART1 ||
+                 e->enemy.role == AOS_ROLE_GLADIATOR_PART2 ||
+                 e->enemy.role == AOS_ROLE_GLADIATOR_SHOT ||
+                 e->enemy.role == AOS_ROLE_GLADIATOR_TRAIL ||
+                 e->enemy.role == AOS_ROLE_GLADIATOR_GORE) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
@@ -3021,7 +3028,13 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_MAN_LEVEL ||
                                        hit.children[c].role == AOS_ROLE_MAN_VOLLEY ||
                                        hit.children[c].role == AOS_ROLE_MAN_SHOT ||
-                                       hit.children[c].role == AOS_ROLE_MAN_DEATHP
+                                       hit.children[c].role == AOS_ROLE_MAN_DEATHP ||
+                                       hit.children[c].role == AOS_ROLE_GLADIATOR_PART0 ||
+                                       hit.children[c].role == AOS_ROLE_GLADIATOR_PART1 ||
+                                       hit.children[c].role == AOS_ROLE_GLADIATOR_PART2 ||
+                                       hit.children[c].role == AOS_ROLE_GLADIATOR_SHOT ||
+                                       hit.children[c].role == AOS_ROLE_GLADIATOR_TRAIL ||
+                                       hit.children[c].role == AOS_ROLE_GLADIATOR_GORE
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

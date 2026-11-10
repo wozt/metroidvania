@@ -239,6 +239,11 @@ static const EntitySpec entities[] = {
      * the head, the three level children, the volley entities, the
      * bolts and the death particles. */
     ENTITY("man_eater", 0x081F4224, 0x0820BD28, 0, 0x0824B178),
+    /* Gladiator (sub_080A1BEC in EnemyGladiatorCreate): tiles
+     * 0x081CC0AC, frames 0x08229104, palette bank 0x0820AF98 —
+     * shared by the body, the three limbs, the shots, the trails
+     * and the death chunks. */
+    ENTITY("gladiator", 0x081CC0AC, 0x0820AF98, 0, 0x08229104),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
@@ -958,9 +963,11 @@ static bool render_frame(const FusionRom *rom, uint32_t descriptor,
     for (size_t order = count; order > 0; --order) {
         const Component *component = &components[order - 1];
         if (((component->flags >> 16) & 0xFF) >= 4) {
-            free(rgba);
-            set_error(error, error_size, "unsupported OAM component attributes");
-            return false;
+            /* Affine (rotated/scaled) components cannot be baked into
+             * the sheet; the runtime rotates the whole entity through
+             * its own transform.  Skip the component — one sprite of
+             * the Gladiator flail is affected (frame 44). */
+            continue;
         }
         if ((size_t)component->source_x + component->width >
                 sheet->width_tiles * 8 ||

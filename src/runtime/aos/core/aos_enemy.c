@@ -391,6 +391,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_KILLER_FISH && id != AOS_ENEMY_BUER && id != AOS_ENEMY_WHITE_DRAGON &&
         id != AOS_ENEMY_GIANT_GHOST && id != AOS_ENEMY_BONE_PILLAR &&
         id != AOS_ENEMY_FISH_HEAD && id != AOS_ENEMY_UKOBACK &&
+        id != AOS_ENEMY_STUDENT_WITCH &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -637,6 +638,33 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         enemy->state = 0;
         enemy->step = enemy->substep = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_STUDENT_WITCH) {
+        /* EnemyStudentWitchCreate (0x080B8CA0) through sub_0806E0D0:
+         * the shared witch tiles 0x081E41C4, palette 0x0820B880 and
+         * frames 0x08241790; sub_0806B04C, + 0x5C = 0x13, animation
+         * (7, 0, 1) stepped once; the global 0x8E & 0x40 sends it to
+         * state 5, else the sub_0806E1B8 contact and sub_080B9EEC
+         * hurt callbacks, sub_0806B1FC facing, the sub_0806AF98 floor
+         * snap, + 0x46 + 1 and + 0x59 bit 1 (the ghost translucency,
+         * approximated by translucent), state 0. */
+        play_loop(enemy, anims, 7, true);
+        step_anim(enemy, anims);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->angle = 0;
+        enemy->spin = 0;
+        enemy->sw_probe = 0;
+        enemy->translucent = true;
+        if (flag_8e_40) {
+            enemy->state = 5;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        snap_to_floor(enemy, layer);
+        enemy->y += 0x10000;
         return true;
     }
     if (id == AOS_ENEMY_GIANT_GHOST) {
@@ -1877,6 +1905,18 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                      * shatter (sub_080C5F10 on the next update). */
                     enemy->state = 0xFF;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_STUDENT_WITCH &&
+                           enemy->role == AOS_ROLE_STUDENT_WITCH_BOLT) {
+                    /* sub_080B9F88: any blow zeroes + 0x34 — with hp 1
+                     * every hit is lethal; state 2 bursts it. */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_STUDENT_WITCH &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080B9EEC: sub_080683BC then state 4 (the
+                     * palette merge is not ported). */
+                    enemy->state = 4;
+                    enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_0807D88C: its update finishes the death. */
@@ -3091,6 +3131,17 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_ukoback_update(enemy, soma, layer, kind, weapon,
                                         weapon_frames, soma_atk, soma_def,
                                         cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_STUDENT_WITCH &&
+        enemy->role == AOS_ROLE_STUDENT_WITCH_BOLT)
+        return aos_enemy_student_witch_bolt_update(enemy, soma, layer, kind,
+                                                weapon, weapon_frames,
+                                                soma_atk, soma_def, cam_x,
+                                                cam_y, random);
+    if (enemy->id == AOS_ENEMY_STUDENT_WITCH && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_student_witch_update(enemy, soma, layer, kind,
+                                              weapon, weapon_frames,
+                                              soma_atk, soma_def, cam_x,
+                                              cam_y, random);
     if (enemy->role == AOS_ROLE_ALURA_SCYTHE)
         return aos_enemy_alura_scythe_update(enemy, soma, layer, kind,
                                              weapon, weapon_frames,

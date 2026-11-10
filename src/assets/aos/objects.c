@@ -164,6 +164,10 @@ static const EntitySpec entities[] = {
      * resources; the sub_080C6310/sub_080C639C shard entities use the
      * shared special-15 row-7 art, emitted as burst-15 effects. */
     ENTITY("ukoback", 0x081F425C, 0x0820BEA4, 0, 0x0824D198),
+    /* EnemyStudentWitchCreate (0x080B8CA0) through sub_0806E0D0 and
+     * the sub_080B8668 bolt, which share the Witch's resources: tiles
+     * 0x081E41C4, palette 0x0820B880, frames 0x08241790. */
+    ENTITY("student_witch", 0x081E41C4, 0x0820B880, 0, 0x08241790),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
     /* Buer sub_0806CAF8: the shared 0x08528B64 s16 probe descriptor
      * has wall count, ceiling, floor, half-width and wall Y offsets.

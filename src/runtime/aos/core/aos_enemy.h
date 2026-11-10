@@ -158,6 +158,7 @@ enum {
     AOS_ENEMY_FISH_HEAD = 0x41,
     AOS_ENEMY_BASILISK = 0x64,
     AOS_ENEMY_UKOBACK = 0x4C,
+    AOS_ENEMY_STUDENT_WITCH = 0x16,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -201,7 +202,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_DISC_BLADE = 72, AOS_ROLE_DISC_SHARD = 73,
        AOS_ROLE_DISC_GLOW = 74, AOS_ROLE_ALURA_SCYTHE = 75,
        AOS_ROLE_ALURA_BLADE = 76, AOS_ROLE_UKOBACK_CREATURE = 77,
-       AOS_ROLE_UKOBACK_LID = 78 };
+       AOS_ROLE_UKOBACK_LID = 78, AOS_ROLE_STUDENT_WITCH_BOLT = 79 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -443,6 +444,8 @@ typedef struct AosEnemy {
     int16_t uk_timer;
     uint8_t uk_peek;
     int16_t uk_death_y;      /* the shatter's sink reference (+0x46 approx) */
+    uint8_t sw_probe;        /* Student Witch: last sub_0806CAF8 result
+                              * byte (+ 0x6C), its bit 2 the ceiling mark */
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

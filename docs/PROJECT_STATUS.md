@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0965 - Student Witch ported (id 22)
+
+- `EnemyStudentWitchCreate` (0x080B8CA0) / `EnemyStudentWitchUpdate`
+  (0x080B8D50) plus the `sub_080B8850` hover, `sub_080B8954`
+  perch, `sub_080B8A90` dive and `sub_080B8C0C` death handlers and
+  the `sub_080B87C4`/`sub_080B8668` bolt as
+  `src/runtime/aos/enemies/student_witch.c`. She shares the Witch's
+  resources (tiles `0x081E41C4`, palette `0x0820B880`, frames
+  `0x08241790`), hovers on the `0x08528884` probes with the
+  `+ 0x14` speed stepped by animation frame, perches on the
+  `0x78`-tick timer, dives with songs `0x1CB`/`0x81` and a frame-6
+  bolt, and dies in a sixteen-spark `sub_080B8C0C` sequence that
+  ends with a param-2 bolt. New role `STUDENT_WITCH_BOLT`.
+- Documented approximations: the `sub_080458E4` smoke and
+  `sub_08045CEC` sparks are shared drifts, the `+ 0x59` bit-1
+  translucency is `translucent`, and the activity/stun/room-query
+  bookkeeping is not ported.
+- Verified in `aria area_02_room_011`: repeated 19-damage hits on
+  Soma; unit-tested in `student_witch_tests`.
+
 ## Patch 0964 - Ukoback ported (id 76)
 
 - `EnemyUkobackCreate` (0x080C5BDC) / `EnemyUkobackUpdate`

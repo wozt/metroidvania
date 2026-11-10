@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T03:38:13+00:00",
+ "generated_at": "2026-11-10T03:56:53+00:00",
  "git": {
-  "commit": "ffa49e38",
+  "commit": "20533a48",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 245,
+   "total": 246,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 179,
+    "functional": 180,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 179,
-   "functional_or_better_percent": 73.1,
-   "with_passing_tests": 232,
+   "functional_or_better": 180,
+   "functional_or_better_percent": 73.2,
+   "with_passing_tests": 233,
    "with_passing_tests_percent": 94.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -263,6 +263,7 @@
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
     "aos.enemies.sky_fish",
+    "aos.enemies.student_witch",
     "aos.enemies.tiny_devil",
     "aos.enemies.tsuchinoko",
     "aos.enemies.ukoback",
@@ -479,20 +480,20 @@
    "areas": [
     "aos"
    ],
-   "total": 100,
+   "total": 101,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 72,
+    "functional": 73,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 72,
-   "functional_or_better_percent": 72.0,
-   "with_passing_tests": 100,
+   "functional_or_better": 73,
+   "functional_or_better_percent": 72.3,
+   "with_passing_tests": 101,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -558,6 +559,7 @@
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
     "aos.enemies.sky_fish",
+    "aos.enemies.student_witch",
     "aos.enemies.tiny_devil",
     "aos.enemies.tsuchinoko",
     "aos.enemies.ukoback",
@@ -13985,6 +13987,105 @@
    }
   },
   {
+   "id": "aos.enemies.student_witch",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Student Witch",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/student_witch.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyStudentWitchCreate",
+    "EnemyStudentWitchUpdate",
+    "sub_080B8850",
+    "sub_080B8954",
+    "sub_080B8A90",
+    "sub_080B8C0C",
+    "sub_080B87C4",
+    "sub_080B8668",
+    "sub_080B9EEC",
+    "sub_080B9F88",
+    "sub_0806CAF8",
+    "sub_0806BC40",
+    "sub_0806E29C",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_080458E4",
+    "sub_08045CEC",
+    "sub_080009E4",
+    "sub_0806E0D0",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_0806D128",
+    "sub_0806AD24",
+    "sub_08021924",
+    "sub_0806DF20",
+    "sub_0806E218",
+    "sub_080683BC",
+    "sub_0806E1B8",
+    "sub_0806DFF8",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The sub_080458E4 dive-smoke entities and the sub_08045CEC death sparks are approximated by the shared smoke/spark drifts; the + 0x59 bit-1 ghost translucency is approximated by translucent; the sub_08021924 activity mark, the sub_0806AD24 stun gate, the sub_080421AC room queries, the sub_0806D128 visibility bookkeeping, the + 0x5A palette merges, sub_0806B04C, sub_080683BC and the global pause are not ported; no emulator comparison. EnemyStudentWitchCreate (0x080B8CA0) loads the shared witch tiles 0x081E41C4, palette 0x0820B880 and frames 0x08241790 through sub_0806E0D0, sets + 0x5C = 0x13, plays animation (7, 0, 1) and steps it, enters state 5 under the global 0x8E & 0x40 else state 0 with the sub_0806E1B8 contact and sub_080B9EEC hurt callbacks after the sub_0806B1FC facing and sub_0806AF98 floor snap, a one-pixel lift and the + 0x59 bit-1 translucent mark. EnemyStudentWitchUpdate dispatches: state 0 sub_080B8850 hovers — the + 0x14 horizontal speed steps 0xC000 / -0x1200 / +0x4000 by animation frame, the mode-8 probe walk 0x08528884 flips facing on walls, a missing floor enters state 2, and on frame 0 a player in the 0xA0 x 0x3C box with a RandomNumberGenerator & 4 roll dives (state 3) or perches (state 2), five playerless frames turning her; state 2 sub_080B8954 perches — face player, the 0x78 tick timer, mode-0xD hover, the 0x64 x 0x3C box switching to animation 0xA, the mode-0xC walk with the frame-9 song 0x1CA and 0x20000 lunge, ceiling bit to substep 3; state 3 sub_080B8A90 dives — animation 8, vy -(0xC000 + n * 0x800), 0x400 gravity, smoke puffs at ticks 0x14-0x1D, animation 9 at 0x1E, songs 0x1CB and 0x81 with the sub_080B87C4 bolt at (-0xC, -0x14) on frame 6, ceiling pull-up and floor exit; state 4 sub_080B8C0C dies — sixteen sine-offset sparks then the param-2 bolt and delete; the bolt sub_080B8668 (sub_080B87C4 spawn at the parent's pixel position plus offsets) accelerates its + 0x14 speed by 0x4000 through the 0x08528890 probes, plays song 0x68 on the first floor touch, bursts on walls or the sub_080B9F88 hurt. Unit-tested in student_witch_tests.",
+   "next_action": "Compare the hover cadence, the dive timing and the bolt flight against an emulator; port the red soul 15 update (the Student Witch soul).",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_02_room_011 (--spawn 284 88): the Student Witch hovers and engages Soma for repeated 19-damage hits (frames to 800; contact vs bolt not distinguished)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.tiny_devil",
    "area": "aos",
    "category": "enemies",
@@ -20327,6 +20428,7 @@
     "src/runtime/aos/enemies/disc_armor.c",
     "src/runtime/aos/enemies/alura_une.c",
     "src/runtime/aos/enemies/ukoback.c",
+    "src/runtime/aos/enemies/student_witch.c",
     "src/runtime/aos/enemies/mimic.c",
     "src/runtime/aos/enemies/fleaman.c",
     "src/runtime/aos/enemies/skeleton_knight.c",
@@ -22825,6 +22927,12 @@
  },
  "timeline": [
   {
+   "commit": "20533a48",
+   "date": "2026-11-10",
+   "subject": "Port Ukoback (Aria enemy 0x4C) with peeked creature and lid children",
+   "scope": "project"
+  },
+  {
    "commit": "ffa49e38",
    "date": "2026-11-10",
    "subject": "Port Basilisk (Aos enemy id 100) as a Cockatrice palette variant",
@@ -23297,12 +23405,6 @@
    "date": "2026-11-09",
    "subject": "Split the Aria enemies into one file per monster family",
    "scope": "project"
-  },
-  {
-   "commit": "d2a9e842",
-   "date": "2026-11-09",
-   "subject": "Play the editor's room transitions in the Aria runtime",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -23363,9 +23465,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1250,
-    "routines_attached_to_features": 1250,
-    "unassigned_routines": 2323,
+    "routines_cited_by_features": 1261,
+    "routines_attached_to_features": 1261,
+    "unassigned_routines": 2312,
     "call_edges": 14228
    }
   },
@@ -25607,12 +25709,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 69,
-      "functional_or_better": 69,
-      "functional_or_better_percent": 67,
+      "implemented": 70,
+      "functional_or_better": 70,
+      "functional_or_better_percent": 68,
       "by_status": {
-       "functional": 69,
-       "not_started": 33
+       "functional": 70,
+       "not_started": 32
       }
      },
      "bosses": {
@@ -26276,13 +26378,28 @@
      {
       "id": 22,
       "name": "Student Witch",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Student Witch",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_02_room_011 (--spawn 284 88): the Student Witch hovers and engages Soma for repeated 19-damage hits (frames to 800; contact vs bolt not distinguished)"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.student_witch",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "red:15",
+       "notes": "Soul: drops (soul_index 15 through the generic roll, common 0x0006 / rare 0x000E) and is collected, but its red soul 15 has no ported update yet. Animations: ported from EnemyStudentWitchCreate (0x080B8CA0) / EnemyStudentWitchUpdate (0x080B8D50) and the sub_080B8850 hover, sub_080B8954 perch, sub_080B8A90 dive, sub_080B8C0C death handlers plus the sub_080B87C4 bolt spawn and sub_080B8668 bolt update; unit-tested in student_witch_tests. Sounds: PlaySong 0x1CA (perch frame 9), 0x1CB and 0x81 (dive bolt release), 0x68 (bolt's first floor touch) are requested and unit-tested, not listened to. Loot: the native record drops common 0x0006 and rare 0x000E through the generic roll. Divergences: the sub_080458E4 dive smoke and sub_08045CEC sparks are approximated by shared drifts, the + 0x59 bit-1 translucency by translucent, the activity/stun/room-query/palette bookkeeping is not ported, and there is no emulator comparison."
       }
      },
      {
@@ -28075,17 +28192,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 69,
+      "ported": 70,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 69,
+      "ported": 70,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 69,
+      "ported": 70,
       "partial": 0,
       "missing": 0
      },
@@ -28096,11 +28213,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 12,
+      "partial": 13,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 69
+     "monsters": 70
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [

@@ -5316,6 +5316,138 @@ static void alura_une_tests(void) {
     assert(e.removed);
 }
 
+static void student_witch_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;   /* floor top 160 */
+    enum { SW_ANIMS = 12 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[SW_ANIMS];
+    for (int a = 0; a < SW_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = SW_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < SW_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    /* enemies.tsv id 22: hp 80, field_e 999, contact 15, defence 10,
+     * weak 0x0941, resist 0x0000, experience 28. */
+    const AosEnemyStats stats = {80, 15, 10, 0x0941, 0x0000, 28};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(120), AOS_FIXED(150), NULL);
+    soma.max_hp = soma.hp = 400;
+
+    /* EnemyStudentWitchCreate (0x080B8CA0): state 0 hovering, the
+     * translucent ghost bit set and animation 7 looping; the global
+     * 0x8E & 0x40 parks it in the inert state 5. */
+    AosEnemy w;
+    assert(aos_enemy_create(&w, AOS_ENEMY_STUDENT_WITCH, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(w.state == 0 && w.hp == 80 && w.translucent);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy wi;
+    assert(aos_enemy_create(&wi, AOS_ENEMY_STUDENT_WITCH, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(wi.state == 5);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* sub_080B8850: the hover arms + 0x14 = 0xC000 on animation frame
+     * 0 and the mode-8 probe walk moves her at that speed; the floor
+     * at row 20 keeps bit 8 set so she stays in state 0. */
+    w.anim.frame = 0;
+    int32_t x0 = w.x;
+    (void)aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(w.angle == 0xC000 && w.x != x0);
+    /* Soma sits in the 0xA0 x 0x3C box and always_zero fails the & 4
+     * roll, so the first hover already perched her in state 2. */
+    assert(w.state == 2);
+
+    /* Back in state 0 on animation frame 0 with the scripted RNG & 4
+     * set, the player box dives her into state 3. */
+    w.state = 0;
+    w.step = 1;
+    w.substep = 0;
+    w.anim.frame = 0;
+    script = (const uint32_t[]){4, 0, 0, 0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0, 0, 0, 0};
+    script_at = 0;
+    (void)aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, scripted);
+    assert(w.state == 3);
+    /* sub_080B8A90 substep 0 arms the dive on the next update. */
+    (void)aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(w.vy < 0 && w.ay == 0x400 && w.angle == 0x8000 && w.step == 1);
+
+    /* sub_080B8A90 substep 0 armed the dive; substep 1 climbs the
+     * + 0x18 tick. Run the dive until the bolt fires at animation
+     * frame 6 — drive the frame directly since the 8-frame test
+     * animation never reaches it natively. */
+    w.step = 2;
+    w.substep = 0;
+    w.anim.frame = 6;
+    w.anim.tick = 0;
+    AosHitReport r = aos_enemy_update(&w, &soma, &layer, &kind, NULL,
+                                      NULL, 10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1CB) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x81) == 1);
+    assert(r.child_count == 1 &&
+           r.children[0].role == AOS_ROLE_STUDENT_WITCH_BOLT &&
+           r.children[0].step == 0);
+
+    /* sub_080B87C4/sub_080B8668: the bolt inits on animation 0xB (param
+     * bit 0 clear), hp 1 and 0x4000 gravity, then accelerates its
+     * + 0x14 speed by 0x4000 a frame through the mode-8 probes. */
+    AosEnemy b = r.children[0];
+    /* The native init falls through into the flight block: after one
+     * update the bolt is in state 1 with its speed already ramped. */
+    (void)aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(b.state == 1 && b.hp == 1 && b.ay == 0x4000 &&
+           b.angle == 0x4000);
+    /* A wall result (bits 3) bursts it: wall the probe path ahead of
+     * its rightward flight (mirrored faces +x). */
+    b.mirrored = true;
+    for (int y = 0; y < H; ++y) cells[y * W + 30] = 0x03;
+    int guard = 0;
+    while (b.state == 1 && !b.removed && guard++ < 200)
+        (void)aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(b.state == 2 || b.removed);
+    for (int y = 0; y < H; ++y) cells[y * W + 30] = 0;
+
+    /* sub_080B8C0C: the lethal blow (sub_080B9EEC) enters state 4;
+     * the 0x20 counter flings spark drifts on even counts and the
+     * final substep emits the param-2 bolt before deleting. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_STUDENT_WITCH, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    d.state = 4;
+    d.step = 0;
+    (void)aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(d.step == 1 && d.timer == 0x20);
+    /* Drive the counter down: each update spawns a spark on even
+     * counts; the last one emits the death bolt and removes. */
+    int sparks = 0;
+    for (int i = 0; i < 40 && !d.removed; ++i) {
+        AosHitReport dr = aos_enemy_update(&d, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, 0, 0,
+                                           always_zero);
+        sparks += dr.effect_count;
+        for (int k = 0; k < dr.child_count; ++k)
+            assert(dr.children[k].role == AOS_ROLE_STUDENT_WITCH_BOLT &&
+                   dr.children[k].step == 2);
+    }
+    assert(d.removed && sparks > 0);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -8352,7 +8484,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x16, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x17, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -8554,6 +8686,7 @@ int main(void) {
     disc_armor_tests();
     alura_une_tests();
     ukoback_tests();
+    student_witch_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

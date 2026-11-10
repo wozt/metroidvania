@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T07:32:11+00:00",
+ "generated_at": "2026-11-10T07:48:44+00:00",
  "git": {
-  "commit": "da1476a2",
+  "commit": "09e20a00",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 253,
+   "total": 254,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 187,
+    "functional": 188,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 187,
-   "functional_or_better_percent": 73.9,
-   "with_passing_tests": 240,
+   "functional_or_better": 188,
+   "functional_or_better_percent": 74.0,
+   "with_passing_tests": 241,
    "with_passing_tests_percent": 94.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -203,6 +203,7 @@
     "mzm.weapons.wave_plasma_beams",
     "aos.audio.play_song",
     "aos.death.soma",
+    "aos.enemies.altair",
     "aos.enemies.alura_une",
     "aos.enemies.axe_armor",
     "aos.enemies.basilisk",
@@ -487,25 +488,26 @@
    "areas": [
     "aos"
    ],
-   "total": 108,
+   "total": 109,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 80,
+    "functional": 81,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 80,
-   "functional_or_better_percent": 74.1,
-   "with_passing_tests": 108,
+   "functional_or_better": 81,
+   "functional_or_better_percent": 74.3,
+   "with_passing_tests": 109,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "aos.audio.play_song",
     "aos.death.soma",
+    "aos.enemies.altair",
     "aos.enemies.alura_une",
     "aos.enemies.axe_armor",
     "aos.enemies.basilisk",
@@ -8874,6 +8876,108 @@
    }
   },
   {
+   "id": "aos.enemies.altair",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Altair",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/altair.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyAltairCreate",
+    "EnemyAltairUpdate",
+    "sub_080C1694",
+    "sub_080C1898",
+    "sub_080C1940",
+    "sub_080C1CDC",
+    "sub_080C1C54",
+    "sub_080C1A64",
+    "sub_080C1B54",
+    "sub_080C1D38",
+    "sub_080C1D70",
+    "sub_080C1D88",
+    "sub_080C1DF0",
+    "sub_080C19E0",
+    "sub_080C1D0C",
+    "sub_0806B04C",
+    "sub_0806D244",
+    "sub_0806BD64",
+    "sub_0806AE54",
+    "sub_0806D4C0",
+    "sub_0806DF20",
+    "sub_080421AC",
+    "sub_0803AFB8",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_080681D8",
+    "sub_080683BC",
+    "sub_08021654",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_08042B8C",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The + 0x4A window field's native writer was not traced (kept 0: the state-1 tail despawns on screen x outside [-0x80, +0x170]); the global 0x84F0B14 + 0x8E & 0x40 dormant check maps to flag_8e_40; the partner blade's Fleaman (param1 1) / Ripper (param1 2) frames of func_080DA7A4 use Altair's anims; the link blade is emitted on the first dash entry instead of create (children cannot spawn there); func_0806D4C0's stun gate, func_0806BE74's plunge collision and func_08042B8C's knockback are not ported; and there is no emulator comparison. EnemyAltairCreate (0x080C1490) loads tiles 0x081F4234, palette 0x0820BD70 and frames 0x0824B660 through sub_080C1C54, sets + 0x5C = 3 and state 1, sends the 0x8E & 0x40 flag to state 4, param0 0 to the hidden state-5 spawner (+ 0x72 bits 1-2 set) and seeds + 0x42/+ 0x46 by param0 2/3 with the facing of sub_0806BD64. EnemyAltairUpdate dispatches: state 1 sub_080C1694 dashes in six substates (animations 0-2, vx ±0xA000, the partner sync and the + 0x1D player-band probes, the pixel-window despawn); state 2 sub_080C1898 bursts four angle-0/0x8000 bolts with song 0x72 and the + 0x4C = 0xC0000 plunge; state 4 sub_080C1CDC idles; state 5 sub_080C1940 recursively clones itself (param0 2/3, + 0x1E count <= 1) every 0x40 ticks. The blades of sub_080C1B54 scatter on init then fly on sine(angle) >> 2 until the angle bounds. The hurt sub_080C19E0 carries the lethal state-2 / timer 0x32 cosmetics under generic_death. Unit-tested in altair_tests.",
+   "next_action": "Port the red soul 20 update and compare a room fight against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_05_room_004/008/009/010: Altair copies dash and spawn blade children"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.alura_une",
    "area": "aos",
    "category": "enemies",
@@ -10105,7 +10209,6 @@
     "sub_0806B1FC",
     "sub_0806AF98",
     "sub_080421AC",
-    "sub_080009E4",
     "PlaySong"
    ],
    "limitations": "The shadow child's palette nibble, + 0x24 scale, + 0x4 trail callback and the sub_0803E058 affine fade bookkeeping are not ported and its + 0x18 bob / + 0x1C spin are approximated by aos_sine; the rock's launch velocity, + 0x58 palette byte and speed factor are approximated and its still frame's empty attack record is replaced by a small own box for the sub_080BC0F4 / sub_08021654 contact; the sub_0803E654 sign draw is the RNG bit 15; the gEwramData + 0x13270 bit-2 attack gate, the sub_080421AC room queries, the + 0x5A palette merges and the global pause 0x4BE are not ported; no emulator comparison. sub_080BBFF0 (the shared create, variant 0 for the Cockatrice) loads tiles 0x081E41CC, palette 0x0820B8A4 and frames 0x08242994, plays animation 0 looping, links the sub_080BB924 shadow child through sub_0806DFF8, enters state 3 under the global 0x8E & 0x40 else state 0 after the sub_0806AF98 floor snap and a one-pixel lift, with the sub_0806E1B8 contact and sub_080BC0B4 hurt callbacks. EnemyCockatriceUpdate hides it above y -0x20 (sub_0806E4F8), gates on the sub_0806D128 margin 6 check and the sub_0806AD24 stun outside state 2, dispatches the states and steps the animation. State 0 (sub_080BBCC4) walks the 0x085288C0 probes (mode 0x14) with the (frame + 1) % 8 speed curve, counts three clean loop boundaries before turning, wakes on the centred 0xF0 x 0x64 box or on damage; state 1 (sub_080BBD90) repeats the walk, and at each loop boundary a facing-side check, a 0x77-pixel reach and the global gate start step 2 with animation 1 once — frame 0xA tick 0 spawns the sub_080BBAC4 rock (its + 0x14 the parent, + 0x5C the parent's contact + 1, + 0x65 frame 1, hurt off) and the animation's end arms the 0x20 return timer; the rock aims and tosses toward Soma, spins, dies at + 0x1A 0x1F with sound 0x65. State 2 (sub_080BBEE4) is the death: sound 0x65, animation 2, drift, song 0x6E every eighth tick, gore every other tick, the + 0x18 bit-0 corpse mark and deletion; the shadow rides the parent's attachment (edge + the 0x08119490 offset) and deletes on that mark or in state 3. The hurt sub_080BC0B4 enters state 2 on a lethal blow. Unit-tested in cockatrice_tests.",
@@ -10523,7 +10626,6 @@
     "sub_0806CD38",
     "sub_0806CD78",
     "sub_080212C8",
-    "sub_080009E4",
     "sub_0803F2C8",
     "sub_0803F17C",
     "sub_0806DF20",
@@ -10690,7 +10792,6 @@
     "sub_0806CD38",
     "sub_0806CD78",
     "sub_080212C8",
-    "sub_080009E4",
     "sub_0803F2C8",
     "sub_0803F17C",
     "sub_0806DF20",
@@ -14230,7 +14331,6 @@
     "sub_080C06A8",
     "sub_080C1454",
     "sub_080686CC",
-    "sub_080009E4",
     "sub_08002058",
     "sub_0800207C",
     "sub_08001C1C",
@@ -14348,7 +14448,6 @@
     "sub_0803F17C",
     "sub_080458E4",
     "sub_08045CEC",
-    "sub_080009E4",
     "sub_0806E0D0",
     "sub_0806B04C",
     "sub_0806B1FC",
@@ -15427,7 +15526,6 @@
     "sub_0806D3C0",
     "sub_0806D3CC",
     "sub_0806D430",
-    "sub_080009E4",
     "sub_0803E058",
     "sub_0803E6BC",
     "sub_08021654",
@@ -23697,6 +23795,12 @@
  },
  "timeline": [
   {
+   "commit": "09e20a00",
+   "date": "2026-11-10",
+   "subject": "Port the Aria Kyoma Demon enemy (id 39)",
+   "scope": "project"
+  },
+  {
    "commit": "da1476a2",
    "date": "2026-11-10",
    "subject": "Port the Aria Slime enemy (id 68)",
@@ -24169,12 +24273,6 @@
    "date": "2026-11-09",
    "subject": "Compile Ectoplasm as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "3b0edd19",
-   "date": "2026-11-09",
-   "subject": "Compile Sky Fish as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24235,9 +24333,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1341,
-    "routines_attached_to_features": 1341,
-    "unassigned_routines": 2232,
+    "routines_cited_by_features": 1358,
+    "routines_attached_to_features": 1358,
+    "unassigned_routines": 2215,
     "call_edges": 14228
    }
   },
@@ -26479,12 +26577,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 77,
-      "functional_or_better": 77,
-      "functional_or_better_percent": 75,
+      "implemented": 78,
+      "functional_or_better": 78,
+      "functional_or_better_percent": 76,
       "by_status": {
-       "functional": 77,
-       "not_started": 25
+       "functional": 78,
+       "not_started": 24
       }
      },
      "bosses": {
@@ -27640,13 +27738,28 @@
      {
       "id": 44,
       "name": "Altair",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Altair",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_05_room_004/008/009/010: Altair copies dash and spawn blade children"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.altair",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "red:20",
+       "notes": "Soul: drops (soul_index 20, soul_rarity 18, rates 20/30 through the generic roll) and is collected, but its red soul 20 has no ported update yet. Animations: ported from EnemyAltairCreate (0x080C1490) / EnemyAltairUpdate (0x080C15C8) and the sub_080C1694 dash, sub_080C1898 death burst, sub_080C1940 copy spawner and sub_080C1CDC dormant handlers — animations 0-3 through the shared play/step helpers; unit-tested in altair_tests. Sounds: PlaySong 0x72 at the death burst is requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x081F4234, palette 0x0820BD70, animation record 0x0824B660 exported natively, shared with the blade children. Divergences: the + 0x4A window field is kept 0, the partner blade uses Altair frames instead of the Fleaman/Ripper form frames, the link blade emits on the first dash entry, and there is no emulator comparison."
       }
      },
      {
@@ -29067,17 +29180,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 77,
+      "ported": 78,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 77,
+      "ported": 78,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 77,
+      "ported": 78,
       "partial": 0,
       "missing": 0
      },
@@ -29088,11 +29201,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 20,
+      "partial": 21,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 77
+     "monsters": 78
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -32296,7 +32409,7 @@
        "id": "05:14",
        "name": "Altair",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 20, soul_rarity 18, rates 20/30 through the generic roll) and is collected, but its red soul 20 has no ported update yet. Animations: ported from EnemyAltairCreate (0x080C1490) / EnemyAltairUpdate (0x080C15C8) and the sub_080C1694 dash, sub_080C1898 death burst, sub_080C1940 copy spawner and sub_080C1CDC dormant handlers — animations 0-3 through the shared play/step helpers; unit-tested in altair_tests. Sounds: PlaySong 0x72 at the death burst is requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x081F4234, palette 0x0820BD70, animation record 0x0824B660 exported natively, shared with the blade children. Divergences: the + 0x4A window field is kept 0, the partner blade uses Altair frames instead of the Fleaman/Ripper form frames, the link blade emits on the first dash entry, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

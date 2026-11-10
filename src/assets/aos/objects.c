@@ -183,6 +183,10 @@ static const EntitySpec entities[] = {
      * animation record 0x0826798C. */
     ENTITY("slime", 0x08260320, 0x082664DC, 0, 0x0826798C),
     ENTITY("kyoma_demon", 0x081CC0A4, 0x0820AF74, 0, 0x08226EAC),
+    /* Altair (func_080C1C54): enemy record 0x081F4234, palette
+     * descriptor 0x0820BD70 (one bank), animation record 0x0824B660 —
+     * shared with its blade children of sub_080C1D88. */
+    ENTITY("altair", 0x081F4234, 0x0820BD70, 0, 0x0824B660),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

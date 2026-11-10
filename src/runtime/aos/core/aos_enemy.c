@@ -396,6 +396,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_WEREJAGUAR && id != AOS_ENEMY_WERETIGER &&
         id != AOS_ENEMY_WEREWOLF &&
         id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
+        id != AOS_ENEMY_ALTAIR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -786,6 +787,55 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->substep = 2;
             enemy->sl_angle = 0x8000;
         }
+        return true;
+    }
+    if (id == AOS_ENEMY_ALTAIR) {
+        /* EnemyAltairCreate (0x080C1490): the resource loader
+         * sub_080C1C54 takes tiles 0x081F4234, palette 0x0820BD70
+         * and frames 0x0824B660 (carried by the kind); + 0x5C = 3,
+         * state 1, the link + 0x14 NULL, + 0x1D = 0. The global
+         * 0x84F0B14 + 0x8E & 0x40 sends it to the dormant state 4;
+         * param0 == 0 parks it hidden in the state-5 spawner with
+         * + 0x72 |= 6; param0 2 / 3 seed the + 0x42 pixel anchor
+         * (-(+ 0x4A) - 0x10 / 0x100 + (+ 0x4A)) and + 0x46 gains
+         * (rng & 0x1F) - 0x10; the facing comes from sub_0806BD64
+         * (player right clears + 0x58 bit 6). func_080C1A64's link
+         * blade is emitted on the first dash entry (children cannot
+         * spawn at create — documented one-tick shift). */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->al_wx = enemy->al_wy = enemy->al_ww = 0;
+        enemy->al_mark1c = enemy->al_mark1d = 0;
+        enemy->al_f6f = 0;
+        enemy->al_copies = 0;
+        enemy->al_linked = 0;
+        enemy->al_draw5c = 3;
+        enemy->al_angle = enemy->al_avel = 0;
+        enemy->timer = 0;
+        int16_t ex = (int16_t)(enemy->x >> 16);
+        int16_t sx = (int16_t)(aos_enemy_target_x(soma) >> 16);
+        enemy->mirrored = sx <= ex;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        if (param0 == 0) {
+            enemy->state = 5;
+            enemy->step = enemy->substep = 0;
+            enemy->hidden = true;
+            enemy->attack_off = true;   /* + 0x72 bit 1 of |= 6 */
+            return true;
+        }
+        if (param0 == 2)
+            enemy->al_wx = (int16_t)(-enemy->al_ww - 0x10);
+        else if (param0 == 3)
+            enemy->al_wx = (int16_t)(0x100 + enemy->al_ww);
+        enemy->al_wy = (int16_t)(enemy->y >> 16);
+        enemy->al_wy = (int16_t)(enemy->al_wy +
+                                (int16_t)(aos_random() & 0x1F) - 0x10);
+        enemy->state = 1;
+        enemy->step = enemy->substep = 0;
         return true;
     }
     if (id == AOS_ENEMY_KYOMA_DEMON) {
@@ -2118,6 +2168,20 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->timer = 0x3C;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_ALTAIR &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080C19E0: lethal — sub_080683BC defeated
+                     * (the framework's mark), the + 0x5A draw group
+                     * from the + 0x2C palette byte (bank 0 here),
+                     * + 0xD = 0x32, state 2 with the velocities
+                     * zeroed and + 0x54 = 0x2000; generic_death
+                     * owns the corpse so only the timer carries
+                     * over (documented). */
+                    enemy->timer = 0x32;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->vx = enemy->ax = enemy->vy = 0;
+                    enemy->ay = 0x2000;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3486,6 +3550,17 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_slime_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_ALTAIR) {
+        if (enemy->role == AOS_ROLE_ALTAIR_BLADE)
+            return aos_enemy_altair_blade_update(enemy, soma, layer, kind,
+                                                 weapon, weapon_frames,
+                                                 soma_atk, soma_def, cam_x,
+                                                 cam_y, random);
+        if (enemy->role == AOS_ROLE_ENEMY)
+            return aos_enemy_altair_update(enemy, soma, layer, kind, weapon,
+                                           weapon_frames, soma_atk,
+                                           soma_def, cam_x, cam_y, random);
+    }
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

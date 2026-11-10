@@ -2,6 +2,31 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0972 - Altair ported (id 44)
+
+- `EnemyAltairCreate` (0x080C1490) through `sub_080C1C54` (tiles
+  `0x081F4234`, palette `0x0820BD70`, frames `0x0824B660`, shared
+  with the blade children of `sub_080C1D88`) and
+  `EnemyAltairUpdate` (0x080C15C8) dispatching `sub_080C1694`
+  the six-substep dash, `sub_080C1898` the death burst,
+  `sub_080C1940` the recursive copy spawner and `sub_080C1CDC`
+  the dormant form as `src/runtime/aos/enemies/altair.c`.
+- param0 0 parks it hidden in the state-5 spawner which clones
+  itself (param0 2/3, `+0x1E` count <= 1) every `0x40` ticks;
+  the 0x8E & 0x40 flag sends it to state 4; state 1 dashes with
+  `vx ±0xA000`, syncs the partner blade and bursts on the player
+  band probes; state 2 throws four angle-0/0x8000 bolts
+  (`sub_080C1B54` sine-flight) with song `0x72`.
+- Verified by `altair_tests` (create variants, dash entry,
+  spawner clones, blade roles); spawn data places it in
+  `area_05_room_004/008/009/010` and others.
+- Divergences: the `+0x4A` window field is kept 0, the partner
+  blade uses Altair frames instead of the Fleaman/Ripper form
+  frames of `func_080DA7A4`, the link blade emits on the first
+  dash entry, `func_0806D4C0`/`func_0806BE74`/`func_08042B8C`
+  are not ported. Red soul 20 not ported yet.
+- Ported enemies: 78/113.
+
 ## Patch 0971 - Kyoma Demon ported (id 39)
 
 - `EnemyKyomaDemonCreate` (0x080A01B8) through `sub_080A0744`

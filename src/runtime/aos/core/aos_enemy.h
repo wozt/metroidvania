@@ -118,6 +118,7 @@ enum {
     AOS_ENEMY_NEMESIS = 0x26,
     AOS_ENEMY_VALKYRIE = 0x29,
     AOS_ENEMY_CURLY = 0x2B,
+    AOS_ENEMY_ALTAIR = 0x2C,
     AOS_ENEMY_RED_CROW = 0x2D,
     AOS_ENEMY_DEAD_WARRIOR = 0x2F,
     AOS_ENEMY_IMP = 0x31,
@@ -213,7 +214,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WITCH_COMPANION = 80, AOS_ROLE_WITCH_ORBIT = 81,
        AOS_ROLE_WITCH_BOLT = 82, AOS_ROLE_WITCH_SPARK = 83,
        AOS_ROLE_WITCH_TRAIL = 84, AOS_ROLE_MUDMAN_BUBBLE = 85,
-       AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87 };
+       AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87,
+       AOS_ROLE_ALTAIR_BLADE = 88 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -516,6 +518,21 @@ typedef struct AosEnemy {
     uint8_t kd_alert, kd_5c, kd_atk, kd_f59, kd_f5a;
     bool kd_origin;
     uint16_t au_life;
+    /* Altair (EnemyAltairCreate 0x080C1490 / sub_080C1694 /
+     * sub_080C1898 / sub_080C1940 / sub_080C1CDC): + 0x42/+ 0x46/+ 0x4A
+     * the pixel window fields the state-1 tail despawn check reads
+     * (+ 0x4A latched 0 — its native writer was not traced), + 0x1C and
+     * + 0x1D the state-1 marks, + 0x1E the s16 spawned-copy count,
+     * + 0x5C the draw byte (3 at create, 0x30 in the dash), + 0x6F an
+     * unread animation byte kept 0, and the blade child's + 0x14/+ 0x16
+     * angular speed and + 0x24 phase with `al_linked` marking the
+     * persistent partner blade of func_080C1A64 versus the free bolts
+     * of func_080C1D38. + 0x20/+ 0x10 are the shared `parent` field and
+     * + 0x6D/+ 0x6E the shared animation id/frame. */
+    int16_t al_wx, al_wy, al_ww;
+    uint8_t al_mark1c, al_mark1d, al_draw5c, al_f6f, al_linked;
+    int16_t al_copies;
+    uint16_t al_angle, al_avel;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

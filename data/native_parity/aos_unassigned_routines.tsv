@@ -720,8 +720,6 @@ aos:asm:asm/code/code_08060B98.s:sub_0806F678	sub_0806F678	enemies	referrers			a
 aos:asm:asm/code/code_08060B98.s:sub_0806F6D4	sub_0806F6D4	enemies	referrers			asm_function	0x0806F6D4	asm/code/code_08060B98.s	30433	1	4
 aos:asm:asm/code/code_08060B98.s:sub_0806F71C	sub_0806F71C	enemies	referrers			asm_function	0x0806F71C	asm/code/code_08060B98.s	30468	1	2
 aos:asm:asm/code/code_08060B98.s:sub_0806F750	sub_0806F750	enemies	referrers			asm_function	0x0806F750	asm/code/code_08060B98.s	30493	0	2
-aos:asm:asm/code/code_080709D8.s:EnemyArachneCreate	EnemyArachneCreate	enemies	name			asm_function		asm/code/code_080709D8.s	18453	0	11
-aos:asm:asm/code/code_080709D8.s:EnemyArachneUpdate	EnemyArachneUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	18321	0	15
 aos:asm:asm/code/code_080709D8.s:EnemyGolemCreate	EnemyGolemCreate	enemies	name			asm_function		asm/code/code_080709D8.s	28063	3	14
 aos:asm:asm/code/code_080709D8.s:EnemyGolemUpdate	EnemyGolemUpdate	enemies	name			asm_function		asm/code/code_080709D8.s	27846	3	14
 aos:asm:asm/code/code_080709D8.s:EnemyManticoreCreate	EnemyManticoreCreate	enemies	name			asm_function		asm/code/code_080709D8.s	3873	0	12
@@ -775,17 +773,6 @@ aos:asm:asm/code/code_080709D8.s:sub_08078654	sub_08078654	enemies	referrers			a
 aos:asm:asm/code/code_080709D8.s:sub_080786B0	sub_080786B0	enemies	referrers			asm_function	0x080786B0	asm/code/code_080709D8.s	15969	1	3
 aos:asm:asm/code/code_080709D8.s:sub_080786FC	sub_080786FC	enemies	referrers			asm_function	0x080786FC	asm/code/code_080709D8.s	16006	0	1
 aos:asm:asm/code/code_080709D8.s:sub_08078728	sub_08078728	enemies	referrers			asm_function	0x08078728	asm/code/code_080709D8.s	16030	0	1
-aos:asm:asm/code/code_080709D8.s:sub_08079B38	sub_08079B38	enemies	referrers			asm_function	0x08079B38	asm/code/code_080709D8.s	18606	1	6
-aos:asm:asm/code/code_080709D8.s:sub_08079EF0	sub_08079EF0	enemies	referrers			asm_function	0x08079EF0	asm/code/code_080709D8.s	19092	1	18
-aos:asm:asm/code/code_080709D8.s:sub_0807A2E4	sub_0807A2E4	enemies	referrers			asm_function	0x0807A2E4	asm/code/code_080709D8.s	19592	1	5
-aos:asm:asm/code/code_080709D8.s:sub_0807A438	sub_0807A438	enemies	referrers			asm_function	0x0807A438	asm/code/code_080709D8.s	19765	1	2
-aos:asm:asm/code/code_080709D8.s:sub_0807A4DC	sub_0807A4DC	enemies	referrers			asm_function	0x0807A4DC	asm/code/code_080709D8.s	19852	0	7
-aos:asm:asm/code/code_080709D8.s:sub_0807A590	sub_0807A590	enemies	referrers			asm_function	0x0807A590	asm/code/code_080709D8.s	19940	0	1
-aos:asm:asm/code/code_080709D8.s:sub_0807A848	sub_0807A848	enemies	referrers			asm_function	0x0807A848	asm/code/code_080709D8.s	20325	1	4
-aos:asm:asm/code/code_080709D8.s:sub_0807A900	sub_0807A900	enemies	referrers			asm_function	0x0807A900	asm/code/code_080709D8.s	20414	0	2
-aos:asm:asm/code/code_080709D8.s:sub_0807A940	sub_0807A940	enemies	referrers			asm_function	0x0807A940	asm/code/code_080709D8.s	20448	0	1
-aos:asm:asm/code/code_080709D8.s:sub_0807A970	sub_0807A970	enemies	referrers			asm_function	0x0807A970	asm/code/code_080709D8.s	20474	1	3
-aos:asm:asm/code/code_080709D8.s:sub_0807A9BC	sub_0807A9BC	enemies	referrers			asm_function	0x0807A9BC	asm/code/code_080709D8.s	20511	1	0
 aos:asm:asm/code/code_080709D8.s:sub_0807A9C0	sub_0807A9C0	enemies	referrers			asm_function	0x0807A9C0	asm/code/code_080709D8.s	20516	0	1
 aos:asm:asm/code/code_080709D8.s:sub_0807B404	sub_0807B404	enemies	referrers			asm_function	0x0807B404	asm/code/code_080709D8.s	21827	1	3
 aos:asm:asm/code/code_080709D8.s:sub_0807B450	sub_0807B450	enemies	referrers			asm_function	0x0807B450	asm/code/code_080709D8.s	21864	0	1
@@ -1966,7 +1953,6 @@ aos:c:src/code_08013960.c:sub_08013B44	sub_08013B44	unclassified		rooms	exclusiv
 aos:c:src/code_08013960.c:sub_08013BCC	sub_08013BCC	unclassified		rooms	exclusive_callees	c_function	0x08013BCC	src/code_08013960.c	191	3	3
 aos:c:src/code_08013960.c:sub_08013C5C	sub_08013C5C	unclassified		rooms	exclusive_callees	c_function	0x08013C5C	src/code_08013960.c	228	2	3
 aos:c:src/code_08013960.c:sub_08013D30	sub_08013D30	unclassified		audio	exclusive_callees	c_function	0x08013D30	src/code_08013960.c	281	2	1
-aos:c:src/code_08013960.c:sub_08013DA8	sub_08013DA8	unclassified		audio	exclusive_callees	c_function	0x08013DA8	src/code_08013960.c	339	5	1
 aos:c:src/code_08013960.c:sub_08013E74	sub_08013E74	unclassified		audio	exclusive_callees	c_function	0x08013E74	src/code_08013960.c	419	2	1
 aos:c:src/code_08013960.c:sub_08013EAC	sub_08013EAC	unclassified		audio	exclusive_callees	c_function	0x08013EAC	src/code_08013960.c	442	0	1
 aos:c:src/code_08013960.c:sub_08013EEC	sub_08013EEC	unclassified		audio	exclusive_callees	c_function	0x08013EEC	src/code_08013960.c	466	8	2

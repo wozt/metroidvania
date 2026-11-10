@@ -398,6 +398,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
         id != AOS_ENEMY_ALTAIR && id != AOS_ENEMY_BAEL &&
         id != AOS_ENEMY_NIGHTMARE && id != AOS_ENEMY_UNE &&
+        id != AOS_ENEMY_ARACHNE &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -977,6 +978,32 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         enemy->step = enemy->substep = 0;
         enemy->timer = 0x3C;
+        return true;
+    }
+    if (id == AOS_ENEMY_ARACHNE) {
+        /* EnemyArachneCreate 0x080799FC through sub_0807A970: tiles
+         * 0x081CBF84, palette 0x0820A608, frames 0x08217464; anim (0,
+         * 0, 1), the 0x8E & 0x40 flag parks it in state 4, else state
+         * 0 with the five leg entities emitted on the first update
+         * (the create path has no report — documented). */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->spin = enemy->walk_timer = 0;
+        enemy->angle = 0;
+        enemy->ar_leg = enemy->ar_mode = enemy->ar_cool = enemy->ar_pal = 0;
+        enemy->ar_drop = 0;
+        enemy->parent = NULL;
+        enemy->spawned_count = 0;
+        enemy->static_frame = -1;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            enemy->timer = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        enemy->timer = 0;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2069,6 +2096,16 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                                  contact_x, contact_y, &report);
             enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
+            if (enemy->id == AOS_ENEMY_ARACHNE &&
+                enemy->role == AOS_ROLE_ENEMY && enemy->hp > 0 &&
+                enemy->state < 3) {
+                /* sub_0807A4DC non-lethal: animation 3 and the state 3
+                 * knockback while not already attacking (state 1) or
+                 * dying — the native's hitstun gate is approximated. */
+                play_loop(enemy, kind->anims, 3, false);
+                enemy->state = 3;
+                enemy->step = 0;
+            }
             if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY) {
                 /* sub_080998E8: knockback on every hit, the death drift
                  * on a lethal one. */
@@ -2325,6 +2362,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_ARACHNE &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_0807A4DC lethal: sub_080683BC defeated (the
+                     * framework's mark), sound 0x6E, animation 3,
+                     * + 0xD = 0x5A, state 2 — sub_0807A438's first
+                     * tick starts the drift/blink/sink death. */
+                    aos_audio_play_song(0x6E);
+                    play_loop(enemy, kind->anims, 3, false);
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x5A;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3716,6 +3764,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_UNE)
         return aos_enemy_une_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_ARACHNE)
+        return aos_enemy_arachne_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)

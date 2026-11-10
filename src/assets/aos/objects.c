@@ -203,6 +203,10 @@ static const EntitySpec entities[] = {
      * 0x081CBF5C, palette 0x0820A4F4, frames 0x08214C38 — shared
      * with its split children and debris (sub_080747B4). */
     ENTITY("une", 0x081CBF5C, 0x0820A4F4, 0, 0x08214C38),
+    /* Arachne (EnemyArachneCreate 0x080799FC through sub_0807A970):
+     * tiles 0x081CBF84, palette 0x0820A608, frames 0x08217464 —
+     * shared with its five legs and the web projectiles. */
+    ENTITY("arachne", 0x081CBF84, 0x0820A608, 0, 0x08217464),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T13:23:02+00:00",
+ "generated_at": "2026-11-10T14:34:22+00:00",
  "git": {
-  "commit": "7b5a34e5",
+  "commit": "76be2416",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 257,
+   "total": 258,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 191,
+    "functional": 192,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 191,
-   "functional_or_better_percent": 74.3,
-   "with_passing_tests": 244,
-   "with_passing_tests_percent": 94.9,
+   "functional_or_better": 192,
+   "functional_or_better_percent": 74.4,
+   "with_passing_tests": 245,
+   "with_passing_tests_percent": 95.0,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -205,6 +205,7 @@
     "aos.death.soma",
     "aos.enemies.altair",
     "aos.enemies.alura_une",
+    "aos.enemies.arachne",
     "aos.enemies.axe_armor",
     "aos.enemies.bael",
     "aos.enemies.basilisk",
@@ -491,20 +492,20 @@
    "areas": [
     "aos"
    ],
-   "total": 112,
+   "total": 113,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 84,
+    "functional": 85,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 84,
-   "functional_or_better_percent": 75.0,
-   "with_passing_tests": 112,
+   "functional_or_better": 85,
+   "functional_or_better_percent": 75.2,
+   "with_passing_tests": 113,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -512,6 +513,7 @@
     "aos.death.soma",
     "aos.enemies.altair",
     "aos.enemies.alura_une",
+    "aos.enemies.arachne",
     "aos.enemies.axe_armor",
     "aos.enemies.bael",
     "aos.enemies.basilisk",
@@ -9041,6 +9043,121 @@
     ],
     "in_game_check": [
      "aria area_10_room_003 (--spawn 340 170 --hp 99999 --def 65000): Alura Une aggros, throws scythes and orbit blades - four hits for 75-84 damage observed and Soma killed at frame 411 without the defense flags; captures at frames 300 and 500 show the animated fight"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
+   "id": "aos.enemies.arachne",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Arachne",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/arachne.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyArachneCreate",
+    "EnemyArachneUpdate",
+    "sub_0807A970",
+    "sub_08079B38",
+    "sub_08079EF0",
+    "sub_0807A2E4",
+    "sub_0807A438",
+    "sub_0807A4DC",
+    "sub_0807A590",
+    "sub_0807A848",
+    "sub_0807A900",
+    "sub_0807A940",
+    "sub_0807A9BC",
+    "sub_0806DFF8",
+    "sub_0806B04C",
+    "sub_0806AF98",
+    "sub_0806D244",
+    "sub_0806D4C0",
+    "sub_0806AE54",
+    "sub_0806E4F8",
+    "sub_0806D128",
+    "sub_08068AD4",
+    "sub_0806CF2C",
+    "sub_0806CFFC",
+    "sub_0806D54C",
+    "sub_0806B120",
+    "sub_0806D490",
+    "sub_0806D5C0",
+    "sub_0806D518",
+    "sub_08069A00",
+    "sub_0806D288",
+    "sub_0806D2F8",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_080421AC",
+    "sub_08042B8C",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_08021924",
+    "sub_08021278",
+    "sub_08013D60",
+    "sub_08013DA8",
+    "sub_08013E18",
+    "EntityCreateInRange",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The five leg entities emit on the first update instead of inside EnemyArachneCreate (the create path has no report); sub_08069A00 maps to projectile_collide with the same wall/ceiling/floor flag bits and 8.0 clamp but without the native probe margin; the + 0x18/+ 0x1C speed accumulators also drive vx (the native consumer inside sub_08069A00 could not be confirmed); the web lifetime is approximated to 0x60 ticks; sub_0806AE54/sub_0806D4C0 and the + 0x2D freeze collapse into hit_flash; the sub_08013D60/sub_08013DA8/sub_08013E18 room events, the + 0x5A palette merge, the + 0x42/+ 0x46 pixel mirrors and the sub_0807A940 contact box detail are skipped or folded into the shared collide; and there is no emulator comparison. EnemyArachneCreate (0x080799FC) through sub_0807A970 loads tiles 0x081CBF84, palette 0x0820A608 and frames 0x08217464, plays animation (0, 0, 1) and enters state 0 (the 0x8E & 0x40 flag parks the inert state 4), spawning five linked leg entities whose frames come from the 0x08118E5C table. EnemyArachneUpdate gates the activity box and margin hide, runs the stun/flash collide-only paths, then dispatches state 0 sub_08079B38 (the 0xA0 aggro box, the charge speed ramp, the hop and the random 1/32 web-rain trigger), state 1 sub_08079EF0 (windup, animation wait, the 0x3C-tick web rain at angle 0x2800/0x5800 speed 0x80000 then the cooldown return), state 2 sub_0807A438 (the drift shed, the blink strobe, the sink and the delete), state 3 sub_0807A2E4 (the hit knockback crawling to a room edge) and state 4 (inert), then the animation step and the contact tail. Unit-tested in arachne_tests.",
+   "next_action": "Port the red soul 16 update and compare a room fight against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_02_room_003: two Arachnes charge, hop and rain webs at Soma"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -24093,6 +24210,12 @@
  },
  "timeline": [
   {
+   "commit": "76be2416",
+   "date": "2026-11-10",
+   "subject": "Port Une (id 0x3D): the splitting ghost swarm",
+   "scope": "project"
+  },
+  {
    "commit": "7b5a34e5",
    "date": "2026-11-10",
    "subject": "Port Nightmare (id 66): drifting skull with ramped wisp attack",
@@ -24565,12 +24688,6 @@
    "date": "2026-11-09",
    "subject": "Compile Zombie Officer as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "ad6b04b1",
-   "date": "2026-11-09",
-   "subject": "Compile Ghost as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24631,9 +24748,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1387,
-    "routines_attached_to_features": 1387,
-    "unassigned_routines": 2186,
+    "routines_cited_by_features": 1401,
+    "routines_attached_to_features": 1401,
+    "unassigned_routines": 2172,
     "call_edges": 14228
    }
   },
@@ -26875,12 +26992,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 81,
-      "functional_or_better": 81,
-      "functional_or_better_percent": 79,
+      "implemented": 82,
+      "functional_or_better": 82,
+      "functional_or_better_percent": 80,
       "by_status": {
-       "functional": 81,
-       "not_started": 21
+       "functional": 82,
+       "not_started": 20
       }
      },
      "bosses": {
@@ -27571,13 +27688,28 @@
      {
       "id": 23,
       "name": "Arachne",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Arachne",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_02_room_003: two Arachnes charge, hop and rain webs at Soma"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.arachne",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "partial",
+       "soul_ref": "red:16",
+       "notes": "Soul: drops (soul_index 16, soul_rarity 10, rates 20/30 through the generic roll, common item 0x0001) and is collected, but its red soul 16 has no ported update yet. Animations: ported from EnemyArachneCreate (0x080799FC) / EnemyArachneUpdate (0x080798F0) and the sub_08079B38 charge, sub_08079EF0 web rain, sub_0807A2E4 knockback, sub_0807A438 death and sub_0807A590 leg handlers — animations 0-3 through the shared play/step helpers; unit-tested in arachne_tests. Sounds: PlaySong 0x6E at the lethal hit is requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x0001 (rare 0x0000) through the generic roll. Sprite: tiles 0x081CBF84, palette 0x0820A608, animation record 0x08217464 exported natively, shared with the five legs and the webs; the legs read the 0x08118E5C frame table. Divergences: sub_08069A00 maps to projectile_collide (same flag bits, no probe margin), the + 0x18/+ 0x1C accumulators also drive vx as an approximation, the legs emit on the first update, the web lifetime is 0x60 ticks, sub_0806AE54/sub_0806D4C0 collapse into hit_flash, the room events and + 0x5A palette merge are skipped, and there is no emulator comparison."
       }
      },
      {
@@ -29523,32 +29655,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 81,
+      "ported": 82,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 81,
+      "ported": 82,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 80,
+      "ported": 81,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 44,
+      "ported": 45,
       "partial": 0,
       "missing": 0
      },
      "soul": {
       "ported": 57,
-      "partial": 24,
+      "partial": 25,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 81
+     "monsters": 82
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -32576,7 +32708,7 @@
        "id": "05:10",
        "name": "Arachne",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 16, soul_rarity 10, rates 20/30 through the generic roll, common item 0x0001) and is collected, but its red soul 16 has no ported update yet. Animations: ported from EnemyArachneCreate (0x080799FC) / EnemyArachneUpdate (0x080798F0) and the sub_08079B38 charge, sub_08079EF0 web rain, sub_0807A2E4 knockback, sub_0807A438 death and sub_0807A590 leg handlers — animations 0-3 through the shared play/step helpers; unit-tested in arachne_tests. Sounds: PlaySong 0x6E at the lethal hit is requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x0001 (rare 0x0000) through the generic roll. Sprite: tiles 0x081CBF84, palette 0x0820A608, animation record 0x08217464 exported natively, shared with the five legs and the webs; the legs read the 0x08118E5C frame table. Divergences: sub_08069A00 maps to projectile_collide (same flag bits, no probe margin), the + 0x18/+ 0x1C accumulators also drive vx as an approximation, the legs emit on the first update, the web lifetime is 0x60 ticks, sub_0806AE54/sub_0806D4C0 collapse into hit_flash, the room events and + 0x5A palette merge are skipped, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

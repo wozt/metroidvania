@@ -2,6 +2,45 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0976 - Arachne ported (id 23)
+
+- `EnemyArachneCreate` (0x080799FC) through `sub_0807A970` (tiles
+  `0x081CBF84`, palette `0x0820A608`, frames `0x08217464`, shared
+  with the legs and webs) and `EnemyArachneUpdate` (0x080798F0)
+  dispatching `sub_08079B38` state 0, `sub_08079EF0` state 1,
+  `sub_0807A2E4` state 3, `sub_0807A438` state 2 and the inert
+  state 4 as `src/runtime/aos/enemies/arachne.c`.
+- Create plays animation (0, 0, 1) and enters state 0 (the
+  `0x8E & 0x40` flag parks state 4); the first update emits the
+  five linked leg entities (roles `ARACHNE_LEG`, alternating
+  facing, `+0x20` slot, `+0x48` vertical drop, frames `0x19`/`0x15`)
+  whose `sub_0807A590` callback copies the parent's position and
+  picks frames from the `0x08118E5C` table by attack mode and the
+  `+0x18` speed accumulator.
+- State 0 runs the `0xA0` aggro box, the charge speed ramp
+  (`+0x18 += +0x1C` clamped, `vx` capped), the hop and the random
+  1/32 trigger into state 1; state 1 winds down, waits animation 1
+  and rains webs every fourth tick for `0x3C` ticks (launch angle
+  `0x2800`/`0x5800`, speed `0x80000` through `sub_0806D2F8`) before
+  returning with a random cooldown; state 3 is the hit knockback
+  crawling to a room edge; state 2 is the `sub_0806D518` blink,
+  drift-shed and sink death on the `0x5A` timer; `sub_0807A4DC`
+  hurt flashes, flinches into state 3 and kills into state 2 with
+  sound `0x6E`.
+- Verified by `arachne_tests` (create variants, five-leg emit and
+  follow, web rain and web death, blink death) and in
+  `area_02_room_003` through gdb (body plus role-91 legs updating).
+- Divergences: `sub_08069A00` maps to `projectile_collide` (same
+  flag bits and 8.0 clamp, no probe margin), the `+0x18/+0x1C`
+  accumulators also drive `vx` (the native consumer inside
+  `sub_08069A00` could not be confirmed), the legs emit on the
+  first update, the web lifetime is `0x60` ticks, the sleep/stun
+  gates collapse into `hit_flash`, the room events
+  (`sub_08013D60`/`sub_08013DA8`/`sub_08013E18`) and the `+0x5A`
+  palette merge are skipped, and there is no emulator comparison.
+  Red soul 16 not ported yet.
+- Ported enemies: 82/113.
+
 ## Patch 0975 - Une ported (id 61)
 
 - `EnemyUneCreate` (0x0807427C) through `sub_08074874` (tiles

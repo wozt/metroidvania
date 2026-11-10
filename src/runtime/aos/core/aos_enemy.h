@@ -170,6 +170,7 @@ enum {
     AOS_ENEMY_BAEL = 0x5E,
     AOS_ENEMY_NIGHTMARE = 0x42,
     AOS_ENEMY_UNE = 0x3D,
+    AOS_ENEMY_ARACHNE = 0x17,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -219,7 +220,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WITCH_TRAIL = 84, AOS_ROLE_MUDMAN_BUBBLE = 85,
        AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87,
        AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89,
-       AOS_ROLE_UNE_DEBRIS = 90 };
+       AOS_ROLE_UNE_DEBRIS = 90,
+       AOS_ROLE_ARACHNE_LEG = 91, AOS_ROLE_ARACHNE_WEB = 92 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -566,6 +568,16 @@ typedef struct AosEnemy {
      * shared draw. */
     uint8_t une_child, une_draw;
     int32_t une_wait;
+    /* Arachne (EnemyArachneCreate 0x080799FC, EnemyArachneUpdate
+     * 0x080798F0): `spin` is + 0x18 the charge speed accumulator,
+     * `walk_timer` is + 0x1C its acceleration, `angle` is + 0x14 the
+     * web launch angle (or the AIM phase while winding up), + 0x20
+     * the leg index, + 0x21 the attack mode, + 0x22 the cooldown,
+     * + 0x2C the palette byte and + 0x48 of a leg its vertical
+     * drop. `ar_*` carry the leg index, attack mode, cooldown,
+     * palette byte and the leg's vertical drop. */
+    uint8_t ar_leg, ar_mode, ar_cool, ar_pal;
+    int32_t ar_drop;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

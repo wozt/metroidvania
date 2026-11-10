@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 98 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 99 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1231 | 2342 |
+| Castlevania: Aria of Sorrow | 1234 | 2339 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1376,6 +1376,16 @@ Dependencies: `aos.audio.play_song`, `aos.enemies.zombie`.
 Known divergences: The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sound requests are timed and routed through the real song player and priority metadata, but the MP2K sequencer, sample banks, mixer and SDL renderer are absent, so they are not audible. The palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
 Next action: Port the MP2K sequencer, voice and sample banks, mixer and SDL sink, then compare timing and output with an emulator.
 Evidence: in game: `aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)`.
+
+[+] **`aos.enemies.basilisk` — Basilisk.** EnemyBasiliskCreate (0x080BC1F8) / EnemyBasiliskUpdate (0x080BC204) are pure aliases of the Cockatrice family with variant 1: the port reuses aos_enemy_cockatrice_update (patrol sub_080BBCC4, attack sub_080BBD90 with the sub_080BBAC4 rock at frame 0xA, death sub_080BBEE4) and the shared shadow/rock child roles; unit-tested in cockatrice_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806B1FC`, `aos:asm:asm/code/code_08060B98.s:sub_0806BBC4`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D044`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806D54C`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBasiliskCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyBasiliskUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BB924`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBAC4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBCC4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBD90`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBEE4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BBFF0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BC0B4`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_08013960.c:sub_08013E18`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/cockatrice.c`](../src/runtime/aos/enemies/cockatrice.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.enemies.cockatrice`.  
+Known divergences: None beyond Cockatrice's: EnemyBasiliskCreate (0x080BC1F8) calls sub_080BBFF0(e, 1) and EnemyBasiliskUpdate (0x080BC204) is byte-identical to EnemyCockatriceUpdate (0x080BC164) — same handlers, same shadow and rock children; only the sub_08068264 palette variant slot differs (bank 1 of 0x0820B8A4).  
+Next action: Compare the fight against an emulator; port red soul 15 (0x08025361).
+Evidence: in game: `aria area_09_room_015 (--spawn 180 290 --hp 9999): the Basilisk patrols and strikes Soma for four hits (81 + 119 x 3 damage, frames to 300)`.
 
 [+] **`aos.enemies.bat` — Bat enemy.** Hanging, swoop, combat, the falling death with its flames (sub_0806BE74 over 8 x 6 pixels every 15 frames, sub_0806E524 with animation 0 of the shared effect frames 0x0820ED60, palette row 7 = bank 3 of 0x082099FC) and the inert state 4 under gEwramData + 0x8E bit 0x40 are ported. Its death plays sound 0x72 through PlaySong (unit-tested; the mixer rendered it in a local run).
 

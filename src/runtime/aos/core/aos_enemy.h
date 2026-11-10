@@ -156,6 +156,7 @@ enum {
     AOS_ENEMY_DISC_ARMOR = 0x34,
     AOS_ENEMY_ALURA_UNE = 0x4D,
     AOS_ENEMY_FISH_HEAD = 0x41,
+    AOS_ENEMY_BASILISK = 0x64,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */

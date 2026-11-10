@@ -4544,6 +4544,22 @@ static void cockatrice_tests(void) {
     }
     assert(e.removed && ticks < 200 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) >= 1);
+
+    /* The Basilisk (id 0x64) shares the whole family: EnemyBasiliskCreate
+     * (0x080BC1F8) is sub_080BBFF0(e, 1) and EnemyBasiliskUpdate
+     * (0x080BC204) is byte-identical to EnemyCockatriceUpdate, so the
+     * same state machine runs on the variant-1 palette bank. */
+    /* enemies.tsv id 100: hp 700, contact 65, defence 38, weak 0x81,
+     * resist 0, experience 600. */
+    const AosEnemyStats basil_stats = {700, 65, 38, 0x0081, 0x0000, 600};
+    AosEnemy b;
+    assert(aos_enemy_create(&b, AOS_ENEMY_BASILISK, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &basil_stats));
+    assert(b.state == 0 && b.variant == 1 && b.hp == basil_stats.hp);
+    AosHitReport bh = aos_enemy_update(&b, &soma, &layer, &kind, NULL,
+                                       NULL, 10, 4, 0, 0, always_zero);
+    assert(bh.child_count == 1 && bh.children[0].id == AOS_ENEMY_BASILISK &&
+           bh.children[0].role == AOS_ROLE_COCKATRICE_SHADOW);
 }
 
 static void chronomage_tests(void) {

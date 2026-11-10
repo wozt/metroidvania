@@ -2,6 +2,21 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0963 - Basilisk ported (id 100)
+
+- `EnemyBasiliskCreate` (0x080BC1F8) calls `sub_080BBFF0(e, 1)`
+  and `EnemyBasiliskUpdate` (0x080BC204) is byte-identical to
+  `EnemyCockatriceUpdate` (0x080BC164): same patrol, attack,
+  death handlers and shadow/rock children. The port reuses
+  `aos_enemy_cockatrice_update` and the shared child roles;
+  only the `sub_08068264` palette variant differs (bank 1 of
+  `0x0820B8A4`), exported as `basilisk` in `objects.c`.
+- Verified in game in `area_09_room_015`: four hits on Soma
+  (81 + 119 x 3 damage).
+- Ported enemies: 68/113. Red soul 15 (routine 0x08025361) is
+  not ported yet, so the soul aspect stays partial. Divergences
+  identical to Cockatrice's (no emulator comparison).
+
 ## Patch 0962 - Fish Head ported (id 65)
 
 - `EnemyFishHeadCreate` (0x080B3F34) / `EnemyFishHeadUpdate`

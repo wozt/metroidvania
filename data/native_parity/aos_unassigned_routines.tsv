@@ -644,7 +644,6 @@ aos:asm:asm/code/code_08060B98.s:sub_08067804	sub_08067804	unclassified		technic
 aos:asm:asm/code/code_08060B98.s:sub_08067898	sub_08067898	unclassified		technical	exclusive_callees	asm_function	0x08067898	asm/code/code_08060B98.s	13808	10	1
 aos:asm:asm/code/code_08060B98.s:sub_08068104	sub_08068104	unclassified				asm_function	0x08068104	asm/code/code_08060B98.s	14828	1	1
 aos:asm:asm/code/code_08060B98.s:sub_080681D8	sub_080681D8	unclassified				asm_function	0x080681D8	asm/code/code_08060B98.s	14926	21	1
-aos:asm:asm/code/code_08060B98.s:sub_08068264	sub_08068264	unclassified				asm_function	0x08068264	asm/code/code_08060B98.s	15002	88	1
 aos:asm:asm/code/code_08060B98.s:sub_080682F4	sub_080682F4	unclassified				asm_function	0x080682F4	asm/code/code_08060B98.s	15080	1	1
 aos:asm:asm/code/code_08060B98.s:sub_08068340	sub_08068340	enemies	referrers			asm_function	0x08068340	asm/code/code_08060B98.s	15122	1	0
 aos:asm:asm/code/code_08060B98.s:sub_08068688	sub_08068688	unclassified				asm_function	0x08068688	asm/code/code_08060B98.s	15546	0	0
@@ -1268,8 +1267,6 @@ aos:asm:asm/code/code_080A0A8C.s:sub_080B0244	sub_080B0244	enemies	referrers			a
 aos:asm:asm/code/code_080A0A8C.s:sub_080B02E0	sub_080B02E0	enemies	referrers			asm_function	0x080B02E0	asm/code/code_080A0A8C.s	31195	0	24
 aos:asm:asm/code/code_080B0AD4.s:EnemyBaloreCreate	EnemyBaloreCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	10542	1	9
 aos:asm:asm/code/code_080B0AD4.s:EnemyBaloreUpdate	EnemyBaloreUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	10730	0	11
-aos:asm:asm/code/code_080B0AD4.s:EnemyBasiliskCreate	EnemyBasiliskCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	23575	0	1
-aos:asm:asm/code/code_080B0AD4.s:EnemyBasiliskUpdate	EnemyBasiliskUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	23583	0	9
 aos:asm:asm/code/code_080B0AD4.s:EnemyDeathCreate	EnemyDeathCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	29785	0	12
 aos:asm:asm/code/code_080B0AD4.s:EnemyDeathUpdate	EnemyDeathUpdate	enemies	name			asm_function		asm/code/code_080B0AD4.s	30174	0	12
 aos:asm:asm/code/code_080B0AD4.s:EnemyManEaterCreate	EnemyManEaterCreate	enemies	name			asm_function		asm/code/code_080B0AD4.s	20788	0	8

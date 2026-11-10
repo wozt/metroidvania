@@ -411,6 +411,14 @@ static const EntitySpec entities[] = {
      * frame 1 (+ 0x65). */
     {"cockatrice", 0x081E41CC, 0x0820B8A4, 0, 0x08242994,
      0x085288C0, 0, 0, 1, {1}},
+    /* EnemyBasiliskCreate (0x080BC1F8) is a thunk to sub_080BBFF0 with
+     * variant 1: the same tiles 0x081E41CC, frames 0x08242994 and
+     * probes 0x085288C0, but palette bank 1 (the sub_08068264 variant
+     * slot) of 0x0820B8A4; EnemyBasiliskUpdate (0x080BC204) is
+     * byte-identical to EnemyCockatriceUpdate (0x080BC164) and shares
+     * its state handlers, shadow and rock children. */
+    {"basilisk", 0x081E41CC, 0x0820B8A4, 1, 0x08242994,
+     0x085288C0, 0, 0, 1, {1}},
     /* EnemyChronomageCreate (0x080B712C) and its sub_080B6C3C wisp
      * child, which share the same resources: tiles 0x081EC1EC,
      * palette 0x0820BBB0, frames 0x08245CA8; the state-2 chase probes

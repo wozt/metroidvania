@@ -407,7 +407,8 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_EVIL_BUTCHER && id != AOS_ENEMY_KILLER_MANTLE &&
         id != AOS_ENEMY_DRYAD && id != AOS_ENEMY_TSUCHINOKO &&
         id != AOS_ENEMY_KICKER_SKELETON && id != AOS_ENEMY_WAITER_SKELETON &&
-        id != AOS_ENEMY_COCKATRICE && id != AOS_ENEMY_CHRONOMAGE &&
+        id != AOS_ENEMY_COCKATRICE && id != AOS_ENEMY_BASILISK &&
+        id != AOS_ENEMY_CHRONOMAGE &&
         id != AOS_ENEMY_MANDRAGORA && id != AOS_ENEMY_DISC_ARMOR &&
         id != AOS_ENEMY_ALURA_UNE && id != AOS_BOSS_HEADHUNTER)
         return false;
@@ -928,10 +929,11 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         return true;
     }
-    if (id == AOS_ENEMY_COCKATRICE) {
-        /* sub_080BBFF0(e, 0): sub_0806E0D0 loads tiles 0x081E41CC,
+    if (id == AOS_ENEMY_COCKATRICE || id == AOS_ENEMY_BASILISK) {
+        /* sub_080BBFF0(e, variant): sub_0806E0D0 loads tiles 0x081E41CC,
          * palette 0x0820B8A4 and frames 0x08242994; + 0x14 the variant
-         * (0 for the Cockatrice), sub_0806B04C, + 0x5C = 0x11,
+         * (0 for the Cockatrice, 1 for the Basilisk's EnemyBasiliskCreate
+         * thunk), sub_0806B04C, + 0x5C = 0x11,
          * animation 0 looping, the sub_0806DFF8(sub_080BB924) shadow
          * child (emitted by the first update here), state 3 under the
          * global 0x8E & 0x40, else the sub_0806E1B8 contact and
@@ -939,7 +941,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * + 0x46 += 1 and state 0. */
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
-        enemy->variant = 0;
+        enemy->variant = id == AOS_ENEMY_BASILISK ? 1 : 0;
         if (flag_8e_40) {
             enemy->state = 3;
             return true;
@@ -2045,7 +2047,8 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                      * seed-burst death of sub_080CF748. */
                     enemy->state = 0xF0;
                     enemy->step = enemy->substep = 0;
-                } else if (enemy->id == AOS_ENEMY_COCKATRICE &&
+                } else if ((enemy->id == AOS_ENEMY_COCKATRICE ||
+                            enemy->id == AOS_ENEMY_BASILISK) &&
                            enemy->role == AOS_ROLE_ENEMY && enemy->state != 2) {
                     /* sub_080BC0B4: sub_0806E218's damage and hit timer,
                      * sub_080683BC at the lethal blow (done by the
@@ -3005,7 +3008,8 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_cockatrice_rock_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
-    if (enemy->id == AOS_ENEMY_COCKATRICE && enemy->role == AOS_ROLE_ENEMY)
+    if ((enemy->id == AOS_ENEMY_COCKATRICE || enemy->id == AOS_ENEMY_BASILISK) &&
+        enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_cockatrice_update(enemy, soma, layer, kind, weapon,
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);

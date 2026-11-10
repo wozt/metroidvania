@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow BG1 collision primitives. */
-#include "aos_collision.h"
+#include "aos/core/aos_collision.h"
 
 #include <assert.h>
 #include <stdio.h>

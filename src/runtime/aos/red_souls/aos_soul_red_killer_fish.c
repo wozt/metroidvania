@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_killer_fish.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 #include <limits.h>
 

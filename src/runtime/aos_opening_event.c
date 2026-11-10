@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 static void clear_page(AosOpeningEvent *event) {
     memset(event->glyphs, 0, sizeof event->glyphs);

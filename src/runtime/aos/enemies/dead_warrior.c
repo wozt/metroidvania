@@ -4,8 +4,8 @@
  * This family is a separate translation unit and uses the shared internal
  * enemy framework API. */
 
-#include "../../aos_enemy_internal.h"
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_enemy_internal.h"
+#include "../../aos/core/aos_audio.h"
 
 /* sub_080B72F8: every frame the probe walker sub_0806CAF8 at + 0x18
  * (table 0x08528830, mode 4); step 1 waits for the player in the centred

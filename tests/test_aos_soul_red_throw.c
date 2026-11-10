@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../src/runtime/aos_audio.h"
+#include "../src/runtime/aos/core/aos_audio.h"
 
 #include "../src/runtime/aos/red_souls/aos_soul_red_throw.h"
 

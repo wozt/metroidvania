@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_anim.h"
+#include "../../aos/core/aos_anim.h"
 #include "../red_souls/aos_soul_red_devil.h"
 #include "../souls/aos_soul.h"
 

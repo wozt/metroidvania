@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow enemy framework and its ported enemy
  * state machines, including Nemesis. */
-#include "aos_enemy.h"
-#include "aos_effect.h"
-#include "aos_audio.h"
+#include "aos/core/aos_enemy.h"
+#include "aos/core/aos_effect.h"
+#include "aos/core/aos_audio.h"
 
 #include <assert.h>
 #include <stdio.h>

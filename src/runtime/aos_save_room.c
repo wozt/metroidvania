@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_save_room.h"
 
-#include "aos_soma.h"
+#include "aos/core/aos_soma.h"
 
 bool aos_save_room_player_inside(int x, int y) {
     return (unsigned)(x - 104) <= 32u && (unsigned)(y - 128) <= 55u;

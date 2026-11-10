@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 static const char *const enemy_names[AOS_BESTIARY_NATIVE_RECORDS] = {
     [0] = "Bat", [1] = "Zombie", [2] = "Skeleton", [3] = "Merman",

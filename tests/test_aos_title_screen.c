@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "aos_game_mode.h"
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 /* A palette resource: 4-byte header (+ 2: its row count), then the rows;
  * row r, colour i holds r * 32 + i. */

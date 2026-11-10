@@ -4,8 +4,8 @@
  * This family is a separate translation unit and uses the shared internal
  * enemy framework API. */
 
-#include "../../aos_enemy_internal.h"
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_enemy_internal.h"
+#include "../../aos/core/aos_audio.h"
 
 #define buer_player_in_window aos_enemy_buer_player_in_window
 #define collide aos_enemy_collide

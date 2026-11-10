@@ -2,7 +2,7 @@
 /* SkillDeathUse (see aos_soul_blue_death.h). */
 #include "aos_soul_blue_death.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 #include "../../aos/math/aos_math.h"
 
 /* sub_0802D5EC(n): (random & (n - 1)) - n / 2. */

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_millione.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 AosMillioneSoul aos_millione_soul_create(void) {
     return (AosMillioneSoul){0};

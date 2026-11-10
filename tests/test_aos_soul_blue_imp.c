@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_audio.h"
+#include "aos/core/aos_audio.h"
 #include "aos/blue_souls/aos_soul_blue_imp.h"
 
 #include <assert.h>

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 /* A palette fade of sub_0803D18C (BG set, unk_1261C) or sub_0803CDF0 (OBJ
  * set, unk_11DDC): every colour mixes with (r, g, b) by the weight, 0x10000

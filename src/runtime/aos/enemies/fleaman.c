@@ -4,8 +4,8 @@
  * This family is a separate translation unit and uses the shared internal
  * enemy framework API. */
 
-#include "../../aos_enemy_internal.h"
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_enemy_internal.h"
+#include "../../aos/core/aos_audio.h"
 
 /* Sets the Fleaman's animation frame by hand, paused (+ 0x6E, + 0x6F, + 0x6C
  * bit 1). */

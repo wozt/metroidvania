@@ -4,8 +4,8 @@
  * This family is a separate translation unit and uses the shared internal
  * enemy framework API. */
 
-#include "../../aos_enemy_internal.h"
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_enemy_internal.h"
+#include "../../aos/core/aos_audio.h"
 
 #define collide aos_enemy_collide
 #define flag_8e_40 aos_enemy_flag_8e_40

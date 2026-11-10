@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_audio.h"
-#include "aos_enemy.h"
+#include "aos/core/aos_audio.h"
+#include "aos/core/aos_enemy.h"
 #include "aos/souls/aos_soul.h"
 
 #include <assert.h>

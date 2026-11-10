@@ -5,7 +5,7 @@ Audience: the next coding agent (Codex) continuing this refactor. Read
 
 ## Why
 
-All 63 ported Aria monsters lived in one file, `src/runtime/aos_enemy.c`
+All 63 ported Aria monsters lived in one file, `src/runtime/aos/core/aos_enemy.c`
 (16,586 lines), while 26 files named after monsters
 (`aos_skill_*.c`, `aos_guardian_*.c`) are not monsters at all: they are the
 **souls** Soma gets from them (red-soul attacks and blue-soul familiars).
@@ -46,9 +46,9 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
    padding, because its callee `aos_arctan2` moved to another file.
    Procedure to repeat for every later step:
    ```sh
-   git show HEAD~1:src/runtime/aos_enemy.c > /tmp/old_enemy.c   # adjust the revision
+   git show HEAD~1:src/runtime/aos/core/aos_enemy.c > /tmp/old_enemy.c   # adjust the revision
    cc -Iinclude -Isrc/runtime -std=c11 -O0 -c /tmp/old_enemy.c -o /tmp/old.o
-   cc -Iinclude -Isrc/runtime -std=c11 -O0 -c src/runtime/aos_enemy.c -o /tmp/new.o
+   cc -Iinclude -Isrc/runtime -std=c11 -O0 -c src/runtime/aos/core/aos_enemy.c -o /tmp/new.o
    for v in old new; do
      objdump -d --no-show-raw-insn -r /tmp/$v.o | awk '/^[0-9a-f]+ <.*>:$/{n=$2}
        /^ /{sub(/^ *[0-9a-f]+:\t/,""); gsub(/[0-9a-f]+ <[^>]*>/,"X"); print n"\t"$0}' |
@@ -342,7 +342,7 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      the remaining `aos_*` groupings (menus, intro, HUD, save,
      gameplay core) and then the analogous MZM paths, one category
      per commit.
-   - Create `src/runtime/aos_enemy_internal.h`. Declare in it every
+   - Create `src/runtime/aos/core/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).
    - Make those helpers non-static with an `aos_enemy_` prefix, or another
@@ -361,7 +361,7 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      many families' fields. You can leave them in `aos_enemy.c`, or turn
      them into per-family `*_create` functions. Do it one family at a time.
    - Add each new `.c` file to every CMake target that lists
-     `src/runtime/aos_enemy.c` (16 places). A small CMake variable such as
+     `src/runtime/aos/core/aos_enemy.c` (16 places). A small CMake variable such as
      `AOS_ENEMY_SOURCES` would avoid repeating the list.
    - Verify with the comparison above, then with `fusion_aos_enemy_tests`
      and the full cycle.

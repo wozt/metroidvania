@@ -302,7 +302,7 @@ cells, mostly with air above), bit 2 outside slopes (`0x04`) and the rare
 Ported so far: `./build/fusion_rebuild --task aria_rooms` runs the native
 C11 exporter for every room, writing each background composite and its BG1
 collision bytes as `sub_08001A00` returns them (342 of 343 rooms; the
-remaining one has no text BG1). `src/runtime/aos_collision.c` ports the cell
+remaining one has no text BG1). `src/runtime/aos/core/aos_collision.c` ports the cell
 lookup, slope height, walk modes, the four vertical walks, the bit-3 test and
 both horizontal pushes,
 with ROM-free tests. It is not yet used by a Soma controller.
@@ -473,7 +473,7 @@ record 58) is class 0 without the deletion when Soma's `0x20` clears; the
 attack refuses class 5 and only `sub_08033F58`, a player copy driven by
 `gEwramData + 0x4DC`, calls `sub_080230A8` otherwise. `src/runtime/aos_weapon.c`
 ports classes 0 to 5 and
-`src/runtime/aos_effect.c` the shared effects; the runtime draws the blade
+`src/runtime/aos/core/aos_effect.c` the shared effects; the runtime draws the blade
 or gun, rotating class 1 about the entity position (`--hitboxes` outlines
 the active hitbox).
 
@@ -516,7 +516,7 @@ read so far:
   mid-air jump; those paths end in `sub_08017D90` (ability 3: Down + jump in
   the air, state 7, vy +4.875).
 
-`src/runtime/aos_soma.c` ports the rules of this table, the tile path of
+`src/runtime/aos/core/aos_soma.c` ports the rules of this table, the tile path of
 the collision pass and the movement part of cases 0 and 4
 (`aos_soma_update`) with the ability moves and states 3, 5, 6 and 7, except
 attacks, recoil, hurtboxes, effects and moving platforms
@@ -655,7 +655,7 @@ edge doors inside their doorway art (rooms 0/3 and 0/16).
 
 Breakable walls (special objects 0x08 and 0x09, `Object08Create` /
 `Object08Update`, `Object09Create` / `Object09Update`, in
-`src/runtime/aos_wall.c`). Parameter 0 picks an entry of `0x08526064` (a
+`src/runtime/aos/core/aos_wall.c`). Parameter 0 picks an entry of `0x08526064` (a
 sprite frame of a descriptor of `0x08526004` with its palette bank, a block
 offset, a box and a shape); parameter 1 is a bit of the event words at
 gEwramData + 0x344, which records the break. Creation deletes the wall when
@@ -742,7 +742,7 @@ death below. A bat created while gEwramData + 0x8E bit 0x40 is set (by
 `sub_0804C404`, reached through the table `0x085254D8`; cleared by
 `sub_0804CC14`; meaning not traced) skips the ceiling search and the hit
 callback and stays in state 4 (`sub_080AD6AC`): animation 1, no activity
-window, no collision pass. `src/runtime/aos_enemy.c` ports the framework parts above and the
+window, no collision pass. `src/runtime/aos/core/aos_enemy.c` ports the framework parts above and the
 bat; the native object exporter writes its animations and boxes.
 
 Collisions and damage. Every entity has a collision block at `+0x70`
@@ -825,8 +825,8 @@ over 16 x 12 pixels. The flame plays animation 0 of the shared frame list
 palette row 7, which `sub_0800C5D8` fills with bank 3 of `0x082099FC`
 (`sUnk_084F0DD8` maps rows 4 to 9 and 14); it rises 0.5 per frame after
 its first and is deleted when the animation ends. The export names it
-`Effect/flame/anim_0`; the runtime updates flames after the enemies. `src/runtime/aos_combat.c` ports the boxes,
-overlaps, slots and formulas; `src/runtime/aos_stats.c` derives ATK
+`Effect/flame/anim_0`; the runtime updates flames after the enemies. `src/runtime/aos/core/aos_combat.c` ports the boxes,
+overlaps, slots and formulas; `src/runtime/aos/core/aos_stats.c` derives ATK
 (STR + equipment ATK) and DEF (CON / 2 + equipment DEF) from the level and
 the equipment records (sub_0804AD9C), and `--atk`, `--def` and `--hp` remain
 diagnostic overrides.
@@ -953,7 +953,7 @@ Skeleton (0x02), Peeping Eye (0x06), Killer Fish (0x07), Bone Pillar (0x08),
 Buer (0x0A), White Dragon (0x0B), Ghost (0x0E), Rock Armor (0x12), Giant Ghost
 (0x13) and Winged Skeleton (0x14). `fusion_aos_export_objects` exports
 their native sheets, palettes, animation descriptors, direct child frames and
-frame boxes. `src/runtime/aos_enemy.c` preserves their constructor choices:
+frame boxes. `src/runtime/aos/core/aos_enemy.c` preserves their constructor choices:
 floor placement, facing, parameter clamps, hidden producer forms and inert
 states, and supplies deliberately small observable patrol, swimming and
 hovering loops. Peeping Eye, Rock Armor, Buer, the White Dragon, the Giant Ghost and

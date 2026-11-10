@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_blue_ghost.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 #include "../../aos/math/aos_math.h"
 
 bool aos_ghost_guardian_update(AosGhostGuardian *ghost, AosGuardian *guardian, AosStats *stats,

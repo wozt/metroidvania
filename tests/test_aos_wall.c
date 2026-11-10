@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow breakable walls (objects 0x08 and
  * 0x09). */
-#include "aos_wall.h"
+#include "aos/core/aos_wall.h"
 
 #include <assert.h>
 #include <stdio.h>

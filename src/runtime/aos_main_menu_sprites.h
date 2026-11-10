@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos_anim.h"
+#include "aos/core/aos_anim.h"
 #include "aos_main_menu.h"
 #include "aos_obj.h"
 

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_gladiator.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 AosGladiatorSoul aos_gladiator_soul_create(int32_t soma_x, int32_t soma_y,
                                            bool facing_left) {

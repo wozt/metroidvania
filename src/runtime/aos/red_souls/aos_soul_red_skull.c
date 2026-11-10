@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_skull.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 AosSkull aos_skull_create(bool soma_facing_left) {
     return (AosSkull){.dx = (int16_t)(soma_facing_left ? -0x14 : 0x14), .dy = -0x10,

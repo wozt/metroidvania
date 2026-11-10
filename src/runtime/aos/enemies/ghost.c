@@ -4,7 +4,7 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
 /* sub_08089E64: after animation 0 has appeared, animation 1 attacks while
  * the Ghost accelerates toward Soma at a random height. Near that target it

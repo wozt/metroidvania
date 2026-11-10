@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../src/runtime/aos_mp2k.h"
+#include "../src/runtime/aos/core/aos_mp2k.h"
 
 enum { BASE = 0x08300000 };
 

@@ -3,7 +3,7 @@
 
 #include "aos_obj_rom.h"
 #include "aos_recent_items.h"
-#include "aos_rom_graphics.h"
+#include "aos/core/aos_rom_graphics.h"
 
 #include <stdio.h>
 #include <stdlib.h>

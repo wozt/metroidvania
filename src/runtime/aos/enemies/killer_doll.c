@@ -4,7 +4,7 @@
  * This family is a separate translation unit and uses the shared internal
  * enemy framework API. The piece tables are shared with Lightning Doll. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
 /* sub_080C86A0: Killer Doll flight stays inside the room. Crossing a room
  * edge reflects that speed; a wall, floor or ceiling zeros it. Horizontal

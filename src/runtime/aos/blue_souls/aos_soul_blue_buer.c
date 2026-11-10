@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SkillBuerUse and its flames sub_0802FDE4 (see aos_soul.h). */
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 #include "../../aos/math/aos_math.h"
 #include "../souls/aos_soul.h"
 

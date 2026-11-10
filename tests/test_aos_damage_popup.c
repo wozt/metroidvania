@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_damage_popup.h"
+#include "aos/core/aos_damage_popup.h"
 
 #include <assert.h>
 #include <stdio.h>

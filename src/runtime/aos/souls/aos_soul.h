@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_stats.h"
+#include "../../aos/core/aos_stats.h"
 
 /* One of Soma's red soul records (0x080E1598, metadata/red_souls.tsv). */
 typedef struct {

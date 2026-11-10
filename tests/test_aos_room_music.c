@@ -2,8 +2,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/runtime/aos_audio.h"
-#include "../src/runtime/aos_room_music.h"
+#include "../src/runtime/aos/core/aos_audio.h"
+#include "../src/runtime/aos/core/aos_room_music.h"
 
 static const AosRoomMusicFlags plain = {false, false, false};
 

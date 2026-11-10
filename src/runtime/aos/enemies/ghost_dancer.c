@@ -4,7 +4,7 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
 /* sub_080C3190: step 0 plays animation 0, stops and faces the player;
  * step 1 dances a figure of eight: vx = 2 sin(+ 0x14 + 0x4000), x += vx,

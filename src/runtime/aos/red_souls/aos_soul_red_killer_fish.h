@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../../aos_collision.h"
+#include "../../aos/core/aos_collision.h"
 
 enum {
     AOS_KILLER_FISH_APPEARING = 1,

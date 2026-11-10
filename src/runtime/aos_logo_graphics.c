@@ -2,7 +2,7 @@
 /* Aria's startup logos: see aos_logo_graphics.h. */
 #include "aos_logo_graphics.h"
 
-#include "aos_rom_graphics.h"
+#include "aos/core/aos_rom_graphics.h"
 #include "aos_title_graphics.h"
 
 #include <stdio.h>

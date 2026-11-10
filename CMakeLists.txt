@@ -213,7 +213,7 @@ target_link_libraries(fusion_room_runtime PRIVATE SDL3::SDL3 fusion_json m)
 fusion_enable_warnings(fusion_room_runtime)
 
 set(AOS_ENEMY_SOURCES
-    src/runtime/aos_enemy.c
+    src/runtime/aos/core/aos_enemy.c
     src/runtime/aos/math/aos_math.c
     src/runtime/aos/enemies/sky_fish.c
     src/runtime/aos/enemies/ectoplasm.c
@@ -269,14 +269,14 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/valkyrie.c
     src/runtime/aos/enemies/bat.c)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/red_souls/aos_soul_red_arrow.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos_audio.c src/runtime/aos_room_music.c src/runtime/aos_mp2k.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/souls/aos_soul_notice.c src/runtime/aos/blue_souls/aos_soul_blue_buer.c src/runtime/aos/blue_souls/aos_soul_blue_imp.c src/runtime/aos/blue_souls/aos_soul_blue_ghost.c src/runtime/aos/blue_souls/aos_soul_blue_death.c src/runtime/aos/red_souls/aos_soul_red_lightning.c src/runtime/aos/red_souls/aos_soul_red_killer_doll.c src/runtime/aos/red_souls/aos_soul_red_nemesis.c src/runtime/aos/red_souls/aos_soul_red_throw.c src/runtime/aos/red_souls/aos_soul_red_merman.c src/runtime/aos/red_souls/aos_soul_red_axe.c src/runtime/aos/red_souls/aos_soul_red_spear.c src/runtime/aos/red_souls/aos_soul_red_shot.c src/runtime/aos/red_souls/aos_soul_red_dagger.c src/runtime/aos/red_souls/aos_soul_red_devil.c src/runtime/aos/red_souls/aos_soul_red_crow.c src/runtime/aos/red_souls/aos_soul_red_flea.c src/runtime/aos/red_souls/aos_soul_red_skull.c src/runtime/aos/red_souls/aos_soul_red_valkyrie.c src/runtime/aos/red_souls/aos_soul_red_needles.c src/runtime/aos/red_souls/aos_soul_red_ghost.c src/runtime/aos/red_souls/aos_soul_red_siren.c src/runtime/aos/red_souls/aos_soul_red_ripper.c src/runtime/aos/red_souls/aos_soul_red_millione.c src/runtime/aos/red_souls/aos_soul_red_fish_head.c src/runtime/aos/red_souls/aos_soul_red_killer_fish.c src/runtime/aos/red_souls/aos_soul_red_gladiator.c src/runtime/aos_portrait.c src/runtime/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
-               src/runtime/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos/souls/aos_soul_menu.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/red_souls/aos_soul_red_arrow.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos/core/aos_audio.c src/runtime/aos/core/aos_room_music.c src/runtime/aos/core/aos_mp2k.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/souls/aos_soul_notice.c src/runtime/aos/blue_souls/aos_soul_blue_buer.c src/runtime/aos/blue_souls/aos_soul_blue_imp.c src/runtime/aos/blue_souls/aos_soul_blue_ghost.c src/runtime/aos/blue_souls/aos_soul_blue_death.c src/runtime/aos/red_souls/aos_soul_red_lightning.c src/runtime/aos/red_souls/aos_soul_red_killer_doll.c src/runtime/aos/red_souls/aos_soul_red_nemesis.c src/runtime/aos/red_souls/aos_soul_red_throw.c src/runtime/aos/red_souls/aos_soul_red_merman.c src/runtime/aos/red_souls/aos_soul_red_axe.c src/runtime/aos/red_souls/aos_soul_red_spear.c src/runtime/aos/red_souls/aos_soul_red_shot.c src/runtime/aos/red_souls/aos_soul_red_dagger.c src/runtime/aos/red_souls/aos_soul_red_devil.c src/runtime/aos/red_souls/aos_soul_red_crow.c src/runtime/aos/red_souls/aos_soul_red_flea.c src/runtime/aos/red_souls/aos_soul_red_skull.c src/runtime/aos/red_souls/aos_soul_red_valkyrie.c src/runtime/aos/red_souls/aos_soul_red_needles.c src/runtime/aos/red_souls/aos_soul_red_ghost.c src/runtime/aos/red_souls/aos_soul_red_siren.c src/runtime/aos/red_souls/aos_soul_red_ripper.c src/runtime/aos/red_souls/aos_soul_red_millione.c src/runtime/aos/red_souls/aos_soul_red_fish_head.c src/runtime/aos/red_souls/aos_soul_red_killer_fish.c src/runtime/aos/red_souls/aos_soul_red_gladiator.c src/runtime/aos_portrait.c src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
+               src/runtime/aos/core/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos/souls/aos_soul_menu.c
                src/runtime/aos_levelup.c
                src/runtime/aos_bestiary.c
                src/runtime/aos_button_config.c
-               src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_room.c
-               src/runtime/aos_door.c src/runtime/aos_wall.c src/runtime/aos/weapons/aos_weapon.c ${AOS_ENEMY_SOURCES} src/runtime/aos_damage_popup.c src/runtime/aos_effect.c
-               src/runtime/gba_input.c src/runtime/aos_input.c src/runtime/aos_save.c
+               src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c src/runtime/aos_room.c
+               src/runtime/aos_door.c src/runtime/aos/core/aos_wall.c src/runtime/aos/weapons/aos_weapon.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/core/aos_effect.c
+               src/runtime/gba_input.c src/runtime/aos/core/aos_input.c src/runtime/aos_save.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_main_menu.c
                src/runtime/aos_intro_cutscene.c src/runtime/aos_intro_entities.c
                src/runtime/aos_intro_resources.c src/runtime/aos_intro_font.c
@@ -286,20 +286,20 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/re
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos_anim.c
+               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
                src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
                src/runtime/aos_intro_font.c src/runtime/aos_intro_graphics.c
-               src/runtime/aos_rom_graphics.c src/runtime/aos_main_menu_graphics.c
+               src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos_main_menu_graphics.c
                src/runtime/aos_main_menu_objects.c src/runtime/aos_main_menu_sprites.c
-               src/runtime/aos_main_menu_files.c src/runtime/aos_stats.c
+               src/runtime/aos_main_menu_files.c src/runtime/aos/core/aos_stats.c
                src/runtime/aos_title_graphics.c src/runtime/aos_obj_rom.c src/runtime/aos_logo_graphics.c
-               src/runtime/aos_input.c src/runtime/aos_text_window.c
+               src/runtime/aos/core/aos_input.c src/runtime/aos_text_window.c
                src/runtime/aos_menu_bg0.c src/runtime/aos_window_frame.c
                src/runtime/aos_game_over_graphics.c
                src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c
-               src/runtime/aos_audio.c src/runtime/aos_mp2k.c)
+               src/runtime/aos/core/aos_audio.c src/runtime/aos/core/aos_mp2k.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets m)
 fusion_enable_warnings(fusion_aria_title_preview)
@@ -350,8 +350,8 @@ if(GTK4_FOUND)
 
     add_executable(fusion_sfx_browser
         src/tools/sfx_browser_gtk.c
-        src/runtime/aos_audio.c
-        src/runtime/aos_mp2k.c
+        src/runtime/aos/core/aos_audio.c
+        src/runtime/aos/core/aos_mp2k.c
         src/runtime/mzm_audio.c
         src/runtime/gba_psg.c)
     target_include_directories(fusion_sfx_browser PRIVATE src/runtime)
@@ -726,9 +726,9 @@ if(BUILD_TESTING)
     add_test(NAME aos_save_room COMMAND fusion_aos_save_room_tests)
 
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c ${AOS_ENEMY_SOURCES} src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_collision.c
-                   src/runtime/aos_combat.c src/runtime/aos_anim.c)
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_collision.c
+                   src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c)
     target_include_directories(fusion_aos_pickup_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_pickup_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_pickup_tests)
@@ -741,7 +741,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_game_over COMMAND fusion_aos_game_over_tests)
 
     add_executable(fusion_aos_game_over_graphics_tests tests/test_aos_game_over_graphics.c
-                   src/runtime/aos_game_over_graphics.c src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos_game_over_graphics.c src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_game_over_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_game_over_graphics_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_game_over_graphics_tests)
@@ -758,24 +758,24 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_levelup_tests)
     add_test(NAME aos_levelup COMMAND fusion_aos_levelup_tests)
 
-    add_executable(fusion_aos_soul_tests tests/test_aos_soul.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_stats.c
-                   src/runtime/aos_audio.c)
+    add_executable(fusion_aos_soul_tests tests/test_aos_soul.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c
+                   src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_tests)
     add_test(NAME aos_soul COMMAND fusion_aos_soul_tests)
 
     add_executable(fusion_aos_soul_menu_tests tests/test_aos_soul_menu.c
-                   src/runtime/aos/souls/aos_soul_menu.c src/runtime/aos_recent_items.c src/runtime/aos_stats.c
+                   src/runtime/aos/souls/aos_soul_menu.c src/runtime/aos_recent_items.c src/runtime/aos/core/aos_stats.c
                    src/runtime/aos_button_config.c src/runtime/aos_bestiary.c)
     target_include_directories(fusion_aos_soul_menu_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_menu_tests)
     add_test(NAME aos_soul_menu COMMAND fusion_aos_soul_menu_tests)
 
     add_executable(fusion_aos_soul_red_throw_tests tests/test_aos_soul_red_throw.c
-                   src/runtime/aos/red_souls/aos_soul_red_throw.c ${AOS_ENEMY_SOURCES} src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_throw.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_throw_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_throw_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_throw_tests)
@@ -787,30 +787,30 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_soul_red_merman_tests)
     add_test(NAME aos_soul_red_merman COMMAND fusion_aos_soul_red_merman_tests)
 
-    add_executable(fusion_aos_audio_tests tests/test_aos_audio.c src/runtime/aos_audio.c)
+    add_executable(fusion_aos_audio_tests tests/test_aos_audio.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_audio_tests PRIVATE src/runtime)
     target_compile_definitions(fusion_aos_audio_tests PRIVATE
         FUSION_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
     fusion_enable_warnings(fusion_aos_audio_tests)
     add_test(NAME aos_audio COMMAND fusion_aos_audio_tests)
 
-    add_executable(fusion_aos_mp2k_tests tests/test_aos_mp2k.c src/runtime/aos_mp2k.c)
+    add_executable(fusion_aos_mp2k_tests tests/test_aos_mp2k.c src/runtime/aos/core/aos_mp2k.c)
     target_include_directories(fusion_aos_mp2k_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_mp2k_tests)
     add_test(NAME aos_mp2k COMMAND fusion_aos_mp2k_tests
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     add_executable(fusion_aos_soul_red_axe_tests tests/test_aos_soul_red_axe.c
-                   src/runtime/aos/red_souls/aos_soul_red_axe.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_axe.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_axe_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_axe_tests)
     add_test(NAME aos_soul_red_axe COMMAND fusion_aos_soul_red_axe_tests)
 
     add_executable(fusion_aos_soul_red_spear_tests tests/test_aos_soul_red_spear.c
-                   src/runtime/aos/red_souls/aos_soul_red_spear.c src/runtime/aos_audio.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c)
+                   src/runtime/aos/red_souls/aos_soul_red_spear.c src/runtime/aos/core/aos_audio.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c)
     target_include_directories(fusion_aos_soul_red_spear_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_spear_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_spear_tests)
@@ -827,49 +827,49 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_arrow COMMAND fusion_aos_soul_red_arrow_tests)
 
     add_executable(fusion_aos_soul_red_dagger_tests tests/test_aos_soul_red_dagger.c
-                   src/runtime/aos/red_souls/aos_soul_red_dagger.c src/runtime/aos_collision.c)
+                   src/runtime/aos/red_souls/aos_soul_red_dagger.c src/runtime/aos/core/aos_collision.c)
     target_include_directories(fusion_aos_soul_red_dagger_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_dagger_tests)
     add_test(NAME aos_soul_red_dagger COMMAND fusion_aos_soul_red_dagger_tests)
 
     add_executable(fusion_aos_room_music_tests tests/test_aos_room_music.c
-                   src/runtime/aos_room_music.c src/runtime/aos_audio.c)
+                   src/runtime/aos/core/aos_room_music.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_room_music_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_room_music_tests)
     add_test(NAME aos_room_music COMMAND fusion_aos_room_music_tests)
 
     add_executable(fusion_aos_soul_red_devil_tests tests/test_aos_soul_red_devil.c
-                   src/runtime/aos/red_souls/aos_soul_red_devil.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_devil.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_devil_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_devil_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_devil_tests)
     add_test(NAME aos_soul_red_devil COMMAND fusion_aos_soul_red_devil_tests)
 
     add_executable(fusion_aos_soul_red_crow_tests tests/test_aos_soul_red_crow.c
-                   src/runtime/aos/red_souls/aos_soul_red_crow.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_crow.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_crow_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_crow_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_crow_tests)
     add_test(NAME aos_soul_red_crow COMMAND fusion_aos_soul_red_crow_tests)
 
     add_executable(fusion_aos_soul_red_flea_tests tests/test_aos_soul_red_flea.c
-                   src/runtime/aos/red_souls/aos_soul_red_flea.c ${AOS_ENEMY_SOURCES} src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_flea.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_flea_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_flea_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_flea_tests)
     add_test(NAME aos_soul_red_flea COMMAND fusion_aos_soul_red_flea_tests)
 
     add_executable(fusion_aos_soul_red_skull_tests tests/test_aos_soul_red_skull.c
-                   src/runtime/aos/red_souls/aos_soul_red_skull.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_skull.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_skull_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_skull_tests)
     add_test(NAME aos_soul_red_skull COMMAND fusion_aos_soul_red_skull_tests)
@@ -881,50 +881,50 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_valkyrie COMMAND fusion_aos_soul_red_valkyrie_tests)
 
     add_executable(fusion_aos_soul_red_needles_tests tests/test_aos_soul_red_needles.c
-                   src/runtime/aos/red_souls/aos_soul_red_needles.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_needles.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_needles_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_needles_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_needles_tests)
     add_test(NAME aos_soul_red_needles COMMAND fusion_aos_soul_red_needles_tests)
 
     add_executable(fusion_aos_soul_blue_buer_tests tests/test_aos_soul_blue_buer.c
-                   src/runtime/aos/blue_souls/aos_soul_blue_buer.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/blue_souls/aos_soul_blue_buer.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_blue_buer_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_blue_buer_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_blue_buer_tests)
     add_test(NAME aos_soul_blue_buer COMMAND fusion_aos_soul_blue_buer_tests)
 
     add_executable(fusion_aos_soul_blue_ghost_tests tests/test_aos_soul_blue_ghost.c
-                   src/runtime/aos/blue_souls/aos_soul_blue_ghost.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/blue_souls/aos_soul_blue_ghost.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_blue_ghost_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_blue_ghost_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_blue_ghost_tests)
     add_test(NAME aos_soul_blue_ghost COMMAND fusion_aos_soul_blue_ghost_tests)
 
     add_executable(fusion_aos_soul_blue_imp_tests tests/test_aos_soul_blue_imp.c
-                   src/runtime/aos/blue_souls/aos_soul_blue_imp.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/blue_souls/aos_soul_blue_imp.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_blue_imp_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_blue_imp_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_blue_imp_tests)
     add_test(NAME aos_soul_blue_imp COMMAND fusion_aos_soul_blue_imp_tests)
 
     add_executable(fusion_aos_soul_blue_death_tests tests/test_aos_soul_blue_death.c
-                   src/runtime/aos/blue_souls/aos_soul_blue_death.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
-                   src/runtime/aos_effect.c src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c
-                   src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/blue_souls/aos_soul_blue_death.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
+                   src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c
+                   src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_blue_death_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_blue_death_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_blue_death_tests)
@@ -937,7 +937,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_lightning COMMAND fusion_aos_soul_red_lightning_tests)
 
     add_executable(fusion_aos_soul_red_killer_doll_tests tests/test_aos_soul_red_killer_doll.c
-                   src/runtime/aos/red_souls/aos_soul_red_killer_doll.c src/runtime/aos_collision.c)
+                   src/runtime/aos/red_souls/aos_soul_red_killer_doll.c src/runtime/aos/core/aos_collision.c)
     target_include_directories(fusion_aos_soul_red_killer_doll_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_killer_doll_tests)
     add_test(NAME aos_soul_red_killer_doll COMMAND fusion_aos_soul_red_killer_doll_tests)
@@ -949,35 +949,35 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_red_nemesis COMMAND fusion_aos_soul_red_nemesis_tests)
 
     add_executable(fusion_aos_soul_red_ripper_tests tests/test_aos_soul_red_ripper.c
-                   src/runtime/aos/red_souls/aos_soul_red_ripper.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_ripper.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_ripper_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_ripper_tests)
     add_test(NAME aos_soul_red_ripper COMMAND fusion_aos_soul_red_ripper_tests)
 
     add_executable(fusion_aos_soul_red_millione_tests tests/test_aos_soul_red_millione.c
-                   src/runtime/aos/red_souls/aos_soul_red_millione.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_millione.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_millione_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_millione_tests)
     add_test(NAME aos_soul_red_millione COMMAND fusion_aos_soul_red_millione_tests)
 
     add_executable(fusion_aos_soul_red_fish_head_tests tests/test_aos_soul_red_fish_head.c
-                   src/runtime/aos/red_souls/aos_soul_red_fish_head.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_fish_head.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_fish_head_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_fish_head_tests)
     add_test(NAME aos_soul_red_fish_head COMMAND fusion_aos_soul_red_fish_head_tests)
 
     add_executable(fusion_aos_soul_red_killer_fish_tests tests/test_aos_soul_red_killer_fish.c
-                   src/runtime/aos/red_souls/aos_soul_red_killer_fish.c src/runtime/aos_collision.c
-                   src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_killer_fish.c src/runtime/aos/core/aos_collision.c
+                   src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_killer_fish_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_red_killer_fish_tests)
     add_test(NAME aos_soul_red_killer_fish COMMAND fusion_aos_soul_red_killer_fish_tests)
 
     add_executable(fusion_aos_soul_red_gladiator_tests tests/test_aos_soul_red_gladiator.c
-                   src/runtime/aos/red_souls/aos_soul_red_gladiator.c ${AOS_ENEMY_SOURCES} src/runtime/aos_damage_popup.c
-                   src/runtime/aos/weapons/aos_weapon.c src/runtime/aos_effect.c src/runtime/aos_soma.c
-                   src/runtime/aos/souls/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
-                   src/runtime/aos_anim.c src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_gladiator.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c
+                   src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c
+                   src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c
+                   src/runtime/aos/core/aos_anim.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_gladiator_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_gladiator_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_gladiator_tests)
@@ -985,48 +985,48 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_soul_red_ghost_tests tests/test_aos_soul_red_ghost.c
                    src/runtime/aos/red_souls/aos_soul_red_ghost.c src/runtime/aos/red_souls/aos_soul_red_devil.c
-                   src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_collision.c
-                   src/runtime/aos_combat.c src/runtime/aos_anim.c src/runtime/aos_stats.c
-                   src/runtime/aos_audio.c)
+                   src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c
+                   src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_collision.c
+                   src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c src/runtime/aos/core/aos_stats.c
+                   src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_ghost_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_ghost_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_ghost_tests)
     add_test(NAME aos_soul_red_ghost COMMAND fusion_aos_soul_red_ghost_tests)
 
     add_executable(fusion_aos_soul_red_siren_tests tests/test_aos_soul_red_siren.c
-                   src/runtime/aos/red_souls/aos_soul_red_siren.c src/runtime/aos/math/aos_math.c src/runtime/aos_damage_popup.c
-                   src/runtime/aos/weapons/aos_weapon.c src/runtime/aos_effect.c src/runtime/aos_soma.c
-                   src/runtime/aos/souls/aos_soul.c src/runtime/aos_collision.c src/runtime/aos_combat.c
-                   src/runtime/aos_anim.c src/runtime/aos_stats.c src/runtime/aos_audio.c)
+                   src/runtime/aos/red_souls/aos_soul_red_siren.c src/runtime/aos/math/aos_math.c src/runtime/aos/core/aos_damage_popup.c
+                   src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c
+                   src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c
+                   src/runtime/aos/core/aos_anim.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soul_red_siren_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_red_siren_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_soul_red_siren_tests)
     add_test(NAME aos_soul_red_siren COMMAND fusion_aos_soul_red_siren_tests)
 
-    add_executable(fusion_aos_stats_tests tests/test_aos_stats.c src/runtime/aos_stats.c)
+    add_executable(fusion_aos_stats_tests tests/test_aos_stats.c src/runtime/aos/core/aos_stats.c)
     target_include_directories(fusion_aos_stats_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_stats_tests)
     add_test(NAME aos_stats COMMAND fusion_aos_stats_tests)
 
     add_executable(fusion_aos_main_menu_sprites_tests tests/test_aos_main_menu_sprites.c
                    src/runtime/aos_main_menu_sprites.c src/runtime/aos_main_menu_files.c
-                   src/runtime/aos_obj.c src/runtime/aos_anim.c src/runtime/aos_menu_bg0.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c src/runtime/aos_menu_bg0.c
+                   src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_main_menu_sprites_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_main_menu_sprites_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_main_menu_sprites_tests)
     add_test(NAME aos_main_menu_sprites COMMAND fusion_aos_main_menu_sprites_tests)
 
     add_executable(fusion_aos_menu_bg0_tests tests/test_aos_menu_bg0.c
-                   src/runtime/aos_menu_bg0.c src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos_menu_bg0.c src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_menu_bg0_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_menu_bg0_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_menu_bg0_tests)
     add_test(NAME aos_menu_bg0 COMMAND fusion_aos_menu_bg0_tests)
 
     add_executable(fusion_aos_window_frame_tests tests/test_aos_window_frame.c
-                   src/runtime/aos_window_frame.c src/runtime/aos_rom_graphics.c
+                   src/runtime/aos_window_frame.c src/runtime/aos/core/aos_rom_graphics.c
                    src/runtime/aos_intro_font.c)
     target_include_directories(fusion_aos_window_frame_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_window_frame_tests PRIVATE fusion_assets m)
@@ -1034,7 +1034,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_window_frame COMMAND fusion_aos_window_frame_tests)
 
     add_executable(fusion_aos_soul_notice_tests tests/test_aos_soul_notice.c
-                   src/runtime/aos/souls/aos_soul_notice.c src/runtime/aos_rom_graphics.c
+                   src/runtime/aos/souls/aos_soul_notice.c src/runtime/aos/core/aos_rom_graphics.c
                    src/runtime/aos_intro_font.c)
     target_include_directories(fusion_aos_soul_notice_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_soul_notice_tests PRIVATE fusion_assets m)
@@ -1056,7 +1056,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_game_mode_tests tests/test_aos_game_mode.c
                    src/runtime/aos_game_mode.c src/runtime/aos_title_fade.c
-                   src/runtime/aos_input.c)
+                   src/runtime/aos/core/aos_input.c)
     target_include_directories(fusion_aos_game_mode_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
     add_test(NAME aos_game_mode COMMAND fusion_aos_game_mode_tests)
@@ -1094,7 +1094,7 @@ if(BUILD_TESTING)
     add_test(NAME metroidvania_split COMMAND fusion_metroidvania_split_tests)
 
     add_executable(fusion_aos_title_screen_tests tests/test_aos_title_screen.c
-                   src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos_anim.c)
+                   src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c)
     target_include_directories(fusion_aos_title_screen_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_title_screen_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_title_screen_tests)
@@ -1103,8 +1103,8 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_game_mode.c
                    src/runtime/aos_main_menu.c
-                   src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos_anim.c
-                   src/runtime/aos_input.c src/runtime/aos_intro_cutscene.c
+                   src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_input.c src/runtime/aos_intro_cutscene.c
                    src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_game_lifecycle_tests PRIVATE m)
@@ -1147,7 +1147,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_opening_event_tests
                    tests/test_aos_opening_event.c
-                   src/runtime/aos_opening_event.c src/runtime/aos_stats.c
+                   src/runtime/aos_opening_event.c src/runtime/aos/core/aos_stats.c
                    src/runtime/aos_intro_resources.c
                    src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_opening_event_tests PRIVATE src/runtime)
@@ -1158,7 +1158,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_portrait_tests
                    tests/test_aos_portrait.c
                    src/runtime/aos_portrait.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_portrait_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_portrait_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_portrait_tests)
@@ -1168,7 +1168,7 @@ if(BUILD_TESTING)
                    tests/test_aos_intro_graphics.c
                    src/runtime/aos_intro_graphics.c
                    src/runtime/aos_obj_rom.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_intro_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_intro_graphics_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_intro_graphics_tests)
@@ -1176,7 +1176,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_logo_graphics_tests tests/test_aos_logo_graphics.c
                    src/runtime/aos_logo_graphics.c src/runtime/aos_title_graphics.c src/runtime/aos_obj_rom.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_logo_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_logo_graphics_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_logo_graphics_tests)
@@ -1185,7 +1185,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_main_menu_graphics_tests
                    tests/test_aos_main_menu_graphics.c
                    src/runtime/aos_main_menu_graphics.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_main_menu_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_main_menu_graphics_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_main_menu_graphics_tests)
@@ -1195,7 +1195,7 @@ if(BUILD_TESTING)
                    tests/test_aos_pause_graphics.c
                    src/runtime/aos_pause_graphics.c
                    src/runtime/aos_obj_rom.c
-                   src/runtime/aos_rom_graphics.c
+                   src/runtime/aos/core/aos_rom_graphics.c
                    src/runtime/aos_intro_resources.c
                    src/runtime/aos_intro_entities.c
                    src/runtime/aos_intro_font.c
@@ -1215,7 +1215,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_quick_map_tests
                    tests/test_aos_quick_map.c
                    src/runtime/aos_quick_map.c
-                   src/runtime/aos_rom_graphics.c)
+                   src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_quick_map_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_quick_map_tests PRIVATE fusion_assets)
     fusion_enable_warnings(fusion_aos_quick_map_tests)
@@ -1227,7 +1227,7 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_main_menu_tests)
     add_test(NAME aos_main_menu COMMAND fusion_aos_main_menu_tests)
 
-    add_executable(fusion_aos_input_tests tests/test_aos_input.c src/runtime/aos_input.c)
+    add_executable(fusion_aos_input_tests tests/test_aos_input.c src/runtime/aos/core/aos_input.c)
     target_include_directories(fusion_aos_input_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_input_tests)
     add_test(NAME aos_input COMMAND fusion_aos_input_tests)
@@ -1246,56 +1246,56 @@ if(BUILD_TESTING)
 
     # ROM-free Aria of Sorrow BG1 collision primitives.
     add_executable(fusion_aos_collision_tests tests/test_aos_collision.c
-                   src/runtime/aos_collision.c)
+                   src/runtime/aos/core/aos_collision.c)
     target_include_directories(fusion_aos_collision_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_collision_tests)
     add_test(NAME aos_collision COMMAND fusion_aos_collision_tests)
 
     add_executable(fusion_aos_soma_tests tests/test_aos_soma.c
-                   src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_stats.c src/runtime/aos_collision.c src/runtime/aos_combat.c
-                   src/runtime/aos_anim.c src/runtime/aos_audio.c)
+                   src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c
+                   src/runtime/aos/core/aos_anim.c src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_soma_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soma_tests)
     add_test(NAME aos_soma COMMAND fusion_aos_soma_tests)
 
     add_executable(fusion_aos_room_tests tests/test_aos_room.c src/runtime/aos_room.c
-                   src/runtime/aos_collision.c)
+                   src/runtime/aos/core/aos_collision.c)
     target_include_directories(fusion_aos_room_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_room_tests)
     add_test(NAME aos_room COMMAND fusion_aos_room_tests)
 
     add_executable(fusion_aos_door_tests tests/test_aos_door.c src/runtime/aos_door.c
-                   src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_stats.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_audio.c)
+                   src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_door_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)
 
-    add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_stats.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_audio.c)
+    add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c
+                   src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_weapon_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_weapon_tests)
     add_test(NAME aos_weapon COMMAND fusion_aos_weapon_tests)
 
-    add_executable(fusion_aos_wall_tests tests/test_aos_wall.c src/runtime/aos_wall.c
-                   src/runtime/aos/weapons/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_stats.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c
-                   src/runtime/aos_audio.c)
+    add_executable(fusion_aos_wall_tests tests/test_aos_wall.c src/runtime/aos/core/aos_wall.c
+                   src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c
+                   src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/core/aos_audio.c)
     target_include_directories(fusion_aos_wall_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_wall_tests)
     add_test(NAME aos_wall COMMAND fusion_aos_wall_tests)
 
-    add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c ${AOS_ENEMY_SOURCES} src/runtime/aos_damage_popup.c
-                   src/runtime/aos_audio.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos_effect.c
-                   src/runtime/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos_stats.c src/runtime/aos_collision.c src/runtime/aos_combat.c src/runtime/aos_anim.c)
+    add_executable(fusion_aos_enemy_tests tests/test_aos_enemy.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c
+                   src/runtime/aos/core/aos_audio.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c
+                   src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c)
     target_include_directories(fusion_aos_enemy_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_enemy_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_enemy_tests)
     add_test(NAME aos_enemy COMMAND fusion_aos_enemy_tests)
 
     add_executable(fusion_aos_damage_popup_tests tests/test_aos_damage_popup.c
-                   src/runtime/aos_damage_popup.c)
+                   src/runtime/aos/core/aos_damage_popup.c)
     target_include_directories(fusion_aos_damage_popup_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_damage_popup_tests)
     add_test(NAME aos_damage_popup COMMAND fusion_aos_damage_popup_tests)

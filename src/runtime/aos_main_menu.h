@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include "aos_game_mode.h"
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 /* Source-derived GameModeMainMenuUpdate controller state. Slot masks retain
  * the native file/quicksave topology; SRAM contents and rendering stay owned

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_menu.h"
 
-#include "../../aos_input.h"
+#include "../../aos/core/aos_input.h"
 
 static const char *const red_names[] = {
     "Winged Skeleton", "Bat", "Skeleton", "Merman", "Axe Armor", "Skull Archer",

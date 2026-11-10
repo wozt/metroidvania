@@ -5,7 +5,7 @@
 
 #include "aos_audio.h"
 #include "aos_enemy.h"
-#include "aos/souls/aos_soul.h"
+#include "../souls/aos_soul.h"
 
 const AosBox aos_soma_stand_box = {-6, -32, 12, 28};
 const AosBox aos_soma_low_box = {-5, -16, 12, 14};

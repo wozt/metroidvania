@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_stats.h"
+#include "aos/core/aos_stats.h"
 
 #include <assert.h>
 #include <stdio.h>

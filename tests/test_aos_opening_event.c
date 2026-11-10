@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_opening_event.h"
 #include "aos_intro_resources.h"
-#include "aos_soma.h"
+#include "aos/core/aos_soma.h"
 
 #include <assert.h>
 #include <string.h>
 
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 static uint32_t zero_random(void *context) {
     (void)context;

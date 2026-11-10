@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0947 - Shared runtime modules move to src/runtime/aos/core/
+
+- The 14 shared primitives moved to `src/runtime/aos/core/`:
+  `aos_anim`, `aos_audio`, `aos_collision`, `aos_combat`,
+  `aos_damage_popup`, `aos_effect`, `aos_enemy` (+ internal header),
+  `aos_input`, `aos_mp2k`, `aos_room_music`, `aos_rom_graphics`,
+  `aos_soma`, `aos_stats` and `aos_wall`. Includes were rewritten
+  (`aos/core/` for consumers, bare names inside the directory,
+  `../../aos/core/` inside the sibling category folders) and CMake
+  plus the registries were updated. No code or behavior changed.
+
 ## Patch 0946 - Weapon and math modules move to aos/{weapons,math}
 
 - `aos_weapon.c/h` moved to `src/runtime/aos/weapons/` and
@@ -569,7 +580,7 @@ Last updated: **2026-11-09**.
 
 ## Patch 0885 - Aria enemies split into one file per monster
 
-- `src/runtime/aos_enemy.c` (16,586 lines) is now the shared enemy
+- `src/runtime/aos/core/aos_enemy.c` (16,586 lines) is now the shared enemy
   framework (about 3,500 lines: creation, collision pass, common movement
   helpers, update dispatch) and includes 52 monster-family files from
   `src/runtime/aos_enemies/` (for example `zombie.c`, `harpy.c` for Harpy
@@ -657,7 +668,7 @@ Last updated: **2026-11-09**.
 
 - EnemyChronomageCreate (0x080B712C) /
   EnemyChronomageUpdate (0x080B71F8) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_CHRONOMAGE
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_CHRONOMAGE
   (0x28), with the sub_080B6D68 idle, sub_080B6DEC
   time-stop, sub_080B6FB8 chase, sub_080B70B4 inert
   and sub_080B72B8 hurt handlers and the sub_080B6C3C
@@ -698,7 +709,7 @@ Last updated: **2026-11-09**.
 
 - EnemyCockatriceCreate (0x080BC158) /
   EnemyCockatriceUpdate (0x080BC164) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_COCKATRICE
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_COCKATRICE
   (0x2E), with the sub_080BBCC4 patrol, sub_080BBD90
   attack, sub_080BBEE4 death and sub_080BC0B4 hurt
   handlers and the two linked children sub_080BB924
@@ -740,7 +751,7 @@ Last updated: **2026-11-09**.
 
 - EnemyWaiterSkeletonCreate (0x080AF574) /
   EnemyWaiterSkeletonUpdate (0x080AF650) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_WAITER_SKELETON
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_WAITER_SKELETON
   (0x1E), with the sub_080AF194 attack, sub_080AF2A0 walk,
   sub_080AF450 death and sub_080AF6FC hurt handlers and the
   two linked children sub_080AEC0C (companion, role 64) and
@@ -895,7 +906,7 @@ sub_0806DFF8 (0x1B/0x48 normally, 0xD0/0xDF under the global 0x8E &
 
 - EnemyKickerSkeletonCreate (0x080C0324) /
   EnemyKickerSkeletonUpdate (0x080C03D0) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_KICKER_SKELETON
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_KICKER_SKELETON
   (0x53), with the sub_080BFFF0 eight-case attack machine,
   the sub_080BFF7C contact and sub_080C0478 hurt
   callbacks, and the sub_080C0250 death.
@@ -928,7 +939,7 @@ sub_0806DFF8 (0x1B/0x48 normally, 0xD0/0xDF under the global 0x8E &
 
 - EnemyKillerMantleCreate (0x080BB70C) /
   EnemyKillerMantleUpdate (0x080BB824) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_KILLER_MANTLE
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_KILLER_MANTLE
   (0x55), the enemy_names[85] = "killer_mantle" kind row
   (objects.c: graphics 0x081F421C, palette 0x0820BD04,
   frames 0x0824AE0C, probes 0x085288B4; still frame
@@ -994,7 +1005,7 @@ sub_0806DFF8 (0x1B/0x48 normally, 0xD0/0xDF under the global 0x8E &
 
 - EnemyTsuchinokoCreate (0x080A71CC) /
   EnemyTsuchinokoUpdate (0x080A7B54) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_TSUCHINOKO
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_TSUCHINOKO
   (0x23), with the sub_080A7294 hop table, the
   sub_080A7534 rear-up attack, the sub_080A75B0 death,
   the sub_080A76E0 hurt, the sub_080A776C spit and the
@@ -1022,7 +1033,7 @@ sub_0806DFF8 (0x1B/0x48 normally, 0xD0/0xDF under the global 0x8E &
 
 - EnemyDryadCreate (0x080AEAAC) /
   EnemyDryadUpdate (0x080AEB8C) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_DRYAD
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_DRYAD
   (0x46), the enemy_names[70] = "dryad" kind row
   (objects.c: graphics 0x081E418C, palette 0x0820B768,
   frames 0x082388AC) and role AOS_ROLE_DRYAD_SEED
@@ -1194,7 +1205,7 @@ sub_0806DFF8 (0x1B/0x48 normally, 0xD0/0xDF under the global 0x8E &
 
 - EnemyEvilButcherCreate (0x080BFE1C) /
   EnemyEvilButcherUpdate (0x080BFF14) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_EVIL_BUTCHER
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_EVIL_BUTCHER
   (0x19), the enemy_names[25] = "evil_butcher" kind row
   (objects.c PROBES: graphics 0x082052D0, palette
   0x0820C27C banked by parameter 1, frames 0x08256720,
@@ -1354,7 +1365,7 @@ the create passes sub_0806E1B8 and sub_080BFECC.
 
 - EnemyEctoplasmCreate (0x080995B8) /
   EnemyEctoplasmUpdate (0x080994E0) ported in
-  src/runtime/aos_enemy.c behind AOS_ENEMY_ECTOPLASM
+  src/runtime/aos/core/aos_enemy.c behind AOS_ENEMY_ECTOPLASM
   (0x1B) and the enemy_names[27] = "ectoplasm" kind
   row (objects.c ENTITY: graphics 0x081CC054, palette
   0x0820ABE0 bank 0, frames 0x0822388C, art exported
@@ -1421,7 +1432,7 @@ the create passes sub_0806E1B8 and sub_080BFECC.
 ## Patch 0868 - Sky Fish ported (id 81)
 
 - EnemySkyFishCreate (0x080A7C80) / EnemySkyFishUpdate
-  (0x080A7BD0) ported in src/runtime/aos_enemy.c behind
+  (0x080A7BD0) ported in src/runtime/aos/core/aos_enemy.c behind
   AOS_ENEMY_SKY_FISH (0x51) and the enemy_names[81] =
   "sky_fish" kind row (objects.c ENTITY: graphics
   0x081CC0BC, palette 0x0820B000 bank 0, frames
@@ -1470,7 +1481,7 @@ the create passes sub_0806E1B8 and sub_080BFECC.
 ## Patch 0867 - Bomber Armor ported (id 58)
 
 - EnemyBomberArmorCreate (0x080B2DB8) / EnemyBomberArmorUpdate
-  (0x080B3040) ported in src/runtime/aos_enemy.c behind
+  (0x080B3040) ported in src/runtime/aos/core/aos_enemy.c behind
   AOS_ENEMY_BOMBER_ARMOR (0x3A) and the enemy_names[58] =
   "bomber_armor" kind row (objects.c ENTITY: graphics
   0x081E41BC, palette 0x0820B83C bank 0, frames
@@ -1515,7 +1526,7 @@ the create passes sub_0806E1B8 and sub_080BFECC.
 ## Patch 0866 - Biphron ported (id 78)
 
 - EnemyBiphronCreate (0x08099C5C) / EnemyBiphronUpdate
-  (0x0809A450) ported in src/runtime/aos_enemy.c behind
+  (0x0809A450) ported in src/runtime/aos/core/aos_enemy.c behind
   AOS_ENEMY_BIPHRON (0x4E) and the enemy_names[78] =
   "biphron" kind row (objects.c PROBES: graphics
   0x081CC05C, palette 0x0820AC04, frames 0x08223FF8,
@@ -6654,7 +6665,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0608 - Aria room music
 
-- `src/runtime/aos_room_music.c` ports `sub_08013960`: on each room
+- `src/runtime/aos/core/aos_room_music.c` ports `sub_08013960`: on each room
   load the runtime quiets the music in save and warp rooms, mutes it in
   transition rooms and otherwise plays the area's song or a room's
   special song. The sound export adds `room_music.tsv` (17 save, 8 warp,
@@ -6763,7 +6774,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0600 - Aria native audio controller
 
-- `src/runtime/aos_audio.c` now carries the control portion of `StartSong`
+- `src/runtime/aos/core/aos_audio.c` now carries the control portion of `StartSong`
   and `AudioCommand`: song/player metadata can be injected, song replacement
   follows pause and header priority, and the current-music quirk occurs
   before that priority decision.
@@ -6780,7 +6791,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0599 - Aria PlaySong requests and Axe Armor sound events
 
-- `src/runtime/aos_audio.c` introduces a host-neutral, tested boundary for
+- `src/runtime/aos/core/aos_audio.c` introduces a host-neutral, tested boundary for
   Aria's `PlaySong`: table IDs below 0x400 become start requests,
   `STOP_SONG` masks the ID, and other values become audio-command requests.
   Requests are logged and may be forwarded to a sink.
@@ -7115,7 +7126,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0578 - Aria levels and experience
 
-- `src/runtime/aos_stats.c` ports Aria's level system from
+- `src/runtime/aos/core/aos_stats.c` ports Aria's level system from
   `src/code_08033CAC.c`: starting stats for Soma and Julius, the
   x(x + 1)(3x + 8) experience curve, the level-up loop to 99 with its four
   gain tables, experience to the next level, level setting and Julius'
@@ -9743,7 +9754,7 @@ numbers and hit-feedback comparisons.
   the gun drawn at Soma's hand, the accelerating shot with the box packed
   in the pointer `0x0810FCF8` (-8, -4, 16, 8), its wall impact and the
   bouncing shell casing `sub_080228F8`.
-- Moved the shared effects to `src/runtime/aos_effect.c` / `.h` (weapons
+- Moved the shared effects to `src/runtime/aos/core/aos_effect.c` / `.h` (weapons
   now emit them too) and added the impact and casing; the exporter adds
   `Effect/impact` and `Effect/casing`.
 - Checked in room 0/15 with weapon 55 (`--spawn 120 446 --weapon 55
@@ -11707,7 +11718,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   Bit 3 and a few rare values remain unidentified (`docs/AOS_SOMA.md`).
 - Added `scripts/aos_runtime_room.py` (342 of 343 rooms export background and
   native collision bytes, with the slope X-flip toggle applied as the game
-  does) and `src/runtime/aos_collision.c`, a ROM-free port of the collision
+  does) and `src/runtime/aos/core/aos_collision.c`, a ROM-free port of the collision
   primitives with tests. The Aria importer now also records per-cell block
   X flips.
 - Recorded the probe points of Soma's collision routine `sub_08014A04` as
@@ -11717,7 +11728,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0201 - Soma motion rules
 
-- Added `src/runtime/aos_soma.c`, a ROM-free port of the verified Soma motion
+- Added `src/runtime/aos/core/aos_soma.c`, a ROM-free port of the verified Soma motion
   rules from cvaos: position integration and fall cap (`sub_0801B0D8`),
   steering with friction, the normal jump and its three-frame coyote window
   (`sub_08019180`), jump release, apex float and slow fall (`sub_0801938C`),
@@ -11732,7 +11743,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0202 - Soma collision pass
 
 - Ported the tile path of Soma's collision pass `sub_08014A04` into
-  `src/runtime/aos_soma.c`: wall pushes from the ROM probe lists with the
+  `src/runtime/aos/core/aos_soma.c`: wall pushes from the ROM probe lists with the
   quarter bounce, ceiling flags, bit-3 flags, floor snap with the step-down
   probe, slope flags, one-way platform catching and normal/hard landings; the
   gravity routine now bumps the head on ceilings. The order and constants
@@ -11765,7 +11776,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0204 - Soma animation timing and requests
 
-- Added `src/runtime/aos_anim.c`, a port of the animation start
+- Added `src/runtime/aos/core/aos_anim.c`, a port of the animation start
   `sub_0803F2C8` and the encoding-1 step `sub_0803EC34`, and wired Soma's
   native animation requests: idle, walk start/walk, turn, stop, crouch
   down/crouch/stand up, look up, jump/forward jump/fall, landing and hard
@@ -11894,7 +11905,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 - Traced the shared enemy framework (spawn stats, activity window,
   facing, collision and damage call chain) and ported the parts the bat
-  needs into `src/runtime/aos_enemy.c`, with the native random generator and
+  needs into `src/runtime/aos/core/aos_enemy.c`, with the native random generator and
   the sine of `sub_080009E4` (computed; it matches all 1024 table entries).
 - Ported the bat's create (ceiling climb) and states 1 and 2 (hang, alert,
   stretch, hop, dive, sine-wave flight, off-screen deletion) with ROM-free
@@ -11912,7 +11923,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   rectangles, inclusive overlaps, recent-hit slots with per-type cooldowns
   (81 frames of immunity after an enemy hit), the cooldown tick, the enemy
   damage formula with weaknesses and resistances and the player damage
-  formula (`src/runtime/aos_combat.c`), plus Soma's hurtbox at every
+  formula (`src/runtime/aos/core/aos_combat.c`), plus Soma's hurtbox at every
   animation change.
 - Bats now hurt Soma on contact and die to his weapon: frame boxes, the hit
   callback and the death state (fall, blink, deletion) are ported; enemy
@@ -12093,7 +12104,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0223 - native blue crows
 
-- Ported the blue crow (Aria enemy 0x09) into `src/runtime/aos_enemy.c`: it
+- Ported the blue crow (Aria enemy 0x09) into `src/runtime/aos/core/aos_enemy.c`: it
   perches until Soma comes within 60 pixels, flaps in place for 33 frames,
   then whenever he is more than 72 pixels away horizontally and 16 vertically
   flies at 1.625 per frame to 42 pixels above and 32 pixels behind him.

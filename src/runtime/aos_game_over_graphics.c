@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_game_over_graphics.h"
 
-#include "aos_rom_graphics.h"
+#include "aos/core/aos_rom_graphics.h"
 
 #include <stdio.h>
 #include <stdlib.h>

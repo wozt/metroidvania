@@ -20,7 +20,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos_anim.h"
+#include "aos/core/aos_anim.h"
 #include "aos_title_layers.h"
 
 enum { AOS_TITLE_W = 240, AOS_TITLE_H = 160, AOS_TITLE_WAVE_LINES = 120,

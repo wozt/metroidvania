@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 /* 0x080E1918: the ground and air cast animations of the four poses. */
 static const uint8_t cast_animations[4][2] = {{22, 49}, {78, 78}, {79, 79}, {80, 80}};

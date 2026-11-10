@@ -1364,11 +1364,11 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         fusion_json_free(&items);
         return false;
     }
-    char *header = read_file("src/runtime/aos_enemy.h", NULL);
+    char *header = read_file("src/runtime/aos/core/aos_enemy.h", NULL);
     if (!header) {
         free_aos_catalog(&catalog);
         fusion_json_free(&aspects);
-        return fail("cannot read src/runtime/aos_enemy.h");
+        return fail("cannot read src/runtime/aos/core/aos_enemy.h");
     }
     /* Per aspect: monsters ported, partial, missing; complete monsters have
      * every aspect ported or n/a. */

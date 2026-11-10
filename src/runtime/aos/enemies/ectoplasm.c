@@ -4,9 +4,9 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 /* sub_08099690: state 0 of the ectoplasm drift. Step 0 hovers at the home
  * point (+ 0x14/+ 0x18, here in world pixels — the gEwramData + 0xA094

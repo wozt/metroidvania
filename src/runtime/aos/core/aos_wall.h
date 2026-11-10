@@ -28,7 +28,7 @@
 #include "aos_combat.h"
 #include "aos_effect.h"
 #include "aos_soma.h"
-#include "aos/weapons/aos_weapon.h"
+#include "../weapons/aos_weapon.h"
 
 enum { AOS_WALL_ENTRIES = 18, AOS_WALL_DUSTS = 4, AOS_WALL_MAX_EFFECTS = 32,
        AOS_WALL_EVENT_WORDS = 8 };

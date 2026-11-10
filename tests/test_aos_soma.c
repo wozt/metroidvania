@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow Soma motion rules. */
-#include "aos_soma.h"
-#include "aos_audio.h"
+#include "aos/core/aos_soma.h"
+#include "aos/core/aos_audio.h"
 #include "aos/souls/aos_soul.h"
 
 #include <assert.h>

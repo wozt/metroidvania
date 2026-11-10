@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "aos_stats.h"
+#include "aos/core/aos_stats.h"
 
 enum {
     AOS_OPENING_TEXT_ID = 0x000C,

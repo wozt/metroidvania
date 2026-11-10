@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Local GTK4 browser for ROM-derived Aria and Zero Mission sound entries. */
-#include "aos_audio.h"
-#include "aos_mp2k.h"
+#include "aos/core/aos_audio.h"
+#include "aos/core/aos_mp2k.h"
 #include "mzm_audio.h"
 #include "mzm_sound_ids.h"
 #include "metroidvania_split_audio.h"

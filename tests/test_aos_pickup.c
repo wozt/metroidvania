@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_pickup.h"
-#include "aos_enemy.h"
-#include "aos_effect.h"
+#include "aos/core/aos_enemy.h"
+#include "aos/core/aos_effect.h"
 
 #include <assert.h>
 #include <stdio.h>

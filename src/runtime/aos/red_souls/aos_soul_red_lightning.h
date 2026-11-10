@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_combat.h"
+#include "../../aos/core/aos_combat.h"
 
 /* SkillLightningDollUse (0x080277B0): a bolt ahead of Soma whose attack
  * box reaches further every frame. */

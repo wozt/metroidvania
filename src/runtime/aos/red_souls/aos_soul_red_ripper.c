@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_ripper.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 /* Preserve GBA-style 32-bit wrapping without signed-overflow UB. */
 static int32_t add32(int32_t a, int32_t b) {

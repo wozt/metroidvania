@@ -15,10 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "aos_audio.h"
+#include "aos/core/aos_audio.h"
 #include "aos_game_mode.h"
-#include "aos_input.h"
-#include "aos_mp2k.h"
+#include "aos/core/aos_input.h"
+#include "aos/core/aos_mp2k.h"
 #include "aos_title_graphics.h"
 #include "aos_title_screen.h"
 #include "fusion_host.h"

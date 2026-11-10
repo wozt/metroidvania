@@ -4,9 +4,9 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 /* sub_080CB5E0: the animation loops with a pause of 0 to 127 frames
  * (RandomNumberGenerator & 0x7F) after every cycle; with parameter 0 set

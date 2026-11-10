@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Aria of Sorrow weapon entity. */
 #include "aos/weapons/aos_weapon.h"
-#include "aos_audio.h"
+#include "aos/core/aos_audio.h"
 
 #include <assert.h>
 #include <stdio.h>

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_collision.h"
+#include "../../aos/core/aos_collision.h"
 
 /* SkillKillerDollUse (0x08024F38): a thrown doll the enemies aim at
  * (gEwramData + 0x13168) until it vanishes. It has no attack. */

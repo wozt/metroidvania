@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_enemy.h"
+#include "../../aos/core/aos_enemy.h"
 
 enum { AOS_GLADIATOR_MOVING = 1, AOS_GLADIATOR_ENDING = 2 };
 

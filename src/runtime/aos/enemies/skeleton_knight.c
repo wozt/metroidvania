@@ -4,8 +4,8 @@
  * This family is a separate translation unit and uses the shared internal
  * enemy framework API. */
 
-#include "../../aos_enemy_internal.h"
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_enemy_internal.h"
+#include "../../aos/core/aos_audio.h"
 
 /* The skeleton knight's turn to the player, then walking (or backing)
  * at the given pace with vy 1.0 and + 0x54 = 0x2800. */

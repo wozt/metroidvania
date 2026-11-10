@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_soul_red_axe.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 AosAxe aos_axe_create(int32_t soma_x, int32_t soma_y, bool soma_facing_left) {
     /* SkillAxeArmorUse calls PlaySong(0xE3) when it creates the axe. */

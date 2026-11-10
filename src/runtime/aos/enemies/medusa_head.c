@@ -4,7 +4,7 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
 /* sub_08093A3C: vy swings by + 0x54 (subtracted while + 0x20 is set),
  * + 0x20 flips every + 0x22 frames (+ 0x21 counts), then the move

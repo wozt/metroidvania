@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 enum {
     AOS_BUTTON_ATTACK,

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_enemy.h"
+#include "../../aos/core/aos_enemy.h"
 
 /* One record of 0x084F12C8 (8 x 24 bytes), the table of
  * Skill_Skeleton_ZombieSoldier_RockArmor_WaiterSkeleton_GiantSkeleton_BomberArmor_Use

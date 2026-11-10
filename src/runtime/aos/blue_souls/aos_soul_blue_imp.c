@@ -2,7 +2,7 @@
 /* SkillImpUse (see aos_soul_blue_imp.h). */
 #include "aos_soul_blue_imp.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 #include "../../aos/math/aos_math.h"
 
 /* Sqrt (BIOS call 0x08): the integer square root, rounded down. */

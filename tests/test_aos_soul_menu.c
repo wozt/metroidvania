@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 #include "aos/souls/aos_soul_menu.h"
 
 int main(void) {

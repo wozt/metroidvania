@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "aos_game_mode.h"
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 #include "aos/math/aos_math.h"
 
 enum {

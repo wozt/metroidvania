@@ -3,7 +3,7 @@
 #define AOS_GAME_MODE_H
 #include <stdbool.h>
 #include <stdint.h>
-#include "aos_input.h"
+#include "aos/core/aos_input.h"
 
 /* Pure mode dispatch state from main.c, without graphics or host lifecycle. */
 typedef struct {

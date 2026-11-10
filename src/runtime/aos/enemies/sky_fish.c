@@ -4,7 +4,7 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
 /* Sky Fish state 0 (sub_080A7D58): the entry waits out + 0x1A while hidden,
  * then crosses the top of the screen. Step 0 plants it on the entry side

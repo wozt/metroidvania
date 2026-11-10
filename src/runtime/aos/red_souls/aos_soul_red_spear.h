@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_collision.h"
+#include "../../aos/core/aos_collision.h"
 
 /* SkillWingedSkeletonUse's spear. */
 typedef struct {

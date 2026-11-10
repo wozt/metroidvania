@@ -4,9 +4,9 @@
  * This family is a separate translation unit and uses only the prefixed
  * internal enemy-framework API. */
 
-#include "../../aos_enemy_internal.h"
+#include "../../aos/core/aos_enemy_internal.h"
 
-#include "../../aos_audio.h"
+#include "../../aos/core/aos_audio.h"
 
 /* Curly's walk speed (0.5) toward its facing, slowed uphill. */
 static void curly_pace(AosEnemy *c, const AosCollision *layer) {

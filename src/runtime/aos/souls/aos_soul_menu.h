@@ -9,7 +9,7 @@
 
 #include "../../aos_bestiary.h"
 #include "../../aos_recent_items.h"
-#include "../../aos_stats.h"
+#include "../../aos/core/aos_stats.h"
 
 enum {
     AOS_SOUL_MENU_RED,

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_enemy.h"
+#include "../../aos/core/aos_enemy.h"
 
 enum { AOS_FLEA_FRAMES = 0xA0, AOS_FLEA_END_SEQUENCE = 1, AOS_FLEA_END_FRAMES = 0x10 };
 

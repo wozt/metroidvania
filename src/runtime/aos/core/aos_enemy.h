@@ -154,6 +154,7 @@ enum {
     AOS_ENEMY_CHRONOMAGE = 0x28,
     AOS_ENEMY_MANDRAGORA = 0x4F,
     AOS_ENEMY_DISC_ARMOR = 0x34,
+    AOS_ENEMY_ALURA_UNE = 0x4D,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -195,7 +196,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_CHRONO_WISP = 68, AOS_ROLE_MANDRAGORA_BODY = 69,
        AOS_ROLE_MANDRAGORA_TAIL = 70, AOS_ROLE_MANDRAGORA_SEED = 71,
        AOS_ROLE_DISC_BLADE = 72, AOS_ROLE_DISC_SHARD = 73,
-       AOS_ROLE_DISC_GLOW = 74 };
+       AOS_ROLE_DISC_GLOW = 74, AOS_ROLE_ALURA_SCYTHE = 75,
+       AOS_ROLE_ALURA_BLADE = 76 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -418,6 +420,16 @@ typedef struct AosEnemy {
     int32_t da_ox, da_oy, da_radius, da_speed, da_momentum, da_launch,
             da_lvy, da_heading, da_spin;
     struct AosEnemy *da_glow;
+    /* Alura Une (EnemyAluraUneCreate 0x0807C0A0, update 0x0807CF9C;
+     * scythe sub_0807C9A4/sub_0807CAD4, orbit blade sub_0807CC9C/
+     * sub_0807CDA8): + 0x20 the aggro box already seen, + 0x21 the hurt
+     * reaction owed, + 0x6D the once-only 0x6A hurt song and the
+     * previous animation frame for the state-1 blade spawns; a blade's
+     * + 0x18 facing-flip counter and + 0x20 (u16) flight life; + 0x72
+     * bit 2 the launch mark, + 0x73 bit 1 the landed mark and + 0x59
+     * bits 1/3 the blade's launch/expiry flags. */
+    uint8_t au_seen, au_react, au_hurted, au_prev_frame, au_blade_flags;
+    uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

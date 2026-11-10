@@ -1,6 +1,35 @@
 # Project status
 
-Last updated: **2026-11-09**.
+Last updated: **2026-11-10**.
+
+## Patch 0961 - Alura Une ported (id 77)
+
+- `EnemyAluraUneCreate` (0x0807C0A0) /
+  `EnemyAluraUneUpdate` (0x0807CF9C) plus the scythe-phase handler
+  (sub_0807C150), blade-phase handler (sub_0807C494), materialize
+  (sub_0807C888), hurt (sub_0807C8FC), scythe spawn/update
+  (sub_0807C9A4 / sub_0807CAD4) and orbit-blade spawn/update
+  (sub_0807CC9C / sub_0807CDA8) are ported as
+  `src/runtime/aos/enemies/alura_une.c` with two new child roles
+  (scythe, orbit blade) wired through `aria_runtime.c`.
+- Both fight phases run the native 14-entry sub-state machine on
+  + 0x0B: state 0 throws scythe volleys, state 1 throws the delayed
+  fan and emits orbit blades on the + 0x6E frame words 3 and 4;
+  state 2 is the shared generic death, state 3 the materialize.
+- Resources from the ROM: tiles 0x081CBF9C, palette 0x0820A674,
+  frames 0x08218D3C. Songs 0x6A (first hurt), 0x6E (death) and 0x80
+  (orbit blade) are requested at the native points; unit-tested in
+  `alura_une_tests`.
+- Verified in game in `area_10_room_003`: the boss aggros, throws
+  scythes and orbit blades — four hits for 75-84 damage observed and
+  Soma killed at frame 411; captures at frames 300/500 show the
+  animated fight.
+- Ported enemies: 66/113. Blue soul 17 (Alura Une healer) is already
+  ported through SkillAluraUneUse. Divergences are listed in
+  `data/native_parity/annotations.tsv` (the 0x105 room events and
+  sub_08011F7C screen pulses not ported, the sub_0806D54C aggro
+  helper and several native helpers approximated, the eight-child
+  cap truncating the twelve-blade volley, no emulator comparison).
 
 ## Patch 0960 - Disc Armor ported (id 52)
 

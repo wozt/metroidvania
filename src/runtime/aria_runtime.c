@@ -162,6 +162,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [74] = "ripper",
                                                      [62] = "giant_worm",
                                                      [71] = "poison_worm",
+                                                     [77] = "alura_une",
                                                      [78] = "biphron",
                                                      [81] = "sky_fish",
                                                      [85] = "killer_mantle",
@@ -2973,7 +2974,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_MANDRAGORA_SEED ||
                                        hit.children[c].role == AOS_ROLE_DISC_BLADE ||
                                        hit.children[c].role == AOS_ROLE_DISC_SHARD ||
-                                       hit.children[c].role == AOS_ROLE_DISC_GLOW
+                                       hit.children[c].role == AOS_ROLE_DISC_GLOW ||
+                                       hit.children[c].role == AOS_ROLE_ALURA_SCYTHE ||
+                                       hit.children[c].role == AOS_ROLE_ALURA_BLADE
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

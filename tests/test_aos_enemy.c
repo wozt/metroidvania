@@ -5133,6 +5133,159 @@ static void disc_armor_tests(void) {
     assert(e.removed);
 }
 
+static void alura_une_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-0xD: 0 idle loop, 1-6 the fight cycles, 7-8 the
+     * launched scythe, 9 the orbit blade, 0xA-0xD the spin frames. */
+    static const uint8_t four[4] = {4, 4, 4, 4};
+    const AosAnimDef defs[14] = {
+        {4, four}, {4, four}, {4, four}, {4, four}, {4, four},
+        {4, four}, {4, four}, {4, four}, {4, four}, {4, four},
+        {4, four}, {4, four}, {4, four}, {4, four}};
+    const AosAnimSet anims = {defs, 14};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 14; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-24, -48, 48, 48};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    /* enemies.tsv id 77 (0x4D): hp 800, contact 53, defence 50,
+     * weak 0x0802, experience 400. */
+    const AosEnemyStats stats = {800, 53, 50, 0x0802, 0, 400};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+
+    /* EnemyAluraUneCreate (0x0807C0A0): animation 0 looping, state 0;
+     * the 0x8E & 0x40 flag path is the materialize state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_ALURA_UNE, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.anim.id == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_ALURA_UNE, 200, 150, 0,
+                            0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 3);
+    /* State 3 (sub_0807C888): the 0x3B timer gate, then two animation
+     * gates advance the steps to the looping animation 4. */
+    flagged.timer = 0x3B;
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(flagged.step == 1 && flagged.anim.id == 1);
+    flagged.cycle_done = true;
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(flagged.step == 2 && flagged.anim.id == 3);
+    flagged.cycle_done = true;
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(flagged.step == 3 && flagged.anim.id == 4);
+
+    /* State 0 step 0 (sub_0807C150): the aggro box arms the + 0x20 seen
+     * flag and jumps to sub-state 10. */
+    soma.x = e.x;
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.au_seen == 1 && e.step == 10);
+    /* Sub-state 10 (sub_0807C9A4 x8): four scythe pairs with the 0x28
+     * life and the immediate state-2 launch. */
+    AosHitReport volley = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+    assert(volley.child_count == 8);
+    for (int i = 0; i < 8; ++i) {
+        assert(volley.children[i].role == AOS_ROLE_ALURA_SCYTHE);
+        assert(volley.children[i].parent == &e);
+        assert(volley.children[i].au_life == 0x28);
+        assert(volley.children[i].state == 2);
+    }
+    AosEnemy scythe = volley.children[0];
+    scythe.parent = &e;
+
+    /* The scythe (sub_0807CAD4): state 2 flies until the animation ends,
+     * state 3 runs the + 0x20 life, state 4 ends on the parent check. */
+    scythe.cycle_done = true;
+    (void)aos_enemy_update(&scythe, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(scythe.state == 3);
+    scythe.timer = 0x28;
+    (void)aos_enemy_update(&scythe, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    /* The boss still lives (state 0): the scythe keeps flying. */
+    assert(scythe.state == 3);
+    e.state = 2; /* the lethal path of sub_0807C8FC */
+    scythe.cycle_done = true;
+    (void)aos_enemy_update(&scythe, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(scythe.state == 4);
+    scythe.cycle_done = true;
+    (void)aos_enemy_update(&scythe, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(scythe.removed);
+    e.state = 0;
+
+    /* State 1 sub-state 1 (sub_0807C494): the delayed scythe volley —
+     * up to twelve children on the 0x6E life (capped at eight). */
+    e.state = 1;
+    e.step = 1;
+    e.cycle_done = true;
+    AosHitReport fan = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                         NULL, 10, 4, 0, 0, always_zero);
+    assert(fan.child_count > 0 && fan.child_count <= 8);
+    for (int i = 0; i < fan.child_count; ++i) {
+        assert(fan.children[i].role == AOS_ROLE_ALURA_SCYTHE);
+        assert(fan.children[i].au_life == 0x6E);
+        assert(fan.children[i].state == 0);
+    }
+
+    /* State 1 sub-state 12: the + 0x6E frame word 3 emits two orbit
+     * blades (sub_0807CC9C) with facing and its complement. */
+    e.step = 12;
+    e.anim.frame = 3;
+    e.anim.tick = 0;
+    e.cycle_done = false;
+    AosHitReport orbit = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                           NULL, 10, 4, 0, 0, always_zero);
+    assert(orbit.child_count == 2);
+    assert(orbit.children[0].role == AOS_ROLE_ALURA_BLADE &&
+           orbit.children[1].role == AOS_ROLE_ALURA_BLADE);
+    assert(orbit.children[0].mirrored != orbit.children[1].mirrored);
+    AosEnemy blade = orbit.children[0];
+    blade.parent = &e;
+    /* The orbit blade (sub_0807CDA8): song 0x80 on the frame word
+     * 0x100, then the hidden/reveal cycle on the + 0x18 counter. */
+    blade.anim.frame = 0;
+    blade.anim.tick = 0; /* step_anim advances it to the 0x100 word */
+    (void)aos_enemy_update(&blade, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x80) == 1);
+    /* Seven reveal cycles move the + 0x18 counter past the flip marks. */
+    for (int i = 0; i < 40 && !blade.removed; ++i) {
+        blade.anim.flags |= AOS_ANIM_ENDED;
+        blade.cycle_done = i % 2 == 0;
+        (void)aos_enemy_update(&blade, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    }
+    assert(blade.spawned_count > 0);
+
+    /* The lethal path: state 2 runs the shared generic death and
+     * removes the boss. */
+    e.state = 2;
+    e.timer = 1;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.removed);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -8259,6 +8412,7 @@ int main(void) {
     chronomage_tests();
     mandragora_tests();
     disc_armor_tests();
+    alura_une_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

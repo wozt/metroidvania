@@ -408,7 +408,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_KICKER_SKELETON && id != AOS_ENEMY_WAITER_SKELETON &&
         id != AOS_ENEMY_COCKATRICE && id != AOS_ENEMY_CHRONOMAGE &&
         id != AOS_ENEMY_MANDRAGORA && id != AOS_ENEMY_DISC_ARMOR &&
-        id != AOS_BOSS_HEADHUNTER)
+        id != AOS_ENEMY_ALURA_UNE && id != AOS_BOSS_HEADHUNTER)
         return false;
     const AosAnimSet *anims = kind->anims;
     *enemy = (AosEnemy){.id = id, .x = (int32_t)((uint32_t)x << 16), .y = (int32_t)((uint32_t)y << 16),
@@ -1009,6 +1009,25 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         snap_to_floor(enemy, layer);
         enemy->state = 1;
+        enemy->step = enemy->substep = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_ALURA_UNE) {
+        /* EnemyAluraUneCreate (0x0807C0A0): sub_0807CF20 loads tiles
+         * 0x081CBF9C, palette 0x0820A674 and frames 0x08218D3C;
+         * sub_0803F2C8(0, 0, 1) presets animation 0 looping, the
+         * sub_080427B8/sub_0804277C callbacks (the choice reads
+         * sub_0806D260, not ported) install the sub_0807CF6C contact
+         * and sub_0807C8FC hurt, sub_0806AF98 snaps to the floor and
+         * the global 0x8E & 0x40 sends it to state 3, else state 0. */
+        play_loop(enemy, anims, 0, true);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        snap_to_floor(enemy, layer);
+        enemy->state = 0;
         enemy->step = enemy->substep = 0;
         return true;
     }
@@ -2067,6 +2086,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0;
+                } else if (enemy->id == AOS_ENEMY_ALURA_UNE &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_0807C8FC's lethal path: sub_08013E18(0x105)
+                     * room event and sub_080683BC (done by the caller)
+                     * not ported, the + 0x5A palette merge (not
+                     * ported), timer 0x28, state 2, steps cleared,
+                     * song 0x6E. */
+                    aos_audio_play_song(0x6E);
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
                 } else {
                     /* sub_0807B0DC: death animation 3, 40 frames (sound 0x70;
                      * sub_080683BC and the gore of sub_0807B258 are not
@@ -3007,6 +3037,20 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         aos_enemy_disc_glow_update(enemy, kind);
         return report;
     }
+    if (enemy->role == AOS_ROLE_ALURA_SCYTHE)
+        return aos_enemy_alura_scythe_update(enemy, soma, layer, kind,
+                                             weapon, weapon_frames,
+                                             soma_atk, soma_def, cam_x,
+                                             cam_y, random);
+    if (enemy->role == AOS_ROLE_ALURA_BLADE)
+        return aos_enemy_alura_blade_update(enemy, soma, layer, kind,
+                                            weapon, weapon_frames,
+                                            soma_atk, soma_def, cam_x,
+                                            cam_y, random);
+    if (enemy->id == AOS_ENEMY_ALURA_UNE && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_alura_une_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_DISC_ARMOR && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_disc_armor_update(enemy, soma, layer, kind, weapon,
                                            weapon_frames, soma_atk, soma_def,

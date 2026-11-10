@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 96 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 97 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1215 | 2358 |
+| Castlevania: Aria of Sorrow | 1229 | 2344 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1357,6 +1357,15 @@ Evidence: in game: `aria area_00_room_015 (--spawn 120 446 --hitboxes): weapons 
 ### Enemies
 
 [?] **`aos.enemies.inventory-boundary` — source coverage.** The current classifier assigns 1518 discovered routine(s) to this category (228 by native name, 1290 by exclusive referrers). Category completeness has not been established.
+
+[+] **`aos.enemies.alura_une` — Alura Une.** EnemyAluraUneCreate (0x0807C0A0) loads tiles 0x081CBF9C, palette 0x0820A674 and frames 0x08218D3C through sub_0807CF20, presets animation 0 looping, installs the sub_0807CF6C contact and sub_0807C8FC hurt callbacks and enters state 3 under the global 0x8E & 0x40 else state 0. State 0 (sub_0807C150) is the scythe phase: sub-state 0 aggros on the sub_0806CFFC box and the + 0x20 seen flag, sub-states 1-6 run the anim gates, and sub-states 10-13 throw four scythe pairs through sub_0807C9A4. State 1 (sub_0807C494) is the blade phase: sub-state 1 throws the delayed 0x6E-life volley on random excluded slots, sub-states 3-6 run the long spin, and sub-state 12 emits the sub_0807CC9C orbit blades on the + 0x6E frame words 3 and 4. State 2 is the shared sub_0806AEAC generic death, state 3 (sub_0807C888) the materialize sequence; the hurt sub_0807C8FC plays song 0x6A once, song 0x6E and state 2 on the lethal blow. The scythe (sub_0807CAD4) delays, launches at timer 8, flies its + 0x20 life and dies with the boss; the orbit blade (sub_0807CDA8) plays song 0x80 and loops its hidden/reveal cycle; unit-tested in alura_une_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806AEAC`, `aos:asm:asm/code/code_08060B98.s:sub_0806B7D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806CC20`, `aos:asm:asm/code/code_08060B98.s:sub_0806CF2C`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806DCC4`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080709D8.s:EnemyAluraUneCreate`, `aos:asm:asm/code/code_080709D8.s:EnemyAluraUneUpdate`, `aos:asm:asm/code/code_080709D8.s:sub_0807C150`, `aos:asm:asm/code/code_080709D8.s:sub_0807C494`, `aos:asm:asm/code/code_080709D8.s:sub_0807C888`, `aos:asm:asm/code/code_080709D8.s:sub_0807C8FC`, `aos:asm:asm/code/code_080709D8.s:sub_0807C9A4`, `aos:asm:asm/code/code_080709D8.s:sub_0807CAD4`, `aos:asm:asm/code/code_080709D8.s:sub_0807CC9C`, `aos:asm:asm/code/code_080709D8.s:sub_0807CDA8`, `aos:asm:asm/code/code_080709D8.s:sub_0807CEF0`, `aos:asm:asm/code/code_080709D8.s:sub_0807CF20`, `aos:asm:asm/code/code_080709D8.s:sub_0807CF6C`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/alura_une.c`](../src/runtime/aos/enemies/alura_une.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The 0x105 room events (sub_08013D60/sub_08013DA8/sub_08013E18) and the sub_08011F7C screen pulses are not ported, the sub_0806D54C aggro helper is approximated by the centred player box, the sub_0806D260 callback variant, sub_0806B1FC, sub_0806AF98, sub_0806B04C, sub_08042B8C, sub_080421AC and sub_08042848 are approximated or skipped, the scythe's sub_0806DCC4 launch velocity picks are approximated, the eight-child report cap truncates the twelve-blade state-1 volley, the + 0x6E frame-word gates are tracked as frame edges, and there is no emulator comparison.  
+Next action: Compare the phase timing, volley patterns and blade orbit against an emulator; port the 0x105 room events and the sub_08011F7C screen pulses.
+Evidence: in game: `aria area_10_room_003 (--spawn 340 170 --hp 99999 --def 65000): Alura Une aggros, throws scythes and orbit blades - four hits for 75-84 damage observed and Soma killed at frame 411 without the defense flags; captures at frames 300 and 500 show the animated fight`.
 
 [+] **`aos.enemies.axe_armor` — Axe armor, its axe and the probe walker.** Walking with the native probe walker, patrols, high and low throws, the returning axe with its strike flame (sub_0806D5C0), the death with its fire column and sparks (sub_080B11DC / sub_08045CEC: animation 1 row 8, animation 16 row 6) and state 3 under gEwramData + 0x8E bit 0x40 are ported. PlaySong requests occur for a struck axe (0x86), death start (0x6F), each eighth-frame spark (0x6E) and the red-soul axe (0xE3); the runtime resolves them through the exported 495-entry gSongTable. Source-derived and unit-tested, not emulator-compared.
 

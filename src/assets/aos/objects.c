@@ -427,6 +427,12 @@ static const EntitySpec entities[] = {
      * 4-5. */
     {"disc_armor", 0x081E41B4, 0x0820B818, 0, 0x0823D78C,
      0, 0, 0, 0, {0}},
+    /* EnemyAluraUneCreate (0x0807C0A0) through sub_0807CF20, shared by
+     * the boss and the sub_0807C9A4 scythes and sub_0807CC9C orbit
+     * blades: tiles 0x081CBF9C, palette 0x0820A674, frames
+     * 0x08218D3C. */
+    {"alura_une", 0x081CBF9C, 0x0820A674, 0, 0x08218D3C,
+     0, 0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

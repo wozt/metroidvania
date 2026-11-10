@@ -2,6 +2,31 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0964 - Ukoback ported (id 76)
+
+- `EnemyUkobackCreate` (0x080C5BDC) / `EnemyUkobackUpdate`
+  (0x080C6480) plus the `sub_080C5CE8` hop, `sub_080C5F10`
+  shatter, `sub_080C5FA0`/`sub_080C610C` peeked creature and
+  `sub_080C61F4` lid as `src/runtime/aos/enemies/ukoback.c`.
+  The pot hops on a `umod(random, 0x168) + 0x50` cooldown,
+  peeks up to eight creatures (song 0x78 in the centred box),
+  and shatters on the lethal blow (song 0x72, direct frame 9,
+  sink at `vy 0x8000`, lid child on the `sub_0806D518` blink).
+  Resources tiles `0x081F425C`, palette `0x0820BEA4`, frames
+  `0x0824D198`, exported as `ukoback` in `objects.c`; two new
+  child roles (`UKOBACK_CREATURE`, `UKOBACK_LID`).
+- Documented approximations: the `sub_080C6310`/`sub_080C639C`
+  shard entities are `AOS_EFFECT_BURST_15` drifts (same
+  special-15 row-7 art), the room-edge bounce uses screen
+  margins for the native scroll/probe checks, the creature's
+  `+0x14` drift is a fixed countdown, and the lid's sunk mark
+  uses the fall timer.
+- Verified in game in `area_07_room_010`: three hits on Soma
+  (76 + 88 + 88 damage).
+- Ported enemies: 69/113. Red soul 28 has no ported update
+  yet, so the soul aspect stays partial. No emulator
+  comparison.
+
 ## Patch 0963 - Basilisk ported (id 100)
 
 - `EnemyBasiliskCreate` (0x080BC1F8) calls `sub_080BBFF0(e, 1)`

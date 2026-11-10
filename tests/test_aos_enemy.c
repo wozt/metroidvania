@@ -5316,6 +5316,116 @@ static void alura_une_tests(void) {
     assert(e.removed);
 }
 
+static void ukoback_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    static const uint8_t four[4] = {6, 6, 6, 6};
+    const AosAnimDef defs[4] = {{4, four}, {4, four}, {4, four}, {4, four}};
+    const AosAnimSet anims = {defs, 4};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 76: hp 80, field_e 999, contact 40, defence 20,
+     * weak 0x0124, resist 0x0012, experience 180. */
+    const AosEnemyStats stats = {80, 40, 20, 0x0124, 0x0012, 180};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+
+    /* EnemyUkobackCreate (0x080C5BDC): state 0 with the sub_080C6510
+     * contact and sub_080C653C hurt; the global 0x8E & 0x40 sends it
+     * to the inert state 1 instead. */
+    AosEnemy u;
+    assert(aos_enemy_create(&u, AOS_ENEMY_UKOBACK, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(u.state == 0 && u.hp == 80 && u.uk_timer == 0 && u.uk_peek == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ui;
+    assert(aos_enemy_create(&ui, AOS_ENEMY_UKOBACK, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ui.state == 1);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* sub_080C5CE8: the first substep arms vx = vy = 0xC000 and the
+     * cooldown umod(random, 0x168) + 0x50; script {0x200, 0, 1} keeps
+     * both directions positive (the vy draw inverts on a clear bit). */
+    script = (const uint32_t[]){0x200, 0, 1, 0, 0, 0, 0, 0,
+                                0, 0, 0, 0, 0, 0, 0, 0};
+    script_at = 0;
+    int32_t x0 = u.x, y0 = u.y;
+    AosHitReport r = aos_enemy_update(&u, &soma, &layer, &kind, NULL,
+                                      NULL, 10, 4, 0, 0, scripted);
+    assert(u.vx == 0xC000 && u.vy == 0xC000 && u.mirrored);
+    assert(u.x == x0 + 0xC000 && u.y == y0 + 0xC000);
+    assert(u.uk_timer == 0xE8);   /* umod(0x200, 0x168) + 0x50 = 0x98+0x50 */
+
+    /* Once the countdown reaches 0 and uk_peek <= 7 the pot emits the
+     * peeked creature (sub_080C6590 -> sub_080C5FA0): same id, role
+     * UKOBACK_CREATURE, parent pointer, hp 1, anim 1. The spawn check
+     * runs after the decrement, so a timer of 1 expires this frame. */
+    u.uk_timer = 1;
+    r = aos_enemy_update(&u, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                         0, 0, scripted);
+    assert(r.child_count == 1 && r.children[0].id == AOS_ENEMY_UKOBACK &&
+           r.children[0].role == AOS_ROLE_UKOBACK_CREATURE &&
+           r.children[0].parent == &u && r.children[0].hp == 1 &&
+           u.uk_peek == 1);
+    /* sub_080C5FA0's sub_08068AD4 box (-0x80, -0x40, 0x120, 0x100
+     * centred) contains Soma here: song 0x78. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x78) == 1);
+
+    /* sub_080C610C: the creature counts + 0x1C up to 0x3FF, then
+     * enters the 0xFF drift; a soma touch bursts it into the shard
+     * effects and the same drift. */
+    AosEnemy c = r.children[0];
+    c.walk_timer = 0x3FF;
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     always_zero);
+    assert(c.state == 0xFF);
+    /* The drift integrates + 0x14/+ 0x18; with the offsets still at
+     * their 0x10000 init the first pass counts them down through vx. */
+    int32_t tx0 = c.target_x;
+    aos_enemy_update(&c, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     always_zero);
+    assert(c.target_x != tx0 || c.target_y != 0x10000);
+
+    /* sub_080C5F10: the lethal blow (the hurt callback
+     * sub_080C653C) enters state 0xFF; the next update plays song
+     * 0x72, freezes on direct frame 9, sinks at vy 0x8000 and emits
+     * the lid child (sub_080C6624 -> sub_080C61F4). */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_UKOBACK, 100, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    /* Drive it to the death state the way the hurt callback does. */
+    d.state = 0xFF;
+    d.step = 0;
+    AosHitReport dr = aos_enemy_update(&d, &soma, &layer, &kind, NULL,
+                                       NULL, 10, 4, 0, 0, always_zero);
+    assert(d.static_frame == 9 && d.vy == 0x8000 && d.step == 1 &&
+           dr.child_count == 1 &&
+           dr.children[0].role == AOS_ROLE_UKOBACK_LID &&
+           dr.children[0].parent == &d);
+    /* sub_080C5F10 step 0: song 0x72. */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
+
+    /* sub_080C61F4: state 0 copies the parent position, lifts the lid
+     * 4 px and inherits 1.5x its vy; state 1 falls; state 2 fades. */
+    AosEnemy l = dr.children[0];
+    aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                     always_zero);
+    assert(l.state == 1 && l.vy == d.vy + d.vy / 2);
+    for (int i = 0; i < 0x40; ++i)
+        aos_enemy_update(&l, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                         0, 0, always_zero);
+    assert(l.state == 2);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -8443,6 +8553,7 @@ int main(void) {
     mandragora_tests();
     disc_armor_tests();
     alura_une_tests();
+    ukoback_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

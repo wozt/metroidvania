@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 99 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 100 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1234 | 2339 |
+| Castlevania: Aria of Sorrow | 1250 | 2323 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1946,6 +1946,15 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: The sub_0803F0E4 death table 0x085283FC (a custom frame sequence) is approximated by the running animation; the sub_08069A00 walk is walk_collide with the native arguments; the sub_0806DD64 gore chunks are AOS_EFFECT_BLOOD particles; the sub_0806D518 blink, the + 0x5A palette merge, the sub_0806D4C0 pause, the sub_080428F0 box preset 0x0808FCFC (exported frame boxes stand in), the + 0x72 flag bits, the + 0x65 still frame approximated by static_frame and the sub_080421AC room query are not ported; the two sub_080427B8 / sub_0804277C installers collapse into the standard callbacks; no emulator comparison.  
 Next action: Compare the hop cadence, the spit arc and the dormant rock timing against an emulator; the yellow soul 9 bit 0x200000 has no reader natively.
 Evidence: in game: `aria area_00_room_035 (--spawn 160 176 --hp 9999): Tsuchinokos hop at Soma, spit, burrow and die`.
+
+[+] **`aos.enemies.ukoback` — Ukoback.** EnemyUkobackCreate (0x080C5BDC) loads tiles 0x081F425C, palette 0x0820BEA4 and frames 0x0824D198 through sub_080C5C58, sets + 0x5C = 4, enters state 1 under the global 0x8E & 0x40 else state 0 with the sub_080C6510 contact and sub_080C653C hurt callbacks. State 0 (sub_080C5CE8) hops: a umod(random, 0x168) + 0x50 cooldown, the first substep arming vx = vy = 0xC000 with the direction draws, the facing bit following vx, the room-edge bounce negating the velocity, and sub_080C6590 peeking up to eight creatures (sub_080C5FA0, shared resources, anim 1) while uk_peek <= 7, with song 0x78 inside the centred box. The creature (sub_080C610C) lives 0x3FF frames then drifts out through its + 0x14 offset, flipping facing and decrementing the pot's peek count on arrival; its contact sub_080C65C8 bursts it into ten shard entities and its hurt sub_080C6614 flees on any blow. State 0xFF (sub_080C5F10) plays song 0x72, freezes on direct frame 9, sinks at vy 0x8000 and emits the lid (sub_080C6624 -> sub_080C61F4: state 0 copies the parent, lifts 4 px and inherits 1.5x vy, state 1 falls, state 2 fades on the sub_0806D518 blink). Unit-tested in ukoback_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806BE74`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080C0A1C.s:EnemyUkobackCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyUkobackUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5C58`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5CE8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5F10`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C5FA0`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C610C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C61F4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6310`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C639C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6510`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C653C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6590`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C65C8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6614`, `aos:asm:asm/code/code_080C0A1C.s:sub_080C6624`, `aos:c:src/code/code_080211F0.c:sub_08021924`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/ukoback.c`](../src/runtime/aos/enemies/ukoback.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The sub_080C6310/sub_080C639C shard entities (special-15 row-7 art pinned around the player) are approximated by AOS_EFFECT_BURST_15 drifts; the room-edge bounce approximates the scroll-byte and four wall probes of sub_0800210C/sub_020D8/sub_01CCC/sub_01E58 by screen margins; the creature's + 0x14 drift is a fixed countdown, its exact velocity inheritance is not traced; the lid's + 0x46 sunk mark is approximated by the fall timer; the sub_080421AC room query, the + 0x5A palette bits, sub_0806B04C, sub_0806B1FC, sub_0806AF98 and sub_080683BC are approximated or skipped; no emulator comparison.  
+Next action: Compare the hop timing, the peek cadence and the shatter sequence against an emulator; port red soul 27 (the Ukoback soul).
+Evidence: in game: `aria area_07_room_010 (--spawn 120 250 --hp 9999 --atk 8 --def 4): the Ukoback hops and its contact and peeked creatures strike Soma for three hits (76 + 88 + 88 damage, frames to 400)`.
 
 [+] **`aos.enemies.valkyrie` — Valkyrie.** The wait until the player is within 120 pixels or it is hurt, the 2.0 approach to the point in front of and above him, the strike with its held frame and 3.0 charge, the slowdown and hover back, the recoil when struck during the strike, the halved contact outside strike frames 4 to 6, the hit stun, the falling generic death and state 4 under gEwramData + 0x8E bit 0x40 are ported. Its charge plays 0x87 (sub_0806E8AC) and its death 0x1CD (sub_0806EBDC), unit-tested.
 

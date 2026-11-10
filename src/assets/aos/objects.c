@@ -158,6 +158,12 @@ static const EntitySpec entities[] = {
      * 1: the resource row of 0x081193DC + 16 — same tiles and palette,
      * frames 0x08243830. */
     ENTITY("fish_head", 0x081E41D4, 0x0820B8E8, 0, 0x08243830),
+    /* EnemyUkobackCreate (0x080C5BDC) through sub_080C5C58: tiles
+     * 0x081F425C, palette 0x0820BEA4, frames 0x0824D198. Its peeked
+     * creature (sub_080C5FA0) and lid (sub_080C6624) share the same
+     * resources; the sub_080C6310/sub_080C639C shard entities use the
+     * shared special-15 row-7 art, emitted as burst-15 effects. */
+    ENTITY("ukoback", 0x081F425C, 0x0820BEA4, 0, 0x0824D198),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
     /* Buer sub_0806CAF8: the shared 0x08528B64 s16 probe descriptor
      * has wall count, ceiling, floor, half-width and wall Y offsets.

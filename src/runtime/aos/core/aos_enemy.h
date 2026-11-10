@@ -157,6 +157,7 @@ enum {
     AOS_ENEMY_ALURA_UNE = 0x4D,
     AOS_ENEMY_FISH_HEAD = 0x41,
     AOS_ENEMY_BASILISK = 0x64,
+    AOS_ENEMY_UKOBACK = 0x4C,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -199,7 +200,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_MANDRAGORA_TAIL = 70, AOS_ROLE_MANDRAGORA_SEED = 71,
        AOS_ROLE_DISC_BLADE = 72, AOS_ROLE_DISC_SHARD = 73,
        AOS_ROLE_DISC_GLOW = 74, AOS_ROLE_ALURA_SCYTHE = 75,
-       AOS_ROLE_ALURA_BLADE = 76 };
+       AOS_ROLE_ALURA_BLADE = 76, AOS_ROLE_UKOBACK_CREATURE = 77,
+       AOS_ROLE_UKOBACK_LID = 78 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -431,6 +433,16 @@ typedef struct AosEnemy {
      * bit 2 the launch mark, + 0x73 bit 1 the landed mark and + 0x59
      * bits 1/3 the blade's launch/expiry flags. */
     uint8_t au_seen, au_react, au_hurted, au_prev_frame, au_blade_flags;
+    /* Ukoback (sub_080C5CE8 hop, sub_080C5F10 shatter, creature
+     * sub_080C610C, lid sub_080C61F4): + 0x16 the hop countdown,
+     * + 0x22 the peek count the drifting creature decrements; the
+     * + 0x42/+ 0x46/+ 0x4A/+ 0x4E probe offsets are approximated by
+     * the room-edge bounce below. A creature's + 0x14/+ 0x18 drift
+     * offsets live in target_x/target_y and its + 0x1C lifetime in
+     * walk_timer. */
+    int16_t uk_timer;
+    uint8_t uk_peek;
+    int16_t uk_death_y;      /* the shatter's sink reference (+0x46 approx) */
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

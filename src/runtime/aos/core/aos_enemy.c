@@ -390,7 +390,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_ZOMBIE_SOLDIER && id != AOS_ENEMY_AXE_ARMOR && id != AOS_ENEMY_ROCK_ARMOR &&
         id != AOS_ENEMY_KILLER_FISH && id != AOS_ENEMY_BUER && id != AOS_ENEMY_WHITE_DRAGON &&
         id != AOS_ENEMY_GIANT_GHOST && id != AOS_ENEMY_BONE_PILLAR &&
-        id != AOS_ENEMY_FISH_HEAD &&
+        id != AOS_ENEMY_FISH_HEAD && id != AOS_ENEMY_UKOBACK &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -616,6 +616,27 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->hidden = true;
         enemy->combat.attack_off = enemy->combat.hurt_off = true;
         enemy->bp_top = -1;
+        return true;
+    }
+    if (id == AOS_ENEMY_UKOBACK) {
+        /* EnemyUkobackCreate (0x080C5BDC): sub_080C5C58 loads tiles
+         * 0x081F425C, palette 0x0820B8A4-style 0x0820BEA4 and frames
+         * 0x0824D198; sub_0806B04C, + 0x5C = 4, the velocities and
+         * + 0x22 zeroed, sub_0806BC40 facing; the global 0x8E & 0x40
+         * sends it to state 1, else state 0 with the sub_080C6510
+         * contact and sub_080C653C hurt callbacks. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->uk_timer = 0;
+        enemy->uk_peek = 0;
+        if (flag_8e_40) {
+            enemy->state = 1;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
         return true;
     }
     if (id == AOS_ENEMY_GIANT_GHOST) {
@@ -1844,6 +1865,18 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->timer = 0x40;
                     enemy->state = 1;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_UKOBACK &&
+                           enemy->role == AOS_ROLE_UKOBACK_CREATURE) {
+                    /* sub_080C6614: any blow sends the creature into
+                     * its 0xFF drift-out. */
+                    enemy->state = 0xFF;
+                    enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_UKOBACK &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080C653C: the lethal blow enters the 0xFF
+                     * shatter (sub_080C5F10 on the next update). */
+                    enemy->state = 0xFF;
+                    enemy->step = 0;
                 } else if (enemy->id == AOS_ENEMY_GIANT_GHOST &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_0807D88C: its update finishes the death. */
@@ -3045,6 +3078,19 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         aos_enemy_disc_glow_update(enemy, kind);
         return report;
     }
+    if (enemy->role == AOS_ROLE_UKOBACK_CREATURE)
+        return aos_enemy_ukoback_creature_update(enemy, soma, layer, kind,
+                                                 weapon, weapon_frames,
+                                                 soma_atk, soma_def, cam_x,
+                                                 cam_y, random);
+    if (enemy->role == AOS_ROLE_UKOBACK_LID) {
+        aos_enemy_ukoback_lid_update(enemy, soma, kind, cam_y, random);
+        return report;
+    }
+    if (enemy->id == AOS_ENEMY_UKOBACK && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_ukoback_update(enemy, soma, layer, kind, weapon,
+                                        weapon_frames, soma_atk, soma_def,
+                                        cam_x, cam_y, random);
     if (enemy->role == AOS_ROLE_ALURA_SCYTHE)
         return aos_enemy_alura_scythe_update(enemy, soma, layer, kind,
                                              weapon, weapon_frames,

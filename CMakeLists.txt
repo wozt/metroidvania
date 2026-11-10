@@ -261,6 +261,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/waiter_skeleton.c
     src/runtime/aos/enemies/cockatrice.c
     src/runtime/aos/enemies/chronomage.c
+    src/runtime/aos/enemies/mandragora.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

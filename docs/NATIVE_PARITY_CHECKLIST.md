@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 94 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 95 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1190 | 2383 |
+| Castlevania: Aria of Sorrow | 1204 | 2369 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1705,6 +1705,15 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: The palette bits, sub_080683BC, the tracking list of sub_08021924 and the routine sub_08021654 of the draw callback sub_080B76E4 are not ported; the stun of sub_0806AD24 takes the global pause 0x4BE as 0; the fin's affine double-size placement is not modelled and it is made on the first update rather than at creation.  
 Next action: Trace sub_08021654; compare against an emulator.
 Evidence: in game: `aria area_08_room_009 (--spawn 100 191 --hp 9999): the Lubicants bob, chase with their turning tridents and dive onto Soma (frames 30, 80, 120 and 180); with --atk 999 --repeat 2 and B a blow kills one: blood, the trident flung off turning, then the sinking flames (frames 85, 100, 115 and 140)`.
+
+[+] **`aos.enemies.mandragora` — Mandragora.** EnemyMandragoraCreate (0x080CEF34) loads tiles 0x081F429C, palette 0x0820C004 and frames 0x08250E94, plays animation 0 looping and enters state 3 under the global 0x8E & 0x40 else state 1 with the sub_0806E1B8 contact and sub_080CFA4C hurt callbacks and the sub_0806AF98 floor snap; the first update emits the sub_080CEFE8 body (state 0 dormant copy, state 1 hp sync + head sensor bit 1 + song 0x83, state 2 tail reveal + 0x20 timer into 0xF1, 0xF0 one-tick death, 0xF1 flame scatter every seventh tick) which emits the sub_080CF2B8 tail (state 0 dormant, 1 animation 4 once, 2 four-tick fade, 3 animation 5 loop marking head bit 4, 0xF0 fade); the head's state 1 watches the sub_0806E29C 0x100 x 0x80 centred probe, state 2 plays animations 1/2 with song 0x119 at timer 1, bumps the body state, holds frame 0xA while the body winds down and enters 0xF0 on the + 0x20 bits 0x18; state 0xF0 hides the head and fires the sub_080CF804 volley of five seeds from the 0x08528CC4 table (frames 0x1F-0x23, sub_080CF910 drift with gravity and the parent live-seed count) before sub_080CFA68 removes the chain; state 3 is the inert animation-0 sequence. The hurt sub_080CFA4C enters state 0xF0 on a lethal blow, sub_080CF9FC does the same for the body. Unit-tested in mandragora_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08042884`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806CC20`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E218`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080C0A1C.s:EnemyMandragoraCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyMandragoraUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CEFE8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF0E4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF2B8`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF3BC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF5C4`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF624`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF748`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF804`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CF910`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CFA18`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CFA4C`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CFA68`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/mandragora.c`](../src/runtime/aos/enemies/mandragora.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The + 0x11/+ 0x12 entity-slot links are modelled by parent plus the head's mg_body/mg_tail pointers; the + 0x20 sensor byte keeps only its family bits across the head's per-frame collision rewrite (bit 3 is the collision-owned attack flag); the + 0x2C palette group fold into + 0x5A bits 3-6 keeps only the low bits (mg_draw), the + 0x5C = 0x11 priority, the + 0x59 palette fades, the sub_08042884 box presets (exported frame boxes stand in), the sub_08068AD4 seed probe (the kind's screen margins stand in), the sub_0806D5C0 flame scatter (the shared spawn_flame_at), the sub_080683BC head reward fired by the body's one-tick 0xF0 (children cannot pay rewards here), the + 0x6D == 2 activity-window bypass and the sub_0806CC20 call itself are not fully ported; no emulator comparison.  
+Next action: Compare the three-part chain, the seed volley and the death fades against an emulator; port the palette group fades and the + 0x11/+ 0x12 slot links natively.
+Evidence: in game: `aria area_05_room_004 (--spawn 256 176 --hp 9999): Mandragora's head, body and tail chain, its seed burst on death`.
 
 [+] **`aos.enemies.medusa_head` — Medusa head and its spawner.** The spawner (parameter 1 bit 1: one head in 32 frames up to parameter 0, at screen X 256 or -16 by Soma's screen X and facing, Y 64 to 127), the swinging flight with its animations, the (-5, -5, 10, 10) boxes packed in 0x0A0AFBFB, gold heads (bank 1), the hit stun, the margin death, the generic death with flames and state 4 under gEwramData + 0x8E bit 0x40 are ported. Sound 0x72 is requested at death (sub_08093AE0) and unit-tested.
 

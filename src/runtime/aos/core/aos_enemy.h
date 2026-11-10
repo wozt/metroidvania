@@ -152,6 +152,7 @@ enum {
     AOS_ENEMY_WAITER_SKELETON = 0x1E,
     AOS_ENEMY_COCKATRICE = 0x2E,
     AOS_ENEMY_CHRONOMAGE = 0x28,
+    AOS_ENEMY_MANDRAGORA = 0x4F,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -190,7 +191,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_TSUCHINOKO_ROCK = 63,
        AOS_ROLE_WAITER_COMPANION = 64, AOS_ROLE_WAITER_TRAY = 65,
        AOS_ROLE_COCKATRICE_SHADOW = 66, AOS_ROLE_COCKATRICE_ROCK = 67,
-       AOS_ROLE_CHRONO_WISP = 68 };
+       AOS_ROLE_CHRONO_WISP = 68, AOS_ROLE_MANDRAGORA_BODY = 69,
+       AOS_ROLE_MANDRAGORA_TAIL = 70, AOS_ROLE_MANDRAGORA_SEED = 71 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -388,6 +390,17 @@ typedef struct AosEnemy {
     /* Chronomage (sub_080B712C create, sub_080B6C3C wisp): + 0x59 bits
      * 1 (linked flag), 3 (margin-out mark) and 4 (wisp palette group). */
     uint8_t cm_flags;
+    /* Mandragora (EnemyMandragoraCreate 0x080CEF34; head update
+     * 0x080CF99C, body 0x080CF0E4, tail 0x080CF3BC, seed 0x080CF910):
+     * + 0x13 the death-seed volley index, + 0x20 the entity sensor byte
+     * the collision pass writes, + 0xF the tail's sub-state, + 0x59
+     * bits 1-4 (linked, tail-active, fade marks, translucent) and + 0x5A
+     * the draw-flip byte. */
+    uint8_t mg_seeds, mg_sensors, mg_sub, mg_flags, mg_draw;
+    /* The body's and the tail's slots, each registered by the child
+     * through its `parent` link (the tail reaches the head through
+     * `parent->parent`). */
+    struct AosEnemy *mg_body, *mg_tail;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

@@ -413,6 +413,13 @@ static const EntitySpec entities[] = {
      * 0x08528824 (sub_0806CAF8 mode 2). */
     {"chronomage", 0x081EC1EC, 0x0820BBB0, 0, 0x08245CA8,
      0x08528824, 0, 0, 0, {0}},
+    /* EnemyMandragoraCreate (0x080CEF34) and its sub_080CEFE8 body /
+     * sub_080CF2B8 tail children plus the sub_080CF804 seed volley,
+     * which share the same resources: tiles 0x081F429C, palette
+     * 0x0820C004, frames 0x08250E94; the head's + 0x65 = 0xA attack
+     * frame and the seeds' static frames 0x1F-0x23. */
+    {"mandragora", 0x081F429C, 0x0820C004, 0, 0x08250E94,
+     0, 0, 0, 6, {0x0A, 0x1F, 0x20, 0x21, 0x22, 0x23}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

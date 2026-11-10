@@ -2801,7 +2801,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_WAITER_COMPANION ||
                  e->enemy.role == AOS_ROLE_WAITER_TRAY ||
                  e->enemy.role == AOS_ROLE_COCKATRICE_SHADOW ||
-                 e->enemy.role == AOS_ROLE_COCKATRICE_ROCK) &&
+                 e->enemy.role == AOS_ROLE_COCKATRICE_ROCK ||
+                 e->enemy.role == AOS_ROLE_MANDRAGORA_BODY ||
+                 e->enemy.role == AOS_ROLE_MANDRAGORA_TAIL ||
+                 e->enemy.role == AOS_ROLE_MANDRAGORA_SEED) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
@@ -2960,7 +2963,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_WAITER_COMPANION ||
                                        hit.children[c].role == AOS_ROLE_WAITER_TRAY ||
                                        hit.children[c].role == AOS_ROLE_COCKATRICE_SHADOW ||
-                                       hit.children[c].role == AOS_ROLE_COCKATRICE_ROCK
+                                       hit.children[c].role == AOS_ROLE_COCKATRICE_ROCK ||
+                                       hit.children[c].role == AOS_ROLE_MANDRAGORA_BODY ||
+                                       hit.children[c].role == AOS_ROLE_MANDRAGORA_TAIL ||
+                                       hit.children[c].role == AOS_ROLE_MANDRAGORA_SEED
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

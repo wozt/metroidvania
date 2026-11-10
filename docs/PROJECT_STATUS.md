@@ -2,6 +2,26 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0959 - Mandragora ported (id 79)
+
+- `EnemyMandragoraCreate` (0x080CEF34) /
+  `EnemyMandragoraUpdate` (0x080CF99C) plus the body
+  (sub_080CEFE8/sub_080CF0E4), tail (sub_080CF2B8/sub_080CF3BC),
+  watch/attack (sub_080CF5C4/sub_080CF624), death (sub_080CF748),
+  seed volley (sub_080CF804), seed drift (sub_080CF910) and chain
+  removal (sub_080CFA68) routines are ported as
+  `src/runtime/aos/enemies/mandragora.c` with three new child roles
+  (body, tail, seed) wired through `aria_runtime.c`.
+- Resources from the ROM: tiles 0x081F429C, palette 0x0820C004,
+  frames 0x08250E94; the five seed records of 0x08528CC4 (frames
+  0x1F-0x23) are reproduced. Songs 0x83, 0x119, 0x6B and 0x70 are
+  requested at the native points; unit-tested in `mandragora_tests`.
+- Ported enemies: 64/113. Red soul 38 (Mandragora) remains
+  unported, so the dropped soul aspect is partial. Divergences are
+  listed in `data/native_parity/annotations.tsv` (entity-slot links
+  approximated by parent/mg_body/mg_tail, palette fades and the
+  + 0x5C priority not ported, no emulator comparison).
+
 ## Patch 0958 - MZM game modules move to src/runtime/mzm/game/
 
 - The last flat MZM modules moved to `src/runtime/mzm/game/`:

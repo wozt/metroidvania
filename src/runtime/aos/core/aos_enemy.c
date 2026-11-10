@@ -407,6 +407,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_DRYAD && id != AOS_ENEMY_TSUCHINOKO &&
         id != AOS_ENEMY_KICKER_SKELETON && id != AOS_ENEMY_WAITER_SKELETON &&
         id != AOS_ENEMY_COCKATRICE && id != AOS_ENEMY_CHRONOMAGE &&
+        id != AOS_ENEMY_MANDRAGORA &&
         id != AOS_BOSS_HEADHUNTER)
         return false;
     const AosAnimSet *anims = kind->anims;
@@ -965,6 +966,27 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->y += 0x10000;
         enemy->cm_flags = 2;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_MANDRAGORA) {
+        /* EnemyMandragoraCreate (0x080CEF34): sub_0806E0D0 loads tiles
+         * 0x081F429C, palette 0x0820C004 and frames 0x08250E94;
+         * sub_0806B04C, + 0x5C = 0x11 (not ported), animation 0 looping;
+         * the global 0x8E & 0x40 sends it to state 3, else state 1 with
+         * the sub_0806E1B8 contact and sub_080CFA4C hurt callbacks and
+         * the sub_0806AF98 floor snap. The sub_080CEFE8 body and
+         * sub_080CF2B8 tail linked entities are emitted by the first
+         * updates here. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        snap_to_floor(enemy, layer);
+        enemy->state = 1;
+        enemy->step = enemy->substep = 0;
         return true;
     }
     if (id == AOS_ENEMY_AXE_ARMOR) {
@@ -1959,6 +1981,13 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                      * (not ported), state 3, steps cleared. */
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_MANDRAGORA &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080CFA4C: sub_0806E218's lethal check, then
+                     * state 0xF0 with step and substep cleared — the
+                     * seed-burst death of sub_080CF748. */
+                    enemy->state = 0xF0;
+                    enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_COCKATRICE &&
                            enemy->role == AOS_ROLE_ENEMY && enemy->state != 2) {
                     /* sub_080BC0B4: sub_0806E218's damage and hit timer,
@@ -2918,6 +2947,22 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     }
     if (enemy->id == AOS_ENEMY_CHRONOMAGE && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_chronomage_update(enemy, soma, layer, kind, weapon,
+                                 weapon_frames, soma_atk, soma_def, cam_x,
+                                 cam_y, random);
+    if (enemy->role == AOS_ROLE_MANDRAGORA_BODY)
+        return aos_enemy_mandragora_body_update(enemy, soma, layer, kind,
+                                      weapon, weapon_frames, soma_atk,
+                                      soma_def, cam_x, cam_y, random);
+    if (enemy->role == AOS_ROLE_MANDRAGORA_TAIL)
+        return aos_enemy_mandragora_tail_update(enemy, soma, layer, kind,
+                                      weapon, weapon_frames, soma_atk,
+                                      soma_def, cam_x, cam_y, random);
+    if (enemy->role == AOS_ROLE_MANDRAGORA_SEED) {
+        aos_enemy_mandragora_seed_update(enemy, kind, cam_x, cam_y);
+        return report;
+    }
+    if (enemy->id == AOS_ENEMY_MANDRAGORA && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_mandragora_update(enemy, soma, layer, kind, weapon,
                                  weapon_frames, soma_atk, soma_def, cam_x,
                                  cam_y, random);
     if (enemy->id == AOS_ENEMY_DRYAD && enemy->role == AOS_ROLE_ENEMY)

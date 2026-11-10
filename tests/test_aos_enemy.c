@@ -4717,6 +4717,203 @@ static void chronomage_tests(void) {
     assert(e.removed && death_ticks < 120 && flame_ticks > 0);
 }
 
+static void mandragora_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-5: 0 idle, 1/2 the head attack (short so the
+     * one-shot ends), 3 the body loop, 4/5 the tail reveal and loop. */
+    static const uint8_t six[6] = {6, 6, 6, 6, 6, 6};
+    static const uint8_t four[4] = {8, 8, 8, 8};
+    static const uint8_t two[2] = {6, 6};
+    const AosAnimDef defs[6] = {{8, six}, {2, two}, {2, two}, {8, six},
+                                {4, four}, {8, six}};
+    const AosAnimSet anims = {defs, 6};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 6; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-24, -48, 48, 48};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    /* enemies.tsv id 79: hp 200, contact 65, defence 0, experience 100,
+     * soul index 38. */
+    const AosEnemyStats stats = {200, 65, 0, 0, 0, 100};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+    int frames = 0;
+
+    /* EnemyMandragoraCreate (0x080CEF34): state 1, animation 0 looping,
+     * floor snapped; the 0x8E & 0x40 flag path is the inert state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_MANDRAGORA, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 1 && e.step == 0 && e.anim.id == 0 &&
+           e.hp == stats.hp && e.mg_seeds == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_MANDRAGORA, 200, 150, 0,
+                            0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 3);
+    /* State 3 (sub_080CFA18): animation 0 held, only the step latch. */
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(flagged.step == 1 && flagged.anim.id == 0);
+
+    /* The first on-screen update emits the body child
+     * (sub_080CEFE8); the body then emits the tail (sub_080CF2B8). */
+    soma.x = e.x + AOS_FIXED(200);
+    soma.y = e.y;
+    AosHitReport born = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                          NULL, 10, 4, 0, 0, always_zero);
+    assert(born.child_count == 1 &&
+           born.children[0].role == AOS_ROLE_MANDRAGORA_BODY);
+    AosEnemy body = born.children[0];
+    body.parent = &e;
+    e.mg_body = &body;
+    /* sub_080CF0E4 state 0: dormant, hidden, synced to the head. */
+    (void)aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(body.state == 0 && body.hidden && body.step == 1);
+    /* The tail spawn rides the body's first update report. */
+    AosHitReport tailborn = {0};
+    {
+        /* Force the tail emission: the body already ran once, so emit
+         * it through a fresh dormant body the way the room does. */
+        AosEnemy b2 = born.children[0];
+        b2.parent = &e;
+        tailborn = aos_enemy_update(&b2, &soma, &layer, &kind, NULL,
+                                     NULL, 10, 4, 0, 0, always_zero);
+        body = b2;
+        e.mg_body = &body;
+    }
+    assert(tailborn.child_count == 1 &&
+           tailborn.children[0].role == AOS_ROLE_MANDRAGORA_TAIL);
+    AosEnemy tail = tailborn.children[0];
+    tail.parent = &body;
+    body.mg_tail = &tail;
+    (void)aos_enemy_update(&tail, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(tail.state == 0 && tail.hidden);
+
+    /* State 1 (sub_080CF5C4): the centred probe keeps it dormant while
+     * Soma is beyond the box, then enters the attack state 2. */
+    soma.x = e.x + AOS_FIXED(400);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.state == 1 && e.step == 1);
+    soma.x = e.x + AOS_FIXED(60);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 2);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.state == 2 && e.step == 0);
+
+    /* State 2 (sub_080CF624): animation 1 then 2, song 0x119, the body
+     * state bump, then the held attack frame while no hit lands. */
+    frames = 0;
+    while (e.step == 0 && frames < 40) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 1 && e.substep >= 0);
+    frames = 0;
+    while (e.substep != 2 && frames < 60) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.substep == 2 && e.static_frame == 0xA &&
+           body.state == 1);
+    /* Body state 1 (sub_080CF0E4): hp sync, head sensor bit 1, song
+     * 0x83, straight into state 2 which reveals the tail. */
+    (void)aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(body.state == 2 && (e.mg_sensors & 2) &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x83) == 1);
+    (void)aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(tail.state == 1);
+    frames = 0;
+    while (tail.state != 3 && frames < 80) {
+        (void)aos_enemy_update(&tail, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(tail.state == 3);
+    /* State 3 step 0 arms the head's + 0x20 bit 4 and loops anim 5. */
+    (void)aos_enemy_update(&tail, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(e.mg_sensors & 0x10);
+
+    /* The lethal blow on the head (sub_080CFA4C): state 0xF0, then the
+     * sub_080CF748 volley of five seeds (sub_080CF910 children). */
+    e.hp = 1;
+    e.combat.hurt_off = false;
+    soma.x = e.x + AOS_FIXED(10);
+    soma.y = e.y + AOS_FIXED(10);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 0xF0 && e.step == 0);
+    AosHitReport volley = {0};
+    frames = 0;
+    while (e.mg_seeds == 0 && frames < 10) {
+        volley = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                                  10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(volley.child_count == 5 && e.mg_seeds == 5);
+    for (int i = 0; i < 5; ++i)
+        assert(volley.children[i].role == AOS_ROLE_MANDRAGORA_SEED &&
+               volley.children[i].static_frame >= 0x1F &&
+               volley.children[i].static_frame <= 0x23);
+    /* A seed (sub_080CF910): lifetime countdown then removal, which
+     * decrements the head's live-seed count. */
+    AosEnemy seed = volley.children[0];
+    seed.parent = &e;
+    frames = 0;
+    while (!seed.removed && frames < 200) {
+        (void)aos_enemy_update(&seed, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(seed.removed && e.mg_seeds == 4);
+
+    /* The body death (sub_080CF9FC -> 0xF0 -> 0xF1): a lethal blow drops
+     * it into the one-tick 0xF0 then the flame-emitting 0xF1; the tail,
+     * still looping state 3, sees body state > 0xEF and enters its own
+     * 0xF0 before the body's 0xF1 step 0 puts it back to dormant. */
+    body.hp = 1;
+    body.combat.hurt_off = false;
+    hit = aos_enemy_update(&body, &soma, &layer, &kind, &weapon, &blade,
+                           9999, 4, 0, 0, always_zero);
+    assert(hit.killed && body.state == 0xF0);
+    (void)aos_enemy_update(&tail, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(tail.state == 0xF0);
+    (void)aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(body.state == 0xF1 && (e.mg_sensors & 0x20));
+    (void)aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(tail.state == 0 && (e.mg_sensors & 8));
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -7841,6 +8038,7 @@ int main(void) {
     waiter_skeleton_tests();
     cockatrice_tests();
     chronomage_tests();
+    mandragora_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

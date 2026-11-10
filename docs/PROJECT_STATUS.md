@@ -2,6 +2,23 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0969 - Werewolf ported (id 50)
+
+- `EnemyWerewolfCreate` (0x0806F7A4) through `sub_0806F818` (tiles
+  `0x081CBF34`, palette `0x0820A440` bank 0, frames `0x08212C64`) and
+  `EnemyWerewolfUpdate` (0x0806EDB8) dispatching `sub_0806EEB4`
+  idle/walk, `sub_0806F024` the eight-substep attack (charge/pounce
+  roll, `0x50000` dash, the howl with songs `0x77`/`0x79` and the
+  shadow spawns), the shared `sub_08079294` vanish, `sub_0806F41C`
+  hit leap and `sub_0806F50C` hurt as
+  `src/runtime/aos/enemies/werewolf.c`.
+- Verified in game `area_05_room_010` (`--spawn 336 380`): six
+  55-damage hits, Soma dies at frame 569.
+- Divergences: the `sub_0806D0B8` terrain probe is approximated by
+  distance; the `sub_0806F5C8` shadow and `sub_0806D7F0` spectral
+  wolf are dark smoke/dust drifts. Red soul 23 not ported yet.
+- Ported enemies: 75/113.
+
 ## Patch 0968 - Werejaguar and Weretiger ported (ids 75/84)
 
 - `EnemyWerejaguarCreate` (0x080796F0) / `EnemyWeretigerCreate`

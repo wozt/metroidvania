@@ -394,6 +394,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_STUDENT_WITCH && id != AOS_ENEMY_WITCH &&
         id != AOS_ENEMY_MUDMAN &&
         id != AOS_ENEMY_WEREJAGUAR && id != AOS_ENEMY_WERETIGER &&
+        id != AOS_ENEMY_WEREWOLF &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -711,6 +712,28 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->step = enemy->substep = 0;
             play_loop(enemy, anims, 2, false);
             step_anim(enemy, anims);
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        snap_to_floor(enemy, layer);
+        return true;
+    }
+    if (id == AOS_ENEMY_WEREWOLF) {
+        /* EnemyWerewolfCreate (0x0806F7A4) through sub_0806F818:
+         * tiles record 0x081CBF34, palette 0x0820A440 bank 0, frames
+         * 0x08212C64; sub_0803F2C8 animation (0, 0, 1) and one step,
+         * sub_0806B04C init, the global 0x8E & 0x40 sends it to state
+         * 4, else the sub_0806F4B8 contact and sub_0806F50C hurt
+         * callbacks (sub_080427B8 mode 8), sub_0806B1FC facing and the
+         * sub_0806AF98 floor snap into state 0. */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->ww_mark = 0;
+        enemy->ww_bit = 0;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
             return true;
         }
         enemy->state = 0;
@@ -1845,6 +1868,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->step = enemy->substep = 0;
             }
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+                enemy->id == AOS_ENEMY_WEREWOLF &&
+                enemy->role == AOS_ROLE_ENEMY && enemy->state == 1 &&
+                enemy->step <= 1) {
+                /* sub_0806F50C: a surviving weapon blow (attacker
+                 * + 0x70 = 3 or 4) during the attack's first two
+                 * substates flinches it into the state-3 leap. */
+                play_loop(enemy, kind->anims, 4, false);
+                enemy->state = 3;
+                enemy->step = enemy->substep = 0;
+            }
+            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
                 (enemy->id == AOS_ENEMY_WEREJAGUAR ||
                  enemy->id == AOS_ENEMY_WERETIGER) &&
                 enemy->role == AOS_ROLE_ENEMY && enemy->state == 1 &&
@@ -2039,6 +2073,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     aos_audio_play_song(0x70);
                     play_loop(enemy, kind->anims, 4, false);
                     enemy->cycle_done = false;
+                    enemy->timer = 0x28;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_WEREWOLF &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_0806F50C lethal: sub_080683BC, song 0x6E,
+                     * animation 4, + 0x0D = 0x28, state 2 — the shared
+                     * blinking vanish (the + 0x5A palette merge is
+                     * not ported). */
+                    aos_audio_play_song(0x6E);
+                    play_loop(enemy, kind->anims, 4, false);
                     enemy->timer = 0x28;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
@@ -3321,6 +3366,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                            weapon_frames, soma_atk,
                                            soma_def, cam_x, cam_y, random);
     }
+    if (enemy->id == AOS_ENEMY_WEREWOLF && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_werewolf_update(enemy, soma, layer, kind, weapon,
+                                         weapon_frames, soma_atk,
+                                         soma_def, cam_x, cam_y, random);
     if ((enemy->id == AOS_ENEMY_WEREJAGUAR ||
          enemy->id == AOS_ENEMY_WERETIGER) && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_were_update(enemy, soma, layer, kind, weapon,

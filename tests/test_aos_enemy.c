@@ -5945,6 +5945,157 @@ static void were_tests(void) {
      * pass — verified live in area_10_room_000 / area_08_room_003. */
 }
 
+static void werewolf_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;   /* floor top 160 */
+    enum { WW_ANIMS = 6 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[WW_ANIMS];
+    for (int a = 0; a < WW_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = WW_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < WW_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv id 50: hp 290, contact 33, defence 30, weak 0x0081,
+     * resist 0, experience 100, soul_type 0 (red) soul_index 23. */
+    const AosEnemyStats stats = {290, 33, 30, 0x0081, 0x0000, 100};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+
+    /* EnemyWerewolfCreate (0x0806F7A4) through sub_0806F818: state 0
+     * animation 0; the global 0x8E & 0x40 sends it to state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_WEREWOLF, 150, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 290 && e.anim.id == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ei;
+    assert(aos_enemy_create(&ei, AOS_ENEMY_WEREWOLF, 150, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ei.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* sub_0806EEB4 step 0: Soma inside the 0xA0 x 0xA0 box at
+     * (px-0x50, py-0x50) arms step 1 with animation 1. */
+    soma.x = e.x;
+    soma.y = e.y;
+    int armed = 0;
+    for (int i = 0; i < 40 && !armed; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.step == 1) armed = 1;
+    }
+    assert(armed && e.anim.id == 1);
+
+    /* Step 1 walk: on a tick-0 frame inside the 0x78 x 0x50 box at
+     * (px-0x3C, py-0x28) it enters state 1 step 0. */
+    int pounced = 0;
+    for (int i = 0; i < 240 && !pounced; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.state == 1 && e.step == 0) pounced = 1;
+    }
+    assert(pounced);
+
+    /* sub_0806F024 case 0: past timer 0x1D the rng & 1 roll picks the
+     * charge (step 1, animation 2) — scripted() returns 1. */
+    e.timer = 0x1E;
+    script = (const uint32_t[]){1, 1, 1, 1, 1, 1, 1, 1};
+    script_at = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           200, 0, scripted);
+    assert(e.step == 1 && e.anim.id == 2);
+
+    /* Case 1: once animation frame 2 shows it launches the dash —
+     * vx +/-0x50000, vy 0x20000, ay 0x2800, timer and + 0x10 cleared. */
+    e.anim.frame = 2;
+    e.vx = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           200, 0, always_zero);
+    assert(e.step == 2 && (e.vx == 0x50000 || e.vx == (int32_t)-0x50000) &&
+           e.vy == 0x20000 && e.ay == 0x2800 && e.ww_mark == 0);
+
+    /* Case 2 with + 0x10 set: clears the mark, plays animation 0 and
+     * drops into the state-3 leap. */
+    e.ww_mark = 1;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           200, 0, always_zero);
+    assert(e.state == 3 && e.step == 0 && e.ww_mark == 0 &&
+           e.anim.id == 0);
+
+    /* sub_0806F41C: step 0 arms vx -/+0x18000, vy -0x24000, ay 0x1800;
+     * the floor bit lands it into state 0 step 1 animation 1. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           200, 0, always_zero);
+    assert(e.step == 1 && (e.vx == 0x18000 || e.vx == (int32_t)-0x18000) &&
+           e.vy == (int32_t)-0x24000 && e.ay == 0x1800);
+    int landed = 0;
+    for (int i = 0; i < 90 && !landed; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.state == 0 && e.step == 1 && e.anim.id == 1) landed = 1;
+    }
+    assert(landed);
+
+    /* sub_0806F024 case 4 (the howl), driven directly: every eighth
+     * timer tick song 0x77 and a dust drift; timer 0x1F/0x24/0x25
+     * spawn the shadow approximations; past 0x23 it steps to 5 with
+     * song 0x79. */
+    memset(&e, 0, sizeof e);
+    e.id = AOS_ENEMY_WEREWOLF;
+    e.role = AOS_ROLE_ENEMY;
+    e.stats = stats;
+    e.hp = 10;
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(140);
+    e.state = 1;
+    e.step = 4;
+    e.timer = 0x18;
+    int dust = 0, ash = 0;
+    for (int i = 0; i < 16 && e.step == 4; ++i) {
+        AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 200, 0,
+                                            always_zero);
+        for (int k = 0; k < rep.effect_count; ++k) {
+            if (rep.effects[k].kind == AOS_EFFECT_DUST) dust = 1;
+            if (rep.effects[k].kind == AOS_EFFECT_DARK_SMOKE) ash = 1;
+        }
+    }
+    assert(dust && ash && e.step == 5);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x77) >= 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x79) == 1);
+
+    /* sub_08079294 state 2 (the shared vanish): ash every fourth tick,
+     * the timer counts down and the enemy removes itself. */
+    memset(&e, 0, sizeof e);
+    e.id = AOS_ENEMY_WEREWOLF;
+    e.role = AOS_ROLE_ENEMY;
+    e.stats = stats;
+    e.hp = 10;
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(140);
+    e.state = 2;
+    e.timer = 8;
+    int smoke = 0;
+    for (int i = 0; i < 12 && !e.removed; ++i) {
+        AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 200, 0,
+                                            always_zero);
+        if (rep.effect_count) smoke = 1;
+    }
+    assert(e.removed && smoke);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9187,6 +9338,7 @@ int main(void) {
     witch_tests();
     mudman_tests();
     were_tests();
+    werewolf_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

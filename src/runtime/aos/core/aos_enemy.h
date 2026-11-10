@@ -161,6 +161,7 @@ enum {
     AOS_ENEMY_STUDENT_WITCH = 0x16,
     AOS_ENEMY_WITCH = 0x2A,
     AOS_ENEMY_MUDMAN = 0x56,
+    AOS_ENEMY_WEREWOLF = 0x32,
     AOS_ENEMY_WEREJAGUAR = 0x4B,
     AOS_ENEMY_WERETIGER = 0x54,
 };
@@ -210,7 +211,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WITCH_COMPANION = 80, AOS_ROLE_WITCH_ORBIT = 81,
        AOS_ROLE_WITCH_BOLT = 82, AOS_ROLE_WITCH_SPARK = 83,
        AOS_ROLE_WITCH_TRAIL = 84, AOS_ROLE_MUDMAN_BUBBLE = 85,
-       AOS_ROLE_MUDMAN_ARM = 86 };
+       AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -479,6 +480,11 @@ typedef struct AosEnemy {
      * (1 slash, 2/3 the dash), + 0x16 the Werejaguar chain latch and
      * + 0x17 the repeat-attack mark read at the pounce landing. */
     uint8_t were_attack, were_element, were_chain, were_flag;
+    /* Werewolf (id 0x32): + 0x10 the attack land/mark word the state-1
+     * machine reads and clears, and the + 0x59 bit-1 mark the attack
+     * tail clears (value 2). */
+    int32_t ww_mark;
+    uint8_t ww_bit;
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

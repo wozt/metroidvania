@@ -174,6 +174,9 @@ static const EntitySpec entities[] = {
      * (0x08079874) share sub_0807968C: the 0x081CBF7C record, frames
      * 0x08216A40 and palette 0x0820A5C4 — bank 0 for id 0x4B, bank 1
      * for id 0x54. */
+    /* EnemyWerewolfCreate through sub_0806F818: the 0x081CBF34
+     * record, palette 0x0820A440 bank 0, frames 0x08212C64. */
+    ENTITY("werewolf", 0x081CBF34, 0x0820A440, 0, 0x08212C64),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

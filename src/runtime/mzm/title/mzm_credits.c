@@ -5,10 +5,10 @@
 
 #include <string.h>
 
-#include "gba_input.h"
-#include "mzm/core/mzm_rom.h"
-#include "mzm/core/mzm_sfx.h"
-#include "mzm/core/mzm_sound_ids.h"
+#include "../../gba_input.h"
+#include "../core/mzm_rom.h"
+#include "../core/mzm_sfx.h"
+#include "../core/mzm_sound_ids.h"
 
 enum {
     /* CreditLineType */

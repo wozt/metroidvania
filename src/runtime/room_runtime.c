@@ -26,12 +26,12 @@
 #include "mzm/core/mzm_room_gfx.h"
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
-#include "mzm_credits.h"
+#include "mzm/title/mzm_credits.h"
 #include "mzm_samus.h"
 #include "mzm/core/mzm_screen_shake.h"
 #include "mzm/core/mzm_screen.h"
 #include "mzm/core/mzm_room_overlay.h"
-#include "mzm_title_screen.h"
+#include "mzm/title/mzm_title_screen.h"
 #include "mzm/menus/mzm_pause_screen.h"
 #include "mzm_save.h"
 #include "mzm/menus/mzm_file_select.h"
@@ -39,7 +39,7 @@
 #include "mzm_cutscene.h"
 #include "mzm_in_game_cutscene.h"
 #include "mzm_door_fade.h"
-#include "mzm_intro.h"
+#include "mzm/title/mzm_intro.h"
 #include <sys/stat.h>
 #include <errno.h>
 #include "mzm/core/mzm_sprites.h"

@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm/core/mzm_screen.h"
+#include "../core/mzm_screen.h"
 
 typedef struct { uint8_t palette_row, max_timer; uint16_t timer; uint8_t unk_4; } MzmTitleAnimatedPalette;
 typedef struct { uint8_t stage; uint16_t timer; } MzmTitleOamTiming;

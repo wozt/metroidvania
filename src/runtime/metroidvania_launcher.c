@@ -29,7 +29,7 @@
 #include "mzm/core/mzm_rom.h"
 #include "mzm/core/mzm_screen.h"
 #include "mzm/core/mzm_sfx.h"
-#include "mzm_title_screen.h"
+#include "mzm/title/mzm_title_screen.h"
 
 /* The embedded frontends (FUSION_EMBEDDED). */
 int room_runtime_main(int argc, char **argv);

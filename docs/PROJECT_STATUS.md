@@ -2,6 +2,14 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0956 - MZM title modules move to src/runtime/mzm/title/
+
+- `mzm_title_screen`, `mzm_intro` and `mzm_credits` moved to
+  `src/runtime/mzm/title/`. Includes inside the directory use
+  `../core/` for core modules and `../../` for modules not yet
+  moved; consumers use `mzm/title/` paths. CMake plus the
+  registries were updated. No code or behavior changed.
+
 ## Patch 0955 - MZM menu modules move to src/runtime/mzm/menus/
 
 - `mzm_file_select`, `mzm_hud`, `mzm_items`, `mzm_message_banner`,
@@ -15863,7 +15871,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0296 - Zero Mission intro
 
-- `src/runtime/mzm_intro.c`: the US intro (intro.c): the fade from black,
+- `src/runtime/mzm/title/mzm_intro.c`: the US intro (intro.c): the fade from black,
   the three typed texts with their letter sounds and blinking marker, the
   ship flying towards the camera as double-size affine sprites
   (ProcessComplexOam and CalculateOamPart4), Samus in her ship, the view of
@@ -16093,7 +16101,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   GBA-bit input) and `ProcessMenuOam`, `ResetFreeOam`,
   `UpdateMenuOamDataId`, `ClearGfxRam`, `ApplySpecialBackgroundFadingColor`
   over the ROM's OamArray/FrameData tables.
-- `src/runtime/mzm_title_screen.c` ports the US title screen: init from the
+- `src/runtime/mzm/title/mzm_title_screen.c` ports the US title screen: init from the
   ROM bank, fade in, title music (with `UpdateMusicPriority`, now carried by
   mzm_sfx), comets and ground scrolling, START skipping them, the title
   alpha fade, animated palettes, sparkles, PRESS START, fade out.

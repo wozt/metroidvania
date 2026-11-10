@@ -5,8 +5,8 @@
 
 #include <string.h>
 
-#include "mzm/core/mzm_rom.h"
-#include "mzm/core/mzm_sfx.h"
+#include "../core/mzm_rom.h"
+#include "../core/mzm_sfx.h"
 
 enum {
     SCREEN_W = 240, SCREEN_H = 160, BLOCK = 64,

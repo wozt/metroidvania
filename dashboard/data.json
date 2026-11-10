@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:23:31+00:00",
+ "generated_at": "2026-11-10T01:24:16+00:00",
  "git": {
-  "commit": "6234c1ec",
+  "commit": "91922de4",
   "branch": "main",
   "dirty": true
  },
@@ -1276,8 +1276,8 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_credits.c",
-    "src/runtime/mzm_credits.h",
+    "src/runtime/mzm/title/mzm_credits.c",
+    "src/runtime/mzm/title/mzm_credits.h",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_save.c",
     "src/runtime/mzm_save.h"
@@ -7653,7 +7653,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_intro.c",
+    "src/runtime/mzm/title/mzm_intro.c",
     "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/mzm/core/mzm_sfx.c",
     "src/runtime/room_runtime.c"
@@ -7730,7 +7730,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_title_screen.c",
+    "src/runtime/mzm/title/mzm_title_screen.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -17948,7 +17948,7 @@
     "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/fusion_host.c",
     "src/runtime/aos/title/aos_title_screen.c",
-    "src/runtime/mzm_title_screen.c",
+    "src/runtime/mzm/title/mzm_title_screen.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/room_runtime.c",
     "src/runtime/aria_runtime.c"
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "91922de4",
+   "date": "2026-11-10",
+   "subject": "Move MZM menu modules into src/runtime/mzm/menus/",
+   "scope": "project"
+  },
+  {
    "commit": "6234c1ec",
    "date": "2026-11-10",
    "subject": "Move MZM weapon modules into src/runtime/mzm/weapons/",
@@ -22713,12 +22719,6 @@
    "commit": "59fed5f1",
    "date": "2026-11-09",
    "subject": "Port the Cockatrice (Aria enemy id 46)",
-   "scope": "project"
-  },
-  {
-   "commit": "2202bd8b",
-   "date": "2026-11-09",
-   "subject": "Port the Waiter Skeleton (Aria of Sorrow enemy id 30)",
    "scope": "project"
   }
  ],

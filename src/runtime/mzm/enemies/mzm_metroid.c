@@ -6,8 +6,8 @@
  * last one unlocks the room and sets its event. Comments name the pinned
  * decompilation's routines. MetroidDoorLock (an unused sprite) is not
  * ported. */
-#include "mzm_projectiles.h"
-#include "mzm/core/mzm_sprite_ai.h"
+#include "../../mzm_projectiles.h"
+#include "../core/mzm_sprite_ai.h"
 
 enum {
     METROID_POSE_CHECK_SPAWN = 0x1,

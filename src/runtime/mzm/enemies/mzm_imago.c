@@ -5,9 +5,9 @@
  * has no missiles), loses its stinger when killed and keeps flying while
  * burning until Samus reaches the Super Missile, then crashes through the
  * wall; the event is set once Samus has picked the Super Missiles up. */
-#include "mzm/core/mzm_sprite_ai.h"
-#include "mzm/core/mzm_blocks.h"
-#include "mzm/core/mzm_screen_shake.h"
+#include "../core/mzm_sprite_ai.h"
+#include "../core/mzm_blocks.h"
+#include "../core/mzm_screen_shake.h"
 
 enum {
     POSE_WAIT_FOR_LAST_EGG = 0x1,

@@ -6,8 +6,8 @@
  * beam; its death flashes it, removes it and starts the escape. Comments
  * name the pinned decompilation's routines. Not ported: the in-game timer at
  * bosses. */
-#include "mzm_background_effect.h"
-#include "mzm/core/mzm_sprite_ai.h"
+#include "../../mzm_background_effect.h"
+#include "../core/mzm_sprite_ai.h"
 
 enum {
     POSE_WAITING_GLASS = 0x1,

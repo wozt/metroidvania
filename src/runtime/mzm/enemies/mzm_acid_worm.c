@@ -2,10 +2,10 @@
 /* Zero Mission's Acid Worm (src/sprites_ai/acid_worm.c): zipline-triggered
  * entrance, segmented body and weak point, hooked and spit attacks, acid
  * movement, arena destruction and persistent death event. */
-#include "mzm/core/mzm_blocks.h"
-#include "mzm_samus.h"
-#include "mzm/core/mzm_screen_shake.h"
-#include "mzm/core/mzm_sprite_ai.h"
+#include "../core/mzm_blocks.h"
+#include "../../mzm_samus.h"
+#include "../core/mzm_screen_shake.h"
+#include "../core/mzm_sprite_ai.h"
 
 enum {
     AW_CHECK_ZIPLINE = 0x1, AW_IDLE_INIT = 0x8, AW_IDLE = 0x9, AW_EXTENDED = 0xF,

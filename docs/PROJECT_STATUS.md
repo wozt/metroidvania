@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0953 - MZM enemy modules move to src/runtime/mzm/enemies/
+
+- The 19 enemy modules moved to `src/runtime/mzm/enemies/`:
+  acid worm, baristute, crocomire, deorem, gadora, hive, imago
+  (crawler, cocoon, larva), Kraid, Mecha Ridley, metroid, Mother
+  Brain, parasite, polyp, Ridley, space pirate, tangle vine and
+  worker robot. Includes inside the directory use `../core/` for
+  core modules and `../../mzm_*.h` for modules not yet moved;
+  CMake plus the registries were updated. No code or behavior
+  changed.
+
 ## Patch 0952 - MZM shared modules move to src/runtime/mzm/core/
 
 - The 14 shared MZM modules moved to `src/runtime/mzm/core/`:
@@ -12905,7 +12916,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0252 - Zero Mission Space Pirates
 
-- `src/runtime/mzm_space_pirate.c` ports `SpacePirate` and
+- `src/runtime/mzm/enemies/mzm_space_pirate.c` ports `SpacePirate` and
   `SpacePirateLaser` for the normal, three waiting and second pirate
   sprites: grid line-of-sight detection, walking, idling on stop-enemy
   blocks, obstacle jumps (the four ROM jump tables), crawling, climbing,
@@ -15420,7 +15431,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0326 - Zero Mission Mother Brain
 
 - MotherBrain and its part, beam, block and glass sprites
-  (`src/runtime/mzm_mother_brain.c`): the glass that missiles crack in
+  (`src/runtime/mzm/enemies/mzm_mother_brain.c`): the glass that missiles crack in
   three BG0 stages and shatter, the block Samus can't grab, the eye that
   opens after the glass and closes after enough damage, the charged beam
   that ignores invincibility, and the death that sets its event and shows
@@ -15433,7 +15444,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0325 - Zero Mission Ridley
 
-- Ridley, RidleyPart, RidleyTail and RidleyFireball (`src/runtime/mzm_ridley.c`):
+- Ridley, RidleyPart, RidleyTail and RidleyFireball (`src/runtime/mzm/enemies/mzm_ridley.c`):
   the Gravity Suit condition, the drop when Samus faces left on the
   ground, the landing that breaks the ground, the hovering and sliding,
   the turns, the small, big and grab fireballs, the tail's diagonal and
@@ -15474,7 +15485,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0322 - Zero Mission Kraid
 
-- Kraid, KraidPart, KraidSpike and KraidNail (`src/runtime/mzm_kraid.c`):
+- Kraid, KraidPart, KraidSpike and KraidNail (`src/runtime/mzm/enemies/mzm_kraid.c`):
   the rise, the steps with the multi-sprite tables and the BG2 body, the
   mouth that missiles and charged beams hurt, the health palettes (sprite
   rows and BG row 10), the swipe, the nails, the spikes that break the
@@ -15495,7 +15506,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0321 - Zero Mission Metroids
 
-- Metroid and MetroidShell (`src/runtime/mzm_metroid.c`): the room lock
+- Metroid and MetroidShell (`src/runtime/mzm/enemies/mzm_metroid.c`): the room lock
   and event, the growth on screen (sMetroidSpawning tables, Q8.8 scaling,
   palette rows 3 to 1), the chase with its inertia and bounces, the grab
   (SSC_METROID: the drain with its suit-dependent invincibility, the
@@ -15527,7 +15538,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0319 - Zero Mission Worker Robots and the projectile hit order
 
-- WorkerRobot (`src/runtime/mzm_worker_robot.c`): solid, immune to
+- WorkerRobot (`src/runtime/mzm/enemies/mzm_worker_robot.c`): solid, immune to
   projectiles, asleep until a hit's stun flash wakes them; they stand half
   a second, walk until Samus is in front of them or a ledge or wall stops
   them, lie down the other way, carry Samus standing on them, are pushed
@@ -15581,7 +15592,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0315 - Zero Mission Polyps
 
-- Polyp and PolypProjectile (`src/runtime/mzm_polyp.c`): the lava plants
+- Polyp and PolypProjectile (`src/runtime/mzm/enemies/mzm_polyp.c`): the lava plants
   spit an arcing projectile towards Samus every two seconds on screen.
 - SSC_KNOCKS_BACK_SAMUS: the sprites can now request Samus's knockback
   pose (no damage).
@@ -15638,7 +15649,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0310 - Zero Mission Parasites
 
-- Parasite and ParasiteMultiple (`src/runtime/mzm_parasite.c`): crawling,
+- Parasite and ParasiteMultiple (`src/runtime/mzm/enemies/mzm_parasite.c`): crawling,
   jumping, grabbing Samus (SSC_PARASITE: more than three leech her energy
   without the Varia or Gravity Suit) and the Gerons (four destroy one),
   thrown off by the screw attack and any shot, killed by bombs and power

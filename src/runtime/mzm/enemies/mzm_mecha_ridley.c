@@ -7,9 +7,9 @@
  * the Chozodia escape. */
 #include <string.h>
 
-#include "mzm/core/mzm_sprite_ai.h"
-#include "mzm/core/mzm_screen_shake.h"
-#include "mzm_message_banner.h"
+#include "../core/mzm_sprite_ai.h"
+#include "../core/mzm_screen_shake.h"
+#include "../../mzm_message_banner.h"
 
 enum {
     MECHA_CRAWLING_INIT = 0x1,

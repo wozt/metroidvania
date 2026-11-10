@@ -422,7 +422,7 @@ a power bomb after the Fully Powered Suit. Their sprites and the crawlers
 react to the shared screen shake (`src/runtime/mzm/core/mzm_screen_shake.c`), which
 moves the backgrounds, never the sprites.
 
-Parasites (`src/runtime/mzm_parasite.c`) crawl, hop and jump, grab Samus and
+Parasites (`src/runtime/mzm/enemies/mzm_parasite.c`) crawl, hop and jump, grab Samus and
 the Gerons; more than three on Samus leech her energy unless she wears the
 Varia or Gravity Suit, the screw attack and any shot throw them off, and only
 bombs and power bombs kill them. The bug room's multiple Parasites lock its

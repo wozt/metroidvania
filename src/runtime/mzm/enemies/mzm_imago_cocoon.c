@@ -2,9 +2,9 @@
 /* Zero Mission's Imago cocoon actors (src/sprites_ai/imago_cocoon.c): the
  * active multi-sprite cocoon, its destructible vines and spore nests, the
  * tunnel discovery trigger, and the persistent post-fight remains. */
-#include "mzm/core/mzm_blocks.h"
-#include "mzm/core/mzm_sprite_ai.h"
-#include "mzm/core/mzm_screen_shake.h"
+#include "../core/mzm_blocks.h"
+#include "../core/mzm_sprite_ai.h"
+#include "../core/mzm_screen_shake.h"
 
 enum {
     COCOON_IDLE = 0x8,

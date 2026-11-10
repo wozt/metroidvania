@@ -3,7 +3,7 @@
  * routines. */
 #include "mzm_message_banner.h"
 #include "mzm_items.h"
-#include "mzm/core/mzm_sfx.h"
+#include "../core/mzm_sfx.h"
 
 #include <string.h>
 

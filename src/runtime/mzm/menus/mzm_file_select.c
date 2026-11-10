@@ -5,8 +5,8 @@
 
 #include <string.h>
 
-#include "mzm/core/mzm_rom.h"
-#include "mzm/core/mzm_sfx.h"
+#include "../core/mzm_rom.h"
+#include "../core/mzm_sfx.h"
 
 enum {
     BLOCK = 64, HALF_BLOCK = 32, QUARTER_BLOCK = 16,

@@ -4,7 +4,7 @@
  * leaving it, and the escape take-off; its parts (the entrance, the
  * platform, the flames). Comments name the pinned decompilation's
  * routines. */
-#include "mzm_message_banner.h"
+#include "mzm/menus/mzm_message_banner.h"
 #include "mzm_samus.h"
 #include "mzm/core/mzm_sprite_ai.h"
 

@@ -2,6 +2,16 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0955 - MZM menu modules move to src/runtime/mzm/menus/
+
+- `mzm_file_select`, `mzm_hud`, `mzm_items`, `mzm_message_banner`,
+  `mzm_pause_screen`, `mzm_item_sprites` and `mzm_time_attack`
+  moved to `src/runtime/mzm/menus/`. Includes inside the
+  directory use `../core/` for core modules and `../../mzm_*.h`
+  for modules not yet moved; consumers use `mzm/menus/` paths.
+  CMake plus the registries were updated. No code or behavior
+  changed.
+
 ## Patch 0954 - MZM weapon modules move to src/runtime/mzm/weapons/
 
 - `mzm_projectiles`, `mzm_power_bomb` and `mzm_gadget_sprites`
@@ -14011,7 +14021,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0413 - Time Attack
 
-- New module `src/runtime/mzm_time_attack.c`, ported from `time_attack.c`:
+- New module `src/runtime/mzm/menus/mzm_time_attack.c`, ported from `time_attack.c`:
   - the save file validity: the first four bosses beaten in order, each
     after its anti-cheat time;
   - the unlock value of `CheckUnlockTimeAttack`;
@@ -14320,7 +14330,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0399 - item acquisition and suitless status screens
 
-- Ported in `src/runtime/mzm_pause_screen.c`:
+- Ported in `src/runtime/mzm/menus/mzm_pause_screen.c`:
   - `StatusScreenSuitlessItems`;
   - the whole of `StatusScreenToggleItem`;
   - the new-item form of `StatusScreenGetSlotForNewItem`;
@@ -14361,7 +14371,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0398 - fully powered suit items on the status screen
 
 - Ported `StatusScreenFullyPoweredItems` and the routines it needs in
-  `src/runtime/mzm_pause_screen.c`:
+  `src/runtime/mzm/menus/mzm_pause_screen.c`:
   - `PauseScreenSuitChangingStart`;
   - `StatusScreenFindUnknownItemSlot`;
   - `StatusScreenUpdateUnknownItemPalette`;
@@ -15769,7 +15779,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0301 - Zero Mission Chozo statue hints
 
-- `src/runtime/mzm_pause_screen.c`: PAUSE_SCREEN_CHOZO_HINT
+- `src/runtime/mzm/menus/mzm_pause_screen.c`: PAUSE_SCREEN_CHOZO_HINT
   (pause_screen_sub_menus.c): the hint screen, the statue's target
   travelling to its item with a trail while the map scrolls to it, the
   elevators to the target's area, A or START to leave; the activated
@@ -15886,7 +15896,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0294 - Zero Mission file select copy and erase
 
-- `src/runtime/mzm_file_select.c`: the copy and erase menus
+- `src/runtime/mzm/menus/mzm_file_select.c`: the copy and erase menus
   (FileSelectCopyFileHandler, FileSelectEraseFileHandler, their cursors,
   the copy arrow and the green destination markers, the overwrite and erase
   confirmations, the time attack refusal); the runtime copies and deletes
@@ -15900,7 +15910,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0293 - Zero Mission file select screen
 
-- `src/runtime/mzm_file_select.c`: the US file select screen
+- `src/runtime/mzm/menus/mzm_file_select.c`: the US file select screen
   (menus/file_select.c) on the native screen PPU, after START on the
   title: the three files (energy and tanks, timer, difficulty, area), the
   cursor and markers, the "Start game" panel with its native text, the
@@ -15926,7 +15936,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   palette row 2 flash, the extending top, the tube and the rising ray), then
   the save complete message and her release. The pause is disabled
   meanwhile (gDisablePause).
-- `src/runtime/mzm_message_banner.c`: the save prompt's YES/NO cursor
+- `src/runtime/mzm/menus/mzm_message_banner.c`: the save prompt's YES/NO cursor
   (SaveYesNoCursor) with its sounds; YES requests the save.
 - `src/runtime/mzm_save.c`: the runtime's save file (a versioned
   little-endian format with a CRC-32): the room, Samus, the equipment, the
@@ -15948,7 +15958,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   a station whose area map is already downloaded stays retracted.
 - The station sets gPauseScreenFlag to PAUSE_SCREEN_MAP_DOWNLOAD and the
   runtime opens the pause screen in its map download mode
-  (`src/runtime/mzm_pause_screen.c`): the download BG layout, the area
+  (`src/runtime/mzm/menus/mzm_pause_screen.c`): the download BG layout, the area
   name, the line sweeping down and revealing the downloaded rows, then A,
   B or START to return. The HUD minimap shows the download afterwards.
 - `MzmSpriteSamusLink` carries SamusSetPose requests and gSamusData writes
@@ -15962,7 +15972,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0290 - Zero Mission easy sleep
 
 - L on the pause map opens the native easy sleep screen
-  (`src/runtime/mzm_pause_screen.c`, from pause_screen_sub_menus.c,
+  (`src/runtime/mzm/menus/mzm_pause_screen.c`, from pause_screen_sub_menus.c,
   pause_screen.c and text.c): BLDALPHA fades, the L prompt, the easy sleep
   tilemap, the text drawn into the equipment names graphics (backed up and
   restored), the YES/NO cursor with its sounds.
@@ -15976,7 +15986,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0289 - Zero Mission status screen
 
 - R on the pause map opens the native status screen
-  (`src/runtime/mzm_pause_screen.c`, from status_screen.c and
+  (`src/runtime/mzm/menus/mzm_pause_screen.c`, from status_screen.c and
   pause_screen.c): the map fades out through BLDALPHA, the headers and
   Samus's wireframe slide in (the wireframe also drawn into the OBJ window,
   which shows only BG3 and the objects), the equipment rows are revealed one
@@ -15999,7 +16009,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0288 - Zero Mission pause screen map
 
-- `src/runtime/mzm_pause_screen.c`: START in the game opens the native
+- `src/runtime/mzm/menus/mzm_pause_screen.c`: START in the game opens the native
   pause screen's map (PauseScreenInit, fades, the area map with Samus's and
   the boss icons, scroll arrows, area name, minimap palette animation,
   D-pad scrolling with repeat, world map on A/B, area switching on SELECT,
@@ -16104,7 +16114,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   `metroid_rom_bank`) copies the verified ROM into a private bank with the
   14462 sized data symbols of `third_party/mzm/mzm_us.elf`; `mzm_rom.c` reads
   them by name and decompresses BIOS LZ77 and run-length streams.
-- `src/runtime/mzm_hud.c` ports `hud.c`, `hud_generic.c` and `minimap.c`:
+- `src/runtime/mzm/menus/mzm_hud.c` ports `hud.c`, `hud_generic.c` and `minimap.c`:
   energy digits and tanks with the low health flag, the missile, super
   missile and power bomb counters with their Inactive/Selected/Active
   symbols and refill stages, the suitless charge bar, the HUD OAM, and the
@@ -16179,7 +16189,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0278 - Zero Mission Morph Ball, Power Grip and Charge Beam pickups
 
-- `src/runtime/mzm_item_sprites.c` ports the three item sprites outside the
+- `src/runtime/mzm/menus/mzm_item_sprites.c` ports the three item sprites outside the
   Chozo statues with their secondaries: the Morph Ball and its outline, the
   Power Grip and its glow, the Charge Beam with its spawning table, glow and
   float (`sChargeBeamIdleYMovement`, now exported).
@@ -16383,7 +16393,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0269 - Zero Mission tank pickups and the message banner
 
-- `src/runtime/mzm_items.c` ports the tank part of
+- `src/runtime/mzm/menus/mzm_items.c` ports the tank part of
   `BgClipCheckTouchingTransitionOrTank` (odd frames, the four Clipdata
   probes, last first): a revealed tank starts `gCollectingTank`, raises the
   equipment within the game total (100 energy refilled, 5 missiles, 2 super
@@ -16394,7 +16404,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   `BgClipRemoveCollectedTanks` clears it on every room load.
   `scripts/mzm_c_tables.py` exports `sTankBehaviors`' item types, water
   flags and messages and the TankList rows into `blocks.tsv`.
-- `src/runtime/mzm_message_banner.c` runs `MessageBanner` (graphics frames,
+- `src/runtime/mzm/menus/mzm_message_banner.c` runs `MessageBanner` (graphics frames,
   text processing with the animation held, the one- or two-line spawn, 100
   static frames, A/B/directions to close, the removal) with the tank jingle;
   `gPreventMovementTimer` skips `SamusUpdate` and stops the sprites

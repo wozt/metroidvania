@@ -11,10 +11,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm_hud.h"
-#include "mzm_items.h"
+#include "mzm/menus/mzm_hud.h"
+#include "mzm/menus/mzm_items.h"
 #include "mzm_samus.h"
-#include "mzm_time_attack.h"
+#include "mzm/menus/mzm_time_attack.h"
 
 enum {
     MZM_SAVE_ALIAS = 48,

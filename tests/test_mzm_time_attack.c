@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mzm_time_attack.h"
+#include "mzm/menus/mzm_time_attack.h"
 
 int main(void) {
     const uint8_t *characters = (const uint8_t *)"0123456789ABCDEFGHJKLMNPQRSTVWXY";

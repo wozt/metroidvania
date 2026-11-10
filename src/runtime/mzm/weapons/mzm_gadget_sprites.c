@@ -6,7 +6,7 @@
  * platforms (save_platform.c); comments name the pinned decompilation's
  * routines. */
 #include "../core/mzm_blocks.h"
-#include "../../mzm_message_banner.h"
+#include "../../mzm/menus/mzm_message_banner.h"
 #include "../core/mzm_screen_shake.h"
 #include "../core/mzm_sprite_ai.h"
 

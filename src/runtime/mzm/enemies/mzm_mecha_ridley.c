@@ -9,7 +9,7 @@
 
 #include "../core/mzm_sprite_ai.h"
 #include "../core/mzm_screen_shake.h"
-#include "../../mzm_message_banner.h"
+#include "../../mzm/menus/mzm_message_banner.h"
 
 enum {
     MECHA_CRAWLING_INIT = 0x1,

@@ -11,9 +11,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "gba_ppu.h"
-#include "mzm_escape.h"
-#include "mzm_samus.h"
+#include "../../gba_ppu.h"
+#include "../../mzm_escape.h"
+#include "../../mzm_samus.h"
 
 enum { MZM_MINIMAP_SIZE = 32, MZM_HUD_AREAS = 8 };
 

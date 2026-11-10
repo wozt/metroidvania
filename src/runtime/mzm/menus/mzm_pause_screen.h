@@ -28,8 +28,8 @@
 #include <stdint.h>
 
 #include "mzm_hud.h"
-#include "mzm/core/mzm_screen.h"
-#include "mzm/core/mzm_text.h"
+#include "../core/mzm_screen.h"
+#include "../core/mzm_text.h"
 
 /* gPauseScreenFlag values the pause screen handles. */
 enum {

@@ -8,7 +8,7 @@
  * slight-yellow palette flash is ported; the Long Beam hint's long
  * transparency and the slow scrolling are not. */
 #include "mzm_background_effect.h"
-#include "mzm_items.h"
+#include "mzm/menus/mzm_items.h"
 #include "mzm/core/mzm_sprite_ai.h"
 
 #include <stddef.h>

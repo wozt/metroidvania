@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:22:05+00:00",
+ "generated_at": "2026-11-10T01:23:31+00:00",
  "git": {
-  "commit": "112332d1",
+  "commit": "6234c1ec",
   "branch": "main",
   "dirty": true
  },
@@ -1155,8 +1155,8 @@
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_save.c",
     "src/runtime/mzm_save.h",
-    "src/runtime/mzm_time_attack.c",
-    "src/runtime/mzm_time_attack.h"
+    "src/runtime/mzm/menus/mzm_time_attack.c",
+    "src/runtime/mzm/menus/mzm_time_attack.h"
    ],
    "tests": [
     "tests/test_mzm_screens.c",
@@ -1371,7 +1371,7 @@
     "src/runtime/mzm_in_game_cutscene.h",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_ruins_test.c",
-    "src/runtime/mzm_message_banner.c"
+    "src/runtime/mzm/menus/mzm_message_banner.c"
    ],
    "tests": [
     "tests/test_mzm_screens.c"
@@ -1992,7 +1992,7 @@
     "src/runtime/mzm_chozodia_scripted.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
-    "src/runtime/mzm_message_banner.c",
+    "src/runtime/mzm/menus/mzm_message_banner.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -5783,8 +5783,8 @@
    "local_sources": [
     "src/runtime/mzm_escape.c",
     "src/runtime/mzm_escape.h",
-    "src/runtime/mzm_hud.c",
-    "src/runtime/mzm_message_banner.c",
+    "src/runtime/mzm/menus/mzm_hud.c",
+    "src/runtime/mzm/menus/mzm_message_banner.c",
     "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/enemies/mzm_mother_brain.c",
     "src/runtime/mzm_tourian_escape.c",
@@ -6041,9 +6041,9 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_hud.c",
+    "src/runtime/mzm/menus/mzm_hud.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_items.c"
+    "src/runtime/mzm/menus/mzm_items.c"
    ],
    "tests": [
     "tests/test_mzm_hud.c",
@@ -6139,7 +6139,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_message_banner.c",
+    "src/runtime/mzm/menus/mzm_message_banner.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/message_text.c",
@@ -6448,7 +6448,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_item_sprites.c",
+    "src/runtime/mzm/menus/mzm_item_sprites.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
@@ -6525,7 +6525,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_items.c",
+    "src/runtime/mzm/menus/mzm_items.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/runtime_room.c"
    ],
@@ -6600,7 +6600,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_pause_screen.c",
+    "src/runtime/mzm/menus/mzm_pause_screen.c",
     "src/runtime/mzm/core/mzm_text.c",
     "src/runtime/room_runtime.c"
    ],
@@ -6661,7 +6661,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_file_select.c",
+    "src/runtime/mzm/menus/mzm_file_select.c",
     "src/runtime/mzm/core/mzm_text.c",
     "src/runtime/room_runtime.c"
    ],
@@ -6750,8 +6750,8 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_pause_screen.c",
-    "src/runtime/mzm_hud.c",
+    "src/runtime/mzm/menus/mzm_pause_screen.c",
+    "src/runtime/mzm/menus/mzm_hud.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -6813,8 +6813,8 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_pause_screen.c",
-    "src/runtime/mzm_hud.c",
+    "src/runtime/mzm/menus/mzm_pause_screen.c",
+    "src/runtime/mzm/menus/mzm_hud.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -6906,7 +6906,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_pause_screen.c",
+    "src/runtime/mzm/menus/mzm_pause_screen.c",
     "src/runtime/mzm/core/mzm_text.c"
    ],
    "tests": [
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "6234c1ec",
+   "date": "2026-11-10",
+   "subject": "Move MZM weapon modules into src/runtime/mzm/weapons/",
+   "scope": "project"
+  },
+  {
    "commit": "112332d1",
    "date": "2026-11-10",
    "subject": "Move MZM enemy modules into src/runtime/mzm/enemies/",
@@ -22713,12 +22719,6 @@
    "commit": "2202bd8b",
    "date": "2026-11-09",
    "subject": "Port the Waiter Skeleton (Aria of Sorrow enemy id 30)",
-   "scope": "project"
-  },
-  {
-   "commit": "37b9cd1b",
-   "date": "2026-11-09",
-   "subject": "docs: decode Waiter Skeleton enemy chain spec (id 30)",
    "scope": "project"
   }
  ],

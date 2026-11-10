@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free regression tests for the Zero Mission tank pickups and the
  * message banner. */
-#include "mzm_items.h"
-#include "mzm_message_banner.h"
+#include "mzm/menus/mzm_items.h"
+#include "mzm/menus/mzm_message_banner.h"
 #include "mzm/core/mzm_sfx.h"
 
 #include <assert.h>

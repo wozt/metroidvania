@@ -13,7 +13,7 @@
 #include "mzm_background_effect.h"
 #include "mzm/core/mzm_sprite_ai.h"
 #include "mzm/core/mzm_blocks.h"
-#include "mzm_message_banner.h"
+#include "mzm/menus/mzm_message_banner.h"
 
 enum {
     POSE_SPAWNING = 0x1,

@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "gba_ppu.h"
-#include "mzm_hud.h"
+#include "mzm/menus/mzm_hud.h"
 #include "mzm/core/mzm_rom.h"
 
 static GbaPpu ppu;

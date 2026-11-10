@@ -271,6 +271,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/were.c
     src/runtime/aos/enemies/werewolf.c
     src/runtime/aos/enemies/slime.c
+    src/runtime/aos/enemies/kyoma_demon.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

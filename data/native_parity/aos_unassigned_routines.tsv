@@ -942,8 +942,6 @@ aos:asm:asm/code/code_08090914.s:EnemyFlameDemonUpdate	EnemyFlameDemonUpdate	ene
 aos:asm:asm/code/code_08090914.s:EnemyGiantSkeletonCreate	EnemyGiantSkeletonCreate	enemies	name			asm_function		asm/code/code_08090914.s	16771	0	1
 aos:asm:asm/code/code_08090914.s:EnemyGiantSkeletonUpdate	EnemyGiantSkeletonUpdate	enemies	name			asm_function		asm/code/code_08090914.s	16763	0	1
 aos:asm:asm/code/code_08090914.s:EnemyGladiatorCreate	EnemyGladiatorCreate	enemies	name			asm_function		asm/code/code_08090914.s	32188	0	17
-aos:asm:asm/code/code_08090914.s:EnemyKyomaDemonCreate	EnemyKyomaDemonCreate	enemies	name			asm_function		asm/code/code_08090914.s	31381	0	11
-aos:asm:asm/code/code_08090914.s:EnemyKyomaDemonUpdate	EnemyKyomaDemonUpdate	enemies	name			asm_function		asm/code/code_08090914.s	31269	0	9
 aos:asm:asm/code/code_08090914.s:EnemyLegionCreate	EnemyLegionCreate	enemies	name			asm_function		asm/code/code_08090914.s	23881	0	17
 aos:asm:asm/code/code_08090914.s:EnemyLegionUpdate	EnemyLegionUpdate	enemies	name			asm_function		asm/code/code_08090914.s	23775	0	11
 aos:asm:asm/code/code_08090914.s:EnemyLilithCreate	EnemyLilithCreate	enemies	name			asm_function		asm/code/code_08090914.s	7947	0	10
@@ -1080,13 +1078,7 @@ aos:asm:asm/code/code_08090914.s:sub_0809FFEC	sub_0809FFEC	enemies	referrers			a
 aos:asm:asm/code/code_08090914.s:sub_080A0030	sub_080A0030	enemies	referrers			asm_function	0x080A0030	asm/code/code_08090914.s	31177	0	1
 aos:asm:asm/code/code_08090914.s:sub_080A005C	sub_080A005C	enemies	referrers			asm_function	0x080A005C	asm/code/code_08090914.s	31201	1	2
 aos:asm:asm/code/code_08090914.s:sub_080A00AC	sub_080A00AC	enemies	referrers			asm_function	0x080A00AC	asm/code/code_08090914.s	31243	0	1
-aos:asm:asm/code/code_08090914.s:sub_080A02AC	sub_080A02AC	enemies	referrers			asm_function	0x080A02AC	asm/code/code_08090914.s	31497	1	4
-aos:asm:asm/code/code_08090914.s:sub_080A04B0	sub_080A04B0	enemies	referrers			asm_function	0x080A04B0	asm/code/code_08090914.s	31760	1	5
-aos:asm:asm/code/code_08090914.s:sub_080A05B4	sub_080A05B4	enemies	referrers			asm_function	0x080A05B4	asm/code/code_08090914.s	31893	0	6
 aos:asm:asm/code/code_08090914.s:sub_080A0640	sub_080A0640	enemies	referrers			asm_function	0x080A0640	asm/code/code_08090914.s	31961	0	2
-aos:asm:asm/code/code_08090914.s:sub_080A0744	sub_080A0744	enemies	referrers			asm_function	0x080A0744	asm/code/code_08090914.s	32092	1	3
-aos:asm:asm/code/code_08090914.s:sub_080A0790	sub_080A0790	enemies	referrers			asm_function	0x080A0790	asm/code/code_08090914.s	32129	1	1
-aos:asm:asm/code/code_08090914.s:sub_080A07D0	sub_080A07D0	enemies	referrers			asm_function	0x080A07D0	asm/code/code_08090914.s	32164	0	1
 aos:asm:asm/code/code_080A0A8C.s:EnemyBigGolemCreate	EnemyBigGolemCreate	enemies	name			asm_function		asm/code/code_080A0A8C.s	15259	0	18
 aos:asm:asm/code/code_080A0A8C.s:EnemyBigGolemUpdate	EnemyBigGolemUpdate	enemies	name			asm_function		asm/code/code_080A0A8C.s	15128	0	10
 aos:asm:asm/code/code_080A0A8C.s:EnemyChaos2Create	EnemyChaos2Create	enemies	name			asm_function		asm/code/code_080A0A8C.s	12999	1	4

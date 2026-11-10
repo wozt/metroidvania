@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0971 - Kyoma Demon ported (id 39)
+
+- `EnemyKyomaDemonCreate` (0x080A01B8) through `sub_080A0744`
+  (tiles `0x081CC0A4`, palette `0x0820AF74` one bank, frames
+  `0x08226EAC`) and `EnemyKyomaDemonUpdate` (0x080A00DC)
+  dispatching `sub_080A02AC` the position-copying watch,
+  `sub_080A04B0` the three-substep attack and `sub_080A0790`
+  the blink wait as `src/runtime/aos/enemies/kyoma_demon.c`.
+- The demon copies the player entity's `+0x40/+0x44` position
+  (x + 16 px) and `+0x58` bit-6 facing every tick of states 0
+  and 1, hides (`+0x58` bit 5) outside a spawn window, arms the
+  attack on the player `+0x10` bit 1 and counts the `+0x1A`
+  entry timer; state 1 lifts 16 px, plays animations 2-3
+  (sound `0x85` on frame 4) and strobes on the `sub_0806D518`
+  blink table; the hurt `sub_080A05B4` plays `0x72` and parks
+  `0x3C` blink frames in state 2.
+- Verified by `kyoma_tests` (create flags, position copy,
+  attack entry, the lift/return cycle, lethal transition);
+  spawn data places it in `area_04_room_012`/`013`.
+- Divergences: the spawn window latches lazily on the first
+  update (the native reads the room scroll at create), the
+  `func_0803F0E4` reveal/death children are spark drifts, and
+  the `sub_08042B8C` knockback is not ported. Red soul 54 not
+  ported yet.
+- Ported enemies: 77/113.
+
 ## Patch 0970 - Slime ported (id 68)
 
 - `EnemySlimeCreate` (0x080C11C0) feeds `sub_0806E0D0` the tile

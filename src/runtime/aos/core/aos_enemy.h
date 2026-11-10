@@ -165,6 +165,7 @@ enum {
     AOS_ENEMY_WEREJAGUAR = 0x4B,
     AOS_ENEMY_WERETIGER = 0x54,
     AOS_ENEMY_SLIME = 0x44,
+    AOS_ENEMY_KYOMA_DEMON = 0x27,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -500,6 +501,20 @@ typedef struct AosEnemy {
     int32_t sl_power, sl_charge, sl_width;
     uint16_t sl_angle, sl_astep;
     int16_t sl_box[4];
+    /* Kyoma Demon (sub_080A02AC / sub_080A04B0 / sub_080A0790): the
+     * + 0x14/+ 0x16 spawn-window centre and + 0x1C/+ 0x20 the spawn
+     * screen position latched on the first update (the native stores
+     * them at create against the room scroll; the camera is only
+     * known here), + 0x42/+ 0x46 the spawn slot pixels, + 0x18 the
+     * alert flag, + 0x5C the draw byte (0x1D idle, 0x11 attack),
+     * + 0x2C the last attack element low nibble, + 0x59 bit 1 the
+     * attack-anim lock and + 0x5A bits 3-6 the hurt draw group
+     * (bits 1-2 stay `translucent`). + 0x6D/+ 0x6E are the shared
+     * animation id/frame fields. */
+    int16_t kd_sx, kd_sy, kd_ox, kd_oy;
+    int32_t kd_tx, kd_ty;
+    uint8_t kd_alert, kd_5c, kd_atk, kd_f59, kd_f5a;
+    bool kd_origin;
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

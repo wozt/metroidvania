@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T07:14:04+00:00",
+ "generated_at": "2026-11-10T07:32:11+00:00",
  "git": {
-  "commit": "42b6f6fe",
+  "commit": "da1476a2",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 252,
+   "total": 253,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 186,
+    "functional": 187,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 186,
-   "functional_or_better_percent": 73.8,
-   "with_passing_tests": 239,
-   "with_passing_tests_percent": 94.8,
+   "functional_or_better": 187,
+   "functional_or_better_percent": 73.9,
+   "with_passing_tests": 240,
+   "with_passing_tests_percent": 94.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -242,6 +242,7 @@
     "aos.enemies.killer_doll",
     "aos.enemies.killer_fish",
     "aos.enemies.killer_mantle",
+    "aos.enemies.kyoma_demon",
     "aos.enemies.lightning_doll",
     "aos.enemies.lubicant",
     "aos.enemies.mandragora",
@@ -486,20 +487,20 @@
    "areas": [
     "aos"
    ],
-   "total": 107,
+   "total": 108,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 79,
+    "functional": 80,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 79,
-   "functional_or_better_percent": 73.8,
-   "with_passing_tests": 107,
+   "functional_or_better": 80,
+   "functional_or_better_percent": 74.1,
+   "with_passing_tests": 108,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -544,6 +545,7 @@
     "aos.enemies.killer_doll",
     "aos.enemies.killer_fish",
     "aos.enemies.killer_mantle",
+    "aos.enemies.kyoma_demon",
     "aos.enemies.lightning_doll",
     "aos.enemies.lubicant",
     "aos.enemies.mandragora",
@@ -12246,6 +12248,105 @@
    }
   },
   {
+   "id": "aos.enemies.kyoma_demon",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Kyoma Demon",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/kyoma_demon.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyKyomaDemonCreate",
+    "EnemyKyomaDemonUpdate",
+    "sub_080A02AC",
+    "sub_080A04B0",
+    "sub_080A0790",
+    "sub_080A07D0",
+    "sub_080A05B4",
+    "sub_080A0744",
+    "sub_0806D518",
+    "sub_0806CF2C",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803F0E4",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_0806E0D0",
+    "sub_08068264",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_080427B8",
+    "sub_0804277C",
+    "sub_080683BC",
+    "sub_08021654",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_08042B8C",
+    "sub_08021924",
+    "sub_08068AD4",
+    "sub_080421AC",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The spawn window of sub_080A02AC is approximated: the native latches + 0x14/+ 0x16 and + 0x1C/+ 0x20 against the room scroll at create, the camera is only known on the first update here so they latch lazily; the func_0803F0E4 reveal and death children (records 0x08528364 / 0x0852836C) are approximated by spark drifts; the sub_0806D518 blink table is ported but its sign-extension edge cases collapse to the 40-byte table; the sub_08042B8C knockback, the + 0x5A palette merges, the sub_0806D128 activity window and sub_08021924/sub_080421AC bookkeeping are not ported; and there is no emulator comparison. EnemyKyomaDemonCreate (0x080A01B8) through sub_080A0744 loads tiles 0x081CC0A4, palette 0x0820AF74 (one bank) and frames 0x08226EAC, plays animation (1, 0, 1), enters state 3 under the global 0x8E & 0x40, else state 0 with + 0x5C = 0x1D, + 0x18 = 1, + 0x1A = (rng & 0x1F) + 0x20, + 0x42/+ 0x46 the spawn slot pixels and the + 0x14/+ 0x16 window — a nonzero param0 parks it hidden in state 2 step 1. EnemyKyomaDemonUpdate dispatches: state 0 sub_080A02AC copies the player entity's + 0x40/+ 0x44 position (x + 16 px) and + 0x58 bit-6 facing every tick, hides (+ 0x58 bit 5) outside the spawn window, arms step 1 on the player + 0x10 bit 1 with the func_0803F0E4 reveal, counts the + 0x1A attack-entry timer into state 1 inside the [-0xA, +0x14] edge band and picks the pose animation by the spawn screen-position match; step 1 replays the copy and returns to step 0 or parks at step 2 on the flag. State 1 sub_080A04B0 attacks in three substates — animation 2 with the 16 px lift and + 0x5C = 0x11, the loop end arming animation 3 (sound 0x85 on frame 4) and the 0x28 blink-table wait back to the watch. State 2 sub_080A0790 strobes hidden on the same table for the post-hurt wait; state 3 animates only. The hurt sub_080A05B4 flashes every blow, plays sound 0x72 and the func_0803F0E4 death child on a lethal one, writes the + 0x5A draw group from + 0x2C and parks 0x3C frames in state 2. Unit-tested in kyoma_tests.",
+   "next_action": "Port the red soul 54 update and compare a room fight against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_04_room_012: three Kyoma Demons hold their spawn windows and copy Soma's position"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.lightning_doll",
    "area": "aos",
    "category": "enemies",
@@ -23596,6 +23697,12 @@
  },
  "timeline": [
   {
+   "commit": "da1476a2",
+   "date": "2026-11-10",
+   "subject": "Port the Aria Slime enemy (id 68)",
+   "scope": "project"
+  },
+  {
    "commit": "42b6f6fe",
    "date": "2026-11-10",
    "subject": "Port Werewolf (id 50)",
@@ -24068,12 +24175,6 @@
    "date": "2026-11-09",
    "subject": "Compile Sky Fish as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "d8f60f50",
-   "date": "2026-11-09",
-   "subject": "Move the Skull Archer soul's arrow into its own module",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24134,9 +24235,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1333,
-    "routines_attached_to_features": 1333,
-    "unassigned_routines": 2240,
+    "routines_cited_by_features": 1341,
+    "routines_attached_to_features": 1341,
+    "unassigned_routines": 2232,
     "call_edges": 14228
    }
   },
@@ -26378,12 +26479,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 76,
-      "functional_or_better": 76,
-      "functional_or_better_percent": 74,
+      "implemented": 77,
+      "functional_or_better": 77,
+      "functional_or_better_percent": 75,
       "by_status": {
-       "functional": 76,
-       "not_started": 26
+       "functional": 77,
+       "not_started": 25
       }
      },
      "bosses": {
@@ -27404,13 +27505,28 @@
      {
       "id": 39,
       "name": "Kyoma Demon",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Kyoma Demon",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_012: three Kyoma Demons hold their spawn windows and copy Soma's position"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.kyoma_demon",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "red:54",
+       "notes": "Soul: drops (soul_index 54, soul_rarity 30, rates 20/30 through the generic roll) and is collected, but its red soul 54 has no ported update yet. Animations: ported from EnemyKyomaDemonCreate (0x080A01B8) / EnemyKyomaDemonUpdate (0x080A00DC) and the sub_080A02AC watch, sub_080A04B0 attack and sub_080A0790 blink-wait handlers — animations 1-3 through the shared play/step helpers; unit-tested in kyoma_tests. Sounds: PlaySong 0x85 on the attack's animation frame 4 and 0x72 at the lethal hurt are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x081CC0A4, palette 0x0820AF74 (one bank), animation record 0x08226EAC exported natively. Divergences: the spawn window latches lazily on the first update (the native reads the room scroll at create), the func_0803F0E4 reveal/death children are spark drifts, and there is no emulator comparison."
       }
      },
      {
@@ -28951,17 +29067,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 76,
+      "ported": 77,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 76,
+      "ported": 77,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 76,
+      "ported": 77,
       "partial": 0,
       "missing": 0
      },
@@ -28972,11 +29088,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 19,
+      "partial": 20,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 76
+     "monsters": 77
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -33676,7 +33792,7 @@
        "id": "05:36",
        "name": "Kyoma Demon",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 54, soul_rarity 30, rates 20/30 through the generic roll) and is collected, but its red soul 54 has no ported update yet. Animations: ported from EnemyKyomaDemonCreate (0x080A01B8) / EnemyKyomaDemonUpdate (0x080A00DC) and the sub_080A02AC watch, sub_080A04B0 attack and sub_080A0790 blink-wait handlers — animations 1-3 through the shared play/step helpers; unit-tested in kyoma_tests. Sounds: PlaySong 0x85 on the attack's animation frame 4 and 0x72 at the lethal hurt are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x081CC0A4, palette 0x0820AF74 (one bank), animation record 0x08226EAC exported natively. Divergences: the spawn window latches lazily on the first update (the native reads the room scroll at create), the func_0803F0E4 reveal/death children are spark drifts, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

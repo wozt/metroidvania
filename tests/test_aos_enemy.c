@@ -6209,6 +6209,113 @@ static void slime_tests(void) {
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);
 }
 
+static void kyoma_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;   /* floor top 160 */
+    enum { KD_ANIMS = 4 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[KD_ANIMS];
+    for (int a = 0; a < KD_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = KD_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < KD_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv id 39: hp 220, field_e 999, contact 30, defence 10,
+     * weak 0x0020, resist 0x0410, experience 60, soul 0/54. */
+    const AosEnemyStats stats = {220, 30, 10, 0x0020, 0x0410, 60};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+    const int CAM = 200;
+
+    /* EnemyKyomaDemonCreate (0x080A01B8): state 0, animation 1,
+     * + 0x5C = 0x1D, + 0x18 = 1, + 0x1A = (rng & 0x1F) + 0x20 and
+     * + 0x42/+ 0x46 the spawn slot pixels. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_KYOMA_DEMON, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 220 && e.anim.id == 1 &&
+           e.kd_5c == 0x1D && e.kd_alert == 1 &&
+           e.producer_timer >= 0x20 && e.producer_timer <= 0x3F &&
+           e.kd_ox == 300 && e.kd_oy == 150);
+
+    /* The global 0x8E & 0x40 sends it to the inert state 3; a
+     * nonzero param0 parks it hidden in state 2 step 1. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ei;
+    assert(aos_enemy_create(&ei, AOS_ENEMY_KYOMA_DEMON, 150, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ei.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+    AosEnemy ep;
+    assert(aos_enemy_create(&ep, AOS_ENEMY_KYOMA_DEMON, 150, 150, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ep.state == 2 && ep.step == 1 && ep.hidden);
+
+    /* sub_080A02AC step 0: the demon copies Soma's position (x +
+     * 16 px) and facing; the spawn window latches on the first
+     * update and the edge check keeps it visible near its spawn. */
+    soma.x = AOS_FIXED(290);
+    soma.y = AOS_FIXED(140);
+    soma.facing_left = false;
+    for (int i = 0; i < 3; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, 0, always_zero);
+    assert(e.x == soma.x + 0x100000 && e.y == soma.y && !e.hidden);
+
+    /* The + 0x1A countdown re-rolls (always_zero -> 0x40) and the
+     * screen edge inside [sx - 0xA, sx + 0x14] enters state 1. */
+    int attacked = 0;
+    for (int i = 0; i < 90 && !attacked; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, 0, always_zero);
+        if (e.state == 1) attacked = 1;
+    }
+    assert(attacked);
+
+    /* sub_080A04B0: step 0 plays animation 2, lifts 16 px and sets
+     * + 0x5C = 0x11; the loop end arms animation 3 and the 0x28
+     * blink wait hands back to state 0. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, 0, always_zero);
+    assert(e.step == 1 && e.kd_5c == 0x11 && e.anim.id == 2);
+    int recoiled = 0;
+    for (int i = 0; i < 300 && e.state == 1; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, 0, always_zero);
+        if (e.state == 0) recoiled = 1;
+    }
+    assert(recoiled);
+
+    /* sub_080A05B4 lethal: defeated, sound 0x72, state 2 with the
+     * 0x3C blink wait of sub_080A0790. */
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = e.x - 0x100000;
+    soma.y = e.y;
+    aos_audio_clear();
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        &weapon, &blade, 9999, 4, CAM, 0,
+                                        always_zero);
+    assert(hit.killed && e.state == 2 && e.timer == 0x3C && e.defeated &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9453,6 +9560,7 @@ int main(void) {
     were_tests();
     werewolf_tests();
     slime_tests();
+    kyoma_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

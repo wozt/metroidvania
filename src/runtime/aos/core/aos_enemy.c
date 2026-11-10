@@ -395,7 +395,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MUDMAN &&
         id != AOS_ENEMY_WEREJAGUAR && id != AOS_ENEMY_WERETIGER &&
         id != AOS_ENEMY_WEREWOLF &&
-        id != AOS_ENEMY_SLIME &&
+        id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -786,6 +786,44 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->substep = 2;
             enemy->sl_angle = 0x8000;
         }
+        return true;
+    }
+    if (id == AOS_ENEMY_KYOMA_DEMON) {
+        /* EnemyKyomaDemonCreate (0x080A01B8): tiles 0x081CC0A4,
+         * palette 0x0820AF74 (one bank), frames 0x08226EAC;
+         * animation (1, 0, 1) stepped, sub_0806B04C stats, the
+         * global 0x8E & 0x40 sends it to state 3, else state 0 with
+         * + 0x5C = 0x1D, + 0x18 = 1, + 0x1A = (rng & 0x1F) + 0x20
+         * and + 0x42/+ 0x46 the spawn slot pixels the window latches
+         * against; a nonzero param0 parks it hidden in state 2
+         * step 1. */
+        play_loop(enemy, anims, 1, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->kd_sx = enemy->kd_sy = 0;
+        enemy->kd_tx = enemy->kd_ty = 0;
+        enemy->kd_alert = enemy->kd_5c = enemy->kd_atk = 0;
+        enemy->kd_f59 = enemy->kd_f5a = 0;
+        enemy->kd_origin = false;
+        enemy->kd_5c = 0x1D;
+        enemy->kd_ox = (int16_t)(enemy->x >> 16);
+        enemy->kd_oy = (int16_t)(enemy->y >> 16);
+        enemy->kd_alert = 1;
+        enemy->producer_timer =
+            (uint16_t)((int16_t)(aos_random() & 0x1F) + 0x20);
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        if (param0 != 0) {
+            enemy->state = 2;
+            enemy->step = 1;
+            enemy->hidden = true;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        enemy->kd_f59 &= ~0x20;   /* + 0x59 bit 5 cleared natively */
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -1941,6 +1979,11 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 /* sub_080C140C: every blow sets the + 0x11 bit-0 squash
                  * mark before the damage walk. */
                 enemy->sl_flags |= 1;
+            if (enemy->id == AOS_ENEMY_KYOMA_DEMON &&
+                enemy->role == AOS_ROLE_ENEMY)
+                /* The damage walk stores the attack element's low
+                 * nibble at + 0x2C for the hurt's + 0x5A draw group. */
+                enemy->kd_atk = (uint8_t)(elements & 0xF);
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON && enemy->id == AOS_ENEMY_VALKYRIE &&
                 enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
@@ -2058,6 +2101,21 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     /* sub_080C140C: lethal — sub_080683BC rewards
                      * (the framework's defeated mark), state 2 step
                      * 0, the spin death of sub_080C10BC. */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_KYOMA_DEMON &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080A05B4: lethal — sub_080683BC defeated,
+                     * sound 0x72, the func_0803F0E4 death child
+                     * (a spark drift stands in), + 0x5A draw group
+                     * from + 0x2C, 0x3C frames of the blink wait. */
+                    enemy->defeated = true;
+                    aos_audio_play_song(0x72);
+                    aos_enemy_spawn_drift(AOS_EFFECT_SPARK, enemy->x,
+                                          enemy->y, &report);
+                    enemy->kd_f5a = (uint8_t)(((enemy->kd_atk & 0xF) << 3) |
+                                             (enemy->kd_f5a & 0x86));
+                    enemy->timer = 0x3C;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
@@ -3426,6 +3484,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
     }
     if (enemy->id == AOS_ENEMY_SLIME && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_slime_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_WEREWOLF && enemy->role == AOS_ROLE_ENEMY)

@@ -199,6 +199,10 @@ static const EntitySpec entities[] = {
      * descriptor (sub_0806CAF8, mode 4). */
     PROBES("nightmare", 0x081EC1FC, 0x0820BBF8, 0, 0x08247488,
            0x08528878),
+    /* Une (EnemyUneCreate 0x0807427C through sub_08074874): tiles
+     * 0x081CBF5C, palette 0x0820A4F4, frames 0x08214C38 — shared
+     * with its split children and debris (sub_080747B4). */
+    ENTITY("une", 0x081CBF5C, 0x0820A4F4, 0, 0x08214C38),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

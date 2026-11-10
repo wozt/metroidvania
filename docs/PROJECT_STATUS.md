@@ -2,6 +2,47 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0975 - Une ported (id 61)
+
+- `EnemyUneCreate` (0x0807427C) through `sub_08074874` (tiles
+  `0x081CBF5C`, palette `0x0820A4F4`, frames `0x08214C38`, shared
+  with the split children and debris) and `EnemyUneUpdate`
+  (0x08074130) dispatching `sub_080743B4` the state-0 machine,
+  `sub_080748C0` state 1, the inline state-2 blink death and the
+  state-3/4 dormant forms as `src/runtime/aos/enemies/une.c`.
+- Create plays animation 0 looping with `+0x54 = 0x2800` (the
+  projectile gravity, carried in `ay`), enters state 0 with
+  `+0xD = 0x3C`; a `param1` nonzero record floor-snaps into the
+  hidden state-3 spawner (`+0x58 |= 0x20`, `+0x1A |= 6`) whose
+  create child is emitted on the first update because the create
+  path has no report; the `0x8E & 0x40` flag parks state 4 on
+  animation 3.
+- State 0 runs the steps 0/10 projectile motion
+  (`sub_08069770`-style collide at `0x10000`/`-0x80000`) to the
+  floor, then the aggro box `sub_0806CFFC` `0xC8 x 0x140`, the
+  one-shot chain animations 1 -> 2 -> 3 and the split cycle:
+  step 4 births a linked Une every `0xF` timer ticks (random
+  `vx +/- 0x20000`, `vy -0x30000..-0x50000`, step `0xA`, gravity
+  `0x2800`, linked to the root whose `param0` caps the population)
+  and sheds `sub_080747B4` debris every fourth tick; surplus at
+  the cap goes to step 5 -> animation 5 -> state 2. State 2 blinks
+  on the `sub_0806D518` table counting `+0xD` down from `0x28`,
+  removes at zero and decrements the root's live count once; the
+  spawner removes itself at count zero.
+- Verified by `une_tests` (create variants, fall/aggro/anim
+  chain, lone-Une no-split rule, linked split + debris + decay,
+  blink death count, spawner child and self-removal) and in
+  `area_07_room_047` through gdb (both spawner pairs, children
+  aggro and chain, splits capped at `param0` 5 and 7).
+- Divergences: the `+0x54` gravity rides `ay`, the create child
+  is deferred to the first state-3 update, the dormant `+0x38`
+  paths of `sub_0806AD24` collapse into `hit_flash`, the `+0x5A`
+  palette merge, the `+0x5C-1` debris draw byte and the
+  `sub_08021924` target registration are folded into the shared
+  draw/engine, and there is no emulator comparison. Red soul 25
+  not ported yet.
+- Ported enemies: 81/113.
+
 ## Patch 0974 - Nightmare ported (id 66)
 
 - `EnemyNightmareCreate` (0x080B839C) through the shared loader

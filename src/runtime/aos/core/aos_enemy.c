@@ -397,7 +397,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_WEREWOLF &&
         id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
         id != AOS_ENEMY_ALTAIR && id != AOS_ENEMY_BAEL &&
-        id != AOS_ENEMY_NIGHTMARE &&
+        id != AOS_ENEMY_NIGHTMARE && id != AOS_ENEMY_UNE &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -937,6 +937,46 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         enemy->step = enemy->substep = 0;
         enemy->walk_timer = 0x28;
+        return true;
+    }
+    if (id == AOS_ENEMY_UNE) {
+        /* EnemyUneCreate 0x0807427C through sub_08074874: tiles
+         * 0x081CBF5C, palette 0x0820A4F4, frames 0x08214C38; anim 0
+         * looping, + 0x54 = 0x2800 the projectile gravity (ay); the
+         * 0x8E & 0x40 flag parks it in state 4 on animation 3; a
+         * param1 nonzero spawner floor-snaps, hides (+ 0x58 bit
+         * 0x20), marks + 0x1A |= 6 and waits in state 3 — its
+         * create child is emitted on the first update because the
+         * create path has no report (documented); else state 0
+         * with + 0xD = 0x3C. */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = 0;
+        enemy->ay = 0x2800;
+        enemy->une_child = enemy->une_draw = 0;
+        enemy->une_wait = 0;
+        enemy->parent = NULL;
+        enemy->spawned_count = 0;
+        enemy->static_frame = -1;
+        if (flag_8e_40) {
+            play_loop(enemy, anims, 3, true);
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        if (param1 != 0) {
+            snap_to_floor(enemy, layer);
+            if (param1 != 0) {
+                enemy->state = 3;
+                enemy->hidden = true;
+                enemy->producer_timer |= 6;
+                enemy->step = enemy->substep = 0;
+                enemy->timer = 0;
+                return true;
+            }
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        enemy->timer = 0x3C;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2276,6 +2316,15 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0;
+                } else if (enemy->id == AOS_ENEMY_UNE &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_0807473C lethal: sub_080683BC defeated
+                     * (the framework's mark), + 0xD = 0x28, state 2
+                     * with the step cleared — the blink death runs
+                     * its 0x28-tick strobe. */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x28;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3663,6 +3712,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_NIGHTMARE && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_nightmare_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_UNE)
+        return aos_enemy_une_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)

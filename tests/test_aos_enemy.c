@@ -6657,6 +6657,170 @@ static void nightmare_tests(void) {
     assert(d.removed && saw_debris);
 }
 
+static void une_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    enum { UNE_ANIMS = 12 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[UNE_ANIMS];
+    for (int a = 0; a < UNE_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = UNE_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < UNE_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 61: hp 10, field_e 10, contact 32, defence 1,
+     * weak 0x0002, resist 0x0000, experience 10. */
+    const AosEnemyStats stats = {10, 32, 1, 0x0002, 0x0000, 10};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(250), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 400;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemyUneCreate: state 0, + 0xD = 0x3C, + 0x54 = 0x2800 the
+     * projectile gravity carried in ay; param1 nonzero is the
+     * hidden state-3 spawner; the 0x8E & 0x40 flag parks state 4. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_UNE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 10 && e.timer == 0x3C &&
+           e.ay == 0x2800 && e.parent == NULL);
+    AosEnemy sp;
+    assert(aos_enemy_create(&sp, AOS_ENEMY_UNE, 300, 150, 5, 1,
+                            &soma, &layer, &kind, &stats));
+    assert(sp.state == 3 && sp.hidden && sp.param0 == 5);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_UNE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* State 0: gravity pulls it to the floor row, then the step-0
+     * block resets the motion and the aggro box (player inside
+     * 0xC8 x 0x140) chains animation 1 and step 1. */
+    for (int i = 0; i < 60 && e.ay != 0; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.ay == 0 && e.vy == 0x10000);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1 && e.anim.id == 1);
+
+    /* Steps 1/2 chain the one-shot animations; step 2 arms the
+     * split-cycle timer (a lone Une's + 0x1C is 0: rng % 0x28 +
+     * 0x64, here 100 with the zero rng). */
+    e.step = 1;
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2 && e.anim.id == 2);
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 3 && e.anim.id == 3 && e.timer == 100);
+
+    /* A lone Une has no + 0x18 link: step 3 re-arms the timer and
+     * never advances — no splits without a root. */
+    e.timer = 1;
+    e.une_wait = 1;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 3);
+
+    /* Linked to a root below its param0 cap, step 3 advances to the
+     * split cycle; at timer 0xF a full Une child is emitted —
+     * step 0xA, gravity, linked to the root, count incremented —
+     * and every fourth tick sheds a debris sprite. */
+    AosEnemy root;
+    memset(&root, 0, sizeof root);
+    root.id = AOS_ENEMY_UNE;
+    root.param0 = 4;
+    root.spawned_count = 0;
+    AosEnemy p;
+    assert(aos_enemy_create(&p, AOS_ENEMY_UNE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    p.parent = &root;
+    p.step = 3;
+    p.timer = 1;
+    p.une_wait = 0x8C;
+    (void)aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    (void)aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(p.step == 4);
+    p.timer = 0xE;
+    AosHitReport sr = aos_enemy_update(&p, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, CAM, CAMY,
+                                       always_zero);
+    assert(sr.child_count >= 1);
+    const AosEnemy *split = NULL, *debris = NULL;
+    for (unsigned i = 0; i < sr.child_count; ++i) {
+        if (sr.children[i].role == AOS_ROLE_UNE_DEBRIS) debris = &sr.children[i];
+        else if (sr.children[i].step == 0xA) split = &sr.children[i];
+    }
+    /* timer 0xF is odd: no debris this tick — the next one (0x10,
+     * & 3 == 0) sheds it. */
+    assert(split && split->parent == &root && split->ay == 0x2800 &&
+           split->hp == 10 && root.spawned_count == 1);
+    sr = aos_enemy_update(&p, &soma, &layer, &kind, NULL, NULL,
+                          10, 4, CAM, CAMY, always_zero);
+    for (unsigned i = 0; i < sr.child_count; ++i)
+        if (sr.children[i].role == AOS_ROLE_UNE_DEBRIS) debris = &sr.children[i];
+    assert(debris != NULL);
+
+    /* The debris decays at 7/8 a tick and deletes past + 0xD = 0x13. */
+    AosEnemy d = *debris;
+    int32_t vx0 = d.vx;
+    for (int i = 0; i < 30 && !d.removed; ++i)
+        (void)aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(d.removed && (vx0 == 0 || d.vx == 0 ||
+           llabs((int64_t)d.vx) < llabs((int64_t)vx0)));
+
+    /* State 2: the blink death counts + 0xD down from 0x28, removes
+     * at zero and decrements the root's live count once. */
+    AosEnemy dying;
+    assert(aos_enemy_create(&dying, AOS_ENEMY_UNE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    dying.state = 2;
+    dying.timer = 3;
+    dying.parent = &root;
+    root.spawned_count = 2;
+    for (int i = 0; i < 10 && !dying.removed; ++i)
+        (void)aos_enemy_update(&dying, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(dying.removed && root.spawned_count == 1);
+
+    /* The state-3 spawner emits its create child on the first
+     * update (short-fuse + 0x1C, one pixel up, linked to itself)
+     * and removes itself once the count reaches zero. */
+    AosEnemy s2;
+    assert(aos_enemy_create(&s2, AOS_ENEMY_UNE, 300, 150, 5, 1,
+                            &soma, &layer, &kind, &stats));
+    AosHitReport cr = aos_enemy_update(&s2, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, CAM, CAMY,
+                                       always_zero);
+    assert(cr.child_count == 1 && cr.children[0].une_child == 1 &&
+           cr.children[0].parent == &s2 && s2.spawned_count == 1 &&
+           !s2.removed);
+    s2.spawned_count = 0;
+    (void)aos_enemy_update(&s2, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(s2.removed);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9905,6 +10069,7 @@ int main(void) {
     kyoma_tests();
     bael_tests();
     nightmare_tests();
+    une_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

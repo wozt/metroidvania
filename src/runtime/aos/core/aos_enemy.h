@@ -169,6 +169,7 @@ enum {
     AOS_ENEMY_KYOMA_DEMON = 0x27,
     AOS_ENEMY_BAEL = 0x5E,
     AOS_ENEMY_NIGHTMARE = 0x42,
+    AOS_ENEMY_UNE = 0x3D,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -217,7 +218,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WITCH_BOLT = 82, AOS_ROLE_WITCH_SPARK = 83,
        AOS_ROLE_WITCH_TRAIL = 84, AOS_ROLE_MUDMAN_BUBBLE = 85,
        AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87,
-       AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89 };
+       AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89,
+       AOS_ROLE_UNE_DEBRIS = 90 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -553,6 +555,17 @@ typedef struct AosEnemy {
      * walk_timer, + 0xD timer, + 0xB step. */
     uint8_t nm_wisp_a, nm_wisp_b, nm_probe;
     int32_t nm_speed;
+    /* Une (EnemyUneCreate 0x0807427C / EnemyUneUpdate 0x08074130;
+     * state0 sub_080743B4, state1 sub_080748C0, hurt sub_0807473C,
+     * debris sub_080747B4/sub_08074838): + 0x18 the root spawner's
+     * live-descendant count (spawned_count) and each child's root
+     * link (parent), + 0x1C the create-spawned child's short-fuse
+     * mark, + 0x20 the split-cycle wait and + 0x5C-1 the debris draw
+     * byte (cosmetic, kept). + 0x54 is the projectile-motion gravity
+     * carried in `ay`; + 0x2C the palette bank is folded into the
+     * shared draw. */
+    uint8_t une_child, une_draw;
+    int32_t une_wait;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

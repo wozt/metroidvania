@@ -3,7 +3,7 @@
  * entrance, segmented body and weak point, hooked and spit attacks, acid
  * movement, arena destruction and persistent death event. */
 #include "../core/mzm_blocks.h"
-#include "../../mzm_samus.h"
+#include "../../mzm/game/mzm_samus.h"
 #include "../core/mzm_screen_shake.h"
 #include "../core/mzm_sprite_ai.h"
 

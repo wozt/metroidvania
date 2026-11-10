@@ -2,6 +2,19 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0958 - MZM game modules move to src/runtime/mzm/game/
+
+- The last flat MZM modules moved to `src/runtime/mzm/game/`:
+  `mzm_background_effect`, `mzm_door_fade`, `mzm_game_over`,
+  `mzm_hatches`, `mzm_ruins_test`, `mzm_samus`, `mzm_save` and
+  `mzm_tourian`. No flat `src/runtime/mzm_*.c/h` remains: the
+  whole Zero Mission runtime now lives under
+  `src/runtime/mzm/{core,enemies,weapons,menus,title,cutscenes,
+  game}/`. Includes inside the directory use `../<category>/`
+  for siblings and bare names for same-directory headers;
+  consumers use `mzm/game/` paths. CMake plus the registries
+  were updated. No code or behavior changed.
+
 ## Patch 0957 - MZM cutscene modules move to src/runtime/mzm/cutscenes/
 
 - The cutscene and escape modules moved to
@@ -11549,7 +11562,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0189 - native Samus pose controller
 
-- Added `src/runtime/mzm_samus.{h,c}`, an SDL-free controller ported from the
+- Added `src/runtime/mzm/game/mzm_samus.{h,c}`, an SDL-free controller ported from the
   pinned decompilation. It reproduces the native pose handlers and graphics
   loops for standing, running, turning, shooting, crouching, MidAir, midair
   turning, landing, spin start, spinning, wall-jump start, Space Jump, Screw
@@ -13073,7 +13086,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0256 - Zero Mission hatches as native blocks
 
-- `src/runtime/mzm_hatches.c` ports `ConnectionUpdateHatches`,
+- `src/runtime/mzm/game/mzm_hatches.c` ports `ConnectionUpdateHatches`,
   `ConnectionUpdateHatchAnimation`, `ConnectionHatchFlashingAnimation`,
   `ConnectionHatchStartLockAnimation`, `ConnectionOverrideOpenedHatch` and
   `BgClipCheckOpeningHatch`. Hatches change their four BG1 blocks and
@@ -14311,7 +14324,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0401 - Ruins Test symbol palette
 
 - Ported the Ruins Test's dynamic palette (`RUINS_TEST_TRANSFER_DYNAMIC_PAL`:
-  the first eight colours of OBJ row 14) in `src/runtime/mzm_ruins_test.c`:
+  the first eight colours of OBJ row 14) in `src/runtime/mzm/game/mzm_ruins_test.c`:
   - the four symbols lighting up, merging and disappearing;
   - the shot symbol's flight, a 4-frame pulse through the base and the six
     shot palettes;
@@ -15610,7 +15623,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0317 - Zero Mission Zebetites and Tourian cannons
 
-- Zebetite, Cannon, CannonBullet (`src/runtime/mzm_tourian.c`): the
+- Zebetite, Cannon, CannonBullet (`src/runtime/mzm/game/mzm_tourian.c`): the
   Zebetites heal while not hurt, show their damage phases and move 20
   blocks left after their first destruction, setting the Zebetite
   events; the cannons sweep their aims, shoot by chance, change place
@@ -15812,7 +15825,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0300 - Zero Mission hatch locks
 
-- `src/runtime/mzm_hatches.c`: ConnectionLockHatches,
+- `src/runtime/mzm/game/mzm_hatches.c`: ConnectionLockHatches,
   ConnectionLockHatchesWithTimer and ConnectionCheckUnlockDoors with
   gDoorUnlockTimer and the gHatchesState lock masks.
 - Gray hatches wait for the door timer; a sprite's LOCK_DOORS (the Long
@@ -15829,7 +15842,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0299 - Zero Mission door fades
 
-- `src/runtime/mzm_door_fade.c`: COLOR_FADING_DOOR_TRANSITION and
+- `src/runtime/mzm/game/mzm_door_fade.c`: COLOR_FADING_DOOR_TRANSITION and
   COLOR_FADING_NO_TRANSITION (color_fading.c). A hatch fades the room to
   black but its hatches, the door transition tilemap's tube blends in on
   BG3 and covers the screen, slides to the arrival door once the room is
@@ -15899,7 +15912,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0295 - Zero Mission game over
 
-- `src/runtime/mzm_game_over.c`: the US game over screen
+- `src/runtime/mzm/game/mzm_game_over.c`: the US game over screen
   (menus/game_over.c): the fade from white, the GAME OVER letters'
   breathing palette, the try again / title choice with Samus's head, the
   text palettes and the WIN1 window, the music, the fade to black.
@@ -15958,7 +15971,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   meanwhile (gDisablePause).
 - `src/runtime/mzm/menus/mzm_message_banner.c`: the save prompt's YES/NO cursor
   (SaveYesNoCursor) with its sounds; YES requests the save.
-- `src/runtime/mzm_save.c`: the runtime's save file (a versioned
+- `src/runtime/mzm/game/mzm_save.c`: the runtime's save file (a versioned
   little-endian format with a CRC-32): the room, Samus, the equipment, the
   events, the minimap progress, the collected items, the opened hatches and
   the never-reform blocks. `--save-file PATH` chooses it (default:
@@ -16226,7 +16239,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0277 - Zero Mission native Samus controller
 
-- `src/runtime/mzm_samus.c` is now a transliteration of `src/samus.c`: the
+- `src/runtime/mzm/game/mzm_samus.c` is now a transliteration of `src/samus.c`: the
   67 native poses with `sSamusCollisionData`, every pose handler and
   graphics loop, `SamusSetPose` and its carries, the physics, the velocity
   update (`DIV_SHIFT` shifts, slope speeds) and the native point-probe

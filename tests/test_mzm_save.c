@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mzm_save.h"
+#include "mzm/game/mzm_save.h"
 
 static MzmSaveData data, back;
 static MzmUnlockData unlocks, unlocks_back;

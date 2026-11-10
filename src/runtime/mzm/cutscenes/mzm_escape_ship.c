@@ -5,7 +5,7 @@
  * the pirate that chases the ship. */
 #include "../core/mzm_sprite_ai.h"
 #include "../core/mzm_blocks.h"
-#include "../../mzm_samus.h"
+#include "../../mzm/game/mzm_samus.h"
 
 enum {
     SHIP_POSE_CHECK_OPEN = 0x8,

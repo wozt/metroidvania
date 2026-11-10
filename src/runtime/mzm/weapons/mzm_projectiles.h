@@ -15,7 +15,7 @@
 #define MZM_PROJECTILES_H
 
 #include "mzm_power_bomb.h"
-#include "../../mzm_samus.h"
+#include "../../mzm/game/mzm_samus.h"
 
 #define MZM_MAX_PROJECTILES 16
 #define MZM_PROJECTILE_LIMIT_BEAM 6

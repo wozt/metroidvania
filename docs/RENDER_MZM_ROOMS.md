@@ -51,7 +51,7 @@ palettes, BG movement effects, gradients and windows are not reproduced yet.
 
 Hatches and breakable blocks change BG1 blocks and raw Clipdata values like
 the game (`BgClipSetBg1BlockValue`, `BgClipSetClipdataBlockValue`):
-`src/runtime/mzm_hatches.c` runs the hatch state machine and
+`src/runtime/mzm/game/mzm_hatches.c` runs the hatch state machine and
 `src/runtime/mzm/core/mzm_blocks.c` the block routines of `src/block.c`. The block,
 tank and bomb chain tables and the collision and behavior of every raw
 Clipdata value are exported privately as `rooms/runtime/blocks.tsv`

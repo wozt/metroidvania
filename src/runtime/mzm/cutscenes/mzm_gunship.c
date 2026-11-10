@@ -5,7 +5,7 @@
  * platform, the flames). Comments name the pinned decompilation's
  * routines. */
 #include "../menus/mzm_message_banner.h"
-#include "../../mzm_samus.h"
+#include "../../mzm/game/mzm_samus.h"
 #include "../core/mzm_sprite_ai.h"
 
 enum {

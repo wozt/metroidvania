@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Zero Mission hatches; comments name the pinned decompilation's routines. */
 #include "mzm_hatches.h"
-#include "mzm/core/mzm_sfx.h"
+#include "../core/mzm_sfx.h"
 
 #include <stddef.h>
 

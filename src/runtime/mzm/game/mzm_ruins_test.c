@@ -11,9 +11,9 @@
  * 15 palettes, their graphics DMA at OBJ VRAM 0x4280/0x4680 and the ghost's
  * native EVA/EVB alpha blending and quick background flash are ported. */
 #include "mzm_background_effect.h"
-#include "mzm/core/mzm_sprite_ai.h"
-#include "mzm/core/mzm_blocks.h"
-#include "mzm/menus/mzm_message_banner.h"
+#include "../core/mzm_sprite_ai.h"
+#include "../core/mzm_blocks.h"
+#include "../menus/mzm_message_banner.h"
 
 enum {
     POSE_SPAWNING = 0x1,

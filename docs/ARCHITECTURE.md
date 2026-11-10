@@ -407,7 +407,7 @@ dynamic menu entities, file text, cursor OAM and title artwork remain open.
 
 `fusion_room_runtime` is the experimental SDL3 Zero Mission room runtime:
 
-- `src/runtime/mzm_samus.c`: SDL-free Samus pose controller ported from the
+- `src/runtime/mzm/game/mzm_samus.c`: SDL-free Samus pose controller ported from the
   pinned decompilation (pose handlers, `SamusSetMidAir`/landing/hurt carries,
   native physics constants, per-pose block hitboxes, animation-driven
   transitions). It talks to the room through a box-collision callback and to

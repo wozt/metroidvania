@@ -105,7 +105,7 @@ reported as unavailable because they have no native Suitless sequence.
 
 `animation_map.tsv` is loaded and cross-validated against `runtime_index.tsv`
 before SDL creates any animation textures. Gameplay no longer chooses
-animations from held keys: `src/runtime/mzm_samus.c` ports the native pose
+animations from held keys: `src/runtime/mzm/game/mzm_samus.c` ports the native pose
 handlers (`SamusStanding`, `SamusRunning`, `SamusMidAir`, `SamusSpinning`,
 `SamusCrouching`, `SamusMorphball`, `SamusRolling`, `SamusHangingOnLedge`,
 `SamusPullingSelfUp/Forward`, `SamusGettingHurt`, ...) and the pose-change
@@ -228,7 +228,7 @@ unsupported because the verified animations do not require them.
 ### Palette
 
 The runtime library exports every palette row and its native effects; see
-`palettes.tsv` and the `SamusUpdatePalette` selection in `src/runtime/mzm_samus.c`.
+`palettes.tsv` and the `SamusUpdatePalette` selection in `src/runtime/mzm/game/mzm_samus.c`.
 
 ## Active diagnostic workflow
 

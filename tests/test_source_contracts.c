@@ -101,7 +101,7 @@ static void test_runtime_contracts(void) {
     has(runtime, "verified full-solid cells (Clipdata 16)", "0140");
     lacks(runtime, "if (kind == 'N' && code == 5)", "0140");
     has(runtime, "mzm_samus_graphics_key(samus,equipment,weapon_highlighted", "0169");
-    char *samus = text_of("src/runtime/mzm_samus.c");
+    char *samus = text_of("src/runtime/mzm/game/mzm_samus.c");
     has(samus, "table = \"ScrewAttacking\";", "0169");
     has(samus, "selector = eq->items & MZM_ITEM_SPACE_JUMP ? \"TRUE\" : \"FALSE\";", "0169");
     char *cmake = text_of("CMakeLists.txt");

@@ -8,7 +8,7 @@
 #define MZM_ITEMS_H
 
 #include "../core/mzm_blocks.h"
-#include "../../mzm_samus.h"
+#include "../../mzm/game/mzm_samus.h"
 
 #include <stdbool.h>
 #include <stdint.h>

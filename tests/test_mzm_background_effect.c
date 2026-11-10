@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free regression for MakeBackgroundFlash's palette behavior tables. */
-#include "mzm_background_effect.h"
+#include "mzm/game/mzm_background_effect.h"
 
 #include <assert.h>
 #include <stdio.h>

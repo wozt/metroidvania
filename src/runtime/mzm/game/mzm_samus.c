@@ -4,8 +4,8 @@
  * reproduces. Inside an update the position is native (the public `y` minus
  * one); positions wrap as the native u16 fields do. */
 #include "mzm_samus.h"
-#include "mzm/core/mzm_screen_shake.h"
-#include "mzm/core/mzm_sfx.h"
+#include "../core/mzm_screen_shake.h"
+#include "../core/mzm_sfx.h"
 
 #include <stdio.h>
 #include <string.h>

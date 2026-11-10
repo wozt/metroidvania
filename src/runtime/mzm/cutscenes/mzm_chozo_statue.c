@@ -7,7 +7,7 @@
  * (PAUSE_SCREEN_CHOZO_HINT, mzm_pause_screen.c) before sitting down. Its
  * slight-yellow palette flash is ported; the Long Beam hint's long
  * transparency and the slow scrolling are not. */
-#include "../../mzm_background_effect.h"
+#include "../../mzm/game/mzm_background_effect.h"
 #include "../menus/mzm_items.h"
 #include "../core/mzm_sprite_ai.h"
 

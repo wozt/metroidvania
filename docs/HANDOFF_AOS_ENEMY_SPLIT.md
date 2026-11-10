@@ -349,8 +349,9 @@ Part of the soul code also sits inline in `src/runtime/aria_runtime.c`
      game-over and level-up in `aos/intro/`, and bestiary, doors,
      lifecycle, game mode, objects, pickups, recent items, rooms and
      save in `aos/game/`. No flat `src/runtime/aos_*.c/h` remains.
-     Continue with the analogous MZM paths (`runtime/mzm/...`),
-     one category per commit.
+     The MZM runtime was categorized the same way in patches
+     0952-0958: `mzm/{core,enemies,weapons,menus,title,cutscenes,
+     game}/`. No flat `src/runtime/mzm_*.c/h` remains either.
    - Create `src/runtime/aos/core/aos_enemy_internal.h`. Declare in it every
      framework helper the fragments use (currently `static` in
      `aos_enemy.c`; there are 109 `static` definitions there).

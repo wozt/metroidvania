@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#include "mzm/core/mzm_screen.h"
+#include "../core/mzm_screen.h"
 
 enum { BLDALPHA_MAX = 16 };
 

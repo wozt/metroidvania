@@ -2,6 +2,30 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0970 - Slime ported (id 68)
+
+- `EnemySlimeCreate` (0x080C11C0) feeds `sub_0806E0D0` the tile
+  record `0x08260320`, palette descriptor `0x082664DC` (bank =
+  spawn record `+0x32`, 0 in every room export) and animation
+  record `0x0826798C`; `EnemySlimeUpdate` (0x080C1348) dispatches
+  `sub_080C0A1C` the continuous curved bound (sine/power velocity
+  on the `+0x20` steering angle turned toward `0x08528922` by
+  `sub_080686CC`, the `sub_080C06A8` landing prediction and the
+  `sub_080C0630` launch), `sub_080C0F14` the five-substep attack
+  hop (songs `0x164`/`0x163`, debris bursts on the wall bits),
+  `sub_080C10BC` the spin death (song `0x70`, orbit debris,
+  `0x165` ticks) and `sub_080C140C` the hurt squash as
+  `src/runtime/aos/enemies/slime.c`.
+- Verified in game `area_11_room_021`: the Slime spawns and bounds
+  between its ledge and the ceiling, landing back on its floor
+  (y 447 -> 147 -> 447 over 400 frames); unit-tested in
+  `slime_tests`.
+- Divergences: the `sub_080C06A8` quadrant probe order collapses
+  into shared edge tests, the state-1 floor wait is a depth probe,
+  and the debris `+0x65` lifetime is folded into the piece timer.
+  Red soul 32 not ported yet.
+- Ported enemies: 76/113.
+
 ## Patch 0969 - Werewolf ported (id 50)
 
 - `EnemyWerewolfCreate` (0x0806F7A4) through `sub_0806F818` (tiles

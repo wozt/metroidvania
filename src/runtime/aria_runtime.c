@@ -185,7 +185,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [100] = "basilisk",
                                                      [50] = "werewolf", [75] = "werejaguar", [76] = "ukoback", [84] = "weretiger", [86] = "mudman",
                                                      [22] = "student_witch",
-                                                     [42] = "witch"};
+                                                     [42] = "witch",
+                                                     [68] = "slime"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
@@ -4286,6 +4287,8 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.role == AOS_ROLE_COCKATRICE_SHADOW ||
             (e->enemy.id == AOS_ENEMY_DRYAD && e->enemy.role == AOS_ROLE_ENEMY &&
              e->enemy.state == 3) ||
+            /* The Slime's sub_0803E058 turn: + 0x20 is its hop angle. */
+            (e->enemy.id == AOS_ENEMY_SLIME && e->enemy.role == AOS_ROLE_ENEMY) ||
             (e->enemy.role == AOS_ROLE_SKELETON_BONE && e->enemy.spinning) ||
             ((e->enemy.id == AOS_ENEMY_BUER || e->enemy.id == AOS_ENEMY_NEMESIS ||
               e->enemy.id == AOS_ENEMY_GIANT_WORM || e->enemy.id == AOS_ENEMY_POISON_WORM) &&

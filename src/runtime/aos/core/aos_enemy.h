@@ -164,6 +164,7 @@ enum {
     AOS_ENEMY_WEREWOLF = 0x32,
     AOS_ENEMY_WEREJAGUAR = 0x4B,
     AOS_ENEMY_WERETIGER = 0x54,
+    AOS_ENEMY_SLIME = 0x44,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -485,6 +486,20 @@ typedef struct AosEnemy {
      * tail clears (value 2). */
     int32_t ww_mark;
     uint8_t ww_bit;
+    /* Slime (EnemySlimeCreate 0x080C11C0): + 0x11 the flags byte —
+     * bit 0 the hurt squash mark read by sub_080C0A1C, bit 1 its
+     * follow-through, bit 2 the airborne mark of the state-1 launch
+     * and the state-2 spin; + 0x12 the ground rest countdown, + 0x13
+     * the hop direction index of 0x08528922, + 0x14 the signed hop
+     * power, + 0x18 the ground charge (the affine height), + 0x19
+     * and + 0x1B the attack marks, + 0x1C the affine width and the
+     * state-2 spin countdown, + 0x20 the hop angle (also the sprite
+     * rotation of sub_0803E058), + 0x22 the angle-approach step and
+     * + 0x24..+ 0x2A the predicted landing box of sub_080C06A8. */
+    uint8_t sl_flags, sl_rest, sl_dir, sl_mark19, sl_mark1b, sl_coll;
+    int32_t sl_power, sl_charge, sl_width;
+    uint16_t sl_angle, sl_astep;
+    int16_t sl_box[4];
     uint16_t au_life;
     AosCombat combat;
     AosAnimState anim;

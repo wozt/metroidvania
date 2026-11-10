@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T06:19:09+00:00",
+ "generated_at": "2026-11-10T07:14:04+00:00",
  "git": {
-  "commit": "b740ea81",
+  "commit": "42b6f6fe",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 251,
+   "total": 252,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 185,
+    "functional": 186,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 185,
-   "functional_or_better_percent": 73.7,
-   "with_passing_tests": 233,
-   "with_passing_tests_percent": 92.8,
+   "functional_or_better": 186,
+   "functional_or_better_percent": 73.8,
+   "with_passing_tests": 239,
+   "with_passing_tests_percent": 94.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -264,6 +264,7 @@
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
     "aos.enemies.sky_fish",
+    "aos.enemies.slime",
     "aos.enemies.student_witch",
     "aos.enemies.tiny_devil",
     "aos.enemies.tsuchinoko",
@@ -381,8 +382,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 90,
-   "with_passing_tests_percent": 97.8,
+   "with_passing_tests": 92,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -485,20 +486,20 @@
    "areas": [
     "aos"
    ],
-   "total": 106,
+   "total": 107,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 78,
+    "functional": 79,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 78,
-   "functional_or_better_percent": 73.6,
-   "with_passing_tests": 106,
+   "functional_or_better": 79,
+   "functional_or_better_percent": 73.8,
+   "with_passing_tests": 107,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -565,6 +566,7 @@
     "aos.enemies.skull_archer",
     "aos.enemies.skull_millione",
     "aos.enemies.sky_fish",
+    "aos.enemies.slime",
     "aos.enemies.student_witch",
     "aos.enemies.tiny_devil",
     "aos.enemies.tsuchinoko",
@@ -677,8 +679,8 @@
    },
    "functional_or_better": 5,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 73.3,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -779,8 +781,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -6383,15 +6385,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
    }
   },
   {
@@ -6534,15 +6534,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
    }
   },
   {
@@ -14099,6 +14097,120 @@
    }
   },
   {
+   "id": "aos.enemies.slime",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Slime",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/slime.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemySlimeCreate",
+    "EnemySlimeUpdate",
+    "sub_080C0A1C",
+    "sub_080C0F14",
+    "sub_080C10BC",
+    "sub_080C13DC",
+    "sub_080C140C",
+    "sub_080C04C8",
+    "sub_080C05D8",
+    "sub_080C0630",
+    "sub_080C06A8",
+    "sub_080C1454",
+    "sub_080686CC",
+    "sub_080009E4",
+    "sub_08002058",
+    "sub_0800207C",
+    "sub_08001C1C",
+    "sub_0806CAF8",
+    "sub_0806D3C0",
+    "sub_0806D3CC",
+    "sub_0806E218",
+    "sub_0806E29C",
+    "sub_0806CF2C",
+    "sub_0806CFFC",
+    "sub_0806CC20",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803E058",
+    "sub_0803E654",
+    "sub_0802D5EC",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_0806E0D0",
+    "sub_08068264",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_080427B8",
+    "sub_0804277C",
+    "sub_080683BC",
+    "sub_08021654",
+    "sub_0806B7D8",
+    "sub_08042B8C",
+    "sub_08021924",
+    "sub_08068AD4",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The sub_080C06A8 predictive landing probe is approximated: the four-quadrant probe order collapses into shared edge tests and the exact + 0x24..+ 0x2A box corner math is simplified; the state-1 + 0x6C bit-2 floor wait is approximated by a floor-depth probe; the sub_080C05D8 special-cell slope cases (0xC0/0x8) collapse into the plain cell test; the + 0x65 lifetime draw and the sub_08068AD4 wall mark of the debris children are folded into the piece timer; the sub_0806D128 activity window, sub_08021924 and sub_080421AC bookkeeping are not ported; the + 0x5A palette merges are not ported; and there is no emulator comparison. EnemySlimeCreate (0x080C11C0) feeds sub_0806E0D0 the tile record 0x08260320, palette descriptor 0x082664DC (bank = spawn record + 0x32, 0 in every room export) and animation record 0x0826798C, presets + 0x18/+ 0x1C = 0x40000 and + 0x5C = 0x11, plays animation (0, 0, 1), enters state 3 under the global 0x8E & 0x40, else state 0 with the sub_080C13DC contact and sub_080C140C hurt callbacks, the sub_0806B1FC facing and the sub_0806AF98 floor snap — a nonzero param0 drops it from the ceiling (+ 0xC = 2, + 0x20 = 0x8000). EnemySlimeUpdate dispatches: state 0 sub_080C0A1C bounds continuously — the grounded decision faces the player, arms the hop power, charges the affine height, counts the rest timer and rolls RandomNumberGenerator & 0xFF <= 3 inside the centred 0x78 x 0xB4 box into state 1, then the shared tail predicts the landing (sub_080C06A8) and launches through sub_080C0630; step 1 is the curved flight — velocity = power * sine/cosine of the steering angle + 0x20 turned toward the 0x08528922 direction entry by sub_080686CC, floor contact ending the bound. State 1 sub_080C0F14 attacks in five substates — animation 1, the grounded launch armed by + 0xC (held, back-up, drop, forward) with song 0x164 and the + 0x11 bit-2 mark, the wall probe walk bursting debris on the collision bits, the 0x163 recovery aiming the landing, and the floor return to state 0. State 2 sub_080C10BC is the spin death — song 0x70, the angle orbit at 0x12 px per sine unit while + 0x1C counts down by 0x400 with debris every fourth tick and song 0x165 every sixteenth, deleting when spent. The hurt sub_080C140C sets the + 0x11 bit-0 squash mark on every blow and runs the lethal transition. Unit-tested in slime_tests.",
+   "next_action": "Port the red soul 32 update and compare a room fight against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_11_room_021: the Slime spawns, bounds between its ledge and the ceiling and lands back on its floor (y 447 -> 147 -> 447 over 400 frames)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.student_witch",
    "area": "aos",
    "category": "enemies",
@@ -19618,7 +19730,7 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -19632,11 +19744,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
    }
   },
   {
@@ -22449,15 +22559,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
    }
   },
   {
@@ -22495,14 +22603,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
    }
   },
   {
@@ -22734,7 +22840,7 @@
     "files": [
      "tests/test_dashboard.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "native_map_contract",
@@ -23483,12 +23589,18 @@
    }
   ],
   "summary": {
-   "passed": 136,
-   "failed": 1,
+   "passed": 137,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "42b6f6fe",
+   "date": "2026-11-10",
+   "subject": "Port Werewolf (id 50)",
+   "scope": "project"
+  },
   {
    "commit": "b740ea81",
    "date": "2026-11-10",
@@ -23962,12 +24074,6 @@
    "date": "2026-11-09",
    "subject": "Move the Skull Archer soul's arrow into its own module",
    "scope": "project"
-  },
-  {
-   "commit": "7177842d",
-   "date": "2026-11-09",
-   "subject": "Build ten Aria soul tests without the enemy code",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24028,9 +24134,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1321,
-    "routines_attached_to_features": 1321,
-    "unassigned_routines": 2252,
+    "routines_cited_by_features": 1333,
+    "routines_attached_to_features": 1333,
+    "unassigned_routines": 2240,
     "call_edges": 14228
    }
   },
@@ -26272,12 +26378,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 75,
-      "functional_or_better": 75,
-      "functional_or_better_percent": 73,
+      "implemented": 76,
+      "functional_or_better": 76,
+      "functional_or_better_percent": 74,
       "by_status": {
-       "functional": 75,
-       "not_started": 27
+       "functional": 76,
+       "not_started": 26
       }
      },
      "bosses": {
@@ -27907,13 +28013,28 @@
      {
       "id": 68,
       "name": "Slime",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Slime",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_11_room_021: the Slime spawns, bounds between its ledge and the ceiling and lands back on its floor (y 447 -> 147 -> 447 over 400 frames)"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.slime",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "red:32",
+       "notes": "Soul: drops (soul_index 32, soul_rarity 12, common/rare rates 20/30 through the generic roll) and is collected, but its red soul 32 has no ported update yet. Animations: ported from EnemySlimeCreate (0x080C11C0) / EnemySlimeUpdate (0x080C1348) and the sub_080C0A1C bound, sub_080C0F14 attack and sub_080C10BC spin-death handlers plus the sub_080C04C8 debris spawn / sub_080C1454 debris update children; unit-tested in slime_tests. Sounds: PlaySong 0x164 at the attack launch, 0x163 in the recovery, 0x70 at the spin death and 0x165 every sixteenth tick of the spin; the mixer renders them. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x08260320, palette 0x082664DC bank 0, animation record 0x0826798C exported natively."
       }
      },
      {
@@ -28830,17 +28951,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 75,
+      "ported": 76,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 75,
+      "ported": 76,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 75,
+      "ported": 76,
       "partial": 0,
       "missing": 0
      },
@@ -28851,11 +28972,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 18,
+      "partial": 19,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 75
+     "monsters": 76
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -32587,7 +32708,7 @@
        "id": "05:20",
        "name": "Slime",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 32, soul_rarity 12, common/rare rates 20/30 through the generic roll) and is collected, but its red soul 32 has no ported update yet. Animations: ported from EnemySlimeCreate (0x080C11C0) / EnemySlimeUpdate (0x080C1348) and the sub_080C0A1C bound, sub_080C0F14 attack and sub_080C10BC spin-death handlers plus the sub_080C04C8 debris spawn / sub_080C1454 debris update children; unit-tested in slime_tests. Sounds: PlaySong 0x164 at the attack launch, 0x163 in the recovery, 0x70 at the spin death and 0x165 every sixteenth tick of the spin; the mixer renders them. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x08260320, palette 0x082664DC bank 0, animation record 0x0826798C exported natively.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

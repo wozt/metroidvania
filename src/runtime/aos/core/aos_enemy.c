@@ -395,6 +395,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MUDMAN &&
         id != AOS_ENEMY_WEREJAGUAR && id != AOS_ENEMY_WERETIGER &&
         id != AOS_ENEMY_WEREWOLF &&
+        id != AOS_ENEMY_SLIME &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -739,6 +740,52 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         enemy->step = enemy->substep = 0;
         snap_to_floor(enemy, layer);
+        return true;
+    }
+    if (id == AOS_ENEMY_SLIME) {
+        /* EnemySlimeCreate (0x080C11C0): tiles 0x08260320, frames
+         * 0x082664DC, palette 0x0826798C banked by + 0x32; + 0x5C =
+         * 0x11, + 0x18/+ 0x1C = 0x40000, sub_0803F2C8 animation
+         * (0, 0, 1), the global 0x8E & 0x40 sends it to state 3, else
+         * the sub_080C13DC contact and sub_080C140C hurt callbacks,
+         * sub_0806B1FC facing and the sub_0806AF98 floor snap — a
+         * nonzero param0 drops it from the ceiling (+ 0xC = 2,
+         * + 0x20 = 0x8000). */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->sl_flags = enemy->sl_rest = enemy->sl_dir = 0;
+        enemy->sl_mark19 = enemy->sl_mark1b = enemy->sl_coll = 0;
+        enemy->sl_power = 0;
+        enemy->sl_charge = enemy->sl_width = 0x40000;
+        enemy->sl_angle = 0;
+        enemy->sl_astep = 0;
+        enemy->scaled = true;
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        if (param0 == 0) {
+            snap_to_floor(enemy, layer);
+        } else {
+            /* The ceiling drop: walk the floor probe up until it
+             * answers, settle 5 px under it, substep 2, angle
+             * 0x8000 (upside-down bound). */
+            for (int guard = 0; guard < 512; ++guard) {
+                int depth = aos_ceiling_depth(layer, enemy->x >> 16,
+                                              enemy->y >> 16, 0, false);
+                if (depth) {
+                    enemy->y += (int32_t)((uint32_t)depth << 16);
+                    break;
+                }
+                enemy->y -= 8 << 16;
+            }
+            enemy->y += 5 << 16;
+            enemy->substep = 2;
+            enemy->sl_angle = 0x8000;
+        }
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -1890,6 +1937,10 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->state = 3;
                 enemy->step = enemy->substep = 0;
             }
+            if (enemy->id == AOS_ENEMY_SLIME && enemy->role == AOS_ROLE_ENEMY)
+                /* sub_080C140C: every blow sets the + 0x11 bit-0 squash
+                 * mark before the damage walk. */
+                enemy->sl_flags |= 1;
             if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON && enemy->id == AOS_ENEMY_VALKYRIE &&
                 enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
@@ -2002,6 +2053,13 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->timer = 0x28;
                     enemy->state = 1;
                     enemy->step = 0;
+                } else if (enemy->id == AOS_ENEMY_SLIME &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080C140C: lethal — sub_080683BC rewards
+                     * (the framework's defeated mark), state 2 step
+                     * 0, the spin death of sub_080C10BC. */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3366,6 +3424,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                            weapon_frames, soma_atk,
                                            soma_def, cam_x, cam_y, random);
     }
+    if (enemy->id == AOS_ENEMY_SLIME && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_slime_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_WEREWOLF && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_werewolf_update(enemy, soma, layer, kind, weapon,
                                          weapon_frames, soma_atk,

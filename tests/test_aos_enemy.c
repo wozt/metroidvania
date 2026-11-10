@@ -6096,6 +6096,119 @@ static void werewolf_tests(void) {
     assert(e.removed && smoke);
 }
 
+
+static void slime_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;   /* floor top 160 */
+    enum { SL_ANIMS = 5 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[SL_ANIMS];
+    for (int a = 0; a < SL_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = SL_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < SL_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv id 68: hp 200, field_e 1, contact 42, defence 30,
+     * weak 0x0802, resist 0x0005, experience 200, soul_type 0
+     * soul_index 32. */
+    const AosEnemyStats stats = {200, 42, 30, 0x0802, 0x0005, 200};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+
+    /* EnemySlimeCreate (0x080C11C0): state 0 animation 0, the affine
+     * charge and width at 0x40000; the global 0x8E & 0x40 sends it to
+     * the inert state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_SLIME, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 200 && e.anim.id == 0 &&
+           e.sl_charge == 0x40000 && e.sl_width == 0x40000);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ei;
+    assert(aos_enemy_create(&ei, AOS_ENEMY_SLIME, 150, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ei.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* A nonzero param0 is the ceiling drop: substep 2, angle 0x8000. */
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_SLIME, 150, 40, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.substep == 2 && ed.sl_angle == 0x8000);
+
+    /* sub_080C0A1C step 0: Soma inside the centred 0x78 x 0xB4 box,
+     * rest 0 and rng & 0xFF <= 3 (always_zero) enters state 1. */
+    soma.x = e.x;
+    soma.y = e.y;
+    int attacked = 0;
+    for (int i = 0; i < 60 && !attacked; ++i) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                               200, 0, always_zero);
+        if (e.state == 1) attacked = 1;
+    }
+    assert(attacked);
+
+    /* sub_080C0F14: case 0 plays animation 1; the grounded case 1
+     * arms animation 2, the + 0x11 bit-2 mark, song 0x164 and the
+     * launch; the walk and landing cases return to state 0. */
+    int launched = 0, returned = 0, saw_debris = 0;
+    for (int i = 0; i < 600 && e.state == 1; ++i) {
+        AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 200, 0,
+                                            always_zero);
+        if (e.sl_flags & 4) launched = 1;
+        if (rep.child_count) saw_debris = 1;
+        if (e.state == 0) returned = 1;
+    }
+    assert(launched && returned);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x164) == 1 ||
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x163) == 1);
+    (void)saw_debris;
+
+    /* The hurt mark: every blow sets + 0x11 bit 0 before the damage
+     * walk; the squash animation and four debris follow on the next
+     * grounded update. */
+    e.sl_flags |= 1;
+    int squashed = 0;
+    for (int i = 0; i < 30 && !squashed; ++i) {
+        AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 200, 0,
+                                            always_zero);
+        if (e.anim.id == 4 || rep.child_count >= 4) squashed = 1;
+    }
+    assert(squashed);
+
+    /* sub_080C10BC state 2: song 0x70, the orbit sheds debris every
+     * fourth tick and song 0x165 every sixteenth while + 0x1C counts
+     * down by 0x400; the corpse deletes when it is spent. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_SLIME, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    d.state = 2;
+    d.step = 0;
+    d.sl_width = 0x1000;   /* short spin for the test */
+    int spin_debris = 0;
+    for (int i = 0; i < 40 && !d.removed; ++i) {
+        AosHitReport rep = aos_enemy_update(&d, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 200, 0,
+                                            always_zero);
+        if (rep.child_count) spin_debris = 1;
+    }
+    assert(d.removed && spin_debris);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x70) == 1);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9339,6 +9452,7 @@ int main(void) {
     mudman_tests();
     were_tests();
     werewolf_tests();
+    slime_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

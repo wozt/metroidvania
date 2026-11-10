@@ -177,6 +177,11 @@ static const EntitySpec entities[] = {
     /* EnemyWerewolfCreate through sub_0806F818: the 0x081CBF34
      * record, palette 0x0820A440 bank 0, frames 0x08212C64. */
     ENTITY("werewolf", 0x081CBF34, 0x0820A440, 0, 0x08212C64),
+    /* EnemySlimeCreate 0x080C11C0 feeds sub_0806E0D0 the tile record
+     * 0x08260320, palette descriptor 0x082664DC (two banks, the spawn
+     * record's + 0x32 byte picks one — 0 in every room export) and the
+     * animation record 0x0826798C. */
+    ENTITY("slime", 0x08260320, 0x082664DC, 0, 0x0826798C),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Aria's startup logos: the brightness effects of aos_logo_render, and
  * (optional local check with the ROM path) the decoded layers. */
-#include "aos_logo_graphics.h"
+#include "aos/title/aos_logo_graphics.h"
 
 #include <assert.h>
 #include <stdio.h>

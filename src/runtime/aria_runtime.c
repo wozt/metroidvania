@@ -19,7 +19,7 @@
 #include "aos_game_lifecycle.h"
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"
-#include "aos_opening_event.h"
+#include "aos/title/aos_opening_event.h"
 #include "aos/menus/aos_pause_graphics.h"
 #include "aos/menus/aos_portrait.h"
 #include "aos/menus/aos_quick_map.h"

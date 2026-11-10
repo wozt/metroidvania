@@ -280,13 +280,13 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/re
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos/menus/aos_main_menu.c
                src/runtime/aos_intro_cutscene.c src/runtime/aos_intro_entities.c
                src/runtime/aos_intro_resources.c src/runtime/aos_intro_font.c
-               src/runtime/aos_opening_event.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos_obj.c
+               src/runtime/aos/title/aos_opening_event.c
+               src/runtime/aos/title/aos_title_fade.c src/runtime/aos/title/aos_title_screen.c src/runtime/aos_obj.c
                src/runtime/aos_obj_rom.c
                src/runtime/aos_save_room.c
                src/runtime/debug_menu.c)
-add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
-               src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
+add_executable(fusion_aria_title_preview src/runtime/aos/title/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
+               src/runtime/aos/title/aos_title_fade.c src/runtime/aos/title/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
                src/runtime/aos/menus/aos_main_menu.c src/runtime/aos_intro_cutscene.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
@@ -294,7 +294,7 @@ add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/run
                src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos/menus/aos_main_menu_graphics.c
                src/runtime/aos/menus/aos_main_menu_objects.c src/runtime/aos/menus/aos_main_menu_sprites.c
                src/runtime/aos/menus/aos_main_menu_files.c src/runtime/aos/core/aos_stats.c
-               src/runtime/aos_title_graphics.c src/runtime/aos_obj_rom.c src/runtime/aos_logo_graphics.c
+               src/runtime/aos/title/aos_title_graphics.c src/runtime/aos_obj_rom.c src/runtime/aos/title/aos_logo_graphics.c
                src/runtime/aos/core/aos_input.c src/runtime/aos/menus/aos_text_window.c
                src/runtime/aos/menus/aos_menu_bg0.c src/runtime/aos/menus/aos_window_frame.c
                src/runtime/aos_game_over_graphics.c
@@ -1049,13 +1049,13 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_text_window_tests)
     add_test(NAME aos_text_window COMMAND fusion_aos_text_window_tests)
 
-    add_executable(fusion_aos_title_fade_tests tests/test_aos_title_fade.c src/runtime/aos_title_fade.c)
+    add_executable(fusion_aos_title_fade_tests tests/test_aos_title_fade.c src/runtime/aos/title/aos_title_fade.c)
     target_include_directories(fusion_aos_title_fade_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_title_fade_tests)
     add_test(NAME aos_title_fade COMMAND fusion_aos_title_fade_tests)
 
     add_executable(fusion_aos_game_mode_tests tests/test_aos_game_mode.c
-                   src/runtime/aos_game_mode.c src/runtime/aos_title_fade.c
+                   src/runtime/aos_game_mode.c src/runtime/aos/title/aos_title_fade.c
                    src/runtime/aos/core/aos_input.c)
     target_include_directories(fusion_aos_game_mode_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_game_mode_tests)
@@ -1094,7 +1094,7 @@ if(BUILD_TESTING)
     add_test(NAME metroidvania_split COMMAND fusion_metroidvania_split_tests)
 
     add_executable(fusion_aos_title_screen_tests tests/test_aos_title_screen.c
-                   src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c)
+                   src/runtime/aos/title/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c)
     target_include_directories(fusion_aos_title_screen_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_title_screen_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_title_screen_tests)
@@ -1103,7 +1103,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_game_mode.c
                    src/runtime/aos/menus/aos_main_menu.c
-                   src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
+                   src/runtime/aos/title/aos_title_fade.c src/runtime/aos/title/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
                    src/runtime/aos/core/aos_input.c src/runtime/aos_intro_cutscene.c
                    src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)
@@ -1147,7 +1147,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_opening_event_tests
                    tests/test_aos_opening_event.c
-                   src/runtime/aos_opening_event.c src/runtime/aos/core/aos_stats.c
+                   src/runtime/aos/title/aos_opening_event.c src/runtime/aos/core/aos_stats.c
                    src/runtime/aos_intro_resources.c
                    src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_opening_event_tests PRIVATE src/runtime)
@@ -1175,7 +1175,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_intro_graphics COMMAND fusion_aos_intro_graphics_tests)
 
     add_executable(fusion_aos_logo_graphics_tests tests/test_aos_logo_graphics.c
-                   src/runtime/aos_logo_graphics.c src/runtime/aos_title_graphics.c src/runtime/aos_obj_rom.c
+                   src/runtime/aos/title/aos_logo_graphics.c src/runtime/aos/title/aos_title_graphics.c src/runtime/aos_obj_rom.c
                    src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_logo_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_logo_graphics_tests PRIVATE fusion_assets)

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_opening_event.h"
+#include "aos/title/aos_opening_event.h"
 #include "aos_intro_resources.h"
 #include "aos/core/aos_soma.h"
 

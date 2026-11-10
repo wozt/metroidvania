@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:09:48+00:00",
+ "generated_at": "2026-11-10T01:10:43+00:00",
  "git": {
-  "commit": "aca6a97d",
+  "commit": "2a7921e4",
   "branch": "main",
   "dirty": true
  },
@@ -8742,7 +8742,7 @@
     "src/runtime/aos_game_over.c",
     "src/runtime/aos_game_over_graphics.c",
     "src/runtime/aos_game_lifecycle.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
     "src/assets/aos/runtime_room.c",
     "src/assets/aos/objects.c"
@@ -14484,15 +14484,15 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_opening_event.c",
-    "src/runtime/aos_opening_event.h",
+    "src/runtime/aos/title/aos_opening_event.c",
+    "src/runtime/aos/title/aos_opening_event.h",
     "src/runtime/aos/menus/aos_portrait.c",
     "src/runtime/aos/menus/aos_portrait.h",
     "src/runtime/aos/menus/aos_window_frame.c",
     "src/runtime/aos/menus/aos_window_frame.h",
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos_intro_resources.c",
     "src/runtime/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_notice.c",
@@ -15300,7 +15300,7 @@
    "local_sources": [
     "src/runtime/aos/menus/aos_menu_bg0.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
-    "src/runtime/aos_title_preview.c"
+    "src/runtime/aos/title/aos_title_preview.c"
    ],
    "tests": [
     "tests/test_aos_menu_bg0.c",
@@ -15433,7 +15433,7 @@
     "src/runtime/aos/souls/aos_soul_menu.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
     "src/runtime/aos_save.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/menus/aos_pause_graphics.c"
    ],
@@ -15533,7 +15533,7 @@
     "src/runtime/aos_intro_font.c",
     "src/runtime/aos_intro_resources.c",
     "src/runtime/aos/menus/aos_main_menu.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_cells.c"
    ],
    "tests": [
@@ -15922,11 +15922,11 @@
     "src/runtime/aos_save.c",
     "src/runtime/aos_save_room.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/core/aos_stats.c",
     "src/runtime/aos/menus/aos_button_config.c",
-    "src/runtime/aos_opening_event.c"
+    "src/runtime/aos/title/aos_opening_event.c"
    ],
    "tests": [
     "tests/test_aos_save.c",
@@ -17014,14 +17014,14 @@
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos_intro_cutscene.c",
-    "src/runtime/aos_title_fade.c",
+    "src/runtime/aos/title/aos_title_fade.c",
     "src/runtime/aos/core/aos_input.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_title_screen.c",
-    "src/runtime/aos_logo_graphics.c",
-    "src/runtime/aos_title_graphics.c"
+    "src/runtime/aos/title/aos_title_screen.c",
+    "src/runtime/aos/title/aos_logo_graphics.c",
+    "src/runtime/aos/title/aos_title_graphics.c"
    ],
    "tests": [
     "tests/test_aos_game_mode.c",
@@ -17181,14 +17181,14 @@
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos/menus/aos_main_menu_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
-    "src/runtime/aos_title_fade.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_fade.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
     "src/runtime/aos_save.c",
     "src/runtime/aos_intro_resources.c",
     "src/runtime/aos_intro_font.c",
-    "src/runtime/aos_title_screen.c",
-    "src/runtime/aos_title_graphics.c",
+    "src/runtime/aos/title/aos_title_screen.c",
+    "src/runtime/aos/title/aos_title_graphics.c",
     "src/runtime/aos/core/aos_anim.c",
     "src/runtime/aos/core/aos_audio.c",
     "src/runtime/aos/core/aos_mp2k.c",
@@ -17415,7 +17415,7 @@
     "src/runtime/aos_intro_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aos_game_lifecycle.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos_save.c"
    ],
    "tests": [
@@ -17947,9 +17947,9 @@
     "src/runtime/aos/core/aos_mp2k.c",
     "src/runtime/mzm_audio.c",
     "src/runtime/fusion_host.c",
-    "src/runtime/aos_title_screen.c",
+    "src/runtime/aos/title/aos_title_screen.c",
     "src/runtime/mzm_title_screen.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/room_runtime.c",
     "src/runtime/aria_runtime.c"
    ],
@@ -18078,15 +18078,15 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_opening_event.c",
-    "src/runtime/aos_opening_event.h",
+    "src/runtime/aos/title/aos_opening_event.c",
+    "src/runtime/aos/title/aos_opening_event.h",
     "src/runtime/aos/menus/aos_portrait.c",
     "src/runtime/aos/menus/aos_portrait.h",
     "src/runtime/aos/menus/aos_window_frame.c",
     "src/runtime/aos/menus/aos_window_frame.h",
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos_intro_resources.c",
     "src/runtime/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_notice.c",
@@ -19460,7 +19460,7 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_title_preview.c",
+    "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
     "src/runtime/aos_save.c",
     "src/runtime/aos_game_lifecycle.c",
@@ -19472,7 +19472,7 @@
     "src/runtime/aos_intro_resources.c",
     "src/runtime/aos_intro_font.c",
     "src/runtime/aos_intro_graphics.c",
-    "src/runtime/aos_opening_event.c",
+    "src/runtime/aos/title/aos_opening_event.c",
     "src/runtime/aos/menus/aos_pause_graphics.c",
     "src/runtime/aos/menus/aos_quick_map.c",
     "src/runtime/aria_runtime.c"
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "2a7921e4",
+   "date": "2026-11-10",
+   "subject": "Move Aria menu modules into src/runtime/aos/menus/",
+   "scope": "project"
+  },
+  {
    "commit": "aca6a97d",
    "date": "2026-11-10",
    "subject": "Move shared Aria runtime modules into src/runtime/aos/core/",
@@ -22713,12 +22719,6 @@
    "commit": "53802b2d",
    "date": "2026-11-09",
    "subject": "Port the Killer Mantle (Aria of Sorrow enemy id 85)",
-   "scope": "project"
-  },
-  {
-   "commit": "598b1bba",
-   "date": "2026-11-09",
-   "subject": "Port Evil Butcher (Aria enemy 25) with cleaver, gore and death particles",
    "scope": "project"
   }
  ],

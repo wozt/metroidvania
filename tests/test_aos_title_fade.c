@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_title_fade.h"
+#include "aos/title/aos_title_fade.h"
 #include <assert.h>
 #include <stdio.h>
 

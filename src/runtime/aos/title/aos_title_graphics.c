@@ -2,8 +2,8 @@
 /* Aria's title-screen backgrounds: see aos_title_graphics.h. */
 #include "aos_title_graphics.h"
 
-#include "aos_obj_rom.h"
-#include "aos/core/aos_rom_graphics.h"
+#include "../../aos_obj_rom.h"
+#include "../core/aos_rom_graphics.h"
 #include "fusion/assets/gba.h"
 
 #include <stdio.h>

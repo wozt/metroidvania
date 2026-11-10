@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for Aria's title screen (aos_title_screen). */
-#include "aos_title_screen.h"
+#include "aos/title/aos_title_screen.h"
 
 #include <assert.h>
 #include <stdio.h>

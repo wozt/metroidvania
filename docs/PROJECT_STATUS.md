@@ -2,6 +2,17 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0949 - Title modules move to src/runtime/aos/title/
+
+- The title modules moved to `src/runtime/aos/title/`:
+  `aos_logo_graphics`, `aos_opening_event`, `aos_title_fade`,
+  `aos_title_graphics`, `aos_title_layers.h`, `aos_title_preview`
+  and `aos_title_screen`. Includes inside the directory are
+  `../core/`, `../menus/`, `../math/` for sibling categories and
+  `../../aos_*.h` for modules not yet moved; consumers use
+  `aos/title/` paths. CMake plus the registries were updated.
+  No code or behavior changed.
+
 ## Patch 0948 - Menu modules move to src/runtime/aos/menus/
 
 - The 16 menu modules moved to `src/runtime/aos/menus/`:

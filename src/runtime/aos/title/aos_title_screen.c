@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "aos_game_mode.h"
-#include "aos/core/aos_input.h"
-#include "aos/math/aos_math.h"
+#include "../../aos_game_mode.h"
+#include "../core/aos_input.h"
+#include "../math/aos_math.h"
 
 enum {
     DCNT_MODE_1 = 1, DCNT_BG0 = 1 << 8, DCNT_BG1 = 1 << 9, DCNT_BG2 = 1 << 10,

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 110 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 111 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1370 | 2203 |
+| Castlevania: Aria of Sorrow | 1377 | 2196 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1846,6 +1846,15 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: The body runs its linked sprite at the end of its own update (the native slot follows the body's) and the child entity only shows it. The children are emitted on the first update instead of at creation. the +0x5A palette bits of its death are not ported. The trails copy the body's visibility each frame, so sub_080C7A3C is not modelled separately.  
 Next action: Compare the dash, swoop and dive paths and the trails against an emulator.
 Evidence: in game: `aria area_03_room_000 (--spawn 200 335 --hp 9999): Nemesis renders tilted with its trails and Soma takes 45-damage contact hits by frame 330`.
+
+[+] **`aos.enemies.nightmare` — Nightmare.** EnemyNightmareCreate (0x080B839C) through the shared loader sub_0806E0D0 loads tiles 0x081EC1FC, palette 0x0820BBF8 and frames 0x08247488, sets + 0x5C = 9, plays animation param0 looping and enters state 0 with the sub_0806AF98 floor snap, + 0x46 += 1 px and + 0x1C = 0x28 (the 0x8E & 0x40 flag parks it in dormant state 3 with param0 = 1). EnemyNightmareUpdate dispatches state 0 (the two sub_080458E4 trail registrations into + 0x14/+ 0x15, then state 1), state 1 sub_080B80BC (the sub_0806CAF8 drift on probes 0x08528878 mode 4 with the + 0x18 speed ramping + 0x4000 to 0x27FFF, song 0x7D every 0x19 ticks, the + 0x1C > 0x50 pounce into animation param0 + 2 with song 0x127, then the - 0x1000 bleed, the (rng & 1) + 4 wisp shed every fourth tick and the + 0x6C bit-2 U-turn), state 2 sub_080B8240 (the release, animation param0 + 2, the vx +/- 0x28000 / vy - 0x28000 / ay 0x200000 fling, the blink strobe, song 0x6E every eighth tick, the sub_08045CEC debris every fourth and the window/probe/timer delete) and state 3 (animation only). Unit-tested in nightmare_tests.
+
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_080458E4`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08040A38.s:sub_08045E38`, `aos:asm:asm/code/code_08060B98.s:sub_080683BC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806AD24`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B04C`, `aos:asm:asm/code/code_08060B98.s:sub_0806C828`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D4C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E218`, `aos:asm:asm/code/code_08060B98.s:sub_0806E4F8`, `aos:asm:asm/code/code_080B0AD4.s:EnemyNightmareCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyNightmareUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B80BC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B8240`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B85E8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B8628`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_080211F0.c:sub_08021924`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/nightmare.c`](../src/runtime/aos/enemies/nightmare.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The two sub_080458E4 trail slots (+ 0x14/+ 0x15) are marks only — the native OAM-history effect records are not ported; the song-0x7D window is approximated by a screen box; sub_0806D3D8's velocity limit runs through the shared integrate; the sub_0806D518 blink strobe is a hidden flicker; the sub_08045CEC wisps and debris are shared drifts; sub_08021278 target registration is implicit; and there is no emulator comparison.  
+Next action: Port the red soul 31 update and compare a room fight against an emulator.
+Evidence: in game: `aria area_07_room_023 and area_07_room_047: Nightmares drift, ramp, pounce and shed wisps`.
 
 [+] **`aos.enemies.peeping_eye` — Peeping Eye.** EnemyPeepingEyeUpdate is ported from its traced routines: the wait for the target in its 180 x 200 box or a first wound, the opening (0x08527400, 40 frames), the steering toward a point 64 pixels short of the target and 64 above it then toward random points 16 to 63 pixels to a side and 32 to 79 above (sub_08088168: +- 0x800 beyond 4 pixels, 31/32 damping, sub_0806D3D8 at 2.0, 120-frame timeout), its eyelid looks (0x08527450: blink, looking up or down toward the target, the hurt look facing it after a blow), the 2.0 push of a blow and the death (sub_08088638: 0x6E, 45 hidden frames with a flame), the eyeball (sub_080888D4), the pupil looking at the target (sub_08088724) and the six swaying, growing segments flaming in turn at its death (sub_08088A64), and the state-4 showcase (sub_08088510) under the global 0x8E & 0x40.
 

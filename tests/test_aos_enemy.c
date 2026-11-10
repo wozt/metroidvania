@@ -6535,6 +6535,128 @@ static void bael_tests(void) {
     assert(d4.y < y0 && d4.angle != a0);
 }
 
+static void nightmare_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    enum { NM_ANIMS = 12 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[NM_ANIMS];
+    for (int a = 0; a < NM_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = NM_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < NM_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv id 66: hp 260, field_e 300, contact 43, defence 30,
+     * weak 0x0020, resist 0x0010, experience 280. */
+    const AosEnemyStats stats = {260, 43, 30, 0x0020, 0x0010, 280};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemyNightmareCreate: state 0, + 0x1C = 0x28, animation
+     * param0 looping, one pixel of + 0x46 anchor. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_NIGHTMARE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 260 && e.walk_timer == 0x28 &&
+           e.nm_speed == 0 && e.nm_wisp_a == 0);
+
+    /* param0 nonzero keeps state 0 but bases the animations on it;
+     * the 0x8E & 0x40 flag parks it in dormant state 3 with param0
+     * forced to 1. */
+    AosEnemy e9;
+    assert(aos_enemy_create(&e9, AOS_ENEMY_NIGHTMARE, 300, 150, 9, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e9.state == 0 && e9.param0 == 9);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_NIGHTMARE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 3 && ed.param0 == 1);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* State 0 registers the two trail slots and arms state 1; step 0
+     * then zeroes the speed and arms step 1. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 1 && e.step == 0 && e.nm_wisp_a == 1 &&
+           e.nm_wisp_b == 1);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1 && e.nm_speed == 0);
+
+    /* sub_080B80BC step 1: the + 0x18 speed ramps + 0x4000 a tick and
+     * + 0x1C past 0x50 pounces — animation param0 + 2 once, song
+     * 0x127, step 2. */
+    e.nm_speed = 0x10000;
+    e.walk_timer = 0x50;
+    e.timer = 1;    /* keep + 0xD % 0x19 off the 0x7D howl */
+    aos_audio_clear();
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2 && e.nm_speed == 0x14000 &&
+           e.anim.id == 2);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x127) == 1);
+
+    /* Step 2 bleeds the speed - 0x1000 a tick and sheds a wisp drift
+     * every fourth tick; the U-turn waits on the probe byte's bit 2
+     * (a ceiling mark the flat test layer never raises). */
+    e.step = 2;
+    e.timer = 3;
+    e.nm_speed = 0x8000;
+    AosHitReport sr = aos_enemy_update(&e, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, CAM, CAMY,
+                                       always_zero);
+    assert(e.step == 2 && e.nm_speed == 0x7000 && e.timer == 4 &&
+           sr.effect_count > 0);
+
+    /* sub_080B8240: the death flings the skull (vx by facing, vy
+     * - 0x28000, ay 0x200000), steps the animation and deletes on
+     * the window/probe/timer rule after the drift puffs. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_NIGHTMARE, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    d.state = 2;
+    d.step = d.substep = 0;
+    d.timer = 0;
+    d.nm_probe = 0;
+    (void)aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    /* vy already absorbed one ay step through the shared integrate. */
+    assert(d.step == 1 && d.vx == (d.mirrored ? 0x28000 : -0x28000) &&
+           d.vy == -0x28000 + 0x200000 && d.ay == 0x200000 &&
+           d.timer == 1);
+    /* Park it mid-screen with the timer on the song beat: + 0xD % 8
+     * plays 0x6E and + 0xD % 4 sheds the debris drift. */
+    d.vy = 0;
+    d.y = AOS_FIXED(150);
+    d.timer = 7;
+    aos_audio_clear();
+    AosHitReport sr2 = aos_enemy_update(&d, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, CAM, CAMY,
+                                        always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1 &&
+           sr2.effect_count > 0);
+    int saw_debris = 1;
+    for (int i = 0; i < 400 && !d.removed; ++i) {
+        AosHitReport dr = aos_enemy_update(&d, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, CAM,
+                                           CAMY, always_zero);
+        if (dr.effect_count > 0) saw_debris = 1;
+    }
+    assert(d.removed && saw_debris);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9782,6 +9904,7 @@ int main(void) {
     altair_tests();
     kyoma_tests();
     bael_tests();
+    nightmare_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

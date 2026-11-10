@@ -248,7 +248,7 @@ static void test_output(const FusionJson *data) {
     EXPECT(aos && integer_at(aos, "unassigned_routines") == rows - 1, "unassigned rows");
     /* Keep this as a corruption guard, not a ceiling on native progress: each
      * newly attached feature legitimately shrinks the report. */
-    EXPECT(rows - 1 > 2200, "unassigned report size");
+    EXPECT(rows - 1 > 2100, "unassigned report size");
     EXPECT(!fusion_json_member(fusion_json_member(data, "tests"), "ran")->boolean, "tests not run");
 }
 
@@ -376,7 +376,7 @@ static void test_bestiary(const FusionJson *data) {
         "Mandragora", "Disc Armor", "Alura Une", "Fish Head", "Basilisk",
         "Ukoback", "Student Witch", "Witch", "Mudman",
         "Werejaguar", "Weretiger", "Werewolf", "Slime", "Kyoma Demon",
-        "Altair", "Bael"};
+        "Altair", "Bael", "Nightmare"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

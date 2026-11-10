@@ -193,6 +193,12 @@ static const EntitySpec entities[] = {
      * & 0x1F + 0x58 variant picks one of eight palette schemes at
      * draw time natively; bank 0 stands in (documented). */
     ENTITY("bael", 0x081F428C, 0x0820BF9C, 0, 0x0824FDB0),
+    /* Nightmare (EnemyNightmareCreate 0x080B839C through the shared
+     * loader sub_0806E0D0): tiles 0x081EC1FC, palette 0x0820BBF8,
+     * frames 0x08247488; its drift walks the 0x08528878 probe
+     * descriptor (sub_0806CAF8, mode 4). */
+    PROBES("nightmare", 0x081EC1FC, 0x0820BBF8, 0, 0x08247488,
+           0x08528878),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

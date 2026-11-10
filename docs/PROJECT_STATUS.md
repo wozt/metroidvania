@@ -2,6 +2,41 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0974 - Nightmare ported (id 66)
+
+- `EnemyNightmareCreate` (0x080B839C) through the shared loader
+  `func_0806E0D0` (tiles `0x081EC1FC`, palette `0x0820BBF8`,
+  frames `0x08247488`) and `EnemyNightmareUpdate` (0x080B84B4)
+  dispatching the inline state-0 trail registration,
+  `sub_080B80BC` the drift and `sub_080B8240` the death as
+  `src/runtime/aos/enemies/nightmare.c`.
+- Create plays animation param0 looping, snaps to the floor,
+  adds one `+0x46` pixel and arms `+0x1C = 0x28`; the 0x8E & 0x40
+  flag parks it in dormant state 3 with param0 forced to 1.
+- State 1 drifts on the `0x08528878` probes (mode 4) with the
+  `+0x18` speed ramping `+0x4000` a tick to `0x27FFF`, howls
+  `0x7D` every `0x19` ticks inside the window, pounces into
+  animation param0 + 2 with song `0x127` once `+0x1C` passes
+  `0x50`, then bleeds `-0x1000`, sheds `(rng & 1) + 4` wisp
+  drifts every fourth tick and U-turns on the `+0x6C` bit-2
+  ceiling mark.
+- State 2 releases the trail slots, plays param0 + 2 once,
+  flings the skull (`vx` by facing, `vy -0x28000`, `ay 0x200000`),
+  strobes the `sub_0806D518` blink, requests `0x6E` every eighth
+  tick, sheds `sub_08045CEC` debris every fourth and deletes on
+  the window/probe/`+0xD <= 0x80` rule.
+- Verified by `nightmare_tests` (create variants, state 0 → 1
+  trail marks, speed ramp and pounce, step-2 bleed and wisp
+  shed, death fling/song/debris/delete) and in
+  `area_07_room_023` / `area_07_room_047` (both records spawn,
+  ramp, pounce and drift).
+- Divergences: the two `sub_080458E4` trail slots are marks
+  only, the song window is a screen box, `sub_0806D3D8` runs
+  through the shared integrate, the blink strobe is a hidden
+  flicker, the wisps/debris are shared drifts, and there is no
+  emulator comparison. Red soul 31 not ported yet.
+- Ported enemies: 80/113.
+
 ## Patch 0973 - Bael ported (id 94)
 
 - `EnemyBaelCreate` (0x080CC624) through the shared loader

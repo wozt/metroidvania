@@ -397,6 +397,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_WEREWOLF &&
         id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
         id != AOS_ENEMY_ALTAIR && id != AOS_ENEMY_BAEL &&
+        id != AOS_ENEMY_NIGHTMARE &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -906,6 +907,36 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         enemy->state = param0 ? 2 : 1;
         enemy->step = enemy->substep = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_NIGHTMARE) {
+        /* EnemyNightmareCreate 0x080B839C through the shared loader
+         * sub_0806E0D0: tiles 0x081EC1FC, palette 0x0820BBF8, frames
+         * 0x08247488 (the kind); sub_0806B04C stats, + 0x5C = 9 the
+         * draw byte; the 0x8E & 0x40 flag parks it in state 3 with
+         * param0 forced to 1 and animation 1; else animation
+         * param0 looping, the sub_080B8628 pre-hit bookkeeping
+         * (covered by the shared hurt path), the param0 == 0 /
+         * nonzero affine variants (cosmetic, folded into the shared
+         * draw), the sub_0806AF98 floor snap, + 0x46 += 1 px, state
+         * 0 and + 0x1C = 0x28. */
+        play_loop(enemy, anims, (unsigned)param0, true);
+        enemy->vx = enemy->vy = enemy->ax = enemy->ay = 0;
+        enemy->nm_wisp_a = enemy->nm_wisp_b = enemy->nm_probe = 0;
+        enemy->nm_speed = 0;
+        enemy->static_frame = -1;
+        if (flag_8e_40) {
+            enemy->param0 = 1;
+            play_loop(enemy, anims, 1, true);
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        snap_to_floor(enemy, layer);
+        enemy->y += 0x10000;    /* + 0x46 low half += 1: one pixel */
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        enemy->walk_timer = 0x28;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2235,6 +2266,16 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0;
                     enemy->ba_flag = 0;
+                } else if (enemy->id == AOS_ENEMY_NIGHTMARE &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080B85E8 lethal: sub_080683BC defeated
+                     * (the framework's mark), the + 0x5A draw merge,
+                     * state 2 with + 0xB/+ 0xC cleared — sub_080B8240's
+                     * first tick releases the trail slots, flings the
+                     * skull and starts the blink. */
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3618,6 +3659,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         (enemy->role == AOS_ROLE_ENEMY ||
          enemy->role == AOS_ROLE_BAEL_COMPANION))
         return aos_enemy_bael_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_NIGHTMARE && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_nightmare_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)

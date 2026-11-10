@@ -168,6 +168,7 @@ enum {
     AOS_ENEMY_SLIME = 0x44,
     AOS_ENEMY_KYOMA_DEMON = 0x27,
     AOS_ENEMY_BAEL = 0x5E,
+    AOS_ENEMY_NIGHTMARE = 0x42,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -543,6 +544,15 @@ typedef struct AosEnemy {
      * and the companion's + 0x11 swap. */
     uint8_t ba_flag, ba_tint, ba_companion;
     int8_t ba_drift_x, ba_drift_y;
+    /* Nightmare (EnemyNightmareCreate 0x080B839C, update 0x080B84B4;
+     * drift sub_080B80BC, death sub_080B8240): + 0x14/+ 0x15 the two
+     * trail slots sub_080458E4 registers and sub_080B8240 releases
+     * (marks only — the native OAM-history effect slots are not
+     * ported), + 0x18 the ramped drift speed, + 0x6C the
+     * sub_0806CAF8 probe byte (bit 2 the turn mark). + 0x1C is
+     * walk_timer, + 0xD timer, + 0xB step. */
+    uint8_t nm_wisp_a, nm_wisp_b, nm_probe;
+    int32_t nm_speed;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

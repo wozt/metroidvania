@@ -407,6 +407,8 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_ALASTOR &&
         id != AOS_ENEMY_MAN_EATER &&
         id != AOS_ENEMY_GLADIATOR &&
+        id != AOS_ENEMY_WOODEN_GOLEM && id != AOS_ENEMY_GOLEM &&
+        id != AOS_ENEMY_FLESH_GOLEM && id != AOS_ENEMY_IRON_GOLEM &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1287,6 +1289,33 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             enemy->state = 2;
             enemy->step = 0;
         }
+        return true;
+    }
+    if (id == AOS_ENEMY_WOODEN_GOLEM || id == AOS_ENEMY_GOLEM ||
+        id == AOS_ENEMY_FLESH_GOLEM || id == AOS_ENEMY_IRON_GOLEM) {
+        /* EnemyGolemCreate 0x0807E508: tiles 0x081CBFAC/0x081CBFB4 by
+         * variant, frames 0x08219804 through sub_0803B924, palettes
+         * per variant through sub_08081128; the ten limb children of
+         * sub_0806DFF8 (callback sub_080812CC) emit on the first
+         * update via boss_parts_spawned; the + 0x24 variant index is
+         * {0x35->0, 0x65->1, 0x22->2, 0x50->3}; the dormant
+         * gEwramData + 0x8E & 0x40 flag parks state 3; hurt callbacks
+         * sub_080811CC/sub_08081248 and the sub_0804277C box
+         * registrations fold into the shared collide. */
+        enemy->go_var = (uint8_t)((id == AOS_ENEMY_GOLEM) ? 0 :
+                                  (id == AOS_ENEMY_IRON_GOLEM) ? 1 :
+                                  (id == AOS_ENEMY_WOODEN_GOLEM) ? 2 : 3);
+        enemy->go_ax = enemy->go_ay = 0;
+        enemy->go_mode = 0;
+        enemy->go_cx = enemy->go_cy = 0;
+        enemy->go_ang = enemy->go_life = 0;
+        enemy->go_piece = 0;
+        enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2770,6 +2799,19 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 7;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0;
+                } else if ((enemy->id == AOS_ENEMY_WOODEN_GOLEM ||
+                            enemy->id == AOS_ENEMY_GOLEM ||
+                            enemy->id == AOS_ENEMY_FLESH_GOLEM ||
+                            enemy->id == AOS_ENEMY_IRON_GOLEM) &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080811CC lethal: sub_080683BC defeated, sound
+                     * 0x71, + 0xD = 0x4A, state 2, step 0 — the
+                     * update's death machine spawns the debris. */
+                    aos_audio_play_song(0x71);
+                    enemy->defeated = true;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x4A;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -4204,6 +4246,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_gladiator_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk,
                                           soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_WOODEN_GOLEM || enemy->id == AOS_ENEMY_GOLEM ||
+        enemy->id == AOS_ENEMY_FLESH_GOLEM || enemy->id == AOS_ENEMY_IRON_GOLEM)
+        return aos_enemy_golem_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

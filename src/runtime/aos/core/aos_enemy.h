@@ -183,6 +183,10 @@ enum {
     AOS_ENEMY_ALASTOR = 0x5A,
     AOS_ENEMY_MAN_EATER = 0x40,
     AOS_ENEMY_GLADIATOR = 0x5D,
+    AOS_ENEMY_WOODEN_GOLEM = 0x22,
+    AOS_ENEMY_GOLEM = 0x35,
+    AOS_ENEMY_FLESH_GOLEM = 0x50,
+    AOS_ENEMY_IRON_GOLEM = 0x65,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -245,7 +249,13 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_MAN_DEATHP = 109, AOS_ROLE_GLADIATOR_PART0 = 110,
        AOS_ROLE_GLADIATOR_PART1 = 111, AOS_ROLE_GLADIATOR_PART2 = 112,
        AOS_ROLE_GLADIATOR_SHOT = 113, AOS_ROLE_GLADIATOR_TRAIL = 114,
-       AOS_ROLE_GLADIATOR_GORE = 115 };
+       AOS_ROLE_GLADIATOR_GORE = 115,
+       AOS_ROLE_GOLEM_PART0 = 116, AOS_ROLE_GOLEM_PART1 = 117,
+       AOS_ROLE_GOLEM_PART2 = 118, AOS_ROLE_GOLEM_PART3 = 119,
+       AOS_ROLE_GOLEM_PART4 = 120, AOS_ROLE_GOLEM_PART5 = 121,
+       AOS_ROLE_GOLEM_PART6 = 122, AOS_ROLE_GOLEM_PART7 = 123,
+       AOS_ROLE_GOLEM_PART8 = 124, AOS_ROLE_GOLEM_PART9 = 125,
+       AOS_ROLE_GOLEM_DEBRIS = 126 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -713,6 +723,20 @@ typedef struct AosEnemy {
     uint8_t gl_part, gl_atk, gl_atk2;
     int16_t gl_ang, gl_ang2, gl_ox, gl_oy;
     int32_t gl_life;
+    /* Golem family (EnemyGolemCreate 0x0807E508 / update 0x0807E35C,
+     * state0 sub_0807E8EC, state1 sub_0807F494, dormant sub_080809C0):
+     * `go_var` is the + 0x24 variant index (0x35->0, 0x65->1, 0x22->2,
+     * 0x50->3), `go_ax`/`go_ay` the + 0x42/+ 0x46 anchor the probes
+     * measure from, `go_mode` the + 0x20 attack-mode byte the intro
+     * cases write (2 or 4), `go_cx`/`go_cy` the container + 0x80/+ 0x84
+     * hitbox source and `go_piece`/`go_ang`/`go_life` the limb child's
+     * + 0x20 record index, + 0x48 aim angle and + 0xD throw timer.  The
+     * ten limb children (sub_080812CC) and the death debris
+     * (sub_0806D7F0) are persistent children of roles
+     * AOS_ROLE_GOLEM_*. */
+    uint8_t go_var, go_mode, go_piece;
+    int16_t go_ax, go_ay;
+    int32_t go_cx, go_cy, go_ang, go_life;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

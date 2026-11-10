@@ -244,6 +244,13 @@ static const EntitySpec entities[] = {
      * shared by the body, the three limbs, the shots, the trails
      * and the death chunks. */
     ENTITY("gladiator", 0x081CC0AC, 0x0820AF98, 0, 0x08229104),
+    /* Golem family (sub_08081128 in EnemyGolemCreate): tiles
+     * 0x081CBFAC (0x081CBFB4 for Flesh Golem), palette 0x0820A6FC,
+     * frames 0x08219804 — shared by the body and the ten limbs. */
+    ENTITY("wooden_golem", 0x081CBFAC, 0x0820A6FC, 0, 0x08219804),
+    ENTITY("golem", 0x081CBFAC, 0x0820A6FC, 0, 0x08219804),
+    ENTITY("flesh_golem", 0x081CBFB4, 0x0820A6FC, 0, 0x08219804),
+    ENTITY("iron_golem", 0x081CBFAC, 0x0820A6FC, 0, 0x08219804),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

@@ -1,3 +1,28 @@
+## Patch 0985 - Golem family ported (ids 34, 53, 80, 101)
+
+- `EnemyGolemCreate` (0x0807E508) / `EnemyGolemUpdate` (0x0807E35C)
+  shared by Wooden Golem (0x22), Golem (0x35), Flesh Golem (0x50)
+  and Iron Golem (0x65): tiles `0x081CBFAC`/`0x081CBFB4`, frames
+  `0x08219804`, palette `0x0820A6FC`, the ten-limb piece tables
+  `0x08118E80`..`0x08118ECD`, the `+0x24` variant index
+  {0x35->0, 0x65->1, 0x22->2, 0x50->3} and the dormant
+  `gEwramData + 0x8E & 0x40` flag parking state 3.
+- `golem.c` ports the architecture: the ten `AOS_ROLE_GOLEM_PART*`
+  limbs riding per-piece anchor offsets (the `0x08527048`/`0x08527354`
+  container records folded to fixed offsets), the state-0 attack
+  machine (song 0x7C call, 0x7E exit), the state-1 rush (songs
+  0x80/0x87), the state-2 death spawning `sub_0806D7F0` debris every
+  fourth tick and the lethal `sub_080811CC` (song 0x71, timer 0x4A).
+- The 42-case state-0 and ~57-case state-1 native machines collapse
+  to a documented step cycle; divergences are recorded per variant
+  in `aos_monster_aspects.tsv`.
+- All four yellow souls (11, 24, 8, 4 — routines `0x080322E9`,
+  `0x0803226D`, `0x08032205`) were already ported in `aos_soul.c`,
+  so all five aspects are `ported` for all four ids.
+- Unit-tested in `golem_tests` (create per variant, dormant flag,
+  ten limbs over the 8-child cap, anchor follow, thrown detach,
+  attack cycle, debris, lethal); golden regenerated.
+
 ## Patch 0984 - Gladiator ported (id 93)
 
 - `EnemyGladiatorCreate` (0x080A07FC) / `EnemyGladiatorUpdate`

@@ -11390,6 +11390,150 @@ static void gladiator_tests(void) {
            el.timer >= 0x3B);
 }
 
+
+static void golem_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { GO_ANIMS = 8 };
+    static const uint8_t ticks8[8] = {4, 4, 4, 4, 4, 4, 4, 4};
+    static AosAnimDef defs[GO_ANIMS];
+    for (int a = 0; a < GO_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks8};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = GO_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < GO_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-24, -48, 48, 56};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv: Wooden 34 {250,29,30,0x0802,0x0000,200},
+     * Golem 53 {200,40,40,0x0800,0x0fff,180},
+     * Flesh 80 {2000,47,25,0x0801,0x0000,400},
+     * Iron 101 {9999,70,255,0x0800,0x0fff,500}. */
+    static const struct { uint8_t id; AosEnemyStats st; } vars[4] = {
+        {0x22, {250, 29, 30, 0x0802, 0x0000, 200}},
+        {0x35, {200, 40, 40, 0x0800, 0x0fff, 180}},
+        {0x50, {2000, 47, 25, 0x0801, 0x0000, 400}},
+        {0x65, {9999, 70, 255, 0x0800, 0x0fff, 500}},
+    };
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyGolemCreate: state 0 (or 3 under the dormant flag), the
+     * + 0x24 variant index by id. */
+    for (int v = 0; v < 4; ++v) {
+        AosEnemy e;
+        assert(aos_enemy_create(&e, vars[v].id, 300, 150, 0, 0,
+                                &soma, &layer, &kind, &vars[v].st));
+        /* Native + 0x24: 0x35->0, 0x65->1, 0x22->2, 0x50->3. */
+        static const uint8_t want_var[4] = {2, 0, 3, 1};
+        assert(e.state == 0 && e.go_var == want_var[v] &&
+               e.hp == vars[v].st.hp);
+        aos_enemy_set_flag_8e_40(true);
+        AosEnemy ed;
+        assert(aos_enemy_create(&ed, vars[v].id, 300, 150, 0, 0,
+                                &soma, &layer, &kind, &vars[v].st));
+        assert(ed.state == 3);
+        aos_enemy_set_flag_8e_40(false);
+    }
+
+    /* The first updates emit the ten limbs (sub_0806DFF8 x10,
+     * spread over the 8-child room cap). */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x22, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &vars[0].st));
+    AosEnemy limbs[10];
+    int nlimbs = 0;
+    for (int i = 0; i < 4 && nlimbs < 10; ++i) {
+        AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+        for (int c = 0; c < hit.child_count && nlimbs < 10; ++c)
+            if (hit.children[c].role >= AOS_ROLE_GOLEM_PART0 &&
+                hit.children[c].role <= AOS_ROLE_GOLEM_PART9)
+                limbs[nlimbs++] = hit.children[c];
+    }
+    assert(nlimbs == 10 && e.spawned_count == 10);
+    for (int i = 0; i < 10; ++i) {
+        assert(limbs[i].role == AOS_ROLE_GOLEM_PART0 + i);
+        assert(limbs[i].parent == &e && limbs[i].combat.hurt_off);
+        assert(limbs[i].go_piece == i);
+    }
+    AosHitReport hit = {0 };
+
+
+    /* A limb rides its anchor beside the parent and mirrors facing. */
+    AosEnemy arm = limbs[3];
+    arm.role = AOS_ROLE_GOLEM_PART3;
+    arm.parent = &e;
+    e.mirrored = true;
+    hit = aos_enemy_update(&arm, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    (void)hit;
+    assert(arm.x == e.x - (40 << 16) && arm.y == e.y - (24 << 16));
+    assert(arm.mirrored);
+
+    /* The limbs detach into their thrown state on the parent death. */
+    e.state = 2;
+    hit = aos_enemy_update(&arm, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(arm.state == 1 && arm.timer >= 0x30 && arm.timer <= 0x50);
+
+    /* State 0 cycle: the aggro probe walks the machine into the
+     * song-0x7C attack and out through song 0x7E. */
+    AosEnemy w;
+    assert(aos_enemy_create(&w, 0x22, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &vars[0].st));
+    w.x = AOS_FIXED(150);
+    w.y = AOS_FIXED(120);
+    for (int i = 0; i < 40 && w.step != 2; ++i)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(w.step == 2);
+    for (int i = 0; i < 80; ++i)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x7C) >= 1);
+
+    /* State 1 entry: the recover step can roll into the rush. */
+    w.state = 1;
+    w.step = 0;
+    aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(w.step == 1 && w.vx != 0);
+
+    /* Death: state 2 spawns sub_0806D7F0 debris every fourth tick. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, 0x50, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &vars[2].st));
+    d.state = 2;
+    d.timer = 0x28;
+    hit = aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int debris = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_GOLEM_DEBRIS) debris++;
+    assert(debris == 1);
+
+    /* Lethal: hp 0 enters the shared death (state 2 keeps running). */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, 0x65, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &vars[3].st));
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.defeated);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -11640,6 +11784,7 @@ int main(void) {
     alastor_tests();
     maneater_tests();
     gladiator_tests();
+    golem_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

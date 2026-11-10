@@ -248,7 +248,7 @@ static void test_output(const FusionJson *data) {
     EXPECT(aos && integer_at(aos, "unassigned_routines") == rows - 1, "unassigned rows");
     /* Keep this as a corruption guard, not a ceiling on native progress: each
      * newly attached feature legitimately shrinks the report. */
-    EXPECT(rows - 1 > 2000, "unassigned report size");
+    EXPECT(rows - 1 > 1900, "unassigned report size");
     EXPECT(!fusion_json_member(fusion_json_member(data, "tests"), "ran")->boolean, "tests not run");
 }
 
@@ -275,7 +275,7 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(red_souls->count == 55 && blue_souls->count == 24 &&
            yellow_souls->count == 35 && ability_souls->count == 6,
            "Aria soul families");
-    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 63,
+    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 67,
            "complete Aria monsters");
     const FusionJson *mzm_monster_coverage = fusion_json_member(mzm_coverage, "monsters");
     const FusionJson *mzm_item_coverage = fusion_json_member(mzm_coverage, "items");
@@ -379,7 +379,8 @@ static void test_bestiary(const FusionJson *data) {
         "Altair", "Bael", "Nightmare", "Une", "Arachne", "Persephone",
         "Lilith", "Succubus", "Triton", "Devil", "Arc Demon",
         "Demon Lord", "Flame Demon", "Quezlcoatl", "Alastor",
-        "Man Eater", "Gladiator"};
+        "Man Eater", "Gladiator", "Wooden Golem", "Golem",
+        "Flesh Golem", "Iron Golem"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include "fusion/assets/aos.h"
-#include "aos_obj.h"
+#include "../../aos_obj.h"
 
 enum { AOS_INTRO_BACKGROUND_COUNT = 3, AOS_INTRO_ACTOR_SHEETS = 2 };
 

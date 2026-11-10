@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 #include "aos_game_mode.h"
-#include "aos_game_over.h"
-#include "aos_intro_cutscene.h"
+#include "aos/intro/aos_game_over.h"
+#include "aos/intro/aos_intro_cutscene.h"
 #include "aos/menus/aos_main_menu.h"
 #include "aos/title/aos_title_screen.h"
 

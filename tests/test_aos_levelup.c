@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_levelup.h"
+#include "aos/intro/aos_levelup.h"
 
 #include <assert.h>
 #include <math.h>

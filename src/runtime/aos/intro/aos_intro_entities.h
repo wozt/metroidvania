@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "aos_obj.h"
+#include "../../aos_obj.h"
 
 enum {
     AOS_INTRO_TEXT_X = 4,

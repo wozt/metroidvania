@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_game_over_graphics.h"
+#include "aos/intro/aos_game_over_graphics.h"
 
 #include <assert.h>
 #include <stdio.h>

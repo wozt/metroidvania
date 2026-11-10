@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:10:43+00:00",
+ "generated_at": "2026-11-10T01:11:28+00:00",
  "git": {
-  "commit": "2a7921e4",
+  "commit": "3b30c5bd",
   "branch": "main",
   "dirty": true
  },
@@ -8739,8 +8739,8 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos/core/aos_soma.c",
-    "src/runtime/aos_game_over.c",
-    "src/runtime/aos_game_over_graphics.c",
+    "src/runtime/aos/intro/aos_game_over.c",
+    "src/runtime/aos/intro/aos_game_over_graphics.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aria_runtime.c",
@@ -14493,8 +14493,8 @@
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/title/aos_title_preview.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_notice.c",
     "src/runtime/aos/souls/aos_soul_notice.h",
     "src/runtime/aos/core/aos_room_music.c",
@@ -15063,8 +15063,8 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos/menus/aos_pause_graphics.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_menu.c",
     "src/runtime/aos_recent_items.c",
     "src/runtime/aria_runtime.c",
@@ -15530,8 +15530,8 @@
    "fidelity": "partial",
    "local_sources": [
     "src/runtime/aos/menus/aos_text_window.c",
-    "src/runtime/aos_intro_font.c",
-    "src/runtime/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_cells.c"
@@ -16207,8 +16207,8 @@
    "local_sources": [
     "src/runtime/aos/menus/aos_pause_graphics.c",
     "src/runtime/aos_recent_items.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_menu.c",
     "src/runtime/aos_bestiary.c",
     "src/runtime/aos/menus/aos_button_config.c",
@@ -16344,8 +16344,8 @@
     "src/runtime/aos_save.c",
     "src/runtime/aos/souls/aos_soul_notice.c",
     "src/runtime/aos/souls/aos_soul_notice.h",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c"
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c"
    ],
    "tests": [
     "tests/test_aos_pickup.c",
@@ -17013,7 +17013,7 @@
     "src/runtime/aos_game_mode.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos/menus/aos_main_menu.c",
-    "src/runtime/aos_intro_cutscene.c",
+    "src/runtime/aos/intro/aos_intro_cutscene.c",
     "src/runtime/aos/title/aos_title_fade.c",
     "src/runtime/aos/core/aos_input.c",
     "src/runtime/aos/title/aos_title_preview.c",
@@ -17185,8 +17185,8 @@
     "src/runtime/aos/title/aos_title_preview.c",
     "src/runtime/aos/menus/aos_menu_save_bridge.c",
     "src/runtime/aos_save.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/title/aos_title_screen.c",
     "src/runtime/aos/title/aos_title_graphics.c",
     "src/runtime/aos/core/aos_anim.c",
@@ -17408,11 +17408,11 @@
    "status": "partial",
    "fidelity": "partial",
    "local_sources": [
-    "src/runtime/aos_intro_cutscene.c",
-    "src/runtime/aos_intro_entities.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
-    "src/runtime/aos_intro_graphics.c",
+    "src/runtime/aos/intro/aos_intro_cutscene.c",
+    "src/runtime/aos/intro/aos_intro_entities.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aos_game_lifecycle.c",
     "src/runtime/aos/title/aos_title_preview.c",
@@ -18087,8 +18087,8 @@
     "src/runtime/aos/core/aos_rom_graphics.c",
     "src/runtime/aria_runtime.c",
     "src/runtime/aos/title/aos_title_preview.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
     "src/runtime/aos/souls/aos_soul_notice.c",
     "src/runtime/aos/souls/aos_soul_notice.h",
     "src/runtime/aos/core/aos_room_music.c",
@@ -19467,11 +19467,11 @@
     "src/runtime/aos/menus/aos_main_menu.c",
     "src/runtime/aos/menus/aos_main_menu_graphics.c",
     "src/runtime/aos/core/aos_rom_graphics.c",
-    "src/runtime/aos_intro_cutscene.c",
-    "src/runtime/aos_intro_entities.c",
-    "src/runtime/aos_intro_resources.c",
-    "src/runtime/aos_intro_font.c",
-    "src/runtime/aos_intro_graphics.c",
+    "src/runtime/aos/intro/aos_intro_cutscene.c",
+    "src/runtime/aos/intro/aos_intro_entities.c",
+    "src/runtime/aos/intro/aos_intro_resources.c",
+    "src/runtime/aos/intro/aos_intro_font.c",
+    "src/runtime/aos/intro/aos_intro_graphics.c",
     "src/runtime/aos/title/aos_opening_event.c",
     "src/runtime/aos/menus/aos_pause_graphics.c",
     "src/runtime/aos/menus/aos_quick_map.c",
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "3b30c5bd",
+   "date": "2026-11-10",
+   "subject": "Move Aria title modules into src/runtime/aos/title/",
+   "scope": "project"
+  },
+  {
    "commit": "2a7921e4",
    "date": "2026-11-10",
    "subject": "Move Aria menu modules into src/runtime/aos/menus/",
@@ -22713,12 +22719,6 @@
    "commit": "78ef1230",
    "date": "2026-11-09",
    "subject": "docs: decode Dryad enemy chain spec (id 70)",
-   "scope": "project"
-  },
-  {
-   "commit": "53802b2d",
-   "date": "2026-11-09",
-   "subject": "Port the Killer Mantle (Aria of Sorrow enemy id 85)",
    "scope": "project"
   }
  ],

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_game_over.h"
+#include "aos/intro/aos_game_over.h"
 
 #include "aos_game_mode.h"
 

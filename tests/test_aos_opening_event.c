@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos/title/aos_opening_event.h"
-#include "aos_intro_resources.h"
+#include "aos/intro/aos_intro_resources.h"
 #include "aos/core/aos_soma.h"
 
 #include <assert.h>

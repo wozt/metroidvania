@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0950 - Intro and game-over modules move to src/runtime/aos/intro/
+
+- The intro cutscene, entities, font, graphics and resources, the
+  game-over modules and `aos_levelup` moved to
+  `src/runtime/aos/intro/`. Includes inside the directory use
+  `../core/` for core modules and `../../aos_*.h` for modules not
+  yet moved; consumers use `aos/intro/` paths. CMake plus the
+  registries were updated. No code or behavior changed.
+
 ## Patch 0949 - Title modules move to src/runtime/aos/title/
 
 - The title modules moved to `src/runtime/aos/title/`:
@@ -2260,7 +2269,7 @@ the create passes sub_0806E1B8 and sub_080BFECC.
   0x16-0x19, update EntityUpdateNothing, drawFunc sub_08045454, still
   frame 0x48 of tileset 0x081C15F4 on OBJ row 6 (palette bank 2 through
   sUnk_084F0DD8), PlaySong(0xBC) at creation.
-- New `src/runtime/aos_levelup.[ch]`: the +0xD counter state machine
+- New `src/runtime/aos/intro/aos_levelup.[ch]`: the +0xD counter state machine
   (61 envelopes over 0x00-0x3C, freeze window [2, 0x3C]), the affine
   envelope of sub_08045454's sub_0803E058 call — rotation
   0x10000 - sine(frame * 0x400 + 0x4000) turns for frames <= 0xF then
@@ -6946,7 +6955,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0590 - Aria death fade and game over
 
-- `src/runtime/aos_game_over.c` ports the in-game death sub-state
+- `src/runtime/aos/intro/aos_game_over.c` ports the in-game death sub-state
   `sub_0800C8C8` (BG to black over 0x40 frames, OBJ over 0x80) and
   `GameModeGameOverUpdate` (fade-in, 0x80-frame wait, the GAME OVER sprite
   blended in, any press, white fade, back to the Konami logo), with the

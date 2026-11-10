@@ -7,8 +7,8 @@
 #include <stdint.h>
 
 #include "aos_button_config.h"
-#include "../../aos_intro_font.h"
-#include "../../aos_intro_resources.h"
+#include "../../aos/intro/aos_intro_font.h"
+#include "../../aos/intro/aos_intro_resources.h"
 #include "aos_menu_cells.h"
 #include "../../aos_obj.h"
 

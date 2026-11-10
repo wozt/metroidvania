@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../../aos_intro_font.h"
+#include "../../aos/intro/aos_intro_font.h"
 #include "fusion/assets/rom.h"
 
 enum { AOS_SOUL_NOTICE_MAP_SIZE = 32, AOS_SOUL_NOTICE_STATIC_BYTES = 0x2000 };

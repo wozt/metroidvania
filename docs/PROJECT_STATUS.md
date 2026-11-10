@@ -2,6 +2,40 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0973 - Bael ported (id 94)
+
+- `EnemyBaelCreate` (0x080CC624) through the shared loader
+  `func_0806E0D0` (tiles `0x081F428C`, palette `0x0820BF9C`,
+  frames `0x0824FDB0`) and `EnemyBaelUpdate` (0x080CD2D0)
+  dispatching `func_080CD378` the idle watch, `func_080CC800`
+  the spin attack, `func_080CCDDC` the death and `func_080CD3AC`
+  the dormant form as `src/runtime/aos/enemies/bael.c`.
+- Create seeds `+0x18 = 0x8000` walk speed, `+0x54 = 0x4000`,
+  state 1 (param0 0) or 2, and `func_080CC744` links the
+  translucent static-frame-1 companion (`func_080CD348` copies
+  the parent's position every tick); the companion is emitted
+  lazily on the first update because children cannot spawn
+  inside create.
+- State 2 approaches or retreats on the `0x58`/`0x20` player
+  boxes, gates the spin on the `func_080CD47C` grid probe
+  (approximated by an ahead-cell wall test), plays animation 1
+  and recovers to the watch; state 3 requests song `0x6E`,
+  decays the spin, drifts and ends in the seven-piece debris
+  ring; the 0x8E & 0x40 flag parks it in state 4.
+- Verified by `bael_tests` (create, companion spawn, attack
+  entry, death debris) and in `area_08_room_002` /
+  `area_09_room_013` (patrol, spin attack, anim reset).
+- Also fixed: `enemy_names` gained the missing `kyoma_demon`,
+  `altair`, `mandragora` and `bael` sprite bindings — without
+  them `combat->kinds[id]` stayed NULL and those enemies never
+  spawned in rooms.
+- Divergences: the attack's substep bodies 1/2/0xA are only
+  partially traced, the 6 x 5 wall sweep collapses to one cell
+  probe, the eight palette schemes use bank 0, the death's
+  affine split rides the body, and `+0x5A`/palette merges are
+  not ported. Yellow soul 32 not ported yet.
+- Ported enemies: 79/113.
+
 ## Patch 0972 - Altair ported (id 44)
 
 - `EnemyAltairCreate` (0x080C1490) through `sub_080C1C54` (tiles

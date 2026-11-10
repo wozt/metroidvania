@@ -396,7 +396,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_WEREJAGUAR && id != AOS_ENEMY_WERETIGER &&
         id != AOS_ENEMY_WEREWOLF &&
         id != AOS_ENEMY_SLIME && id != AOS_ENEMY_KYOMA_DEMON &&
-        id != AOS_ENEMY_ALTAIR &&
+        id != AOS_ENEMY_ALTAIR && id != AOS_ENEMY_BAEL &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -874,6 +874,38 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->state = 0;
         enemy->step = enemy->substep = 0;
         enemy->kd_f59 &= ~0x20;   /* + 0x59 bit 5 cleared natively */
+        return true;
+    }
+    if (id == AOS_ENEMY_BAEL) {
+        /* func_080CC624 through the shared loader sub_0806E0D0:
+         * graphics 0x081F428C, palette 0x0820BF9C, frames 0x0824FDB0
+         * (the kind); sub_0806B04C stats, + 0x65 = 0, + 0x59 |= 2,
+         * + 0x18 = 0x8000 the walk-speed seed, ay 0x4000, state
+         * param0 ? 2 : 1, step/substep 0; func_080CC744's companion
+         * emits lazily on the first update; + 0x58 low 5 = rng &
+         * 0x1F (the eight palette schemes — bank 0 stands in) and
+         * + 0x59 |= 0x10 the scaled draw; the 0x8E & 0x40 flag parks
+         * it in state 4; + 0x46 -= 0x18 px anchor; facing bit 6 is
+         * left clear natively until sub_080CD144 rewrites it from
+         * the speed sign. */
+        play_loop(enemy, anims, 0, true);
+        enemy->vx = enemy->ax = 0;
+        enemy->vy = 0;
+        enemy->ay = 0x4000;
+        enemy->spin = 0x8000;
+        enemy->angle = 0;
+        enemy->scaled = true;          /* + 0x59 bit 0x10 */
+        enemy->ba_flag = enemy->ba_tint = enemy->ba_companion = 0;
+        enemy->ba_drift_x = enemy->ba_drift_y = 0;
+        enemy->static_frame = -1;
+        enemy->y -= 0x18 << 16;
+        if (flag_8e_40) {
+            enemy->state = 4;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        enemy->state = param0 ? 2 : 1;
+        enemy->step = enemy->substep = 0;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2025,6 +2057,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->state = 3;
                 enemy->step = enemy->substep = 0;
             }
+            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+                enemy->id == AOS_ENEMY_BAEL &&
+                enemy->role == AOS_ROLE_ENEMY &&
+                ((enemy->state == 1 && enemy->step == 0) ||
+                 (enemy->state == 2 && enemy->step == 0))) {
+                /* func_080CD434: a surviving blow while the halfword
+                 * + 0x0A reads 1 or 2 (state 1 / 2, step 0) flinches
+                 * it into step 1. */
+                enemy->step = 1;
+                enemy->substep = 0;
+            }
             if (enemy->id == AOS_ENEMY_SLIME && enemy->role == AOS_ROLE_ENEMY)
                 /* sub_080C140C: every blow sets the + 0x11 bit-0 squash
                  * mark before the damage walk. */
@@ -2182,6 +2225,16 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->step = enemy->substep = 0;
                     enemy->vx = enemy->ax = enemy->vy = 0;
                     enemy->ay = 0x2000;
+                } else if (enemy->id == AOS_ENEMY_BAEL &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* func_080CD434 lethal: sub_080683BC defeated
+                     * (the framework's mark), state 3 step/substep 0 —
+                     * func_080CCDDC's first tick supplies song 0x6E,
+                     * the spin and the drift. */
+                    enemy->state = 3;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0;
+                    enemy->ba_flag = 0;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3561,6 +3614,12 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                            weapon_frames, soma_atk,
                                            soma_def, cam_x, cam_y, random);
     }
+    if (enemy->id == AOS_ENEMY_BAEL &&
+        (enemy->role == AOS_ROLE_ENEMY ||
+         enemy->role == AOS_ROLE_BAEL_COMPANION))
+        return aos_enemy_bael_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 109 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 110 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1358 | 2215 |
+| Castlevania: Aria of Sorrow | 1370 | 2203 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1385,6 +1385,15 @@ Dependencies: `aos.audio.play_song`, `aos.enemies.zombie`.
 Known divergences: The axe turns clockwise for a positive angle after its horizontal flip (sub_0803E058 traced); the affine double-size placement is not modelled. Sound requests are timed and routed through the real song player and priority metadata, but the MP2K sequencer, sample banks, mixer and SDL renderer are absent, so they are not audible. The palette bits and the global pause 0x4BE are not ported. The walker's one-way platform bit is not used by the armor (mode 0x14) and is not ported.  
 Next action: Port the MP2K sequencer, voice and sample banks, mixer and SDL sink, then compare timing and output with an emulator.
 Evidence: in game: `aria area_00_room_015: knife kill at frame 63 (--spawn 300 430 --atk 80 --repeat 2), fire and sparks captured at frames 72, 82 and 94 (5, 11 and 18 effects)`.
+
+[+] **`aos.enemies.bael` — Bael.** EnemyBaelCreate (func_080CC624) through the shared loader func_0806E0D0 loads tiles 0x081F428C, palette 0x0820BF9C and frames 0x0824FDB0, sets + 0x5C = 0x14, + 0x65 = 0, + 0x59 bit 1, + 0x18 = 0x8000 and + 0x54 = 0x4000, enters state 1 (param0 0) or state 2, and calls func_080CC744 for the translucent static-frame-1 companion that copies the parent's position through func_080CD348. func_080CD2D0 dispatches state 1 func_080CD378 (the walk and the func_0806DF40 aggro box into state 2), state 2 func_080CC800 (the approach / spin attack with the func_080CD47C grid probe, the func_0806BBC4 player-ahead checks and func_08001D94 collision probes), state 3 func_080CCDDC (song 0x6E, the spin decay, the pixel drift and the seven-piece debris ring) and state 4 func_080CD3AC (the dormant two-step). Unit-tested in bael_tests; the enemy_names table gained the missing kyoma_demon / altair / mandragora / bael sprite bindings.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B0A8`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF40`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBaelCreate`, `aos:asm:asm/code/code_080C0A1C.s:EnemyBaelUpdate`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC744`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CC800`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CCDDC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD144`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD348`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD378`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD3AC`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD404`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD434`, `aos:asm:asm/code/code_080C0A1C.s:sub_080CD47C`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`, `aos:c:src/code_08001194.c:sub_08001D94`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/bael.c`](../src/runtime/aos/enemies/bael.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The func_080CD2D0 substep bodies 1 / 2 / 0xA of the attack were only partially traced and run as the documented approach -> spin -> recover tail; the 6 x 5 wall sweep of func_080CD47C is approximated by a single ahead-cell probe; the eight palette schemes of + 0x58 low 5 collapse to bank 0; the func_080CC744 companion emits lazily on the first update instead of inside create; the death's affine split onto the companion is carried by the body; the + 0x5A draw group and palette merges are not ported; and there is no emulator comparison.  
+Next action: Port the yellow soul 32 update and compare a room fight against an emulator.
+Evidence: in game: `aria area_08_room_002 and area_09_room_013: Baels patrol, enter the spin attack on approach and die with the debris ring`.
 
 [+] **`aos.enemies.basilisk` — Basilisk.** EnemyBasiliskCreate (0x080BC1F8) / EnemyBasiliskUpdate (0x080BC204) are pure aliases of the Cockatrice family with variant 1: the port reuses aos_enemy_cockatrice_update (patrol sub_080BBCC4, attack sub_080BBD90 with the sub_080BBAC4 rock at frame 0xA, death sub_080BBEE4) and the shared shadow/rock child roles; unit-tested in cockatrice_tests.
 

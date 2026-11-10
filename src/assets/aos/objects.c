@@ -187,6 +187,12 @@ static const EntitySpec entities[] = {
      * descriptor 0x0820BD70 (one bank), animation record 0x0824B660 —
      * shared with its blade children of sub_080C1D88. */
     ENTITY("altair", 0x081F4234, 0x0820BD70, 0, 0x0824B660),
+    /* Bael (EnemyBaelCreate 0x080CC624 through the shared loader sub_0806E0D0):
+     * graphics 0x081F428C, palette 0x0820BF9C, frames 0x0824FDB0 —
+     * shared with its companion of func_080CC744. The create's rng
+     * & 0x1F + 0x58 variant picks one of eight palette schemes at
+     * draw time natively; bank 0 stands in (documented). */
+    ENTITY("bael", 0x081F428C, 0x0820BF9C, 0, 0x0824FDB0),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

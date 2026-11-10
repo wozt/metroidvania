@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T07:48:44+00:00",
+ "generated_at": "2026-11-10T11:17:29+00:00",
  "git": {
-  "commit": "09e20a00",
+  "commit": "d10ff4a7",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 254,
+   "total": 255,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 188,
+    "functional": 189,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 188,
-   "functional_or_better_percent": 74.0,
-   "with_passing_tests": 241,
+   "functional_or_better": 189,
+   "functional_or_better_percent": 74.1,
+   "with_passing_tests": 242,
    "with_passing_tests_percent": 94.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -206,6 +206,7 @@
     "aos.enemies.altair",
     "aos.enemies.alura_une",
     "aos.enemies.axe_armor",
+    "aos.enemies.bael",
     "aos.enemies.basilisk",
     "aos.enemies.bat",
     "aos.enemies.beam_skeleton",
@@ -488,20 +489,20 @@
    "areas": [
     "aos"
    ],
-   "total": 109,
+   "total": 110,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 81,
+    "functional": 82,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 81,
-   "functional_or_better_percent": 74.3,
-   "with_passing_tests": 109,
+   "functional_or_better": 82,
+   "functional_or_better_percent": 74.5,
+   "with_passing_tests": 110,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -510,6 +511,7 @@
     "aos.enemies.altair",
     "aos.enemies.alura_une",
     "aos.enemies.axe_armor",
+    "aos.enemies.bael",
     "aos.enemies.basilisk",
     "aos.enemies.bat",
     "aos.enemies.beam_skeleton",
@@ -9177,6 +9179,94 @@
       "registered": true,
       "ctest": [
        "fusion_assets_aos"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
+   "id": "aos.enemies.bael",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Bael",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/bael.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyBaelCreate",
+    "EnemyBaelUpdate",
+    "sub_080CC744",
+    "sub_080CD348",
+    "sub_080CC800",
+    "sub_080CCDDC",
+    "sub_080CD378",
+    "sub_080CD3AC",
+    "sub_080CD144",
+    "sub_080CD47C",
+    "sub_080CD404",
+    "sub_080CD434",
+    "sub_0806E0D0",
+    "sub_0806DF40",
+    "sub_08001D94",
+    "sub_0806AF98",
+    "sub_0806B0A8",
+    "sub_08021654",
+    "sub_0806CAF8",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The func_080CD2D0 substep bodies 1 / 2 / 0xA of the attack were only partially traced and run as the documented approach -> spin -> recover tail; the 6 x 5 wall sweep of func_080CD47C is approximated by a single ahead-cell probe; the eight palette schemes of + 0x58 low 5 collapse to bank 0; the func_080CC744 companion emits lazily on the first update instead of inside create; the death's affine split onto the companion is carried by the body; the + 0x5A draw group and palette merges are not ported; and there is no emulator comparison. EnemyBaelCreate (func_080CC624) through the shared loader func_0806E0D0 loads tiles 0x081F428C, palette 0x0820BF9C and frames 0x0824FDB0, sets + 0x5C = 0x14, + 0x65 = 0, + 0x59 bit 1, + 0x18 = 0x8000 and + 0x54 = 0x4000, enters state 1 (param0 0) or state 2, and calls func_080CC744 for the translucent static-frame-1 companion that copies the parent's position through func_080CD348. func_080CD2D0 dispatches state 1 func_080CD378 (the walk and the func_0806DF40 aggro box into state 2), state 2 func_080CC800 (the approach / spin attack with the func_080CD47C grid probe, the func_0806BBC4 player-ahead checks and func_08001D94 collision probes), state 3 func_080CCDDC (song 0x6E, the spin decay, the pixel drift and the seven-piece debris ring) and state 4 func_080CD3AC (the dormant two-step). Unit-tested in bael_tests; the enemy_names table gained the missing kyoma_demon / altair / mandragora / bael sprite bindings.",
+   "next_action": "Port the yellow soul 32 update and compare a room fight against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_08_room_002 and area_09_room_013: Baels patrol, enter the spin attack on approach and die with the debris ring"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
       ],
       "outcome": "passed",
       "exists": true
@@ -23795,6 +23885,12 @@
  },
  "timeline": [
   {
+   "commit": "d10ff4a7",
+   "date": "2026-11-10",
+   "subject": "Port Altair (id 44): spectral swordsman with blade children",
+   "scope": "project"
+  },
+  {
    "commit": "09e20a00",
    "date": "2026-11-10",
    "subject": "Port the Aria Kyoma Demon enemy (id 39)",
@@ -24267,12 +24363,6 @@
    "date": "2026-11-09",
    "subject": "Compile Ghost Dancer as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "20bd8f82",
-   "date": "2026-11-09",
-   "subject": "Compile Ectoplasm as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24333,9 +24423,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1358,
-    "routines_attached_to_features": 1358,
-    "unassigned_routines": 2215,
+    "routines_cited_by_features": 1370,
+    "routines_attached_to_features": 1370,
+    "unassigned_routines": 2203,
     "call_edges": 14228
    }
   },
@@ -26577,12 +26667,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 78,
-      "functional_or_better": 78,
-      "functional_or_better_percent": 76,
+      "implemented": 79,
+      "functional_or_better": 79,
+      "functional_or_better_percent": 77,
       "by_status": {
-       "functional": 78,
-       "not_started": 24
+       "functional": 79,
+       "not_started": 23
       }
      },
      "bosses": {
@@ -28842,13 +28932,28 @@
      {
       "id": 94,
       "name": "Bael",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Bael",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_08_room_002 and area_09_room_013: Baels patrol, enter the spin attack on approach and die with the debris ring"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.bael",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "yellow:32",
+       "notes": "Soul: drops (soul_index 32, soul_rarity 20, rates 20/30 through the generic roll) and is collected, but its yellow soul 32 has no ported update yet. Animations: ported from EnemyBaelCreate (func_080CC624) / EnemyBaelUpdate (func_080CD2D0) and the func_080CD378 idle, func_080CC800 spin attack, func_080CCDDC death and func_080CD3AC dormant handlers plus the func_080CD348 companion update and func_080CC744 companion create — animations 0-1 through the shared play/step helpers; unit-tested in bael_tests. Sounds: PlaySong 0x6E at the death is requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x081F428C, palette 0x0820BF9C, animation record 0x0824FDB0 exported natively, shared with the translucent companion. Divergences: the attack's 6 x 5 wall sweep is approximated by a single ahead-cell probe, the eight palette schemes collapse to bank 0, the companion emits lazily on the first update, and there is no emulator comparison."
       }
      },
      {
@@ -29180,17 +29285,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 78,
+      "ported": 79,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 78,
+      "ported": 79,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 78,
+      "ported": 79,
       "partial": 0,
       "missing": 0
      },
@@ -29201,11 +29306,11 @@
      },
      "soul": {
       "ported": 57,
-      "partial": 21,
+      "partial": 22,
       "missing": 0
      },
      "complete": 57,
-     "monsters": 78
+     "monsters": 79
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -34932,7 +35037,7 @@
        "id": "07:20",
        "name": "Bael",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 32, soul_rarity 20, rates 20/30 through the generic roll) and is collected, but its yellow soul 32 has no ported update yet. Animations: ported from EnemyBaelCreate (func_080CC624) / EnemyBaelUpdate (func_080CD2D0) and the func_080CD378 idle, func_080CC800 spin attack, func_080CCDDC death and func_080CD3AC dormant handlers plus the func_080CD348 companion update and func_080CC744 companion create — animations 0-1 through the shared play/step helpers; unit-tested in bael_tests. Sounds: PlaySong 0x6E at the death is requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x081F428C, palette 0x0820BF9C, animation record 0x0824FDB0 exported natively, shared with the translucent companion. Divergences: the attack's 6 x 5 wall sweep is approximated by a single ahead-cell probe, the eight palette schemes collapse to bank 0, the companion emits lazily on the first update, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

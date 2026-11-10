@@ -167,6 +167,7 @@ enum {
     AOS_ENEMY_WERETIGER = 0x54,
     AOS_ENEMY_SLIME = 0x44,
     AOS_ENEMY_KYOMA_DEMON = 0x27,
+    AOS_ENEMY_BAEL = 0x5E,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -215,7 +216,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WITCH_BOLT = 82, AOS_ROLE_WITCH_SPARK = 83,
        AOS_ROLE_WITCH_TRAIL = 84, AOS_ROLE_MUDMAN_BUBBLE = 85,
        AOS_ROLE_MUDMAN_ARM = 86, AOS_ROLE_WEREWOLF_SHADOW = 87,
-       AOS_ROLE_ALTAIR_BLADE = 88 };
+       AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -533,6 +534,15 @@ typedef struct AosEnemy {
     uint8_t al_mark1c, al_mark1d, al_draw5c, al_f6f, al_linked;
     int16_t al_copies;
     uint16_t al_angle, al_avel;
+    /* Gladiator (EnemyGladiatorCreate-equivalent func_080CC624 /
+     * func_080CD2D0): + 0x18 the walk-speed accumulator the slope bits
+     * of sub_080CD144 grow and brake (`spin`), + 0x14 the affine
+     * rotation angle (`angle`), + 0xF the death phase flag, + 0x14/
+     * + 0x15 the death pixel-drift bytes (gl_drift_*), + 0x11 the
+     * instance index whose low bits seed the + 0x58 tint (ba_tint)
+     * and the companion's + 0x11 swap. */
+    uint8_t ba_flag, ba_tint, ba_companion;
+    int8_t ba_drift_x, ba_drift_y;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

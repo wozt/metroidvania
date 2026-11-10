@@ -6401,6 +6401,140 @@ static void kyoma_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
 }
 
+static void bael_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;
+    enum { GL_ANIMS = 4 };
+    static const uint8_t eight[8] = {8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[GL_ANIMS];
+    for (int a = 0; a < GL_ANIMS; ++a) defs[a] = (AosAnimDef){8, eight};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = GL_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < GL_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    /* enemies.tsv id 94: hp 300, field_e 666, contact 52, defence 42,
+     * weak 0x0040, resist 0x0000, experience 380, soul 2/32. */
+    const AosEnemyStats stats = {300, 52, 42, 0x0040, 0x0000, 380};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(200), AOS_FIXED(100), NULL);
+    soma.max_hp = soma.hp = 400;
+    const int CAM = 200, CAMY = 120;
+
+    /* func_080CC624: state 1 (param0 0), + 0x18 = 0x8000 speed seed,
+     * ay 0x4000, scaled draw, y anchor -0x18 px. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_BAEL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 1 && e.hp == 300 && e.spin == 0x8000 &&
+           e.ay == 0x4000 && e.scaled && e.static_frame == -1);
+
+    /* param0 nonzero parks it in state 2; the 0x8E & 0x40 flag in
+     * the dormant state 4. */
+    AosEnemy e2;
+    assert(aos_enemy_create(&e2, AOS_ENEMY_BAEL, 150, 150, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e2.state == 2);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy e4;
+    assert(aos_enemy_create(&e4, AOS_ENEMY_BAEL, 150, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e4.state == 4);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The func_080CC744 companion emits lazily on the first live
+     * tick: same kind frames, static frame 1, translucent, parent
+     * link, and func_080CD348 mirrors the parent's position. */
+    int32_t ex0 = e.x, ey0 = e.y;
+    AosHitReport r = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                      NULL, 10, 4, CAM, CAMY,
+                                      always_zero);
+    assert(r.child_count >= 1);
+    const AosEnemy *comp = NULL;
+    for (int i = 0; i < r.child_count; ++i)
+        if (r.children[i].role == AOS_ROLE_BAEL_COMPANION)
+            comp = &r.children[i];
+    assert(comp && comp->static_frame == 1 && comp->translucent &&
+           comp->parent == &e && comp->x == ex0 && comp->y == ey0);
+
+    /* sub_080CD144: the + 0x18 speed decays 0x20 per tick on flat
+     * ground and + 0x14 gains speed >> 6 — run the walk forward. */
+    int32_t spin0 = e.spin;
+    uint32_t ang0 = e.angle;
+    for (int i = 0; i < 12; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.spin < spin0 && e.angle != ang0);
+
+    /* func_080CD378's aggro box (0x5C): Soma inside it enters the
+     * attack state 2. */
+    soma.x = e.x;
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 2 && e.step == 0);
+
+    /* func_080CC800 step 0: the 0x20 disengage box stays clear at
+     * +30 px while the 0x58 engage and the 0xC0 x 0x30 centred probe
+     * hold — the spin (step 1, animation 1) starts. */
+    soma.x = e.x + AOS_FIXED(30);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1);
+    for (int i = 0; i < 50 && e.step == 1; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2);
+    for (int i = 0; i < 30 && e.state == 2; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 1);
+
+    /* func_080CCDDC: song 0x6E, spin +/-0x20000, the 0x60 wait then
+     * the seven-piece ring of 0x08119500 and removal. */
+    AosEnemy d;
+    assert(aos_enemy_create(&d, AOS_ENEMY_BAEL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    d.state = 3;
+    d.step = d.substep = 0;
+    d.timer = 0;
+    d.ba_flag = 0;
+    d.spin = 0x8000;
+    aos_audio_clear();
+    (void)aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) == 1 &&
+           d.timer == 0x5F && d.spin == 0x6FFF && d.attack_off);
+    int saw_debris = 0;
+    for (int i = 0; i < 400 && !d.removed; ++i) {
+        AosHitReport dr = aos_enemy_update(&d, &soma, &layer, &kind,
+                                           NULL, NULL, 10, 4, CAM,
+                                           CAMY, always_zero);
+        if (dr.child_count > 0) saw_debris = 1;
+    }
+    assert(d.removed && saw_debris);
+
+    /* The dormant state 4 rises and spins its angle (func_080CD3AC). */
+    AosEnemy d4;
+    assert(aos_enemy_create(&d4, AOS_ENEMY_BAEL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    d4.state = 4;
+    int32_t y0 = d4.y;
+    uint32_t a0 = d4.angle;
+    (void)aos_enemy_update(&d4, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(d4.y < y0 && d4.angle != a0);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -9647,6 +9781,7 @@ int main(void) {
     slime_tests();
     altair_tests();
     kyoma_tests();
+    bael_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

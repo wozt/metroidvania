@@ -212,6 +212,9 @@ static const EntitySpec entities[] = {
      * tiles 0x081CC03C, palette 0x0820AAF4, frames 0x08222EFC —
      * shared with the breath bolt children (static frame 0x36). */
     ENTITY("lilith", 0x081CC03C, 0x0820AAF4, 0, 0x08222EFC),
+    /* Succubus (sub_080946C4): the same tiles 0x081CC03C, palette
+     * 0x0820AAF4 and frames 0x08222EFC as Lilith. */
+    ENTITY("succubus", 0x081CC03C, 0x0820AAF4, 0, 0x08222EFC),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

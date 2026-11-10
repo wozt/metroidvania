@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T16:32:33+00:00",
+ "generated_at": "2026-11-10T17:57:10+00:00",
  "git": {
-  "commit": "57bbcc17",
+  "commit": "efb1aa38",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 260,
+   "total": 261,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 194,
+    "functional": 195,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 194,
-   "functional_or_better_percent": 74.6,
-   "with_passing_tests": 247,
+   "functional_or_better": 195,
+   "functional_or_better_percent": 74.7,
+   "with_passing_tests": 248,
    "with_passing_tests_percent": 95.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -273,6 +273,7 @@
     "aos.enemies.sky_fish",
     "aos.enemies.slime",
     "aos.enemies.student_witch",
+    "aos.enemies.succubus",
     "aos.enemies.tiny_devil",
     "aos.enemies.tsuchinoko",
     "aos.enemies.ukoback",
@@ -494,20 +495,20 @@
    "areas": [
     "aos"
    ],
-   "total": 115,
+   "total": 116,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 87,
+    "functional": 88,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 87,
-   "functional_or_better_percent": 75.7,
-   "with_passing_tests": 115,
+   "functional_or_better": 88,
+   "functional_or_better_percent": 75.9,
+   "with_passing_tests": 116,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -583,6 +584,7 @@
     "aos.enemies.sky_fish",
     "aos.enemies.slime",
     "aos.enemies.student_witch",
+    "aos.enemies.succubus",
     "aos.enemies.tiny_devil",
     "aos.enemies.tsuchinoko",
     "aos.enemies.ukoback",
@@ -15049,6 +15051,115 @@
    }
   },
   {
+   "id": "aos.enemies.succubus",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Succubus",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/succubus.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemySuccubusCreate",
+    "EnemySuccubusUpdate",
+    "sub_08093E04",
+    "sub_08094238",
+    "sub_08094620",
+    "sub_080946C4",
+    "sub_08094710",
+    "sub_0806AEAC",
+    "sub_0806D128",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0806AD24",
+    "sub_080421AC",
+    "sub_08042B8C",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_0806CF2C",
+    "sub_0806CEC0",
+    "sub_0806CFFC",
+    "sub_0806B120",
+    "sub_0806D490",
+    "sub_0806D260",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_0806D2F8",
+    "sub_0806D3AC",
+    "sub_08069A00",
+    "sub_080212C8",
+    "sub_080458E4",
+    "sub_08045E38",
+    "sub_080427B8",
+    "sub_0804277C",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_08021654",
+    "sub_0801D028",
+    "sub_080683BC",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "EnemySuccubusCreate (0x08093D24) through sub_08094710 loads through sub_080946C4 the tiles 0x081CC03C, palette 0x0820AAF4 and frames 0x08222EFC shared with Lilith, plays animation 0xA looping and, unless gEwramData + 0x8E & 0x40 parks it in state 3 on animation 1, starts state 0 with vy 0x10000 / ay 0x1800: param0 clear enters step 0 (+ 0x1A = 1), set enters step 2 on animation 1. EnemySuccubusUpdate (0x08093C34) hides beyond the sub_0806D128(4) margins, gates on the (-0x10, 0, 0x110, 0xB0) targetable box, freezes on the sub_0806AD24 stun while + 0x1B is clear and runs four states: state 0 (sub_08093E04) is the five-substep hover machine — aggro boxes (0xB4 x 0x46 wake playing song 0x1C7, 0x3C x 0x46 and the + 0x18 gate into step 1), an animation wait (song 0x1C8 at frame 5), and two 30-tick drift variants with vx +/-0x6000 that dash (vx +/-0x28000, two sub_080458E4 trail marks, song 0x1C8 on a 0x30/0x80 roll) or return toward the player through the 0x64 x 0xA0, 0x50 x 0xA0 and 0x8C x 0xA0 proximity boxes into state 1; state 1 (sub_08094238) is the twelve-substep attack — a wind-down (song 0x1C7), the dash at anim frame 3 (vx +/-0x30000, trails), the chain-homing pounce of step 0xA (position divided by the + 0xD countdown toward Soma, five sub_08021654 contact volleys with song 0x7B and the 0x1D-tick age cap) and the step-0xB return to state 0 step 2; state 2 is the shared sub_0806AEAC flame death and state 3 only steps the dormant animation. sub_08094620 hurts without flinching (+ 0x2D = 8, + 0x18 = 1, + 0x1B while + 0x1A stands); lethal marks sub_080683BC, merges + 0x5A from + 0x2C, plays song 0x1CC, animation 9 and + 0xD = 0x28 into state 2. Unit-tested in succubus_tests.",
+   "next_action": "Compare the hover, dash and pounce cadence against an emulator; the sub_0801D028 grab probe of the pounce is not ported.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_08_room_008 (entity 95): a Succubus drifts in state 0 step 2 and enters the state-1 attack"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-10"
+   }
+  },
+  {
    "id": "aos.enemies.tiny_devil",
    "area": "aos",
    "category": "enemies",
@@ -24440,6 +24551,12 @@
  },
  "timeline": [
   {
+   "commit": "efb1aa38",
+   "date": "2026-11-10",
+   "subject": "Port Lilith (Aria of Sorrow enemy id 0x25)",
+   "scope": "project"
+  },
+  {
    "commit": "57bbcc17",
    "date": "2026-11-10",
    "subject": "Port Persephone (Aria of Sorrow enemy id 0x24)",
@@ -24912,12 +25029,6 @@
    "date": "2026-11-09",
    "subject": "Compile Gorgon and Catoblepas as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "9c2c36d7",
-   "date": "2026-11-09",
-   "subject": "Compile Needles as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -24978,9 +25089,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1425,
-    "routines_attached_to_features": 1425,
-    "unassigned_routines": 2148,
+    "routines_cited_by_features": 1434,
+    "routines_attached_to_features": 1434,
+    "unassigned_routines": 2139,
     "call_edges": 14228
    }
   },
@@ -27222,12 +27333,12 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 84,
-      "functional_or_better": 84,
-      "functional_or_better_percent": 82,
+      "implemented": 85,
+      "functional_or_better": 85,
+      "functional_or_better_percent": 83,
       "by_status": {
-       "functional": 84,
-       "not_started": 18
+       "functional": 85,
+       "not_started": 17
       }
      },
      "bosses": {
@@ -29589,13 +29700,28 @@
      {
       "id": 95,
       "name": "Succubus",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Succubus",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_08_room_008 (entity 95): a Succubus drifts in state 0 step 2 and enters the state-1 attack"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.succubus",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "yellow:7",
+       "notes": "Soul: drops (soul_index 7, soul_rarity 5, rates 20/30 through the generic roll, common item 0x0079, rare 0x0013), is collected and casts SkillSuccubusUse (the heal-on-strike yellow soul, already ported). Animations: ported from EnemySuccubusCreate (0x08093D24) / EnemySuccubusUpdate (0x08093C34) and the sub_08093E04 hover, sub_08094238 attack, sub_08094620 hurt, sub_080946C4 resource loader and sub_08094710 callback handlers — animations 0xA and 1-9 through the shared play/step helpers; unit-tested in succubus_tests. Sounds: PlaySong 0x1C7 (aggro/attack wind-down), 0x1C8 (hover/dash), 0x7B (pounce volleys) and 0x1CC (death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x0079 and rare item 0x0013 through the generic roll. Sprite: tiles 0x081CC03C, palette 0x0820AAF4, animation record 0x08222EFC exported natively, shared with Lilith. Divergences: sub_08068AD4/sub_08021924 collapse to the margin hide plus the (-0x10, 0, 0x110, 0xB0) box, the sub_0806AD24 stun gate maps to hit_flash, sub_0806D490 is vx*(n-1)/n, sub_08069A00 maps to walk_collide, sub_0806CFFC is player_near, sub_0806B120 is clamp_to_room, the pounce contact records become positional elemental hits, the sub_0801D028 grab probe is not ported (the pounce ends on the +0x1E/+0x1F counters), the sub_0806D260 callback pick, the +0x5C draw byte and the +0x5A palette merge are not reproduced, and there is no emulator comparison."
       }
      },
      {
@@ -29915,32 +30041,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 84,
+      "ported": 85,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 84,
+      "ported": 85,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 83,
+      "ported": 84,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 47,
+      "ported": 48,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 58,
+      "ported": 59,
       "partial": 26,
       "missing": 0
      },
-     "complete": 58,
-     "monsters": 84
+     "complete": 59,
+     "monsters": 85
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -35242,7 +35368,7 @@
        "id": "07:07",
        "name": "Succubus",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 7, soul_rarity 5, rates 20/30 through the generic roll, common item 0x0079, rare 0x0013), is collected and casts SkillSuccubusUse (the heal-on-strike yellow soul, already ported). Animations: ported from EnemySuccubusCreate (0x08093D24) / EnemySuccubusUpdate (0x08093C34) and the sub_08093E04 hover, sub_08094238 attack, sub_08094620 hurt, sub_080946C4 resource loader and sub_08094710 callback handlers — animations 0xA and 1-9 through the shared play/step helpers; unit-tested in succubus_tests. Sounds: PlaySong 0x1C7 (aggro/attack wind-down), 0x1C8 (hover/dash), 0x7B (pounce volleys) and 0x1CC (death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops common item 0x0079 and rare item 0x0013 through the generic roll. Sprite: tiles 0x081CC03C, palette 0x0820AAF4, animation record 0x08222EFC exported natively, shared with Lilith. Divergences: sub_08068AD4/sub_08021924 collapse to the margin hide plus the (-0x10, 0, 0x110, 0xB0) box, the sub_0806AD24 stun gate maps to hit_flash, sub_0806D490 is vx*(n-1)/n, sub_08069A00 maps to walk_collide, sub_0806CFFC is player_near, sub_0806B120 is clamp_to_room, the pounce contact records become positional elemental hits, the sub_0801D028 grab probe is not ported (the pounce ends on the +0x1E/+0x1F counters), the sub_0806D260 callback pick, the +0x5C draw byte and the +0x5A palette merge are not reproduced, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

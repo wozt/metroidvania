@@ -399,7 +399,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_ALTAIR && id != AOS_ENEMY_BAEL &&
         id != AOS_ENEMY_NIGHTMARE && id != AOS_ENEMY_UNE &&
         id != AOS_ENEMY_ARACHNE && id != AOS_ENEMY_PERSEPHONE &&
-        id != AOS_ENEMY_LILITH &&
+        id != AOS_ENEMY_LILITH && id != AOS_ENEMY_SUCCUBUS &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1053,6 +1053,45 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->li_inactive = 1;
         enemy->vy = 0x10000;
         enemy->ay = 0x1800;
+        return true;
+    }
+    if (id == AOS_ENEMY_SUCCUBUS) {
+        /* EnemySuccubusCreate 0x08093D24 through sub_08094710: the
+         * loader sub_080946C4 shares Lilith's tiles 0x081CC03C,
+         * palette 0x0820AAF4 and frames 0x08222EFC; anim (0xA, 0, 1),
+         * the 0x8E & 0x40 flag parks it in state 3 on anim 1; param0
+         * clear starts state 0 step 0 with + 0x1A = 1, set starts
+         * step 2 on anim 1; + 0x5C = 9 (draw byte, not ported),
+         * vy 0x10000 / ay 0x1800. The sub_0806D260 callback-variant
+         * pick is not ported. */
+        play_loop(enemy, anims, 0xA, true);
+        enemy->vx = enemy->ax = 0;
+        enemy->su_gate = enemy->su_try = enemy->su_touch = 0;
+        enemy->su_inactive = enemy->su_dash = enemy->su_chain = 0;
+        enemy->su_age = enemy->su_volley = enemy->su_emit = 0;
+        enemy->su_aggro = enemy->su_pal = enemy->su_tint = 0;
+        enemy->vy = 0x10000;
+        enemy->ay = 0x1800;
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            enemy->timer = 0;
+            play_loop(enemy, anims, 1, true);
+            return true;
+        }
+        enemy->state = 0;
+        enemy->timer = 0;
+        if (enemy->param0 == 0) {
+            enemy->step = enemy->substep = 0;
+            enemy->su_touch = 1;
+            enemy->su_inactive = 0;
+        } else {
+            play_loop(enemy, anims, 1, true);
+            enemy->step = 2;
+            enemy->substep = 0;
+            enemy->su_touch = 0;
+            enemy->su_inactive = 0;
+        }
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2166,6 +2205,14 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->step = 0;
                 enemy->timer = 0;
             }
+            if (enemy->id == AOS_ENEMY_SUCCUBUS &&
+                enemy->role == AOS_ROLE_ENEMY && report.enemy_damage > 0) {
+                /* sub_08094620: + 0x18 = 1 on every hit (su_gate via the
+                 * update's hit_flash path) and + 0x1B = 1 while + 0x1A
+                 * stands — she never flinches. */
+                enemy->su_gate = 1;
+                if (enemy->su_touch) enemy->su_inactive = 1;
+            }
             if (enemy->id == AOS_ENEMY_ECTOPLASM && enemy->role == AOS_ROLE_ENEMY) {
                 /* sub_080998E8: knockback on every hit, the death drift
                  * on a lethal one. */
@@ -2453,6 +2500,20 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     aos_audio_play_song(0x1CC);
                     play_loop(enemy, kind->anims, 9, false);
                     enemy->li_tint = (enemy->li_pal & 0xF) << 3;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_SUCCUBUS &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_08094620 lethal: sub_080683BC defeated, the
+                     * + 0x5A palette merge kept in su_tint only, sound
+                     * 0x1CC, animation 9, + 0xD = 0x28, state 2 — the
+                     * shared sub_0806AEAC flame death. Non-lethal hits
+                     * only flash (+ 0x2D = 8, + 0x18 = 1): no flinch,
+                     * handled by the hit_flash/su_gate path. */
+                    aos_audio_play_song(0x1CC);
+                    play_loop(enemy, kind->anims, 9, false);
+                    enemy->su_tint = (enemy->su_pal & 0xF) << 3;
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x28;
@@ -3861,6 +3922,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_lilith_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk,
                                        soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_SUCCUBUS)
+        return aos_enemy_succubus_update(enemy, soma, layer, kind, weapon,
+                                         weapon_frames, soma_atk,
+                                         soma_def, cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

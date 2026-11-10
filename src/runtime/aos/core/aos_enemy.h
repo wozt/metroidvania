@@ -173,6 +173,7 @@ enum {
     AOS_ENEMY_ARACHNE = 0x17,
     AOS_ENEMY_PERSEPHONE = 0x24,
     AOS_ENEMY_LILITH = 0x25,
+    AOS_ENEMY_SUCCUBUS = 0x5F,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -592,6 +593,13 @@ typedef struct AosEnemy {
      * breath child's + 0x1C speed/phase accumulator. */
     uint8_t li_approach, li_flag, li_breath, li_inactive, li_pal, li_tint;
     int32_t li_bolt;
+    /* Succubus (EnemySuccubusCreate 0x08093D24, EnemySuccubusUpdate
+     * 0x08093C34): `su_gate` + 0x18 (set by the hurt pass), `su_try`
+     * + 0x19, `su_touch` + 0x1A, `su_inactive` + 0x1B, `su_dash` + 0x1C,
+     * `su_chain` + 0x1D, `su_age` + 0x1E, `su_volley` + 0x1F, `su_emit`
+     * + 0x20, `su_aggro` + 0x21, `su_pal` + 0x2C, `su_tint` + 0x5A. */
+    uint8_t su_gate, su_try, su_touch, su_inactive, su_dash, su_chain;
+    uint8_t su_age, su_volley, su_emit, su_aggro, su_pal, su_tint;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

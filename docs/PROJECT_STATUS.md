@@ -2,6 +2,50 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0979 - Succubus ported (id 95)
+
+- `EnemySuccubusCreate` (0x08093D24) through `sub_08094710`
+  (loader `sub_080946C4`: tiles `0x081CC03C`, palette `0x0820AAF4`,
+  frames `0x08222EFC`, shared with Lilith) and
+  `EnemySuccubusUpdate` (0x08093C34) dispatching `sub_08093E04`
+  state 0, `sub_08094238` state 1, the shared `sub_0806AEAC`
+  flame death and the animation-only dormant state 3 as
+  `src/runtime/aos/enemies/succubus.c`.
+- Create plays animation `0xA` looping with `vy 0x10000` /
+  `ay 0x1800`; the `0x8E & 0x40` flag parks state 3 on animation
+  1, else `param0` clear enters state 0 step 0 (`+0x1A = 1`) and
+  set enters step 2 on animation 1. State 0 is the five-substep
+  hover machine: aggro boxes (`0xB4 x 0x46` wake playing song
+  `0x1C7`, `0x3C x 0x46` and the `+0x18` gate into step 1), an
+  animation wait (song `0x1C8` at frame 5) and two 30-tick drift
+  variants (`vx +/-0x6000`) that dash (`vx +/-0x28000`, two
+  `sub_080458E4` trail marks, song `0x1C8` on a `0x30/0x80`
+  roll) or return through the `0x64/0x50/0x8C x 0xA0` proximity
+  boxes into state 1. State 1 is the twelve-substep attack: a
+  wind-down (song `0x1C7`), the dash at anim frame 3
+  (`vx +/-0x30000`, trails), the chain-homing pounce of step
+  `0xA` (position divided by the `+0xD` countdown toward Soma,
+  five `sub_08021654` contact volleys with song `0x7B`) and the
+  step-`0xB` return. `sub_08094620` hurt never flinches
+  (`+0x2D = 8`, `+0x18 = 1`, `+0x1B` while `+0x1A` stands);
+  lethal: `sub_080683BC`, the `+0x5A` merge, song `0x1CC`,
+  animation 9, `+0xD = 0x28`, state 2.
+- Unit-tested in `succubus_tests` (create variants, dormant,
+  drift-to-attack, dash suppression, pounce, flame death) and
+  in `area_08_room_008` through gdb (entity 95 drifting in
+  state 0 step 2 and entering the state-1 attack).
+- Divergences: `sub_08068AD4`/`sub_08021924` collapse to the
+  margin hide plus the targetable box, the `sub_0806AD24` stun
+  gate maps to `hit_flash`, `sub_0806D490` is `vx*(n-1)/n`,
+  `sub_08069A00` maps to `walk_collide`, `sub_0806CFFC` is
+  `player_near`, `sub_0806B120` is `clamp_to_room`, the pounce
+  contact records become positional elemental hits, the
+  `sub_0801D028` grab probe is not ported (the pounce ends on
+  the `+0x1E`/`+0x1F` counters), the `sub_0806D260` callback
+  pick, the `+0x5C` draw byte and the `+0x5A` palette merge
+  are not reproduced, and there is no emulator comparison.
+- Ported enemies: 85/113.
+
 ## Patch 0978 - Lilith ported (id 37)
 
 - `EnemyLilithCreate` (0x08094818) through `sub_080952A0`

@@ -7188,6 +7188,169 @@ static void lilith_tests(void) {
     assert(e.removed);
 }
 
+static void succubus_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { SU_ANIMS = 11 };
+    static const uint8_t eleven[11] = {8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[SU_ANIMS];
+    for (int a = 0; a < SU_ANIMS; ++a) defs[a] = (AosAnimDef){8, eleven};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = SU_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < SU_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 95: hp 550, field_e 3000, contact 54, defence 40,
+     * weak 0x0801, resist 0x0410, experience 360, soul yellow 7. */
+    const AosEnemyStats stats = {550, 54, 40, 0x0801, 0x0410, 360};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemySuccubusCreate + sub_080946C4: anim 0xA looping, state 0;
+     * param0 clear starts step 0 with + 0x1A = 1, set starts step 2;
+     * vy 0x10000 / ay 0x1800; the 0x8E & 0x40 flag parks state 3 on
+     * anim 1. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_SUCCUBUS, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.hp == 550 &&
+           e.su_touch == 1 && e.vy == 0x10000 && e.ay == 0x1800);
+    AosEnemy ep;
+    assert(aos_enemy_create(&ep, AOS_ENEMY_SUCCUBUS, 300, 150, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ep.state == 0 && ep.step == 2 && ep.su_touch == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_SUCCUBUS, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* State 0 step 0: the wide 0xB4 x 0x46 box marks + 0x21 (song
+     * 0x1C7); the narrow 0x3C x 0x46 box — or the + 0x18 hit gate —
+     * advances to step 1 on anim 0. */
+    soma.x = AOS_FIXED(255);   /* px-0x5A = 197 .. px+0x5A: inside wide */
+    soma.y = AOS_FIXED(140);   /* py-0x40 = 100 .. py+6: inside */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.su_aggro == 1);
+    soma.x = AOS_FIXED(295);   /* px-0x1E = 277 .. px+0x1E: inside narrow */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1);
+    /* The + 0x18 hit gate also advances step 0. */
+    AosEnemy eg;
+    assert(aos_enemy_create(&eg, AOS_ENEMY_SUCCUBUS, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    eg.su_gate = 1;
+    (void)aos_enemy_update(&eg, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(eg.step == 1);
+
+    /* Step 1: the animation end loops anim 1 and clears + 0x1A/+ 0x1B. */
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2 && e.su_touch == 0 && e.su_inactive == 0);
+
+    /* Step 2 drift: the 0x64 x 0xA0 box with an even coin dashes into
+     * step 4 (vx +/-0x28000); always_zero rolls the dash. */
+    soma.x = AOS_FIXED(280);   /* px-0x32 = 248 .. px+0x32 */
+    soma.y = AOS_FIXED(130);   /* py-0x50 = 80 .. py+0x50 */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 4 && (e.vx == 0x28000 || e.vx == -0x28000));
+
+    /* Step 4: the 23/24 friction bleeds the dash; past 0x27 ticks it
+     * resumes the drift with vy 0x10000 / ay 0x1800. */
+    for (int i = 0; i < 0x30 && e.step == 4; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2);
+
+    /* Step 2 again: with the + 0x19 attempt flag set the dash gate is
+     * skipped; the close 0x50 x 0xA0 box with an even coin enters
+     * state 1 step 0 (the pounce wind-up). */
+    e.su_try = 1;
+    for (int i = 0; i < 0x80 && e.state == 0; ++i) {
+        /* She drifts: keep Soma inside the close 0x50 x 0xA0 box. */
+        soma.x = e.x;
+        soma.y = e.y;
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    }
+    assert(e.state == 1 && e.step == 0);
+
+    /* State 1: step 0 waits 0x28 ticks (song 0x1C7, vx cleared); step 1
+     * dashes at anim frame 3 (vx +/-0x30000); step 2 with + 0x1D set
+     * chains into the homing pounce step 10. */
+    e.timer = 0x28;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1 && e.vx == 0);
+    e.anim.frame = 3;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2 && (e.vx == 0x30000 || e.vx == -0x30000) &&
+           e.su_dash == 1);
+    e.su_chain = 1;
+    e.timer = 0x1E;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 10 && e.timer == 0x10 && e.su_emit == 1 &&
+           e.su_volley == 0 && e.su_age == 0);
+
+    /* Step 10 homing: the countdown divides the remaining distance —
+     * the body closes on Soma; the + 0x1E age counter ends the
+     * pounce into step 11 (anim 3, vx +/-0x28000). */
+    int32_t before_x = e.x, before_y = e.y;
+    soma.x = AOS_FIXED(290);
+    soma.y = AOS_FIXED(145);
+    for (int i = 0; i < 0x22 && e.step == 10; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 11 && e.x != before_x);
+    (void)before_y;
+
+    /* Step 11: past 0x27 ticks she returns to state 0 step 2 on anim 1. */
+    e.timer = 0x28;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 0 && e.step == 2 && e.su_try == 0);
+
+    /* State 2 death: the shared flame/blink/sink removes the body. */
+    e.state = 2;
+    e.timer = 0x28;
+    for (int i = 0; i < 0x40 && !e.removed; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.removed);
+
+    /* The dormant state 3 runs the animation step only: no state
+     * machine, no contact pass — the body just idles off-screen. */
+    AosEnemy ed2;
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&ed2, AOS_ENEMY_SUCCUBUS, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    ed2.hidden = false;
+    (void)aos_enemy_update(&ed2, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(ed2.state == 3 && !ed2.removed);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -10440,6 +10603,7 @@ int main(void) {
     arachne_tests();
     persephone_tests();
     lilith_tests();
+    succubus_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

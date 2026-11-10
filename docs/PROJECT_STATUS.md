@@ -2,6 +2,65 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0981 - Devil family ported (ids 48, 72, 102, 104)
+
+- `EnemyDevilCreate` (0x0808FA30) through `sub_08092048` serves
+  the four devil-family ids — Devil `0x30`, Arc Demon `0x48`,
+  Demon Lord `0x66`, Flame Demon `0x68` — whose `+0x36` variant
+  byte is the id itself: the loader `sub_08091430` picks the
+  palette bank (0x30->2, 0x68->3, 0x48->0, 0x66->1 through
+  `sub_08068264`), the variant animation (0x30/0x68 -> 0xA,
+  0x48 -> 2, 0x66 -> 6), tiles `0x081CC014`, frames `0x08220A38`
+  and palettes `0x0820A9A0`, allocates the `+0x1C` container of
+  eight 0x2C-byte orbit records and spawns the eight imps
+  through `sub_0806DFF8` + `sub_080917B4` with the
+  `0x0811900C`/`0x08119014` child frames, the `0x0811901C`
+  slot parameters, the `0x08119024` enable order and the
+  `0x08119034` dive bytes; the `0x8E & 0x40` flag parks it in
+  state 3, else state 0 step `0xA`, `+0x22 = 0x88`, `+0x26 = 1`.
+- `EnemyDevilUpdate` (`sub_0808F964` via `sub_0808FE10` and
+  `sub_08090914`) runs the sixteen-case state-0 idle/approach
+  machine (aggro boxes, the `+0xC` sub-cycle re-forming the swarm
+  through the `0x08527C1C`/`0x08527CD0` formation tables every
+  `0x16` ticks, walk legs, the close-range entry into state 1),
+  the sixteen-case state-1 attack machine (timed re-forms, song
+  `0x86`, the Arc Demon/Demon Lord orb at timer `0x28` of step
+  `0xB`, the aimed volley at timer `0x1E` of step `0xC`
+  spawning the `sub_08091C50` fireball with ArcTan2 aim and song
+  `0x78`, then the return legs) and the `sub_08091204` dormant
+  formation cycle; state 2 is the shared blink death.
+- The swarm (`sub_080914C4`/`sub_08091ED8`) updates each orbit
+  record: follow mode chases the formation offsets divided by
+  `+0xD`, orbit mode lerps the angle by `1/+0xD`, spins `0x4000`
+  and positions anchor + sine/cosine * radius; `sub_08091624`
+  configures each slot's anchor and radius. The imp child
+  (`sub_080917B4`) rides its record attached, launches on the
+  parent's attack step and flies until its timer or the margins
+  return it; touching an imp damages the container HP at `+0x34`.
+  The fireball (`sub_08091D54`) re-anchors on the parent, plays
+  song `0x12A` at expiry and drifts out; the orb
+  (`sub_08092018`) integrates its offset for `+0xD` ticks.
+  `sub_080920D8` hurt never flinches (`+0x2D = 8` flash); lethal:
+  `sub_080683BC`, song `0x72`, `+0xD = 0x28`, state 2. Souls drop
+  through the generic roll (blue 18, yellow 18, red 43, red 44 —
+  none ported yet).
+- Unit-tested in `devil_tests` (the four create variants, the
+  eight-imp first update, orbit riding, the state-1 entry, the
+  aimed volley and its song, the variant orb gate, the imp
+  launch/flight/return, the fireball expiry and the lethal
+  song-0x72 death).
+- Divergences: the `+0x1C` container's native allocation is
+  folded into the parent's `dv` arrays, the eight imps emit as
+  persistent child entities on the first update instead of the
+  create, the `sub_0804277C`/`sub_080427B8` callback
+  registrations and the `+0x5A` palette merge are covered by the
+  shared hurt pass or not ported, the fireball's parent re-anchor
+  is approximated, `sub_0806D490`/`sub_0806D4A8` map to the
+  friction tails, `sub_0806D3AC` to plain integration, and
+  `sub_08068AD4`/`sub_08021924` collapse to the margin hide plus
+  the targetable box; no emulator comparison.
+- Ported enemies: 90/113.
+
 ## Patch 0980 - Triton ported (id 67)
 
 - `EnemyTritonCreate` (0x08086AD4) through `sub_08087D24`

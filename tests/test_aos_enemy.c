@@ -7588,6 +7588,215 @@ static void triton_tests(void) {
     assert(e2.removed);
 }
 
+static void devil_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { DV_ANIMS = 12 };
+    static const uint8_t twelve[12] = {8, 8, 8, 8, 8, 8,
+                                       8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[DV_ANIMS];
+    for (int a = 0; a < DV_ANIMS; ++a) defs[a] = (AosAnimDef){8, twelve};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = DV_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < DV_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv: id 48 hp 300, id 72 hp 500, id 102 hp 1800,
+     * id 104 hp 500 (contact/defence/resist per record). */
+    const AosEnemyStats stats48 = {300, 38, 30, 0x0820, 0x0010, 200};
+    const AosEnemyStats stats72 = {500, 46, 35, 0x0820, 0x0410, 400};
+    const AosEnemyStats stats102 = {1800, 78, 45, 0x0820, 0x0410, 3000};
+    const AosEnemyStats stats104 = {500, 55, 35, 0x0824, 0x0412, 400};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemyDevilCreate: the + 0x36 variant (the id) picks the animation
+     * — 0x30/0x68 -> 0xA, 0x48 -> 2, 0x66 -> 6 — state 0 step 0xA,
+     * timer 1, + 0x26 = 1; the 0x8E & 0x40 flag parks state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_DEVIL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats48));
+    assert(e.state == 0 && e.step == 0xA && e.timer == 1 &&
+           e.dv_c26 == 1 && e.anim.id == 0xA && e.hp == 300 &&
+           !e.boss_parts_spawned);
+    AosEnemy ea;
+    assert(aos_enemy_create(&ea, AOS_ENEMY_ARC_DEMON, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats72));
+    assert(ea.anim.id == 2 && ea.hp == 500);
+    AosEnemy el;
+    assert(aos_enemy_create(&el, AOS_ENEMY_DEMON_LORD, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats102));
+    assert(el.anim.id == 6 && el.hp == 1800);
+    AosEnemy ef;
+    assert(aos_enemy_create(&ef, AOS_ENEMY_FLAME_DEMON, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats104));
+    assert(ef.anim.id == 0xA && ef.hp == 500);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_DEVIL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats48));
+    assert(ed.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The first update emits the eight imps (the + 0x1C container):
+     * role DEVIL_IMP, parent pointer, variant frame, orbit records. */
+    soma.x = AOS_FIXED(200);
+    soma.y = AOS_FIXED(140);
+    AosHitReport rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
+                                        NULL, 10, 4, CAM, CAMY,
+                                        always_zero);
+    assert(rep.child_count == 8 && e.boss_parts_spawned &&
+           e.step == 0);
+    for (int i = 0; i < 8; ++i) {
+        assert(rep.children[i].role == AOS_ROLE_DEVIL_IMP &&
+               rep.children[i].parent == &e &&
+               rep.children[i].id == AOS_ENEMY_DEVIL &&
+               rep.children[i].combat.attack_off &&
+               rep.children[i].combat.hurt_off);
+    }
+    /* Attached imps ride their orbit record: position = parent + the
+     * record offset (dv.ox/dv.oy). */
+    AosEnemy imp = rep.children[0];
+    imp.parent = &e;
+    int32_t ix = imp.x, iy = imp.y;
+    (void)aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(imp.x == e.x + e.dv.ox[imp.dv_slot & 7] &&
+           imp.y == e.y + e.dv.oy[imp.dv_slot & 7]);
+    (void)ix; (void)iy;
+
+    /* State-1 entry (the close-range check): state 1 step 0 rolls the
+     * variant gate — Devil always takes step 1 timer 0x12. */
+    e.state = 1;
+    e.step = 0;
+    e.timer = 0;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1 && e.timer == 0x12);
+
+    /* The aimed volley: state 1 step 0xC at timer 0x1E spawns the
+     * DEVIL_FIRE child and plays song 0x78; the timer then counts
+     * down to step 0xD. */
+    aos_audio_clear();
+    e.step = 0xC;
+    e.timer = 0x1E;
+    rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(rep.child_count == 1 &&
+           rep.children[0].role == AOS_ROLE_DEVIL_FIRE &&
+           rep.children[0].parent == &e &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x78) == 1);
+    assert(e.timer == 0x1D && e.step == 0xC);
+
+    /* The Arc Demon orb: state 1 step 0xB at timer 0x28 spawns the
+     * straight DEVIL_ORB (imps already emitted). */
+    ea.boss_parts_spawned = true;
+    ea.state = 1;
+    ea.step = 0xB;
+    ea.timer = 0x28;
+    rep = aos_enemy_update(&ea, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(rep.child_count == 1 &&
+           rep.children[0].role == AOS_ROLE_DEVIL_ORB);
+    /* Flame Demon / Devil do not fire the orb on that step. */
+    ef.boss_parts_spawned = true;
+    ef.state = 1;
+    ef.step = 0xB;
+    ef.timer = 0x28;
+    rep = aos_enemy_update(&ef, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(rep.child_count == 0);
+
+    /* The imp dive: parent state 1 step >= 2 releases the child —
+     * state 0 -> 1 launch (angle to the player), then state 2 flight
+     * integrates and expires back to the orbit. */
+    imp.state = 0;
+    imp.step = 0;
+    imp.timer = 0;
+    e.state = 1;
+    e.step = 2;
+    (void)aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(imp.state == 1 && imp.timer == 0x28 &&
+           !imp.combat.attack_off && !imp.combat.hurt_off);
+    (void)aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(imp.state == 2);
+    imp.timer = 1;
+    (void)aos_enemy_update(&imp, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(imp.state == 0 && imp.combat.attack_off && imp.combat.hurt_off);
+
+    /* The fireball: first update arms, then it re-anchors on the
+     * parent and expires with song 0x12A past its life. */
+    AosEnemy fire = rep.children[0]; /* the orb copy — re-create a fire */
+    (void)fire;
+    e.step = 0xC;
+    e.timer = 0x1E;
+    rep = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    AosEnemy fb = rep.children[0];
+    fb.parent = &e;
+    fb.role = AOS_ROLE_DEVIL_FIRE;
+    fb.state = 1;
+    fb.dv_life = 1;
+    fb.timer = 0x40;
+    fb.x = e.x;
+    fb.y = e.y;
+    rep = aos_enemy_update(&fb, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    /* life hit 0 -> drift spawns + song 0x12A + removal. */
+    assert(fb.removed);
+
+    /* Lethal damage (sub_080920D8): defeated, song 0x72, state 2,
+     * timer 0x28, step 0 — the shared death path. */
+    aos_audio_clear();
+    soma = aos_soma_spawn(AOS_FIXED(300), AOS_FIXED(150), NULL);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    AosEnemy kd;
+    assert(aos_enemy_create(&kd, AOS_ENEMY_DEVIL, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats48));
+    kd.y = AOS_FIXED(150);
+    static const uint8_t blade_steps[] = {8};
+    const AosAnimDef blade_def = {1, blade_steps};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&kd, &soma, &layer, &kind,
+                                        &weapon, &blade, 9999, 4,
+                                        0, 0, always_zero);
+    assert(hit.enemy_hit && hit.killed && kd.state == 2 &&
+           kd.timer == 0x28 && kd.step == 0 && kd.defeated &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x72) == 1);
+
+    /* Dormant state 3: the formation cycle only — timer 0x16 re-forms
+     * and steps 1-4 rotate the formation index. */
+    ed.state = 3;
+    ed.step = 0;
+    ed.timer = 0;
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(ed.step == 1 && ed.timer == 0x16);
+    ed.timer = 1;
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(ed.step == 2 && ed.timer == 0x16);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -10842,6 +11051,7 @@ int main(void) {
     lilith_tests();
     succubus_tests();
     triton_tests();
+    devil_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

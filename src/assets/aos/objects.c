@@ -219,6 +219,13 @@ static const EntitySpec entities[] = {
      * frames 0x0821D4E8 — shared with the whirlpool head, the bubble,
      * the streak jets and the splashes. */
     ENTITY("triton", 0x081CBFE4, 0x0820A848, 0, 0x0821D4E8),
+    /* Devil family (sub_08091430): tiles 0x081CC014, frames 0x08220A38,
+     * palettes 0x0820A9A0 banks 0-3 — the + 0x36 variant byte (the id)
+     * picks the bank and the per-slot child frame descriptor. */
+    ENTITY("devil", 0x081CC014, 0x0820A9A0, 2, 0x08220A38),
+    ENTITY("arc_demon", 0x081CC014, 0x0820A9A0, 0, 0x08220A38),
+    ENTITY("demon_lord", 0x081CC014, 0x0820A9A0, 1, 0x08220A38),
+    ENTITY("flame_demon", 0x081CC014, 0x0820A9A0, 3, 0x08220A38),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

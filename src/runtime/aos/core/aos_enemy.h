@@ -175,6 +175,10 @@ enum {
     AOS_ENEMY_LILITH = 0x25,
     AOS_ENEMY_TRITON = 0x43,
     AOS_ENEMY_SUCCUBUS = 0x5F,
+    AOS_ENEMY_DEVIL = 0x30,
+    AOS_ENEMY_ARC_DEMON = 0x48,
+    AOS_ENEMY_DEMON_LORD = 0x66,
+    AOS_ENEMY_FLAME_DEMON = 0x68,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -228,7 +232,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_ARACHNE_LEG = 91, AOS_ROLE_ARACHNE_WEB = 92,
        AOS_ROLE_PERSEPHONE_STRIKE = 93, AOS_ROLE_LILITH_BOLT = 94,
        AOS_ROLE_TRITON_HEAD = 95, AOS_ROLE_TRITON_BUBBLE = 96,
-       AOS_ROLE_TRITON_JET = 97, AOS_ROLE_TRITON_SPLASH = 98 };
+       AOS_ROLE_TRITON_JET = 97, AOS_ROLE_TRITON_SPLASH = 98,
+       AOS_ROLE_DEVIL_IMP = 99, AOS_ROLE_DEVIL_FIRE = 100,
+       AOS_ROLE_DEVIL_ORB = 101 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -614,6 +620,32 @@ typedef struct AosEnemy {
     uint32_t tr_angle;
     int32_t tr_angle_target;
     int32_t tr_jvy;
+    /* Devil family (EnemyDevilCreate 0x0808FA30 / update 0x0808F964):
+     * the + 0x1C container's eight 0x2C-byte orbit records folded into
+     * the parent — ox/oy position, osc scale (+ 8), oat/oac the orbit
+     * angle target/current (+ 0x10/+ 0x14), oan the 0x80000000 anchor
+     * flag (+ 0x18), oai the anchor record index (+ 0x1C), osx/osy the
+     * saved position (+ 0x20/+ 0x24) and orad the orbit radius
+     * (+ 0x28).  dv_tx/dv_ty is the state-0/1 target (+ 0x10/+ 0x14 of
+     * the native actor), dv_dist the + 0x18 approach ramp, dv_ax16 /
+     * dv_ay16 the + 0x42/+ 0x46 home anchor, dv_form the + 0x20
+     * formation index, dv_cyc the + 0xC sub-cycle, dv_pal the + 0x2C
+     * palette/kind index, dv_f27 the + 0x27 anchor-side flag and
+     * dv_c26 the + 0x26 attack-enable byte.  On an imp child dv_slot
+     * is its container slot (+ 0x20), dv_dvx/dv_dvy its dive velocity
+     * and dv_ang its launch angle; on a fireball dv_life is + 0xD and
+     * dv_kind the inherited + 0x36 variant byte. */
+    struct {
+        int32_t ox[8], oy[8], osc[8];
+        int32_t oat[8], oac[8];
+        int32_t oan[8], oai[8];
+        int32_t osx[8], osy[8];
+        int32_t orad[8];
+    } dv;
+    int32_t dv_tx, dv_ty, dv_dist;
+    int32_t dv_ax16, dv_ay16;
+    uint8_t dv_form, dv_cyc, dv_pal, dv_f27, dv_c26;
+    int32_t dv_slot, dv_dvx, dv_dvy, dv_ang, dv_life, dv_kind;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

@@ -281,6 +281,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/lilith.c
     src/runtime/aos/enemies/succubus.c
     src/runtime/aos/enemies/triton.c
+    src/runtime/aos/enemies/devil.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

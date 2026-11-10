@@ -401,6 +401,8 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_ARACHNE && id != AOS_ENEMY_PERSEPHONE &&
         id != AOS_ENEMY_LILITH && id != AOS_ENEMY_SUCCUBUS &&
         id != AOS_ENEMY_TRITON &&
+        id != AOS_ENEMY_DEVIL && id != AOS_ENEMY_ARC_DEMON &&
+        id != AOS_ENEMY_DEMON_LORD && id != AOS_ENEMY_FLAME_DEMON &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1124,6 +1126,46 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->substep = 0;
         enemy->timer = 0;
         snap_to_floor(enemy, layer);
+        return true;
+    }
+    if (id == AOS_ENEMY_DEVIL || id == AOS_ENEMY_ARC_DEMON ||
+        id == AOS_ENEMY_DEMON_LORD || id == AOS_ENEMY_FLAME_DEMON) {
+        /* EnemyDevilCreate 0x0808FA30 through sub_08092048: the loader
+         * sub_08091430 picks the palette bank by the + 0x36 variant
+         * (the id itself: 0x30->2, 0x68->3, 0x48->0, 0x66->1) and the
+         * variant animation (0x30/0x68 -> 0xA, 0x48 -> 2, 0x66 -> 6);
+         * the + 0x1C container and its eight orbit records live in the
+         * dv arrays, the eight imps spawn on the first update through
+         * boss_parts_spawned; the 0x8E & 0x40 flag parks it in state 3,
+         * else state 0 step 0xA, timer 1, + 0x22 = 0x88 contact and
+         * + 0x26 = 1. The sub_0804277C/sub_080427B8 registrations are
+         * covered by the shared hurt pass. */
+        unsigned dv_anim = (id == AOS_ENEMY_DEVIL || id == AOS_ENEMY_FLAME_DEMON)
+                               ? 0xA
+                               : (id == AOS_ENEMY_ARC_DEMON ? 2 : 6);
+        play_loop(enemy, anims, dv_anim, true);
+        step_anim(enemy, anims);
+        memset(&enemy->dv, 0, sizeof(enemy->dv));
+        enemy->dv_tx = enemy->dv_ty = enemy->dv_dist = 0;
+        /* + 0x42/+ 0x46: the home anchor the aggro box hangs off. */
+        enemy->dv_ax16 = x;
+        enemy->dv_ay16 = y;
+        enemy->dv_form = 1;
+        enemy->dv_cyc = enemy->dv_pal = enemy->dv_f27 = enemy->dv_c26 = 0;
+        enemy->dv_slot = enemy->dv_dvx = enemy->dv_dvy = 0;
+        enemy->dv_ang = enemy->dv_life = enemy->dv_kind = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->timer = 1;
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            enemy->timer = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = 0xA;
+        enemy->substep = 0;
+        enemy->dv_c26 = 1;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2569,6 +2611,20 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x28;
+                } else if ((enemy->id == AOS_ENEMY_DEVIL ||
+                            enemy->id == AOS_ENEMY_ARC_DEMON ||
+                            enemy->id == AOS_ENEMY_DEMON_LORD ||
+                            enemy->id == AOS_ENEMY_FLAME_DEMON) &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080920D8 lethal: sub_080683BC defeated, sound
+                     * 0x72, the + 0x5A palette merge (not ported),
+                     * + 0xD = 0x28, state 2, step 0. Non-lethal hits
+                     * only flash (+ 0x2D = 8): the devil never flinches. */
+                    aos_audio_play_song(0x72);
+                    enemy->defeated = true;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x28;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -3982,6 +4038,11 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_triton_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk,
                                        soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_DEVIL || enemy->id == AOS_ENEMY_ARC_DEMON ||
+        enemy->id == AOS_ENEMY_DEMON_LORD || enemy->id == AOS_ENEMY_FLAME_DEMON)
+        return aos_enemy_demon_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

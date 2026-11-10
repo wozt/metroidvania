@@ -420,6 +420,13 @@ static const EntitySpec entities[] = {
      * frame and the seeds' static frames 0x1F-0x23. */
     {"mandragora", 0x081F429C, 0x0820C004, 0, 0x08250E94,
      0, 0, 0, 6, {0x0A, 0x1F, 0x20, 0x21, 0x22, 0x23}},
+    /* EnemyDiscArmorCreate (0x080B2228) and its sub_080B1678 disc,
+     * sub_080B1428 shards and sub_080B14B4 glow, which share the same
+     * resources: tiles 0x081E41B4, palette 0x0820B818, frames
+     * 0x0823D78C; the disc's animation 6, the glow's 7 and the shards'
+     * 4-5. */
+    {"disc_armor", 0x081E41B4, 0x0820B818, 0, 0x0823D78C,
+     0, 0, 0, 0, {0}},
 };
 
 /* Room SPECIAL objects (kind 2). Each ObjectXXCreate feeds sub_0806E0D0

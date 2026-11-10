@@ -2,6 +2,32 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0960 - Disc Armor ported (id 52)
+
+- `EnemyDiscArmorCreate` (0x080B2228) /
+  `EnemyDiscArmorUpdate` (0x080B22D4) plus the walk (sub_080B1F14),
+  attack (sub_080B205C), death (sub_080B2148), hurt (sub_080B2370)
+  and orbit helper (sub_080B23C4) routines are ported as
+  `src/runtime/aos/enemies/disc_armor.c` with three new child roles
+  (disc blade, shard, glow) wired through `aria_runtime.c`.
+- The disc's own eight-state machine (sub_080B1678), its shard
+  (sub_080B1428), glow child (sub_080B14B4) and angle helper
+  (sub_080B15EC) are ported in the same unit: orbit around the
+  armor's + 0x40/+ 0x44 centre, directional surface probes,
+  ArcTan2-aimed shard throws (songs 0x74/0x104/0x73/0x103) and the
+  recall back to the armor.
+- Resources from the ROM: tiles 0x081E41B4, palette 0x0820B818,
+  frames 0x0823D78C; probe tables 0x08528714 (walk) and 0x08528720
+  (disc wall/return). Songs 0x74, 0x104, 0x73, 0x103, 0x6F and 0x6E
+  are requested at the native points; unit-tested in
+  `disc_armor_tests`.
+- Ported enemies: 65/113. Red soul 30 (Disc Armor) remains
+  unported, so the dropped soul aspect is partial. Divergences are
+  listed in `data/native_parity/annotations.tsv` (entity-slot links
+  approximated by parent/da_glow, directional probes approximated by
+  the shared collision helpers, palette folds and the + 0x5C
+  priority not ported, no emulator comparison).
+
 ## Patch 0959 - Mandragora ported (id 79)
 
 - `EnemyMandragoraCreate` (0x080CEF34) /

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 95 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 96 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1204 | 2369 |
+| Castlevania: Aria of Sorrow | 1215 | 2358 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1500,6 +1500,15 @@ Dependencies: `aos.enemies.axe_armor`.
 Known divergences: The death's palette flash, sub_080683BC and the dust's + 0x0F are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)`.
+
+[+] **`aos.enemies.disc_armor` — Disc Armor.** EnemyDiscArmorCreate (0x080B2228) loads tiles 0x081E41B4, palette 0x0820B818 and frames 0x0823D78C, plays animation 0 looping, installs the sub_080B2370 hurt callback and enters state 3 under the global 0x8E & 0x40 else state 0. State 0 (sub_080B1F14) walks the 0x08528714 probe table flipping at the + 0x6E == 0x11 marker and wakes into state 1 on the sub_0806D044 notice; state 1 (sub_080B205C) retracts the orbit offsets and at + 0x6E == 0x10C emits the sub_080B1678 disc through sub_0806DFF8, then state 2 (sub_080B2148) is the death: animation 8, the + 0x48 spin mapped to the affine angle, + 0x4C gravity for the gore spawn height, sub_08045CEC bursts with songs 0x6F then 0x6E every eighth tick and deletion on the animation end. The disc runs its eight-state machine: state 0 charges its own resources and emits the sub_080B14B4 glow child with song 0x74, states 1-3 orbit then fall through the directional probes throwing sub_080B1428 shards aimed by ArcTan2 (song 0x104), state 4 fires the shard burst with song 0x73, state 5 recalls with ArcTan2/Sqrt targeting and song 0x103, states 6-7 land and fade out; unit-tested in disc_armor_tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806BC40`, `aos:asm:asm/code/code_08060B98.s:sub_0806CAF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806DF20`, `aos:asm:asm/code/code_08060B98.s:sub_0806DFF8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E1B8`, `aos:asm:asm/code/code_08060B98.s:sub_0806E29C`, `aos:asm:asm/code/code_08060B98.s:sub_0806E314`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDiscArmorCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDiscArmorUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1428`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B14B4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B15EC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1678`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B1F14`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B205C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2148`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B2370`, `aos:asm:asm/code/code_080B0AD4.s:sub_080B23C4`, `aos:asm:asm/libagbsyscall.s:ArcTan2`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_08001194.c:sub_08001D94`, `aos:c:src/code_08001194.c:sub_08002058`, `aos:c:src/code_08001194.c:sub_0800207C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/disc_armor.c`](../src/runtime/aos/enemies/disc_armor.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The + 0x11/+ 0x12 entity-slot links are modelled by parent plus the blade's da_glow pointer; the directional surface probes sub_0800207C/sub_08002058/sub_08001D94 are approximated through the shared floor-depth and wall helpers, the disc's affine spin angle stands in for its native sine-table rotation draw, the glow child's scale curve and the disc's rebound velocity picks are approximations, the palette group fold and the + 0x5C = 0x12 priority are not ported, and there is no emulator comparison.  
+Next action: Compare the walk/attack timing, the disc's orbit, rebound and recall against an emulator; observe it in game and port red soul 30.
+Evidence: in game: `aria area_04_room_010 (--spawn 296 290 --hp 9999): Disc Armor spawns with the room's enemies and its disc strikes Soma for 59 damage (two hits observed with effects)`.
 
 [+] **`aos.enemies.dryad` — Dryad.** EnemyDryadCreate (0x080AEAAC) loads graphics 0x081E418C, palette 0x0820B768 and frames 0x082388AC and plays animation 0 looping. State 0 (sub_080AE4BC) notices the player in the 0xDC x 0x50 box of sub_0806CFFC and on RNG & 3 == 0 enters state 1; state 1 (sub_080AE554) loops animation 2 and on RNG & 7 == 0 while on screen plays animation 3 with timer 0x12, the last three ticks playing song 0x89 and calling sub_080AE96C — the seed, a linked role on entity type 0x1B arcing under 0x1000 gravity and then mining the floor while it tracks the player for 0xB4 ticks (state 2, table 0x08528604) then 0x78 more (state 3) with the periodic sub_08021654 contact; state 2 returns to state 0 on the animation end; state 3 (sub_080AE650) is the death — timer 0x40, song 0x6E and a sub_0806D5C0 drift burst every eighth tick, the timer to zero deleting it, its affine angle timer << 0xA while + 0x59 & 0x10 lasts; state 4 only animates. The hurt sub_080AE3FC plays animation 5 (state 1 with step) or 4 on a lethal blow, then state 3 with timer 0x28. Unit-tested in dryad_tests.
 

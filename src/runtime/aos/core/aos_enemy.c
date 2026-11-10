@@ -407,7 +407,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_DRYAD && id != AOS_ENEMY_TSUCHINOKO &&
         id != AOS_ENEMY_KICKER_SKELETON && id != AOS_ENEMY_WAITER_SKELETON &&
         id != AOS_ENEMY_COCKATRICE && id != AOS_ENEMY_CHRONOMAGE &&
-        id != AOS_ENEMY_MANDRAGORA &&
+        id != AOS_ENEMY_MANDRAGORA && id != AOS_ENEMY_DISC_ARMOR &&
         id != AOS_BOSS_HEADHUNTER)
         return false;
     const AosAnimSet *anims = kind->anims;
@@ -966,6 +966,29 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->y += 0x10000;
         enemy->cm_flags = 2;
         enemy->state = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_DISC_ARMOR) {
+        /* EnemyDiscArmorCreate (0x080B2228): sub_0806E0D0 loads tiles
+         * 0x081E41B4, palette 0x0820B818 and frames 0x0823D78C;
+         * sub_0806B04C, + 0x5C = 0x12 (not ported), animation 1 once
+         * stepped; the global 0x8E & 0x40 sends it to state 3, else
+         * state 0 with the sub_0806E1B8 contact and sub_080B2370 hurt
+         * callbacks, the sub_0806B1FC box refresh, the sub_0806AF98
+         * floor snap and + 0x59 |= 2. */
+        if (flag_8e_40) {
+            enemy->state = 3;
+            enemy->step = enemy->substep = 0;
+            return true;
+        }
+        play_loop(enemy, anims, 1, false);
+        step_anim(enemy, anims);
+        snap_to_floor(enemy, layer);
+        enemy->state = 0;
+        enemy->step = enemy->substep = 0;
+        enemy->da_flags = 0;
+        enemy->da_orbit_x = 0;
+        enemy->da_orbit_y = 0;
         return true;
     }
     if (id == AOS_ENEMY_MANDRAGORA) {
@@ -1981,6 +2004,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                      * (not ported), state 3, steps cleared. */
                     enemy->state = 3;
                     enemy->step = enemy->substep = 0;
+                } else if (enemy->id == AOS_ENEMY_DISC_ARMOR &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080B2370: sub_0806BC40 wakes a state-0 armor
+                     * toward the player, sub_080683BC at the lethal
+                     * blow (done by the caller), the + 0x5A palette
+                     * merge (not ported), state 2, steps cleared. */
+                    if (enemy->state == 0) {
+                        enemy->mirrored = enemy->x < soma->x;
+                    }
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
                 } else if (enemy->id == AOS_ENEMY_MANDRAGORA &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080CFA4C: sub_0806E218's lethal check, then
@@ -2961,6 +2995,22 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         aos_enemy_mandragora_seed_update(enemy, kind, cam_x, cam_y);
         return report;
     }
+    if (enemy->role == AOS_ROLE_DISC_BLADE)
+        return aos_enemy_disc_blade_update(enemy, soma, layer, kind, weapon,
+                                           weapon_frames, soma_atk, soma_def,
+                                           cam_x, cam_y, random);
+    if (enemy->role == AOS_ROLE_DISC_SHARD) {
+        aos_enemy_disc_shard_update(enemy, kind, cam_x, cam_y);
+        return report;
+    }
+    if (enemy->role == AOS_ROLE_DISC_GLOW) {
+        aos_enemy_disc_glow_update(enemy, kind);
+        return report;
+    }
+    if (enemy->id == AOS_ENEMY_DISC_ARMOR && enemy->role == AOS_ROLE_ENEMY)
+        return aos_enemy_disc_armor_update(enemy, soma, layer, kind, weapon,
+                                           weapon_frames, soma_atk, soma_def,
+                                           cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_MANDRAGORA && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_mandragora_update(enemy, soma, layer, kind, weapon,
                                  weapon_frames, soma_atk, soma_def, cam_x,

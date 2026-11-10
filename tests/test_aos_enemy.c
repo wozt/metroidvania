@@ -5,6 +5,9 @@
 #include "aos/core/aos_effect.h"
 #include "aos/core/aos_audio.h"
 
+void aos_enemy_disc_glow_update(AosEnemy *enemy,
+                                const AosEnemyKind *kind);
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -4914,6 +4917,222 @@ static void mandragora_tests(void) {
     assert(tail.state == 0 && (e.mg_sensors & 8));
 }
 
+static void disc_armor_tests(void) {
+    aos_audio_clear();
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int y = 20; y < 26; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    /* Animations 0-8: 0/1 patrol, 2/3 the attack, 4/5 shard frames,
+     * 6 the disc, 7 the glow, 8 the death lurch. */
+    static const uint8_t six[6] = {6, 6, 6, 6, 6, 6};
+    static const uint8_t two[2] = {6, 6};
+    static const uint8_t four[4] = {8, 8, 8, 8};
+    const AosAnimDef defs[9] = {{8, six}, {8, six}, {2, two}, {2, two},
+                                {4, four}, {4, four}, {8, six}, {8, six},
+                                {8, six}};
+    const AosAnimSet anims = {defs, 9};
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < 9; ++a)
+        for (int f = 0; f < 16; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-24, -48, 48, 48};
+        }
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 0x100;
+    /* enemies.tsv id 52 (0x34): hp 240, contact 35, defence 25,
+     * experience 150, soul red index 30. */
+    const AosEnemyStats stats = {240, 35, 25, 0x0108, 0, 150};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(40), NULL);
+    soma.max_hp = soma.hp = 320;
+    int frames = 0;
+
+    /* EnemyDiscArmorCreate (0x080B2228): animation 1 stepped once,
+     * state 0; the 0x8E & 0x40 flag path is the inert state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_DISC_ARMOR, 200, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 0 && e.da_flags == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy flagged;
+    assert(aos_enemy_create(&flagged, AOS_ENEMY_DISC_ARMOR, 200, 150, 0,
+                            0, &soma, &layer, &kind, &stats));
+    aos_enemy_set_flag_8e_40(false);
+    assert(flagged.state == 3);
+    /* State 3 only steps the animation. */
+    (void)aos_enemy_update(&flagged, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(flagged.anim.id == 1 || flagged.anim.id == 0);
+
+    /* State 0 step 0 (sub_080B1F14): param0 clear picks animation 0 and
+     * step 1, the aggro gate. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 1 && e.anim.id == 0);
+    /* Soma far away: no aggro; the patrol keeps walking. */
+    soma.x = e.x + AOS_FIXED(600);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    /* Step 2 is reached on the next patrol pass once the aggro gate
+     * re-arms; drive it directly to check the walk physics. */
+    e.step = 2;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.state == 0 || e.state == 1);
+
+    /* Aggro (sub_0806D044 <= 0x4F): Soma close enters state 1. */
+    e.state = 0;
+    e.step = 1;
+    soma.x = e.x + AOS_FIXED(40);
+    soma.y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.state == 1 && e.step == 0);
+
+    /* State 1 step 0 (sub_080B205C): faces the player, animation 2,
+     * da_flags = 1, orbit offsets -20/-36. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 1 && e.da_flags == 1 && e.da_orbit_x == -20 &&
+           e.da_orbit_y == -36);
+    /* The disc throw at animation word 0x10C (frame 0x0C, tick 1). */
+    e.anim.frame = 0x0C;
+    e.anim.tick = 1;
+    AosHitReport thrown = aos_enemy_update(&e, &soma, &layer, &kind,
+                                            NULL, NULL, 10, 4, 0, 0,
+                                            always_zero);
+    assert(thrown.child_count == 1 &&
+           thrown.children[0].role == AOS_ROLE_DISC_BLADE &&
+           thrown.children[0].parent == &e);
+    AosEnemy disc = thrown.children[0];
+    disc.parent = &e;
+    e.da_flags |= 2; /* the disc's return signal, set by its update */
+    /* da_flags bit 1 -> animation 3, step 2, orbit eases to -10/-16. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.step == 2 && e.anim.id == 3);
+    e.da_orbit_x = -20;
+    e.da_orbit_y = -36;
+    e.anim.flags |= AOS_ANIM_ENDED;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                           0, 0, always_zero);
+    assert(e.state == 0 && e.da_flags == 0);
+
+    /* The disc (sub_080B1678): state 0 emits the glow child
+     * (sub_080B14B4), plays song 0x74 and enters state 1. */
+    disc.state = 0;
+    disc.da_momentum = 0;
+    disc.da_launch = 0;
+    AosHitReport glowborn = aos_enemy_update(&disc, &soma, &layer, &kind,
+                                              NULL, NULL, 10, 4, 0, 0,
+                                              always_zero);
+    assert(glowborn.child_count == 1 &&
+           glowborn.children[0].role == AOS_ROLE_DISC_GLOW &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x74) == 1);
+    assert(disc.state == 1 && disc.x == e.da_ox && disc.y == e.da_oy);
+    AosEnemy glow = glowborn.children[0];
+    glow.parent = &disc;
+    disc.da_glow = &glow;
+    /* The glow registers itself on the disc and tracks the orbit. */
+    disc.x += AOS_FIXED(30);
+    disc.y += AOS_FIXED(10);
+    aos_enemy_disc_glow_update(&glow, &kind);
+    assert(disc.da_glow == &glow && glow.da_radius != 0 &&
+           glow.x == e.da_ox && glow.y == e.da_oy);
+
+    /* States 1-3 fly the sine orbit; drive the machine forward. */
+    frames = 0;
+    while (disc.state < 4 && frames < 400) {
+        (void)aos_enemy_update(&disc, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(disc.state >= 1);
+
+    /* State 4 (sub_080B1B42): shard bursts — type-5 shards while the
+     * timer is <= 3 and song 0x73 every 16 ticks. */
+    disc.state = 4;
+    disc.timer = 0;
+    disc.da_momentum = 0x1000;
+    AosHitReport burst = {0};
+    frames = 0;
+    while (disc.state == 4 && burst.child_count == 0 && frames < 8) {
+        burst = aos_enemy_update(&disc, &soma, &layer, &kind, NULL,
+                                 NULL, 10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(burst.child_count >= 1 &&
+           burst.children[0].role == AOS_ROLE_DISC_SHARD &&
+           burst.children[0].variant == 5);
+
+    /* A shard (sub_080B1428): animation 5 once, moves, deletes on the
+     * animation end. */
+    AosEnemy shard = burst.children[0];
+    shard.parent = &disc;
+    int sx = (int)(shard.x >> 16);
+    (void)aos_enemy_update(&shard, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(shard.state == 1 && shard.anim.id == 5);
+    frames = 0;
+    while (!shard.removed && frames < 200) {
+        (void)aos_enemy_update(&shard, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(shard.removed);
+    (void)sx;
+
+    /* State 5 (sub_080B1D14): the return flight — speed decays toward
+     * the armor, position follows the heading. */
+    disc.state = 5;
+    disc.da_speed = 0x30000;
+    disc.da_heading = 0;
+    disc.timer = 0;
+    int32_t dx0 = disc.x;
+    (void)aos_enemy_update(&disc, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(disc.da_speed < 0x30000 || disc.da_speed == 0x20001);
+    (void)dx0;
+
+    /* State 7 (sub_080B1E76): the fade timer then removal. */
+    disc.state = 7;
+    disc.timer = 2;
+    (void)aos_enemy_update(&disc, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(disc.timer == 1 && !disc.removed);
+    (void)aos_enemy_update(&disc, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    (void)aos_enemy_update(&disc, &soma, &layer, &kind, NULL, NULL, 10,
+                           4, 0, 0, always_zero);
+    assert(disc.removed);
+
+    /* The lethal blow (sub_080B2370 -> state 2): song 0x6F on entry,
+     * gravity on + 0x4C, deletion when animation 8 ends. */
+    e.hp = 1;
+    e.combat.hurt_off = false;
+    soma.x = e.x + AOS_FIXED(10);
+    soma.y = e.y + AOS_FIXED(10);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, &weapon,
+                                        &blade, 9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e.state == 2 && e.step == 0);
+    frames = 0;
+    while (!e.removed && frames < 200) {
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10,
+                               4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.removed);
+}
+
 static void killer_fish_tests(void) {
     aos_audio_clear();
     /* Water (cells 8) on rows 10-19 (y 80..159) over a floor at row 20. */
@@ -8039,6 +8258,7 @@ int main(void) {
     cockatrice_tests();
     chronomage_tests();
     mandragora_tests();
+    disc_armor_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

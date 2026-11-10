@@ -153,6 +153,7 @@ enum {
     AOS_ENEMY_COCKATRICE = 0x2E,
     AOS_ENEMY_CHRONOMAGE = 0x28,
     AOS_ENEMY_MANDRAGORA = 0x4F,
+    AOS_ENEMY_DISC_ARMOR = 0x34,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -192,7 +193,9 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_WAITER_COMPANION = 64, AOS_ROLE_WAITER_TRAY = 65,
        AOS_ROLE_COCKATRICE_SHADOW = 66, AOS_ROLE_COCKATRICE_ROCK = 67,
        AOS_ROLE_CHRONO_WISP = 68, AOS_ROLE_MANDRAGORA_BODY = 69,
-       AOS_ROLE_MANDRAGORA_TAIL = 70, AOS_ROLE_MANDRAGORA_SEED = 71 };
+       AOS_ROLE_MANDRAGORA_TAIL = 70, AOS_ROLE_MANDRAGORA_SEED = 71,
+       AOS_ROLE_DISC_BLADE = 72, AOS_ROLE_DISC_SHARD = 73,
+       AOS_ROLE_DISC_GLOW = 74 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -401,6 +404,20 @@ typedef struct AosEnemy {
      * through its `parent` link (the tail reaches the head through
      * `parent->parent`). */
     struct AosEnemy *mg_body, *mg_tail;
+    /* DiscArmor (EnemyDiscArmorCreate 0x080B2228, update 0x080B22D4;
+     * disc sub_080B1678, shard sub_080B1428, glow sub_080B14B4): the
+     * armor's +0x20/+0x22 orbit pixel offsets, +0x6E walk/shot counter,
+     * +0x6F aggro mark and +0x18/+0x1C orbit draw offset; the disc's
+     * +0x20 radius, +0x24 return speed, +0x28 momentum, +0x2C/+0x30
+     * launch, +0x1C heading, +0x42/+0x46 shard offsets, +0x54 spin and
+     * +0x18 glow child; +0x59 flag bits and the +0x5A draw byte. */
+    int16_t da_orbit_x, da_orbit_y, da_tx, da_ty;
+    uint16_t da_frame;
+    uint8_t da_mark, da_lflags, da_draw;
+    uint16_t da_flags;
+    int32_t da_ox, da_oy, da_radius, da_speed, da_momentum, da_launch,
+            da_lvy, da_heading, da_spin;
+    struct AosEnemy *da_glow;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

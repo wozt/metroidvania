@@ -170,6 +170,7 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [30] = "waiter_skeleton",
                                                      [46] = "cockatrice",
                                                      [40] = "chronomage",
+                                                     [52] = "disc_armor",
                                                      [27] = "ectoplasm",
                                                      [82] = "dead_crusader",
                                                      [87] = "gargoyle",
@@ -2804,7 +2805,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_COCKATRICE_ROCK ||
                  e->enemy.role == AOS_ROLE_MANDRAGORA_BODY ||
                  e->enemy.role == AOS_ROLE_MANDRAGORA_TAIL ||
-                 e->enemy.role == AOS_ROLE_MANDRAGORA_SEED) &&
+                 e->enemy.role == AOS_ROLE_MANDRAGORA_SEED ||
+                 e->enemy.role == AOS_ROLE_DISC_BLADE ||
+                 e->enemy.role == AOS_ROLE_DISC_SHARD ||
+                 e->enemy.role == AOS_ROLE_DISC_GLOW) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
@@ -2966,7 +2970,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_COCKATRICE_ROCK ||
                                        hit.children[c].role == AOS_ROLE_MANDRAGORA_BODY ||
                                        hit.children[c].role == AOS_ROLE_MANDRAGORA_TAIL ||
-                                       hit.children[c].role == AOS_ROLE_MANDRAGORA_SEED
+                                       hit.children[c].role == AOS_ROLE_MANDRAGORA_SEED ||
+                                       hit.children[c].role == AOS_ROLE_DISC_BLADE ||
+                                       hit.children[c].role == AOS_ROLE_DISC_SHARD ||
+                                       hit.children[c].role == AOS_ROLE_DISC_GLOW
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};
@@ -4208,7 +4215,14 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
                     frame = &objects->enemies[e->id].statics[k];
         }
         if (!frame || !frame->texture) continue;
+        /* The Disc Armor's + 0x18/+ 0x1C orbit draw position: the disc
+         * sprite circles the walking centre (+ 0x40/+ 0x44). */
         int ex = e->enemy.x >> 16, ey = e->enemy.y >> 16;
+        if (e->enemy.id == AOS_ENEMY_DISC_ARMOR &&
+            e->enemy.role == AOS_ROLE_ENEMY) {
+            ex = (int)(e->enemy.da_ox >> 16);
+            ey = (int)(e->enemy.da_oy >> 16);
+        }
         bool flip = e->enemy.mirrored;
         float x = flip ? (float)(ex - frame->offset_x) - frame->w : (float)(ex + frame->offset_x);
         SDL_FRect rect = {x - (float)cam_x, (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
@@ -4249,6 +4263,9 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
             e->enemy.role == AOS_ROLE_BUTCHER_CLEAVER ||
             e->enemy.role == AOS_ROLE_BUTCHER_GORE ||
             e->enemy.role == AOS_ROLE_MANTLE_ORBIT ||
+            e->enemy.role == AOS_ROLE_DISC_BLADE ||
+            e->enemy.role == AOS_ROLE_DISC_GLOW ||
+            (e->enemy.id == AOS_ENEMY_DISC_ARMOR && e->enemy.state == 2) ||
             e->enemy.role == AOS_ROLE_WAITER_TRAY ||
             e->enemy.role == AOS_ROLE_COCKATRICE_ROCK ||
             e->enemy.role == AOS_ROLE_COCKATRICE_SHADOW ||

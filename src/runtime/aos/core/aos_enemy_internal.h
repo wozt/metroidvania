@@ -566,6 +566,21 @@ AosHitReport aos_enemy_mandragora_tail_update(
 void aos_enemy_mandragora_seed_update(AosEnemy *enemy,
                                       const AosEnemyKind *kind,
                                       int cam_x, int cam_y);
+AosHitReport aos_enemy_disc_armor_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+AosHitReport aos_enemy_disc_blade_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
+void aos_enemy_disc_shard_update(AosEnemy *enemy,
+                                 const AosEnemyKind *kind,
+                                 int cam_x, int cam_y);
+void aos_enemy_disc_glow_update(AosEnemy *enemy,
+                                const AosEnemyKind *kind);
 bool aos_enemy_on_slope(const AosCollision *layer, int32_t x, int32_t y);
 bool aos_enemy_head_toward(AosEnemy *enemy, int32_t tx, int32_t ty,
                            int32_t speed);

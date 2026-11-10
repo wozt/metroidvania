@@ -172,6 +172,7 @@ enum {
     AOS_ENEMY_UNE = 0x3D,
     AOS_ENEMY_ARACHNE = 0x17,
     AOS_ENEMY_PERSEPHONE = 0x24,
+    AOS_ENEMY_LILITH = 0x25,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -223,7 +224,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_ALTAIR_BLADE = 88, AOS_ROLE_BAEL_COMPANION = 89,
        AOS_ROLE_UNE_DEBRIS = 90,
        AOS_ROLE_ARACHNE_LEG = 91, AOS_ROLE_ARACHNE_WEB = 92,
-       AOS_ROLE_PERSEPHONE_STRIKE = 93 };
+       AOS_ROLE_PERSEPHONE_STRIKE = 93, AOS_ROLE_LILITH_BOLT = 94 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -584,6 +585,13 @@ typedef struct AosEnemy {
      * 0x0807B47C): `pr_hit` is + 0x20 (a strike already connected);
      * + 0x6C is the shared anim.flags, + 0x6E the shared anim.frame. */
     uint8_t pr_hit;
+    /* Lilith (EnemyLilithCreate 0x08094818, EnemyLilithUpdate 0x08094750):
+     * `li_approach` + 0x18, `li_flag` + 0x19, `li_breath` + 0x1A (the
+     * contact callback's mark), `li_inactive` + 0x1B (intangible until
+     * the wake), `li_pal` + 0x2C, `li_tint` + 0x5A; `li_bolt` is the
+     * breath child's + 0x1C speed/phase accumulator. */
+    uint8_t li_approach, li_flag, li_breath, li_inactive, li_pal, li_tint;
+    int32_t li_bolt;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

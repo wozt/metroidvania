@@ -2,6 +2,50 @@
 
 Last updated: **2026-11-10**.
 
+## Patch 0978 - Lilith ported (id 37)
+
+- `EnemyLilithCreate` (0x08094818) through `sub_080952A0`
+  (tiles `0x081CC03C`, palette `0x0820AAF4`, frames `0x08222EFC`,
+  shared with the breath bolt children) and `EnemyLilithUpdate`
+  (0x08094750) dispatching `sub_080948DC` state 0,
+  `sub_08094D28` state 1, the shared `sub_0806AEAC` flame death
+  and the animation-only dormant state 3 as
+  `src/runtime/aos/enemies/lilith.c`.
+- Create plays animation 4 looping; the `0x8E & 0x40` flag parks
+  state 3 on animation 5, else state 0 starts hidden
+  (`+0x58 |= 0x20`) and intangible (`+0x1B = 1`) with
+  `vy 0x10000` / `ay 0x1800`. State 0 wakes on the `0x64 x 0x50`
+  box (animation 4 once, unhide, song `0x1C8`), activates on the
+  animation end (animation 5 loop, `+0x1B = 0`) and drifts with
+  `ax +/-0x800`; two substep machines dash (`vx +/-0x28000`,
+  `+0x19` cooldown, song `0x1C8` half the time), resume the hover
+  or enter state 1 step `0xA` on the close and wide boxes.
+  State 1 runs the dash attack (animation 7, `vx +/-0x30000` at
+  frame 3, song `0x85`, the `+0x1A` contact mark gating the
+  follow-up) and the breath sequence (animation 6, the
+  `sub_0809508C` bolt child at frame 4, song `0x7B`).
+  `sub_08095000` hurt never flinches (hit flash `+0x2D = 8`);
+  lethal: `sub_080683BC`, the `+0x5A` merge, song `0x1CC`,
+  animation 9, `+0xD = 0x28`, state 2.
+- The breath bolt (`sub_080951A0`, role `LILITH_BOLT`) is
+  attack-off (`+0x72 |= 2`), static frame `0x36`, spawned `0x1C`
+  pixels above the body, keeps the `+0x1C` sawtooth speed
+  (`+0x400`/tick to `0xE`, `-0x400` to `0x1C`), drifts by facing
+  and dies on the margin check or a strike.
+- Unit-tested in `lilith_tests` (create variants, wake, activate,
+  drift-to-attack, bolt spawn and sawtooth, margin delete, flame
+  death) and in `area_04_room_008` through gdb (a Lilith waking
+  and hovering at `vy 0x10000`).
+- Divergences: `sub_080212C8 & 0x60` is approximated as set,
+  `sub_0806CEC0`'s facing compare always holds after
+  `face_player`, `sub_08069A00` maps to `projectile_collide`
+  without the native probe margins, the bolt's two
+  `sub_080458E4` trail slots and the `0x0A0AFBFB` parameter pack
+  are not reproduced, the `+0x5A` palette merge is recorded in
+  `li_tint` only, and there is no emulator comparison.
+  Yellow soul 31 not ported yet.
+- Ported enemies: 84/113.
+
 ## Patch 0977 - Persephone ported (id 36)
 
 - `EnemyPersephoneCreate` (0x0807B5D0) through `sub_0807BDD0`

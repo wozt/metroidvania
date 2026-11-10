@@ -7074,6 +7074,120 @@ static void persephone_tests(void) {
     assert(ed.step == 0 && ed.timer <= 0x1F);
 }
 
+static void lilith_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { LI_ANIMS = 10 };
+    static const uint8_t ten[10] = {8, 8, 8, 8, 8, 8, 8, 8, 8, 8};
+    static AosAnimDef defs[LI_ANIMS];
+    for (int a = 0; a < LI_ANIMS; ++a) defs[a] = (AosAnimDef){8, ten};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = LI_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < LI_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 37: hp 220, field_e 999, contact 30, defence 30,
+     * weak 0x0801, resist 0x0410, experience 60. */
+    const AosEnemyStats stats = {220, 30, 30, 0x0801, 0x0410, 60};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 400;
+    const int CAM = 200, CAMY = 120;
+
+    /* EnemyLilithCreate: state 0, hidden and intangible, vy 0x10000,
+     * ay 0x1800; the 0x8E & 0x40 flag parks the dormant state 3. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_LILITH, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.hp == 220 && e.hidden && e.li_inactive == 1 &&
+           e.vy == 0x10000 && e.ay == 0x1800);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_LILITH, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 3 && !ed.hidden && ed.li_inactive == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* State 0 step 0: Soma inside the 0x64 x 0x50 box wakes her —
+     * step 1, unhidden, song 0x1C8. Move Soma into the box first. */
+    soma.x = AOS_FIXED(290);
+    soma.y = AOS_FIXED(140);
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 1 && !e.hidden);
+
+    /* Step 1: the animation end loops anim 5, activates (+ 0x1B = 0)
+     * and enters the drift. */
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 2 && e.li_inactive == 0);
+
+    /* Step 2 drift: with Soma outside the 0x64 box but inside the wide
+     * 0x190 box the + 0x18 approach counter climbs; past 0x3B and an
+     * even coin she enters state 1 step 0xA. */
+    soma.x = AOS_FIXED(120);   /* px-0xC8 = 100 .. px+0x68 wide box */
+    e.li_flag = 0;
+    for (int i = 0; i < 0x45 && e.state == 0; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 1 && e.step == 0xA);
+
+    /* Step 0xA -> 11: anim 6 once, then the shared move block; step 11
+     * spawns the breath bolt once anim frame passes 4 (song 0x7B) and
+     * step 12 loops back to the hover on the animation end. */
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.step == 11);
+    e.anim.frame = 5;
+    AosHitReport br = aos_enemy_update(&e, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, CAM, CAMY,
+                                       always_zero);
+    const AosEnemy *bolt = NULL;
+    for (unsigned i = 0; i < br.child_count; ++i)
+        if (br.children[i].role == AOS_ROLE_LILITH_BOLT)
+            bolt = &br.children[i];
+    assert(e.step == 12 && bolt && bolt->static_frame == 0x36 &&
+           bolt->combat.attack_off && !bolt->mirrored);
+    e.cycle_done = true;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(e.state == 0 && e.step == 2);
+
+    /* The bolt's + 0x1C sawtooth: + 0x400 per tick while the old timer
+     * is <= 0xE, horizontal drift by facing, margin delete. */
+    AosEnemy b = *bolt;
+    b.removed = false;
+    b.timer = 5;
+    b.li_bolt = 0x8000;
+    (void)aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(b.li_bolt == 0x8400 && b.vx == 0x8400);
+    /* Off-screen bolts are deleted by the margin check. */
+    b.x = AOS_FIXED(-400);
+    (void)aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, CAM, CAMY, always_zero);
+    assert(b.removed);
+
+    /* State 2 death: the shared flame/blink/sink removes the body. */
+    e.state = 2;
+    e.timer = 0x28;
+    for (int i = 0; i < 0x40 && !e.removed; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, CAM, CAMY, always_zero);
+    assert(e.removed);
+}
+
 static void ukoback_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -10325,6 +10439,7 @@ int main(void) {
     une_tests();
     arachne_tests();
     persephone_tests();
+    lilith_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

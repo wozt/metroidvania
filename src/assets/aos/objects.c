@@ -208,6 +208,10 @@ static const EntitySpec entities[] = {
      * shared with its five legs and the web projectiles. */
     ENTITY("arachne", 0x081CBF84, 0x0820A608, 0, 0x08217464),
     ENTITY("persephone", 0x081CBF94, 0x0820A650, 0, 0x08217D48),
+    /* Lilith (EnemyLilithCreate 0x08094818 through sub_080952A0):
+     * tiles 0x081CC03C, palette 0x0820AAF4, frames 0x08222EFC —
+     * shared with the breath bolt children (static frame 0x36). */
+    ENTITY("lilith", 0x081CC03C, 0x0820AAF4, 0, 0x08222EFC),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

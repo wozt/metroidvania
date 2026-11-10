@@ -10974,6 +10974,176 @@ static void quezlcoatl_tests(void) {
            ed.vy == (int32_t)0xFFFE0000 && ed.ay == 0x1800);
 }
 
+
+static void alastor_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { AL_ANIMS = 20 };
+    static const uint8_t ticks20[20] = {4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4, 4, 4, 4, 4,
+                                        4, 4, 4, 4};
+    static AosAnimDef defs[AL_ANIMS];
+    for (int a = 0; a < AL_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks20};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = AL_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < AL_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-16, -32, 32, 32};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 90: hp 1200, contact 80, defence 45, weak 0x0000,
+     * resist 0x0400, exp 1500, soul blue index 23 rarity 25. */
+    const AosEnemyStats stats = {1200, 80, 45, 0x0000, 0x0400, 1500};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyAlastorCreate 0x080CD544: state 0 step 9 substep 3, the
+     * + 0x24 three-hit counter at 3, + 0x17 = 9 pattern column; the
+     * 0x8E & 0x40 flag parks state 8. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_ALASTOR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(e.state == 0 && e.step == 9 && e.substep == 3 &&
+           e.ala_hits == 3 && e.ala_col == 9 && e.ala_row == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, AOS_ENEMY_ALASTOR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    assert(ed.state == 8 && ed.step == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The first update emits the partner body (sub_080CEAA4): role
+     * ALASTOR_BODY, hidden, attack/hurt off, linked to the head. */
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.child_count == 1);
+    assert(hit.children[0].role == AOS_ROLE_ALASTOR_BODY &&
+           hit.children[0].hidden &&
+           hit.children[0].parent == &e &&
+           hit.children[0].combat.attack_off &&
+           hit.children[0].combat.hurt_off);
+
+    /* State 0 (sub_080CD75C): the partner walk-on — after the six
+     * substeps (~0x6C ticks) the head enters state 1. */
+    for (int i = 0; i < 140 && e.state == 0; ++i)
+        hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(e.state == 1);
+
+    /* State 1 (sub_080CD934): the flight accelerates toward the
+     * player; force the wall-probe exit into state 2. */
+    e.state = 2;
+    e.step = e.substep = 0;
+    e.ala_row = 0;
+    e.ala_col = 0;   /* pattern[0][0] = 0 -> the run continues */
+    int32_t x0 = e.x;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.x != x0 || e.vx != 0);
+
+    /* State 3 (sub_080CDE70): the dash — velocity set, song 0x86,
+     * the timer counts down the approach. */
+    e.state = 3;
+    e.step = 0;
+    e.timer = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.step == 1 && e.vx != 0);
+
+    /* State 4 (sub_080CE13C): the volley dash — song 0x86, the record
+     * fields drive vx/vy and the spin probe. */
+    e.state = 4;
+    e.step = 0;
+    e.ala_vol = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.step == 1);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.step == 2 && e.timer != 0);
+
+    /* State 6 (sub_080CE598): the assault emits a muzzle shot child
+     * (role ALASTOR_SHOT, lifetime + 0xD = 5) and plays 0x1BB+0x86. */
+    e.state = 6;
+    e.step = 0;
+    e.substep = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.step == 1);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(hit.child_count >= 1);
+    int shot = -1;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_ALASTOR_SHOT) shot = i;
+    assert(shot >= 0 && hit.children[shot].ala_plife == 5);
+
+    /* The shot dies with its parent or after five ticks
+     * (sub_080CEEE8). */
+    AosEnemy shot_e = hit.children[shot];
+    shot_e.parent = &e;
+    for (int i = 0; i < 6; ++i)
+        aos_enemy_update(&shot_e, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(shot_e.removed);
+
+    /* State 7 (sub_080CE758): the death spiral — orbits, then hands
+     * to 0xFF once the partner settles and hp is gone. */
+    e.state = 7;
+    e.step = 0;
+    e.hp = 0;
+    e.ala_pstate = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.state == 0xFF || e.step >= 1);
+
+    /* State 0xFF (sub_080CE85C): song 0x6E, the burst, then removed. */
+    e.state = 0xFF;
+    e.step = 0;
+    e.substep = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.state == 0xFF);
+    for (int i = 0; i < 80 && !e.removed; ++i)
+        hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(e.removed);
+
+    /* Lethal hook (sub_080CE9E8): hp depleted -> state 7, song 0x1BE,
+     * the partner mirror to state 3. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, AOS_ENEMY_ALASTOR, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    el.hp = 1;
+    el.state = 1;
+    el.step = 3;
+    soma.x = AOS_FIXED(300);
+    soma.y = AOS_FIXED(150);
+    static const uint8_t al_steps[] = {8};
+    const AosAnimDef al_def = {1, al_steps};
+    const AosAnimSet al_set = {&al_def, 1};
+    const AosHitbox al_box[] = {{-10, -40, 20, 20, true}};
+    const AosWeaponFrames al_weapon = {&al_set, al_box};
+    AosWeaponEntity weapon = {.active = true};
+    hit = aos_enemy_update(&el, &soma, &layer, &kind,
+                           &weapon, &al_weapon, 9999, 4,
+                           0, 0, always_zero);
+    assert(hit.enemy_hit && hit.killed && el.state == 7 &&
+           el.ala_pstate == 3 && el.defeated &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x1BE) == 1);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -11221,6 +11391,7 @@ int main(void) {
 
     devil_tests();
     quezlcoatl_tests();
+    alastor_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

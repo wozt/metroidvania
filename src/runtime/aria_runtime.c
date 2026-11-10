@@ -200,7 +200,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [72] = "arc_demon",
                                                      [102] = "demon_lord",
                                                      [104] = "flame_demon",
-                                                     [26] = "quezlcoatl"};
+                                                     [26] = "quezlcoatl",
+                                                     [90] = "alastor"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
@@ -2831,7 +2832,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_DISC_SHARD ||
                  e->enemy.role == AOS_ROLE_DISC_GLOW ||
                  e->enemy.role == AOS_ROLE_QUEZLCOATL_SEGMENT ||
-                 e->enemy.role == AOS_ROLE_QUEZLCOATL_GORE) &&
+                 e->enemy.role == AOS_ROLE_QUEZLCOATL_GORE ||
+                 e->enemy.role == AOS_ROLE_ALASTOR_BODY ||
+                 e->enemy.role == AOS_ROLE_ALASTOR_SHOT) &&
                 e->spawner >= 0)
                 e->enemy.parent = &room->entities[e->spawner].enemy;
             /* sub_080AD7F0's + 0x18 link: segment 1 follows the parent,
@@ -3007,7 +3010,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_MUDMAN_BUBBLE ||
                                        hit.children[c].role == AOS_ROLE_MUDMAN_ARM ||
                                        hit.children[c].role == AOS_ROLE_QUEZLCOATL_SEGMENT ||
-                                       hit.children[c].role == AOS_ROLE_QUEZLCOATL_GORE
+                                       hit.children[c].role == AOS_ROLE_QUEZLCOATL_GORE ||
+                                       hit.children[c].role == AOS_ROLE_ALASTOR_BODY ||
+                                       hit.children[c].role == AOS_ROLE_ALASTOR_SHOT
                                    ? (int)i
                                    : -1,
                     .enemy = hit.children[c]};

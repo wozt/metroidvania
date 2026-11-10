@@ -180,6 +180,7 @@ enum {
     AOS_ENEMY_DEMON_LORD = 0x66,
     AOS_ENEMY_FLAME_DEMON = 0x68,
     AOS_ENEMY_QUEZLCOATL = 0x1A,
+    AOS_ENEMY_ALASTOR = 0x5A,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -236,7 +237,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_TRITON_JET = 97, AOS_ROLE_TRITON_SPLASH = 98,
        AOS_ROLE_DEVIL_IMP = 99, AOS_ROLE_DEVIL_FIRE = 100,
        AOS_ROLE_DEVIL_ORB = 101, AOS_ROLE_QUEZLCOATL_SEGMENT = 102,
-       AOS_ROLE_QUEZLCOATL_GORE = 103 };
+       AOS_ROLE_QUEZLCOATL_GORE = 103, AOS_ROLE_ALASTOR_BODY = 104,
+       AOS_ROLE_ALASTOR_SHOT = 105 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -662,6 +664,21 @@ typedef struct AosEnemy {
     int8_t qz_depth;
     uint8_t qz_seg, qz_pal, qz_tint;
     int16_t qz_tx, qz_ty;
+    /* Alastor (EnemyAlastorCreate 0x080CD544 / EnemyAlastorUpdate
+     * 0x080CD644): `ala_angle` is + 0x1A (the spin angle the sine/cosine
+     * motion of states 5-7 reads), `ala_rot` the + 0x1C draw rotation
+     * (sub_080CDD9C's oriented box angle), `ala_probe` the + 0x1E probe
+     * distance, `ala_hits` the + 0x24 three-hit counter, `ala_row`/`ala_col`
+     * the + 0x16/+ 0x17 pattern-table indices into 0x08528C2C, `ala_vol`
+     * the + 0x13 volley record into 0x08528BF4.  The partner body
+     * (sub_080CEB58) mirrors its + 0xA/+ 0xB/+ 0xC/+ 0xD machine into
+     * `ala_pstate`/`ala_pstep`/`ala_psub`/`ala_ptmr` on the head and reads
+     * them back through `parent`; `ala_plife` is a shot's + 0xD
+     * lifetime and `ala_pslot` its + 0x11 parent link. */
+    uint16_t ala_angle;
+    int16_t ala_rot, ala_probe;
+    uint8_t ala_hits, ala_row, ala_col, ala_vol;
+    uint8_t ala_pstate, ala_pstep, ala_psub, ala_ptmr, ala_plife, ala_pslot;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

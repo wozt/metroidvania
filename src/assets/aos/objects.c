@@ -230,6 +230,10 @@ static const EntitySpec entities[] = {
      * bank 1, frames 0x0821631C — shared by the head, its fifteen
      * segments and the death gore. */
     ENTITY("quezlcoatl", 0x081CBF74, 0x0820A580, 1, 0x0821631C),
+    /* Alastor (sub_080CD544): tiles 0x081F4294, palette 0x0820BFE0,
+     * frames 0x0824FEE0 — shared by the head, the partner body and
+     * the state-6 muzzle shots. */
+    ENTITY("alastor", 0x081F4294, 0x0820BFE0, 0, 0x0824FEE0),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

@@ -378,7 +378,7 @@ static void test_bestiary(const FusionJson *data) {
         "Werejaguar", "Weretiger", "Werewolf", "Slime", "Kyoma Demon",
         "Altair", "Bael", "Nightmare", "Une", "Arachne", "Persephone",
         "Lilith", "Succubus", "Triton", "Devil", "Arc Demon",
-        "Demon Lord", "Flame Demon", "Quezlcoatl"};
+        "Demon Lord", "Flame Demon", "Quezlcoatl", "Alastor"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];

@@ -404,6 +404,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_DEVIL && id != AOS_ENEMY_ARC_DEMON &&
         id != AOS_ENEMY_DEMON_LORD && id != AOS_ENEMY_FLAME_DEMON &&
         id != AOS_ENEMY_QUEZLCOATL &&
+        id != AOS_ENEMY_ALASTOR &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1195,6 +1196,37 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         snap_to_floor(enemy, layer);
         enemy->state = 0;
         enemy->step = 0;
+        return true;
+    }
+    if (id == AOS_ENEMY_ALASTOR) {
+        /* EnemyAlastorCreate 0x080CD544: the loader picks tiles
+         * 0x081F4294 / palette 0x0820BFE0 / frames 0x0824FEE0 (the
+         * kind), + 0x5C = 3, + 0x59 |= 0x10, a random variant byte
+         * through sub_0803E654, the partner body through sub_080CEAA4
+         * (spawned on the first update via boss_parts_spawned), + 0x16
+         * = 0, + 0x17 = 9, + 0x24 = 3; the 0x8E & 0x40 flag parks it
+         * in state 8, else state 0 step 9 substep 3 — sub_080CD75C.
+         * The hurt (sub_080CE9E8) and collision callbacks ride the
+         * shared passes and the lethal hook below. */
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        enemy->ala_hits = 3;
+        enemy->ala_row = 0;
+        enemy->ala_col = 9;
+        enemy->ala_vol = 0;
+        enemy->ala_pstate = enemy->ala_pstep = enemy->ala_psub =
+            enemy->ala_ptmr = enemy->ala_plife = enemy->ala_pslot = 0;
+        enemy->ala_probe = 0;
+        enemy->ala_rot = 0;
+        enemy->boss_parts_spawned = false;
+        if (flag_8e_40) {
+            enemy->state = 8;
+            enemy->step = 0;
+            return true;
+        }
+        enemy->state = 0;
+        enemy->step = 9;
+        enemy->substep = 3;
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2667,6 +2699,17 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x28;
+                } else if (enemy->id == AOS_ENEMY_ALASTOR &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080CE9E8 lethal: sub_080683BC defeated, sound
+                     * 0x1BE, the partner's + 0xA = 3 (al_pstate) and
+                     * the head's own state 7 death spiral. */
+                    aos_audio_play_song(0x1BE);
+                    enemy->ala_pstate = 3;
+                    enemy->defeated = true;
+                    enemy->state = 7;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -4089,6 +4132,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_quezlcoatl_update(enemy, soma, layer, kind, weapon,
                                            weapon_frames, soma_atk,
                                            soma_def, cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_ALASTOR)
+        return aos_enemy_alastor_update(enemy, soma, layer, kind, weapon,
+                                        weapon_frames, soma_atk, soma_def,
+                                        cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

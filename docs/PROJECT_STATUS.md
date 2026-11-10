@@ -44,6 +44,31 @@ Last updated: **2026-11-10**.
   `0x0803226D`, already ported); sprites, animations, sounds
   and loot are registered in `aos_monster_aspects.tsv`.
 
+## Patch 0982 - Alastor ported (id 90)
+
+- `EnemyAlastorCreate` (0x080CD544) / `EnemyAlastorUpdate`
+  (0x080CD644) and the `sub_080CD75C`..`sub_080CEEE8` cluster:
+  tiles `0x081F4294`, palette `0x0820BFE0`, frames `0x0824FEE0`,
+  `+0x5C = 3`, `+0x59 |= 0x10`, random palette variant, the
+  `0x8E & 0x40` flag parking state 8, else state 0 step 9
+  substep 3 with `+0x24 = 3`, `+0x16 = 0`, `+0x17 = 9`.
+- The partner body (`sub_080CEAA4`/`sub_080CEB58`, entity `0x49`)
+  is a persistent `AOS_ROLE_ALASTOR_BODY` child whose six-case
+  machine mirrors through `ala_pstate`/`ala_pstep`/`ala_psub`/
+  `ala_ptmr`; the state-6 muzzle flash (`sub_080CE44C`) is an
+  `AOS_ROLE_ALASTOR_SHOT` child with the five-tick `+0xD` life.
+- States: 0 partner walk-on, 1 sine flight, 2 pattern-table run
+  (`0x08528C2C`), 3 dash + song `0x86` + strike zones, 4 volley
+  dash (`0x08528BF4` records), 5 homing return, 6 assault
+  (songs `0x1BB`/`0x86`, shot spawn), 7 death spiral, `0xFF`
+  death (song `0x6E`, gore rows, delete); dormant 8 sinks `0x10`.
+- Lethal hook `sub_080CE9E8`: song `0x1BE`, `sub_080683BC`,
+  partner `+0xA = 3`, head state 7. Blue soul 23 (routine
+  `0x080314AD`) is not ported yet.
+- `alastor_tests` covers create/dormant/partner emit/state
+  progression/volley/assault shot/shot expiry/death/lethal;
+  `enemy_frames.tsv` gained the three Alastor sequences.
+
 ## Patch 0981 - Devil family ported (ids 48, 72, 102, 104)
 
 - `EnemyDevilCreate` (0x0808FA30) through `sub_08092048` serves
